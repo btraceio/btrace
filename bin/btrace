@@ -1,0 +1,19 @@
+#! /bin/sh
+
+if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ] ; then
+  # resolve links - $0 could be a link to btrace's home
+  PRG="$0"
+  progname=`basename "$0"`
+  BTRACE_HOME=`dirname "$PRG"`/..
+  BTRACE_HOME=`cd "$BTRACE_HOME" && pwd`
+fi
+
+if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
+    if [ "${JAVA_HOME}" != "" ]; then
+       ${JAVA_HOME}/bin/java -Dcom.sun.btrace.probeDescPath=. -Dcom.sun.btrace.dumpClasses=false -Dcom.sun.btrace.debug=false -cp ${BTRACE_HOME}/build/btrace-client.jar:${BTRACE_HOME}/build/asm-3.0.jar:${JAVA_HOME}/lib/tools.jar:/usr/share/lib/java/dtrace.jar com.sun.btrace.client.Main $*
+    else
+       echo "Please set JAVA_HOME before running this script"
+    fi
+else
+    echo "Please set BTRACE_HOME before running this script"
+fi
