@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="BTrace" default="all" basedir=".">
+
+  <!-- Property Definitions -->
+
+  <property name="app.name" value="btrace"/>
+  <property name="src.dir"  value="../src"/>
+  <property name="share.src.dir"  value="${src.dir}/share/classes"/>
+  <property name="solaris.src.dir"  value="${src.dir}/solaris/classes"/>
+  <property name="docs.dir"  value="../docs"/>
+  <property name="javadoc.dir"  value="${docs.dir}/javadoc"/>
+  <property name="lib.dir"  value="../lib"/>
+  <property name="build.dir"  value="../build"/>
+  <property name="agent.jar" value="${build.dir}/${app.name}-agent.jar"/>
+  <property name="boot.jar" value="${build.dir}/${app.name}-boot.jar"/>
+  <property name="client.jar" value="${build.dir}/${app.name}-client.jar"/>
+  <property name="classes.dir"  value="${build.dir}/classes"/>
+
+  <target name="prepare">
+    <mkdir dir="${classes.dir}"/>
+    <mkdir dir="${javadoc.dir}"/>
+    <available classname="org.opensolaris.os.dtrace.Consumer"
+        classpath="/usr/share/lib/java/dtrace.jar"
+        property="libdtrace.jni.available"/>
+  </target>
+
+  <target name="clean">
+     <delete dir="${build.dir}"/>
+     <delete dir="${javadoc.dir}"/>
+  </target>
+
+  <path id="javac.classpath">
+    <pathelement path="${lib.dir}/asm-3.0.jar" />
+    <pathelement path="${java.home}/../lib/tools.jar" />
+    <pathelement path="/usr/share/lib/java/dtrace.jar" />
+  </path>
+
+  <target name="compile" depends="prepare" description="Compiles the sources">
+    <javac srcdir="${share.src.dir}"
+           destdir="${classes.dir}"
+           debug="on" deprecation="on">
+      <classpath refid="javac.classpath" />
+    </javac>
+    <copy todir="${classes.dir}/com/sun/btrace/resources">
+      <fileset dir="${share.src.dir}/com/sun/btrace/resources/"/>
+    </copy>
+    <copy todir="${classes.dir}/com/sun/btrace/runtime">
+      <fileset file="${share.src.dir}/com/sun/btrace/runtime/jaxb.index"/>
+    </copy>
+    <copy todir="${classes.dir}/com/sun/btrace/annotations">
+      <fileset file="${share.src.dir}/com/sun/btrace/annotations/jaxb.index"/>
+    </copy>
+    <javadoc destdir="${javadoc.dir}">
+      <fileset file="${share.src.dir}/com/sun/btrace/annotations/*.java"/>
+      <fileset file="${share.src.dir}/com/sun/btrace/AnyType.java"/>
+      <fileset file="${share.src.dir}/com/sun/btrace/BTraceUtils.java"/>
+    </javadoc>
+  </target>
+
+  <target name="dtrace-compile" if="libdtrace.jni.available" depends="prepare">
+    <javac srcdir="${solaris.src.dir}"
+           destdir="${classes.dir}"
+           debug="on" deprecation="on">
+      <classpath refid="javac.classpath"/>
+    </javac>
+  </target>
+         
+  <target name="deploy" depends="compile, dtrace-compile" description="Creates deployment bundles">
+    <copy todir="${build.dir}">
+      <fileset file="${lib.dir}/asm-3.0.jar"/>
+      <fileset file="${java.home}/../lib/tools.jar"/>
+    </copy>
+    <jar jarfile="${agent.jar}"         
+         basedir="${classes.dir}"
+         manifest="${share.src.dir}/META-INF/agent-manifest.mf"
+         excludes="**/dtrace/* **/btrace/*.class **/annotations/* **/compiler/* **/client/* **/comm/*"/>
+    <jar jarfile="${boot.jar}"         
+         basedir="${classes.dir}"
+         excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/*"/>
+    <jar jarfile="${client.jar}"
+         basedir="${classes.dir}"
+         manifest="${share.src.dir}/META-INF/client-manifest.mf"
+         excludes="**/runtime/* **/agent/*"/>
+  </target>
+
+  <target name="all" depends="deploy" description="Builds sources and deployment jars"/>
+
+</project>
+
