@@ -1,0 +1,6 @@
+Premain-Class: com.sun.btrace.agent.Main
+Agent-Class: com.sun.btrace.agent.Main
+Class-Path: asm-3.0.jar tools.jar
+Boot-Class-Path: btrace-boot.jar
+Can-Redefine-Classes: true
+Can-Retransform-Classes: true
