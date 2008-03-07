@@ -44,7 +44,6 @@ import com.sun.btrace.comm.*;
 import com.sun.btrace.annotations.DTrace;
 import com.sun.btrace.annotations.DTraceRef;
 import com.sun.btrace.util.NullVisitor;
-import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Type;
@@ -179,7 +178,7 @@ public class Client {
 
         return code;
     }
-
+    
     /**
      * Attach the BTrace client to the given Java process.
      * Loads BTrace agent on the target process if not loaded
@@ -254,7 +253,7 @@ public class Client {
         CommandListener listener) throws IOException {
         if (sock != null) {
             throw new IllegalStateException();
-        }
+        }        
         submitDTrace(fileName, code, args, listener);
         try {
             if (debug) debugPrint("opening socket to " + port);
@@ -268,6 +267,17 @@ public class Client {
         } catch (UnknownHostException uhe) {
             throw new IOException(uhe);
         }
+    }
+    
+    /**
+     * Submits the compiled BTrace .class to the VM
+     * attached and passes given command line arguments.
+     * Receives commands from the traced JVM and sends those
+     * to the command listener provided.
+     */
+    public void submit(byte[] code, String[] args, 
+        CommandListener listener) throws IOException {
+        submit(null, code, args, listener);
     }
 
     /**
@@ -356,6 +366,8 @@ public class Client {
         
     private void submitDTrace(String fileName, byte[] code, 
                               String[] args, CommandListener listener) {
+        if (fileName == null || code == null) return;
+        
         Object dtraceSrc = getDTraceSource(fileName, code);
         try {
             if (dtraceSrc instanceof String) {
@@ -364,7 +376,7 @@ public class Client {
                 } else {
                     warn(listener, "@DTrace is supported only on Solaris 11+");
                 }
-            } else if (dtraceSrc instanceof File) {
+             } else if (dtraceSrc instanceof File) {
                 if (dtraceEnabled) {
                     submitFile.invoke(null, dtraceSrc, args, listener);
                 } else {
