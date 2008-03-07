@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.jar.JarFile;
 import java.lang.instrument.ClassFileTransformer;
 import java.security.ProtectionDomain;
 import com.sun.btrace.BTraceRuntime;
@@ -76,9 +77,47 @@ public final class Main {
             Main.inst = inst;
         }     
 
+
         if (isDebug()) debugPrint("parsing command line arguments");
         parseArgs(args);
         if (isDebug()) debugPrint("parsed command line arguments");
+
+        String bootClassPath = argMap.get("bootClassPath");
+        if (bootClassPath != null) {
+            if (isDebug()) {
+                 debugPrint("Bootstrap ClassPath: " + bootClassPath);
+            }
+            StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
+            try {
+                while (tokenizer.hasMoreTokens()) {
+                    String path = tokenizer.nextToken();
+                    inst.appendToBootstrapClassLoaderSearch(new JarFile(new File(path)));
+                }
+            } catch (IOException ex) {
+                debugPrint("adding to boot classpath failed!");
+                debugPrint(ex);
+                return;
+            }
+        }
+
+        String systemClassPath = argMap.get("systemClassPath");
+        if (systemClassPath != null) {
+            if (isDebug()) {
+                 debugPrint("System ClassPath: " + systemClassPath);
+            }
+            StringTokenizer tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
+            try {
+                while (tokenizer.hasMoreTokens()) {
+                    String path = tokenizer.nextToken();
+                    inst.appendToSystemClassLoaderSearch(new JarFile(new File(path)));
+                }
+            } catch (IOException ex) {
+                debugPrint("adding to boot classpath failed!");
+                debugPrint(ex);
+                return;
+            }
+        }
+
         String tmp = argMap.get("noServer");
         boolean noServer = tmp != null && !"false".equals(tmp);
         if (noServer) {

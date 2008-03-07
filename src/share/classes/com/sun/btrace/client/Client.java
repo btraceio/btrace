@@ -193,7 +193,7 @@ public class Client {
             tmp = tmp.substring("jar:".length(), tmp.lastIndexOf("/"));
             agentPath = tmp + agentPath;
             agentPath = new File(new URI(agentPath)).getAbsolutePath();
-            attach(pid, agentPath);
+            attach(pid, agentPath, null, null);
         } catch (RuntimeException re) {
             throw re;
         } catch (IOException ioexp) {
@@ -207,8 +207,9 @@ public class Client {
      * Attach the BTrace client to the given Java process.
      * Loads BTrace agent on the target process if not loaded
      * already. Accepts the full path of the btrace agent jar.
+     * Also, accepts system classpath and boot classpath optionally.
      */
-    public void attach(String pid, String agentPath) throws IOException {
+    public void attach(String pid, String agentPath, String sysCp, String bootCp) throws IOException {
         try {
             VirtualMachine vm = null;
             if (debug) debugPrint("attaching to " + pid);
@@ -223,6 +224,12 @@ public class Client {
             if (dumpClasses) {
                 agentArgs += ",dumpClasses=true";
                 agentArgs += ",dumpDir=" + dumpDir;
+            }
+            if (bootCp != null) {
+                agentArgs += ",bootClassPath=" + bootCp;
+            }
+            if (sysCp != null) {
+                agentArgs += ",systemClassPath=" + sysCp;
             }
             agentArgs += ",probeDescPath=" + probeDescPath;
             if (debug) debugPrint("agent args: " + agentArgs);
@@ -256,7 +263,8 @@ public class Client {
             if (debug) debugPrint("sending instrument command");
             WireIO.write(oos, new InstrumentCommand(code, args));
             ois = new ObjectInputStream(sock.getInputStream());
-            if (debug) debugPrint("entering into command loop");                            commandLoop(listener);
+            if (debug) debugPrint("entering into command loop");                            
+            commandLoop(listener);
         } catch (UnknownHostException uhe) {
             throw new IOException(uhe);
         }
@@ -317,11 +325,16 @@ public class Client {
         throws IOException {
         assert ois != null: "null input stream?";
         while (true) {
-            Command cmd = WireIO.read(ois);
-            if (debug) debugPrint("received " + cmd);
-            listener.onCommand(cmd);
-            if (cmd.getType() == Command.EXIT) {
-                return;
+            try {
+                Command cmd = WireIO.read(ois);
+                if (debug) debugPrint("received " + cmd);
+                listener.onCommand(cmd);
+                if (cmd.getType() == Command.EXIT) {
+                    return;
+                }
+            } catch (IOException e) {
+                listener.onCommand(new ExitCommand(-1));
+                throw e;
             }
         }
     } 
