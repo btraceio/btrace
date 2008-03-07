@@ -138,13 +138,6 @@ in the trace class name are replaced by "$".
 <h3>Known Issues and Limitations</h3>
 
 <ul>
-<li>BTrace <b>does not work when class sharing is on</b> - so run your traced program with
-<b>-Xshare:off</b> option or use <b>-server</b> option. When class sharing is
-used (atleast on Windows), the traced JVM crashes after instrumenting a
-class (for eg. a bootstrap class like java.awt.Component).
-<li>Certain <b><code>sun.misc.*</code></b> classes are used by BTrace. You get 
-<b>compilation warnings</b> because of this. Also, <b><code>sun.jvmstat.monitor.*</code></b>
-classes are used to read jvmstat perf. counters.
 <li><b>BTrace requires JDK 6</b>. There are API dependencies [for example, javac's new APIs].
 And BTrace uses certain recent changes with java.lang.instrument and hotswap. In particular,
 <b>BTrace adds private methods while hotswapping classes</b>. This feature (of
