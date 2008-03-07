@@ -8,7 +8,7 @@ BTrace User's Guide
 
 <h1>BTrace User's Guide</h1>
 <p>
-<b>BTrace</b> is a safe, dynamic tracing system for Java. BTrace
+<b>BTrace</b> is a safe, dynamic tracing tool for Java. BTrace
 works by dynamically (bytecode) instrumenting classes of a running
 Java program. BTrace inserts tracing actions into the classes of a running
 Java program and hotswaps the traced program classes.
@@ -308,7 +308,7 @@ or any other OS), <code>dtraceProbe()</code> will be a no-op.
 longer and hence stored outside of the BTrace program. See DTrace integration
 samples in the BTrace samples section below. This feature works using the <b><a href="http://www.opensolaris.org/os/project/dtrace-chime/java_dtrace_api/">DTrace Java API</a></b>.
 For this DTrace feature to work (o.e., being able to run associated D-script),
-you need to be running on <b>Solaris 11 build 35+ or beyond</b>. You may want to check whether you have
+you need to be running on <b>Solaris 11 build 35 or beyond</b>. You may want to check whether you have
 <b>/usr/share/lib/java/dtrace.jar</b> on your machine or not. @DTrace and @DTraceRef annotations are ignored on other
 platforms (Solaris 10 or below or any other OS).
 </ul>
