@@ -17,6 +17,7 @@
     <target name="clean" depends="load.properties">
         <delete dir="${build.dir}"/>
         <delete dir="${javadoc.dir}"/>
+        <delete dir="${dist.dir}"/>
     </target>
     <target name="compile" depends="prepare" description="Compiles the sources">
         <javac srcdir="${share.src.dir}"
@@ -46,10 +47,9 @@
             <classpath refid="javac.classpath"/>
         </javac>
     </target>
-    <target name="deploy" depends="compile, dtrace-compile" description="Creates deployment bundles">
+    <target name="build" depends="compile, dtrace-compile" description="Creates deployment bundles">
         <copy todir="${build.dir}">
             <fileset file="${lib.dir}/asm-3.0.jar"/>
-            <fileset file="${java.home}/../lib/tools.jar"/>
         </copy>
         <jar jarfile="${agent.jar}"         
          basedir="${classes.dir}"
@@ -67,6 +67,37 @@
         <echo message="Loading build properties file"/>
         <property file="build.properties"/>
     </target>
-    <target name="all" depends="deploy" description="Builds sources and deployment jars"/>
+    <target name="dist" depends="build">
+        <delete dir="vi${dist.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${dist.dir}/build"/>
+        <mkdir dir="${dist.dir}/bin"/>
+        <mkdir dir="${dist.dir}/samples"/>
+        <mkdir dir="${dist.dir}/docs"/>
+        <copy todir="${dist.dir}/build">
+            <fileset file="${build.dir}/*.jar"/>
+        </copy>
+        <copy todir="${dist.dir}/bin">
+            <fileset file="${bin.dir}/*"/>
+        </copy>
+        <copy todir="${dist.dir}/samples">
+            <fileset file="${samples.dir}/*"/>
+        </copy>
+        <copy todir="${dist.dir}/docs">
+            <fileset file="${docs.dir}/usersguide.html"/>
+        </copy>
+        <copy todir="${dist.dir}/docs/javadoc">
+            <fileset dir="${docs.dir}/javadoc"/>
+        </copy>
+        <copy todir="${dist.dir}">
+            <fileset file="${basedir}/../*.txt"/>
+            <fileset file="${basedir}/../COPYRIGHT"/>
+        </copy>
+        <tar basedir="${dist.dir}" destfile="${dist.dir}/btrace-bin.tar.gz" 
+             compression="gzip" excludes="*.zip,*.gz"/>
+        <zip basedir="${dist.dir}" destfile="${dist.dir}/btrace-bin.zip"
+             excludes="*.zip,*.gz"/>
+    </target>
+    <target name="all" depends="build" description="Builds sources and deployment jars"/>
 </project>
 

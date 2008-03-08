@@ -192,7 +192,7 @@ public class Client {
             tmp = tmp.substring("jar:".length(), tmp.lastIndexOf("/"));
             agentPath = tmp + agentPath;
             agentPath = new File(new URI(agentPath)).getAbsolutePath();
-            attach(pid, agentPath, null, null);
+            attach(pid, agentPath, getToolsJarPath(), null);
         } catch (RuntimeException re) {
             throw re;
         } catch (IOException ioexp) {
@@ -324,6 +324,19 @@ public class Client {
     }
 
     //-- Internals only below this point
+    private String getToolsJarPath() {
+        // try to get absolute path of tools.jar
+        // first check my classpath
+        String[] components = System.getProperty("java.class.path").split(File.pathSeparator);
+        for (String c : components) {
+            if (c.endsWith("tools.jar")) {
+                return new File(c).getAbsolutePath();
+            }
+        }
+        // we didn't find -- make a guess!
+        return System.getProperty("java.home") + "../lib/tools.jar";
+    }
+
     private void send(Command cmd) throws IOException {
         if (oos == null) {
             throw new IllegalStateException();
