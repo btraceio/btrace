@@ -192,7 +192,7 @@ public class Client {
             tmp = tmp.substring("jar:".length(), tmp.lastIndexOf("/"));
             agentPath = tmp + agentPath;
             agentPath = new File(new URI(agentPath)).getAbsolutePath();
-            attach(pid, agentPath, getToolsJarPath(), null);
+            attach(pid, agentPath, null, null);
         } catch (RuntimeException re) {
             throw re;
         } catch (IOException ioexp) {
@@ -227,9 +227,10 @@ public class Client {
             if (bootCp != null) {
                 agentArgs += ",bootClassPath=" + bootCp;
             }
-            if (sysCp != null) {
-                agentArgs += ",systemClassPath=" + sysCp;
+            if (sysCp == null) {
+                sysCp = getToolsJarPath();
             }
+            agentArgs += ",systemClassPath=" + sysCp;
             agentArgs += ",probeDescPath=" + probeDescPath;
             if (debug) debugPrint("agent args: " + agentArgs);
             vm.loadAgent(agentPath, agentArgs);
@@ -326,14 +327,15 @@ public class Client {
     //-- Internals only below this point
     private String getToolsJarPath() {
         // try to get absolute path of tools.jar
-        // first check my classpath
+        // first check this application's classpath
         String[] components = System.getProperty("java.class.path").split(File.pathSeparator);
         for (String c : components) {
             if (c.endsWith("tools.jar")) {
                 return new File(c).getAbsolutePath();
             }
         }
-        // we didn't find -- make a guess!
+        // we didn't find -- make a guess! If this app is running on a JDK rather 
+        // than a JRE there will be a tools.jar in $JDK_HOME/lib directory.
         return System.getProperty("java.home") + "../lib/tools.jar";
     }
 
