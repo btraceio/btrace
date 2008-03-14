@@ -32,7 +32,11 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.BTraceUtils;
-import com.sun.btrace.comm.*;
+import com.sun.btrace.comm.Command;
+import com.sun.btrace.comm.EventCommand;
+import com.sun.btrace.comm.ExitCommand;
+import com.sun.btrace.comm.InstrumentCommand;
+import com.sun.btrace.comm.WireIO;
 
 /**
  * Represents a remote client communicated by socket.

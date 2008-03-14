@@ -30,14 +30,23 @@
 
 package com.sun.btrace.compiler;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.CharBuffer;
 import java.util.Map;
 import java.util.HashMap;
-import javax.tools.*;
+import javax.tools.FileObject;
+import javax.tools.ForwardingJavaFileManager;
+import javax.tools.JavaFileManager;
+import javax.tools.JavaFileObject;
 import javax.tools.JavaFileObject.Kind;
+import javax.tools.SimpleJavaFileObject;
 
 /**
  * JavaFileManager that keeps compiled .class bytes in memory.

@@ -25,6 +25,11 @@
 
 package com.sun.btrace.agent;
 
+import com.sun.btrace.comm.Command;
+import com.sun.btrace.comm.ErrorCommand;
+import com.sun.btrace.comm.ExitCommand;
+import com.sun.btrace.comm.InstrumentCommand;
+import com.sun.btrace.comm.MessageCommand;
 import java.lang.instrument.Instrumentation;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -32,8 +37,6 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import com.sun.btrace.BTraceRuntime;
-import com.sun.btrace.comm.*;
 
 /**
  * Represents a local client communicated by trace file.

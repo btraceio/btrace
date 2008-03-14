@@ -30,16 +30,20 @@ import java.io.FileInputStream;
 import java.io.BufferedInputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import org.objectweb.asm.*;
 import com.sun.btrace.VerifierException;
-import com.sun.btrace.BTraceUtils;
 import static org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.util.Messages;
 import com.sun.btrace.util.NullVisitor;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassAdapter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 
 /**
  * This class verifies that a BTrace program is safe

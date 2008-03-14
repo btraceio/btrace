@@ -25,17 +25,21 @@
 
 package com.sun.btrace.runtime;
 
-import java.io.*;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.objectweb.asm.*;
 import static org.objectweb.asm.Opcodes.ACC_INTERFACE;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.util.NullVisitor;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.Attribute;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 
 /**
  * This class checks whether a given target class

@@ -25,12 +25,13 @@
 
 package com.sun.btrace.runtime;
 
-import org.objectweb.asm.*;
 import static org.objectweb.asm.Opcodes.*;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.io.*;
 import com.sun.btrace.RunnableGenerator;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 
 /**
  * This class generates a java.lang.Runnable implementation 

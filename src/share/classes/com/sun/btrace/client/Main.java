@@ -31,8 +31,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
-import com.sun.btrace.comm.*;
 import com.sun.btrace.CommandListener;
+import com.sun.btrace.comm.Command;
+import com.sun.btrace.comm.ErrorCommand;
+import com.sun.btrace.comm.ExitCommand;
+import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.util.Messages;
 
 /**

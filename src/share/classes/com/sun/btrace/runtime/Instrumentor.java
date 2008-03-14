@@ -29,13 +29,22 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
-import org.objectweb.asm.*;
 import static org.objectweb.asm.Opcodes.*;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Where;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassAdapter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodAdapter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.BTraceRuntime;
-import java.io.*; 
 
 /**
  * This instruments a probed class with BTrace probe

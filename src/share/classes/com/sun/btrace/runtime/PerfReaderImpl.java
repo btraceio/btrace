@@ -25,9 +25,16 @@
 
 package com.sun.btrace.runtime;
 
-import sun.jvmstat.monitor.*;
 import java.net.URISyntaxException;
 import com.sun.btrace.PerfReader;
+import sun.jvmstat.monitor.IntegerMonitor;
+import sun.jvmstat.monitor.LongMonitor;
+import sun.jvmstat.monitor.Monitor;
+import sun.jvmstat.monitor.MonitorException;
+import sun.jvmstat.monitor.MonitoredHost;
+import sun.jvmstat.monitor.MonitoredVm;
+import sun.jvmstat.monitor.StringMonitor;
+import sun.jvmstat.monitor.VmIdentifier;
 
 public class PerfReaderImpl implements PerfReader {
     private volatile MonitoredVm thisVm;

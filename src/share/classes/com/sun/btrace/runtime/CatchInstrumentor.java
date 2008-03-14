@@ -25,10 +25,16 @@
 
 package com.sun.btrace.runtime;
 
-import org.objectweb.asm.*;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.Map;
 import java.util.HashMap;
-import java.io.*;
+import org.objectweb.asm.ClassAdapter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
 
 /**
  * This visitor helps in inserting code whenever an exception 

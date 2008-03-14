@@ -27,7 +27,10 @@ package com.sun.btrace.runtime;
 
 import java.util.Map;
 import java.util.HashMap;
-import org.objectweb.asm.*;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodAdapter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 import static org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 

@@ -29,12 +29,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Set;
-import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-import javax.annotation.processing.*;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ClassTree;
@@ -43,6 +41,13 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TaskEvent;
 import com.sun.source.util.TaskListener;
 import com.sun.source.util.Trees;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
 
 /**
  * An annotation processor that validates a BTrace program.

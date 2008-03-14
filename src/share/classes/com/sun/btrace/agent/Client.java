@@ -25,7 +25,6 @@
 
 package com.sun.btrace.agent;
 
-import java.lang.instrument.*;
 import java.io.IOException;
 import java.security.ProtectionDomain;
 import java.util.List;
@@ -34,7 +33,11 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.CommandListener;
-import com.sun.btrace.comm.*;
+import com.sun.btrace.comm.ErrorCommand;
+import com.sun.btrace.comm.ExitCommand;
+import com.sun.btrace.comm.InstrumentCommand;
+import com.sun.btrace.comm.OkayCommand;
+import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
 import com.sun.btrace.runtime.Instrumentor;
@@ -47,7 +50,9 @@ import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
 import com.sun.btrace.runtime.PerfReaderImpl;
 import com.sun.btrace.util.NullVisitor;
-import sun.misc.Unsafe;
+import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.IllegalClassFormatException;
+import java.lang.instrument.Instrumentation;
 
 /**
  * Abstract class that represents a BTrace client

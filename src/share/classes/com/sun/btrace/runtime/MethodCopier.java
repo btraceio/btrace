@@ -25,14 +25,24 @@
 
 package com.sun.btrace.runtime;
 
-import org.objectweb.asm.*;
+import com.sun.btrace.util.NullVisitor;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.lang.reflect.Method;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.Attribute;
+import org.objectweb.asm.ClassAdapter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 import static com.sun.btrace.runtime.Constants.CLASS_INITIALIZER;
-import com.sun.btrace.util.NullVisitor;
-import java.io.*;
 
 /**
  * This class copies a set of methods from one class
