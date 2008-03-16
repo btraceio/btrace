@@ -327,6 +327,15 @@ public class Client {
         if (sock != null) {
             sock.close();
         }
+        reset();
+    }
+    /**
+     * reset the internal status of the client
+     */
+    private void reset() {
+        sock = null;
+        ois = null;
+        oos = null;
     }
 
     //-- Internals only below this point
