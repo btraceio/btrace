@@ -29,8 +29,11 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MessageCommand extends DataCommand {
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss:SSS");
     private long time;
     private String msg;
 
@@ -69,7 +72,7 @@ public class MessageCommand extends DataCommand {
     
     public void print(PrintWriter out) {
         if (time != 0L) {
-            out.print(time);
+            out.print(DATE_FORMAT.format(new Date(time)));
             out.print(" : ");
         }
         if (msg != null) {
