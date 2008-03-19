@@ -28,8 +28,9 @@ package com.sun.btrace.comm;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.IOException;
+import java.io.PrintWriter;
 
-public class MessageCommand extends Command {
+public class MessageCommand extends DataCommand {
     private long time;
     private String msg;
 
@@ -49,7 +50,7 @@ public class MessageCommand extends Command {
     
     protected void write(ObjectOutput out) throws IOException {
         out.writeLong(time);
-        out.writeUTF(msg);
+        out.writeUTF(msg != null? msg : "");
     }
 
     protected void read(ObjectInput in) 
@@ -64,5 +65,15 @@ public class MessageCommand extends Command {
 
     public String getMessage() {
         return msg;
+    }
+    
+    public void print(PrintWriter out) {
+        if (time != 0L) {
+            out.print(time);
+            out.print(" : ");
+        }
+        if (msg != null) {
+            out.print(msg);
+        }
     }
 }

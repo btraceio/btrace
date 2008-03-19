@@ -51,6 +51,8 @@ import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.EventCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.MessageCommand;
+import com.sun.btrace.comm.NumberMapCommand;
+import com.sun.btrace.comm.StringMapCommand;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -596,23 +598,31 @@ public final class BTraceRuntime {
             throw new IllegalArgumentException();
         }
     }
-
+    
     static void printMap(Map map) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
             synchronized(map) {
+                Map<String, String> m = new HashMap<String, String>();
                 Set keys = map.keySet();
                 for (Object key: keys) {
-                   print(BTraceUtils.str(key));
-                   print(" = ");
-                   println(BTraceUtils.str(map.get(key)));
+                   m.put(BTraceUtils.str(key), BTraceUtils.str(map.get(key)));
                 }
+                printStringMap(null, m);
             }
         } else {
             print(BTraceUtils.str(map));
         }
     }
 
+    static void printNumberMap(String name, Map<String, ? extends Number> data) {
+        getCurrent().send(new NumberMapCommand(name, data));
+    }
+    
+    static void printStringMap(String name, Map<String, String> data) {
+        getCurrent().send(new StringMapCommand(name, data));
+    }
+    
     // BTrace exit built-in function
     static void exit(int exitCode) {
         BTraceRuntime runtime = getCurrent();
@@ -926,7 +936,7 @@ public final class BTraceRuntime {
                                  int start, int numFrames) {
         getCurrent().send(stackTraceStr(prefix, st, start, numFrames));         
     }
-
+     
     // print/println functions
     static void print(String str) {
         getCurrent().send(str);

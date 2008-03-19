@@ -38,11 +38,12 @@ public abstract class Command implements Serializable {
     public static final byte MESSAGE    = 4;
     public static final byte RENAME     = 5;
     public static final byte SUCCESS    = 6;
-
+    public static final byte NUMBER_MAP = 7;
+    public static final byte STRING_MAP = 8;
 
     protected byte type;
     protected Command(byte type) {
-        if (type < ERROR || type > SUCCESS) {
+        if (type < ERROR || type > STRING_MAP) {
             throw new IllegalArgumentException();
         }
         this.type = type;

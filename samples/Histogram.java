@@ -54,8 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
     @OnTimer(4000) 
     public static void print() {
         if (size(histo) != 0) {
-            printMap(histo);
-            println("===============");
+            printNumberMap("Component Histogram", histo);
         }
     }
 }

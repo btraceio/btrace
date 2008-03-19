@@ -51,7 +51,7 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/1">
             <compilation-unit>
                 <package-root>src/share/classes</package-root>
-                <classpath mode="compile">lib/asm-3.0.jar:${tools.jar}</classpath>
+                <classpath mode="compile">lib/asm-3.0.jar;${tools.jar}</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>
         </java-data>

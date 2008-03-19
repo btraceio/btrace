@@ -25,8 +25,6 @@
 
 package com.sun.btrace;
 
-import java.io.FileOutputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.Reference;
@@ -1002,8 +1000,7 @@ public final class BTraceUtils {
     // printing values
     
     /**
-     * Prints the given Map. Map is printed in multiple lines
-     * with each line containing "key = value".
+     * Prints the given Map.
      *
      * @param map Map that is printed.
      */
@@ -1011,6 +1008,26 @@ public final class BTraceUtils {
         BTraceRuntime.printMap(map);
     }
 
+    /**
+     * Prints the given Map.
+     * 
+     * @param name - the name of the map
+     * @param data - the map data
+     */
+    public static void printStringMap(String name, Map<String,String> data) {
+        BTraceRuntime.printStringMap(name, data);
+    }
+    
+    /**
+     * Prints the given Map. 
+     * 
+     * @param name - the name of the map
+     * @param data - the map data
+     */
+    public static void printNumberMap(String name, Map<String, ? extends Number> data) {
+        BTraceRuntime.printNumberMap(name, data);
+    }
+    
     /**
      * Prints the elements of the given array as comma
      * separated line bounded by '[' and ']'.
@@ -1081,7 +1098,7 @@ public final class BTraceUtils {
         buf.append('}');
         println(buf.toString());
     }
-
+    
     // various print methods
     public static void print(Object obj) {
         BTraceRuntime.print(str(obj));
@@ -2693,7 +2710,7 @@ public final class BTraceUtils {
      * Prints all System properties.
      */
     public static void printProperties() {
-        printMap(properties());
+        BTraceRuntime.printMap(properties());
     }
 
     /**
@@ -2725,7 +2742,7 @@ public final class BTraceUtils {
      * Prints all system environment values.
      */
     public static void printEnv() {
-        printMap(getenv());
+        BTraceRuntime.printMap(getenv());
     }
 
     /**

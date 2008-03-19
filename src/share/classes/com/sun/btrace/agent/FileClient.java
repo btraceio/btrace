@@ -22,14 +22,13 @@
  * CA 95054 USA or visit www.sun.com if you need additional information or
  * have any questions.
  */
-
 package com.sun.btrace.agent;
 
 import com.sun.btrace.comm.Command;
+import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
-import com.sun.btrace.comm.MessageCommand;
 import java.lang.instrument.Instrumentation;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -44,45 +43,52 @@ import java.io.PrintWriter;
  * @author A. Sundararajan
  */
 class FileClient extends Client {
+
     private volatile PrintWriter out;
 
     FileClient(Instrumentation inst, File scriptFile, File traceFile) throws IOException {
         super(inst);
         this.out = new PrintWriter(new BufferedWriter(new FileWriter(traceFile)));
         byte[] code = readAll(scriptFile);
-        if (debug) Main.debugPrint("read " + scriptFile);
+        if (debug) {
+            Main.debugPrint("read " + scriptFile);
+        }
         InstrumentCommand cmd = new InstrumentCommand(code, new String[0]);
         Class btraceClazz = loadClass(cmd);
         if (btraceClazz == null) {
             throw new RuntimeException("can not load BTrace class");
-        } 
+        }
     }
 
     public void onCommand(Command cmd) throws IOException {
         if (out == null) {
             throw new IOException("no output stream");
         }
-        if (debug) Main.debugPrint("client " + getClassName() + ": got " + cmd);
+        if (debug) {
+            Main.debugPrint("client " + getClassName() + ": got " + cmd);
+        }
         switch (cmd.getType()) {
-        case Command.EXIT:
-            onExit(((ExitCommand)cmd).getExitCode());
-            break;
-        case Command.MESSAGE:
-            out.print(((MessageCommand)cmd).getMessage());
-            out.flush();
-            break;
-        case Command.ERROR: {
-            ErrorCommand ecmd = (ErrorCommand)cmd;
-            Throwable cause = ecmd.getCause();
-            if (cause != null) {
-                cause.printStackTrace(out);
+            case Command.EXIT:
+                onExit(((ExitCommand) cmd).getExitCode());
+                break;
+            case Command.MESSAGE:
+            case Command.NUMBER_MAP:
+            case Command.STRING_MAP:
+                ((DataCommand) cmd).print(out);
                 out.flush();
+                break;
+            case Command.ERROR: {
+                ErrorCommand ecmd = (ErrorCommand) cmd;
+                Throwable cause = ecmd.getCause();
+                if (cause != null) {
+                    cause.printStackTrace(out);
+                    out.flush();
+                }
+                break;
             }
-            break;
-        }         
-        default:
-            // ignore
-            break;
+            default:
+                // ignore
+                break;
         }
     }
 

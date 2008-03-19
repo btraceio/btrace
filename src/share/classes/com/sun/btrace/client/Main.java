@@ -33,6 +33,7 @@ import sun.misc.Signal;
 import sun.misc.SignalHandler;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.Command;
+import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.MessageCommand;
@@ -156,13 +157,9 @@ public final class Main {
         return new CommandListener() {
             public void onCommand(Command cmd) throws IOException {
                 int type = cmd.getType();
-                if (type == Command.MESSAGE) {
-                    MessageCommand mcmd = (MessageCommand)cmd;
-                    String msg = mcmd.getMessage();
-                    if (msg != null) {
-                        out.print(mcmd.getMessage());
-                        out.flush();
-                    }
+                if (cmd instanceof DataCommand) {
+                    ((DataCommand)cmd).print(out);
+                    out.flush();
                 } else if (type == Command.EXIT) {
                     exiting = true;
                     ExitCommand ecmd = (ExitCommand)cmd;

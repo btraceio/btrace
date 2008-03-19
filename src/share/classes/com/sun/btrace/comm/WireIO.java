@@ -22,7 +22,6 @@
  * CA 95054 USA or visit www.sun.com if you need additional information or
  * have any questions.
  */
-
 package com.sun.btrace.comm;
 
 import java.io.IOException;
@@ -30,7 +29,9 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class WireIO {
-    private WireIO() {}
+
+    private WireIO() {
+    }
 
     public static Command read(ObjectInput in) throws IOException {
         byte type = in.readByte();
@@ -38,25 +39,31 @@ public class WireIO {
         switch (type) {
             case Command.ERROR:
                 cmd = new ErrorCommand();
-            break;
+                break;
             case Command.EVENT:
                 cmd = new EventCommand();
-            break;
+                break;
             case Command.EXIT:
                 cmd = new ExitCommand();
-            break;
+                break;
             case Command.INSTRUMENT:
                 cmd = new InstrumentCommand();
-            break;
+                break;
             case Command.MESSAGE:
                 cmd = new MessageCommand();
-            break;
+                break;
             case Command.RENAME:
                 cmd = new RenameCommand();
-            break;
+                break;
             case Command.SUCCESS:
                 cmd = new OkayCommand();
-            break;
+                break;
+            case Command.NUMBER_MAP:
+                cmd = new NumberMapCommand();
+                break;
+            case Command.STRING_MAP:
+                cmd = new StringMapCommand();
+                break;
             default:
                 throw new RuntimeException("invalid command: " + type);
         }
@@ -69,7 +76,7 @@ public class WireIO {
     }
 
     public static void write(ObjectOutput out, Command cmd)
-        throws IOException {
+            throws IOException {
         out.writeByte(cmd.getType());
         cmd.write(out);
         out.flush();
