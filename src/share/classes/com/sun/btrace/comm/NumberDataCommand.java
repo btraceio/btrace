@@ -22,6 +22,7 @@
  * CA 95054 USA or visit www.sun.com if you need additional information or
  * have any questions.
  */
+
 package com.sun.btrace.comm;
 
 import java.io.IOException;
@@ -32,66 +33,38 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A data command that hold data of type Map<String, String>.
+ * A simple data command that has one number value.
  * 
  * @author A. Sundararajan
  */
-public class StringMapCommand extends DataCommand {
-
-    private String name;
-    private Map<String, String> data;
-
-    public StringMapCommand() {
-        this(null, null);
-    }
-
-    public StringMapCommand(String name, Map<String, String> data) {
-        super(STRING_MAP);
-        this.name = name;
-        this.data = data;
+public class NumberDataCommand extends DataCommand {
+    private Number value;
+    
+    public NumberDataCommand() {
+        this(null, 0);
     }
     
-    public String getName() {
-        return name;
+    public NumberDataCommand(String name, Number value) {
+        super(NUMBER, name);
+        this.value = value;
     }
     
-    public Map<String, String> getData() {
-        return data;
-    }
-
     public void print(PrintWriter out) {
         if (name != null && !name.equals("")) {
-            out.println(name);
+            out.print(name);
+            out.print(" = ");
         }
-        if (data != null) {
-            for (Map.Entry<String, String> e : data.entrySet()) {
-                out.print(e.getKey());
-                out.print(" = ");
-                out.println(e.getValue());
-            }
-        }
+        out.println(value);
     }
     
     protected void write(ObjectOutput out) throws IOException {
         out.writeUTF(name != null ? name : "");
-        if (data != null) {
-            out.writeInt(data.size());
-            for (String key : data.keySet()) {
-                out.writeUTF(key);
-                out.writeUTF(data.get(key));
-            }
-        } else {
-            out.writeInt(0);
-        }
+        out.writeObject(value);
     }
 
     protected void read(ObjectInput in)
             throws IOException, ClassNotFoundException {
-        name = in.readUTF();
-        data = new HashMap<String, String>();
-        int sz = in.readInt();
-        for (int i = 0; i < sz; i++) {
-            data.put(in.readUTF(), (String) in.readUTF());
-        }
+        this.name = in.readUTF();
+        this.value = (Number) in.readObject();
     }
 }

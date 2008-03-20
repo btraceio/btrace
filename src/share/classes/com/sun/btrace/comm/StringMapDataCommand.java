@@ -32,30 +32,24 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A data command that hold data of type Map<String, Number>.
+ * A data command that hold data of type Map<String, String>.
  * 
  * @author A. Sundararajan
  */
-public class NumberMapCommand extends DataCommand {
+public class StringMapDataCommand extends DataCommand {
 
-    private String name;
-    private Map<String, ? extends Number> data;
+    private Map<String, String> data;
 
-    public NumberMapCommand() {
+    public StringMapDataCommand() {
         this(null, null);
     }
 
-    public NumberMapCommand(String name, Map<String, ? extends Number> data) {
-        super(NUMBER_MAP);
-        this.name = name;
+    public StringMapDataCommand(String name, Map<String, String> data) {
+        super(STRING_MAP, name);
         this.data = data;
     }
-
-    public String getName() {
-        return name;
-    }
     
-    public Map<String, ? extends Number> getData() {
+    public Map<String, String> getData() {
         return data;
     }
 
@@ -64,7 +58,7 @@ public class NumberMapCommand extends DataCommand {
             out.println(name);
         }
         if (data != null) {
-            for (Map.Entry<String, ? extends Number> e : data.entrySet()) {
+            for (Map.Entry<String, String> e : data.entrySet()) {
                 out.print(e.getKey());
                 out.print(" = ");
                 out.println(e.getValue());
@@ -78,7 +72,7 @@ public class NumberMapCommand extends DataCommand {
             out.writeInt(data.size());
             for (String key : data.keySet()) {
                 out.writeUTF(key);
-                out.writeObject(data.get(key));
+                out.writeUTF(data.get(key));
             }
         } else {
             out.writeInt(0);
@@ -87,12 +81,11 @@ public class NumberMapCommand extends DataCommand {
 
     protected void read(ObjectInput in)
             throws IOException, ClassNotFoundException {
-        this.name = in.readUTF();
-        Map<String, Number> map = new HashMap<String, Number>();
+        name = in.readUTF();
+        data = new HashMap<String, String>();
         int sz = in.readInt();
         for (int i = 0; i < sz; i++) {
-            map.put(in.readUTF(), (Number) in.readObject());
+            data.put(in.readUTF(), (String) in.readUTF());
         }
-        this.data = map;
     }
 }

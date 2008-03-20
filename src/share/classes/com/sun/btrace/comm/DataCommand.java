@@ -33,8 +33,15 @@ import java.io.PrintWriter;
  * @author A> Sundararajan
  */
 public abstract class DataCommand extends Command {
-    public DataCommand(byte type) {
+    protected String name;
+    
+    public DataCommand(byte type,String name) {
         super(type);
+        this.name = name;
+    }
+    
+    public String getName() {
+        return name;        
     }
     
     public abstract void print(PrintWriter out);

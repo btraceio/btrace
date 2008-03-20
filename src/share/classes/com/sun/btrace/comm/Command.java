@@ -40,10 +40,14 @@ public abstract class Command implements Serializable {
     public static final byte SUCCESS    = 6;
     public static final byte NUMBER_MAP = 7;
     public static final byte STRING_MAP = 8;
+    public static final byte NUMBER     = 9;
+    
+    public static final byte FIRST_COMMAND = ERROR;
+    public static final byte LAST_COMMAND = NUMBER;
 
     protected byte type;
     protected Command(byte type) {
-        if (type < ERROR || type > STRING_MAP) {
+        if (type < FIRST_COMMAND || type > LAST_COMMAND) {
             throw new IllegalArgumentException();
         }
         this.type = type;

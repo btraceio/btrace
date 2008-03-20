@@ -59,10 +59,13 @@ public class WireIO {
                 cmd = new OkayCommand();
                 break;
             case Command.NUMBER_MAP:
-                cmd = new NumberMapCommand();
+                cmd = new NumberMapDataCommand();
                 break;
             case Command.STRING_MAP:
-                cmd = new StringMapCommand();
+                cmd = new StringMapDataCommand();
+                break;
+            case Command.NUMBER:
+                cmd = new NumberDataCommand();
                 break;
             default:
                 throw new RuntimeException("invalid command: " + type);

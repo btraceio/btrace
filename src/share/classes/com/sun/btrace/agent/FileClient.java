@@ -71,12 +71,6 @@ class FileClient extends Client {
             case Command.EXIT:
                 onExit(((ExitCommand) cmd).getExitCode());
                 break;
-            case Command.MESSAGE:
-            case Command.NUMBER_MAP:
-            case Command.STRING_MAP:
-                ((DataCommand) cmd).print(out);
-                out.flush();
-                break;
             case Command.ERROR: {
                 ErrorCommand ecmd = (ErrorCommand) cmd;
                 Throwable cause = ecmd.getCause();
@@ -87,7 +81,10 @@ class FileClient extends Client {
                 break;
             }
             default:
-                // ignore
+                if (cmd instanceof DataCommand) {
+                    ((DataCommand) cmd).print(out);
+                    out.flush();
+                }
                 break;
         }
     }

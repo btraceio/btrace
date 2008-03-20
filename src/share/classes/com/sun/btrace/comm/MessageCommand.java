@@ -38,7 +38,7 @@ public class MessageCommand extends DataCommand {
     private String msg;
 
     public MessageCommand(long time, String msg) {
-        super(MESSAGE);
+        super(MESSAGE, null);
         this.time = time;
         this.msg = msg;
     }

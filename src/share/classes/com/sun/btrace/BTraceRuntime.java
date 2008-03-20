@@ -51,8 +51,9 @@ import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.EventCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.MessageCommand;
-import com.sun.btrace.comm.NumberMapCommand;
-import com.sun.btrace.comm.StringMapCommand;
+import com.sun.btrace.comm.NumberDataCommand;
+import com.sun.btrace.comm.NumberMapDataCommand;
+import com.sun.btrace.comm.StringMapDataCommand;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -615,12 +616,16 @@ public final class BTraceRuntime {
         }
     }
 
+    static void printNumber(String name, Number value) {
+        getCurrent().send(new NumberDataCommand(name, value));
+    }
+
     static void printNumberMap(String name, Map<String, ? extends Number> data) {
-        getCurrent().send(new NumberMapCommand(name, data));
+        getCurrent().send(new NumberMapDataCommand(name, data));
     }
     
     static void printStringMap(String name, Map<String, String> data) {
-        getCurrent().send(new StringMapCommand(name, data));
+        getCurrent().send(new StringMapDataCommand(name, data));
     }
     
     // BTrace exit built-in function

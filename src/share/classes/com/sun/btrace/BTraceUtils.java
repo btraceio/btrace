@@ -1029,6 +1029,16 @@ public final class BTraceUtils {
     }
     
     /**
+     * Prints a number.
+     * 
+     * @param name - name of the number data
+     * @param value - value of the numerical data
+     */
+    public static void printNumber(String name, Number value) {
+        BTraceRuntime.printNumber(name, value);
+    }
+    
+    /**
      * Prints the elements of the given array as comma
      * separated line bounded by '[' and ']'.
      */
