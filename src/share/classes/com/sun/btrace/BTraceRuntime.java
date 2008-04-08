@@ -81,6 +81,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
+import java.util.concurrent.ThreadFactory;
 import javax.management.ListenerNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.Notification;
@@ -1197,7 +1198,15 @@ public final class BTraceRuntime {
         if (threadPool == null) {
             synchronized (this) {
                 if (threadPool == null) {
-                    threadPool = Executors.newFixedThreadPool(1);
+                    threadPool = Executors.newFixedThreadPool(1, 
+                        new ThreadFactory() {
+                            @Override
+                            public Thread newThread(Runnable r) {
+                                Thread th = new Thread(r);
+                                th.setDaemon(true);
+                                return th;
+                            }
+                        });
                 }
             }
         }
