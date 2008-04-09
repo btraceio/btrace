@@ -10,9 +10,14 @@
             </properties>
             <folders>
                 <source-folder>
-                    <label>src</label>
+                    <label>src\share</label>
                     <type>java</type>
-                    <location>src</location>
+                    <location>src/share</location>
+                </source-folder>
+                <source-folder>
+                    <label>src\solaris</label>
+                    <type>java</type>
+                    <location>src/solaris</location>
                 </source-folder>
             </folders>
             <ide-actions>
@@ -33,8 +38,12 @@
             <view>
                 <items>
                     <source-folder style="packages">
-                        <label>src</label>
-                        <location>src</location>
+                        <label>src\share</label>
+                        <location>src/share</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>src\solaris</label>
+                        <location>src/solaris</location>
                     </source-folder>
                     <source-file>
                         <location>${ant.script}</location>
@@ -51,6 +60,8 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/1">
             <compilation-unit>
                 <package-root>src/share/classes</package-root>
+                <package-root>src/share</package-root>
+                <package-root>src/solaris</package-root>
                 <classpath mode="compile">lib/asm-3.0.jar;${tools.jar}</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>
