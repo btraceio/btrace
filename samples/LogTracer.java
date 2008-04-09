@@ -23,6 +23,8 @@
  * have any questions.
  */
 
+package com.sun.btrace.samples;
+
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
 import java.util.logging.*;

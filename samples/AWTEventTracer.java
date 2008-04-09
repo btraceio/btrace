@@ -23,6 +23,8 @@
  * have any questions.
  */
 
+package com.sun.btrace.samples;
+
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
 import java.awt.EventQueue;
@@ -42,6 +44,7 @@ public class AWTEventTracer {
   public static void onevent(EventQueue queue, AWTEvent event) {
      if (event instanceof FocusEvent) {
          println(event); 
+         println();
      }
   }
 }

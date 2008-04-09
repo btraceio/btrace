@@ -23,6 +23,8 @@
  * have any questions.
  */
 
+package com.sun.btrace.samples;
+
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Export;
@@ -55,6 +57,7 @@ import com.sun.btrace.annotations.Export;
         // we can access counter as "count" as well
         // as from jvmstat counter directly.
         println(count);
-        // or equivalently println(perfLong("btrace.ThreadCounter.count"));
+        // or equivalently ...
+        println(perfLong("btrace.com.sun.btrace.samples.ThreadCounter.count"));
     }
 }
