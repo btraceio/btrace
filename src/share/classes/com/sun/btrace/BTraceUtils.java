@@ -3139,6 +3139,43 @@ public final class BTraceUtils {
         BTraceRuntime.writeXML(obj, fileName);
     }
 
+    // speculative buffer management
+    /**
+     * Returns an identifier for a new speculative buffer.
+     * 
+     * @return new speculative buffer id
+     */
+    public static int speculation() {
+        return BTraceRuntime.speculation();
+    }
+    
+    /**
+     * Sets current speculative buffer id.
+     * 
+     * @param id the speculative buffer id
+     */
+    public static void speculate(int id) {
+        BTraceRuntime.speculate(id);
+    }
+    
+    /**
+     * Commits the speculative buffer associated with id.
+     * 
+     * @param id the speculative buffer id
+     */
+    public static void commit(int id) {
+        BTraceRuntime.commit(id);
+    }
+    
+    /**
+     * Discards the speculative buffer associated with id.
+     * 
+     * @param id the speculative buffer id
+     */
+    public static void discard(int id) {
+        BTraceRuntime.discard(id);
+    }
+    
     // Internals only below this point
     private static void checkStatic(Field field) {
         if (! Modifier.isStatic(field.getModifiers())) {

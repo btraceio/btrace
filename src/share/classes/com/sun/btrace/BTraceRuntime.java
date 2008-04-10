@@ -48,6 +48,7 @@ import com.sun.btrace.annotations.OnTimer;
 import com.sun.btrace.annotations.OnEvent;
 import com.sun.btrace.annotations.OnLowMemory;
 import com.sun.btrace.comm.Command;
+import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.EventCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.MessageCommand;
@@ -81,6 +82,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
 import javax.management.ListenerNotFoundException;
 import javax.management.MBeanServer;
@@ -192,6 +194,94 @@ public final class BTraceRuntime {
 
     // Command queue for the client
     private volatile LinkedBlockingQueue<Command> queue;
+    
+    private static class SpeculativeQueueManager {
+        // maximum number of speculative buffers
+        private static final int MAX_SPECULATIVE_BUFFERS = Short.MAX_VALUE;
+        // per buffer message limit
+        private static final int MAX_SPECULATIVE_MSG_LIMIT = Short.MAX_VALUE;
+        // next speculative buffer id
+        private int nextSpeculationId;
+        // speculative buffers map
+        private ConcurrentHashMap<Integer, LinkedBlockingQueue<Command>> speculativeQueues;
+        // per thread current speculative buffer id
+        private ThreadLocal<Integer> currentSpeculationId;
+        
+        SpeculativeQueueManager() {
+            speculativeQueues = new ConcurrentHashMap<Integer, LinkedBlockingQueue<Command>>();
+            currentSpeculationId = new ThreadLocal<Integer>();
+        }
+       
+        void clear() {
+            speculativeQueues.clear();
+            speculativeQueues = null;
+            currentSpeculationId.remove();
+            currentSpeculationId = null;
+        }
+        
+        int speculation() {
+            int nextId = getNextSpeculationId();
+            if (nextId != -1) {
+                speculativeQueues.put(nextId, 
+                        new LinkedBlockingQueue<Command>(MAX_SPECULATIVE_MSG_LIMIT));
+            }
+            return nextId;
+        }
+        
+        boolean send(Command cmd) {
+            Integer curId = currentSpeculationId.get();
+            if ((curId != null) && (cmd.getType() != Command.EXIT)) {
+                LinkedBlockingQueue<Command> sb = speculativeQueues.get(curId);
+                if (sb != null) {
+                    try {
+                        sb.add(cmd);
+                    } catch (IllegalStateException ise) {
+                        sb.clear();
+                        sb.add(new MessageCommand("speculative buffer overflow: " + curId));
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        void speculate(int id) {
+            validateId(id);
+            currentSpeculationId.set(id);
+        }
+        
+        void commit(int id, LinkedBlockingQueue<Command> result) {
+            validateId(id);
+            currentSpeculationId.set(null);
+            LinkedBlockingQueue<Command> sb = speculativeQueues.get(id);
+            if (sb != null) {
+                result.addAll(sb);
+                sb.clear();
+            }
+        }
+        
+        void discard(int id) {
+            validateId(id);
+            currentSpeculationId.set(null);
+            speculativeQueues.get(id).clear();
+        }
+        
+        // -- Internals only below this point
+        private synchronized int getNextSpeculationId() {
+            if (nextSpeculationId == MAX_SPECULATIVE_BUFFERS) {
+                return -1;
+            }
+            return nextSpeculationId++;
+        }
+        
+        private void validateId(int id) {
+            if (! speculativeQueues.containsKey(id)) {
+                throw new RuntimeException("invalid speculative buffer id: " + id);
+            }
+        }
+    }
+    // per client speculative buffer manager
+    private volatile SpeculativeQueueManager specQueueManager;
     // background thread that sends Commands to the handler
     private volatile Thread cmdThread;
     // CommandListener that receives the Commands
@@ -206,6 +296,7 @@ public final class BTraceRuntime {
                          Instrumentation inst) { 
         this.args = args;
         this.queue = new LinkedBlockingQueue<Command>();
+        this.specQueueManager = new SpeculativeQueueManager();
         this.cmdListener = cmdListener;
         this.className = className;
         this.instrumentation = inst;
@@ -218,17 +309,17 @@ public final class BTraceRuntime {
                         Command cmd = queue.take();
                         cmdListener.onCommand(cmd);
                         if (cmd.getType() == Command.EXIT) {
-                            runtimes.put(className, null);
-                            queue.clear();
                             return;
                         }                           
                     }
-                } catch (InterruptedException ie) {
+                } catch (InterruptedException ignored) {
                 } catch (IOException ignored) {
-                    queue.clear();
-                    disabled = true;
                 } finally {
+                    runtimes.put(className, null);
+                    queue.clear();
+                    specQueueManager.clear();
                     BTraceRuntime.leave();
+                    disabled = true;
                 }
             }
         });
@@ -523,6 +614,26 @@ public final class BTraceRuntime {
 
     // package-private interface to BTraceUtil class.
 
+    static int speculation() {
+        BTraceRuntime current = getCurrent();
+        return current.specQueueManager.speculation();
+    }
+
+    static void speculate(int id) {
+        BTraceRuntime current = getCurrent();
+        current.specQueueManager.speculate(id);
+    }
+    
+    static void discard(int id) {
+        BTraceRuntime current = getCurrent();
+        current.specQueueManager.discard(id);
+    }
+    
+    static void commit(int id) {
+        BTraceRuntime current = getCurrent();
+        current.specQueueManager.commit(id, current.queue);
+    }
+    
     // BTrace map functions
     static <K, V> Map<K, V> newHashMap() {
         return new BTraceMap(new HashMap<K, V>());
@@ -1374,7 +1485,10 @@ public final class BTraceRuntime {
 
     private void send(Command cmd) {
         try {
-            queue.put(cmd);
+            boolean speculated = specQueueManager.send(cmd);
+            if (! speculated) {
+                queue.put(cmd);
+            }
         } catch (InterruptedException ie) {
             ie.printStackTrace();
         }
@@ -1396,11 +1510,13 @@ public final class BTraceRuntime {
                     } catch (Throwable ignored) {
                     }
                 } else {
-                    StringBuilder buf = new StringBuilder();
-                    buf.append(th.toString());
-                    buf.append(LINE_SEPARATOR);
-                    buf.append(stackTraceStr("\t", th.getStackTrace(), 0, -1));
-                    send(buf.toString());
+                    try {
+                        // Do not call send(Command). Exception messages should not
+                        // go to speculative buffers!
+                        queue.put(new ErrorCommand(th));
+                    } catch (InterruptedException ie) {
+                        ie.printStackTrace();
+                    }
                 }
             }
         } finally {
