@@ -1,0 +1,29 @@
+<#assign licenseFirst = "/*">
+<#assign licensePrefix = " * ">
+<#assign licenseLast = " */">
+<#include "../../Licenses/license-${project.license}.txt">
+
+<#if package?? && package != "">
+package ${package};
+
+</#if>
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
+
+/**
+ * This BTrace program demonstrates command line
+ * arguments. $ method helps in getting command line
+ * arguments. In this example, desired thread name is
+ * passed from the command line (of the BTrace client).
+ */
+@BTrace public class ${name} {
+    @OnMethod(
+        clazz="java.lang.Thread",
+        method="run"
+    )
+    public static void started() {
+        if (strcmp(name(currentThread()), $(2)) == 0) {
+            println(strcat("started ", $(2)));
+        }
+    }
+}

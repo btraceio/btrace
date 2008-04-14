@@ -1,0 +1,31 @@
+<#assign licenseFirst = "/*">
+<#assign licensePrefix = " * ">
+<#assign licenseLast = " */">
+<#include "../../Licenses/license-${project.license}.txt">
+
+<#if package?? && package != "">
+package ${package};
+
+</#if>
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
+
+/*
+ * This sample prints a line every time any line
+ * of code of java.lang.Thread class is reached.
+ * The line param may be set to any particular
+ * value so that the probe fires only when that line
+ * is reached. But, the value -1 means all line numbers.
+ */
+@BTrace
+public class ${name} {
+    @OnMethod(
+        clazz="java.lang.Thread",
+        location=@Location(value=Kind.LINE, line=-1)
+    )
+    public static void online(int line) {
+        print(strcat(name(probeClass()), "."));
+        print(strcat(probeMethod(), ":"));
+        println(line);
+    } 
+}

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- You may freely edit this file. See harness/README in the NetBeans platform -->
+<!-- for some information on what you could do (e.g. targets to override). -->
+<!-- If you delete this file and reopen the project it will be recreated. -->
+<project name="org.netbeans.modules.btrace.project" default="netbeans" basedir=".">
+    <description>Builds, tests, and runs the project org.netbeans.modules.btrace.project.</description>
+    <import file="nbproject/build-impl.xml"/>
+    
+    <target name="nblib" depends="init">
+        <mkdir dir="build/antclasses"/>
+        <javac srcdir="antsrc" destdir="build/antclasses" debug="${build.compiler.debug}" deprecation="${build.compiler.deprecation}" source="1.5" includeantruntime="false">
+            <classpath>
+                <pathelement path="${antsrc.cp}"/>
+            </classpath>
+        </javac>
+        <copy todir="build/antclasses">
+            <fileset dir="antsrc" excludes="${jar-excludes}"/>
+        </copy>
+        <mkdir dir="${cluster}/ant/nblib"/>
+        <jar jarfile="${cluster}/ant/nblib/${code.name.base.dashes}.jar" compress="false">
+            <fileset dir="build/antclasses"/>
+        </jar>
+    </target>
+
+    <target name="netbeans-extra" depends="nblib"/>
+</project>

@@ -1,0 +1,30 @@
+<#assign licenseFirst = "/*">
+<#assign licensePrefix = " * ">
+<#assign licenseLast = " */">
+<#include "../../Licenses/license-${project.license}.txt">
+
+<#if package?? && package != "">
+package ${package};
+
+</#if>
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
+
+/*
+ * A simple sample that dumps heap of the target at start and exits.
+ * This BTrace program mimics the jmap tool (with -dump option).
+ */
+@BTrace
+public class ${name} {
+    static {
+        String name;
+        if ($length() == 3) {
+            name = $(2);
+        } else {
+            name = "heap.bin";
+        }
+        dumpHeap(name);
+        println("heap dumped!");
+        exit(0);
+    }
+}

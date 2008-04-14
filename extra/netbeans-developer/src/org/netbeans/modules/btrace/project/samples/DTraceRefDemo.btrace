@@ -1,0 +1,40 @@
+<#assign licenseFirst = "/*">
+<#assign licensePrefix = " * ">
+<#assign licenseLast = " */">
+<#include "../../Licenses/license-${project.license}.txt">
+
+<#if package?? && package != "">
+package ${package};
+
+</#if>
+import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.*;
+
+/*
+ * This sample demonstrates associating a D-script
+ * with a BTrace program using @DTraceRef annotation.
+ * BTrace client looks for absolute or relative path for
+ * the D-script and submits it to kernel *before* submitting
+ * BTrace program to JTrace agent.
+ */
+@DTraceRef("classload.d")
+@BTrace public class ${name} {
+   @OnMethod(
+     clazz="java.lang.ClassLoader",
+     method="defineClass"
+   )
+   public static void defineClass() {
+       println("user defined loader load start");
+   }
+
+   @OnMethod(
+     clazz="java.lang.ClassLoader", 
+     method="defineClass",
+     location=@Location(Kind.RETURN)
+   )   
+   public static void defineclass(Class cl) {
+       println(strcat("loaded ", name(cl)));
+       jstack();
+       println("==========================");
+   }
+}

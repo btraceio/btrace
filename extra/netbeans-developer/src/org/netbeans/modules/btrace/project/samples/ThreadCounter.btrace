@@ -1,0 +1,43 @@
+<#assign licenseFirst = "/*">
+<#assign licensePrefix = " * ">
+<#assign licenseLast = " */">
+<#include "../../Licenses/license-${project.license}.txt">
+
+<#if package?? && package != "">
+package ${package};
+
+</#if>
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
+
+/**
+ * This sample creates a jvmstat counter and
+ * increments it everytime Thread.start() is
+ * called. This thread count may be accessed
+ * from outside the process. The @Export annotated
+ * fields are mapped to jvmstat counters. The counter
+ * name is "btrace." + <className> + "." + <fieldName>
+ */ 
+@BTrace public class ${name} {
+
+    // create a jvmstat counter using @Export
+    @Export private static long count;
+
+    @OnMethod(
+        clazz="java.lang.Thread",
+        method="start"
+    ) 
+    public static void onnewThread(Thread t) {
+        // updating counter is easy. Just assign to
+        // the static field!
+        count++;
+    }
+
+    @OnTimer(2000) 
+    public static void ontimer() {
+        // we can access counter as "count" as well
+        // as from jvmstat counter directly.
+        println(count);
+        // or equivalently println(perfLong("btrace.ThreadCounter.count"));
+    }
+}

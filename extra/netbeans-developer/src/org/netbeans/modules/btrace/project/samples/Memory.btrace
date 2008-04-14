@@ -1,0 +1,28 @@
+<#assign licenseFirst = "/*">
+<#assign licensePrefix = " * ">
+<#assign licenseLast = " */">
+<#include "../../Licenses/license-${project.license}.txt">
+
+<#if package?? && package != "">
+package ${package};
+
+</#if>
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
+
+/**
+ * Simple BTrace program that prints memory
+ * usage once every 4 seconds. It is possible
+ * to modify this to dump heap depending on 
+ * used memory crossing a threshold or some other
+ * such condition. [dumpHeap is a built-in function].
+ */
+@BTrace public class ${name} {
+    @OnTimer(4000)
+    public static void printMem() {
+        println("Heap:");
+        println(heapUsage());
+        println("Non-Heap:");
+        println(nonHeapUsage());
+    }
+}
