@@ -466,6 +466,13 @@ public final class BTraceUtils {
     public static int accessFlags(Field field) {
         return field.getModifiers();
     }    
+     
+    /**
+     * Returns the current context class loader
+     */
+    public static ClassLoader contextClassLoader() {
+        return Thread.currentThread().getContextClassLoader();
+    }
     
     // get Class of the given name
     
@@ -483,7 +490,7 @@ public final class BTraceUtils {
      */
     public static Class classForName(String name, ClassLoader cl) {
         try {
-            return Class.forName(name, false, cl);
+                return Class.forName(name, false, cl);
         } catch (ClassNotFoundException exp) {
             throw translate(exp);
         }
@@ -3033,6 +3040,11 @@ public final class BTraceUtils {
         return BTraceRuntime.getCurrentThreadUserTime();
     }
 
+        
+    public static long getSystemNanoTime() {
+        return System.nanoTime();
+    }
+    
     /**
      * Returns an implementation-specific approximation of the amount of storage consumed by
      * the specified object. The result may include some or all of the object's overhead,
