@@ -40,7 +40,6 @@
 
 package org.netbeans.modules.btrace.ui;
 
-import com.sun.btrace.annotations.BTrace;
 import java.awt.Dialog;
 import org.openide.awt.Mnemonics;
 import org.openide.awt.MouseUtils;
@@ -50,16 +49,9 @@ import org.openide.util.RequestProcessor;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import javax.lang.model.element.TypeElement;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.ListSelectionModel;
@@ -67,32 +59,17 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import org.netbeans.api.java.classpath.ClassPath;
-import org.netbeans.api.java.project.JavaProjectConstants;
-import org.netbeans.api.java.source.ClassIndex;
-import org.netbeans.api.java.source.ClasspathInfo;
-import org.netbeans.api.java.source.CompilationController;
-import org.netbeans.api.java.source.ElementHandle;
-import org.netbeans.api.java.source.JavaSource;
-import org.netbeans.api.java.source.SourceUtils;
-import org.netbeans.api.java.source.Task;
-import org.netbeans.api.project.Project;
-import org.netbeans.api.project.ProjectUtils;
-import org.netbeans.api.project.SourceGroup;
-import org.netbeans.api.project.Sources;
-import org.netbeans.spi.java.classpath.support.ClassPathSupport;
-import org.netbeans.spi.project.SubprojectProvider;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
 import org.openide.filesystems.FileUtil;
-import org.openide.util.Exceptions;
 
 
 /**
- * Browses and allows to choose a project's main class.
+ * Browses and allows to choose a BTrace script
  *
  * @author Tomas Hurka
  * @author Jiri Rechtacek
+ * @author Jaroslav Bachorik
  */
 public class ScriptChooser extends JPanel {
     //~ Static fields/initializers -----------------------------------------------------------------------------------------------
