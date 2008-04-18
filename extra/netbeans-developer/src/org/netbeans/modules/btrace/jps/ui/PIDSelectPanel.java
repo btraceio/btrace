@@ -244,11 +244,10 @@ public final class PIDSelectPanel extends JPanel implements ActionListener {
     }
 
     private Runnable comboRefresher = new Runnable() {
-            private RunningVM[] vms = JpsProxy.getRunningVMs();
-            private Object[] ar = new Object[((vms == null) ? 0 : vms.length) + 1];
-
-
             public void run() {
+                final RunningVM[] vms = JpsProxy.getRunningVMs();
+                final Object[] ar = new Object[((vms == null) ? 0 : vms.length) + 1];
+                
                 if (vms == null) {
                     ar[0] = ERROR_GETTING_PROCESSES_ITEM_TEXT;
                 } else if (vms.length == 0) {
