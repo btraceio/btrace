@@ -23,4 +23,12 @@
     </target>
 
     <target name="netbeans-extra" depends="nblib"/>
+    
+    <target name="build-init" depends="harness.build-init">
+        <ant dir="${basedir}/../../make" antfile="build.xml" target="all"/>
+        <mkdir dir="${basedir}/release/modules/ext"/>
+        <copy todir="${basedir}/release/modules/ext" overwrite="true">
+            <fileset dir="${basedir}/../../build" includes="**/*.jar"/>
+        </copy>
+    </target>
 </project>
