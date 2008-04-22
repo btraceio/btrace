@@ -52,7 +52,7 @@
                 <attr name="templateCategory" stringvalue="btrace-scripting"/>
                 <attr name="template" boolvalue="true"/>
                 <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
-                <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/java/project/resources/Script.html"/>
+                <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/resources/Script.html"/>
                 <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.Bundle"/>
                 <attr name="SystemFileSystem.icon" urlvalue="nbresloc:org/netbeans/modules/java/resources/class.gif"/>
             </file>
@@ -63,45 +63,218 @@
                 <attr name="templateCategory" stringvalue="btrace-scripting"/>
                 <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.Bundle"/>
                 <attr name="template" boolvalue="true"/>
-                <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/java/project/resources/Package.html"/>
+                <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/resources/Package.html"/>
             </file>
             <folder name="Samples">
-                <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.Bundle"/>
+                <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
                 <attr name="position" intvalue="300"/>
                 <file name="AWTEventTracer.java" url="samples/AWTEventTracer.btrace">
-                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.Bundle"/>
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
                     <attr name="template" boolvalue="true"/>
                     <attr name="templateCategory" stringvalue="btrace-scripting"/>
                     <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
-                    <attr name="position" intvalue="100"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/AWTEventTracer.html"/>
+                    <attr name="position" intvalue="750"/>
                 </file>
                 <file name="AllLines.java" url="samples/AllLines.btrace">
-                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.Bundle"/>
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
                     <attr name="template" boolvalue="true"/>
                     <attr name="templateCategory" stringvalue="btrace-scripting"/>
                     <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/AllLines.html"/>
                     <attr name="position" intvalue="200"/>
                 </file>
                 <file name="AllMethods.java" url="samples/AllMethods.btrace">
-                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.Bundle"/>
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
                     <attr name="template" boolvalue="true"/>
                     <attr name="templateCategory" stringvalue="btrace-scripting"/>
                     <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/AllMethods.html"/>
                     <attr name="position" intvalue="300"/>
                 </file>
                 <file name="ArgArray.java" url="samples/ArgArray.btrace">
-                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.Bundle"/>
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
                     <attr name="template" boolvalue="true"/>
                     <attr name="templateCategory" stringvalue="btrace-scripting"/>
                     <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/ArgArray.html"/>
                     <attr name="position" intvalue="400"/>
                 </file>
                 <file name="Classload.java" url="samples/Classload.btrace">
-                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.Bundle"/>
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
                     <attr name="template" boolvalue="true"/>
                     <attr name="templateCategory" stringvalue="btrace-scripting"/>
                     <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/Classload.html"/>
                     <attr name="position" intvalue="500"/>
+                </file>
+                <file name="CommandArg.java" url="samples/CommandArg.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/CommandArg.html"/>
+                    <attr name="position" intvalue="450"/>
+                </file>
+                <file name="Deadlock.java" url="samples/Deadlock.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/Deadlock.html"/>
+                    <attr name="position" intvalue="425"/>
+                </file>
+                <file name="FileTracker.java" url="samples/FileTracker.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/FileTracker.html"/>
+                    <attr name="position" intvalue="800"/>
+                </file>
+                <file name="FinalizeTracker.java" url="samples/FinalizeTracker.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/FinalizeTracker.html"/>
+                    <attr name="position" intvalue="900"/>
+                </file>
+                <file name="Histogram.java" url="samples/Histogram.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/Histogram.html"/>
+                    <attr name="position" intvalue="412"/>
+                </file>
+                <file name="LogTracer.java" url="samples/LogTracer.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/LogTracer.html"/>
+                    <attr name="position" intvalue="893"/>
+                </file>
+                <file name="MemAlerter.java" url="samples/MemAlerter.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/MemAlerter.html"/>
+                    <attr name="position" intvalue="1100"/>
+                </file>
+                <file name="Memory.java" url="samples/Memory.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/Memory.html"/>
+                    <attr name="position" intvalue="1200"/>
+                </file>
+                <file name="MultiClass.java" url="samples/MultiClass.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/MultiClass.html"/>
+                    <attr name="position" intvalue="375"/>
+                </file>
+                <file name="NewComponent.java" url="samples/NewComponent.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/NewComponent.html"/>
+                    <attr name="position" intvalue="387"/>
+                </file>
+                <file name="OnThrow.java" url="samples/OnThrow.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/OnThrow.html"/>
+                    <attr name="position" intvalue="1500"/>
+                </file>
+                <file name="OnThrow.java" url="samples/OnThrow.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/OnThrow.html"/>
+                    <attr name="position" intvalue="1600"/>
+                </file>
+                <file name="ProbeExit.java" url="samples/ProbeExit.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/ProbeExit.html"/>
+                    <attr name="position" intvalue="1700"/>
+                </file>
+                <file name="SocketTracker.java" url="samples/SocketTracker.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/SocketTracker.html"/>
+                    <attr name="position" intvalue="850"/>
+                </file>
+                <file name="SysProp.java" url="samples/SysProp.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/SysProp.html"/>
+                    <attr name="position" intvalue="1800"/>
+                </file>
+                <file name="ThreadCounter.java" url="samples/ThreadCounter.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/ThreadCounter.html"/>
+                    <attr name="position" intvalue="1900"/>
+                </file>
+                <file name="ThreadStart.java" url="samples/ThreadStart.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/ThreadStart.html"/>
+                    <attr name="position" intvalue="2000"/>
+                </file>
+                <file name="Timers.java" url="samples/Timers.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/Timers.html"/>
+                    <attr name="position" intvalue="2100"/>
+                </file>
+                <file name="URLTracker.java" url="samples/URLTracker.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/URLTracker.html"/>
+                    <attr name="position" intvalue="875"/>
+                </file>
+                <file name="WebServiceTracker.java" url="samples/WebServiceTracker.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/WebServiceTracker.html"/>
+                    <attr name="position" intvalue="887"/>
+                </file>
+                <file name="AllSync.java" url="samples/AllSync.btrace">
+                    <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.btrace.project.samples.Bundle"/>
+                    <attr name="template" boolvalue="true"/>
+                    <attr name="templateCategory" stringvalue="btrace-scripting"/>
+                    <attr name="javax.script.ScriptEngine" stringvalue="freemarker"/>
+                    <attr name="templateWizardURL" urlvalue="nbresloc:/org/netbeans/modules/btrace/project/samples/AllSync.html"/>
+                    <attr name="position" intvalue="350"/>
                 </file>
             </folder>
         </folder>
@@ -158,7 +331,19 @@
             </folder>
             
             <folder name="Lookup"/>
-            
         </folder>
     </folder>
+    <!--
+    <folder name="Editors">
+        <folder name="text">
+            <folder name="x-java">
+                <folder name="codegenerators">
+                    <file name="org-netbeans-modules-btrace-editor-codegen-OnMethodGenerator$Factory.instance">
+                        <attr name="position" intvalue="1"/>
+                    </file>
+                </folder>
+            </folder>
+        </folder>
+    </folder>
+    -->
 </filesystem>
