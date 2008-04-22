@@ -8,6 +8,7 @@ import com.sun.btrace.CommandListener;
 import com.sun.btrace.client.Client;
 import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.MessageCommand;
+import com.sun.btrace.comm.StringMapDataCommand;
 import java.awt.event.ActionEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -64,8 +65,8 @@ public class BTraceManager {
             }
         }
         
-//        final Client client = new Client(port[0], ".", true, false, null);
-        final Client client = new Client(port[0]);
+        final Client client = new Client(port[0], ".", true, false, null);
+//        final Client client = new Client(port[0]);
         final AtomicBoolean isStopEnabled = new AtomicBoolean(false);
         final AtomicBoolean isRerunEnabled = new AtomicBoolean(false);
         
@@ -130,6 +131,16 @@ public class BTraceManager {
                                 case Command.MESSAGE: {
                                     MessageCommand msg = (MessageCommand)cmd;
                                     io.getOut().println(msg.getTime() + " " + msg.getMessage());
+                                    break;
+                                }
+                                case Command.STRING_MAP: {
+                                    StringMapDataCommand msg = (StringMapDataCommand)cmd;
+                                    if (msg.getData().size() > 0) {
+                                        io.getOut().println("Contents of map " + msg.getName());
+                                        for(Map.Entry<String, String> entry : msg.getData().entrySet()) {
+                                            io.getOut().println(entry.getKey() + " : " + entry.getValue());
+                                        }
+                                    }
                                     break;
                                 }
                                 case Command.EXIT: {
