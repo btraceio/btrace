@@ -680,7 +680,7 @@ public class Instrumentor extends ClassAdapter {
                 };
 
             case SYNC_ENTRY:
-                return new SynchronizedInstrumentor(mv, access, name, desc) {
+                return new SynchronizedInstrumentor(className, mv, access, name, desc) {
                     private void callAction() {
                         switch (numActionArgs) {
                             case 0:
@@ -708,10 +708,18 @@ public class Instrumentor extends ClassAdapter {
                             callAction();
                         }
                     }
+                    
+                    @Override
+                    protected void onBeforeSyncExit() {
+                    }
+                    
+                    @Override
+                    protected void onAfterSyncExit() {
+                    }
                 };
 
             case SYNC_EXIT:
-                return new SynchronizedInstrumentor(mv, access, name, desc) {
+                return new SynchronizedInstrumentor(className, mv, access, name, desc) {
                     private void callAction() {
                         switch (numActionArgs) {
                             case 0:
@@ -724,6 +732,14 @@ public class Instrumentor extends ClassAdapter {
                                 }
                             break;
                         }
+                    }
+                    
+                    @Override
+                    protected void onBeforeSyncEntry() {
+                    }
+
+                    @Override
+                    protected void onAfterSyncEntry() {
                     }
 
                     @Override

@@ -215,6 +215,10 @@ public class MethodInstrumentor extends MethodAdapter {
         super.visitVarInsn(type.getOpcode(ISTORE), index);
     }
 
+    public void pop() {
+        super.visitInsn(POP);
+    }
+    
     public void dup() {
         super.visitInsn(DUP);
     }

@@ -347,9 +347,19 @@ public final class BTraceUtils {
         } else if (obj.getClass().getClassLoader() == null) {
             return obj.toString();
         } else {
-            int hashCode = System.identityHashCode(obj);
-            return obj.getClass().getName() + "@" + Integer.toHexString(hashCode);
+            return identityStr(obj);
         }
+    }
+
+    /**
+     * Returns identity string of the form class-name@identity-hash
+     * 
+     * @param obj object for which identity string is returned
+     * @return identity string
+     */
+    public static String identityStr(Object obj) {
+        int hashCode = System.identityHashCode(obj);
+        return obj.getClass().getName() + "@" + Integer.toHexString(hashCode);
     }
     
     /**

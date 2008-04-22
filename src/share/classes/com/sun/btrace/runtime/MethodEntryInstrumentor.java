@@ -74,8 +74,20 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
     }       
 
     public void visitInsn(int opcode) {
-        if (opcode == RETURN && !entryCalled) {
-            onMethodEntry();
+        switch (opcode) {
+            case IRETURN:
+            case ARETURN:
+            case FRETURN:                           
+            case LRETURN:
+            case DRETURN:
+            case RETURN:
+                if (!entryCalled) {
+                    entryCalled = true;
+                    onMethodEntry();
+                }
+                break;
+            default:                           
+                break;
         }
         super.visitInsn(opcode);
     }

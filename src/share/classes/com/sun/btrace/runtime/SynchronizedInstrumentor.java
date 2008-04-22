@@ -32,33 +32,68 @@ import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 import static org.objectweb.asm.Opcodes.*;
 
 /**
  * This visitor helps in inserting code whenever a synchronized
- * block is about to be entered/exited. The code to insert on synchronized
- * block entry/exit may be decided by derived class. By default, 
- * this class inserts code to print a message.
+ * method or block is about to be entered/exited. The code to insert on 
+ * synchronized method or block entry/exit may be decided by derived class. 
+ * By default, this class inserts code to print a message.
  *
  * @author A. Sundararajan
  */
-public class SynchronizedInstrumentor extends MethodInstrumentor {
-    public SynchronizedInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
+public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
+    private String className;
+    private boolean isStatic;
+    private boolean isSyncMethod;
+    
+    public SynchronizedInstrumentor(String className,
+        MethodVisitor mv, int access, String name, String desc) {
         super(mv, access, name, desc);
+        this.className = className;
+        isStatic = (access & ACC_STATIC) != 0;
+        isSyncMethod = (access & ACC_SYNCHRONIZED) != 0;       
+    }
+    
+    @Override
+    protected void onMethodEntry() {
+        if (isSyncMethod) {
+            pushLockedObject();
+            onAfterSyncEntry();
+            pop();
+        }
+    }
+
+    @Override
+    protected void onMethodReturn(int opcode) {
+        onErrorReturn();
+    }
+    
+    @Override
+    protected void onErrorReturn() {
+        if (isSyncMethod) {
+            pushLockedObject();
+            onBeforeSyncExit();
+            pop();
+        }
     }
 
     public void visitInsn(int opcode) {
         if (opcode == MONITORENTER) {
+            dup();
             onBeforeSyncEntry();
         } else if (opcode == MONITOREXIT) {
+            dup();
             onBeforeSyncExit();
         }
         super.visitInsn(opcode);
         if (opcode == MONITORENTER) {
             onAfterSyncEntry();
+            pop();
         } else if (opcode == MONITOREXIT) {
             onAfterSyncExit();
+            pop();
         }
     }
 
@@ -69,7 +104,7 @@ public class SynchronizedInstrumentor extends MethodInstrumentor {
     protected void onAfterSyncEntry() {
         println("after synchronized entry");
     }
-
+    
     protected void onBeforeSyncExit() {
         println("before synchronized exit");
     }
@@ -77,7 +112,16 @@ public class SynchronizedInstrumentor extends MethodInstrumentor {
     protected void onAfterSyncExit() {
         println("after synchronized exit");
     }
-
+    
+    private void pushLockedObject() {
+        if (isStatic) {
+            // push class object
+            super.visitLdcInsn(Type.getObjectType(className));
+        } else {
+            loadThis();
+        }
+    }
+    
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.SynchronizedInstrumentor <class>");
@@ -91,11 +135,19 @@ public class SynchronizedInstrumentor extends MethodInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassAdapter(writer) {
+                 private String className;
+                 public void visit(int version, int access, String name, 
+                     String signature, String superName, String[] interfaces) {
+                     super.visit(version, access, name, signature,
+                             superName, interfaces);
+                     className = name;
+                 }        
+    
                  public MethodVisitor visitMethod(int access, String name, String desc, 
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new SynchronizedInstrumentor(mv, access, name, desc);
+                     return new SynchronizedInstrumentor(className, mv, access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());
