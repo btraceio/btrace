@@ -1041,6 +1041,12 @@ public final class BTraceRuntime {
             buf.append(st[i].toString());
             buf.append(LINE_SEPARATOR);
         }
+        if (limit < st.length) {
+            buf.append(prefix);
+            buf.append(st.length - limit);
+            buf.append(" more frame(s) ...");
+            buf.append(LINE_SEPARATOR);
+        }
         return buf.toString();
     }
 
