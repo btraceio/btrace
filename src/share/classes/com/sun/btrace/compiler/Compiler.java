@@ -128,8 +128,8 @@ public class Compiler {
             new PrintWriter(System.err), ".", classPath);
         if (classes != null) {
             // write .class files.
-            for (String c : classes.keySet()) {
-                String name = c.replace(".", File.separator);
+            for (Map.Entry<String, byte[]> c : classes.entrySet()) {
+                String name = c.getKey().replace(".", File.separator);
                 int index = name.lastIndexOf(File.separatorChar);
                 String dir = outputDir + File.separator;
                 if (index != -1) {
@@ -145,7 +145,7 @@ public class Compiler {
                 file += ".class";              
                 File out = new File(dir, file);
                 FileOutputStream fos = new FileOutputStream(out);
-                fos.write(classes.get(c));
+                fos.write(c.getValue());
                 fos.close();
             }
         }

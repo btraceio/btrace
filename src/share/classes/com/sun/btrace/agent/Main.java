@@ -53,7 +53,6 @@ import com.sun.btrace.util.Messages;
 public final class Main {
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
-    private static volatile boolean noServer;
     private static volatile boolean debugMode;
     private static volatile boolean dumpClasses;
     private static volatile String dumpDir;
@@ -313,7 +312,11 @@ public final class Main {
                 file += ".class";
                 File out = new File(dir, file);
                 FileOutputStream fos = new FileOutputStream(out);
-                fos.write(code);
+                try {
+                    fos.write(code);
+                } finally {
+                    fos.close();
+                }
             } catch (Exception exp) {
                 exp.printStackTrace();
             }

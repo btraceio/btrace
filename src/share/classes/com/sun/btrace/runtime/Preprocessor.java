@@ -249,6 +249,8 @@ public class Preprocessor extends ClassAdapter {
            BTRACE_RUNTIME_PUT_PERFDOUBLE = putPerfDouble.getName();
            BTRACE_RUNTIME_PUT_PERFDOUBLE_DESC = 
                        Type.getMethodDescriptor(putPerfDouble);           
+       } catch (RuntimeException re) {
+           throw re;
        } catch (Exception exp) {
            throw new RuntimeException(exp);
        }

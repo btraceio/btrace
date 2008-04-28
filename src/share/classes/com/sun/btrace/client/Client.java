@@ -170,7 +170,11 @@ public class Client {
             try {
                 FileInputStream fis = new FileInputStream(file);
                 if (debug) debugPrint("reading " + fileName);
-                fis.read(code);
+                try {
+                    fis.read(code);
+                } finally {
+                    fis.close();
+                }
                 if (debug) debugPrint("read " + fileName);
             } catch (IOException exp) {
                 err.println(exp.getMessage());

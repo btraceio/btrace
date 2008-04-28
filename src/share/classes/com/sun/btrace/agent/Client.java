@@ -168,14 +168,13 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (debug) Main.debugPrint("removed @OnMethod, @OnProbe methods");
         if (debug) Main.debugPrint("sending Okay command");
         onCommand(new OkayCommand());
-        Class btraceClazz;
         try {
             BTraceRuntime.leave();
             if (debug) Main.debugPrint("about to defineClass " + className);
             if (shouldAddTransformer()) {
-                btraceClazz = runtime.defineClass(codeBuf);
+                this.btraceClazz = runtime.defineClass(codeBuf);
             } else {
-                btraceClazz = runtime.defineClass(codeBuf, false);
+                this.btraceClazz = runtime.defineClass(codeBuf, false);
             }
             if (debug) Main.debugPrint("defineClass succeeded for " + className);
         } catch (Throwable th) {
@@ -185,7 +184,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         } finally {
             BTraceRuntime.enter();
         }
-        return btraceClazz;
+        return this.btraceClazz;
     }
 
     protected abstract void closeAll() throws IOException;

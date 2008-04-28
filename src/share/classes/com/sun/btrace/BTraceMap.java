@@ -36,7 +36,7 @@ import java.util.Set;
  * @author A. Sundararajan
  */
 final class BTraceMap<K,V> implements Map<K,V> {
-    private int numItems;
+    //private int numItems;
     private final Map<K,V> m;
     BTraceMap(Map<K,V> m) {
         if (m == null) {

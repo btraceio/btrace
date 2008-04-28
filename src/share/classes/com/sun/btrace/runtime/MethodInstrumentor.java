@@ -195,7 +195,7 @@ public class MethodInstrumentor extends MethodAdapter {
         } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
             super.visitIntInsn(SIPUSH, value);
         } else {
-            super.visitLdcInsn(new Integer(value));
+            super.visitLdcInsn(Integer.valueOf(value));
         }
     }
 
@@ -314,6 +314,7 @@ public class MethodInstrumentor extends MethodAdapter {
                 super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_CHARACTER,
                                 BOX_VALUEOF, 
                                 BOX_CHARACTER_DESC);
+                break;
             case 'B':
                 super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_BYTE,
                                 BOX_VALUEOF, 

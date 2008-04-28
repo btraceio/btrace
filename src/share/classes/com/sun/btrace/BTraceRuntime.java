@@ -505,7 +505,6 @@ public final class BTraceRuntime {
      * Write the value of integer perf. counter of given name.
      */
     public static void putPerfInt(int value, String name) {
-        ByteBuffer b = counters.get(name);
         long l = (long)value;        
         putPerfLong(l, name);
     }
@@ -717,9 +716,9 @@ public final class BTraceRuntime {
             map.getClass().getClassLoader() == null) {
             synchronized(map) {
                 Map<String, String> m = new HashMap<String, String>();
-                Set keys = map.keySet();
-                for (Object key: keys) {
-                   m.put(BTraceUtils.str(key), BTraceUtils.str(map.get(key)));
+                Set<Map.Entry<Object, Object>> entries = map.entrySet();
+                for (Map.Entry<Object, Object> e : entries) {
+                   m.put(BTraceUtils.str(e.getKey()), BTraceUtils.str(e.getValue()));
                 }
                 printStringMap(null, m);
             }
@@ -1005,13 +1004,14 @@ public final class BTraceRuntime {
 
     // stack trace functions
     static String stackTraceAllStr(int numFrames) {
-        Map<Thread, StackTraceElement[]> traces = Thread.getAllStackTraces();
+        Set<Map.Entry<Thread, StackTraceElement[]>> traces = 
+                Thread.getAllStackTraces().entrySet();
         StringBuilder buf = new StringBuilder();
-        for (Thread th : traces.keySet()) {
-            buf.append(th.toString());
+        for (Map.Entry<Thread, StackTraceElement[]> t : traces) {
+            buf.append(t.getKey().toString());
             buf.append(LINE_SEPARATOR);
             buf.append(LINE_SEPARATOR);
-            StackTraceElement[] st = traces.get(th);
+            StackTraceElement[] st = t.getValue();
             buf.append(stackTraceStr("\t", st, 0, numFrames));
             buf.append(LINE_SEPARATOR);
         }
@@ -1645,7 +1645,7 @@ public final class BTraceRuntime {
         try {
             v = value.getBytes("UTF-8");
         } catch (java.io.UnsupportedEncodingException e) {
-            // ignore, UTF-8 encoding is always known
+            throw new RuntimeException(e);
         }
         byte[] v1 = new byte[v.length+1];
         System.arraycopy(v, 0, v1, 0, v.length);
@@ -1669,7 +1669,6 @@ public final class BTraceRuntime {
         }
 
         this.clazz = cl;
-        List<Method> actionsList = new ArrayList<Method>();
         List<Method> timersList = new ArrayList<Method>();
         this.eventHandlers = new HashMap<String, Method>();
         this.lowMemHandlers = new HashMap<String, Method>();

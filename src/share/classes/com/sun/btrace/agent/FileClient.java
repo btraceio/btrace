@@ -98,8 +98,12 @@ class FileClient extends Client {
     private static byte[] readAll(File file) throws IOException {
         int size = (int) file.length();
         FileInputStream fis = new FileInputStream(file);
-        byte[] buf = new byte[size];
-        fis.read(buf);
-        return buf;
+        try {
+            byte[] buf = new byte[size];
+            fis.read(buf);
+            return buf;
+        } finally {
+            fis.close();
+        }
     }
 }
