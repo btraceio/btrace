@@ -59,18 +59,33 @@ public class InstrumentUtils {
     }
 
     public static void accept(ClassReader reader, ClassVisitor visitor) {
-        accept(reader, visitor, 0);
+        accept(reader, visitor, ClassReader.SKIP_FRAMES);
     }
 
     public static void accept(ClassReader reader, ClassVisitor visitor, int flags) {
         reader.accept(visitor, flags);
     }
-
+    
+    private static boolean isJDK16OrAbove(byte[] code) {
+        // skip 0xCAFEBABE magic and minor version
+        final int majorOffset = 4 + 2;
+        int major = 0x0FFFF & ((code[majorOffset] << 8) | code[majorOffset + 1]);
+        return major >= 50;
+    }
+    
     public static ClassWriter newClassWriter() {
-        return newClassWriter(null, ClassWriter.COMPUTE_FRAMES |
-                                    ClassWriter.COMPUTE_MAXS);
+        return newClassWriter(null, 
+                ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
     }
 
+    public static ClassWriter newClassWriter(byte[] code) {
+        int flags = ClassWriter.COMPUTE_MAXS;
+        if (isJDK16OrAbove(code)) {
+            flags |= ClassWriter.COMPUTE_FRAMES;
+        }
+        return newClassWriter(null, flags);
+    }
+    
     public static ClassWriter newClassWriter(ClassReader reader, int flags) {
         // FIXME: getCommonSuperClass is called by ClassWriter to merge two types
         // - persumably to compute stack frame attribute. We get LinkageError

@@ -139,8 +139,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
         this.filter = new ClassFilter(onMethods);
         if (debug) Main.debugPrint("created class filter");
-
-        ClassWriter writer = InstrumentUtils.newClassWriter();
+        
+        ClassWriter writer = InstrumentUtils.newClassWriter(btraceCode);
         ClassReader reader = new ClassReader(btraceCode);
         ClassVisitor visitor = new Preprocessor(writer);
         if (BTraceRuntime.classNameExists(className)) {
@@ -257,7 +257,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private byte[] instrument(String cname, byte[] target) {
         byte[] instrumentedCode;
         try {
-            ClassWriter writer = InstrumentUtils.newClassWriter();
+            ClassWriter writer = InstrumentUtils.newClassWriter(target);
             InstrumentUtils.accept(new ClassReader(target), 
                 new Instrumentor(className, btraceCode, onMethods, writer));
             instrumentedCode = writer.toByteArray();
@@ -285,7 +285,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     }
 
     private static byte[] removeMethods(byte[] buf) {
-        ClassWriter writer = InstrumentUtils.newClassWriter();
+        ClassWriter writer = InstrumentUtils.newClassWriter(buf);
         ClassReader reader = new ClassReader(buf);
         InstrumentUtils.accept(reader, new MethodRemover(writer));
         return writer.toByteArray();
