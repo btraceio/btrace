@@ -226,7 +226,10 @@ may be used to specify methods abstractly. Refer to the sample
 <b><a href="../samples/WebServiceTracker.java">WebServiceTracker.java</a></b>.
 It is also possible to combine regular expressions with annotations - like
 <b><code>@/com\\.acme\\..+/</code></b> matches any class that is annotated by any annotation that matches the given
-regular expression. 
+regular expression. It is possible to match multiple classes by specifying super type. i.e., match all classes that are subtypes of
+a given super type. <b><code>+java.lang.Runnable</code></b> matches all classes implementing java.lang.Runnable
+interface. Refer to the sample <b><a href="../samples/SubtypeTracer.java">SubtypeTracer.java</a></b>.
+
 <li><b><a href="javadoc/com/sun/btrace/annotations/OnTimer.html">@com.sun.btrace.annotations.OnTimer</a></b> 
 annotation can be used to specify tracing 
 actions that have to run periodically once every N milliseconds. Time period is specified as long
@@ -412,6 +415,10 @@ by BTrace agent.
 demonstrates that it is okay to probe into System classes (like
 java.lang.System) and call BTrace built-in functions in the action
 method.
+
+<li><a href="../samples/SubtypeTracer.java">SubtypeTracer.java</a> -
+demonstrates that it is possible to match all subtypes of a given supertype.
+
 <li><a href="../samples/ThreadCounter.java">ThreadCounter.java</a>
 - demonstrates use of jvmstat counters from BTrace programs.
 <li><a href="../samples/ThreadStart.java">ThreadStart.java</a>

@@ -98,10 +98,10 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 skipRetransforms == false &&
                 filter.isCandidate(classBeingRedefined)) {
                 if (debug) Main.debugPrint("client " + className + ": instrumenting " + cname);
-                return instrument(cname, classfileBuffer);
+                return instrument(classBeingRedefined, cname, classfileBuffer);
             } else if (filter.isCandidate(classfileBuffer)) {
                 if (debug) Main.debugPrint("client " + className + ": instrumenting " + cname);
-                return instrument(cname, classfileBuffer); 
+                return instrument(classBeingRedefined, cname, classfileBuffer); 
             } else {
                 if (debug) Main.debugPrint("client " + className + ": skipping transform for " + cname);
                 return null;
@@ -254,12 +254,12 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                name.startsWith("sun/reflect");
     }
 
-    private byte[] instrument(String cname, byte[] target) {
+    private byte[] instrument(Class clazz, String cname, byte[] target) {
         byte[] instrumentedCode;
         try {
             ClassWriter writer = InstrumentUtils.newClassWriter(target);
             InstrumentUtils.accept(new ClassReader(target), 
-                new Instrumentor(className, btraceCode, onMethods, writer));
+                new Instrumentor(clazz, className,  btraceCode, onMethods, writer));
             instrumentedCode = writer.toByteArray();
         } catch (Throwable th) {
             Main.debugPrint(th);

@@ -33,6 +33,7 @@ import static org.objectweb.asm.Opcodes.ACC_INTERFACE;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.util.NullVisitor;
+import java.lang.reflect.Method;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassReader;
@@ -53,6 +54,10 @@ public class ClassFilter {
     private Pattern[] sourceClassPatterns;
     private String[] annotationClasses;
     private Pattern[] annotationClassPatterns;
+    // +foo type class pattern in any @OnMethod.
+    private String[] superTypes;
+    // same as above but stored in internal name form ('/' instead of '.')
+    private String[] superTypesInternal;
 
     public ClassFilter(List<OnMethod> onMethods) {
         init(onMethods);
@@ -62,7 +67,7 @@ public class ClassFilter {
         if (target.isInterface() || target.isPrimitive() || target.isArray()) {
             return false;
         }
-
+        
         String className = target.getName();
         for (String name : sourceClasses) {
             if (name.equals(className)) {
@@ -76,6 +81,12 @@ public class ClassFilter {
             }
         }
 
+        for (String st : superTypes) {
+            if (isSubTypeOf(target, st)) {
+                return true;
+            }
+        }
+        
         Annotation[] annotations = target.getAnnotations();
         String[] annoTypes = new String[annotations.length];
         for (int i = 0; i < annotations.length; i++) {
@@ -110,7 +121,27 @@ public class ClassFilter {
         InstrumentUtils.accept(reader, cv);
         return cv.isCandidate();
     }
-
+    
+    /* 
+     * return whether given Class is subtype of given type name
+     * Note that we can not use Class.iaAssignableFrom because the other
+     * type is specified by just name and not by Class object.
+     */
+    public static boolean isSubTypeOf(Class clazz, String typeName) {
+        if (clazz == null) {
+            return false;
+        } else if (clazz.getName().equals(typeName)) {
+            return true;
+        } else {
+            for (Class iface : clazz.getInterfaces()) {
+                if (isSubTypeOf(iface, typeName)) {
+                    return true;
+                }
+            }
+            return isSubTypeOf(clazz.getSuperclass(), typeName);
+        }
+    }
+    
     private class CheckingVisitor implements ClassVisitor {
         private boolean isInterface;
         private boolean isCandidate;
@@ -138,6 +169,19 @@ public class ClassFilter {
                 if (pat.matcher(name).matches()) {
                     isCandidate = true;
                     return;
+                }
+            }
+            
+            for (String st : superTypesInternal) {
+                if (superName.equals(st)) {
+                    isCandidate = true;
+                    return;
+                }
+                for (String iface : interfaces) {
+                    if (iface.equals(st)) {
+                        isCandidate = true;
+                        return;
+                    }
                 }
             }
         }
@@ -196,6 +240,8 @@ public class ClassFilter {
     private void init(List<OnMethod> onMethods) {
         List<String> strSrcList = new ArrayList<String>();
         List<Pattern> patSrcList = new ArrayList<Pattern>();
+        List<String> superTypesList = new ArrayList<String>();
+        List<String> superTypesInternalList = new ArrayList<String>();
         List<String> strAnoList = new ArrayList<String>();
         List<Pattern> patAnoList = new ArrayList<Pattern>();
 
@@ -219,6 +265,10 @@ public class ClassFilter {
                 } else {
                     strAnoList.add(className);
                 }                        
+            } else if (firstCh == '+') {
+                String superType = className.substring(1);
+                superTypesList.add(superType);
+                superTypesInternalList.add(superType.replace('.','/'));
             } else {
                 strSrcList.add(className);
             }     
@@ -228,7 +278,10 @@ public class ClassFilter {
         strSrcList.toArray(sourceClasses);
         sourceClassPatterns = new Pattern[patSrcList.size()];
         patSrcList.toArray(sourceClassPatterns);
-
+        superTypes = new String[superTypesList.size()];
+        superTypesList.toArray(superTypes);
+        superTypesInternal = new String[superTypesInternalList.size()];
+        superTypesInternalList.toArray(superTypesInternal);
         annotationClasses = new String[strAnoList.size()];
         strAnoList.toArray(annotationClasses);
         annotationClassPatterns = new Pattern[patAnoList.size()];

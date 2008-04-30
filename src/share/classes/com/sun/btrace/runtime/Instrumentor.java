@@ -59,21 +59,24 @@ public class Instrumentor extends ClassAdapter {
     private List<OnMethod> applicableOnMethods;
     private Set<OnMethod> calledOnMethods;
     private String className;
+    private Class clazz;
 
-    public Instrumentor(String btraceClassName, ClassReader btraceClass, 
+    public Instrumentor(Class clazz, 
+            String btraceClassName, ClassReader btraceClass, 
             List<OnMethod> onMethods, ClassVisitor cv) {
         super(cv);
-        btraceClassName = btraceClassName.replace('.', '/');
-        this.btraceClassName = btraceClassName;
+        this.clazz = clazz;
+        this.btraceClassName = btraceClassName.replace('.', '/');
         this.btraceClass = btraceClass;
         this.onMethods = onMethods;
-        applicableOnMethods = new ArrayList<OnMethod>();
-        calledOnMethods = new HashSet<OnMethod>();
+        this.applicableOnMethods = new ArrayList<OnMethod>();
+        this.calledOnMethods = new HashSet<OnMethod>();
     }
 
-    public Instrumentor(String btraceClassName, byte[] btraceCode, 
+    public Instrumentor(Class clazz,
+            String btraceClassName, byte[] btraceCode, 
             List<OnMethod> onMethods, ClassVisitor cv) {
-        this(btraceClassName, new ClassReader(btraceCode), onMethods, cv);
+        this(clazz, btraceClassName, new ClassReader(btraceCode), onMethods, cv);
     }
 
     public void visit(int version, int access, String name, 
@@ -81,19 +84,37 @@ public class Instrumentor extends ClassAdapter {
         className = name;
         // we filter the probe methods applicable for this particular
         // class by brute force walking. FIXME: should I optimize?
-        String extName = name.replace('/', '.');
+        String externalName = name.replace('/', '.');
         for (OnMethod om : onMethods) {
             String probeClazz = om.getClazz();
             if (probeClazz.length() == 0) {
                 continue;
             }
-            if (probeClazz.charAt(0) == '/' &&
+            char firstChar = probeClazz.charAt(0);
+            if (firstChar == '/' &&
                 REGEX_SPECIFIER.matcher(probeClazz).matches()) {
                 probeClazz = probeClazz.substring(1, probeClazz.length() - 1);
-                if (extName.matches(probeClazz)) {
+                if (externalName.matches(probeClazz)) {
                     applicableOnMethods.add(om);
                 }
-            } else if (probeClazz.equals(extName)) {
+            } else if (firstChar == '+') {
+                // super type being matched.
+                String superType = probeClazz.substring(1);
+                // internal name of super type.
+                String superTypeInternal = superType.replace('.', '/');
+                /*
+                 * If we are redefining a class, then we have a Class object
+                 * of it and we can walk through it's hierarchy to match for
+                 * specified super type. But, if we are loading it a fresh, then
+                 * we can not walk through super hierarchy. We just check the
+                 * immediate super class and directly implemented interfaces
+                 */
+                if (ClassFilter.isSubTypeOf(this.clazz, superType) ||
+                    superName.equals(superTypeInternal) ||
+                    isInArray(interfaces, superTypeInternal)) {
+                    applicableOnMethods.add(om);
+                }
+            } else if (probeClazz.equals(externalName)) {
                 applicableOnMethods.add(om);
             }
         }
@@ -824,7 +845,7 @@ public class Instrumentor extends ClassAdapter {
         fis = new FileInputStream(targetClass);
         writer = InstrumentUtils.newClassWriter();  
         ClassReader reader = new ClassReader(fis);        
-        InstrumentUtils.accept(reader, new Instrumentor(
+        InstrumentUtils.accept(reader, new Instrumentor(null,
                     verifier.getClassName(), buf, 
                     verifier.getOnMethods(), writer));
         fos = new FileOutputStream(targetClass);
@@ -864,5 +885,14 @@ public class Instrumentor extends ClassAdapter {
             Type[] args2 = Type.getArgumentTypes(desc);
             return TypeUtils.isCompatible(args1, args2);
         }
+    }
+    
+    private static boolean isInArray(String[] candidates, String given) {
+        for (String c : candidates) {
+            if (c.equals(given)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
