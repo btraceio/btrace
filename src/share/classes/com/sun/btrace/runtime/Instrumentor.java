@@ -327,6 +327,14 @@ public class Instrumentor extends ClassAdapter {
                                         callAction(true, calledMethodArgs);
                                     }
                                 } else {
+                                    /*
+                                     * It is not safe to call a method before constructor
+                                     * call passing (the uninitialized) object as argument. 
+                                     * Bytecode verifier will not like it!
+                                     */
+                                    if (name.equals(CONSTRUCTOR)) {
+                                        return;
+                                    }
                                     if (calledMethodArgs.length + 1 == numActionArgs) {
                                         Type[] tmp = new Type[numActionArgs - 1];
                                         System.arraycopy(actionArgTypes, 1, tmp, 0, tmp.length);

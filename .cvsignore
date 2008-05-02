@@ -1,1 +1,3 @@
-build dist
+.diffs.txt.swp
+build
+dist
