@@ -42,6 +42,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.LinkedBlockingQueue;
 import com.sun.management.HotSpotDiagnosticMXBean;
+import com.sun.btrace.aggregation.Aggregation;
+import com.sun.btrace.aggregation.AggregationKey;
+import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.annotations.OnError;
 import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnTimer;
@@ -55,6 +58,7 @@ import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.comm.NumberDataCommand;
 import com.sun.btrace.comm.NumberMapDataCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
+import com.sun.btrace.comm.GridDataCommand;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -103,6 +107,7 @@ import sun.security.action.GetPropertyAction;
  * and sends Commands to the CommandListener passed.
  *
  * @author A. Sundararajan
+ * @author Christian Glencross (aggregation support)
  */
 public final class BTraceRuntime {
     // we need Unsafe to load BTrace class bytes as 
@@ -1292,6 +1297,35 @@ public final class BTraceRuntime {
         } else {
             return 0;
         }
+    }
+
+    // BTrace aggregation support
+    static Aggregation newAggregation(AggregationFunction type) {
+        return new Aggregation(type);
+    }
+
+    static AggregationKey newAggregationKey(Object... elements) {
+        return new AggregationKey(elements);
+    }
+
+    static void addToAggregation(Aggregation aggregation, int value) {
+        aggregation.add(value);
+    }
+
+    static void addToAggregation(Aggregation aggregation, AggregationKey key, int value) {
+        aggregation.add(key, value);
+    }
+
+    static void clearAggregation(Aggregation aggregation) {
+        aggregation.clear();
+    }
+
+    static void truncateAggregation(Aggregation aggregation, int count) {
+        aggregation.truncate(count);
+    }
+
+    static void printAggregation(String name, Aggregation aggregation) {
+        getCurrent().send(new GridDataCommand(name, aggregation.getData()));
     }
 
     // private methods below this point    

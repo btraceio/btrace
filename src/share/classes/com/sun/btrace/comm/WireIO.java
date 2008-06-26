@@ -67,7 +67,10 @@ public class WireIO {
             case Command.NUMBER:
                 cmd = new NumberDataCommand();
                 break;
-            default:
+            case Command.GRID_DATA:
+                cmd = new GridDataCommand();
+                break;
+           default:
                 throw new RuntimeException("invalid command: " + type);
         }
         try {

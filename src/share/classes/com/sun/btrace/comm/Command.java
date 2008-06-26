@@ -41,9 +41,11 @@ public abstract class Command implements Serializable {
     public static final byte NUMBER_MAP = 7;
     public static final byte STRING_MAP = 8;
     public static final byte NUMBER     = 9;
+    public static final byte GRID_DATA  = 10;
+    
     
     public static final byte FIRST_COMMAND = ERROR;
-    public static final byte LAST_COMMAND = NUMBER;
+    public static final byte LAST_COMMAND = GRID_DATA;
 
     protected byte type;
     protected Command(byte type) {

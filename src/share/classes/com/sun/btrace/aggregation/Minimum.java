@@ -1,0 +1,56 @@
+/*
+ * Copyright 2008 Sun Microsystems, Inc.  All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Sun designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Sun in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
+ */
+package com.sun.btrace.aggregation;
+
+/**
+ * Aggregation function for computing the minimum value.
+ * <p>
+ * 
+ * @author Christian Glencross
+ */
+class Minimum implements AggregationValue {
+
+    int min = Integer.MAX_VALUE;
+
+    @Override
+    public synchronized void clear() {
+        min = Integer.MAX_VALUE;
+    }
+
+    @Override
+    public synchronized void add(int value) {
+        if (value < min) {
+            min = value;
+        }
+    }
+
+    public synchronized int getValue() {
+        return min;
+    }
+
+    public Object getData() {
+        return Integer.valueOf(getValue());
+    }
+}
