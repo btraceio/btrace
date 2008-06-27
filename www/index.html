@@ -9,10 +9,12 @@
 
 <p>
 BTrace is a safe, dynamic tracing tool for the Java platform. BTrace can be used to dynamically trace a running 
-Java program (similar to <a href="http://opensolaris.org/os/community/dtrace/">DTrace for OpenSolaris</a> applications and OS).  BTrace dynamically instruments the classes of the target application to inject tracing code 
+Java program (similar to <b><a href="http://opensolaris.org/os/community/dtrace/">DTrace for OpenSolaris</a></b>
+applications  and OS).  BTrace dynamically instruments the classes of the target application to inject tracing code 
 ("bytecode tracing").  Tracing code is expressed in Java programming language. There is also integration with  
-DTrace for the OpenSolaris platform. There will be a <a href="https://visualvm.dev.java.net">VisualVM</a> plugin 
-for BTrace soon - so that the users can trace their application from the VisualVM client. Alternatively, if you'd prefer you can run BTrace from command line shells as well.
+DTrace for the OpenSolaris platform. There will be a <b><a href="https://visualvm.dev.java.net">VisualVM</a></b>
+plugin for BTrace soon - so that the users can trace their application from the VisualVM client. Alternatively, 
+if you'd prefer you can run BTrace from command line shells as well.
 <p>
 
 <h2>License</h2>
@@ -24,13 +26,48 @@ BTrace binary is available for download from <b><a href="https://btrace.dev.java
 
 <h2>User Guide</h2>
 
-<a href="https://btrace.dev.java.net/source/browse/btrace/docs/usersguide.html?rev=1.4">BTrace User's Guide</a>
+<b><a href="https://btrace.dev.java.net/source/browse/btrace/docs/usersguide.html?rev=1.4">BTrace User's Guide</a></b>
 
 <h2>Building from the sources</h2>
 
 BTrace sources are available from <a href="https://btrace.dev.java.net/source/browse/btrace/">CVS</a> repository.
 After checking out the sources, you can use <b><a href="http://www.netbeans.org">NetBeans</a></b> to build
-BTrace using the <a href="howtonetbeans.html">NetBeans project setup instructions</a>. There is also a <a href="https://btrace.dev.java.net/source/browse/btrace/docs/developersguide.html?rev=1.2">BTrace Developer's Guide</a>
+BTrace using the <a href="howtonetbeans.html">NetBeans project setup instructions</a>. There is also a <b><a href="https://btrace.dev.java.net/source/browse/btrace/docs/developersguide.html?rev=1.2">BTrace Developer's Guide</a></b>.
+
+<h2>Known issues</h2>
+
+<ul>
+<li><b>ASM clash</b>: BTrace uses <b><a href="http://asm.objectweb.org">ASM</a></b> to instrument .class files. If your application
+(or any of the third-party libraries used) uses ASM (possibly a different version of ASM), then there will be 
+name clash. BTrace may not produce any output in such cases. 
+
+The <b><a href="http://asm.objectweb.org/doc/faq.html">ASM FAQ</a></b> suggests renaming ASM classes.
+BTrace does <b>not</b> do that yet. This will probably change in future. For now, you may have to 
+change your application to use renamed ASM classes. Sorry!
+
+<li><b>JVM crash</b>: We have seen JVM crashes with BTrace. We have fixed few such 
+crashes as well. JVM could crash due to the following reasons: 
+<ol>
+<li>BTrace submits invalid .class file to VM (bug in BTrace instrumentor)
+<li>Hotswap bug in HotSpot JVM. 
+</ol>
+To enable debugging such scenarios, please turn on the following options in $BTRACE/bin/btrace (or btrace.bat) 
+script. By default, the System properties <code>com.sun.btrace.debug</code> amd <code>com.sun.btrace.dumpClasses</code> are set to false in the scripts. Please change these to true. Also, you 
+may want to add <code>-verify:all</code> option as well - which will force bytecode verification of all loaded classes. When you report a JVM crash with BTrace, please attach/send the following:
+<ol>
+<li>BTrace trace class that caused the crash.
+<li>hs_err_pidXXX log produced by JVM.
+<li>.class file(s) saved by BTrace setting the <code>com.sun.btrace.dumpClasses</code> option.
+<li>debug output from BTrace by setting the <code>com.sun.btrace.debug</code> option.
+</ol>
+</ul>
+
+<h2>How to contribute to BTrace?</h2>
+<p>
+If you like BTrace and want to contribute fixes/features to BTrace, your are always welcome! You (or your
+company) have to sign the <b><a href="http://www.sun.com/software/opensource/contributor_agreement.jsp">Sun 
+Contributor Agreement</a></b>. Then, please join this project as "developer" using your java.net id.
+</p>
 
 </body>
 </html>
