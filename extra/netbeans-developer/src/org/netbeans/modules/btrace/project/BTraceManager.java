@@ -7,12 +7,16 @@ package org.netbeans.modules.btrace.project;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.client.Client;
 import com.sun.btrace.comm.Command;
+import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
 import java.awt.event.ActionEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -119,8 +123,9 @@ public class BTraceManager {
 //        };
         actions[0] = SystemAction.findObject(RerunBTraceScriptAction.class);
         actions[1] = new AbstractAction("Send Event...", new ImageIcon(Utilities.loadImage("org/netbeans/modules/btrace/ui/resources/event.png"))) {
+            private Set<String> eventNames = getUsedEvents(bytecode.get());
             public void actionPerformed(ActionEvent e) {
-                EventChooser panel = EventChooser.getChooser(getUsedEvents(bytecode.get()));
+                EventChooser panel = EventChooser.getChooser(eventNames);
                 DialogDescriptor dd = new DialogDescriptor(panel, "Send Event");
                 Object result = DialogDisplayer.getDefault().notify(dd);
                 if (result == DialogDescriptor.OK_OPTION) {
@@ -133,7 +138,7 @@ public class BTraceManager {
             
             @Override
             public boolean isEnabled() {
-                return isStopEnabled.get();
+                return isStopEnabled.get() && eventNames.size() > 0;
             }
         };
         actions[2] = new AbstractAction("Stop", new ImageIcon(Utilities.loadImage("org/netbeans/modules/btrace/ui/resources/stop.png"))) {
@@ -185,20 +190,12 @@ public class BTraceManager {
                         });
                         public void onCommand(Command cmd) throws IOException {
                             switch (cmd.getType()) {
-                                case Command.MESSAGE: {
-                                    MessageCommand msg = (MessageCommand)cmd;
-                                    io.getOut().println(msg.getTime() + " " + msg.getMessage());
-                                    io.getOut().flush();
-                                    break;
-                                }
+                                case Command.MESSAGE:
+                                case Command.GRID_DATA:
+                                case Command.NUMBER_MAP:
                                 case Command.STRING_MAP: {
-                                    StringMapDataCommand msg = (StringMapDataCommand)cmd;
-                                    if (msg.getData().size() > 0) {
-                                        io.getOut().println("Contents of map (" + msg.getData().size() + " items)");
-                                        for(Map.Entry<String, String> entry : msg.getData().entrySet()) {
-                                            io.getOut().println(entry.getKey() + " : " + entry.getValue());
-                                        }
-                                    }
+                                    DataCommand msg = (DataCommand)cmd;
+                                    msg.print(io.getOut());
                                     io.getOut().flush();
                                     break;
                                 }
@@ -206,12 +203,13 @@ public class BTraceManager {
                                     portCache.remove(port);
                                     isStopEnabled.set(false);
                                     isRerunEnabled.set(true);
-//                                    for(Action action : actions) {
-//                                        action
-//                                        for(PropertyChangeListener pcl :action.getPropertyChangeListeners()) {
-//                                            pcl.propertyChange(new PropertyChangeEvent(action, PROP_ENABLED, null, null));
-//                                        }
-//                                    }
+                                    for(Action action : actions) {
+                                        if (action instanceof AbstractAction) {
+                                            for(PropertyChangeListener pcl : ((AbstractAction)action).getPropertyChangeListeners()) {
+                                                pcl.propertyChange(new PropertyChangeEvent(action, PROP_ENABLED, null, null));
+                                            }
+                                        }
+                                    }
                                     
                                     io.getOut().println("*** Stopped ***");
                                     ph.finish();
@@ -227,11 +225,13 @@ public class BTraceManager {
                                     io.select();
                                     isStopEnabled.set(true);
                                     isRerunEnabled.set(false);
-//                                    for(AbstractAction action : actions) {
-//                                        for(PropertyChangeListener pcl :action.getPropertyChangeListeners()) {
-//                                            pcl.propertyChange(new PropertyChangeEvent(action, PROP_ENABLED, null, null));
-//                                        }
-//                                    }
+                                    for(Action action : actions) {
+                                        if (action instanceof AbstractAction) {
+                                            for(PropertyChangeListener pcl : ((AbstractAction)action).getPropertyChangeListeners()) {
+                                                pcl.propertyChange(new PropertyChangeEvent(action, PROP_ENABLED, null, null));
+                                            }
+                                        }
+                                    }
                                     ph.start();
                                     break;
                                 }
@@ -242,11 +242,13 @@ public class BTraceManager {
                         portCache.remove(port);
                         isStopEnabled.set(false);
                         isRerunEnabled.set(true);
-//                        for(AbstractAction action : actions) {
-//                            for(PropertyChangeListener pcl :action.getPropertyChangeListeners()) {
-//                                pcl.propertyChange(new PropertyChangeEvent(action, PROP_ENABLED, null, null));
-//                            }
-//                        }
+                        for(Action action : actions) {
+                            if (action instanceof AbstractAction) {
+                                for(PropertyChangeListener pcl : ((AbstractAction)action).getPropertyChangeListeners()) {
+                                    pcl.propertyChange(new PropertyChangeEvent(action, PROP_ENABLED, null, null));
+                                }
+                            }
+                        }
                         io.getOut().println("*** Stopped ***");
                     } finally {
                         try {
