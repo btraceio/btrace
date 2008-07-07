@@ -22,6 +22,8 @@ public class SelectPIDTask extends Task {
     
     @Override
     public void execute() throws BuildException {
+        if (getProject().getProperty(pidPropertyName) != null) return;
+        
         int pid = PIDSelectPanel.selectPID();
         if (pid > -1) {
             getProject().setProperty(pidPropertyName, Integer.toString(pid));
