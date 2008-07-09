@@ -46,7 +46,7 @@ public class StringMapDataCommand extends DataCommand {
 
     public StringMapDataCommand(String name, Map<String, String> data) {
         super(STRING_MAP, name);
-        this.data = data;
+        this.data = (data != null)? new HashMap(data) : data;
     }
     
     public Map<String, String> getData() {

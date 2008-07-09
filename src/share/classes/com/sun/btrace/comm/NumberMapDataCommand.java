@@ -46,7 +46,7 @@ public class NumberMapDataCommand extends DataCommand {
 
     public NumberMapDataCommand(String name, Map<String, ? extends Number> data) {
         super(NUMBER_MAP, name);
-        this.data = data;
+        this.data = (data != null)? new HashMap<String, Number>(data) : null;
     }
 
     public Map<String, ? extends Number> getData() {
