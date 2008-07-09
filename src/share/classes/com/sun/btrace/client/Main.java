@@ -67,7 +67,7 @@ public final class Main {
         }
         PROBE_DESC_PATH = System.getProperty("com.sun.btrace.probeDescPath", ".");
         con = System.console();
-        out = con.writer();
+        out = (con != null)? con.writer() : new PrintWriter(System.out);
     }
     
     public static void main(String[] args) {
@@ -144,7 +144,9 @@ public final class Main {
             }
             client.attach(pid);
             registerExitHook(client);
-            registerSignalHandler(client);
+            if (con != null) {
+                registerSignalHandler(client);
+            }
             if (isDebug()) debugPrint("submitting the BTrace program");
             client.submit(fileName, code, btraceArgs,
                 createCommandListener(client));
