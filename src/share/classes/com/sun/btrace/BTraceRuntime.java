@@ -1208,6 +1208,7 @@ public final class BTraceRuntime {
                 new FileOutputStream(resolveFileName(fileName)));
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeObject(obj);
+            oos.close();
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception exp) {
@@ -1216,7 +1217,13 @@ public final class BTraceRuntime {
     }
 
     static String toXML(Object obj) {
-        return XMLSerializer.toXML(obj);
+        try {
+            return XMLSerializer.toXML(obj);
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception exp) {
+            throw new RuntimeException(exp);
+        }
     }
 
     static void writeXML(Object obj, String fileName) {
@@ -1224,6 +1231,7 @@ public final class BTraceRuntime {
             BufferedWriter bw = new BufferedWriter(
                 new FileWriter(resolveFileName(fileName)));
             XMLSerializer.write(obj, bw);
+            bw.close();
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception exp) {

@@ -58,18 +58,19 @@ final class XMLSerializer {
     /**
      * Write an object as an XML document to the out. 
      */      
-    public static void write(Object obj, Writer out) {
+    public static void write(Object obj, Writer out) throws IOException {
         if (obj == null || out == null) {
             throw new NullPointerException();
         }
         Serializer s = new Serializer(out);
         s.write(obj);
+        out.flush();
     }
 
     /**
      * Return XML document string for the given object. 
      */            
-    public static String toXML(Object obj) {
+    public static String toXML(Object obj) throws IOException {
         if (obj == null) {
             throw new NullPointerException();
         }
@@ -78,7 +79,7 @@ final class XMLSerializer {
         return sw.toString();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length > 0) {
             System.out.println(toXML(args));
         } else {
