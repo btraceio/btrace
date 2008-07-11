@@ -9,7 +9,7 @@
         classpath="/usr/share/lib/java/dtrace.jar"
         property="libdtrace.jni.available"/>
         <path id="javac.classpath">
-            <pathelement path="${lib.dir}/asm-3.0.jar" />
+            <pathelement path="${lib.dir}/btrace-asm-3.1.jar" />
             <pathelement path="${java.home}/../lib/tools.jar" />
             <pathelement path="/usr/share/lib/java/dtrace.jar" />
         </path>
@@ -50,7 +50,7 @@
     </target>
     <target name="build" depends="compile, dtrace-compile" description="Creates deployment bundles">
         <copy todir="${build.dir}">
-            <fileset file="${lib.dir}/asm-3.0.jar"/>
+            <fileset file="${lib.dir}/btrace-asm-3.1.jar"/>
         </copy>
         <jar jarfile="${agent.jar}"         
          basedir="${classes.dir}"

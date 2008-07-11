@@ -28,11 +28,11 @@ package com.sun.btrace.runtime;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.ClassAdapter;
+import com.sun.btrace.org.objectweb.asm.ClassReader;
+import com.sun.btrace.org.objectweb.asm.ClassWriter;
+import com.sun.btrace.org.objectweb.asm.Label;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 
 
 /**

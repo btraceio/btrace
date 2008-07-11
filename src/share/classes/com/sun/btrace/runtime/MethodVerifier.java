@@ -28,11 +28,11 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
-import static org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.org.objectweb.asm.Label;
+import com.sun.btrace.org.objectweb.asm.MethodAdapter;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Type;
+import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 
 /**

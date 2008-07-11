@@ -25,10 +25,10 @@
 
 package com.sun.btrace.runtime;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import static org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.org.objectweb.asm.ClassReader;
+import com.sun.btrace.org.objectweb.asm.ClassVisitor;
+import com.sun.btrace.org.objectweb.asm.ClassWriter;
+import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.JAVA_LANG_OBJECT;
 
 /**

@@ -42,13 +42,6 @@ BTrace using the <a href="howtonetbeans.html">NetBeans project setup instruction
 <h2>Known issues</h2>
 
 <ul>
-<li><b>ASM clash</b>: BTrace uses <b><a href="http://asm.objectweb.org">ASM</a></b> to instrument .class files. If your application
-(or any of the third-party libraries used) uses ASM (possibly a different version of ASM), then there will be 
-name clash. BTrace may not produce any output in such cases. 
-
-The <b><a href="http://asm.objectweb.org/doc/faq.html">ASM FAQ</a></b> suggests renaming ASM classes.
-BTrace does <b>not</b> do that yet. This will probably change in future. For now, you may have to 
-change your application to use renamed ASM classes. Sorry!
 
 <li><b>JVM crash</b>: We have seen JVM crashes with BTrace. We have fixed few such 
 crashes as well. JVM could crash due to the following reasons: 

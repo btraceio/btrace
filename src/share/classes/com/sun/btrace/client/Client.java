@@ -49,9 +49,9 @@ import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.comm.WireIO;
 import com.sun.btrace.util.NullVisitor;
 import com.sun.tools.attach.VirtualMachine;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Type;
+import com.sun.btrace.org.objectweb.asm.ClassReader;
+import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
+import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
  * This class represents a BTrace client. This can be

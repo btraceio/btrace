@@ -33,15 +33,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.lang.reflect.Method;
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Attribute;
-import org.objectweb.asm.ClassAdapter;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
+import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
+import com.sun.btrace.org.objectweb.asm.Attribute;
+import com.sun.btrace.org.objectweb.asm.ClassAdapter;
+import com.sun.btrace.org.objectweb.asm.ClassReader;
+import com.sun.btrace.org.objectweb.asm.ClassVisitor;
+import com.sun.btrace.org.objectweb.asm.ClassWriter;
+import com.sun.btrace.org.objectweb.asm.FieldVisitor;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.runtime.Constants.CLASS_INITIALIZER;
 
 /**

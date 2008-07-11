@@ -34,7 +34,7 @@ import com.sun.btrace.annotations.OnProbe;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.AnyType;
-import org.objectweb.asm.Type;
+import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
  * Constants shared by few classes.

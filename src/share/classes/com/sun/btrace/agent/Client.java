@@ -28,9 +28,9 @@ package com.sun.btrace.agent;
 import java.io.IOException;
 import java.security.ProtectionDomain;
 import java.util.List;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.ClassVisitor;
+import com.sun.btrace.org.objectweb.asm.ClassReader;
+import com.sun.btrace.org.objectweb.asm.ClassWriter;
+import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.ErrorCommand;
@@ -89,8 +89,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         throws IllegalClassFormatException {
         boolean entered = BTraceRuntime.enter();
         try {
-            if (isBTraceClass(cname) || isASMClass(cname) ||
-                isSensitiveClass(cname)) {
+            if (isBTraceClass(cname) || isSensitiveClass(cname)) {
                 if (debug) Main.debugPrint("skipping transform for BTrace class " + cname);
                 return null;
             }
@@ -215,7 +214,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (c.isInterface() || c.isPrimitive() || c.isArray()) {
             return false;
         }
-        if (isBTraceClass(cname) || isASMClass(cname)) {
+        if (isBTraceClass(cname)) {
             return false;
         } else {
             return filter.isCandidate(c);
@@ -233,10 +232,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     // Internals only below this point
     private static boolean isBTraceClass(String name) {
         return name.startsWith("com/sun/btrace/");
-    }
-
-    private static boolean isASMClass(String name) {        
-        return name.startsWith("org/objectweb/asm/");
     }
 
     /*

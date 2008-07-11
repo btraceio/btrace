@@ -25,12 +25,12 @@
 
 package com.sun.btrace.util;
 
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Attribute;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
+import com.sun.btrace.org.objectweb.asm.Attribute;
+import com.sun.btrace.org.objectweb.asm.ClassVisitor;
+import com.sun.btrace.org.objectweb.asm.FieldVisitor;
+import com.sun.btrace.org.objectweb.asm.Label;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 
 /**
  * A visitor that does nothing on visitXXX calls.

@@ -26,11 +26,11 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.AnyType;
-import static org.objectweb.asm.Opcodes.*;
+import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.StringTokenizer;
-import org.objectweb.asm.Type;
+import com.sun.btrace.org.objectweb.asm.Type;
 
 class TypeUtils {
     private TypeUtils() {}

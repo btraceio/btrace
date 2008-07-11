@@ -25,10 +25,10 @@
 
 package com.sun.btrace.runtime;
 
-import org.objectweb.asm.MethodAdapter;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
-import static org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.org.objectweb.asm.MethodAdapter;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Type;
+import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 
 /**
  * Base class for all out method instrumenting classes.
