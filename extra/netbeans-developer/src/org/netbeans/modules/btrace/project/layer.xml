@@ -26,6 +26,17 @@
     <attr name="Templates\SunResources\position" intvalue="2400"/>
     <attr name="Templates\WebServices\position" intvalue="2200"/>
     <attr name="Templates\XML\position" intvalue="2300"/>
+    <folder name="Editors">
+        <folder name="text">
+            <folder name="x-java">
+                <folder name="CodeTemplates">
+                    <folder name="Defaults">
+                        <file name="org-netbeans-modules-editor-java-codetemplates.xml" url="org-netbeans-modules-editor-java-codetemplates.xml"/>
+                    </folder>
+                </folder>
+            </folder>
+        </folder>
+    </folder>
     <folder name="Templates">        
         <folder name="Project">
             <folder name="BTrace">
@@ -346,4 +357,14 @@
         </folder>
     </folder>
     -->
+    <folder name="Actions">
+        <folder name="Other">
+            <file name="org-netbeans-modules-btrace-project-ui-actions-RerunBTraceScriptAction.instance"/>
+        </folder>
+    </folder>
+    <folder name="Shortcuts">
+        <file name="CS-R.shadow">
+            <attr name="originalFile" stringvalue="Actions/Other/org-netbeans-modules-btrace-project-ui-actions-RerunBTraceScriptAction.instance"/>
+        </file>
+    </folder>
 </filesystem>

@@ -9,8 +9,8 @@
                 <binary-origin>release/modules/ext/btrace-client.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
-                <runtime-relative-path>ext/asm-3.0.jar</runtime-relative-path>
-                <binary-origin>release/modules/ext/asm-3.0.jar</binary-origin>
+                <runtime-relative-path>ext/btrace-asm-3.1.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/btrace-asm-3.1.jar</binary-origin>
             </class-path-extension>
             <standalone/>
             <module-dependencies>
@@ -39,6 +39,15 @@
                     <run-dependency>
                         <release-version>1</release-version>
                         <specification-version>1.13</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
+                    <code-name-base>org.netbeans.api.java.classpath</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <release-version>1</release-version>
+                        <specification-version>1.18</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
