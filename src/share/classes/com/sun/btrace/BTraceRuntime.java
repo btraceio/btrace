@@ -75,8 +75,11 @@ import java.lang.management.MonitorInfo;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -637,7 +640,29 @@ public final class BTraceRuntime {
         BTraceRuntime current = getCurrent();
         current.specQueueManager.commit(id, current.queue);
     }
-    
+
+    /**
+     * Indicates whether two given objects are "equal to" one another.
+     * For bootstrap classes, returns the result of calling Object.equals()
+     * override. For non-bootstrap classes, the reference identity comparison
+     * is done.
+     *
+     * @param  obj1 first object to compare equality
+     * @param  obj2 second object to compare equality
+     * @return <code>true</code> if the given objects are equal;
+     *         <code>false</code> otherwise.
+     */
+    static boolean compare(Object obj1, Object obj2) {
+        if (obj1 instanceof String) {
+            return obj1.equals(obj2);
+        } else if (obj1.getClass().getClassLoader() == null) {
+            if (obj2 == null || obj2.getClass().getClassLoader() == null) {
+                return obj1.equals(obj2);
+            } // else fall through..
+        }
+        return obj1 == obj2;
+    }
+
     // BTrace map functions
     static <K, V> Map<K, V> newHashMap() {
         return new BTraceMap(new HashMap<K, V>());
@@ -645,6 +670,39 @@ public final class BTraceRuntime {
 
     static <K, V> Map<K, V> newWeakMap() {
         return new BTraceMap(new WeakHashMap<K, V>());
+    }
+
+    static <V> Deque<V> newDeque() {
+        return new BTraceDeque<V>(new ArrayDeque<V>());
+    }
+
+    static <E> int size(Collection<E> coll) {
+        if (coll instanceof BTraceCollection || coll.getClass().getClassLoader() == null) {
+            return coll.size();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <E> boolean isEmpty(Collection<E> coll) {
+        if (coll instanceof BTraceCollection || coll.getClass().getClassLoader() == null) {
+            return coll.isEmpty();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    static <E> boolean contains(Collection<E> coll, Object obj) {
+        if (coll instanceof BTraceCollection || coll.getClass().getClassLoader() == null) {
+            for (E e : coll) {
+                if (compare(e, obj)) {
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            throw new IllegalArgumentException();
+        }
     }
 
     static <K, V> V get(Map<K, V> map, Object key) {
@@ -707,7 +765,7 @@ public final class BTraceRuntime {
         }
     }
 
-    public static <K, V> boolean isEmpty(Map<K, V> map) {
+    static <K, V> boolean isEmpty(Map<K, V> map) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
             return map.isEmpty();
@@ -729,6 +787,38 @@ public final class BTraceRuntime {
             }
         } else {
             print(BTraceUtils.str(map));
+        }
+    }
+
+    public static <V> void push(Deque<V> queue, V value) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            queue.push(value);
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <V> V poll(Deque<V> queue) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            return queue.poll();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <V> V peek(Deque<V> queue) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            return queue.peek();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <V> void clear(Deque<V> queue) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            queue.clear();
+        } else {
+            throw new IllegalArgumentException();
         }
     }
 

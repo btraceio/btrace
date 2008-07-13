@@ -45,6 +45,7 @@ import sun.reflect.Reflection;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
+import java.util.Deque;
 
 /**
  * This class contains methods for BTrace script "built-in" functions.
@@ -409,14 +410,7 @@ public final class BTraceUtils {
      *         <code>false</code> otherwise.
      */
     public static boolean compare(Object obj1, Object obj2) {
-        if (obj1 instanceof String) {
-            return obj1.equals(obj2);
-        } else if (obj1.getClass().getClassLoader() == null) {
-            if (obj2 == null || obj2.getClass().getClassLoader() == null) {
-                return obj1.equals(obj2);
-            } // else fall through..
-        }
-        return obj1 == obj2;
+        return BTraceRuntime.compare(obj1, obj2);
     }   
     
     // reflection
@@ -2278,6 +2272,10 @@ public final class BTraceUtils {
         return BTraceRuntime.newWeakMap();
     }
 
+    public static <V> Deque<V> newDeque() {
+        return BTraceRuntime.newDeque();
+    }
+
     // get a particular item from a Map
     public static <K, V> V get(Map<K, V> map, Object key) {
         return BTraceRuntime.get(map, key);
@@ -2318,32 +2316,15 @@ public final class BTraceUtils {
 
     // operations on collections
     public static <E> int size(Collection<E> coll) {  
-        if (coll.getClass().getClassLoader() == null) {
-            return coll.size();
-        } else {
-            throw new IllegalArgumentException();
-        }
+       return BTraceRuntime.size(coll);
     }
 
     public static <E> boolean isEmpty(Collection<E> coll) {  
-        if (coll.getClass().getClassLoader() == null) {
-            return coll.isEmpty();
-        } else {
-            throw new IllegalArgumentException();
-        }
+        return BTraceRuntime.isEmpty(coll);
     }
 
     public static <E> boolean contains(Collection<E> coll, Object obj) {  
-        if (coll.getClass().getClassLoader() == null) {
-            for (E e : coll) {
-                if (compare(e, obj)) {
-                    return true;
-                }
-            }
-            return false;
-        } else {
-            throw new IllegalArgumentException();
-        }
+        return BTraceUtils.contains(coll, obj);
     }
 
     public static boolean contains(Object[] array, Object value) {
@@ -2353,6 +2334,19 @@ public final class BTraceUtils {
             }
         }
         return false;
+    }
+
+    // operations on Deque
+    public static <V> void push(Deque<V> queue, V value) {
+        BTraceRuntime.push(queue, value);
+    }
+
+    public static <V> V poll(Deque<V> queue) {
+        return BTraceRuntime.poll(queue);
+    }
+
+    public static <V> V peek(Deque<V> queue) {
+        return BTraceRuntime.peek(queue);
     }
   
     
@@ -3054,7 +3048,7 @@ public final class BTraceUtils {
         return BTraceRuntime.getCurrentThreadUserTime();
     }
 
-        
+    @Deprecated
     public static long getSystemNanoTime() {
         return System.nanoTime();
     }
