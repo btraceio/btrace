@@ -59,6 +59,7 @@ import com.sun.btrace.comm.NumberDataCommand;
 import com.sun.btrace.comm.NumberMapDataCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
+import com.sun.btrace.BTraceMBean;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -1862,6 +1863,8 @@ public final class BTraceRuntime {
 
         timerHandlers = new Method[timersList.size()];
         timersList.toArray(timerHandlers);
+        
+        BTraceMBean.registerMBean(clazz);
     }
 
     private static String resolveFileName(String name) {

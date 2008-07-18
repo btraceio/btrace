@@ -35,6 +35,7 @@ import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.annotations.Export;
 import com.sun.btrace.annotations.TLS;
+import com.sun.btrace.annotations.Property;
 import com.sun.btrace.util.NullVisitor;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -82,6 +83,11 @@ public class Preprocessor extends ClassAdapter {
         Type.getDescriptor(Export.class);
     public static final String BTRACE_TLS_DESC =
         Type.getDescriptor(TLS.class);
+    public static final String BTRACE_PROPERTY_DESC =
+        Type.getDescriptor(Property.class);
+    public static final String BTRACE_PROPERTY_NAME = "name";
+    public static final String BTRACE_PROPERTY_DESCRIPTION = "description";
+    
         
     // stuff from BTraceRuntime class
     public static final String BTRACE_RUNTIME =
@@ -313,10 +319,14 @@ public class Preprocessor extends ClassAdapter {
         List<Attribute> attributes;
         boolean isThreadLocal;
         boolean isExport;
+        boolean isProperty;
+        String propertyName;
+        String propertyDescription;
 
         FieldDescriptor(int acc, String n, String d,
                         String sig, Object val, List<Attribute> attrs,
-                        boolean tls, boolean isExp) {
+                        boolean tls, boolean isExp, boolean isProp,
+                        String propName, String propDescription) {
             access = acc;
             name = n;
             desc = d;
@@ -325,6 +335,9 @@ public class Preprocessor extends ClassAdapter {
             attributes = attrs;
             isThreadLocal = tls;
             isExport = isExp;
+            isProperty = isProp;
+            propertyName = propName;
+            propertyDescription = propDescription;
         }
     }
 
@@ -334,12 +347,27 @@ public class Preprocessor extends ClassAdapter {
         return new FieldVisitor() {
             boolean isExport;
             boolean isThreadLocal;
-
+            boolean isProperty;
+            String propName = "";
+            String propDescription = "";
+            
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 if (desc.equals(BTRACE_TLS_DESC)) {
                     isThreadLocal = true;
                 } else if (desc.equals(BTRACE_EXPORT_DESC)) {
                     isExport = true;                    
+                } else if (desc.equals(BTRACE_PROPERTY_DESC)) {
+                    isProperty = true;
+                    return new NullVisitor() {
+                        @Override
+                        public void visit(String name, Object value) {
+                            if (name.equals(BTRACE_PROPERTY_NAME)) {
+                                propName = value.toString();
+                            } else if (name.equals(BTRACE_PROPERTY_DESCRIPTION)) {
+                                propDescription = value.toString();
+                            }
+                        }
+                    };
                 }
                 return new NullVisitor();
             }
@@ -351,7 +379,8 @@ public class Preprocessor extends ClassAdapter {
             public void visitEnd() {
                 FieldDescriptor fd = new FieldDescriptor(access, name, desc, 
                                     signature, value, attrs,
-                                    isThreadLocal, isExport);
+                                    isThreadLocal, isExport, isProperty,
+                                    propName, propDescription);
                 fields.add(fd);
                 if (isThreadLocal) {         
                     threadLocalFields.put(name, fd);
@@ -401,6 +430,13 @@ public class Preprocessor extends ClassAdapter {
             FieldVisitor fv = super.visitField(fieldAccess,  
                                  BTRACE_FIELD_PREFIX + fieldName,
                                  fieldDesc, fieldSignature, fieldValue);
+            if (fd.isProperty) {
+                AnnotationVisitor av = fv.visitAnnotation(BTRACE_PROPERTY_DESC, true);
+                if (av != null) {
+                    av.visit(BTRACE_PROPERTY_NAME, fd.propertyName);
+                    av.visit(BTRACE_PROPERTY_DESCRIPTION, fd.propertyDescription);
+                }
+            }
             for (Attribute attr : fd.attributes) {
                 fv.visitAttribute(attr);
             }

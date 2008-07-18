@@ -278,6 +278,14 @@ the .xml file is).
 program can expose tracing counters to external jvmstat clients (such as jstat). Refer to the sample
 <b><a href="../samples/ThreadCounter.java">ThreadCounter.java</a></b>
 
+<li><b><code><a href="javadoc/com/sun/btrace/annotations/Property.html">@com.sun.btrace.annotations.Property</a></code></b> annotation
+can be used to flag a specific (static) field as a MBean attribute. If a BTrace class has atleast one static field with
+@Property attribute, then a MBean is created and registered with platform MBean server. JMX clients such as VisualVM, jconsole can be
+used to view such BTrace MBeans. After attaching BTrace to the target program, you can attach VisualVM or jconsole to the same
+program and view the newly created BTrace MBean. With VisualVM and jconsole, you can use MBeans tab to view the BTrace domain and
+check out it's attributes. Refer to the samples <b><a href="../samples/ThreadCounterBean.java">ThreadCounterBean</a></b> and
+<b><a href="../samples/HistogramBean.java">HistogramBean.java</a></b>.
+
 <li><b><code><a href="javadoc/com/sun/btrace/annotations/TLS.html">@com.sun.btrace.annotations.TLS</a></code></b> annotation can be used with BTrace fields (static
 fields) to specify that the field is a thread local field. Each Java thread gets a separate "copy" of
 the field. These thread local fields may be used by BTrace programs to identify whether we reached multiple
@@ -362,6 +370,9 @@ constructor entry points.
 <li><a href="../samples/Histogram.java">Histogram.java</a> - demonstates
 usage of BTrace maps for collecting histogram (of <code>javax.swing.JComponent</code>
 objects created by an app - histogram by subclass name and count).
+<li><a href="../samples/HistogramBean.java">HistogramBean.java</a> - demonstates
+JMX integration. This sample exposes a Map as MBean attribute using <code>@Property</code>
+annotation.
 <li><a href="../samples/HistoOnEvent.java">HistoOnEvent.java</a> -
 demonstrates getting trace output based on client side event. After
 starting the script by BTrace client, press Ctrl-C to get menu to
@@ -426,6 +437,11 @@ demonstrates that it is possible to match all subtypes of a given supertype.
 
 <li><a href="../samples/ThreadCounter.java">ThreadCounter.java</a>
 - demonstrates use of jvmstat counters from BTrace programs.
+
+<li><a href="../samples/ThreadCounterBean.java">ThreadCounterBean.java</a>
+- demonstrates exposing the BTrace program as a JMX bean with one
+attribute (using @Property annotation).
+
 <li><a href="../samples/ThreadStart.java">ThreadStart.java</a>
 - demonstrates raising DTrace probes from BTrace programs. See also
 <a href="../samples/jthread.d">jthread.d</a> - the associated D-script.

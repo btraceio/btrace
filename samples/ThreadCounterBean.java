@@ -23,25 +23,35 @@
  * have any questions.
  */
 
-package com.sun.btrace.annotations;
+package com.sun.btrace.samples;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Export;
 
 /**
- * Top-level annotation that identifies a BTrace
- * class.
- *
- * @author A. Sundararajan
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface BTrace {
-    // If this trace is exposed as MXBean, then this tells
-    // the name of the MXBean.
-    public String name() default "";
-    // description of this trace class.
-    public String description() default "";
+ * This sample demonstrates that you can expose a BTrace
+ * class as a JMX MBean. After connecting BTrace to the
+ * target application, connect VisualVM or jconsole or 
+ * any other JMX client to the same application.
+ */ 
+@BTrace public class ThreadCounterBean {
+
+    // @Property makes the count field to be exposed
+    // as an attribute of this MBean.
+    @Property
+    private static long count;
+
+    @OnMethod(
+        clazz="java.lang.Thread",
+        method="start"
+    ) 
+    public static void onnewThread(Thread t) {
+        count++;
+    }
+
+    @OnTimer(2000) 
+    public static void ontimer() {
+        println(count);
+    }
 }
