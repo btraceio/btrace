@@ -27,20 +27,23 @@
  * MemoryJavaFileManager.java
  * @author A. Sundararajan
  */
-
 package com.sun.btrace.compiler;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.URI;
 import java.nio.CharBuffer;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
 import javax.tools.FileObject;
 import javax.tools.ForwardingJavaFileManager;
 import javax.tools.JavaFileManager;
@@ -54,18 +57,21 @@ import javax.tools.SimpleJavaFileObject;
  *
  * @author A. Sundararajan
  */
-public final class MemoryJavaFileManager extends ForwardingJavaFileManager {                 
+public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
+
+    private List<String> includeDirs;
     private Map<String, byte[]> classBytes;
-    
-    public MemoryJavaFileManager(JavaFileManager fileManager) {
+
+    public MemoryJavaFileManager(JavaFileManager fileManager, List<String> includeDirs) {
         super(fileManager);
+        this.includeDirs = includeDirs;
         classBytes = new HashMap<String, byte[]>();
     }
 
     public Map<String, byte[]> getClassBytes() {
         return classBytes;
     }
-   
+
     public void close() throws IOException {
         classBytes = new HashMap<String, byte[]>();
     }
@@ -77,13 +83,14 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
      * A file object used to represent Java source coming from a string.
      */
     private static class StringInputBuffer extends SimpleJavaFileObject {
+
         final String code;
-        
+
         StringInputBuffer(String name, String code) {
             super(toURI(name), Kind.SOURCE);
             this.code = code;
         }
-        
+
         public CharBuffer getCharContent(boolean ignoreEncodingErrors) {
             return CharBuffer.wrap(code);
         }
@@ -97,28 +104,30 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
      * A file object that stores Java bytecode into the classBytes map.
      */
     private class ClassOutputBuffer extends SimpleJavaFileObject {
+
         private String name;
 
-        ClassOutputBuffer(String name) { 
+        ClassOutputBuffer(String name) {
             super(toURI(name), Kind.CLASS);
             this.name = name;
         }
 
         public OutputStream openOutputStream() {
             return new FilterOutputStream(new ByteArrayOutputStream()) {
+
                 public void close() throws IOException {
                     out.close();
-                    ByteArrayOutputStream bos = (ByteArrayOutputStream)out;
+                    ByteArrayOutputStream bos = (ByteArrayOutputStream) out;
                     classBytes.put(name, bos.toByteArray());
                 }
             };
         }
     }
-    
+
     public JavaFileObject getJavaFileForOutput(JavaFileManager.Location location,
-                                    String className,
-                                    Kind kind,
-                                    FileObject sibling) throws IOException {
+            String className,
+            Kind kind,
+            FileObject sibling) throws IOException {
         if (kind == Kind.CLASS) {
             return new ClassOutputBuffer(className);
         } else {
@@ -126,8 +135,46 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
         }
     }
 
-    static JavaFileObject makeStringSource(String name, String code) {
-        return new StringInputBuffer(name, code);
+    public JavaFileObject getJavaFileForInput(JavaFileManager.Location location,
+            String className,
+            Kind kind)
+            throws IOException {
+        JavaFileObject result = super.getJavaFileForInput(location, className, kind);
+        if (kind == Kind.SOURCE) {
+            return preprocessedFileObject(result, includeDirs);
+        } else {
+            return result;
+        }
+    }
+
+    static JavaFileObject preprocessedFileObject(JavaFileObject fo, List<String> includeDirs)
+            throws IOException {
+        if (includeDirs != null) {
+            PCPP pcpp = new PCPP(includeDirs);
+            StringWriter out = new StringWriter();
+            pcpp.setOut(out);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(fo.openInputStream()));
+            pcpp.run(reader, fo.getName());
+            return new StringInputBuffer(fo.getName(), out.toString());
+        } else {
+            return fo;
+        }
+    }
+
+    static JavaFileObject makeStringSource(String name, String code, List<String> includeDirs) {
+        if (includeDirs != null) {
+            PCPP pcpp = new PCPP(includeDirs);
+            StringWriter out = new StringWriter();
+            pcpp.setOut(out);
+            try {
+                pcpp.run(new StringReader(code), name);
+            } catch (IOException exp) {
+                throw new RuntimeException(exp);
+            }
+            return new StringInputBuffer(name, out.toString());
+        } else {
+            return new StringInputBuffer(name, code);
+        }
     }
 
     static URI toURI(String name) {

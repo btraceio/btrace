@@ -77,16 +77,18 @@ public final class Main {
 
         int port = BTRACE_DEFAULT_PORT;
         String classPath = ".";
-
+        String includePath = null;
+        
         int count = 0;
         boolean portDefined = false;
         boolean classpathDefined = false;
+        boolean includePathDefined = false;
 
         for (;;) {
             if (args[count].charAt(0) == '-') {
                 if (args.length <= count+1) {
                     usage();
-                }              
+                }  
                 if (args[count].equals("-p") && !portDefined) {
                     try {
                         port = Integer.parseInt(args[++count]);
@@ -101,6 +103,10 @@ public final class Main {
                     classPath = args[++count];
                     if (isDebug()) debugPrint("accepting classpath " + classPath);
                     classpathDefined = true;
+                } else if (args[count].equals("-I") && !includePathDefined) {
+                    includePath = args[++count];
+                    if (isDebug()) debugPrint("accepting include path " + includePath);
+                    includePathDefined = true;
                 } else {
                     usage();
                 }
@@ -138,7 +144,7 @@ public final class Main {
             if (! new File(fileName).exists()) {
                 errorExit("File not found: " + fileName, 1);
             }
-            byte[] code = client.compile(fileName, classPath);
+            byte[] code = client.compile(fileName, classPath, includePath);
             if (code == null) { 
                 errorExit("BTrace compilation failed", 1);
             }

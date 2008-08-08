@@ -132,11 +132,18 @@ BTrace is run using the command line tool <b>btrace</b> as shown below:
 
 <pre>
 <code>
-    <b>btrace</b> [-p &lt;port&gt;] [-cp &lt;path&gt;] &lt;pid&gt; &lt;btrace-script&gt; [&lt;args&gt;]
+    <b>btrace</b> [-I &lt;include-path&gt;] [-p &lt;port&gt;] [-cp &lt;classpath&gt;] &lt;pid&gt; &lt;btrace-script&gt; [&lt;args&gt;]
 </code>
 </pre>
 where
 <ul>
+<li><code>include-path</code> is a set of include directories that are searched for header files.
+BTrace includes a simple preprocess with support for #define, #include and conditional compilation.
+It is <b>not</b> like a complete C/C++ preprocessor - but a useful subset. See the sample "ThreadBean.java".
+If -I is not specified, BTrace skips the preprocessor invocation step.
+<li><code>port</code> is the port in which BTrace agent listens. This is optional argument.
+<li><code>classpath</code> is set of directories, jar files where BTrace searches for classes during compilation.
+Default is ".".
 <li><code>pid</code> is the process id of the traced Java program
 <li><code>btrace-script</code>  is the trace program. If it is a ".java", then it is compiled
 before submission. Or else, it is assumed to be pre-compiled [i.e., it has to be a .class] 
@@ -159,12 +166,16 @@ It is possible to precompile BTrace program using <b>btracec</b> script. btracec
 is a javac-like program that takes a BTrace program and produces a .class file.
 <pre>
 <code>
-    <b>btracec</b> [-cp &lt;path&gt;] [-d &lt;directory&gt;] &lt;one-or-more-BTrace-.java-files&gt;
+    <b>btracec</b> [-I &lt;include-path&gt;] [-cp &lt;classpath&gt;] [-d &lt;directory&gt;] &lt;one-or-more-BTrace-.java-files&gt;
 </code>
 </pre>
 where
 <ul>
-<li><code>path</code> is the classpath used for compiling BTrace program(s). Default is "."
+<li><code>include-path</code> is a set of include directories that are searched for header files.
+BTrace includes a simple preprocess with support for #define, #include and conditional compilation.
+It is <b>not</b> like a complete C/C++ preprocessor - but a useful subset. See the sample "ThreadBean.java".
+If -I is not specified, BTrace skips the preprocessor invocation step.
+<li><code>classpath</code> is the classpath used for compiling BTrace program(s). Default is "."
 <li><code>directory</code> is the output directory where compiled .class files are stored. Default is ".".
 </ul>
 This script uses BTrace compiler class - rather than regular javac and therefore will validate
@@ -196,7 +207,7 @@ as an argument to the BTrace agent.
 There is a convenient script called <b>btracer</b> to do the above:
 <pre>
 <code>
-    <b>btracer</b> &lt;pre-compiled-btrace-.class&gt; &lt;application-main-class&gt; &lt;application-args&gt;
+    <b>btracer</b> &lt;pre-compiled-btrace.class&gt; &lt;application-main-class&gt; &lt;application-args&gt;
 </code>
 </pre>
 
@@ -276,6 +287,7 @@ the .xml file is).
 <li><b><code><a href="javadoc/com/sun/btrace/annotations/Export.html">@com.sun.btrace.annotations.Export</a></code></b> annotation can be used with BTrace fields
 (static fields) to specify that the field has to be mapped to a jvmstat counter. Using this, a BTrace
 program can expose tracing counters to external jvmstat clients (such as jstat). Refer to the sample
+
 <b><a href="../samples/ThreadCounter.java">ThreadCounter.java</a></b>
 
 <li><b><code><a href="javadoc/com/sun/btrace/annotations/Property.html">@com.sun.btrace.annotations.Property</a></code></b> annotation
@@ -441,6 +453,9 @@ demonstrates that it is possible to match all subtypes of a given supertype.
 <li><a href="../samples/ThreadCounterBean.java">ThreadCounterBean.java</a>
 - demonstrates exposing the BTrace program as a JMX bean with one
 attribute (using @Property annotation).
+
+<li><a href="../samples/ThreadBean.java">ThreadBean.java</a>
+- demonstrates the use of preprocessor of BTrace [and JMX integratio].
 
 <li><a href="../samples/ThreadStart.java">ThreadStart.java</a>
 - demonstrates raising DTrace probes from BTrace programs. See also

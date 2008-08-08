@@ -22,7 +22,6 @@
  * CA 95054 USA or visit www.sun.com if you need additional information or
  * have any questions.
  */
-
 package com.sun.btrace.client;
 
 import java.io.File;
@@ -63,6 +62,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * @author A. Sundararajan
  */
 public class Client {
+
     private static boolean dtraceEnabled;
     private static Method submitFile;
     private static Method submitString;
@@ -85,11 +85,13 @@ public class Client {
             Class dtraceClass = Class.forName("com.sun.btrace.dtrace.DTrace");
             dtraceEnabled = true;
             submitFile = dtraceClass.getMethod("submit",
-                new Class[] { File.class, String[].class,
-                              CommandListener.class });
+                    new Class[]{File.class, String[].class,
+                CommandListener.class
+            });
             submitString = dtraceClass.getMethod("submit",
-                new Class[] { String.class, String[].class,
-                              CommandListener.class });
+                    new Class[]{String.class, String[].class,
+                CommandListener.class
+            });
         } catch (Exception exp) {
             dtraceEnabled = false;
         }
@@ -121,9 +123,9 @@ public class Client {
         this(port, probeDescPath, false, false, null);
     }
 
-    public Client(int port, String probeDescPath, 
-                  boolean debug, boolean dumpClasses,
-                  String dumpDir) {
+    public Client(int port, String probeDescPath,
+            boolean debug, boolean dumpClasses,
+            String dumpDir) {
         this.port = port;
         this.probeDescPath = probeDescPath;
         this.debug = debug;
@@ -131,51 +133,68 @@ public class Client {
         this.dumpDir = dumpDir;
     }
 
+    public byte[] compile(String fileName, String classPath) {
+        return compile(fileName, classPath, new PrintWriter(System.err), null);
+    }
+
     /** 
      * Compiles given BTrace program using given classpath.
      */
-    public byte[] compile(String fileName, String classPath) {
-        return compile(fileName, classPath, new PrintWriter(System.err));
+    public byte[] compile(String fileName, String classPath, String includePath) {
+        return compile(fileName, classPath, new PrintWriter(System.err), includePath);
+    }
+
+    public byte[] compile(String fileName, String classPath,
+            PrintWriter err) {
+        return compile(fileName, classPath, err, null);
     }
 
     /** 
      * Compiles given BTrace program using given classpath.
      * Errors and warning are written to given PrintWriter.
-     */    
+     */
     public byte[] compile(String fileName, String classPath,
-                          PrintWriter err) {
+            PrintWriter err, String includePath) {
         byte[] code = null;
         File file = new File(fileName);
         if (fileName.endsWith(".java")) {
-            Compiler compiler = new Compiler();
+            Compiler compiler = new Compiler(includePath);
             classPath += File.pathSeparator + System.getProperty("java.class.path");
-            if (debug) debugPrint("compiling " + fileName);
-            Map<String, byte[]> classes = compiler.compile(file, 
-                err, ".", classPath);
+            if (debug) {
+                debugPrint("compiling " + fileName);
+            }
+            Map<String, byte[]> classes = compiler.compile(file,
+                    err, ".", classPath);
             if (classes == null) {
-                err.println("btrace compilation failed!"); 
+                err.println("btrace compilation failed!");
                 return null;
             }
 
             int size = classes.size();
             if (size != 1) {
-                err.println("no classes or more than one class");          
+                err.println("no classes or more than one class");
                 return null;
             }
             String name = classes.keySet().iterator().next();
             code = classes.get(name);
-            if (debug) debugPrint("compiled " + fileName);
+            if (debug) {
+                debugPrint("compiled " + fileName);
+            }
         } else if (fileName.endsWith(".class")) {
             code = new byte[(int) file.length()];
             try {
                 FileInputStream fis = new FileInputStream(file);
-                if (debug) debugPrint("reading " + fileName);
+                if (debug) {
+                    debugPrint("reading " + fileName);
+                }
                 try {
                     fis.read(code);
                 } finally {
                     fis.close();
                 }
-                if (debug) debugPrint("read " + fileName);
+                if (debug) {
+                    debugPrint("read " + fileName);
+                }
             } catch (IOException exp) {
                 err.println(exp.getMessage());
                 return null;
@@ -187,13 +206,13 @@ public class Client {
 
         return code;
     }
-    
+
     /**
      * Attach the BTrace client to the given Java process.
      * Loads BTrace agent on the target process if not loaded
      * already.
      */
-    public void attach(String pid) throws IOException {      
+    public void attach(String pid) throws IOException {
         try {
             String agentPath = "/btrace-agent.jar";
             String tmp = Client.class.getClassLoader().getResource("com/sun/btrace").toString();
@@ -220,11 +239,17 @@ public class Client {
     public void attach(String pid, String agentPath, String sysCp, String bootCp) throws IOException {
         try {
             VirtualMachine vm = null;
-            if (debug) debugPrint("attaching to " + pid);
+            if (debug) {
+                debugPrint("attaching to " + pid);
+            }
             vm = VirtualMachine.attach(pid);
-            if (debug) debugPrint("attached to " + pid);
-            
-            if (debug) debugPrint("loading " + agentPath);
+            if (debug) {
+                debugPrint("attached to " + pid);
+            }
+
+            if (debug) {
+                debugPrint("loading " + agentPath);
+            }
             String agentArgs = "port=" + port;
             if (debug) {
                 agentArgs += ",debug=true";
@@ -241,9 +266,13 @@ public class Client {
             }
             agentArgs += ",systemClassPath=" + sysCp;
             agentArgs += ",probeDescPath=" + probeDescPath;
-            if (debug) debugPrint("agent args: " + agentArgs);
+            if (debug) {
+                debugPrint("agent args: " + agentArgs);
+            }
             vm.loadAgent(agentPath, agentArgs);
-            if (debug) debugPrint("loaded " + agentPath);
+            if (debug) {
+                debugPrint("loaded " + agentPath);
+            }
         } catch (RuntimeException re) {
             throw re;
         } catch (IOException ioexp) {
@@ -259,34 +288,40 @@ public class Client {
      * Receives commands from the traced JVM and sends those
      * to the command listener provided.
      */
-    public void submit(String fileName, byte[] code, String[] args, 
-        CommandListener listener) throws IOException {
+    public void submit(String fileName, byte[] code, String[] args,
+            CommandListener listener) throws IOException {
         if (sock != null) {
             throw new IllegalStateException();
-        }        
+        }
         submitDTrace(fileName, code, args, listener);
         try {
-            if (debug) debugPrint("opening socket to " + port);
+            if (debug) {
+                debugPrint("opening socket to " + port);
+            }
             sock = new Socket("localhost", port);
             oos = new ObjectOutputStream(sock.getOutputStream());
-            if (debug) debugPrint("sending instrument command");
+            if (debug) {
+                debugPrint("sending instrument command");
+            }
             WireIO.write(oos, new InstrumentCommand(code, args));
             ois = new ObjectInputStream(sock.getInputStream());
-            if (debug) debugPrint("entering into command loop");                            
+            if (debug) {
+                debugPrint("entering into command loop");
+            }
             commandLoop(listener);
         } catch (UnknownHostException uhe) {
             throw new IOException(uhe);
         }
     }
-    
+
     /**
      * Submits the compiled BTrace .class to the VM
      * attached and passes given command line arguments.
      * Receives commands from the traced JVM and sends those
      * to the command listener provided.
      */
-    public void submit(byte[] code, String[] args, 
-        CommandListener listener) throws IOException {
+    public void submit(byte[] code, String[] args,
+            CommandListener listener) throws IOException {
         submit(null, code, args, listener);
     }
 
@@ -333,6 +368,7 @@ public class Client {
         }
         reset();
     }
+
     /**
      * reset the internal status of the client
      */
@@ -364,13 +400,15 @@ public class Client {
         WireIO.write(oos, cmd);
     }
 
-    private void commandLoop(CommandListener listener) 
-        throws IOException {
-        assert ois != null: "null input stream?";
+    private void commandLoop(CommandListener listener)
+            throws IOException {
+        assert ois != null : "null input stream?";
         while (true) {
             try {
                 Command cmd = WireIO.read(ois);
-                if (debug) debugPrint("received " + cmd);
+                if (debug) {
+                    debugPrint("received " + cmd);
+                }
                 listener.onCommand(cmd);
                 if (cmd.getType() == Command.EXIT) {
                     return;
@@ -380,7 +418,7 @@ public class Client {
                 throw e;
             }
         }
-    } 
+    }
 
     public void debugPrint(String msg) {
         System.out.println("DEBUG: " + msg);
@@ -396,11 +434,13 @@ public class Client {
             }
         }
     }
-        
-    private void submitDTrace(String fileName, byte[] code, 
-                              String[] args, CommandListener listener) {
-        if (fileName == null || code == null) return;
-        
+
+    private void submitDTrace(String fileName, byte[] code,
+            String[] args, CommandListener listener) {
+        if (fileName == null || code == null) {
+            return;
+        }
+
         Object dtraceSrc = getDTraceSource(fileName, code);
         try {
             if (dtraceSrc instanceof String) {
@@ -409,7 +449,7 @@ public class Client {
                 } else {
                     warn(listener, "@DTrace is supported only on Solaris 11+");
                 }
-             } else if (dtraceSrc instanceof File) {
+            } else if (dtraceSrc instanceof File) {
                 if (dtraceEnabled) {
                     submitFile.invoke(null, dtraceSrc, args, listener);
                 } else {
@@ -429,10 +469,12 @@ public class Client {
         ClassReader reader = new ClassReader(code);
         final Object[] result = new Object[1];
         reader.accept(new NullVisitor() {
+
             @Override
             public AnnotationVisitor visitAnnotation(String desc, boolean vis) {
                 if (desc.equals(DTRACE_DESC)) {
                     return new NullVisitor() {
+
                         @Override
                         public void visit(String name, Object value) {
                             if (name.equals("value")) {
@@ -442,6 +484,7 @@ public class Client {
                     };
                 } else if (desc.equals(DTRACE_REF_DESC)) {
                     return new NullVisitor() {
+
                         @Override
                         public void visit(String name, Object value) {
                             if (name.equals("value")) {
