@@ -183,7 +183,8 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
             return file.toURI();
         } else {
             try {
-                return URI.create("mfm:///" + name.replace('.', '/'));
+//                return URI.create("mfm:///" + name.replace('.', '/'));
+                return URI.create("mfm:///" + name);
             } catch (Exception exp) {
                 return URI.create("mfm:///com/sun/script/java/java_source");
             }
