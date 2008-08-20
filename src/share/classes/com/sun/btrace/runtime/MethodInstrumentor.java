@@ -69,7 +69,7 @@ public class MethodInstrumentor extends MethodAdapter {
 
     public static final String BOX_VALUEOF = "valueOf";
     public static final String BOX_BOOLEAN_DESC = "(Z)Ljava/lang/Boolean;";
-    public static final String BOX_CHARACTER_DESC = "(B)Ljava/lang/Character;";
+    public static final String BOX_CHARACTER_DESC = "(C)Ljava/lang/Character;";
     public static final String BOX_BYTE_DESC = "(B)Ljava/lang/Byte;";
     public static final String BOX_SHORT_DESC = "(S)Ljava/lang/Short;";
     public static final String BOX_INTEGER_DESC = "(I)Ljava/lang/Integer;";
