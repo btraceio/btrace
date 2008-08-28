@@ -166,7 +166,7 @@ public class MethodInstrumentor extends MethodAdapter {
             count++;
         }
         push(count);
-        super.visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getDescriptor());
+        super.visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
         if (!isStatic && includeThis) {
             dup();
             push(0);
