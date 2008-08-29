@@ -357,6 +357,7 @@ public class MethodInstrumentor extends MethodAdapter {
         switch (typeCode) {
             case '[':
             case 'L':
+                super.visitTypeInsn(CHECKCAST, Type.getType(desc).getInternalName());
                 break;
             case 'Z':
                 super.visitTypeInsn(CHECKCAST, JAVA_LANG_BOOLEAN);
