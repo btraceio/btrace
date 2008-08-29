@@ -1125,10 +1125,12 @@ public final class BTraceRuntime {
 
     static String stackTraceStr(String prefix, StackTraceElement[] st, 
                                  int start, int numFrames) {
-        int limit = st.length;        
-        if (numFrames > 0 && numFrames < st.length) {
-            limit = numFrames;
-        }
+        start = start > 0 ? start : 0;
+        numFrames = numFrames > 0 ? numFrames : st.length - start;
+
+        int limit = start + numFrames;
+        limit = limit <= st.length ? limit : st.length;
+
         if (prefix == null) { prefix = ""; }
 
         StringBuilder buf = new StringBuilder();
