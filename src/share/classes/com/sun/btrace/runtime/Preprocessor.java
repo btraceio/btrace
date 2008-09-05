@@ -295,7 +295,11 @@ public class Preprocessor extends ClassAdapter {
         super.visit(version, access, name,
                     signature, superName, interfaces);
     }
-
+    
+    public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+        return super.visitAnnotation(desc, visible);
+    }
+    
     // prefix for BTrace perf counter names.
     private String externalClassName() {
         if (externalClassName == null) {

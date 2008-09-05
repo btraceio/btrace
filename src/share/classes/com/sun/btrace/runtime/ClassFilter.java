@@ -22,7 +22,6 @@
  * CA 95054 USA or visit www.sun.com if you need additional information or
  * have any questions.
  */
-
 package com.sun.btrace.runtime;
 
 import java.lang.annotation.Annotation;
@@ -41,6 +40,7 @@ import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.annotations.BTrace;
 
 /**
  * This class checks whether a given target class
@@ -50,6 +50,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * @author A. Sundararajan
  */
 public class ClassFilter {
+
     private String[] sourceClasses;
     private Pattern[] sourceClassPatterns;
     private String[] annotationClasses;
@@ -67,7 +68,13 @@ public class ClassFilter {
         if (target.isInterface() || target.isPrimitive() || target.isArray()) {
             return false;
         }
-        
+
+        // ignore classes annotated with @BTrace - 
+        // We don't want to instrument tracing classes!
+        if (target.getAnnotation(BTrace.class) != null) {
+            return false;
+        }
+
         String className = target.getName();
         for (String name : sourceClasses) {
             if (name.equals(className)) {
@@ -86,23 +93,23 @@ public class ClassFilter {
                 return true;
             }
         }
-        
+
         Annotation[] annotations = target.getAnnotations();
         String[] annoTypes = new String[annotations.length];
         for (int i = 0; i < annotations.length; i++) {
             annoTypes[i] = annotations[i].annotationType().getName();
         }
 
-        for (String name : annotationClasses) {    
+        for (String name : annotationClasses) {
             for (int i = 0; i < annoTypes.length; i++) {
                 if (name.equals(annoTypes[i])) {
                     return true;
                 }
             }
         }
-          
+
         for (Pattern pat : annotationClassPatterns) {
-            for (int i = 0; i < annoTypes.length; i++)  {
+            for (int i = 0; i < annoTypes.length; i++) {
                 if (pat.matcher(annoTypes[i]).matches()) {
                     return true;
                 }
@@ -121,7 +128,7 @@ public class ClassFilter {
         InstrumentUtils.accept(reader, cv);
         return cv.isCandidate();
     }
-    
+
     /* 
      * return whether given Class is subtype of given type name
      * Note that we can not use Class.iaAssignableFrom because the other
@@ -141,23 +148,25 @@ public class ClassFilter {
             return isSubTypeOf(clazz.getSuperclass(), typeName);
         }
     }
-    
+
     private class CheckingVisitor implements ClassVisitor {
+
         private boolean isInterface;
         private boolean isCandidate;
         private NullVisitor nullVisitor = new NullVisitor();
+
         boolean isCandidate() {
             return isCandidate;
         }
 
-        public void visit(int version, int access, String name, 
-            String signature, String superName, String[] interfaces) {
-            if ((access & ACC_INTERFACE) != 0)  {
+        public void visit(int version, int access, String name,
+                String signature, String superName, String[] interfaces) {
+            if ((access & ACC_INTERFACE) != 0) {
                 isInterface = true;
                 isCandidate = false;
                 return;
             }
-            name = name.replace('/', '.');            
+            name = name.replace('/', '.');
             for (String className : sourceClasses) {
                 if (className.equals(name)) {
                     isCandidate = true;
@@ -171,7 +180,7 @@ public class ClassFilter {
                     return;
                 }
             }
-            
+
             for (String st : superTypesInternal) {
                 if (superName.equals(st)) {
                     isCandidate = true;
@@ -191,9 +200,16 @@ public class ClassFilter {
                 return nullVisitor;
             }
 
+            if (BTRACE_DESC.equals(desc)) {
+                // ignore classes annotated with @BTrace - 
+                // we don't want to instrument tracing classes!
+                isCandidate = false;
+                return nullVisitor;
+            }
+
             if (!isCandidate) {
                 String annoName = Type.getType(desc).getClassName();
-                for (String name: annotationClasses) {
+                for (String name : annotationClasses) {
                     if (annoName.equals(name)) {
                         isCandidate = true;
                         return nullVisitor;
@@ -208,28 +224,28 @@ public class ClassFilter {
             }
 
             return nullVisitor;
-        } 
+        }
 
         public void visitAttribute(Attribute attr) {
         }
-         
+
         public void visitEnd() {
         }
 
         public FieldVisitor visitField(int access, String name,
-            String desc, String signature, Object value) {
+                String desc, String signature, Object value) {
             return null;
         }
-         
-        public void visitInnerClass(String name, String outerName, 
-            String innerName, int access) {
+
+        public void visitInnerClass(String name, String outerName,
+                String innerName, int access) {
         }
-         
-        public MethodVisitor visitMethod(int access, String name, String desc, 
-            String signature, String[] exceptions) {
+
+        public MethodVisitor visitMethod(int access, String name, String desc,
+                String signature, String[] exceptions) {
             return null;
         }
-         
+
         public void visitOuterClass(String owner, String name, String desc) {
         }
 
@@ -252,28 +268,28 @@ public class ClassFilter {
             }
             char firstCh = className.charAt(0);
             if (firstCh == '/' &&
-                REGEX_SPECIFIER.matcher(className).matches()) {
-                Pattern p = Pattern.compile(className.substring(1, 
-                    className.length() - 1));
+                    REGEX_SPECIFIER.matcher(className).matches()) {
+                Pattern p = Pattern.compile(className.substring(1,
+                        className.length() - 1));
                 patSrcList.add(p);
             } else if (firstCh == '@') {
                 className = className.substring(1);
-                if (REGEX_SPECIFIER.matcher(className ).matches()) {
+                if (REGEX_SPECIFIER.matcher(className).matches()) {
                     Pattern p = Pattern.compile(
-                        className.substring(1, className.length() - 1));
+                            className.substring(1, className.length() - 1));
                     patAnoList.add(p);
                 } else {
                     strAnoList.add(className);
-                }                        
+                }
             } else if (firstCh == '+') {
                 String superType = className.substring(1);
                 superTypesList.add(superType);
-                superTypesInternalList.add(superType.replace('.','/'));
+                superTypesInternalList.add(superType.replace('.', '/'));
             } else {
                 strSrcList.add(className);
-            }     
+            }
         }
-     
+
         sourceClasses = new String[strSrcList.size()];
         strSrcList.toArray(sourceClasses);
         sourceClassPatterns = new Pattern[patSrcList.size()];

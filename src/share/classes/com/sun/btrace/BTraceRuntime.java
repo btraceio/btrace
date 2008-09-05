@@ -1707,12 +1707,12 @@ public final class BTraceRuntime {
         for (int index = 0; index < timerHandlers.length; index++) {
             Method m = timerHandlers[index];
             try {
-                final String className = "BTraceRunnable$" + index;                    
+                final String className = "com/sun/btrace/BTraceRunnable$" + index;                    
                 final byte[] buf = gen.generate(m, className);
                 Class cls = AccessController.doPrivileged(
                     new PrivilegedExceptionAction<Class>() {        
                         public Class run() throws Exception {
-                             return loader.loadClass(className, buf);
+                             return loader.loadClass(className.replace('/', '.'), buf);
                         }
                     });   
                 runnables[index] = (Runnable) cls.newInstance();
