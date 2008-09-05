@@ -230,6 +230,7 @@ public final class Main {
         ServerSocket ss;
         try {
             if (isDebug()) debugPrint("starting server at " + port);
+            System.setProperty("btrace.port", String.valueOf(port));
             ss = new ServerSocket(port);
         } catch (IOException ioexp) {
             ioexp.printStackTrace();
