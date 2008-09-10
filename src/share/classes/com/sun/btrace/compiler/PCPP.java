@@ -196,14 +196,16 @@ public class PCPP {
 
         private StreamTokenizer tok;
         private String filename;
-        private int lineNumber;
+        // We do not generate #line directives
+        // private int lineNumber;
         private boolean startOfLine;
         private boolean startOfFile;
 
         ParseState(StreamTokenizer tok, String filename) {
             this.tok = tok;
             this.filename = filename;
-            lineNumber = 1;
+            // We do not generate #line directives
+            // lineNumber = 1;
             startOfLine = true;
             startOfFile = true;
         }
@@ -828,7 +830,6 @@ public class PCPP {
     ////////////
     // Output //
     ////////////
-    private OutputStream out;
     private PrintWriter writer;
     private ArrayList enabledBits = new ArrayList();
     private static int debugPrintIndentLevel = 0;
@@ -847,7 +848,7 @@ public class PCPP {
     }
 
     private void pushEnableBit(boolean enabled) {
-        enabledBits.add(new Boolean(enabled));
+        enabledBits.add(Boolean.valueOf(enabled));
         ++debugPrintIndentLevel;
     //debugPrint(false, "PUSH_ENABLED, NOW: " + enabled());
     }
@@ -871,13 +872,6 @@ public class PCPP {
         if (enabled()) {
             writer.print(s);
         //System.out.print(s);//debug
-        }
-    }
-
-    private void print(char c) {
-        if (enabled()) {
-            writer.print(c);
-        //System.err.print(c); //debug
         }
     }
 

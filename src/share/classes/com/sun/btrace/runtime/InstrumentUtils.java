@@ -69,7 +69,8 @@ public class InstrumentUtils {
     private static boolean isJDK16OrAbove(byte[] code) {
         // skip 0xCAFEBABE magic and minor version
         final int majorOffset = 4 + 2;
-        int major = 0x0FFFF & ((code[majorOffset] << 8) | code[majorOffset + 1]);
+        int major = (((code[majorOffset] << 8) & 0xFF00) | 
+                ((code[majorOffset + 1]) & 0xFF));
         return major >= 50;
     }
     

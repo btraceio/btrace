@@ -92,7 +92,7 @@ public class BTraceMBean implements DynamicMBean {
     public synchronized Object getAttribute(String name)
             throws AttributeNotFoundException {
         Field field = attributes.get(name);
-        if (field != null) {
+        if (field == null) {
             throw new AttributeNotFoundException("No such property: " + name);
         }
         return getFieldValue(field);

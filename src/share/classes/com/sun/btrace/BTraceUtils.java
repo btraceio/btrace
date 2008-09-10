@@ -2324,7 +2324,7 @@ public final class BTraceUtils {
     }
 
     public static <E> boolean contains(Collection<E> coll, Object obj) {  
-        return BTraceUtils.contains(coll, obj);
+        return BTraceRuntime.contains(coll, obj);
     }
 
     public static boolean contains(Object[] array, Object value) {
