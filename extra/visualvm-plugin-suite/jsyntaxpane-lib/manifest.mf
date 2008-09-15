@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+OpenIDE-Module: jsyntaxpane
+OpenIDE-Module-Localizing-Bundle: jsyntaxpane/Bundle.properties
+OpenIDE-Module-Specification-Version: 1.0
+
