@@ -51,6 +51,7 @@ import com.sun.tools.attach.VirtualMachine;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class represents a BTrace client. This can be
@@ -403,6 +404,7 @@ public class Client {
     private void commandLoop(CommandListener listener)
             throws IOException {
         assert ois != null : "null input stream?";
+        final AtomicBoolean exited = new AtomicBoolean(false);
         while (true) {
             try {
                 Command cmd = WireIO.read(ois);
@@ -414,8 +416,10 @@ public class Client {
                     return;
                 }
             } catch (IOException e) {
-                listener.onCommand(new ExitCommand(-1));
+                if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
                 throw e;
+            } catch (NullPointerException e) {
+                if (exited.compareAndSet(false, true))listener.onCommand(new ExitCommand(-1));
             }
         }
     }
