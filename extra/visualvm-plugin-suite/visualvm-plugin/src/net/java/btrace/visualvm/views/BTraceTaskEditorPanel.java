@@ -40,6 +40,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.util.Set;
 import javax.swing.JFileChooser;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -279,6 +280,16 @@ public class BTraceTaskEditorPanel extends javax.swing.JPanel implements StateLi
     }//GEN-LAST:event_btnStopActionPerformed
 
     private void btnEventActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEventActionPerformed
+        Set<String> events = task.getNamedEvents();
+        if (events.isEmpty()) {
+            task.sendEvent();
+            return;
+        }
+        if (events.size() == 1) {
+            task.sendEvent(events.iterator().next());
+            return;
+        }
+        
         EventChooser chooser = EventChooser.getChooser(task.getNamedEvents());
         NotifyDescriptor nd = new DialogDescriptor.Confirmation(chooser, "Select the event to send", NotifyDescriptor.Confirmation.OK_CANCEL_OPTION);
 
@@ -337,6 +348,7 @@ public class BTraceTaskEditorPanel extends javax.swing.JPanel implements StateLi
         int result = chooser.showSaveDialog(null);
         if (result == JFileChooser.APPROVE_OPTION) {
             lastSavePath = chooser.getSelectedFile().getParent();
+            BTraceSettings.sharedInstance().setLastScriptPath(chooser.getSelectedFile().getAbsolutePath());
 
             BufferedWriter bw = null;
             try {
