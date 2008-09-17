@@ -49,6 +49,7 @@ import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
@@ -326,6 +327,8 @@ public class Preprocessor extends ClassAdapter {
         boolean isProperty;
         String propertyName;
         String propertyDescription;
+        int var = -1;
+        boolean initialized;
 
         FieldDescriptor(int acc, String n, String d,
                         String sig, Object val, List<Attribute> attrs,
@@ -481,6 +484,7 @@ public class Preprocessor extends ClassAdapter {
             return new MethodInstrumentor(adaptee, access, name, desc) {
                 private Label start = new Label();
                 private Label handler = new Label();
+                private int nextVar = 0;
 
                 private void generateExportGet(String name, String desc) {
                     int typeCode = desc.charAt(0);
@@ -576,19 +580,36 @@ public class Preprocessor extends ClassAdapter {
                     }
                 }
 
-                private void generateThreadLocalGet(String name, String desc) {
-                    super.visitFieldInsn(GETSTATIC, className, name, JAVA_LANG_THREAD_LOCAL_DESC);
-                    visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_THREAD_LOCAL,
-                                 JAVA_LANG_THREAD_LOCAL_GET, JAVA_LANG_THREAD_LOCAL_GET_DESC);
-                    unbox(desc);
+                private void generateThreadLocalGet(FieldDescriptor fd) {
+                    if (isClassInitializer) {
+                        if (fd.initialized) {
+                            super.visitVarInsn(Type.getType(fd.desc).getOpcode(Opcodes.ILOAD), fd.var);
+                        } else if (fd.value != null) {
+                            visitLdcInsn(fd.value);
+                        } else {
+                            defaultValue(fd.desc);
+                        }
+                    } else {
+                        String fieldName = BTRACE_FIELD_PREFIX + fd.name;
+                        super.visitFieldInsn(GETSTATIC, className, fieldName, JAVA_LANG_THREAD_LOCAL_DESC);
+                        visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_THREAD_LOCAL,
+                                     JAVA_LANG_THREAD_LOCAL_GET, JAVA_LANG_THREAD_LOCAL_GET_DESC);
+                        unbox(fd.desc);
+                    }
                 }
 
-                private void generateThreadLocalPut(String name, String desc) {
-                   box(desc);
-                   super.visitFieldInsn(GETSTATIC, className, name, JAVA_LANG_THREAD_LOCAL_DESC);
-                   visitInsn(SWAP);
-                   visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_THREAD_LOCAL,
-                               JAVA_LANG_THREAD_LOCAL_SET, JAVA_LANG_THREAD_LOCAL_SET_DESC);
+                private void generateThreadLocalPut(FieldDescriptor fd) {
+                    if (isClassInitializer) {
+                        super.visitVarInsn(Type.getType(fd.desc).getOpcode(Opcodes.ISTORE), fd.var);
+                        fd.initialized = true;
+                    } else {
+                        String fieldName = BTRACE_FIELD_PREFIX + fd.name;
+                        box(fd.desc);
+                        super.visitFieldInsn(GETSTATIC, className, fieldName, JAVA_LANG_THREAD_LOCAL_DESC);
+                        visitInsn(SWAP);
+                        visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_THREAD_LOCAL,
+                                    JAVA_LANG_THREAD_LOCAL_SET, JAVA_LANG_THREAD_LOCAL_SET_DESC);
+                    }
                 }
 
                 public void visitCode() {
@@ -612,20 +633,10 @@ public class Preprocessor extends ClassAdapter {
                                     BTRACE_RUNTIME_ENTER_DESC);
                     if (isClassInitializer) {
                          for (FieldDescriptor fd : threadLocalFields.values()) {
-                             if (fd.value == null) {
-                                 defaultValue(fd.desc);
-                             } else {
-                                 visitLdcInsn(fd.value);
-                             }
-                             box(fd.desc);
-                             visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
-                                    BTRACE_RUNTIME_NEW_THREAD_LOCAL,
-                                    BTRACE_RUNTIME_NEW_THREAD_LOCAL_DESC);
-                             super.visitFieldInsn(PUTSTATIC, className,
-                                   BTRACE_FIELD_PREFIX + fd.name,
-                                   JAVA_LANG_THREAD_LOCAL_DESC);
-                         }                        
-                         for (FieldDescriptor fd : exportFields.values()) {                             
+                             fd.var = nextVar;
+                             nextVar += Type.getType(fd.desc).getSize();
+                         }
+                         for (FieldDescriptor fd : exportFields.values()) {
                              visitLdcInsn(perfCounterName(fd.name));
                              visitLdcInsn(fd.desc);
                              if (fd.value == null) {
@@ -647,7 +658,7 @@ public class Preprocessor extends ClassAdapter {
                 }
 
                 public void visitFieldInsn(int opcode, String owner, 
-                                           String name, String desc) {
+                                               String name, String desc) {
                     String fieldName = name;
                     if (owner.equals(className)) {   
                         if (exportFields.get(name) != null) {
@@ -662,12 +673,13 @@ public class Preprocessor extends ClassAdapter {
                         if (! name.equals(BTRACE_RUNTIME_FIELD_NAME)) {
                             fieldName = BTRACE_FIELD_PREFIX + name; 
                         }
-                        
-                        if (threadLocalFields.get(name) != null) {
+
+                        FieldDescriptor fd = threadLocalFields.get(name);
+                        if (fd != null) {
                             if (opcode == GETSTATIC) {                                
-                                generateThreadLocalGet(fieldName, desc);                                
+                                generateThreadLocalGet(fd);
                             } else {
-                                generateThreadLocalPut(fieldName, desc);
+                                generateThreadLocalPut(fd);
                             }
                             return;
                         } // else fall through
@@ -675,9 +687,23 @@ public class Preprocessor extends ClassAdapter {
                     super.visitFieldInsn(opcode, owner, fieldName, desc);
                 }
 
+                public void visitVarInsn(int opcode, int var) {
+                    super.visitVarInsn(opcode, var + nextVar);
+                }
+
                 public void visitInsn(int opcode) {
                     if (opcode == RETURN) {
                         if (isClassInitializer) {
+                            for (FieldDescriptor fd : threadLocalFields.values()) {
+                                generateThreadLocalGet(fd); // generates var load here
+                                box(fd.desc);
+                                visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                        BTRACE_RUNTIME_NEW_THREAD_LOCAL,
+                                        BTRACE_RUNTIME_NEW_THREAD_LOCAL_DESC);
+                                super.visitFieldInsn(PUTSTATIC, className,
+                                        BTRACE_FIELD_PREFIX + fd.name,
+                                        JAVA_LANG_THREAD_LOCAL_DESC);
+                            }
                             visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,                      
                                     BTRACE_RUNTIME_START, 
                                     BTRACE_RUNTIME_START_DESC);
