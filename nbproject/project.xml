@@ -62,7 +62,7 @@
                 <package-root>src/share/classes</package-root>
                 <package-root>src/share/classes</package-root>
                 <package-root>src/solaris/classes</package-root>
-                <classpath mode="compile">lib/asm-3.0.jar;${tools.jar}</classpath>
+                <classpath mode="compile">lib/btrace-asm-3.1.jar;${tools.jar}</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>
         </java-data>
