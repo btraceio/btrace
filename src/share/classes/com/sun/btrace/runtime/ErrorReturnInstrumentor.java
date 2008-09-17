@@ -56,13 +56,13 @@ public class ErrorReturnInstrumentor extends MethodInstrumentor {
     }
 
     public void visitCode() {
-        visitTryCatchBlock(start, end, end, JAVA_LANG_THROWABLE);
         visitLabel(start);
         super.visitCode();
     }
 
     public void visitMaxs(int maxStack, int maxLocals) {
         visitLabel(end);
+        visitTryCatchBlock(start, end, end, JAVA_LANG_THROWABLE);
         onErrorReturn();
         visitInsn(ATHROW);
         super.visitMaxs(maxStack, maxLocals);
