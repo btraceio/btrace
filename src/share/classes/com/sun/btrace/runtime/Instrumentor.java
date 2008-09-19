@@ -293,21 +293,26 @@ public class Instrumentor extends ClassAdapter {
                     }
 
                     private void callAction(boolean isStatic, Type[] args) {  
-                        if (! isStatic) {
-                            storeLocal(TypeUtils.objectType, maxLocal + 1);
+                        int upper = args.length - 1;
+                        for (int i = 0;i<args.length;i++) {
+                            storeLocal(args[upper - i], maxLocal + i);
                         }
-                        for (int i = 0; i < args.length; i++) {
-                            storeLocal(args[i], maxLocal + i + ((isStatic)? 0 : 1));
-                        }                            
+
+                        if (! isStatic) {
+                            storeLocal(TypeUtils.objectType, maxLocal + args.length);
+                            loadLocal(TypeUtils.objectType, maxLocal + args.length);
+                        }
+
                         for (int i = args.length - 1; i > -1; i--) {
-                            loadLocal(args[i], maxLocal + i + ((isStatic)? 0 : 1));
-                        }                            
+                            loadLocal(args[upper - i], maxLocal + i );
+                        }
                         invokeBTraceAction(this, om);
-                        if (! isStatic) {
-                            storeLocal(TypeUtils.objectType, maxLocal + 1);
+                        if (!isStatic) {
+                            loadLocal(TypeUtils.objectType, maxLocal + args.length);
                         }
+
                         for (int i = args.length - 1; i > -1; i--) {
-                            loadLocal(args[i], maxLocal + i + ((isStatic)? 0 : 1));
+                            loadLocal(args[upper - i], maxLocal + i);
                         }
                     }
 
