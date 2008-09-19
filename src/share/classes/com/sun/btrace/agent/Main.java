@@ -293,12 +293,10 @@ public final class Main {
                 targetClassName = targetClassName.replace("/", File.separator);
                 int index = targetClassName.lastIndexOf(File.separatorChar);
                 StringBuilder buf = new StringBuilder();
-                buf.append(btraceClassName);
-                buf.append(File.separatorChar);
-                if (dumpDir.equals(".")) {
+                if (!dumpDir.equals(".")) {
                     buf.append(dumpDir);
                     buf.append(File.separatorChar);
-                } 
+                }
                 String dir = buf.toString();
                 if (index != -1) {
                     dir += targetClassName.substring(0, index);
