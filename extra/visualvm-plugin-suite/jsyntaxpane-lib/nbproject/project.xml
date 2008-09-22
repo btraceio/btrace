@@ -9,10 +9,12 @@
             <public-packages>
                 <package>jsyntaxpane</package>
                 <package>jsyntaxpane.lexers</package>
+                <package>jsyntaxpane.syntaxkits</package>
+                <package>jsyntaxpane.util</package>
             </public-packages>
             <class-path-extension>
-                <runtime-relative-path>ext/JSyntaxPane-080717.jar</runtime-relative-path>
-                <binary-origin>release/modules/ext/JSyntaxPane-080717.jar</binary-origin>
+                <runtime-relative-path>ext/jsyntaxpane.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/jsyntaxpane.jar</binary-origin>
             </class-path-extension>
         </data>
     </configuration>
