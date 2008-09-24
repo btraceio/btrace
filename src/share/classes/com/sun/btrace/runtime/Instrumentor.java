@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.AnyType;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -292,27 +293,69 @@ public class Instrumentor extends ClassAdapter {
                         super.visitVarInsn(opcode, var);
                     }
 
-                    private void callAction(boolean isStatic, Type[] args) {  
-                        int upper = args.length - 1;
-                        for (int i = 0;i<args.length;i++) {
-                            storeLocal(args[upper - i], maxLocal + i);
+                    private void callAction(boolean isStatic, String method, Type[] probeArgs, Type[] callArgs) {
+                        int upper = callArgs.length - 1;
+
+                        for (int i = 0;i<callArgs.length;i++) {
+                            storeLocal(callArgs[upper - i], maxLocal + i);
                         }
 
                         if (! isStatic) {
-                            storeLocal(TypeUtils.objectType, maxLocal + args.length);
-                            loadLocal(TypeUtils.objectType, maxLocal + args.length);
+                            storeLocal(TypeUtils.objectType, maxLocal + callArgs.length); // store *this*
                         }
 
-                        for (int i = args.length - 1; i > -1; i--) {
-                            loadLocal(args[upper - i], maxLocal + i );
+                        if (probeArgs.length == 1 && TypeUtils.isAnyTypeArray(probeArgs[0])) {
+                            preAnyTypeAction(isStatic, method, callArgs);
+                        } else if (probeArgs.length == 1 && TypeUtils.isString(probeArgs[0])) {
+                            preOnlyNameAction(method);
+                        } else if (probeArgs.length > 1) {
+                            preMatchAction(isStatic, method, callArgs);
                         }
                         invokeBTraceAction(this, om);
                         if (!isStatic) {
-                            loadLocal(TypeUtils.objectType, maxLocal + args.length);
+                            loadLocal(TypeUtils.objectType, maxLocal + callArgs.length);
                         }
 
+                        for (int i = callArgs.length - 1; i > -1; i--) {
+                            loadLocal(callArgs[upper - i], maxLocal + i);
+                        }
+                    }
+
+                    private void preOnlyNameAction(String method) {
+                        super.visitLdcInsn(method);
+                    }
+
+                    private void preMatchAction(boolean isStatic, String method, Type[] args) {
+                        if (!isStatic) loadLocal(TypeUtils.objectType, maxLocal + args.length); // load *this*
+                        super.visitLdcInsn(method);
                         for (int i = args.length - 1; i > -1; i--) {
+                            loadLocal(args[args.length - 1 - i], maxLocal + i );
+                        }
+                    }
+
+                    private void preAnyTypeAction(boolean isStatic, String method, Type[] args) {
+                        int upper = args.length - 1;
+
+                        push(args.length + (isStatic ? 0:1) + 1);
+                        super.visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
+
+                        if (!isStatic) {
+                            dup();
+                            push(0);
+                            loadLocal(TypeUtils.objectType, maxLocal + args.length);
+                            arrayStore(TypeUtils.objectType);
+                        }
+                        int start = isStatic? 0 : 1;
+                        dup();
+                        push(start++);
+                        super.visitLdcInsn(method);
+                        arrayStore(TypeUtils.objectType);
+                        for (int i = 0; i < args.length; i++) {
+                            dup();
+                            push(i + start);
                             loadLocal(args[upper - i], maxLocal + i);
+                            box(args[upper - i]);
+                            arrayStore(TypeUtils.objectType);
                         }
                     }
 
@@ -323,33 +366,43 @@ public class Instrumentor extends ClassAdapter {
                             matches(className, owner.replace('/', '.')) &&
                             matches(methodName, name) &&
                             typeMatches(loc.getType(), desc)) {
-                            if (numActionArgs == 0) {
-                                invokeBTraceAction(this, om);
-                            } else {
-                                Type[] calledMethodArgs = Type.getArgumentTypes(desc);
-                                if (opcode == INVOKESTATIC) {                  
-                                    if (TypeUtils.isCompatible(actionArgTypes, calledMethodArgs)) {
-                                        callAction(true, calledMethodArgs);
-                                    }
-                                } else {
-                                    /*
-                                     * It is not safe to call a method before constructor
-                                     * call passing (the uninitialized) object as argument. 
-                                     * Bytecode verifier will not like it!
-                                     */
-                                    if (name.equals(CONSTRUCTOR)) {
-                                        return;
-                                    }
-                                    if (calledMethodArgs.length + 1 == numActionArgs) {
-                                        Type[] tmp = new Type[numActionArgs - 1];
-                                        System.arraycopy(actionArgTypes, 1, tmp, 0, tmp.length);
-                                        if ((TypeUtils.isObject(actionArgTypes[0]) ||
-                                            TypeUtils.isCompatible(actionArgTypes[0], Type.getObjectType(owner))) &&
-                                            TypeUtils.isCompatible(tmp, calledMethodArgs)) {
-                                            callAction(false, calledMethodArgs);
-                                        }
-                                    }
+                            String method = name + desc;
+                            Type[] calledMethodArgs = Type.getArgumentTypes(desc);
+                            if (opcode == INVOKESTATIC) {
+                                boolean doCall = false;
+
+                                doCall |= (actionArgTypes.length == 1 && TypeUtils.isAnyTypeArray(actionArgTypes[0]));
+                                doCall |= (actionArgTypes.length == 1 && TypeUtils.isString(actionArgTypes[0]));
+                                if (calledMethodArgs.length + 1 == numActionArgs) {
+                                    Type[] tmp = new Type[numActionArgs - 1];
+                                    System.arraycopy(actionArgTypes, 1, tmp, 0, tmp.length);
+                                    doCall |= TypeUtils.isString(actionArgTypes[1]) &&
+                                        TypeUtils.isCompatible(tmp, calledMethodArgs);
                                 }
+                                if (doCall) callAction(true, method, actionArgTypes, calledMethodArgs);
+                            } else {
+                                /*
+                                 * It is not safe to call a method before constructor
+                                 * call passing (the uninitialized) object as argument.
+                                 * Bytecode verifier will not like it!
+                                 */
+                                if (name.equals(CONSTRUCTOR)) {
+                                    return;
+                                }
+                                boolean doCall = false;
+
+                                doCall |= (actionArgTypes.length == 1 && TypeUtils.isAnyTypeArray(actionArgTypes[0]));
+                                doCall |= (actionArgTypes.length == 1 && TypeUtils.isString(actionArgTypes[0]));
+
+                                if (calledMethodArgs.length + 2 == numActionArgs) {
+                                    Type[] tmp = new Type[numActionArgs - 2];
+                                    System.arraycopy(actionArgTypes, 2, tmp, 0, tmp.length);
+                                    doCall |= (TypeUtils.isObject(actionArgTypes[0]) ||
+                                        TypeUtils.isCompatible(actionArgTypes[0], Type.getObjectType(owner))) &&
+                                        TypeUtils.isString(actionArgTypes[1]) &&
+                                        TypeUtils.isCompatible(tmp, calledMethodArgs);
+                                }
+                                if (doCall) callAction(false, method, actionArgTypes, calledMethodArgs);
                             }
                         }
                     }
