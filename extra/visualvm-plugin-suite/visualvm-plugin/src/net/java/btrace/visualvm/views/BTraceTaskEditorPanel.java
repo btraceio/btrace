@@ -45,11 +45,11 @@ import javax.swing.JFileChooser;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
+import jsyntaxpane.DefaultSyntaxKit;
 import net.java.btrace.visualvm.ui.components.EventChooser;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
 import org.openide.NotifyDescriptor;
-import jsyntaxpane.*;
 import net.java.btrace.visualvm.api.BTraceTask;
 import net.java.btrace.visualvm.api.BTraceTask.StateListener;
 import net.java.btrace.visualvm.options.BTraceSettings;
@@ -95,9 +95,10 @@ public class BTraceTaskEditorPanel extends javax.swing.JPanel implements StateLi
 
     /** Creates new form BTraceTaskEditorPanel */
     public BTraceTaskEditorPanel(BTraceTask task) {
+        DefaultSyntaxKit.initKit();
         this.task = task;
         task.addStateListener(this);
-        
+
         initComponents();
 
         initializeEditor();
@@ -183,8 +184,8 @@ public class BTraceTaskEditorPanel extends javax.swing.JPanel implements StateLi
 
         scriptEditor.setBackground(javax.swing.UIManager.getDefaults().getColor("EditorPane.background"));
         scriptEditor.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
-        scriptEditor.setEditorKit(new SyntaxKit("java"));
-        scriptEditor.setFont(new java.awt.Font("Monospaced", 0, 12));
+        scriptEditor.setContentType(org.openide.util.NbBundle.getMessage(BTraceTaskEditorPanel.class, "BTraceTaskEditorPanel.scriptEditor.contentType")); // NOI18N
+        scriptEditor.setFont(new java.awt.Font("Monospaced", 0, 12)); // NOI18N
         jScrollPane1.setViewportView(scriptEditor);
 
         editorToolBar.setFloatable(false);
@@ -259,7 +260,7 @@ public class BTraceTaskEditorPanel extends javax.swing.JPanel implements StateLi
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(editorToolBar, javax.swing.GroupLayout.DEFAULT_SIZE, 1395, Short.MAX_VALUE)
+            .addComponent(editorToolBar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addComponent(jScrollPane1)
         );
         layout.setVerticalGroup(
@@ -290,10 +291,10 @@ public class BTraceTaskEditorPanel extends javax.swing.JPanel implements StateLi
             return;
         }
         
-        EventChooser chooser = EventChooser.getChooser(task.getNamedEvents());
+        EventChooser chooser = EventChooser.getChooser(task.getNamedEvents(), task.hasAnonymousEvents());
         NotifyDescriptor nd = new DialogDescriptor.Confirmation(chooser, "Select the event to send", NotifyDescriptor.Confirmation.OK_CANCEL_OPTION);
 
-        if (DialogDisplayer.getDefault().notify(nd) != NotifyDescriptor.CANCEL_OPTION) {
+        if (DialogDisplayer.getDefault().notify(nd) == NotifyDescriptor.OK_OPTION) {
             String event = chooser.getSelectedEvent();
             if (event != null && !event.isEmpty()) {
                 task.sendEvent(event);

@@ -43,7 +43,9 @@ import org.openide.util.WeakListeners;
  * @author Jaroslav Bachorik
  */
 public class BTraceTaskImpl extends BTraceTask implements BTraceEngine.StateListener {
-    final private static Pattern namedEventPattern = Pattern.compile("@OnEvent\\s*\\(\\s*\\\"(\\w.*)\\\"\\s*\\)", Pattern.MULTILINE);
+    final private static Pattern NAMED_EVENT_PATTERN = Pattern.compile("@OnEvent\\s*\\(\\s*\\\"(\\w.*)\\\"\\s*\\)", Pattern.MULTILINE);
+    final private static Pattern ANONYMOUS_EVENT_PATTERN = Pattern.compile("@OnEvent(?!\\s*\\()");
+
     final private static Set<CommandListener> commandListeners = new HashSet<CommandListener>();
 
     final private AtomicReference<State> currentState = new AtomicReference<State>(State.NEW);
@@ -107,11 +109,17 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngine.StateList
     @Override
     public Set<String> getNamedEvents() {
         Set<String> events = new HashSet<String>();
-        Matcher matcher = namedEventPattern.matcher(getScript());
+        Matcher matcher = NAMED_EVENT_PATTERN.matcher(getScript());
         while (matcher.find()) {
             events.add(matcher.group(1));
         }
         return events;
+    }
+
+    @Override
+    public boolean hasAnonymousEvents() {
+        Matcher matcher = ANONYMOUS_EVENT_PATTERN.matcher(getScript());
+        return matcher.find();
     }
 
     @Override

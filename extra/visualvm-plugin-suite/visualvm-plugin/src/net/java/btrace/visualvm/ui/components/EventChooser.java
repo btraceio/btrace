@@ -40,11 +40,13 @@ public class EventChooser extends javax.swing.JPanel {
         initComponents();
     }
     
-    public static EventChooser getChooser(Set<String> events) {
+    public static EventChooser getChooser(Set<String> events, boolean enableAnonymous) {
         EventChooser instance = new EventChooser();
         DefaultComboBoxModel dcm = (DefaultComboBoxModel)instance.eventsList.getModel();
         dcm.removeAllElements();
-        dcm.addElement(ANONYMOUS_NAME);
+        if (enableAnonymous) {
+            dcm.addElement(ANONYMOUS_NAME);
+        }
         for(String event : events) {
             dcm.addElement(event);
         }

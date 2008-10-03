@@ -155,6 +155,12 @@ public abstract class BTraceTask extends DataSource {
     abstract public Set<String> getNamedEvents();
 
     /**
+     * A flag indicating that the task has some anonymous events assigned
+     * @return Returns TRUE if there are any anonymous events defined
+     */
+    abstract public boolean hasAnonymousEvents();
+
+    /**
      * Flag property getter
      * @return Returns true if the script has defined at least one @OnEvent probe
      */
