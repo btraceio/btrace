@@ -49,6 +49,7 @@ public class BTraceTaskView extends DataSourceView {
             public void stateChanged(BTraceTask.State state) {
                 if (state == BTraceTask.State.STARTING) {
                     output.clear();
+                    dvc.showDetailsArea(DataViewComponent.BOTTOM_LEFT);
                 } else if (state == BTraceTask.State.RUNNING) {
                     dvc.showDetailsArea(DataViewComponent.BOTTOM_LEFT);
                 }
