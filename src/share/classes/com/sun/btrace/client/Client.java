@@ -398,6 +398,7 @@ public class Client {
         if (oos == null) {
             throw new IllegalStateException();
         }
+        oos.reset();
         WireIO.write(oos, cmd);
     }
 

@@ -109,6 +109,7 @@ class RemoteClient extends Client {
         if (oos == null) {
             throw new IOException("no output stream");
         }
+        oos.reset();
         switch (cmd.getType()) {
         case Command.EXIT:
             if (debug) Main.debugPrint("client " + getClassName() + ": got " + cmd);
