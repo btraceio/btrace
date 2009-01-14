@@ -35,7 +35,7 @@ public class TraceApplicationAction extends SingleDataSourceAction<Application> 
     @Override
     protected boolean isEnabled(Application app) {
         Jvm jvm = JvmFactory.getJVMFor(app);
-        return jvm.isAttachable();
+        return app.isLocalApplication() && jvm.isAttachable();
     }
 
     public static synchronized TraceApplicationAction newInstance() {
