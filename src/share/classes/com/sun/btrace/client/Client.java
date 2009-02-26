@@ -387,11 +387,19 @@ public class Client {
         for (String c : components) {
             if (c.endsWith("tools.jar")) {
                 return new File(c).getAbsolutePath();
+            } else if (c.endsWith("classes.jar")) { // MacOS specific
+                return new File(c).getAbsolutePath();
             }
         }
         // we didn't find -- make a guess! If this app is running on a JDK rather 
         // than a JRE there will be a tools.jar in $JDK_HOME/lib directory.
-        return System.getProperty("java.home") + "../lib/tools.jar";
+        if(System.getProperty("os.name").startsWith("Mac")) {
+            String java_home = System.getProperty("java.home");
+            String java_mac_home = java_home.substring(0,java_home.indexOf("/Home"));
+            return java_mac_home + "/Classes/classes.jar";
+        } else {
+            return System.getProperty("java.home") + "../lib/tools.jar";
+        }
     }
 
     private void send(Command cmd) throws IOException {

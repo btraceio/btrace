@@ -260,17 +260,31 @@ public class BTraceEngineImpl extends BTraceEngine {
     private static String findToolsJarPath(Application app) {
         String toolsJarPath = null;
         Properties props = JvmFactory.getJVMFor(app).getSystemProperties();
+
         if (props != null && props.containsKey("java.home")) {
-            String java_home = props.getProperty("java.home");
-            java_home = java_home.replace(File.separator + "jre", "");
-            toolsJarPath = java_home + "/lib/tools.jar";
+            if(props.getProperty("os.name").startsWith("Mac")) {
+                String java_home = props.getProperty("java.home");
+                String java_mac_home = java_home.substring(0,java_home.indexOf("/Home"));
+                toolsJarPath = java_mac_home + "/Classes/classes.jar";
+            } else {
+                String java_home = props.getProperty("java.home");
+                java_home = java_home.replace(File.separator + "jre", "");
+                toolsJarPath = java_home + "/lib/tools.jar";
+            }
         }
+
         if (!new File(toolsJarPath).exists()) {
             // may be the target app is running on a JRE. Let us hope
             // VisualVM is running on a JDK!
-            String java_home = System.getProperty("java.home");
-            java_home = java_home.replace(File.separator + "jre", "");
-            toolsJarPath = java_home + "/lib/tools.jar";
+            if(System.getProperty("os.name").startsWith("Mac")) {
+                String java_home = System.getProperty("java.home");
+                String java_mac_home = java_home.substring(0,java_home.indexOf("/Home"));
+                toolsJarPath = java_mac_home + "/Classes/classes.jar";
+            } else {
+                String java_home = System.getProperty("java.home");
+                java_home = java_home.replace(File.separator + "jre", "");
+                toolsJarPath = java_home + "/lib/tools.jar";
+            }
         }
         return toolsJarPath;
     }
