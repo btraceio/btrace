@@ -104,6 +104,8 @@ public class Client {
     private final int port;
     // are we running debug mode?
     private final boolean debug;
+    // are we running in unsafe mode?
+    private final boolean unsafe;
     // are we dumping .class files of
     // the instrumented classes?
     private final boolean dumpClasses;
@@ -117,19 +119,20 @@ public class Client {
     private volatile ObjectOutputStream oos;
 
     public Client(int port) {
-        this(port, ".", false, false, null);
+        this(port, ".", false, false, false, null);
     }
 
     public Client(int port, String probeDescPath) {
-        this(port, probeDescPath, false, false, null);
+        this(port, probeDescPath, false, false, false, null);
     }
 
     public Client(int port, String probeDescPath,
-            boolean debug, boolean dumpClasses,
+            boolean debug, boolean unsafe, boolean dumpClasses,
             String dumpDir) {
         this.port = port;
         this.probeDescPath = probeDescPath;
         this.debug = debug;
+        this.unsafe = unsafe;
         this.dumpClasses = dumpClasses;
         this.dumpDir = dumpDir;
     }
@@ -159,7 +162,7 @@ public class Client {
         byte[] code = null;
         File file = new File(fileName);
         if (fileName.endsWith(".java")) {
-            Compiler compiler = new Compiler(includePath);
+            Compiler compiler = new Compiler(includePath, unsafe);
             classPath += File.pathSeparator + System.getProperty("java.class.path");
             if (debug) {
                 debugPrint("compiling " + fileName);
@@ -254,6 +257,9 @@ public class Client {
             String agentArgs = "port=" + port;
             if (debug) {
                 agentArgs += ",debug=true";
+            }
+            if (unsafe) {
+                agentArgs += ",unsafe=true";
             }
             if (dumpClasses) {
                 agentArgs += ",dumpClasses=true";

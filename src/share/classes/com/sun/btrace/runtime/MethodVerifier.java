@@ -68,11 +68,14 @@ public class MethodVerifier extends MethodAdapter {
         unboxMethods.add("floatValue");
         unboxMethods.add("doubleValue");
     }
+
+    private Verifier verifier;
     private String className;
     private Map<Label, Label> labels;
 
-    public MethodVerifier(MethodVisitor mv, String className) {
+    public MethodVerifier(Verifier v, MethodVisitor mv, String className) {
         super(mv);
+        this.verifier = v;
         this.className = className;
         labels = new HashMap<Label, Label>();
     }
@@ -212,7 +215,7 @@ public class MethodVerifier extends MethodAdapter {
     }
 
     private void reportError(String err, String msg) {
-        Verifier.reportError(err, msg);
+        verifier.reportError(err, msg);
     }
 
     private static boolean isPrimitiveWrapper(String type) {

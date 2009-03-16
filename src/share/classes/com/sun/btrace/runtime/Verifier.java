@@ -56,12 +56,18 @@ public class Verifier extends ClassAdapter {
     private String className;
     private List<OnMethod> onMethods;
     private List<OnProbe> onProbes;
+    private boolean unsafe;
 
 
-    public Verifier(ClassVisitor cv) {
+    public Verifier(ClassVisitor cv, boolean unsafe) {
         super(cv);
+        this.unsafe = unsafe;
         onMethods = new ArrayList<OnMethod>();
         onProbes = new ArrayList<OnProbe>();
+    }
+
+    public Verifier(ClassVisitor cv) {
+        this(cv, false);
     }
 
     public String getClassName() {
@@ -149,7 +155,7 @@ public class Verifier extends ClassAdapter {
 
         MethodVisitor mv = super.visitMethod(access, methodName, 
                    methodDesc, signature, exceptions);
-        return new MethodVerifier(mv, className) {
+        return new MethodVerifier(this, mv, className) {
             public AnnotationVisitor visitAnnotation(String desc,
                                   boolean visible) {      
                 if (desc.equals(ONMETHOD_DESC)) {
@@ -230,11 +236,12 @@ public class Verifier extends ClassAdapter {
         reportError("no.outer.class");
     }
 
-    static void reportError(String err) {
+    void reportError(String err) {
         reportError(err, null);
     }
 
-    static void reportError(String err, String msg) {
+    void reportError(String err, String msg) {
+        if (unsafe) return;
         String str = Messages.get(err);
         if (msg != null) {
             str += ": " + msg;

@@ -59,19 +59,21 @@ public class Compiler {
     private StandardJavaFileManager stdManager;
     // null means no preprocessing isf done.
     public List<String> includeDirs;
+    private boolean unsafe;
 
-    public Compiler(String includePath) {
+    public Compiler(String includePath, boolean unsafe) {
         if (includePath != null) {
             includeDirs = new ArrayList<String>();
             String[] paths = includePath.split(File.pathSeparator);
             for (String p : paths) includeDirs.add(p);
         }
+        this.unsafe = unsafe;
         this.compiler = ToolProvider.getSystemJavaCompiler();
         this.stdManager = compiler.getStandardFileManager(null, null, null);
     }
 
     public Compiler() {
-        this(null);
+        this(null, false);
     }
 
     private static void usage(String msg) {
@@ -92,10 +94,12 @@ public class Compiler {
         String classPath = ".";
         String outputDir = ".";
         String includePath = null;
+        boolean unsafe = false;
         int count = 0;
         boolean classPathDefined = false;
         boolean outputDirDefined = false;
         boolean includePathDefined = false;
+        boolean unsafeDefined = false;
 
         for (;;) {
             if (args[count].charAt(0) == '-') {
@@ -112,6 +116,9 @@ public class Compiler {
                 } else if (args[count].equals("-I") && !includePathDefined) {
                     includePath = args[++count];
                     includePathDefined = true;
+                } else if (args[count].equals("-unsafe") && !unsafeDefined) {
+                    unsafe = true; 
+                    unsafeDefined = true;
                 } else {
                     usage();
                 }
@@ -136,7 +143,7 @@ public class Compiler {
             }
         }
 
-        Compiler compiler = new Compiler(includePath);
+        Compiler compiler = new Compiler(includePath, unsafe);
         classPath += File.pathSeparator + System.getProperty("java.class.path");
         Map<String, byte[]> classes = compiler.compile(files,
                 new PrintWriter(System.err), ".", classPath);
@@ -232,7 +239,7 @@ public class Compiler {
         JavacTask task =
                 (JavacTask) compiler.getTask(err, manager, diagnostics,
                 options, null, compUnits);
-        Verifier btraceVerifier = new Verifier();
+        Verifier btraceVerifier = new Verifier(unsafe);
         task.setTaskListener(btraceVerifier);
 
         // we add BTrace Verifier as a (JSR 269) Processor 

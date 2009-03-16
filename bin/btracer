@@ -9,7 +9,7 @@ if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ] ; then
 fi
 
 if [ -f "${BTRACE_HOME}/build/btrace-agent.jar" ] ; then
-    java -Xshare:off -javaagent:${BTRACE_HOME}/build/btrace-agent.jar=dumpClasses=false,debug=false,probeDescPath=.,noServer=true,script=$1 $2 $3 $4 $5 $6 $7 $8 $9
+    java -Xshare:off -javaagent:${BTRACE_HOME}/build/btrace-agent.jar=dumpClasses=false,debug=false,unsafe=false,probeDescPath=.,noServer=true,script=$1 $2 $3 $4 $5 $6 $7 $8 $9
 else
     echo "Please set BTRACE_HOME before running this script"
 fi

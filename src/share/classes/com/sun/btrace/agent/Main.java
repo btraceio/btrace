@@ -54,6 +54,7 @@ public final class Main {
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
     private static volatile boolean debugMode;
+    private static volatile boolean unsafeMode;
     private static volatile boolean dumpClasses;
     private static volatile String dumpDir;
     private static volatile String probeDescPath;
@@ -173,6 +174,9 @@ public final class Main {
         p = argMap.get("debug");
         debugMode = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("debugMode is " + debugMode);
+	p = argMap.get("unsafe");
+        unsafeMode = "true".equals(p);
+        if (isDebug()) debugPrint("unsafeMode is " + unsafeMode);
         p = argMap.get("dumpClasses");
         dumpClasses = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("dumpClasses is " + dumpClasses);
@@ -363,6 +367,10 @@ public final class Main {
 
     static boolean isDebug() {
         return debugMode;
+    }
+
+    static boolean isUnsafe() {
+        return unsafeMode;
     }
 
     static void debugPrint(String msg) {

@@ -266,7 +266,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     private void verify(byte[] buf) {
         ClassReader reader = new ClassReader(buf);
-        Verifier verifier = new Verifier(new NullVisitor());
+        Verifier verifier = new Verifier(new NullVisitor(), Main.isUnsafe());
         if (debug) Main.debugPrint("verifying BTrace class");
         InstrumentUtils.accept(reader, verifier);
         className = verifier.getClassName().replace('/', '.');

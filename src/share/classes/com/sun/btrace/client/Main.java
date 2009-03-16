@@ -49,6 +49,7 @@ import com.sun.btrace.util.Messages;
 public final class Main {
     public static volatile boolean exiting;
     public static final boolean DEBUG;
+    public static final boolean UNSAFE;
     public static final boolean DUMP_CLASSES;
     public static final String DUMP_DIR;
     public static final String PROBE_DESC_PATH;
@@ -59,6 +60,8 @@ public final class Main {
     static {
         DEBUG = Boolean.getBoolean("com.sun.btrace.debug");
         if (isDebug()) debugPrint("btrace debug mode is set");
+        UNSAFE = Boolean.getBoolean("com.sun.btrace.unsafe");
+        if (isDebug()) debugPrint("btrace unsafe mode is set");
         DUMP_CLASSES = Boolean.getBoolean("com.sun.btrace.dumpClasses");
         if (isDebug()) debugPrint("dumpClasses flag is set");
         DUMP_DIR = System.getProperty("com.sun.btrace.dumpDir", ".");
@@ -140,7 +143,7 @@ public final class Main {
 
         try {
             Client client = new Client(port, PROBE_DESC_PATH, 
-                DEBUG, DUMP_CLASSES, DUMP_DIR);
+                DEBUG, UNSAFE, DUMP_CLASSES, DUMP_DIR);
             if (! new File(fileName).exists()) {
                 errorExit("File not found: " + fileName, 1);
             }
@@ -243,6 +246,10 @@ public final class Main {
 
     private static boolean isDebug() {
         return DEBUG;
+    }
+
+    private static boolean isUnsafe() {
+        return UNSAFE;
     }
 
     private static void debugPrint(String msg) {

@@ -60,12 +60,21 @@ import javax.lang.model.SourceVersion;
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class Verifier extends AbstractProcessor 
                             implements TaskListener {
+    private boolean unsafe;
     private List<String> classNames =
         new ArrayList<String>();
     private Trees treeUtils;
     private List<CompilationUnitTree> compUnits =
         new ArrayList<CompilationUnitTree>();
     private ClassTree currentClass;
+
+    public Verifier(boolean unsafe) {
+        this.unsafe = unsafe;
+    }
+
+    public Verifier() {
+        this(false);
+    }
 
     public void init(ProcessingEnvironment pe) {
         super.init(pe);
@@ -151,7 +160,8 @@ public class Verifier extends AbstractProcessor
             className = pkgName + "." + className;
         }
         classNames.add(className);
-        Boolean value = ct.accept(new VerifierVisitor(this), null);
+        Boolean value = unsafe? Boolean.TRUE : 
+            ct.accept(new VerifierVisitor(this), null);
         return value == null? true : value.booleanValue();
     }
 }
