@@ -10,7 +10,15 @@ fi
 
 if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
     if [ "${JAVA_HOME}" != "" ]; then
-       ${JAVA_HOME}/bin/java -Dcom.sun.btrace.probeDescPath=. -Dcom.sun.btrace.dumpClasses=false -Dcom.sun.btrace.debug=false -Dcom.sun.btrace.unsafe=false -cp ${BTRACE_HOME}/build/btrace-client.jar:${BTRACE_HOME}/build/btrace-asm-3.1.jar:${JAVA_HOME}/lib/tools.jar:/usr/share/lib/java/dtrace.jar com.sun.btrace.client.Main $*
+       case "`uname`" in
+          Darwin*)
+              TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
+          ;;
+          *)
+              TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
+          ;;
+       esac
+       ${JAVA_HOME}/bin/java -Dcom.sun.btrace.probeDescPath=. -Dcom.sun.btrace.dumpClasses=false -Dcom.sun.btrace.debug=false -Dcom.sun.btrace.unsafe=false -cp ${BTRACE_HOME}/build/btrace-client.jar:${BTRACE_HOME}/build/btrace-asm-3.1.jar:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar com.sun.btrace.client.Main $*
     else
        echo "Please set JAVA_HOME before running this script"
     fi

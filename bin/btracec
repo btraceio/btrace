@@ -10,7 +10,16 @@ fi
 
 if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
     if [ "${JAVA_HOME}" != "" ]; then
-        ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/build/btrace-client.jar:${JAVA_HOME}/lib/tools.jar com.sun.btrace.compiler.Compiler $*
+        ase "`uname`" in
+          Darwin*)
+              TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
+          ;;
+          *)
+              TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
+          ;;
+       esac
+
+        ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/build/btrace-client.jar:${TOOLS_JAR} com.sun.btrace.compiler.Compiler $*
     else
         echo "Please set JAVA_HOME before running this script"
     fi
