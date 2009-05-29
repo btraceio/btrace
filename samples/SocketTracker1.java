@@ -47,7 +47,7 @@ import com.sun.btrace.AnyType;
         clazz="java.net.ServerSocket",
         method="<init>"
     )
-    public static void onServerSocket(ServerSocket self, 
+    public static void onServerSocket(@Self ServerSocket self, 
         int p, int backlog, InetAddress bindAddr) {
         port = p;
         inetAddr = bindAddr;
@@ -72,9 +72,9 @@ import com.sun.btrace.AnyType;
 
     @OnProbe(
         namespace="java.net.socket",
-        name="server-socket"
+        name="server-socket-creator"
     )
-    public static void onSocket(ServerSocket ssock) {
+    public static void onSocket(@Return ServerSocket ssock) {
         println(strcat("server socket at ", str(ssock)));
     }
 
@@ -82,7 +82,7 @@ import com.sun.btrace.AnyType;
         namespace="java.net.socket",
         name="bind"
     )
-    public static void onBind(Object self, SocketAddress addr, int backlog) {
+    public static void onBind(@Self Object self, SocketAddress addr, int backlog) {
         sockAddr = addr;
     }
 

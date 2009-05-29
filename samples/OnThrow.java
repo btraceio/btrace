@@ -51,7 +51,7 @@ import static com.sun.btrace.BTraceUtils.*;
         clazz="java.lang.Throwable",
         method="<init>"
     )
-    public static void onthrow(Throwable self) {
+    public static void onthrow(@Self Throwable self) {
         currentException = self;
     }
 
@@ -59,7 +59,7 @@ import static com.sun.btrace.BTraceUtils.*;
         clazz="java.lang.Throwable",
         method="<init>"
     )
-    public static void onthrow1(Throwable self, String s) {
+    public static void onthrow1(@Self Throwable self, String s) {
         currentException = self;
     }
 
@@ -67,7 +67,7 @@ import static com.sun.btrace.BTraceUtils.*;
         clazz="java.lang.Throwable",
         method="<init>"
     )
-    public static void onthrow1(Throwable self, String s, Throwable cause) {
+    public static void onthrow1(@Self Throwable self, String s, Throwable cause) {
         currentException = self;
     }
 
@@ -75,7 +75,7 @@ import static com.sun.btrace.BTraceUtils.*;
         clazz="java.lang.Throwable",
         method="<init>"
     )
-    public static void onthrow2(Throwable self, Throwable cause) {
+    public static void onthrow2(@Self Throwable self, Throwable cause) {
         currentException = self;
     }
 

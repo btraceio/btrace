@@ -65,6 +65,7 @@ class FileClient extends Client {
             throw new IOException("no output stream");
         }
         if (debug) {
+            
             Main.debugPrint("client " + getClassName() + ": got " + cmd);
         }
         switch (cmd.getType()) {

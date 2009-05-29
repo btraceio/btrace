@@ -26,7 +26,7 @@
 -->
 <btrace-probes namespace="java.net.socket">
 
- <probe name="server-socket">
+ <probe name="server-socket-creator">
     <map>
         <clazz>sun.nio.ch.ServerSocketChannelImpl</clazz>
         <method>socket</method>

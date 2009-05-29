@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright 2007-2008 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,42 +23,19 @@
  * have any questions.
  */
 
-package com.sun.btrace.samples;
+package com.sun.btrace.annotations;
 
-import com.sun.btrace.annotations.*;
-import static com.sun.btrace.BTraceUtils.*;
-import java.lang.reflect.Field;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@BTrace public class FinalizeTracker {
-  private static Field fdField =
-    field("java.io.FileInputStream", "fd");
+/**
+ * Marks a method parameter as the one that should contain *this* instance
+ * @author Jaroslav Bachorik
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.PARAMETER)
+public @interface Self {
 
-  @OnTimer(4000) 
-  public static void ontimer() {
-    runFinalization();     
-  }
-
-  @OnMethod(
-    clazz="java.io.FileInputStream",
-    method="finalize"
-  ) 
-  public static void onfinalize(@Self Object me) {
-    println(concat("finalizing ", str(me)));
-    printFields(me);
-    printFields(get(fdField, me));
-    println("==========");
-  }
-
-  @OnMethod(
-    clazz="java.io.FileInputStream",
-    method="close"
-  ) 
-  public static void onclose(@Self Object me) {
-    println(concat("closing ", str(me)));
-    println(concat("thread: ", str(currentThread())));
-    printFields(me);
-    printFields(get(fdField, me));
-    jstack();
-    println("=============");
-  }
 }

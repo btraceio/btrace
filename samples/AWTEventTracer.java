@@ -41,7 +41,7 @@ public class AWTEventTracer {
      clazz="java.awt.EventQueue",
      method="dispatchEvent"
   )
-  public static void onevent(EventQueue queue, AWTEvent event) {
+  public static void onevent(@Self EventQueue queue, AWTEvent event) {
      if (event instanceof FocusEvent) {
          println(event); 
          println();

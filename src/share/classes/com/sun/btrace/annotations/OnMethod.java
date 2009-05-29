@@ -72,4 +72,6 @@ public @interface OnMethod {
      * probe within the set of methods.
      */
     Location location() default @Location();
+
+    boolean follow() default false;
 }

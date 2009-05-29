@@ -59,7 +59,6 @@ import com.sun.btrace.comm.NumberDataCommand;
 import com.sun.btrace.comm.NumberMapDataCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
-import com.sun.btrace.BTraceMBean;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -114,11 +113,11 @@ import sun.security.action.GetPropertyAction;
  * @author Christian Glencross (aggregation support)
  */
 public final class BTraceRuntime {
-    // we need Unsafe to load BTrace class bytes as 
+    // we need Unsafe to load BTrace class bytes as
     // bootstrap class
     private static final Unsafe unsafe = Unsafe.getUnsafe();
 
-    // a dummy BTraceRuntime instance 
+    // a dummy BTraceRuntime instance
     private static BTraceRuntime dummy;
 
     // are we running with DTrace support enabled?
@@ -136,11 +135,11 @@ public final class BTraceRuntime {
     // This way platform classes (which may be called by BTrace)
     // may be instrumented. Also, this helps in inteferring with
     // other BTrace clients that may be running concurrently.
-    private static ThreadLocal<BTraceRuntime> tls = 
+    private static ThreadLocal<BTraceRuntime> tls =
         new ThreadLocal<BTraceRuntime>();
 
     // BTraceRuntime against BTrace class name
-    private static Map<String, BTraceRuntime> runtimes = 
+    private static Map<String, BTraceRuntime> runtimes =
         Collections.synchronizedMap(new HashMap<String, BTraceRuntime>());
 
     // jvmstat related stuff
@@ -149,7 +148,7 @@ public final class BTraceRuntime {
     // interface to read perf counters of this process
     private static volatile PerfReader perfReader;
     // performance counters created by this client
-    private static Map<String, ByteBuffer> counters = 
+    private static Map<String, ByteBuffer> counters =
         new HashMap<String, ByteBuffer>();
 
     // Few MBeans used to implement certain built-in functions
@@ -195,7 +194,7 @@ public final class BTraceRuntime {
 
     // timer to run profile provider actions
     private volatile Timer timer;
- 
+
     // executer to run low memory handlers
     private volatile ExecutorService threadPool;
     // Memory MBean listener
@@ -203,7 +202,7 @@ public final class BTraceRuntime {
 
     // Command queue for the client
     private volatile LinkedBlockingQueue<Command> queue;
-    
+
     private static class SpeculativeQueueManager {
         // maximum number of speculative buffers
         private static final int MAX_SPECULATIVE_BUFFERS = Short.MAX_VALUE;
@@ -215,28 +214,28 @@ public final class BTraceRuntime {
         private ConcurrentHashMap<Integer, LinkedBlockingQueue<Command>> speculativeQueues;
         // per thread current speculative buffer id
         private ThreadLocal<Integer> currentSpeculationId;
-        
+
         SpeculativeQueueManager() {
             speculativeQueues = new ConcurrentHashMap<Integer, LinkedBlockingQueue<Command>>();
             currentSpeculationId = new ThreadLocal<Integer>();
         }
-       
+
         void clear() {
             speculativeQueues.clear();
             speculativeQueues = null;
             currentSpeculationId.remove();
             currentSpeculationId = null;
         }
-        
+
         int speculation() {
             int nextId = getNextSpeculationId();
             if (nextId != -1) {
-                speculativeQueues.put(nextId, 
+                speculativeQueues.put(nextId,
                         new LinkedBlockingQueue<Command>(MAX_SPECULATIVE_MSG_LIMIT));
             }
             return nextId;
         }
-        
+
         boolean send(Command cmd) {
             Integer curId = currentSpeculationId.get();
             if ((curId != null) && (cmd.getType() != Command.EXIT)) {
@@ -253,12 +252,12 @@ public final class BTraceRuntime {
             }
             return false;
         }
-        
+
         void speculate(int id) {
             validateId(id);
             currentSpeculationId.set(id);
         }
-        
+
         void commit(int id, LinkedBlockingQueue<Command> result) {
             validateId(id);
             currentSpeculationId.set(null);
@@ -268,13 +267,13 @@ public final class BTraceRuntime {
                 sb.clear();
             }
         }
-        
+
         void discard(int id) {
             validateId(id);
             currentSpeculationId.set(null);
             speculativeQueues.get(id).clear();
         }
-        
+
         // -- Internals only below this point
         private synchronized int getNextSpeculationId() {
             if (nextSpeculationId == MAX_SPECULATIVE_BUFFERS) {
@@ -282,7 +281,7 @@ public final class BTraceRuntime {
             }
             return nextSpeculationId++;
         }
-        
+
         private void validateId(int id) {
             if (! speculativeQueues.containsKey(id)) {
                 throw new RuntimeException("invalid speculative buffer id: " + id);
@@ -300,9 +299,9 @@ public final class BTraceRuntime {
     private BTraceRuntime() {
     }
 
-    public BTraceRuntime(final String className, String[] args, 
+    public BTraceRuntime(final String className, String[] args,
                          final CommandListener cmdListener,
-                         Instrumentation inst) { 
+                         Instrumentation inst) {
         this.args = args;
         this.queue = new LinkedBlockingQueue<Command>();
         this.specQueueManager = new SpeculativeQueueManager();
@@ -319,7 +318,7 @@ public final class BTraceRuntime {
                         cmdListener.onCommand(cmd);
                         if (cmd.getType() == Command.EXIT) {
                             return;
-                        }                           
+                        }
                     }
                 } catch (InterruptedException ignored) {
                 } catch (IOException ignored) {
@@ -374,7 +373,7 @@ public final class BTraceRuntime {
         // check we have entered already or disabled
         if (current.disabled || (tls.get() != null)) {
             return false;
-        } else {            
+        } else {
             tls.set(current);
             return true;
         }
@@ -383,7 +382,7 @@ public final class BTraceRuntime {
     public static boolean enter() {
         return enter(dummy);
     }
-    
+
     /**
      * Leave method is called by every probed method just
      * before the probe actions end (and actual probed
@@ -430,7 +429,7 @@ public final class BTraceRuntime {
      */
     public static BTraceRuntime forClass(Class cl) {
         BTraceRuntime runtime = runtimes.get(cl.getName());
-        runtime.init(cl); 
+        runtime.init(cl);
         return runtime;
     }
 
@@ -449,7 +448,7 @@ public final class BTraceRuntime {
         };
     }
 
-    // The following constants are copied from VM code 
+    // The following constants are copied from VM code
     // for jvmstat.
 
     // perf counter variability - we always variable variability
@@ -466,7 +465,7 @@ public final class BTraceRuntime {
      */
     public static void newPerfCounter(String name, String desc, Object value) {
         Perf perf = getPerf();
-        char tc = desc.charAt(0);        
+        char tc = desc.charAt(0);
         switch (tc) {
             case 'C':
             case 'Z':
@@ -482,7 +481,7 @@ public final class BTraceRuntime {
                 counters.put(name, b);
             }
             break;
-            
+
             case '[':
                 break;
             case 'L': {
@@ -495,7 +494,7 @@ public final class BTraceRuntime {
                         buf[0] = '\0';
                     }
                     ByteBuffer b = perf.createByteArray(name, V_Variable, V_String,
-                        buf, buf.length); 
+                        buf, buf.length);
                     counters.put(name, b);
                 }
             }
@@ -506,7 +505,7 @@ public final class BTraceRuntime {
     /**
      * Return the value of integer perf. counter of given name.
      */
-    public static int getPerfInt(String name) { 
+    public static int getPerfInt(String name) {
         return (int) getPerfLong(name);
     }
 
@@ -514,7 +513,7 @@ public final class BTraceRuntime {
      * Write the value of integer perf. counter of given name.
      */
     public static void putPerfInt(int value, String name) {
-        long l = (long)value;        
+        long l = (long)value;
         putPerfLong(l, name);
     }
 
@@ -529,7 +528,7 @@ public final class BTraceRuntime {
     /**
      * Write the value of float perf. counter of given name.
      */
-    public static void putPerfFloat(float value, String name) {        
+    public static void putPerfFloat(float value, String name) {
         int i = Float.floatToRawIntBits(value);
         putPerfInt(i, name);
     }
@@ -577,22 +576,22 @@ public final class BTraceRuntime {
      * Return the value of String perf. counter of given name.
      */
     public static String getPerfString(String name) {
-        ByteBuffer b = counters.get(name); 
+        ByteBuffer b = counters.get(name);
         byte[] buf = new byte[b.limit()];
         byte t = (byte)0;
         int i = 0;
-        synchronized (b) {       
+        synchronized (b) {
             while ((t = b.get()) != '\0') {
                 buf[i++] = t;
             }
             b.rewind();
         }
         try {
-            return new String(buf, 0, i, "UTF-8");            
+            return new String(buf, 0, i, "UTF-8");
         } catch (java.io.UnsupportedEncodingException e) {
-            // ignore, UTF-8 encoding is always known        
+            // ignore, UTF-8 encoding is always known
         }
-        return "";        
+        return "";
     }
 
     /**
@@ -631,12 +630,12 @@ public final class BTraceRuntime {
         BTraceRuntime current = getCurrent();
         current.specQueueManager.speculate(id);
     }
-    
+
     static void discard(int id) {
         BTraceRuntime current = getCurrent();
         current.specQueueManager.discard(id);
     }
-    
+
     static void commit(int id) {
         BTraceRuntime current = getCurrent();
         current.specQueueManager.commit(id, current.queue);
@@ -739,7 +738,7 @@ public final class BTraceRuntime {
         } else {
             throw new IllegalArgumentException("not a btrace map");
         }
-    }  
+    }
 
     static <K, V> V remove(Map<K, V> map, Object key) {
         if (map instanceof BTraceMap) {
@@ -774,7 +773,7 @@ public final class BTraceRuntime {
             throw new IllegalArgumentException();
         }
     }
-    
+
     static void printMap(Map map) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
@@ -830,11 +829,11 @@ public final class BTraceRuntime {
     static void printNumberMap(String name, Map<String, ? extends Number> data) {
         getCurrent().send(new NumberMapDataCommand(name, data));
     }
-    
+
     static void printStringMap(String name, Map<String, String> data) {
         getCurrent().send(new StringMapDataCommand(name, data));
     }
-    
+
     // BTrace exit built-in function
     static void exit(int exitCode) {
         BTraceRuntime runtime = getCurrent();
@@ -851,13 +850,13 @@ public final class BTraceRuntime {
         BTraceRuntime runtime = getCurrent();
         return runtime.instrumentation.getObjectSize(obj);
     }
- 
-    // BTrace command line argument functions   
+
+    // BTrace command line argument functions
     static int $length() {
         BTraceRuntime runtime = getCurrent();
         return runtime.args == null? 0 : runtime.args.length;
     }
-    
+
     static String $(int n) {
         BTraceRuntime runtime = getCurrent();
         if (runtime.args == null) {
@@ -899,7 +898,7 @@ public final class BTraceRuntime {
     }
 
     static void lazySet(AtomicInteger ai, int i) {
-        if (ai instanceof BTraceAtomicInteger) {     
+        if (ai instanceof BTraceAtomicInteger) {
             ai.lazySet(i);
         } else {
             throw new IllegalArgumentException();
@@ -915,7 +914,7 @@ public final class BTraceRuntime {
     }
 
     static boolean weakCompareAndSet(AtomicInteger ai, int i, int j) {
-        if (ai instanceof BTraceAtomicInteger) {   
+        if (ai instanceof BTraceAtomicInteger) {
             return ai.weakCompareAndSet(i, j);
         } else {
             throw new IllegalArgumentException();
@@ -923,7 +922,7 @@ public final class BTraceRuntime {
     }
 
     static int getAndIncrement(AtomicInteger ai) {
-        if (ai instanceof BTraceAtomicInteger) {   
+        if (ai instanceof BTraceAtomicInteger) {
             return ai.getAndIncrement();
         } else {
             throw new IllegalArgumentException();
@@ -931,7 +930,7 @@ public final class BTraceRuntime {
     }
 
     static int getAndDecrement(AtomicInteger ai) {
-        if (ai instanceof BTraceAtomicInteger) {   
+        if (ai instanceof BTraceAtomicInteger) {
             return ai.getAndDecrement();
         } else {
             throw new IllegalArgumentException();
@@ -939,7 +938,7 @@ public final class BTraceRuntime {
     }
 
     static int incrementAndGet(AtomicInteger ai) {
-        if (ai instanceof BTraceAtomicInteger) {   
+        if (ai instanceof BTraceAtomicInteger) {
             return ai.incrementAndGet();
         } else {
             throw new IllegalArgumentException();
@@ -947,7 +946,7 @@ public final class BTraceRuntime {
     }
 
     static int decrementAndGet(AtomicInteger ai) {
-        if (ai instanceof BTraceAtomicInteger) {   
+        if (ai instanceof BTraceAtomicInteger) {
             return ai.decrementAndGet();
         } else {
             throw new IllegalArgumentException();
@@ -955,7 +954,7 @@ public final class BTraceRuntime {
     }
 
     static int getAndAdd(AtomicInteger ai, int i) {
-        if (ai instanceof BTraceAtomicInteger) {   
+        if (ai instanceof BTraceAtomicInteger) {
             return ai.getAndAdd(i);
         } else {
             throw new IllegalArgumentException();
@@ -963,7 +962,7 @@ public final class BTraceRuntime {
     }
 
     static int addAndGet(AtomicInteger ai, int i) {
-        if (ai instanceof BTraceAtomicInteger) {   
+        if (ai instanceof BTraceAtomicInteger) {
             return ai.addAndGet(i);
         } else {
             throw new IllegalArgumentException();
@@ -971,7 +970,7 @@ public final class BTraceRuntime {
     }
 
     static int getAndSet(AtomicInteger ai, int i) {
-        if (ai instanceof BTraceAtomicInteger) {   
+        if (ai instanceof BTraceAtomicInteger) {
             return ai.getAndSet(i);
         } else {
             throw new IllegalArgumentException();
@@ -990,7 +989,7 @@ public final class BTraceRuntime {
 
     static long get(AtomicLong al) {
         if (al instanceof BTraceAtomicLong ||
-            al.getClass().getClassLoader() == null) {   
+            al.getClass().getClassLoader() == null) {
             return al.get();
         } else {
             throw new IllegalArgumentException();
@@ -1030,7 +1029,7 @@ public final class BTraceRuntime {
     }
 
     static long getAndIncrement(AtomicLong al) {
-        if (al instanceof BTraceAtomicLong) { 
+        if (al instanceof BTraceAtomicLong) {
             return al.getAndIncrement();
         } else {
             throw new IllegalArgumentException();
@@ -1100,7 +1099,7 @@ public final class BTraceRuntime {
 
     // stack trace functions
     static String stackTraceAllStr(int numFrames) {
-        Set<Map.Entry<Thread, StackTraceElement[]>> traces = 
+        Set<Map.Entry<Thread, StackTraceElement[]>> traces =
                 Thread.getAllStackTraces().entrySet();
         StringBuilder buf = new StringBuilder();
         for (Map.Entry<Thread, StackTraceElement[]> t : traces) {
@@ -1118,12 +1117,12 @@ public final class BTraceRuntime {
         getCurrent().send(stackTraceAllStr(numFrames));
     }
 
-    static String stackTraceStr(StackTraceElement[] st, 
+    static String stackTraceStr(StackTraceElement[] st,
                                  int start, int numFrames) {
         return stackTraceStr(null, st, start, numFrames);
     }
 
-    static String stackTraceStr(String prefix, StackTraceElement[] st, 
+    static String stackTraceStr(String prefix, StackTraceElement[] st,
                                  int start, int numFrames) {
         start = start > 0 ? start : 0;
         numFrames = numFrames > 0 ? numFrames : st.length - start;
@@ -1148,16 +1147,16 @@ public final class BTraceRuntime {
         return buf.toString();
     }
 
-    static void stackTrace(StackTraceElement[] st, 
+    static void stackTrace(StackTraceElement[] st,
                            int start, int numFrames) {
         stackTrace(null, st, start, numFrames);
     }
 
-    static void stackTrace(String prefix, StackTraceElement[] st, 
+    static void stackTrace(String prefix, StackTraceElement[] st,
                                  int start, int numFrames) {
-        getCurrent().send(stackTraceStr(prefix, st, start, numFrames));         
+        getCurrent().send(stackTraceStr(prefix, st, start, numFrames));
     }
-     
+
     // print/println functions
     static void print(String str) {
         getCurrent().send(str);
@@ -1225,7 +1224,7 @@ public final class BTraceRuntime {
         initRuntimeMBean();
         return runtimeMBean.getStartTime();
     }
- 
+
     static long vmUptime() {
         initRuntimeMBean();
         return runtimeMBean.getUptime();
@@ -1354,12 +1353,12 @@ public final class BTraceRuntime {
                         sb.append(" (running in native)");
                     }
                     if (ti.getLockOwnerName() != null) {
-                        sb.append(INDENT + " owned by " + 
+                        sb.append(INDENT + " owned by " +
                                   ti.getLockOwnerName() +
                                   " Id=" + ti.getLockOwnerId());
                         sb.append(LINE_SEPARATOR);
                     }
-             
+
                     if (stackTrace) {
                         // print stack trace with locks
                         StackTraceElement[] stacktrace = ti.getStackTrace();
@@ -1374,7 +1373,7 @@ public final class BTraceRuntime {
                                     sb.append(LINE_SEPARATOR);
                                 }
                             }
-                        }        
+                        }
                         sb.append(LINE_SEPARATOR);
                     }
 
@@ -1429,7 +1428,7 @@ public final class BTraceRuntime {
         getCurrent().send(new GridDataCommand(name, aggregation.getData()));
     }
 
-    // private methods below this point    
+    // private methods below this point
     // raise DTrace USDT probe
     private static native int dtraceProbe0(String s1, String s2, int i1, int i2);
 
@@ -1438,7 +1437,7 @@ public final class BTraceRuntime {
 
     /**
      * Get the current thread BTraceRuntime instance
-     * if there is one. 
+     * if there is one.
      */
     private static BTraceRuntime getCurrent() {
         BTraceRuntime current = tls.get();
@@ -1450,7 +1449,7 @@ public final class BTraceRuntime {
         if (threadPool == null) {
             synchronized (this) {
                 if (threadPool == null) {
-                    threadPool = Executors.newFixedThreadPool(1, 
+                    threadPool = Executors.newFixedThreadPool(1,
                         new ThreadFactory() {
                             @Override
                             public Thread newThread(Runnable r) {
@@ -1459,7 +1458,7 @@ public final class BTraceRuntime {
                                 return th;
                             }
                         });
-                }
+    }
             }
         }
     }
@@ -1469,7 +1468,7 @@ public final class BTraceRuntime {
             synchronized (BTraceRuntime.class) {
                 if (hotspotMBean == null) {
                     hotspotMBean = getHotspotMBean();
-                }
+    }
             }
         }
     }
@@ -1484,13 +1483,13 @@ public final class BTraceRuntime {
                         Iterator<ObjectName> itr = s.iterator();
                         if (itr.hasNext()) {
                             ObjectName name = itr.next();
-                            HotSpotDiagnosticMXBean bean = 
+                            HotSpotDiagnosticMXBean bean =
                                 ManagementFactory.newPlatformMXBeanProxy(server,
                                     name.toString(), HotSpotDiagnosticMXBean.class);
                             return bean;
                         } else {
                             return null;
-                        }                    
+                        }
                    }
                 });
         } catch (Exception exp) {
@@ -1503,7 +1502,7 @@ public final class BTraceRuntime {
             synchronized (BTraceRuntime.class) {
                 if (memoryMBean == null) {
                     memoryMBean = getMemoryMBean();
-                }
+    }
             }
         }
     }
@@ -1587,7 +1586,7 @@ public final class BTraceRuntime {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<ThreadMXBean>() {
                     public ThreadMXBean run() throws Exception {
-                        return ManagementFactory.getThreadMXBean();                 
+                        return ManagementFactory.getThreadMXBean();
                     }
                 });
         } catch (Exception exp) {
@@ -1620,7 +1619,7 @@ public final class BTraceRuntime {
     }
 
     private void send(String msg) {
-        send(new MessageCommand(messageTimestamp? System.nanoTime() : 0L, 
+        send(new MessageCommand(messageTimestamp? System.nanoTime() : 0L,
                                msg));
     }
 
@@ -1662,11 +1661,11 @@ public final class BTraceRuntime {
             }
         } finally {
             currentException.set(null);
-        }       
+        }
     }
 
     private void startImpl() {
-        if (timerHandlers != null && timerHandlers.length != 0) {            
+        if (timerHandlers != null && timerHandlers.length != 0) {
             timer = new Timer();
             RunnableGenerator gen = getRunnableGenerator();
             Runnable[] runnables = new Runnable[timerHandlers.length];
@@ -1698,7 +1697,7 @@ public final class BTraceRuntime {
 
     private void generateRunnables(RunnableGenerator gen, Runnable[] runnables) {
         final MemoryClassLoader loader = AccessController.doPrivileged(
-            new PrivilegedAction<MemoryClassLoader>() {        
+            new PrivilegedAction<MemoryClassLoader>() {
                 public MemoryClassLoader run() {
                     return new MemoryClassLoader(clazz.getClassLoader());
                 }
@@ -1707,19 +1706,19 @@ public final class BTraceRuntime {
         for (int index = 0; index < timerHandlers.length; index++) {
             Method m = timerHandlers[index];
             try {
-                final String className = "com/sun/btrace/BTraceRunnable$" + index;                    
+                final String className = "com/sun/btrace/BTraceRunnable$" + index;
                 final byte[] buf = gen.generate(m, className);
                 Class cls = AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<Class>() {        
+                    new PrivilegedExceptionAction<Class>() {
                         public Class run() throws Exception {
                              return loader.loadClass(className.replace('/', '.'), buf);
                         }
-                    });   
+                    });
                 runnables[index] = (Runnable) cls.newInstance();
             } catch (RuntimeException re) {
                 throw re;
             } catch (Exception exp) {
-                throw new RuntimeException(exp);              
+                throw new RuntimeException(exp);
             }
         }
     }
@@ -1746,7 +1745,7 @@ public final class BTraceRuntime {
             }
         }
         disabled = true;
-        if (timer != null) { 
+        if (timer != null) {
             timer.cancel();
         }
 
@@ -1761,7 +1760,7 @@ public final class BTraceRuntime {
             threadPool.shutdownNow();
         }
 
-        send(new ExitCommand(exitCode));        
+        send(new ExitCommand(exitCode));
     }
 
     private static Perf getPerf() {
@@ -1769,11 +1768,11 @@ public final class BTraceRuntime {
             synchronized(BTraceRuntime.class) {
                 if (perf == null) {
                     perf = (Perf) AccessController.doPrivileged(new Perf.GetPerfAction());
-                }
+    }
             }
         }
         return perf;
-    }    
+    }
 
     private static byte[] getStringBytes(String value) {
         byte[] v = null;
@@ -1816,10 +1815,10 @@ public final class BTraceRuntime {
             }
 
             OnEvent oev = m.getAnnotation(OnEvent.class);
-            if (oev != null && m.getParameterTypes().length == 0) {                
+            if (oev != null && m.getParameterTypes().length == 0) {
                 eventHandlers.put(oev.value(), m);
             }
-               
+
             OnError oer = m.getAnnotation(OnError.class);
             if (oer != null) {
                 Class[] argTypes = m.getParameterTypes();
@@ -1839,7 +1838,7 @@ public final class BTraceRuntime {
             OnTimer ot = m.getAnnotation(OnTimer.class);
             if (ot != null && m.getParameterTypes().length == 0) {
                 timersList.add(m);
-            }   
+            }
 
             OnLowMemory olm = m.getAnnotation(OnLowMemory.class);
             if (olm != null) {
@@ -1852,7 +1851,7 @@ public final class BTraceRuntime {
         }
 
         List<MemoryPoolMXBean> mpools = getMemoryPoolMXBeans();
-        for (MemoryPoolMXBean mpoolBean : mpools) {            
+        for (MemoryPoolMXBean mpoolBean : mpools) {
             String name = mpoolBean.getName();
             if (lowMemHandlers.containsKey(name)) {
                 Method m = lowMemHandlers.get(name);
@@ -1865,7 +1864,7 @@ public final class BTraceRuntime {
 
         timerHandlers = new Method[timersList.size()];
         timersList.toArray(timerHandlers);
-        
+
         BTraceMBean.registerMBean(clazz);
     }
 

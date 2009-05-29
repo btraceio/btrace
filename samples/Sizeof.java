@@ -33,7 +33,7 @@ import static com.sun.btrace.BTraceUtils.*;
         clazz="javax.swing.JComponent",
         method="<init>"
     ) 
-    public static void onnew(Object obj) {
+    public static void onnew(@Self Object obj) {
         println(concat("object of: ", name(classOf(obj))));
         println(concat("size: ", str(sizeof(obj))));
     }

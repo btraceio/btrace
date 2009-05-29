@@ -43,7 +43,7 @@ import java.nio.channels.SocketChannel;
         clazz="java.net.ServerSocket",
         method="<init>"
     )
-    public static void onServerSocket(ServerSocket self, 
+    public static void onServerSocket(@Self ServerSocket self, 
         int p, int backlog, InetAddress bindAddr) {
         port = p;
         inetAddr = bindAddr;
@@ -70,7 +70,7 @@ import java.nio.channels.SocketChannel;
         clazz="java.net.ServerSocket",
         method="bind"
     )
-    public static void onBind(ServerSocket self, SocketAddress addr, int backlog) {
+    public static void onBind(@Self ServerSocket self, SocketAddress addr, int backlog) {
         sockAddr = addr;
     }
 
@@ -91,7 +91,7 @@ import java.nio.channels.SocketChannel;
         clazz="sun.nio.ch.ServerSocketChannelImpl",
         method="bind"
     )
-    public static void onBind(Object self, SocketAddress addr, int backlog) {
+    public static void onBind(@Self Object self, SocketAddress addr, int backlog) {
         sockAddr = addr;
     }
 
@@ -113,7 +113,7 @@ import java.nio.channels.SocketChannel;
         method="accept",
         location=@Location(Kind.RETURN)
     )
-    public static void onAcceptReturn(Socket sock) {
+    public static void onAcceptReturn(@Return Socket sock) {
         if (sock != null) {
             println(strcat("client socket accept ", str(sock)));
         }
@@ -124,7 +124,7 @@ import java.nio.channels.SocketChannel;
         method="socket",
         location=@Location(Kind.RETURN)
     )
-    public static void onSocket(ServerSocket ssock) {
+    public static void onSocket(@Return ServerSocket ssock) {
         println(strcat("server socket at ", str(ssock)));
     }
 
@@ -133,7 +133,7 @@ import java.nio.channels.SocketChannel;
         method="accept",
         location=@Location(Kind.RETURN)
     )
-    public static void onAcceptReturn(SocketChannel sockChan) {
+    public static void onAcceptReturn(@Return SocketChannel sockChan) {
         if (sockChan != null) {
             println(strcat("client socket accept ", str(sockChan)));
         }

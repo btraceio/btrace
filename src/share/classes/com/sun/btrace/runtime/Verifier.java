@@ -31,9 +31,13 @@ import java.io.BufferedInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import com.sun.btrace.VerifierException;
+import com.sun.btrace.annotations.CalledInstance;
+import com.sun.btrace.annotations.CalledMethod;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.util.Messages;
 import com.sun.btrace.util.NullVisitor;
@@ -48,10 +52,18 @@ import com.sun.btrace.org.objectweb.asm.Type;
 /**
  * This class verifies that a BTrace program is safe
  * and well-formed.
+ * Also it fills the onMethods and onProbes structures with the data taken from
+ * the annotations
  *
  * @author A. Sundararajan
+ * @autohr J. Bachorik
  */
 public class Verifier extends ClassAdapter {
+    public static final String BTRACE_SELF_DESC = Type.getDescriptor(Self.class);
+    public static final String BTRACE_RETURN_DESC = Type.getDescriptor(Return.class);
+    public static final String BTRACE_CALLEDMETHOD_DESC = Type.getDescriptor(CalledMethod.class);
+    public static final String BTRACE_CALLEDINSTANCE_DESC = Type.getDescriptor(CalledInstance.class);
+
     private boolean seenBTrace;
     private String className;
     private List<OnMethod> onMethods;
@@ -156,10 +168,53 @@ public class Verifier extends ClassAdapter {
         MethodVisitor mv = super.visitMethod(access, methodName, 
                    methodDesc, signature, exceptions);
         return new MethodVerifier(this, mv, className) {
+            private OnMethod om = null;
+
+            @Override
+            public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
+                if (desc.equals(BTRACE_SELF_DESC)) {
+                    if (om != null) {
+                        if (om.getLocation().getValue() == Kind.ENTRY || om.getLocation().getValue() == Kind.RETURN || om.getLocation().getValue() == Kind.CALL) {
+                            om.setSelfParameter(parameter);
+                        } else {
+                            reportError("self.desc.invalid", "@Self annotation applicable only for Kind.ENTRY and Kind.RETURN");
+                        }
+                    }
+                }
+                if (desc.equals(BTRACE_RETURN_DESC)) {
+                    if (om != null) {
+                        if (om.getLocation().getValue() == Kind.RETURN || (om.getLocation().getValue() == Kind.CALL && om.getLocation().getWhere() == Where.AFTER)) {
+                            om.setReturnParameter(parameter);
+                        } else {
+                            reportError("return.desc.invalid", "@Return annotation applicable only for Kind.RETURN");
+                        }
+                    }
+                }
+                if (desc.equals(BTRACE_CALLEDMETHOD_DESC)) {
+                    if (om != null) {
+                        if (om.getLocation().getValue() == Kind.CALL) {
+                            om.setCalledMethodParameter(parameter);
+                        } else {
+                            reportError("called-method.desc.invalid", "@CalledMethod annotation applicable only for Kind.CALL");
+                        }
+                    }
+                }
+                if (desc.equals(BTRACE_CALLEDINSTANCE_DESC)) {
+                    if (om != null) {
+                        if (om.getLocation().getValue() == Kind.CALL) {
+                            om.setCalledInstanceParameter(parameter);
+                        } else {
+                            reportError("called-instance.desc.invalid", "@CalledInstance annotation applicable only for Kind.CALL");
+                        }
+                    }
+                }
+                return super.visitParameterAnnotation(parameter, desc, visible);
+            }
+
             public AnnotationVisitor visitAnnotation(String desc,
                                   boolean visible) {      
                 if (desc.equals(ONMETHOD_DESC)) {
-                    final OnMethod om = new OnMethod();
+                    om = new OnMethod();
                     onMethods.add(om);
                     om.setTargetName(methodName);
                     om.setTargetDescriptor(methodDesc);

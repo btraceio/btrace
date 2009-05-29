@@ -38,7 +38,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace public class AllCalls2 {
     @OnMethod(clazz="/javax\\.swing\\..*/", method="/.*/",
               location=@Location(value=Kind.CALL, clazz="/.*/", method="/.*/"))
-    public static void n(Object self, String method, String text) { // all calls to the methods with signature "(String)"
+    public static void n(@Self Object self, @CalledInstance Object instance, @CalledMethod String method, String text) { // all calls to the methods with signature "(String)"
         print(method);
         print(" ");
         println(text);

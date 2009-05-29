@@ -37,11 +37,11 @@ import com.sun.btrace.annotations.*;
  */
 @BTrace public class Classload {
    @OnMethod(
-     clazz="java.lang.ClassLoader", 
+     clazz="+java.lang.ClassLoader", 
      method="defineClass",
      location=@Location(Kind.RETURN)
    )   
-   public static void defineclass(Class cl) {
+   public static void defineclass(@Return Class cl) {
        println(strcat("loaded ", name(cl)));
        jstack();
        println("==========================");

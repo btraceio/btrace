@@ -46,7 +46,7 @@ import com.sun.btrace.annotations.Export;
         clazz="java.lang.Thread",
         method="start"
     ) 
-    public static void onnewThread(Thread t) {
+    public static void onnewThread(@Self Thread t) {
         count++;
     }
 

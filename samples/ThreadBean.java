@@ -56,7 +56,7 @@ BTRACE ThreadBean {
         clazz="java.lang.Thread",
         method="start"
     ) 
-    ACTION onnewThread(Thread t) {
+    ACTION onnewThread(@Self Thread t) {
         count++;
     }
 

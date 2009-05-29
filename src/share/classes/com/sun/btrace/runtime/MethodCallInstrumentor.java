@@ -49,7 +49,12 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
     }
 
     public void visitMethodInsn(int opcode, String owner,
-        String name, String desc) {                    
+        String name, String desc) {
+        if (name.startsWith("$btrace")) {
+            super.visitMethodInsn(opcode, owner, name, desc);
+            return;
+        }
+
         onBeforeCallMethod(opcode, owner, name, desc);
         super.visitMethodInsn(opcode, owner, name, desc);
         onAfterCallMethod(opcode, owner, name, desc);     

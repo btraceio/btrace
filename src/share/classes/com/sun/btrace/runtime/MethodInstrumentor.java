@@ -135,17 +135,40 @@ public class MethodInstrumentor extends MethodAdapter {
         loadLocal(argumentTypes[arg], getArgumentIndex(arg));
     }
 
-    public void loadArguments(final int arg, final int count) {
+    public void loadArguments(final int arg, final int count , final int selfParam, final int returnParam, final int retOpCode) {
+        int loadedIndex = 0;
         int index = getArgumentIndex(arg);
         for (int i = 0; i < count; ++i) {
+            if (loadedIndex == selfParam) {
+                if (!isStatic()) {
+                    loadThis();
+                }
+                continue;
+            } else if (loadedIndex == returnParam) {
+                dupReturnValue(retOpCode);
+                continue;
+            }
+            loadedIndex++;
             Type t = argumentTypes[arg + i];
             loadLocal(t, index);
+
             index += t.getSize();
+        }
+        if (loadedIndex == selfParam) {
+            if (!isStatic()) {
+                loadThis();
+            }
+        } else if (loadedIndex == returnParam) {
+            dupReturnValue(retOpCode);
         }
     }
 
-    public void loadArguments() {
-        loadArguments(0, argumentTypes.length);
+    public void loadArguments(OnMethod onMethod) {
+        loadArguments(onMethod, Integer.MIN_VALUE);
+    }
+
+    public void loadArguments(OnMethod onMethod, int retOpCode) {
+        loadArguments(0, argumentTypes.length, onMethod.getSelfParameter(), onMethod.getReturnParameter(), retOpCode);
     }
 
     public void loadThis() {
@@ -156,23 +179,10 @@ public class MethodInstrumentor extends MethodAdapter {
     }
 
     public void loadArgumentArray() {
-        loadArgumentArray(true);
-    }
-
-    public void loadArgumentArray(boolean includeThis) {
         int count = argumentTypes.length;
         boolean isStatic = ((access & ACC_STATIC) != 0);
-        if (!isStatic && includeThis) {
-            count++;
-        }
         push(count);
         super.visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
-        if (!isStatic && includeThis) {
-            dup();
-            push(0);
-            loadThis();
-            arrayStore(TypeUtils.objectType);
-        }
         int start = isStatic? 0 : 1;
         for (int i = 0; i < argumentTypes.length; i++) {
             dup();
@@ -181,6 +191,14 @@ public class MethodInstrumentor extends MethodAdapter {
             box(argumentTypes[i]);
             arrayStore(TypeUtils.objectType);
         }
+    }
+
+    protected final boolean isStatic() {
+        return (getAccess() & ACC_STATIC) != 0;
+    }
+
+    protected final boolean isConstructor() {
+        return "<init>".equals(name);
     }
 
     public void returnValue() {

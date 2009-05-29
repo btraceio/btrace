@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
         clazz="javax.swing.JComponent",
         method="<init>"
     ) 
-    public static void onnewObject(Object obj) {
+    public static void onnewObject(@Self Object obj) {
         String cn = name(classOf(obj));
         AtomicInteger ai = get(histo, cn);
         if (ai == null) {

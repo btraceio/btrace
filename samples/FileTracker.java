@@ -44,7 +44,7 @@ import java.io.FileOutputStream;
         clazz="java.io.FileInputStream",
         method="<init>"
     )
-    public static void onNewFileInputStream(FileInputStream self, File f) {
+    public static void onNewFileInputStream(@Self FileInputStream self, File f) {
         name = str(f);
     }
 
@@ -65,7 +65,7 @@ import java.io.FileOutputStream;
         clazz="java.io.FileOutputStream",
         method="<init>"
     )
-    public static void onNewFileOutputStream(FileOutputStream self, File f, boolean b) {
+    public static void onNewFileOutputStream(@Self FileOutputStream self, File f, boolean b) {
         name = str(f);
     }
 

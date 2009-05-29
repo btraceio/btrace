@@ -44,7 +44,7 @@ import java.awt.Component;
       clazz="java.awt.Component",
       method="<init>"    
     )
-    public static void onnew(Component c) {
+    public static void onnew(@Self Component c) {
         // increment counter on constructor entry
         count++;
     }

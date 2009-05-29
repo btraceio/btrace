@@ -46,6 +46,11 @@ public class OnMethod {
     // target method descriptor on which this annotation is specified
     private String targetDescriptor;
 
+    private int selfParameter = -1;
+    private int returnParameter = -1;
+    private int calledMethodParameter = -1;
+    private int calledInstanceParameter = -1;
+    
     public OnMethod() {
     }
 
@@ -102,5 +107,37 @@ public class OnMethod {
 
     public void setTargetDescriptor(String desc) {
         this.targetDescriptor = desc;
+    }
+
+    public int getSelfParameter() {
+        return selfParameter;
+    }
+
+    public void setSelfParameter(int selfParameter) {
+        this.selfParameter = selfParameter;
+    }
+
+    public int getReturnParameter() {
+        return returnParameter;
+    }
+
+    public void setReturnParameter(int returnParameter) {
+        this.returnParameter = returnParameter;
+    }
+
+    public int getCalledMethodParameter() {
+        return calledMethodParameter;
+    }
+
+    public void setCalledMethodParameter(int calledMethodParameter) {
+        this.calledMethodParameter = calledMethodParameter;
+    }
+
+    public int getCalledInstanceParameter() {
+        return calledInstanceParameter;
+    }
+
+    public void setCalledInstanceParameter(int calledInstanceParameter) {
+        this.calledInstanceParameter = calledInstanceParameter;
     }
 }

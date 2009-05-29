@@ -40,10 +40,10 @@ import java.lang.reflect.Field;
     private static Field msgField = field("java.util.logging.LogRecord", "message");
 
     @OnMethod(
-        clazz="java.util.logging.Logger",
+        clazz="+java.util.logging.Logger",
         method="log"
     )
-    public static void onLog(Logger self, LogRecord record) {
+    public static void onLog(@Self Logger self, LogRecord record) {
         println(get(msgField, record));
     }
 }

@@ -22,7 +22,7 @@ Java program and hotswaps the traced program classes.
 are executed. Probe point is "place" or "event" of interest where
 we want to execute some tracing statements.
 </dd>
-</dd>
+
 <dt><b>Trace Actions or Actions</b></dt>
 <dd>
 Trace statements that are executed whenever a probe "fires". 
@@ -281,7 +281,32 @@ When running this sample, this xml file needs to be copied in the directory wher
 the target JVM runs (or fix probeDescPath option in btracer.bat to point to whereever
 the .xml file is).
 </ul>
+<h4>Argument Annotations</h4>
+<ul>
+    <li><b><a href="javadoc/com/sun/btrace/annotations/Self.html">@com.sun.btrace.annotations.Self</a></b>
+        annotation can be used to mark an argument to hold *this* (or *self*) value. Refer to the samples
 
+        <b><a href="../samples/AWTEventTracer.java">AWTEventTracer.java</a></b> or
+        <b><a href="../samples/AllCalls1.java">AllCalls1.java</a></b>
+
+    </li>
+    <li><b><a href="javadoc/com/sun/btrace/annotations/Return.html">@com.sun.btrace.annotations.Return</a></b>
+        annotation can be used to mark an argument to hold the return value. Refer to the sample
+
+        <b><a href="../samples/Classload.java">Classload.java</a></b>
+    </li>
+    <li><b><a href="javadoc/com/sun/btrace/annotations/CalledInstance.html">@com.sun.btrace.annotations.CalledInstance</a></b>
+        annotation can be used to mark an argument to hold the called instance value. Refer to the sample
+
+        <b><a href="../samples/AllCalls2.java">AllCalls2.java</a></b>
+    </li>
+    <li><b><a href="javadoc/com/sun/btrace/annotations/CalledMethod.html">@com.sun.btrace.annotations.CalledMethod</a></b>
+        can be used to mark an argument to hold the called method name. Refer to the samples
+
+        <b><a href="../samples/AllCalls1.java">AllCalls1.java</a></b> or
+        <b><a href="../samples/AllCalls2.java">AllCalls2.java</a></b>
+    </li>
+</ul>
 <h4>Field Annotations</h4>
 <ul>
 <li><b><code><a href="javadoc/com/sun/btrace/annotations/Export.html">@com.sun.btrace.annotations.Export</a></code></b> annotation can be used with BTrace fields

@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.AnyType;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -269,7 +268,7 @@ public class Instrumentor extends ClassAdapter {
 
                     @Override
                     protected void onAfterArrayStore(int opcode) {
-                        if (numActionArgs == 0 && where == Where.BEFORE) {
+                        if (numActionArgs == 0 && where == Where.AFTER) {
                             invokeBTraceAction(this, om);
                         }
                     }
@@ -293,26 +292,21 @@ public class Instrumentor extends ClassAdapter {
                         super.visitVarInsn(opcode, var);
                     }
 
-                    private void callAction(boolean isStatic, String method, Type[] probeArgs, Type[] callArgs) {
+                    private void backupArgs(boolean isStaticCall, Type[] callArgs) {
                         int upper = callArgs.length - 1;
 
                         for (int i = 0;i<callArgs.length;i++) {
                             storeLocal(callArgs[upper - i], maxLocal + i);
                         }
 
-                        if (! isStatic) {
-                            storeLocal(TypeUtils.objectType, maxLocal + callArgs.length); // store *this*
+                        if (! isStaticCall) {
+                            storeLocal(TypeUtils.objectType, maxLocal + callArgs.length); // store *callee*
                         }
+                    }
 
-                        if (probeArgs.length == 1 && TypeUtils.isAnyTypeArray(probeArgs[0])) {
-                            preAnyTypeAction(isStatic, method, callArgs);
-                        } else if (probeArgs.length == 1 && TypeUtils.isString(probeArgs[0])) {
-                            preOnlyNameAction(method);
-                        } else if (probeArgs.length > 1) {
-                            preMatchAction(isStatic, method, callArgs);
-                        }
-                        invokeBTraceAction(this, om);
-                        if (!isStatic) {
+                    private void restoreArgs(boolean isStaticCall, Type[] callArgs) {
+                        int upper = callArgs.length - 1;
+                        if (!isStaticCall) {
                             loadLocal(TypeUtils.objectType, maxLocal + callArgs.length);
                         }
 
@@ -321,88 +315,103 @@ public class Instrumentor extends ClassAdapter {
                         }
                     }
 
-                    private void preOnlyNameAction(String method) {
-                        super.visitLdcInsn(method);
-                    }
-
-                    private void preMatchAction(boolean isStatic, String method, Type[] args) {
-                        if (!isStatic) loadLocal(TypeUtils.objectType, maxLocal + args.length); // load *this*
-                        super.visitLdcInsn(method);
-                        for (int i = args.length - 1; i > -1; i--) {
-                            loadLocal(args[args.length - 1 - i], maxLocal + i );
+                    private void preMatchAction(boolean isStaticCall, String method, Type[] args, Type returnType, int probeArgsLength) {
+                        int argPtrRev = args.length - 1;
+                        int argPtr = 0;
+                        
+                        for(int i=0;i<probeArgsLength;i++) {
+                            if (i == om.getSelfParameter()) {
+                                if (!isStatic()) {
+                                    loadLocal(TypeUtils.objectType, 0); // load *this*
+                                }
+                            } else if (i == om.getCalledMethodParameter()) {
+                                super.visitLdcInsn(method);
+                            } else if (i == om.getCalledInstanceParameter()) {
+                                if (!isStaticCall) {
+                                    loadLocal(TypeUtils.objectType, maxLocal + args.length); // load the callee instance
+                                }
+                            } else if (i == om.getReturnParameter() && returnType != null) {
+                                loadLocal(returnType, maxLocal + args.length + 1);
+                            } else {
+                                loadLocal(args[argPtr++], maxLocal + argPtrRev--);
+                            }
                         }
                     }
 
-                    private void preAnyTypeAction(boolean isStatic, String method, Type[] args) {
+                    private void preAnyTypeAction(boolean isStaticCall, String method, Type[] args, Type returnType, int probeArgsLength) {
                         int upper = args.length - 1;
-
-                        push(args.length + (isStatic ? 0:1) + 1);
-                        super.visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
-
-                        if (!isStatic) {
-                            dup();
-                            push(0);
-                            loadLocal(TypeUtils.objectType, maxLocal + args.length);
-                            arrayStore(TypeUtils.objectType);
-                        }
-                        int start = isStatic? 0 : 1;
-                        dup();
-                        push(start++);
-                        super.visitLdcInsn(method);
-                        arrayStore(TypeUtils.objectType);
-                        for (int i = 0; i < args.length; i++) {
-                            dup();
-                            push(i + start);
-                            loadLocal(args[upper - i], maxLocal + i);
-                            box(args[upper - i]);
-                            arrayStore(TypeUtils.objectType);
+                        for(int i=0;i < probeArgsLength;i++) {
+                            if (i == om.getSelfParameter()) {
+                                if (!isStatic()) {
+                                    loadLocal(TypeUtils.objectType, 0); // load *this*
+                                }
+                            } else if (i == om.getCalledMethodParameter()) {
+                                super.visitLdcInsn(method);
+                            } else if (i == om.getCalledInstanceParameter()) {
+                                if (!isStaticCall) {
+                                    loadLocal(TypeUtils.objectType, maxLocal + args.length); // load the callee instance
+                                }
+                            } else if (i == om.getReturnParameter() && returnType != null) {
+                                loadLocal(returnType, maxLocal + args.length + 1); // load return type
+                            } else {
+                                // we can safely suppose that the only arg without special annotation would be the AnyType[] arg
+                                push(args.length);
+                                super.visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
+                                for (int argIndex = 0; argIndex < args.length; argIndex++) {
+                                    dup();
+                                    push(argIndex);
+                                    loadLocal(args[upper - argIndex], maxLocal + argIndex);
+                                    box(args[upper - argIndex]);
+                                    arrayStore(TypeUtils.objectType);
+                                }
+                            }
                         }
                     }
 
+                    private void injectBtrace(boolean isStaticCall, boolean usesAnytype, String method, Type[] calledMethodArgs, Type returnType, Type[] actionArgTypes) {
+                        if (usesAnytype) {
+                            preAnyTypeAction(isStaticCall, method, calledMethodArgs, returnType, actionArgTypes.length);
+                        } else {
+                            preMatchAction(isStaticCall, method, calledMethodArgs, returnType, actionArgTypes.length);
+                        }
+                        invokeBTraceAction(this, om);
+                    }
+
+                    private CallValidationResult cvr;
                     @Override
                     protected void onBeforeCallMethod(int opcode, String owner, 
                         String name, String desc) {
-                        if (where == Where.BEFORE &&
-                            matches(className, owner.replace('/', '.')) &&
+                        if (isStatic() && om.getSelfParameter() > -1) return; // invalid combination; a static method can not provide *this*
+
+                        if (matches(className, owner.replace('/', '.')) &&
                             matches(methodName, name) &&
                             typeMatches(loc.getType(), desc)) {
+                            
                             String method = name + desc;
                             Type[] calledMethodArgs = Type.getArgumentTypes(desc);
-                            if (opcode == INVOKESTATIC) {
-                                boolean doCall = false;
-
-                                doCall |= (actionArgTypes.length == 1 && TypeUtils.isAnyTypeArray(actionArgTypes[0]));
-                                doCall |= (actionArgTypes.length == 1 && TypeUtils.isString(actionArgTypes[0]));
-                                if (calledMethodArgs.length + 1 == numActionArgs) {
-                                    Type[] tmp = new Type[numActionArgs - 1];
-                                    System.arraycopy(actionArgTypes, 1, tmp, 0, tmp.length);
-                                    doCall |= TypeUtils.isString(actionArgTypes[1]) &&
-                                        TypeUtils.isCompatible(tmp, calledMethodArgs);
-                                }
-                                if (doCall) callAction(true, method, actionArgTypes, calledMethodArgs);
+                            boolean doCall = false;
+                            boolean isStaticCall = (opcode == INVOKESTATIC);
+                            if (isStaticCall) {
+                                doCall = om.getCalledInstanceParameter() == -1;
                             } else {
-                                /*
-                                 * It is not safe to call a method before constructor
-                                 * call passing (the uninitialized) object as argument.
-                                 * Bytecode verifier will not like it!
-                                 */
-                                if (name.equals(CONSTRUCTOR)) {
+                                if (where == Where.BEFORE && name.equals(CONSTRUCTOR)) {
                                     return;
                                 }
-                                boolean doCall = false;
-
-                                doCall |= (actionArgTypes.length == 1 && TypeUtils.isAnyTypeArray(actionArgTypes[0]));
-                                doCall |= (actionArgTypes.length == 1 && TypeUtils.isString(actionArgTypes[0]));
-
-                                if (calledMethodArgs.length + 2 == numActionArgs) {
-                                    Type[] tmp = new Type[numActionArgs - 2];
-                                    System.arraycopy(actionArgTypes, 2, tmp, 0, tmp.length);
-                                    doCall |= (TypeUtils.isObject(actionArgTypes[0]) ||
-                                        TypeUtils.isCompatible(actionArgTypes[0], Type.getObjectType(owner))) &&
-                                        TypeUtils.isString(actionArgTypes[1]) &&
-                                        TypeUtils.isCompatible(tmp, calledMethodArgs);
+                                doCall = true;
+                            }
+                            if (doCall) {
+                                Type returnType = (where == Where.AFTER ? Type.getReturnType(desc) : null);
+                                cvr = validateCall(owner, className, om, calledMethodArgs, returnType, actionArgTypes, numActionArgs);
+                                if (cvr.callValid) {
+                                    // will store the call args into local variables
+                                    backupArgs(isStaticCall, calledMethodArgs);
+                                    if (where == Where.BEFORE) {
+                                        // this will also retrieve the call args from the backup variables
+                                        injectBtrace(isStaticCall, cvr.usesAnytype, method, calledMethodArgs, returnType, actionArgTypes);
+                                    }
+                                    // put the call args back on stack so the method call can find them
+                                    restoreArgs(isStaticCall, calledMethodArgs);
                                 }
-                                if (doCall) callAction(false, method, actionArgTypes, calledMethodArgs);
                             }
                         }
                     }
@@ -410,23 +419,29 @@ public class Instrumentor extends ClassAdapter {
                     @Override
                     protected void onAfterCallMethod(int opcode,
                         String owner, String name, String desc) {
+                        if (cvr == null || !cvr.callValid) {
+                            return;
+                        }
+                        if (isStatic() && om.getSelfParameter() != -1) {
+                            return;
+                        }
                         if (where == Where.AFTER &&
                             matches(className, owner.replace('/', '.')) &&
                             matches(methodName, name) &&
                             typeMatches(loc.getType(), desc)) {
-                            Type rt = getReturnType();
-                            switch (numActionArgs) {
-                                case 0:
-                                    invokeBTraceAction(this, om);
-                                break;
-                                case 1:
-                                    if (!rt.equals(Type.VOID_TYPE) &&
-                                        TypeUtils.isCompatible(actionArgTypes[0], rt)) {
-                                        dupValue(rt);
-                                        invokeBTraceAction(this, om);
-                                    }
-                                break;
-                            }
+                                Type returnType = Type.getReturnType(desc);
+                                int argsLength = Type.getArgumentTypes(desc).length;
+                                String method = name + desc;
+                                boolean withReturn = om.getReturnParameter() != -1 && returnType != Type.VOID_TYPE;
+                                if (withReturn) {
+                                    // store the return value to a local variable
+                                    storeLocal(returnType, maxLocal + argsLength + 1); // store the return value
+                                }
+                                // will also retrieve the call args and the return value from the backup variables
+                                injectBtrace(opcode == INVOKESTATIC, cvr.usesAnytype, method, Type.getArgumentTypes(desc), returnType, actionArgTypes);
+                                if (withReturn) {
+                                    loadLocal(returnType, maxLocal + argsLength + 1); // restore the return value
+                                }
                         }                            
                     }
                 };
@@ -470,12 +485,96 @@ public class Instrumentor extends ClassAdapter {
 
             case ENTRY:
                 return new MethodEntryInstrumentor(mv, access, name, desc) {
-                    private void callAction(boolean isStatic) {
-                        if (! isStatic) {
-                            loadThis();
+                    private int maxLocal = 0;
+                    private CallValidationResult cvr;
+
+                    @Override
+                    public void visitCode() {
+                        maxLocal = getArgumentTypes().length;
+                        super.visitCode();
+                    }
+
+                    @Override
+                    public void visitVarInsn(int opcode, int var) {
+                        if (var > maxLocal) { maxLocal = var; }
+                        super.visitVarInsn(opcode, var);
+                    }
+//
+//                    private void backupArgs(Type[] callArgs) {
+//                        int upper = callArgs.length - 1;
+//
+//                        for (int i = 0;i<callArgs.length;i++) {
+//                            storeLocal(callArgs[upper - i], maxLocal + i);
+//                        }
+//                    }
+//
+//                    private void restoreArgs(Type[] callArgs) {
+//                        int upper = callArgs.length - 1;
+//
+//                        for (int i = callArgs.length - 1; i > -1; i--) {
+//                            loadLocal(callArgs[upper - i], maxLocal + i);
+//                        }
+//                    }
+
+                    private void preMatchAction(Type[] args, int probeArgsLength) {
+                        int argPtrRev = args.length - 1;
+                        int argPtr = 0;
+
+                        int decrement = isStatic() ? 1 : 0;
+                        for(int i=0;i<probeArgsLength;i++) {
+                            if (i == om.getSelfParameter()) {
+                                if (!isStatic()) {
+                                    loadLocal(TypeUtils.objectType, 0); // load *this*
+                                }
+                            } else {
+                                loadLocal(args[argPtr++], maxLocal + argPtrRev-- - decrement);
+                            }
                         }
-                        loadArguments();
+                    }
+
+                    private void preAnyTypeAction(Type[] args, int probeArgsLength) {
+                        int decrement = isStatic() ? 1 : 0;
+                        int upper = args.length - 1;
+                        for(int i=0;i < probeArgsLength;i++) {
+                            if (i == om.getSelfParameter()) {
+                                if (!isStatic()) {
+                                    loadLocal(TypeUtils.objectType, 0); // load *this*
+                                }
+                            } else {
+                                // we can safely suppose that the only arg without special annotation would be the AnyType[] arg
+                                push(args.length);
+                                super.visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
+                                for (int argIndex = 0; argIndex < args.length; argIndex++) {
+                                    dup();
+                                    push(argIndex);
+                                    loadLocal(args[upper - argIndex], maxLocal + argIndex - decrement);
+                                    box(args[upper - argIndex]);
+                                    arrayStore(TypeUtils.objectType);
+                                }
+                            }
+                        }
+                    }
+
+                    private void injectBtrace(boolean usesAnytype, Type[] calledMethodArgs, Type[] actionArgTypes) {
+                        if (usesAnytype) {
+                            preAnyTypeAction(calledMethodArgs, actionArgTypes.length);
+                        } else {
+                            preMatchAction(calledMethodArgs, actionArgTypes.length);
+                        }
                         invokeBTraceAction(this, om);
+                    }
+
+                    private void callAction() {
+                        if (isStatic() && om.getSelfParameter() > -1) return; // invalid combination; a static method can not provide *this*
+
+                        Type[] calledMethodArgs = Type.getArgumentTypes(getDescriptor());
+
+//                        Type returnType = (where == Where.AFTER ? Type.getReturnType(getDescriptor()) : null);
+                        cvr = validateCall(className, null, om, calledMethodArgs, null, actionArgTypes, numActionArgs);
+                        if (cvr.callValid) {
+                            // this will also retrieve the call args
+                            injectBtrace(cvr.usesAnytype, calledMethodArgs, actionArgTypes);
+                        }
                     }
 
                     @Override
@@ -483,31 +582,7 @@ public class Instrumentor extends ClassAdapter {
                         if (numActionArgs == 0) {
                             invokeBTraceAction(this, om);
                         } else {
-                            boolean isStatic = ((getAccess() & ACC_STATIC) != 0);
-                            if (numActionArgs == 1 &&
-                                TypeUtils.isAnyTypeArray(actionArgTypes[0])) {
-                                loadArgumentArray();
-                                invokeBTraceAction(this, om);
-                                return;
-                            }
-
-                            if (isStatic) {
-                                Type[] probedMethodArgs = getArgumentTypes();       
-                                if (TypeUtils.isCompatible(actionArgTypes, probedMethodArgs)) {
-                                    callAction(true);
-                                }
-                            } else {
-                                Type[] probedMethodArgs = getArgumentTypes();
-                                if (probedMethodArgs.length + 1 == numActionArgs) {
-                                    Type[] tmp = new Type[numActionArgs - 1];
-                                    System.arraycopy(actionArgTypes, 1, tmp, 0, tmp.length);
-                                    if ((TypeUtils.isObject(actionArgTypes[0]) ||
-                                        TypeUtils.isCompatible(actionArgTypes[0], Type.getObjectType(className))) &&
-                                        TypeUtils.isCompatible(tmp, probedMethodArgs)) {
-                                        callAction(false);
-                                    }
-                                }
-                            }
+                            callAction();
                         }
                     }
                 };
@@ -747,21 +822,63 @@ public class Instrumentor extends ClassAdapter {
           
             case RETURN:
                 return new MethodReturnInstrumentor(mv, access, name, desc) {
+                    private void callAction(int retOpCode) {
+                        if (om.getSelfParameter() != -1) {
+                            if (isStatic()) {
+                                return;
+                            }
+
+                            if (isConstructor()) return;
+
+                            if (!(TypeUtils.isObject(actionArgTypes[om.getSelfParameter()]) ||
+                                    TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter() - 1], Type.getObjectType(className)))
+                                && !(TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter() -1], Type.getObjectType(className)))) {
+                                // TODO issue a warning
+                                return;
+                            }
+                        }
+                        int decrement = (om.getSelfParameter() != -1 ? 1 : 0) + (om.getReturnParameter() != -1 ? 1 : 0);
+                        Type[] tmpArgArray = new Type[actionArgTypes.length - decrement];
+
+                        int selfIndex = om.getSelfParameter();
+                        int returnIndex = om.getReturnParameter();
+
+                        int counter = 0;
+                        for(int argIndex=0;argIndex<actionArgTypes.length;argIndex++) {
+                            if (argIndex != selfIndex && argIndex != returnIndex) {
+                                tmpArgArray[counter++] = actionArgTypes[argIndex];
+                            }
+                        }
+
+                        if (tmpArgArray.length == 1 && TypeUtils.isAnyTypeArray(tmpArgArray[0])) {
+                            if (om.getSelfParameter() == 1) {
+                                loadThis();
+                            }
+                            if (om.getReturnParameter() == 1) {
+                                dupReturnValue(retOpCode);
+                            }
+                            loadArgumentArray();
+                            if (om.getSelfParameter() == 2) {
+                                loadThis();
+                            }
+                            if (om.getReturnParameter() == 2) {
+                                dupReturnValue(retOpCode);
+                            }
+                            invokeBTraceAction(this, om);
+                            return;
+                        }
+
+                        if (tmpArgArray.length == 0 || TypeUtils.isCompatible(tmpArgArray, getArgumentTypes())) {
+                            loadArguments(om, retOpCode);
+                            invokeBTraceAction(this, om);
+                        }
+                    }
                     @Override
                     protected void onMethodReturn(int opcode) {
-                        switch (numActionArgs) {
-                            case 0:
-                                invokeBTraceAction(this, om);
-                            break;
-                            case 1: {
-                                Type rt = getReturnType();
-                                if (!rt.equals(Type.VOID_TYPE) &&
-                                    TypeUtils.isCompatible(actionArgTypes[0], getReturnType())) {
-                                    dupReturnValue(opcode);
-                                    invokeBTraceAction(this, om);
-                                }
-                            }
-                            break;
+                        if (numActionArgs == 0) {
+                            invokeBTraceAction(this, om);
+                        } else {
+                            callAction(opcode);
                         }
                     }
                 };
@@ -863,6 +980,82 @@ public class Instrumentor extends ClassAdapter {
                 };
         }
         return mv;
+    }
+    
+    private static class CallValidationResult {
+        final public boolean callValid;
+        final public boolean usesAnytype;
+
+        public CallValidationResult(boolean callValid, boolean usesAnytype) {
+            this.callValid = callValid;
+            this.usesAnytype = usesAnytype;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final CallValidationResult other = (CallValidationResult) obj;
+            if (this.callValid != other.callValid) {
+                return false;
+            }
+            if (this.usesAnytype != other.usesAnytype) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 79 * hash + (this.callValid ? 1 : 0);
+            hash = 79 * hash + (this.usesAnytype ? 1 : 0);
+            return hash;
+        }
+    }
+
+    private CallValidationResult validateCall(String selfClassName, String instanceClassName, OnMethod om, Type[] calledMethodArgs, Type returnType, Type actionArgTypes[], int numActionArgs) {
+        int extraArgCount = (om.getReturnParameter() > -1 ? 1 : 0) + (om.getCalledMethodParameter() > -1 ? 1 : 0) + (om.getSelfParameter() > -1 ? 1 : 0) + (om.getCalledInstanceParameter() > -1 ? 1 : 0);
+        boolean extraArgsValid = true;
+
+        int anyTypeIndex = -1;
+        if (calledMethodArgs.length + extraArgCount == numActionArgs) {
+            Type[] tmp = new Type[numActionArgs - extraArgCount];
+            int counter = 0;
+
+            for(int i=0;i<numActionArgs;i++) {
+                if (om.getCalledMethodParameter() == i) {
+                    extraArgsValid &= TypeUtils.isString(actionArgTypes[i]);
+                    continue;
+                } else if (om.getSelfParameter() == i) {
+                    extraArgsValid &= TypeUtils.isObject(actionArgTypes[i]) || TypeUtils.isCompatible(actionArgTypes[i], Type.getObjectType(selfClassName));
+                    continue;
+                } else if (om.getCalledInstanceParameter() == i) {
+                    extraArgsValid &= TypeUtils.isObject(actionArgTypes[i]) || TypeUtils.isCompatible(actionArgTypes[i], Type.getObjectType(instanceClassName));
+                    continue;
+                } else if (returnType != null && om.getReturnParameter() == i) {
+                    extraArgsValid &= TypeUtils.isCompatible(actionArgTypes[i], returnType);
+                    continue;
+                }
+                if (anyTypeIndex > -1) {
+                    // already has found AnyType[] for args; INVALID!
+                    extraArgsValid = false;
+                    break;
+                }
+                if (TypeUtils.isAnyTypeArray(actionArgTypes[i])) {
+                    anyTypeIndex = i;
+                }
+                tmp[counter++] = actionArgTypes[i];
+            }
+
+            return new CallValidationResult(extraArgsValid &&
+                (anyTypeIndex > -1 || TypeUtils.isCompatible(tmp, calledMethodArgs)), anyTypeIndex > -1);
+        }
+        return new CallValidationResult(false, false);
     }
 
     public void visitEnd() {
