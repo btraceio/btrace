@@ -3,6 +3,7 @@
 (^|/)\.hgtags($|/)
 (^|/)build($|/)
 (^|/)javadoc($|/)
+(^|/)private($|/)
 ^project.log$
 ^tailor.state$
 ^tailor.state.old$
