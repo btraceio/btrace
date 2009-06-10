@@ -1,5 +1,0 @@
-Manifest-Version: 1.0
-OpenIDE-Module: com.sun.btrace
-OpenIDE-Module-Localizing-Bundle: com/sun/btrace/Bundle.properties
-OpenIDE-Module-Specification-Version: 1.0
-
