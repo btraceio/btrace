@@ -282,7 +282,7 @@ public class Instrumentor extends ClassAdapter {
 
                     @Override
                     public void visitCode() {
-                        maxLocal = getArgumentTypes().length;
+                        maxLocal = getArgumentTypes().length + (isStatic() ? 0 : 1);
                         super.visitCode();
                     }
 
