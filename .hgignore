@@ -1,6 +1,8 @@
 (^|/)CVS($|/)
 (^|/)\.hg($|/)
 (^|/)\.hgtags($|/)
+(^|/)build($|/)
+(^|/)javadoc($|/)
 ^project.log$
 ^tailor.state$
 ^tailor.state.old$
