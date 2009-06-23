@@ -119,7 +119,10 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         }
         try {
             if (debug) Main.debugPrint("onExit: closing all");
+            Thread.sleep(300);
             closeAll();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         } catch (IOException ioexp) {
             if (debug) Main.debugPrint(ioexp);
         }
@@ -253,7 +256,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         byte[] instrumentedCode;
         try {
             ClassWriter writer = InstrumentUtils.newClassWriter(target);
-            InstrumentUtils.accept(new ClassReader(target), 
+            InstrumentUtils.accept(new ClassReader(target),
                 new Instrumentor(clazz, className,  btraceCode, onMethods, writer));
             instrumentedCode = writer.toByteArray();
         } catch (Throwable th) {
