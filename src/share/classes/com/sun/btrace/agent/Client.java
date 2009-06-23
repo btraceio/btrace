@@ -49,6 +49,7 @@ import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
 import com.sun.btrace.runtime.PerfReaderImpl;
+import com.sun.btrace.util.EmptyMethodsEvaluator;
 import com.sun.btrace.util.NullVisitor;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -256,8 +257,11 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         byte[] instrumentedCode;
         try {
             ClassWriter writer = InstrumentUtils.newClassWriter(target);
-            InstrumentUtils.accept(new ClassReader(target),
-                new Instrumentor(clazz, className,  btraceCode, onMethods, writer));
+            ClassReader reader = new ClassReader(target);
+            EmptyMethodsEvaluator eme = new EmptyMethodsEvaluator();
+            reader.accept(eme, ClassReader.SKIP_DEBUG + ClassReader.SKIP_FRAMES);
+            InstrumentUtils.accept(reader,
+                new Instrumentor(clazz, className,  btraceCode, onMethods, eme.getEmptyMethods(), writer));
             instrumentedCode = writer.toByteArray();
         } catch (Throwable th) {
             Main.debugPrint(th);

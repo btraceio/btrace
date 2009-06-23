@@ -44,6 +44,8 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.util.MethodID;
+import java.util.Collections;
 import static com.sun.btrace.runtime.Constants.*;
 
 /**
@@ -61,9 +63,11 @@ public class Instrumentor extends ClassAdapter {
     private String className;
     private Class clazz;
 
+    final private Set<String> emptyMethods;
+
     public Instrumentor(Class clazz, 
             String btraceClassName, ClassReader btraceClass, 
-            List<OnMethod> onMethods, ClassVisitor cv) {
+            List<OnMethod> onMethods, Set<String> emptyMethods, ClassVisitor cv) {
         super(cv);
         this.clazz = clazz;
         this.btraceClassName = btraceClassName.replace('.', '/');
@@ -71,12 +75,13 @@ public class Instrumentor extends ClassAdapter {
         this.onMethods = onMethods;
         this.applicableOnMethods = new ArrayList<OnMethod>();
         this.calledOnMethods = new HashSet<OnMethod>();
+        this.emptyMethods = emptyMethods;
     }
 
     public Instrumentor(Class clazz,
             String btraceClassName, byte[] btraceCode, 
-            List<OnMethod> onMethods, ClassVisitor cv) {
-        this(clazz, btraceClassName, new ClassReader(btraceCode), onMethods, cv);
+            List<OnMethod> onMethods, Set<String> emptyMethods, ClassVisitor cv) {
+        this(clazz, btraceClassName, new ClassReader(btraceCode), onMethods, emptyMethods, cv);
     }
 
     public void visit(int version, int access, String name, 
@@ -147,7 +152,11 @@ public class Instrumentor extends ClassAdapter {
     public MethodVisitor visitMethod(final int access, final String name, 
         final String desc, String signature, String[] exceptions) {
         MethodVisitor methodVisitor = super.visitMethod(access, name, desc, 
-                signature, exceptions);   
+                signature, exceptions);
+
+        // don't instrument empty methods
+        if (emptyMethods.contains(MethodID.create(name, desc))) return methodVisitor;
+
         if (applicableOnMethods.size() == 0 ||
             (access & ACC_ABSTRACT) != 0    ||
             (access & ACC_NATIVE) != 0      ||
@@ -175,7 +184,7 @@ public class Instrumentor extends ClassAdapter {
                     }
                 }
             }
-        } 
+        }
 
         return new MethodAdapter(methodVisitor) {
             public AnnotationVisitor visitAnnotation(String annoDesc,
@@ -823,20 +832,20 @@ public class Instrumentor extends ClassAdapter {
             case RETURN:
                 return new MethodReturnInstrumentor(mv, access, name, desc) {
                     private void callAction(int retOpCode) {
-                        if (om.getSelfParameter() != -1) {
+                if (om.getSelfParameter() != -1) {
                             if (isStatic()) {
                                 return;
-                            }
+                    }
 
                             if (isConstructor()) return;
 
-                            if (!(TypeUtils.isObject(actionArgTypes[om.getSelfParameter()]) ||
+                    if (!(TypeUtils.isObject(actionArgTypes[om.getSelfParameter()]) ||
                                     TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter() - 1], Type.getObjectType(className)))
                                 && !(TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter() -1], Type.getObjectType(className)))) {
-                                // TODO issue a warning
+                        // TODO issue a warning
                                 return;
-                            }
-                        }
+                    }
+                }
                         int decrement = (om.getSelfParameter() != -1 ? 1 : 0) + (om.getReturnParameter() != -1 ? 1 : 0);
                         Type[] tmpArgArray = new Type[actionArgTypes.length - decrement];
 
@@ -847,26 +856,26 @@ public class Instrumentor extends ClassAdapter {
                         for(int argIndex=0;argIndex<actionArgTypes.length;argIndex++) {
                             if (argIndex != selfIndex && argIndex != returnIndex) {
                                 tmpArgArray[counter++] = actionArgTypes[argIndex];
-                            }
-                        }
+                    }
+                }
 
                         if (tmpArgArray.length == 1 && TypeUtils.isAnyTypeArray(tmpArgArray[0])) {
                             if (om.getSelfParameter() == 1) {
                                 loadThis();
-                            }
+                    }
                             if (om.getReturnParameter() == 1) {
                                 dupReturnValue(retOpCode);
-                            }
+                }
                             loadArgumentArray();
                             if (om.getSelfParameter() == 2) {
-                                loadThis();
-                            }
+                                    loadThis();
+                                }
                             if (om.getReturnParameter() == 2) {
                                 dupReturnValue(retOpCode);
                             }
                             invokeBTraceAction(this, om);
                             return;
-                        }
+                                }
 
                         if (tmpArgArray.length == 0 || TypeUtils.isCompatible(tmpArgArray, getArgumentTypes())) {
                             loadArguments(om, retOpCode);
@@ -1106,7 +1115,7 @@ public class Instrumentor extends ClassAdapter {
         ClassReader reader = new ClassReader(fis);        
         InstrumentUtils.accept(reader, new Instrumentor(null,
                     verifier.getClassName(), buf, 
-                    verifier.getOnMethods(), writer));
+                    verifier.getOnMethods(), Collections.EMPTY_SET, writer));
         fos = new FileOutputStream(targetClass);
         fos.write(writer.toByteArray());
     }
