@@ -44,16 +44,14 @@ import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
  * @author A. Sundararajan
  */
 public class MethodEntryInstrumentor extends MethodInstrumentor {
-    private boolean isConstructor = false;
     private boolean entryCalled = false;
     public MethodEntryInstrumentor(MethodVisitor mv, int access,
         String name, String desc) {
         super(mv, access, name, desc);
-        isConstructor = name.equals(CONSTRUCTOR);
     }
 
     public void visitCode() {
-        if (!isConstructor) {
+        if (!isConstructor()) {
             entryCalled = true;
             onMethodEntry();
         }
@@ -65,7 +63,7 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
                      String name,
                      String desc) {        
         super.visitMethodInsn(opcode, owner, name, desc);
-        if (isConstructor && !entryCalled && name.equals(CONSTRUCTOR)) {
+        if (isConstructor() && !entryCalled && name.equals(CONSTRUCTOR)) {
             // super or this class constructor call.
             // do method entry after that!
             entryCalled = true;
