@@ -30,10 +30,8 @@ import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
 import java.lang.instrument.Instrumentation;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -46,9 +44,9 @@ class FileClient extends Client {
 
     private volatile PrintWriter out;
 
-    FileClient(Instrumentation inst, File scriptFile, File traceFile) throws IOException {
+    FileClient(Instrumentation inst, File scriptFile, PrintWriter traceWriter) throws IOException {
         super(inst);
-        this.out = new PrintWriter(new BufferedWriter(new FileWriter(traceFile)));
+        this.out = traceWriter;
         byte[] code = readAll(scriptFile);
         if (debug) {
             Main.debugPrint("read " + scriptFile);

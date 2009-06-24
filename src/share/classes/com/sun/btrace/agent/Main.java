@@ -44,6 +44,9 @@ import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.ProbeDescriptor;
 import com.sun.btrace.util.Messages;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -188,6 +191,10 @@ public final class Main {
             if (isDebug()) debugPrint("dumpDir is " + dumpDir);
         }
 
+        p = argMap.get("stdout");
+        boolean traceToStdOut = p != null && !"false".equals(p);
+        if (isDebug()) debugPrint("stdout is " + traceToStdOut);
+
         probeDescPath = argMap.get("probeDescPath");
         if (probeDescPath == null) {
             probeDescPath = ".";
@@ -207,8 +214,16 @@ public final class Main {
                     if (isDebug()) debugPrint("script " + traceScript + " does not exist!");
                     return;
                 }
-                Client client = new FileClient(inst, traceScript, 
-                             new File(p + ".btrace"));
+
+                PrintWriter traceWriter = null;
+                if (traceToStdOut) {
+                    traceWriter = new PrintWriter(System.out);
+                } else {
+                    traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(p + ".btrace"))));
+                }
+
+                Client client = new FileClient(inst, traceScript, traceWriter);
+
                 handleNewClient(client);
             } catch (RuntimeException re) {
                 if (isDebug()) debugPrint(re);                
