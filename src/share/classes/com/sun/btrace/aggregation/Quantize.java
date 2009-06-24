@@ -25,6 +25,7 @@
 package com.sun.btrace.aggregation;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Aggregation function that calculates a power-of-two frequency distribution of the values.
@@ -46,12 +47,12 @@ class Quantize implements AggregationValue {
     // buckets[33] counts the number of 1s
     // buckets[34] counts 2s and 3s,
     // buckets[35] counts numbers in the range 4 to 7
-    private AtomicInteger[] buckets = new AtomicInteger[64];
+    private AtomicLong[] buckets = new AtomicLong[64];
 
     public Quantize() {
         super();
         for (int i = 0; i < buckets.length; i++) {
-            buckets[i] = new AtomicInteger();
+            buckets[i] = new AtomicLong();
         }
     }
 
@@ -61,7 +62,7 @@ class Quantize implements AggregationValue {
      * @see com.sun.btrace.aggregation.Aggregation#add(int)
      */
     @Override
-    public void add(int data) {
+    public void add(long data) {
         int pos = getBucketIndex(data);
         buckets[pos].incrementAndGet();
     }
@@ -72,7 +73,7 @@ class Quantize implements AggregationValue {
      * @param the
      *            value for which to calculate the log, must be positive
      */
-    private static int logBase2(int value) {
+    private static int logBase2(long value) {
         int pos = 0;
         if (value >= 1 << 16) {
             value >>= 16;
@@ -102,9 +103,9 @@ class Quantize implements AggregationValue {
      * delete.
      */
     @Override
-    public int getValue() {
+    public long getValue() {
         for (int i = buckets.length - 1; i >= 0; i--) {
-            int value = buckets[i].get();
+            long value = buckets[i].get();
             if (value > 0) {
                 return getBucketLabel(i);
             }
@@ -144,8 +145,8 @@ class Quantize implements AggregationValue {
             minIndex--;
         }
         int rows = maxIndex - minIndex + 1;
-        int[] values = new int[rows];
-        int[] counts = new int[rows];
+        long[] values = new long[rows];
+        long[] counts = new long[rows];
         for (int i = 0; i < rows; i++) {
             values[i] = getBucketLabel(minIndex + i);
             counts[i] = buckets[minIndex + i].get();
@@ -153,7 +154,7 @@ class Quantize implements AggregationValue {
         return new HistogramData(values, counts);
     }
 
-    private static int getBucketIndex(int data) {
+    private static int getBucketIndex(long data) {
         if (data == 0) {
             return ZERO_INDEX;
         } else if (data > 0) {
@@ -166,11 +167,11 @@ class Quantize implements AggregationValue {
         }
     }
 
-    private static int getBucketLabel(int index) {
+    private static long getBucketLabel(int index) {
         if (index == ZERO_INDEX) {
             return 0;
         } else if (index == 0) {
-            return Integer.MIN_VALUE;
+            return Long.MIN_VALUE;
         } else if (index > ZERO_INDEX) {
             index = index - ZERO_INDEX - 1;
             return 1 << index;

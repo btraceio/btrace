@@ -64,7 +64,7 @@ public class Aggregation {
      * @param data
      *            the value to be added
      */
-    public void add(int data) {
+    public void add(long data) {
         add(NULL_AGGREGATION_KEY, data);
     }
 
@@ -76,7 +76,7 @@ public class Aggregation {
      * @param data
      *            the value to be added
      */
-    public void add(AggregationKey key, int data) {
+    public void add(AggregationKey key, long data) {
         AggregationValue aggregationValue = values.get(key);
         if (aggregationValue == null) {
             aggregationValue = type.newValue();
@@ -165,8 +165,8 @@ public class Aggregation {
         Collections.sort(result, new Comparator<Map.Entry<AggregationKey, AggregationValue>>() {
 
             public int compare(Entry<AggregationKey, AggregationValue> o1, Entry<AggregationKey, AggregationValue> o2) {
-                int i1 = o1.getValue().getValue();
-                int i2 = o2.getValue().getValue();
+                long i1 = o1.getValue().getValue();
+                long i2 = o2.getValue().getValue();
                 if (i1 < i2) {
                     return -1;
                 } else if (i1 == i2) {

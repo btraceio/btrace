@@ -24,7 +24,7 @@
  */
 package com.sun.btrace.aggregation;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Aggregation function for computing the sum of values.
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class Sum implements AggregationValue {
 
-    AtomicInteger value = new AtomicInteger();
+    AtomicLong value = new AtomicLong();
 
     @Override
     public void clear() {
@@ -42,15 +42,15 @@ class Sum implements AggregationValue {
     }
 
     @Override
-    public void add(int delta) {
+    public void add(long delta) {
         value.addAndGet(delta);
     }
 
-    public int getValue() {
+    public long getValue() {
         return value.get();
     }
 
     public Object getData() {
-        return Integer.valueOf(getValue());
+        return Long.valueOf(getValue());
     }
 }

@@ -32,7 +32,7 @@ package com.sun.btrace.aggregation;
  */
 class Minimum implements AggregationValue {
 
-    int min = Integer.MAX_VALUE;
+    long min = Long.MAX_VALUE;
 
     @Override
     public synchronized void clear() {
@@ -40,17 +40,17 @@ class Minimum implements AggregationValue {
     }
 
     @Override
-    public synchronized void add(int value) {
+    public synchronized void add(long value) {
         if (value < min) {
             min = value;
         }
     }
 
-    public synchronized int getValue() {
+    public synchronized long getValue() {
         return min;
     }
 
     public Object getData() {
-        return Integer.valueOf(getValue());
+        return Long.valueOf(getValue());
     }
 }

@@ -46,15 +46,15 @@ class Count implements AggregationValue {
     }
 
     @Override
-    public void add(int delta) {
+    public void add(long delta) {
         value.incrementAndGet();
     }
 
-    public int getValue() {
+    public long getValue() {
         return value.get();
     }
 
     public Object getData() {
-        return Integer.valueOf(getValue());
+        return Long.valueOf(getValue());
     }
 }

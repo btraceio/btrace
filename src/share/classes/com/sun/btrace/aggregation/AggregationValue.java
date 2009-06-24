@@ -40,7 +40,7 @@ public interface AggregationValue {
      * @param data
      *            the data value
      */
-    void add(int data);
+    void add(long data);
 
     /**
      * Removes all data items previously added.
@@ -51,7 +51,7 @@ public interface AggregationValue {
      * @return the aggregated value of all data items added since the aggregation was created or last cleared. The
      *         aggregation function is determined by the concrete implementation of the interface.
      */
-    int getValue();
+    long getValue();
 
     /**
      * @return an object representation of the aggregated value. For most implementations this may be equivalent to

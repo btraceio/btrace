@@ -36,10 +36,10 @@ import java.io.Serializable;
 public class HistogramData implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    private int[] values;
-    private int[] counts;
+    private long[] values;
+    private long[] counts;
 
-    public HistogramData(int[] values, int[] counts) {
+    public HistogramData(long[] values, long[] counts) {
         if (values.length != counts.length) {
             throw new IllegalArgumentException("values and counts are different lengths");
         }
@@ -47,11 +47,11 @@ public class HistogramData implements Serializable {
         this.counts = counts;
     }
 
-    public int[] getValues() {
+    public long[] getValues() {
         return values;
     }
 
-    public int[] getCounts() {
+    public long[] getCounts() {
         return counts;
     }
 
@@ -63,9 +63,9 @@ public class HistogramData implements Serializable {
 
         p.println("          value  ------------- Distribution ------------- count");
         for (int i = 0; i < values.length; i++) {
-            p.print(String.format("%15d", Integer.valueOf(values[i])));
+            p.print(String.format("%15d", Long.valueOf(values[i])));
             p.print(" |");
-            int lineLength = (40 * counts[i]) / totalCount;
+            long lineLength = (40 * counts[i]) / totalCount;
             for (int j = 0; j < 40; j++) {
                 p.print(j < lineLength ? "@" : " ");
             }

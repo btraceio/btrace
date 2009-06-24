@@ -42,12 +42,12 @@ class Average implements AggregationValue {
     }
 
     @Override
-    public synchronized void add(int delta) {
+    public synchronized void add(long delta) {
         sum += delta;
         count++;
     }
 
-    public synchronized int getValue() {
+    public synchronized long getValue() {
         if (count == 0) {
             return 0; // Avoid division by zero
         }
@@ -55,6 +55,6 @@ class Average implements AggregationValue {
     }
 
     public Object getData() {
-        return Integer.valueOf(getValue());
+        return Long.valueOf(getValue());
     }
 }
