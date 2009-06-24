@@ -11,7 +11,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- *
+ * It is used to mark a probe method argument as the receiver of called method name
+ * in {@linkplain Location} = {@linkplain Kind#CALL}
  * @author Jaroslav Bachorik
  */
 @Target(ElementType.PARAMETER)
