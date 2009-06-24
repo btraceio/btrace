@@ -14,6 +14,93 @@
             <pathelement path="/usr/share/lib/java/dtrace.jar" />
         </path>
     </target>
+    <target name="initialize.maven" depends="prepare">
+       <get
+          src="http://maven.glassfish.org/content/repositories/maven.central/org/apache/maven/maven-ant-tasks/2.0.9/maven-ant-tasks-2.0.9.jar"
+          dest="${build.dir}/maven-ant-tasks-2.0.9.jar"
+          verbose="true"
+          usetimestamp="true"/>
+       <path id="maven-ant-tasks.classpath" path="${build.dir}/maven-ant-tasks-2.0.9.jar" />
+       <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
+                classpathref="maven-ant-tasks.classpath" />
+       <install-provider artifactId="wagon-svn" groupId="org.jvnet.wagon-svn" version="1.7">
+          <remoteRepository id="java.net.maven2.repository" url="http://download.java.net/maven/2/" />
+          <localRepository path="${maven.repo.local}"/>
+       </install-provider>
+
+   </target>
+   <target name="create.pom.file" if="artifact">
+       <copy file="btrace_template.pom" tofile="${build.dir}/pom-${artifact}.xml" overwrite="true">
+           <filterset>
+               <filter token="NAME" value="${name}"/>
+               <filter token="ARTIFACT_ID" value="${artifact}"/>
+               <filter token="VERSION" value="${release.version}"/>
+               <filter token="REPOSITORY_ID" value="java.net-maven2-repository"/>
+               <filter token="REPOSITORY_URL" value="java-net:/maven2-repository/trunk/repository/"/>
+           </filterset>
+       </copy>
+   </target>
+
+   <target name="upload.maven.with.build" depends="initialize.maven,build,upload.maven"/>
+
+   <target name="create.poms" depends="initialize.maven">
+       <antcall target="create.pom.file" >
+          <param name="name" value="btrace-agent"/>
+          <param name="artifact" value="btrace-agent"/>
+       </antcall>
+       <install file="${build.dir}/btrace-agent.jar">
+           <pom file="${build.dir}/pom-btrace-agent.xml"/>
+           <localRepository path="${maven.repo.local}"/>
+       </install>
+       <antcall target="create.pom.file" >
+          <param name="name" value="btrace-boot"/>
+          <param name="artifact" value="btrace-boot"/>
+       </antcall>
+       <install file="${build.dir}/btrace-boot.jar">
+           <pom file="${build.dir}/pom-btrace-boot.xml"/>
+           <localRepository path="${maven.repo.local}"/>
+       </install>
+       <antcall target="create.pom.file" >
+          <param name="name" value="btrace-client"/>
+          <param name="artifact" value="btrace-client"/>
+       </antcall>
+       <install file="${build.dir}/btrace-client.jar">
+           <pom file="${build.dir}/pom-btrace-client.xml"/>
+           <localRepository path="${maven.repo.local}"/>
+       </install>
+       <antcall target="create.pom.file" >
+          <param name="name" value="btrace-asm"/>
+          <param name="artifact" value="btrace-asm"/>
+          <param name="release.version" value="${asm.version}"/>
+       </antcall>
+       <install file="${build.dir}/btrace-asm-3.1.jar">
+           <pom file="${build.dir}/pom-btrace-asm.xml"/>
+           <localRepository path="${maven.repo.local}"/>
+       </install>
+   </target>
+
+   <target name="upload.maven" depends="create.poms" description="Publish btrace binaries to Maven2 repository">
+       <deploy file="${build.dir}/btrace-agent.jar" uniqueVersion="false" >
+           <pom file="${build.dir}/pom-btrace-agent.xml"/>
+           <localRepository path="${maven.repo.local}"/>
+       </deploy>
+
+       <deploy file="${build.dir}/btrace-boot.jar" uniqueVersion="false" >
+           <pom file="${build.dir}/pom-btrace-boot.xml"/>
+           <localRepository path="${maven.repo.local}"/>
+       </deploy>
+
+       <deploy file="${build.dir}/btrace-client.jar" uniqueVersion="false" >
+           <pom file="${build.dir}/pom-btrace-client.xml"/>
+           <localRepository path="${maven.repo.local}"/>
+       </deploy>
+
+       <deploy file="${build.dir}/btrace-asm-3.1.jar" uniqueVersion="false" >
+           <pom file="${build.dir}/pom-btrace-asm.xml"/>
+           <localRepository path="${maven.repo.local}"/>
+       </deploy>
+   </target> 
+
     <target name="clean" depends="load.properties">
         <delete dir="${build.dir}"/>
         <delete dir="${javadoc.dir}"/>
