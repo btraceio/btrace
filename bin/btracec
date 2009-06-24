@@ -10,7 +10,7 @@ fi
 
 if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
     if [ "${JAVA_HOME}" != "" ]; then
-        ase "`uname`" in
+        case "`uname`" in
           Darwin*)
               TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
           ;;
