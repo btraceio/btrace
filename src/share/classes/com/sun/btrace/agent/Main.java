@@ -294,7 +294,7 @@ public final class Main {
     static void dumpClass(String btraceClassName, String targetClassName, byte[] code) {
         if (dumpClasses) {
             try {
-                targetClassName = targetClassName.replace("/", File.separator);
+                targetClassName = targetClassName.replace(".", File.separator).replace("/", File.separator);
                 int index = targetClassName.lastIndexOf(File.separatorChar);
                 StringBuilder buf = new StringBuilder();
                 if (!dumpDir.equals(".")) {
