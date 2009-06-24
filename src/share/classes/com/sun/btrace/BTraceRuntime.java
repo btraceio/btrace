@@ -1408,11 +1408,11 @@ public final class BTraceRuntime {
         return new AggregationKey(elements);
     }
 
-    static void addToAggregation(Aggregation aggregation, int value) {
+    static void addToAggregation(Aggregation aggregation, long value) {
         aggregation.add(value);
     }
 
-    static void addToAggregation(Aggregation aggregation, AggregationKey key, int value) {
+    static void addToAggregation(Aggregation aggregation, AggregationKey key, long value) {
         aggregation.add(key, value);
     }
 
