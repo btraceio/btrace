@@ -991,6 +991,7 @@ public final class BTraceUtils {
     /**
      * Returns the currently probed method's name.
      */
+    @Deprecated
     public static String probeMethod() {
         StackTraceElement[] stack = Thread.currentThread().getStackTrace();
         if (stack.length >= 4) {
@@ -3254,7 +3255,7 @@ public final class BTraceUtils {
      *
      * @param aggregation the aggregation to which the value should be added
      */
-    public static void addToAggregation(Aggregation aggregation, int value) {
+    public static void addToAggregation(Aggregation aggregation, long value) {
         BTraceRuntime.addToAggregation(aggregation, value);
     }
 
@@ -3266,7 +3267,7 @@ public final class BTraceUtils {
      * @param aggregation the aggregation to which the value should be added
      * @param key the grouping aggregation key
      */
-    public static void addToAggregation(Aggregation aggregation, AggregationKey key, int value) {
+    public static void addToAggregation(Aggregation aggregation, AggregationKey key, long value) {
         BTraceRuntime.addToAggregation(aggregation, key, value);
     }
 

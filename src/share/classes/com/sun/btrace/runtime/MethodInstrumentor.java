@@ -29,6 +29,7 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
 
 /**
  * Base class for all out method instrumenting classes.
@@ -135,42 +136,6 @@ public class MethodInstrumentor extends MethodAdapter {
         loadLocal(argumentTypes[arg], getArgumentIndex(arg));
     }
 
-    public void loadArguments(final int arg, final int count , final int selfParam, final int returnParam, final int retOpCode) {
-        int loadedIndex = 0;
-        int index = getArgumentIndex(arg);
-        for (int i = 0; i < count; ++i) {
-            if (loadedIndex == selfParam) {
-                if (!isStatic()) {
-                    loadThis();
-                }
-                continue;
-            } else if (loadedIndex == returnParam) {
-                dupReturnValue(retOpCode);
-                continue;
-            }
-            loadedIndex++;
-            Type t = argumentTypes[arg + i];
-            loadLocal(t, index);
-
-            index += t.getSize();
-        }
-        if (loadedIndex == selfParam) {
-            if (!isStatic()) {
-                loadThis();
-            }
-        } else if (loadedIndex == returnParam) {
-            dupReturnValue(retOpCode);
-        }
-    }
-
-    public void loadArguments(OnMethod onMethod) {
-        loadArguments(onMethod, Integer.MIN_VALUE);
-    }
-
-    public void loadArguments(OnMethod onMethod, int retOpCode) {
-        loadArguments(0, argumentTypes.length, onMethod.getSelfParameter(), onMethod.getReturnParameter(), retOpCode);
-    }
-
     public void loadThis() {
         if ((access & ACC_STATIC) != 0) {
             throw new IllegalStateException("no 'this' inside static method");
@@ -178,7 +143,11 @@ public class MethodInstrumentor extends MethodAdapter {
         super.visitVarInsn(ALOAD, 0);
     }
 
-    public void loadArgumentArray() {
+    public void loadMethodParameter() {
+        super.visitLdcInsn(getName() + getDescriptor());
+    }
+
+    public int loadArgumentArray() {
         int count = argumentTypes.length;
         boolean isStatic = ((access & ACC_STATIC) != 0);
         push(count);
@@ -191,6 +160,7 @@ public class MethodInstrumentor extends MethodAdapter {
             box(argumentTypes[i]);
             arrayStore(TypeUtils.objectType);
         }
+        return count;
     }
 
     protected final boolean isStatic() {
@@ -198,7 +168,7 @@ public class MethodInstrumentor extends MethodAdapter {
     }
 
     protected final boolean isConstructor() {
-        return "<init>".equals(name);
+        return CONSTRUCTOR.equals(name);
     }
 
     public void returnValue() {

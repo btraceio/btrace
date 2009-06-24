@@ -33,9 +33,12 @@ import java.util.List;
 import com.sun.btrace.VerifierException;
 import com.sun.btrace.annotations.CalledInstance;
 import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.ProbeClass;
+import com.sun.btrace.annotations.ProbeMethod;
 import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
@@ -60,9 +63,12 @@ import com.sun.btrace.org.objectweb.asm.Type;
  */
 public class Verifier extends ClassAdapter {
     public static final String BTRACE_SELF_DESC = Type.getDescriptor(Self.class);
+    public static final String BTRACE_METHOD_DESC = Type.getDescriptor(ProbeMethod.class);
+    public static final String BTRACE_CLASSNAME_DESC = Type.getDescriptor(ProbeClass.class);
     public static final String BTRACE_RETURN_DESC = Type.getDescriptor(Return.class);
     public static final String BTRACE_CALLEDMETHOD_DESC = Type.getDescriptor(CalledMethod.class);
     public static final String BTRACE_CALLEDINSTANCE_DESC = Type.getDescriptor(CalledInstance.class);
+    public static final String BTRACE_DURATION_DESC = Type.getDescriptor(Duration.class);
 
     private boolean seenBTrace;
     private String className;
@@ -177,7 +183,25 @@ public class Verifier extends ClassAdapter {
                         if (om.getLocation().getValue() == Kind.ENTRY || om.getLocation().getValue() == Kind.RETURN || om.getLocation().getValue() == Kind.CALL) {
                             om.setSelfParameter(parameter);
                         } else {
-                            reportError("self.desc.invalid", "@Self annotation applicable only for Kind.ENTRY and Kind.RETURN");
+                            reportError("self.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
+                        }
+                    }
+                }
+                if (desc.equals(BTRACE_METHOD_DESC)) {
+                    if (om != null) {
+                        if (om.getLocation().getValue() == Kind.ENTRY || om.getLocation().getValue() == Kind.RETURN || om.getLocation().getValue() == Kind.CALL) {
+                            om.setMethodParameter(parameter);
+                        } else {
+                            reportError("probemethod.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
+                        }
+                    }
+                }
+                if (desc.equals(BTRACE_CLASSNAME_DESC)) {
+                    if (om != null) {
+                        if (om.getLocation().getValue() == Kind.ENTRY || om.getLocation().getValue() == Kind.RETURN || om.getLocation().getValue() == Kind.CALL) {
+                            om.setClassNameParameter(parameter);
+                        } else {
+                            reportError("probeclass.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
                         }
                     }
                 }
@@ -186,7 +210,16 @@ public class Verifier extends ClassAdapter {
                         if (om.getLocation().getValue() == Kind.RETURN || (om.getLocation().getValue() == Kind.CALL && om.getLocation().getWhere() == Where.AFTER)) {
                             om.setReturnParameter(parameter);
                         } else {
-                            reportError("return.desc.invalid", "@Return annotation applicable only for Kind.RETURN");
+                            reportError("return.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
+                        }
+                    }
+                }
+                if (desc.equals(BTRACE_DURATION_DESC)) {
+                    if (om != null) {
+                        if (om.getLocation().getValue() == Kind.RETURN) {
+                            om.setDurationParameter(parameter);
+                        } else {
+                            reportError("duration.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
                         }
                     }
                 }
@@ -195,7 +228,7 @@ public class Verifier extends ClassAdapter {
                         if (om.getLocation().getValue() == Kind.CALL) {
                             om.setCalledMethodParameter(parameter);
                         } else {
-                            reportError("called-method.desc.invalid", "@CalledMethod annotation applicable only for Kind.CALL");
+                            reportError("called-method.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
                         }
                     }
                 }
@@ -204,7 +237,7 @@ public class Verifier extends ClassAdapter {
                         if (om.getLocation().getValue() == Kind.CALL) {
                             om.setCalledInstanceParameter(parameter);
                         } else {
-                            reportError("called-instance.desc.invalid", "@CalledInstance annotation applicable only for Kind.CALL");
+                            reportError("called-instance.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
                         }
                     }
                 }

@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.org.objectweb.asm.Type;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -90,5 +91,17 @@ public class MethodReturnInstrumentor extends MethodInstrumentor {
                  }
             });
         fos.write(writer.toByteArray());
+    }
+
+    protected void loadDurationParameter(int localVarIndex1, int localVarIndex2) {
+        if (localVarIndex1 != -1 && localVarIndex2 != -1) {
+            super.loadLocal(Type.LONG_TYPE, localVarIndex2);
+            super.loadLocal(Type.LONG_TYPE, localVarIndex1);
+            super.visitInsn(LSUB);
+        }
+    }
+
+    protected void loadReturnParameter(int opcode) {
+        super.dupReturnValue(opcode);
     }
 }

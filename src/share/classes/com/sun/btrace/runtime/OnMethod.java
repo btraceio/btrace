@@ -47,9 +47,12 @@ public class OnMethod {
     private String targetDescriptor;
 
     private int selfParameter = -1;
+    private int methodParameter = -1;
+    private int classNameParameter = -1;
     private int returnParameter = -1;
     private int calledMethodParameter = -1;
     private int calledInstanceParameter = -1;
+    private int durationParameter = -1;
     
     public OnMethod() {
     }
@@ -117,6 +120,22 @@ public class OnMethod {
         this.selfParameter = selfParameter;
     }
 
+    public int getClassNameParameter() {
+        return classNameParameter;
+    }
+
+    public void setClassNameParameter(int classNameParameter) {
+        this.classNameParameter = classNameParameter;
+    }
+
+    public int getMethodParameter() {
+        return methodParameter;
+    }
+
+    public void setMethodParameter(int methodParameter) {
+        this.methodParameter = methodParameter;
+    }
+
     public int getReturnParameter() {
         return returnParameter;
     }
@@ -140,4 +159,14 @@ public class OnMethod {
     public void setCalledInstanceParameter(int calledInstanceParameter) {
         this.calledInstanceParameter = calledInstanceParameter;
     }
+
+    public int getDurationParameter() {
+        return durationParameter;
+    }
+
+    public void setDurationParameter(int durationParameter) {
+        this.durationParameter = durationParameter;
+    }
+
+
 }
