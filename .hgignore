@@ -4,6 +4,7 @@
 (^|/)build($|/)
 (^|/)javadoc($|/)
 (^|/)private($|/)
+patches
 ^project.log$
 ^tailor.state$
 ^tailor.state.old$

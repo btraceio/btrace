@@ -66,6 +66,10 @@ public class MethodReturnInstrumentor extends MethodInstrumentor {
         super.visitInsn(opcode);
     }
 
+    protected void loadReturnParameter(int opcode) {
+        super.dupReturnValue(opcode);
+    }
+
     protected void onMethodReturn(int opcode) {
         println("leaving " + getName() + getDescriptor());
     }

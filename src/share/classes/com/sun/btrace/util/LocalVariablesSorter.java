@@ -318,7 +318,7 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     private int remap(final int var, final int size) {
-        if (var < firstLocal || !changed) {
+       if (var < firstLocal || !changed) {
             return var;
         }
         int key = 2 * var + size - 1;
