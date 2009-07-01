@@ -178,7 +178,7 @@ public class MethodInstrumentor extends MethodAdapter {
         super.visitVarInsn(ALOAD, 0);
     }
 
-    public void loadArgumentArray() {
+    public int loadArgumentArray() {
         int count = argumentTypes.length;
         boolean isStatic = ((access & ACC_STATIC) != 0);
         push(count);
@@ -191,6 +191,7 @@ public class MethodInstrumentor extends MethodAdapter {
             box(argumentTypes[i]);
             arrayStore(TypeUtils.objectType);
         }
+        return count;
     }
 
     protected final boolean isStatic() {
