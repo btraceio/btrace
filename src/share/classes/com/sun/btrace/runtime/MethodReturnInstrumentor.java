@@ -104,8 +104,4 @@ public class MethodReturnInstrumentor extends MethodInstrumentor {
             super.visitInsn(LSUB);
         }
     }
-
-    protected void loadReturnParameter(int opcode) {
-        super.dupReturnValue(opcode);
-    }
 }
