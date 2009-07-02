@@ -498,7 +498,7 @@ public class Instrumentor extends ClassAdapter {
                 // <editor-fold defaultstate="collapsed" desc="Method Entry Instrumentor">
                 return new MethodEntryInstrumentor(lvs, access, name, desc) {
                     private void preMatchAction(Type[] args, int probeArgsLength) {
-                        int argPtr = isStatic() ? 1 : 0;
+                        int argPtr = isStatic() ? 0 : 1;
                         int argIndex = 0;
                         for (int i = 0; i < probeArgsLength; i++) {
                             if (i == om.getSelfParameter()) {
@@ -514,7 +514,7 @@ public class Instrumentor extends ClassAdapter {
                     }
 
                     private void preAnyTypeAction(Type[] args, int probeArgsLength) {
-                        int argPtr = isStatic() ? 1 : 0;
+                        int argPtr = isStatic() ? 0 : 1;
                         for (int i = 0; i < probeArgsLength; i++) {
                             if (i == om.getSelfParameter()) {
                                 if (!isStatic()) {
