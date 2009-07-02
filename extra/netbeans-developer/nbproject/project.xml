@@ -4,14 +4,6 @@
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/nb-module-project/3">
             <code-name-base>org.netbeans.modules.btrace.project</code-name-base>
-            <class-path-extension>
-                <runtime-relative-path>ext/btrace-client.jar</runtime-relative-path>
-                <binary-origin>release/modules/ext/btrace-client.jar</binary-origin>
-            </class-path-extension>
-            <class-path-extension>
-                <runtime-relative-path>ext/btrace-asm-3.1.jar</runtime-relative-path>
-                <binary-origin>release/modules/ext/btrace-asm-3.1.jar</binary-origin>
-            </class-path-extension>
             <standalone/>
             <module-dependencies>
                 <dependency>
@@ -238,6 +230,14 @@
                 </dependency>
             </module-dependencies>
             <public-packages/>
+            <class-path-extension>
+                <runtime-relative-path>ext/btrace-client.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/btrace-client.jar</binary-origin>
+            </class-path-extension>
+            <class-path-extension>
+                <runtime-relative-path>ext/btrace-asm-3.1.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/btrace-asm-3.1.jar</binary-origin>
+            </class-path-extension>
             <extra-compilation-unit>
                 <package-root>antsrc</package-root>
                 <classpath>${antsrc.cp}</classpath>
