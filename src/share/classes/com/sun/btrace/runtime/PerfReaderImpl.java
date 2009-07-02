@@ -32,8 +32,10 @@ import java.lang.reflect.Method;
 
 public class PerfReaderImpl implements PerfReader {
     private volatile Object thisVm;
-    final private Method findByName;
-    final private Class integerMonitorClz, longMonitorClz, stringMonitorClz;
+    private Method findByName;
+    private Class integerMonitorClz, longMonitorClz, stringMonitorClz;
+    private boolean isAvailable;
+
     private Object getThisVm() {
         if (thisVm == null) {
             synchronized (this) {
@@ -59,6 +61,9 @@ public class PerfReaderImpl implements PerfReader {
     }
 
     private Object findByName(String name) throws RuntimeException {
+        if (!isAvailable) {
+            throw new IllegalArgumentException("jvmstat perf counters not available. probably missing tools.jar");
+        }
         try {
             return findByName.invoke(getThisVm(), name);
         } catch (Exception e) {
@@ -67,14 +72,16 @@ public class PerfReaderImpl implements PerfReader {
     }
 
     public PerfReaderImpl() {
+        isAvailable = false;
         try {
             Class monitoredVmClz = Class.forName("sun.jvmstat.monitor.MonitoredVm");
             findByName = monitoredVmClz.getMethod("findByName", String.class);
             integerMonitorClz = Class.forName("sun.jvmstat.monitor.IntegerMonitor");
             longMonitorClz = Class.forName("sun.jvmstat.monitor.LongMonitor");
             stringMonitorClz = Class.forName("sun.jvmstat.monitor.StringMonitor");
+            isAvailable = true;
         } catch (Exception e) {
-            throw new IllegalArgumentException("jvmstat perf counters not available. probably missing tools.jar");
+            // ignore
         }
     }
 
