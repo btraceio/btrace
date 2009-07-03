@@ -47,6 +47,7 @@ import com.sun.btrace.util.Messages;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.util.Date;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -62,7 +63,7 @@ public final class Main {
     private static volatile String dumpDir;
     private static volatile String probeDescPath;
 
-    public static void premain(String args, Instrumentation inst) {        
+    public static void premain(String args, Instrumentation inst) {
         main(args, inst);
     }
 
@@ -75,7 +76,7 @@ public final class Main {
             return;
         } else {
             Main.inst = inst;
-        }     
+        }
 
 
         if (isDebug()) debugPrint("parsing command line arguments");
@@ -156,7 +157,7 @@ public final class Main {
         }
         String[] pairs = args.split(",");
         argMap = new HashMap<String, String>();
-        for (String s : pairs) {          
+        for (String s : pairs) {
             int i = s.indexOf('=');
             String key, value = "";
             if (i != -1) {
@@ -226,12 +227,12 @@ public final class Main {
 
                 handleNewClient(client);
             } catch (RuntimeException re) {
-                if (isDebug()) debugPrint(re);                
+                if (isDebug()) debugPrint(re);
             } catch (IOException ioexp) {
                 if (isDebug()) debugPrint(ioexp);
             } catch (UnmodifiableClassException uce) {
                 if (isDebug()) debugPrint(uce);
-            } 
+            }
         }
     }
 
@@ -273,6 +274,28 @@ public final class Main {
         }
     }
 
+    public static void handleFlashLightClient(byte[] code) {
+        try {
+            String twn = new String("flashlighttrace" + (new Date()).getTime());
+            PrintWriter traceWriter = null;
+            traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(twn + ".btrace"))));
+            Client client = new FlashLightClient(inst, code, traceWriter);
+            handleNewClient(client);
+        } catch (RuntimeException re) {
+            if (isDebug()) {
+                debugPrint(re);
+            }
+        } catch (IOException ioexp) {
+            if (isDebug()) {
+                debugPrint(ioexp);
+            }
+        } catch (UnmodifiableClassException uce) {
+            if (isDebug()) {
+                debugPrint(uce);
+            }
+        }
+    }
+
     private static void handleNewClient(Client client)
         throws UnmodifiableClassException, IOException {
         if (isDebug()) debugPrint("new Client created " + client);
@@ -294,7 +317,7 @@ public final class Main {
             if (size > 0) {
                 classes = new Class[size];
                 list.toArray(classes);
-                if (isDebug()) debugPrint("calling retransformClasses");    
+                if (isDebug()) debugPrint("calling retransformClasses");
                 inst.retransformClasses(classes);
                 client.skipRetransforms();
                 if (isDebug()) debugPrint("finished retransformClasses");
@@ -378,7 +401,7 @@ public final class Main {
             }
         }
         return res;
-    }    
+    }
 
     static boolean isDebug() {
         return debugMode;
