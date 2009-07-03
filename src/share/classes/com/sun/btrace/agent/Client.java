@@ -38,17 +38,18 @@ import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.comm.RenameCommand;
+import com.sun.btrace.PerfReader;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.MethodRemover;
+import com.sun.btrace.runtime.NullPerfReaderImpl;
 import com.sun.btrace.runtime.Preprocessor;
 import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
-import com.sun.btrace.runtime.PerfReaderImpl;
 import com.sun.btrace.util.EmptyMethodsEvaluator;
 import com.sun.btrace.util.NullVisitor;
 import java.lang.instrument.ClassFileTransformer;
@@ -74,7 +75,18 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     protected final boolean debug = Main.isDebug();
 
     static {
-        BTraceRuntime.init(new PerfReaderImpl(), new RunnableGeneratorImpl());
+        BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
+    }
+
+    private static PerfReader createPerfReaderImpl() {
+        // see if we can access any jvmstat class
+        try {
+            Class.forName("sun.jvmstat.monitor.MonitoredHost");
+            return (PerfReader) Class.forName("com.sun.btrace.runtime.PerfReaderImpl").newInstance();
+        } catch (Exception exp) {
+            // no luck, create null implementation
+            return new NullPerfReaderImpl();
+        }
     }
 
     Client(Instrumentation inst) {

@@ -26,33 +26,31 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.PerfReader;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-
+import java.net.URISyntaxException;
+import sun.jvmstat.monitor.IntegerMonitor;
+import sun.jvmstat.monitor.LongMonitor;
+import sun.jvmstat.monitor.Monitor;
+import sun.jvmstat.monitor.MonitoredHost;
+import sun.jvmstat.monitor.MonitoredVm;
+import sun.jvmstat.monitor.MonitorException;
+import sun.jvmstat.monitor.StringMonitor;
+import sun.jvmstat.monitor.VmIdentifier;
 
 public class PerfReaderImpl implements PerfReader {
-    private volatile Object thisVm;
-    private Method findByName;
-    private Class integerMonitorClz, longMonitorClz, stringMonitorClz;
-    private boolean isAvailable;
+    private volatile MonitoredVm thisVm;
 
-    private Object getThisVm() {
+    private MonitoredVm getThisVm() {
         if (thisVm == null) {
             synchronized (this) {
                 if (thisVm == null) {
                     try {
-                        Class monitoredHostClz = Class.forName("sun.jvmstat.monitor.MonitoredHost");
-                        Class vmIdentifierClz = Class.forName("sun.jvmstat.monitor.VmIdentifier");
-
-                        Method getMonitoredHost = monitoredHostClz.getMethod("getMonitoredHost", String.class);
-                        Object monitoredHost = getMonitoredHost.invoke(null, "localhost");
-
-                        Constructor constructor = vmIdentifierClz.getDeclaredConstructor(String.class);
-                        Object vmIdentifier = constructor.newInstance("0");
-                        Method getMonitoredVm = monitoredHostClz.getMethod("getMonitoredVm", vmIdentifier.getClass());
-                        thisVm = getMonitoredVm.invoke(monitoredHost, vmIdentifier);
-                    } catch (Exception e) {
-                        throw new IllegalArgumentException("jvmstat perf counters not available. probably missing tools.jar");
+                        MonitoredHost localHost = MonitoredHost.getMonitoredHost("localhost");
+                        VmIdentifier vmIdent = new VmIdentifier("0");
+                        thisVm = localHost.getMonitoredVm(vmIdent);
+                    } catch (MonitorException me) {
+                        throw new IllegalArgumentException("jvmstat perf counters not available: " + me);
+                    } catch (URISyntaxException use) {
+                        throw new IllegalArgumentException("jvmstat perf counters not available: " + use);
                     }
                 }
             }
@@ -60,87 +58,49 @@ public class PerfReaderImpl implements PerfReader {
         return thisVm;
     }
 
-    private Object findByName(String name) throws RuntimeException {
-        if (!isAvailable) {
-            throw new IllegalArgumentException("jvmstat perf counters not available. probably missing tools.jar");
-        }
+    private Monitor findByName(String name) {
         try {
-            return findByName.invoke(getThisVm(), name);
+            return getThisVm().findByName(name);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public PerfReaderImpl() {
-        isAvailable = false;
-        try {
-            Class monitoredVmClz = Class.forName("sun.jvmstat.monitor.MonitoredVm");
-            findByName = monitoredVmClz.getMethod("findByName", String.class);
-            integerMonitorClz = Class.forName("sun.jvmstat.monitor.IntegerMonitor");
-            longMonitorClz = Class.forName("sun.jvmstat.monitor.LongMonitor");
-            stringMonitorClz = Class.forName("sun.jvmstat.monitor.StringMonitor");
-            isAvailable = true;
-        } catch (Exception e) {
-            // ignore
-        }
-    }
-
     public int perfInt(String name) {
-         try { 
-            Object mon = findByName(name);
-            if (mon == null) {
-                throw new IllegalArgumentException("no such counter: " + name);
-            }
-            if (integerMonitorClz.isAssignableFrom(mon.getClass())) {
-                Method m = mon.getClass().getMethod("intValue");
-                Object result = m.invoke(mon);
-                return ((Integer)result).intValue();
-            } else if (longMonitorClz.isAssignableFrom(mon.getClass())) {
-                Method m = mon.getClass().getMethod("longValue");
-                Object result = m.invoke(mon);
-                return ((Long)result).intValue();
-            } else {
-                throw new IllegalArgumentException(name + " is not an int");
-            }
-        } catch (Exception me) {
-            throw new RuntimeException(me);
+        Monitor mon = findByName(name);
+        if (mon == null) {
+            throw new IllegalArgumentException("no such counter: " + name);
+        }
+        if (mon instanceof IntegerMonitor) {
+            return ((IntegerMonitor)mon).intValue();
+        } else if (mon instanceof LongMonitor) {
+            return (int) ((LongMonitor)mon).longValue();
+        } else {
+            throw new IllegalArgumentException(name + " is not an int");
         }
     }
 
     public long perfLong(String name) {
-        try {
-            Object mon = findByName(name);
-            if (mon == null) {
-                throw new IllegalArgumentException("no such counter: " + name);
-            }
-            if (longMonitorClz.isAssignableFrom(mon.getClass())) {
-                Method m = mon.getClass().getMethod("longValue");
-                Object result = m.invoke(mon);
-                return ((Long)result).intValue();
-            } else { 
-                throw new IllegalArgumentException(name + " is not a long");
-            }
-        } catch (Exception me) {
-            throw new RuntimeException(me);
+        Monitor mon = findByName(name);
+        if (mon == null) {
+            throw new IllegalArgumentException("no such counter: " + name);
+        }
+        if (mon instanceof LongMonitor) {
+            return ((LongMonitor)mon).longValue();
+        } else { 
+            throw new IllegalArgumentException(name + " is not a long");
         }
     }
 
     public String perfString(String name) {
-        try {
-            Object mon = findByName(name);
-            if (mon == null) {
-                throw new IllegalArgumentException("no such counter: " + name);
-            }
-            if (stringMonitorClz.isAssignableFrom(mon.getClass())) {
-                Method m = mon.getClass().getMethod("stringValue");
-                Object result = m.invoke(mon);
-                System.err.println("result = " + result);
-                return (String)result;
-            } else {
-                throw new IllegalArgumentException(name + " is not a string");
-            }
-        } catch (Exception me) {
-            throw new RuntimeException(me);
+        Monitor mon = findByName(name);
+        if (mon == null) {
+            throw new IllegalArgumentException("no such counter: " + name);
+        }
+        if (mon instanceof StringMonitor) {
+            return ((StringMonitor)mon).stringValue();
+        } else {
+            throw new IllegalArgumentException(name + " is not a string");
         }
     }
 }

@@ -1902,6 +1902,11 @@ public final class BTraceRuntime {
                 System.loadLibrary("btrace");
                 dtraceEnabled = true;
             } catch (LinkageError le) {
+                if (loader == null || 
+                    loader.getResource("com/sun/btrace") == null) {
+                    System.err.println("cannot load libbtrace.so, will miss DTrace probes from BTrace");
+                    return;
+                }
                 String path = loader.getResource("com/sun/btrace").toString();
                 path = path.substring(0, path.indexOf("!"));
                 path = path.substring("jar:".length(), path.lastIndexOf('/'));
