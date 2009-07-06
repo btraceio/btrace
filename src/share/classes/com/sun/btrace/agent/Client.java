@@ -183,6 +183,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (debug) Main.debugPrint("removed @OnMethod, @OnProbe methods");
         if (debug) Main.debugPrint("sending Okay command");
         onCommand(new OkayCommand());
+        boolean enteredHere = BTraceRuntime.enter();
         try {
             BTraceRuntime.leave();
             if (debug) Main.debugPrint("about to defineClass " + className);
@@ -197,7 +198,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             errorExit(th);
             return null;
         } finally {
-            BTraceRuntime.enter();
+            if (! enteredHere) BTraceRuntime.enter();
         }
         return this.btraceClazz;
     }
