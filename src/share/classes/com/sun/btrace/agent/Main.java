@@ -232,11 +232,28 @@ public final class Main {
                 if (isDebug()) debugPrint(ioexp);
             } catch (UnmodifiableClassException uce) {
                 if (isDebug()) debugPrint(uce);
+            } 
+        }
+    }
+
+    // This is really a *private* interface to Glassfish monitoring.
+    // For now, please avoid using this in any other scenario. 
+    public static void handleFlashLightClient(byte[] code) {
+        try {
+            String twn = new String("flashlighttrace" + (new Date()).getTime());
+            PrintWriter traceWriter = null;
+            traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(twn + ".btrace"))));
+            handleNewClient(code, traceWriter);
+        } catch (IOException ioexp) {
+            if (isDebug()) {
+                debugPrint(ioexp);
             }
         }
     }
 
     public static final int BTRACE_DEFAULT_PORT = 2020;
+
+    //-- Internals only below this point
     private static void startServer() {
         int port = BTRACE_DEFAULT_PORT;
         String p = argMap.get("port");
@@ -274,13 +291,9 @@ public final class Main {
         }
     }
 
-    public static void handleFlashLightClient(byte[] code) {
+    private static void handleNewClient(byte[] code, PrintWriter traceWriter) {
         try {
-            String twn = new String("flashlighttrace" + (new Date()).getTime());
-            PrintWriter traceWriter = null;
-            traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(twn + ".btrace"))));
-            Client client = new FlashLightClient(inst, code, traceWriter);
-            handleNewClient(client);
+            handleNewClient(new FileClient(inst, code, traceWriter));
         } catch (RuntimeException re) {
             if (isDebug()) {
                 debugPrint(re);

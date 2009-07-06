@@ -37,6 +37,8 @@ import java.io.PrintWriter;
 
 /**
  * Represents a local client communicated by trace file.
+ * The trace script is specified as a File of a .class file
+ * or a byte array containing bytecode of the trace script.
  *
  * @author A. Sundararajan
  */
@@ -44,18 +46,18 @@ class FileClient extends Client {
 
     private volatile PrintWriter out;
 
-    FileClient(Instrumentation inst, File scriptFile, PrintWriter traceWriter) throws IOException {
+    FileClient(Instrumentation inst, byte[] code, PrintWriter traceWriter) throws IOException {
         super(inst);
         this.out = traceWriter;
-        byte[] code = readAll(scriptFile);
-        if (debug) {
-            Main.debugPrint("read " + scriptFile);
-        }
         InstrumentCommand cmd = new InstrumentCommand(code, new String[0]);
         Class btraceClazz = loadClass(cmd);
         if (btraceClazz == null) {
             throw new RuntimeException("can not load BTrace class");
         }
+    }
+
+    FileClient(Instrumentation inst, File scriptFile, PrintWriter traceWriter) throws IOException {
+        this(inst, readAll(scriptFile), traceWriter);
     }
 
     public void onCommand(Command cmd) throws IOException {
