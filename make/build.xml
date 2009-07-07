@@ -68,15 +68,6 @@
            <pom file="${build.dir}/pom-btrace-client.xml"/>
            <localRepository path="${maven.repo.local}"/>
        </install>
-       <antcall target="create.pom.file" >
-          <param name="name" value="btrace-asm"/>
-          <param name="artifact" value="btrace-asm"/>
-          <param name="release.version" value="${asm.version}"/>
-       </antcall>
-       <install file="${build.dir}/btrace-asm-3.1.jar">
-           <pom file="${build.dir}/pom-btrace-asm.xml"/>
-           <localRepository path="${maven.repo.local}"/>
-       </install>
    </target>
 
    <target name="upload.maven" depends="create.poms" description="Publish btrace binaries to Maven2 repository">
@@ -95,10 +86,6 @@
            <localRepository path="${maven.repo.local}"/>
        </deploy>
 
-       <deploy file="${build.dir}/btrace-asm-3.1.jar" uniqueVersion="false" >
-           <pom file="${build.dir}/pom-btrace-asm.xml"/>
-           <localRepository path="${maven.repo.local}"/>
-       </deploy>
    </target> 
 
     <target name="clean" depends="load.properties">
@@ -136,16 +123,14 @@
         </javac>
     </target>
     <target name="build" depends="compile, dtrace-compile" description="Creates deployment bundles">
-        <copy todir="${build.dir}">
-            <fileset file="${lib.dir}/btrace-asm-3.1.jar"/>
-        </copy>
+        <unjar src="${lib.dir}/btrace-asm-3.1.jar" dest="${classes.dir}"/>
         <jar jarfile="${agent.jar}"         
          basedir="${classes.dir}"
          manifest="${share.src.dir}/META-INF/agent-manifest.mf"
          excludes="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/*"/>
         <jar jarfile="${boot.jar}"         
          basedir="${classes.dir}"
-         excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/*"/>
+         excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/**"/>
         <jar jarfile="${client.jar}"
          basedir="${classes.dir}"
          manifest="${share.src.dir}/META-INF/client-manifest.mf"
