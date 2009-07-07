@@ -22,7 +22,9 @@ if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
         ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/build/btrace-client.jar:${TOOLS_JAR} com.sun.btrace.compiler.Compiler $*
     else
         echo "Please set JAVA_HOME before running this script"
+        exit 1
     fi
 else
     echo "Please set BTRACE_HOME before running this script"
+    exit 1
 fi

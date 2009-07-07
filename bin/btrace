@@ -29,6 +29,7 @@ if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
               # and "connection refused" message from client.
               if [ ! -f ${TOOLS_JAR} ] ; then
                   echo "Please set JAVA_VERSION to the target java version"
+                  exit 1
               fi
           ;;
           *)
@@ -38,7 +39,9 @@ if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
        ${JAVA_HOME}/bin/java -Dcom.sun.btrace.probeDescPath=. -Dcom.sun.btrace.dumpClasses=false -Dcom.sun.btrace.debug=false -Dcom.sun.btrace.unsafe=false -cp ${BTRACE_HOME}/build/btrace-client.jar:${BTRACE_HOME}/build/btrace-asm-3.1.jar:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar com.sun.btrace.client.Main $*
     else
        echo "Please set JAVA_HOME before running this script"
+       exit 1
     fi
 else
     echo "Please set BTRACE_HOME before running this script"
+    exit 1
 fi
