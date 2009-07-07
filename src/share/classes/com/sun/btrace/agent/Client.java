@@ -183,8 +183,13 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (debug) Main.debugPrint("removed @OnMethod, @OnProbe methods");
         if (debug) Main.debugPrint("sending Okay command");
         onCommand(new OkayCommand());
+        // This extra BTraceRuntime.enter is needed to
+        // check whether we have already entered before.
         boolean enteredHere = BTraceRuntime.enter();
         try {
+            // The trace class static initializer needs to be run
+            // without BTraceRuntime.enter(). Please look at the
+            // static initializer code of trace class.
             BTraceRuntime.leave();
             if (debug) Main.debugPrint("about to defineClass " + className);
             if (shouldAddTransformer()) {
@@ -198,6 +203,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             errorExit(th);
             return null;
         } finally {
+            // leave BTraceRuntime enter state as it was before
+            // we started executing this method.
             if (! enteredHere) BTraceRuntime.enter();
         }
         return this.btraceClazz;
