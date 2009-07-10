@@ -68,11 +68,9 @@ public class Instrumentor extends ClassAdapter {
     private String className;
     private Class clazz;
 
-    final private Set<String> emptyMethods;
-
     public Instrumentor(Class clazz, 
             String btraceClassName, ClassReader btraceClass, 
-            List<OnMethod> onMethods, Set<String> emptyMethods, ClassVisitor cv) {
+            List<OnMethod> onMethods, ClassVisitor cv) {
         super(cv);
         this.clazz = clazz;
         this.btraceClassName = btraceClassName.replace('.', '/');
@@ -80,13 +78,12 @@ public class Instrumentor extends ClassAdapter {
         this.onMethods = onMethods;
         this.applicableOnMethods = new ArrayList<OnMethod>();
         this.calledOnMethods = new HashSet<OnMethod>();
-        this.emptyMethods = emptyMethods;
     }
 
     public Instrumentor(Class clazz,
             String btraceClassName, byte[] btraceCode, 
-            List<OnMethod> onMethods, Set<String> emptyMethods, ClassVisitor cv) {
-        this(clazz, btraceClassName, new ClassReader(btraceCode), onMethods, emptyMethods, cv);
+            List<OnMethod> onMethods, ClassVisitor cv) {
+        this(clazz, btraceClassName, new ClassReader(btraceCode), onMethods, cv);
     }
 
     public void visit(int version, int access, String name, 
@@ -158,9 +155,6 @@ public class Instrumentor extends ClassAdapter {
         final String desc, String signature, String[] exceptions) {
         MethodVisitor methodVisitor = super.visitMethod(access, name, desc, 
                 signature, exceptions);
-
-        // don't instrument empty methods
-        if (emptyMethods.contains(MethodID.create(name, desc))) return methodVisitor;
 
         if (applicableOnMethods.size() == 0 ||
             (access & ACC_ABSTRACT) != 0    ||
@@ -1087,7 +1081,7 @@ public class Instrumentor extends ClassAdapter {
         ClassReader reader = new ClassReader(fis);        
         InstrumentUtils.accept(reader, new Instrumentor(null,
                     verifier.getClassName(), buf, 
-                    verifier.getOnMethods(), Collections.EMPTY_SET, writer));
+                    verifier.getOnMethods(), writer));
         fos = new FileOutputStream(targetClass);
         fos.write(writer.toByteArray());
     }
