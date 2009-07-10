@@ -19,6 +19,11 @@
                     <type>java</type>
                     <location>src/solaris/classes</location>
                 </source-folder>
+                <source-folder>
+                    <label>src/test</label>
+                    <type>java</type>
+                    <location>src/test</location>
+                </source-folder>
             </folders>
             <ide-actions>
                 <action name="build">
@@ -34,7 +39,23 @@
                     <target>clean</target>
                     <target>all</target>
                 </action>
+                <action name="test">
+                    <script>${ant.script}</script>
+                    <target>test</target>
+                </action>
             </ide-actions>
+            <export>
+                <type>folder</type>
+                <location>build/classes</location>
+                <script>${ant.script}</script>
+                <build-target>all</build-target>
+            </export>
+            <export>
+                <type>folder</type>
+                <location>build/test</location>
+                <script>${ant.script}</script>
+                <build-target>all</build-target>
+            </export>
             <view>
                 <items>
                     <source-folder style="packages">
@@ -45,26 +66,45 @@
                         <label>src\solaris\classes</label>
                         <location>src/solaris/classes</location>
                     </source-folder>
+                    <source-folder style="packages">
+                        <label>src/test</label>
+                        <location>src/test</location>
+                    </source-folder>
                     <source-file>
                         <location>${ant.script}</location>
                     </source-file>
                 </items>
                 <context-menu>
                     <ide-action name="build"/>
-                    <ide-action name="clean"/>
                     <ide-action name="rebuild"/>
+                    <ide-action name="clean"/>
+                    <ide-action name="test"/>
                 </context-menu>
             </view>
             <subprojects/>
         </general-data>
-        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/1">
+        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/2">
             <compilation-unit>
                 <package-root>src/share/classes</package-root>
-                <package-root>src/share/classes</package-root>
+                <classpath mode="compile">lib/btrace-asm-3.1.jar:/opt/java/default/lib/tools.jar</classpath>
+                <built-to>build/classes</built-to>
+                <source-level>1.5</source-level>
+            </compilation-unit>
+            <compilation-unit>
                 <package-root>src/solaris/classes</package-root>
                 <classpath mode="compile">lib/btrace-asm-3.1.jar:/opt/java/default/lib/tools.jar</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>
+            <compilation-unit>
+                <package-root>src/test</package-root>
+                <unit-tests/>
+                <classpath mode="compile">/opt/junit4/junit-4.6.jar:build/classes:test-lib/asm-3.1.jar:lib/btrace-asm-3.1.jar:test-lib/asm-util-3.1.jar</classpath>
+                <built-to>build/test</built-to>
+                <source-level>1.5</source-level>
+            </compilation-unit>
         </java-data>
+        <preferences xmlns="http://www.netbeans.org/ns/auxiliary-configuration-preferences/1">
+            <module name="org-netbeans-modules-editor-indent"/>
+        </preferences>
     </configuration>
 </project>

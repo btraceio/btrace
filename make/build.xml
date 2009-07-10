@@ -5,6 +5,8 @@
     <target name="prepare" depends="load.properties">
         <mkdir dir="${classes.dir}"/>
         <mkdir dir="${javadoc.dir}"/>
+        <mkdir dir="${tests.dir}"/>
+        <mkdir dir="${tests.result.dir}"/>
         <available classname="org.opensolaris.os.dtrace.Consumer"
         classpath="/usr/share/lib/java/dtrace.jar"
         property="libdtrace.jni.available"/>
@@ -13,6 +15,17 @@
             <pathelement path="${java.home}/../lib/tools.jar" />
             <pathelement path="/usr/share/lib/java/dtrace.jar" />
         </path>
+        <condition property="iswindows">
+            <os family="windows"/>
+        </condition>
+        <condition property="btracec" value="btracec">
+            <not>
+                <istrue value="${iswindows}"/>
+            </not>
+        </condition>
+        <condition property="btracec" value="btracec.bat">
+            <istrue value="${iswindows}"/>
+        </condition>
     </target>
     <target name="initialize.maven" depends="prepare">
        <get
@@ -93,12 +106,14 @@
         <delete dir="${javadoc.dir}"/>
         <delete dir="${dist.dir}"/>
     </target>
-    <target name="compile" depends="prepare" description="Compiles the sources">
+    <target name="compile-src" depends="prepare" description="Compiles the sources">
         <javac srcdir="${share.src.dir}"
            destdir="${classes.dir}"
            debug="on" deprecation="on">
             <classpath refid="javac.classpath" />
         </javac>
+    </target>
+    <target name="compile" depends="compile-src" description="Compiles the sources, resources and javadocs">
         <copy todir="${classes.dir}/com/sun/btrace/resources">
             <fileset dir="${share.src.dir}/com/sun/btrace/resources/"/>
         </copy>
@@ -115,6 +130,38 @@
             <fileset file="${share.src.dir}/com/sun/btrace/BTraceUtils.java"/>
         </javadoc>
     </target>
+    <target name="check-junit" depends="prepare">
+        <available file="${junit.jar}" property="junit.jar.available"/>
+        <fail message="${junit.jar} is not available. Please, make sure the file exists or set the junit.jar property accordingly.">
+            <condition>
+                <not>
+                    <istrue value="${junit.jar.available}"/>
+                </not>
+            </condition>
+        </fail>
+    </target>
+    <target name="compile-tests" depends="check-junit, compile-src" description="Compiles the tests">
+        <javac srcdir="${test.src.dir}" destdir="${tests.dir}" debug="on" deprecation="on">
+            <classpath refid="javac.classpath"/>
+            <classpath>
+                <pathelement location="${tests.dir}"/>
+                <pathelement location="${classes.dir}"/>
+                <pathelement path="${junit.jar}"/>
+                <fileset dir="${lib.dir}" includes="**/*.jar"/>
+                <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
+            </classpath>
+            <exclude name="traces/**"/>
+        </javac>
+        <antcall target="build.traces"/>
+    </target>
+    
+    <target name="build.traces" depends="build">
+        <apply executable="${bin.dir}/${btracec}" >
+            <fileset dir="${traces.dir}" includes="**/*.java"/>
+            <arg value="-d ${tests.dir}"/>
+        </apply>
+    </target>
+
     <target name="dtrace-compile" if="libdtrace.jni.available" depends="prepare">
         <javac srcdir="${solaris.src.dir}"
            destdir="${classes.dir}"
@@ -170,6 +217,28 @@
              compression="gzip" excludes="*.zip,*.gz"/>
         <zip basedir="${dist.dir}" destfile="${dist.dir}/btrace-bin.zip"
              excludes="*.zip,*.gz"/>
+    </target>
+    <target name="test" depends="check-junit, compile-tests">
+        <junit fork="yes" printsummary="withOutAndErr" showoutput="true" errorProperty="test.failed" failureProperty="test.failed" filtertrace="false">
+            <formatter type="xml"/>
+            <formatter usefile="false" type="brief" />
+            <classpath>
+                <pathelement location="${tests.dir}"/>
+                <pathelement location="${classes.dir}"/>
+                <pathelement path="${java.class.path}"/>
+                <pathelement path="${junit.jar}"/>
+                <fileset dir="${lib.dir}" includes="**/*.jar"/>
+                <fileset dir="${test.lib.dir}" includes="**/*.jar"/>
+            </classpath>
+
+            <batchtest haltonfailure="true" todir="${tests.result.dir}">
+                <fileset dir="${test.src.dir}">
+                    <include name="**/*.java"/>
+                    <exclude name="resources/**"/>
+                    <exclude name="traces/**"/>
+                </fileset>
+            </batchtest>
+        </junit>
     </target>
     <target name="all" depends="build" description="Builds sources and deployment jars"/>
 </project>
