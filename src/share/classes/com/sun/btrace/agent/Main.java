@@ -238,12 +238,18 @@ public final class Main {
 
     // This is really a *private* interface to Glassfish monitoring.
     // For now, please avoid using this in any other scenario. 
+    public static void handleFlashLightClient(byte[] code, PrintWriter traceWriter) {
+        handleNewClient(code, traceWriter);
+    }
+
+    // This is really a *private* interface to Glassfish monitoring.
+    // For now, please avoid using this in any other scenario. 
     public static void handleFlashLightClient(byte[] code) {
         try {
             String twn = new String("flashlighttrace" + (new Date()).getTime());
             PrintWriter traceWriter = null;
             traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(twn + ".btrace"))));
-            handleNewClient(code, traceWriter);
+            handleFlashLightClient(code, traceWriter);
         } catch (IOException ioexp) {
             if (isDebug()) {
                 debugPrint(ioexp);
