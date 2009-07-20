@@ -2,6 +2,7 @@
 (^|/)\.hg($|/)
 (^|/)\.hgtags($|/)
 (^|/)build($|/)
+(^|/)dist($|/)
 (^|/)javadoc($|/)
 (^|/)private($|/)
 patches
