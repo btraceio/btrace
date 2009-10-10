@@ -56,6 +56,8 @@ import java.util.Deque;
  * @author Christian Glencross (aggregation support)
  */
 public final class BTraceUtils {
+    // standard stack depth decrement for Reflection.getCallerClass() calls
+    private static final int STACK_DEC = 2;
     // do not allow object creation!
     private BTraceUtils() {}
     
@@ -488,7 +490,7 @@ public final class BTraceUtils {
      * Returns Class object for given class name.
      */
     public static Class classForName(String name) {
-        ClassLoader callerLoader = Reflection.getCallerClass(1).getClassLoader();
+        ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
         return classForName(name, callerLoader);
     }
     
@@ -638,7 +640,7 @@ public final class BTraceUtils {
      * class
      */
     public static Field field(String clazz, String name, boolean throwException) {
-        ClassLoader callerLoader = Reflection.getCallerClass(1).getClassLoader();
+        ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
         return field(classForName(clazz, callerLoader), name, throwException);
     }
 
@@ -655,7 +657,8 @@ public final class BTraceUtils {
      * class
      */
     public static Field field(String clazz, String name) {
-        return field(clazz, name, true);
+        ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
+        return field(classForName(clazz, callerLoader), name);
     }
     
     // field value get methods
@@ -985,7 +988,7 @@ public final class BTraceUtils {
      * probed (or traced) class.
      */
     public static Class probeClass() {
-        return Reflection.getCallerClass(3);
+        return Reflection.getCallerClass(STACK_DEC);
     }
   
     /**
