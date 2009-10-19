@@ -437,12 +437,29 @@ public final class BTraceRuntime {
      * Utility to create a new ThreadLocal object. Called
      * by preprocessed BTrace class to create ThreadLocal
      * for each @TLS variable.
+     * @param initValue Initial value.
+     *                  This value must be either a boxed primitive or {@linkplain Cloneable}.
+     *                  In case a {@linkplain Cloneable} value is provided the value is never used directly
+     *                  - instead, a new clone of the value is created per thread.
      */
     public static ThreadLocal newThreadLocal(
                 final Object initValue) {
         return new ThreadLocal() {
             @Override
             protected Object initialValue() {
+                if (initValue == null) return initValue;
+
+                if (initValue instanceof Cloneable) {
+                    try {
+                        Class clz = initValue.getClass();
+                        Method m = clz.getDeclaredMethod("clone");
+                        m.setAccessible(true);
+                        return m.invoke(initValue);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
                 return initValue;
             }
         };

@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Christian Glencross
  */
-public class Aggregation {
+public class Aggregation implements Cloneable {
 
     private static final AggregationKey NULL_AGGREGATION_KEY = new AggregationKey(new Object[0]);
     private final AggregationFunction type;
@@ -178,4 +178,10 @@ public class Aggregation {
         });
         return result;
     }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return new Aggregation(type);
+    }
+
 }

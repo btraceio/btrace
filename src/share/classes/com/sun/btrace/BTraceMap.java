@@ -26,8 +26,10 @@
 package com.sun.btrace;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 /** 
  * Instances of this class are used to store  aggregate 
@@ -35,14 +37,16 @@ import java.util.Set;
  *
  * @author A. Sundararajan
  */
-final class BTraceMap<K,V> implements Map<K,V> {
+final class BTraceMap<K,V> implements Map<K,V>, Cloneable {
     //private int numItems;
     private final Map<K,V> m;
+    private boolean isWeak;
     BTraceMap(Map<K,V> m) {
         if (m == null) {
             throw new NullPointerException();
         }
         this.m = m;
+        isWeak = (m instanceof WeakHashMap);
     }
 
     public synchronized int size() {
@@ -117,4 +121,11 @@ final class BTraceMap<K,V> implements Map<K,V> {
     public synchronized String toString() {
         return m.toString();
     }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return new BTraceMap(isWeak ? new WeakHashMap() : new HashMap());
+    }
+
+
 }
