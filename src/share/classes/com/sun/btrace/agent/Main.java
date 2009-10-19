@@ -48,6 +48,8 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -62,6 +64,8 @@ public final class Main {
     private static volatile boolean dumpClasses;
     private static volatile String dumpDir;
     private static volatile String probeDescPath;
+
+    private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor();
 
     public static void premain(String args, Instrumentation inst) {
         main(args, inst);
@@ -230,9 +234,7 @@ public final class Main {
                 if (isDebug()) debugPrint(re);
             } catch (IOException ioexp) {
                 if (isDebug()) debugPrint(ioexp);
-            } catch (UnmodifiableClassException uce) {
-                if (isDebug()) debugPrint(uce);
-            } 
+            }
         }
     }
 
@@ -291,8 +293,6 @@ public final class Main {
                 if (isDebug()) debugPrint(re);
             } catch (IOException ioexp) {
                 if (isDebug()) debugPrint(ioexp);
-            } catch (UnmodifiableClassException uce) {
-                if (isDebug()) debugPrint(uce);
             }
         }
     }
@@ -308,40 +308,47 @@ public final class Main {
             if (isDebug()) {
                 debugPrint(ioexp);
             }
-        } catch (UnmodifiableClassException uce) {
-            if (isDebug()) {
-                debugPrint(uce);
-            }
         }
     }
 
-    private static void handleNewClient(Client client)
-        throws UnmodifiableClassException, IOException {
-        if (isDebug()) debugPrint("new Client created " + client);
-        if (client.shouldAddTransformer()) {
-            Class[] classes = inst.getAllLoadedClasses();
-            ArrayList<Class> list = new ArrayList<Class>();
-            if (isDebug()) debugPrint("filtering loaded classes");
-            for (Class c : classes) {
-                if (inst.isModifiableClass(c) &&
-                    client.isCandidate(c)) {
-                    if (isDebug()) debugPrint("candidate " + c + " added");
-                    list.add(c);
+    private static void handleNewClient(final Client client) {
+        serializedExecutor.submit(new Runnable() {
+
+            public void run() {
+                try {
+                    if (isDebug()) debugPrint("new Client created " + client);
+                    if (client.shouldAddTransformer()) {
+                        Class[] classes = inst.getAllLoadedClasses();
+                        ArrayList<Class> list = new ArrayList<Class>();
+                        if (isDebug()) debugPrint("filtering loaded classes");
+                        for (Class c : classes) {
+                            if (inst.isModifiableClass(c) &&
+                                client.isCandidate(c)) {
+                                if (isDebug()) debugPrint("candidate " + c + " added");
+                                list.add(c);
+                            }
+                        }
+                        list.trimToSize();
+                        int size = list.size();
+                        if (isDebug()) debugPrint("added as ClassFileTransformer");
+                        inst.addTransformer(client, true);
+                        if (size > 0) {
+                            classes = new Class[size];
+                            list.toArray(classes);
+                            if (isDebug()) debugPrint("calling retransformClasses");
+                            inst.retransformClasses(classes);
+                            client.skipRetransforms();
+                            if (isDebug()) debugPrint("finished retransformClasses");
+                        }
+                    }
+                } catch (UnmodifiableClassException uce) {
+                    if (isDebug()) {
+                        debugPrint(uce);
+                    }
                 }
             }
-            list.trimToSize();
-            int size = list.size();
-            if (isDebug()) debugPrint("added as ClassFileTransformer");
-            inst.addTransformer(client, true);
-            if (size > 0) {
-                classes = new Class[size];
-                list.toArray(classes);
-                if (isDebug()) debugPrint("calling retransformClasses");
-                inst.retransformClasses(classes);
-                client.skipRetransforms();
-                if (isDebug()) debugPrint("finished retransformClasses");
-            }
-        }
+        });
+        
     }
 
     private static void error(String msg) {
