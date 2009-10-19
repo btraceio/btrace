@@ -25,6 +25,7 @@
 
 package com.sun.btrace;
 
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
@@ -33,7 +34,7 @@ import java.util.Iterator;
  *
  * @author Jaroslav Bachorik
  */
-public class BTraceDeque<V> implements Deque<V>, BTraceCollection<V> {
+public class BTraceDeque<V> implements Deque<V>, BTraceCollection<V>, Cloneable {
     private final Deque<V> delegate;
 
     public BTraceDeque(Deque<V> delegate) {
@@ -191,4 +192,10 @@ public class BTraceDeque<V> implements Deque<V>, BTraceCollection<V> {
     public synchronized boolean equals(Object obj) {
         return delegate.equals(obj);
     }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return new BTraceDeque(new ArrayDeque());
+    }
+
 }
