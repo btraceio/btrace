@@ -74,6 +74,12 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     protected final boolean debug = Main.isDebug();
 
     static {
+        ClassFilter.class.getClass();
+        InstrumentUtils.class.getClass();
+        Instrumentor.class.getClass();
+        ClassReader.class.getClass();
+        ClassWriter.class.getClass();
+        
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
 

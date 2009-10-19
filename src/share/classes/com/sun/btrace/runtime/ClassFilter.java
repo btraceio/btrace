@@ -45,7 +45,7 @@ import com.sun.btrace.annotations.BTrace;
 /**
  * This class checks whether a given target class
  * matches atleast one probe specified in a BTrace
- * class. 
+ * class.
  *
  * @author A. Sundararajan
  */
@@ -60,6 +60,16 @@ public class ClassFilter {
     // same as above but stored in internal name form ('/' instead of '.')
     private String[] superTypesInternal;
 
+    static {
+        CheckingVisitor.class.getClass();
+        ClassReader.class.getClass();
+        NullVisitor.class.getClass();
+        AnnotationVisitor.class.getClass();
+        FieldVisitor.class.getClass();
+        MethodVisitor.class.getClass();
+        Attribute.class.getClass();
+    }
+
     public ClassFilter(List<OnMethod> onMethods) {
         init(onMethods);
     }
@@ -69,7 +79,7 @@ public class ClassFilter {
             return false;
         }
 
-        // ignore classes annotated with @BTrace - 
+        // ignore classes annotated with @BTrace -
         // We don't want to instrument tracing classes!
         if (target.getAnnotation(BTrace.class) != null) {
             return false;
@@ -129,7 +139,7 @@ public class ClassFilter {
         return cv.isCandidate();
     }
 
-    /* 
+    /*
      * return whether given Class is subtype of given type name
      * Note that we can not use Class.iaAssignableFrom because the other
      * type is specified by just name and not by Class object.
@@ -201,7 +211,7 @@ public class ClassFilter {
             }
 
             if (BTRACE_DESC.equals(desc)) {
-                // ignore classes annotated with @BTrace - 
+                // ignore classes annotated with @BTrace -
                 // we don't want to instrument tracing classes!
                 isCandidate = false;
                 return nullVisitor;
