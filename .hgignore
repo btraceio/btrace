@@ -3,7 +3,6 @@
 (^|/)\.hgtags($|/)
 (^|/)build($|/)
 (^|/)dist($|/)
-(^|/)javadoc($|/)
 (^|/)private($|/)
 patches
 webrev*
