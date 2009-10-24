@@ -28,7 +28,7 @@
             <ide-actions>
                 <action name="build">
                     <script>${ant.script}</script>
-                    <target>all</target>
+                    <target>dist</target>
                 </action>
                 <action name="clean">
                     <script>${ant.script}</script>
@@ -37,24 +37,28 @@
                 <action name="rebuild">
                     <script>${ant.script}</script>
                     <target>clean</target>
-                    <target>all</target>
+                    <target>dist</target>
                 </action>
                 <action name="test">
                     <script>${ant.script}</script>
                     <target>test</target>
+                </action>
+                <action name="javadoc">
+                    <script>${ant.script}</script>
+                    <target>javadoc</target>
                 </action>
             </ide-actions>
             <export>
                 <type>folder</type>
                 <location>build/classes</location>
                 <script>${ant.script}</script>
-                <build-target>all</build-target>
+                <build-target>dist</build-target>
             </export>
             <export>
                 <type>folder</type>
                 <location>build/test</location>
                 <script>${ant.script}</script>
-                <build-target>all</build-target>
+                <build-target>dist</build-target>
             </export>
             <view>
                 <items>
@@ -78,6 +82,7 @@
                     <ide-action name="build"/>
                     <ide-action name="rebuild"/>
                     <ide-action name="clean"/>
+                    <ide-action name="javadoc"/>
                     <ide-action name="test"/>
                 </context-menu>
             </view>
