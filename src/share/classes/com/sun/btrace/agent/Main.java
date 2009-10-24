@@ -208,32 +208,26 @@ public final class Main {
         ProbeDescriptorLoader.init(probeDescPath);
         p = argMap.get("script");
         if (p != null) {
-            if (isDebug()) debugPrint("initial script is " + p);
-            try {
-                if (! p.endsWith(".class")) {
-                    if (isDebug()) debugPrint("script should be a pre-compiled .class file");
-                    return;
-                }
-                File traceScript = new File(p);
-                if (! traceScript.exists()) {
-                    if (isDebug()) debugPrint("script " + traceScript + " does not exist!");
-                    return;
-                }
+            StringTokenizer tokenizer = new StringTokenizer(p, ",");
 
-                PrintWriter traceWriter = null;
-                if (traceToStdOut) {
-                    traceWriter = new PrintWriter(System.out);
-                } else {
-                    traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(p + ".btrace"))));
+	    if (isDebug()) {
+                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + p);
+            }
+            while (tokenizer.hasMoreTokens()) {
+                loadBTraceScript(tokenizer.nextToken(), traceToStdOut);
+            }
+        }
+        p = argMap.get("scriptdir");
+        if (p != null) {
+            File scriptdir = new File(p);
+            if (scriptdir != null && scriptdir.isDirectory()) {
+                if (isDebug()) debugPrint("found scriptdir: " + scriptdir.getAbsolutePath());
+                File[] files = scriptdir.listFiles();
+                if (files != null) {
+                    for (File file : files) {
+                       loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
+                    }
                 }
-
-                Client client = new FileClient(inst, traceScript, traceWriter);
-
-                handleNewClient(client);
-            } catch (RuntimeException re) {
-                if (isDebug()) debugPrint(re);
-            } catch (IOException ioexp) {
-                if (isDebug()) debugPrint(ioexp);
             }
         }
     }
@@ -256,6 +250,37 @@ public final class Main {
             if (isDebug()) {
                 debugPrint(ioexp);
             }
+        }
+    }
+
+    private static void loadBTraceScript(String filename, boolean traceToStdOut) {
+        try {
+            if (! filename.endsWith(".class")) {
+                if (isDebug()) { 
+                    debugPrint("refusing " + filename + ". script should be a pre-compiled .class file");
+                }
+                return;
+            }
+            File traceScript = new File(filename);
+            if (! traceScript.exists()) {
+                if (isDebug()) debugPrint("script " + traceScript + " does not exist!");
+                return;
+            }
+
+            PrintWriter traceWriter = null;
+            if (traceToStdOut) {
+                traceWriter = new PrintWriter(System.out);
+            } else {
+                traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(filename + ".btrace"))));
+            }
+
+            Client client = new FileClient(inst, traceScript, traceWriter);
+
+            handleNewClient(client);
+        } catch (RuntimeException re) {
+            if (isDebug()) debugPrint(re);
+        } catch (IOException ioexp) {
+            if (isDebug()) debugPrint(ioexp);
         }
     }
 
