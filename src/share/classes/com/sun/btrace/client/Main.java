@@ -29,6 +29,9 @@ import java.io.Console;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.UnknownHostException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 import com.sun.btrace.CommandListener;
@@ -38,6 +41,7 @@ import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.util.Messages;
+import java.net.Socket;
 
 /**
  * This is the main class for a simple command line
@@ -133,6 +137,7 @@ public final class Main {
         if (args.length < (count + 1)) {
             usage();
         }
+        checkPortAvailable(port);
 
         String pid = args[count];
         String fileName = args[count + 1];
@@ -161,6 +166,23 @@ public final class Main {
                 createCommandListener(client));
         } catch (IOException exp) {
             errorExit(exp.getMessage(), 1);
+        }
+    }
+
+    private static void checkPortAvailable(int port) {
+        Socket clSocket = null;
+        try {
+            clSocket = new Socket("127.0.0.1", port);
+        } catch (UnknownHostException ex) {
+        } catch (IOException ex) {
+            clSocket = null;
+        }
+        if (clSocket != null) {
+            try {
+                clSocket.close();
+            } catch (IOException e) {
+            }
+            errorExit("port " + port + " not available. exiting", -1);
         }
     }
 
