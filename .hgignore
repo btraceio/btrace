@@ -4,6 +4,7 @@
 (^|/)build($|/)
 (^|/)dist($|/)
 (^|/)private($|/)
+(^|/)output($|/)
 patches
 webrev*
 ^project.log$
