@@ -54,7 +54,7 @@
        </copy>
    </target>
 
-   <target name="upload.maven.with.build" depends="initialize.maven,build,upload.maven"/>
+   <target name="upload.maven.with.build" depends="initialize.maven,jar,upload.maven"/>
 
    <target name="create.poms" depends="initialize.maven">
        <antcall target="create.pom.file" >
@@ -103,9 +103,12 @@
 
     <target name="clean" depends="load.properties">
         <delete dir="${build.dir}"/>
-        <delete dir="${javadoc.dir}"/>
         <delete dir="${dist.dir}"/>
     </target>
+    <target name="clean-docs" depends="load.properties">
+        <delete dir="${javadoc.dir}"/>
+    </target>
+
     <target name="compile-src" depends="prepare" description="Compiles the sources">
         <javac srcdir="${share.src.dir}"
            destdir="${classes.dir}"
@@ -123,6 +126,8 @@
         <copy todir="${classes.dir}/com/sun/btrace/annotations">
             <fileset file="${share.src.dir}/com/sun/btrace/annotations/jaxb.index"/>
         </copy>
+    </target>
+    <target name="javadoc" depends="compile,clean-docs" description="Generates javadocs">
         <javadoc destdir="${javadoc.dir}">
             <fileset file="${share.src.dir}/com/sun/btrace/aggregation/*.java"/>
             <fileset file="${share.src.dir}/com/sun/btrace/annotations/*.java"/>
@@ -155,7 +160,7 @@
         <antcall target="build.traces"/>
     </target>
     
-    <target name="build.traces" depends="build">
+    <target name="build.traces" depends="jar">
         <apply executable="${bin.dir}/${btracec}" >
             <fileset dir="${traces.dir}" includes="**/*.java"/>
             <arg value="-d ${tests.dir}"/>
@@ -169,7 +174,7 @@
             <classpath refid="javac.classpath"/>
         </javac>
     </target>
-    <target name="build" depends="compile, dtrace-compile" description="Creates deployment bundles">
+    <target name="jar" depends="compile, dtrace-compile" description="Creates deployment bundles">
         <unjar src="${lib.dir}/btrace-asm-3.1.jar" dest="${classes.dir}"/>
         <jar jarfile="${agent.jar}"         
          basedir="${classes.dir}"
@@ -187,7 +192,7 @@
         <echo message="Loading build properties file"/>
         <property file="build.properties"/>
     </target>
-    <target name="dist" depends="build">
+    <target name="dist" depends="jar">
         <delete dir="vi${dist.dir}"/>
         <mkdir dir="${dist.dir}"/>
         <mkdir dir="${dist.dir}/build"/>
@@ -240,6 +245,6 @@
             </batchtest>
         </junit>
     </target>
-    <target name="all" depends="build" description="Builds sources and deployment jars"/>
+    <target name="all" depends="jar, javadoc" description="Builds sources and deployment jars"/>
 </project>
 
