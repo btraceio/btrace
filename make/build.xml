@@ -116,7 +116,7 @@
             <classpath refid="javac.classpath" />
         </javac>
     </target>
-    <target name="compile" depends="compile-src" description="Compiles the sources, resources and javadocs">
+    <target name="compile" depends="compile-src, compile-dtrace" description="Compiles the sources, resources and javadocs">
         <copy todir="${classes.dir}/com/sun/btrace/resources">
             <fileset dir="${share.src.dir}/com/sun/btrace/resources/"/>
         </copy>
@@ -127,7 +127,7 @@
             <fileset file="${share.src.dir}/com/sun/btrace/annotations/jaxb.index"/>
         </copy>
     </target>
-    <target name="javadoc" depends="compile,clean-docs" description="Generates javadocs">
+    <target name="javadoc" depends="jar,clean-docs" description="Generates javadocs">
         <javadoc destdir="${javadoc.dir}">
             <fileset file="${share.src.dir}/com/sun/btrace/aggregation/*.java"/>
             <fileset file="${share.src.dir}/com/sun/btrace/annotations/*.java"/>
@@ -167,14 +167,14 @@
         </apply>
     </target>
 
-    <target name="dtrace-compile" if="libdtrace.jni.available" depends="prepare">
+    <target name="compile-dtrace" if="libdtrace.jni.available" depends="prepare">
         <javac srcdir="${solaris.src.dir}"
            destdir="${classes.dir}"
            debug="on" deprecation="on">
             <classpath refid="javac.classpath"/>
         </javac>
     </target>
-    <target name="jar" depends="compile, dtrace-compile" description="Creates deployment bundles">
+    <target name="jar" depends="compile" description="Creates deployment bundles">
         <unjar src="${lib.dir}/btrace-asm-3.1.jar" dest="${classes.dir}"/>
         <jar jarfile="${agent.jar}"         
          basedir="${classes.dir}"
@@ -192,7 +192,7 @@
         <echo message="Loading build properties file"/>
         <property file="build.properties"/>
     </target>
-    <target name="dist" depends="jar">
+    <target name="dist" depends="jar, test">
         <delete dir="vi${dist.dir}"/>
         <mkdir dir="${dist.dir}"/>
         <mkdir dir="${dist.dir}/build"/>
@@ -223,7 +223,7 @@
         <zip basedir="${dist.dir}" destfile="${dist.dir}/btrace-bin.zip"
              excludes="*.zip,*.gz"/>
     </target>
-    <target name="test" depends="check-junit, compile-tests">
+    <target name="test" depends="check-junit, compile, compile-tests">
         <junit fork="yes" printsummary="withOutAndErr" showoutput="true" errorProperty="test.failed" failureProperty="test.failed" filtertrace="false">
             <formatter type="xml"/>
             <formatter usefile="false" type="brief" />
