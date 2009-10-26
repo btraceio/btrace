@@ -46,6 +46,8 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.LocalVariablesSorter;
 import com.sun.btrace.util.MethodID;
+import com.sun.btrace.util.TimeStampGenerator;
+import com.sun.btrace.util.TimeStampHelper;
 import java.util.Collections;
 import static com.sun.btrace.runtime.Constants.*;
 
@@ -68,6 +70,10 @@ public class Instrumentor extends ClassAdapter {
     private String className;
     private Class clazz;
 
+    private boolean usesTimeStamp = false;
+    private boolean timeStampExisting = false;
+
+
     public Instrumentor(Class clazz, 
             String btraceClassName, ClassReader btraceClass, 
             List<OnMethod> onMethods, ClassVisitor cv) {
@@ -87,7 +93,9 @@ public class Instrumentor extends ClassAdapter {
     }
 
     public void visit(int version, int access, String name, 
-        String signature, String superName, String[] interfaces) {        
+        String signature, String superName, String[] interfaces) {
+        usesTimeStamp = false;
+        timeStampExisting = false;
         className = name;
         // we filter the probe methods applicable for this particular
         // class by brute force walking. FIXME: should I optimize?
@@ -162,7 +170,13 @@ public class Instrumentor extends ClassAdapter {
             name.startsWith(BTRACE_METHOD_PREFIX)) {
             return methodVisitor;
         }
-     
+
+        if (name.equals(TimeStampHelper.TIME_STAMP_NAME)) {
+            timeStampExisting = true;
+            return methodVisitor;
+        }
+
+
         for (OnMethod om : applicableOnMethods) {
             if (om.getLocation().getValue() == Kind.LINE) {
                 methodVisitor = instrumentorFor(om, methodVisitor, access, name, desc);
@@ -218,6 +232,9 @@ public class Instrumentor extends ClassAdapter {
         final Where where = loc.getWhere();
         final Type[] actionArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
         final int numActionArgs = actionArgTypes.length;
+
+        // a helper structure for creating timestamps
+        final int[] tsindex = new int[]{-1, -1};
 
         // used to create new local variables while keeping the class internals consistent
         // Call "int index = lvs.newVar(<type>)" to create a new local variable.
@@ -795,57 +812,37 @@ public class Instrumentor extends ClassAdapter {
                 };
           
             case RETURN:
-                return new MethodReturnInstrumentor(mv, access, name, desc) {
+                if (where != Where.BEFORE) return mv;
+
+                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, access, name, desc) {
                     private void callAction(int retOpCode) {
                         ValidationResult vr = validateArguments(om, isStatic(), getReturnType(), actionArgTypes, getArgumentTypes());
-                        switch (vr) {
-                            case INVALID: return;
-                            case ANYTYPE: {
-                                int returnIndex = backupReturnValue();
-                                for(int i=0;i < actionArgTypes.length;) {
-                                    if (i == om.getSelfParameter()) {
-                                        loadThis();
-                                    } else if (i == om.getReturnParameter()) {
-                                        if (returnIndex != -1) {
-                                            loadLocal(getReturnType(), returnIndex);
-                                        }
-                                    } else {
-                                        loadArgumentArray();
-                                    }
-                                }
-                                invokeBTraceAction(this, om);
-                                loadLocal(getReturnType(), returnIndex);
-                                break;
-                            }
-                            case MATCH: {
-                                int returnIndex = backupReturnValue();
-                                int argIndex = isStatic() ? 0 : 1;
-                                for(int argCnt=0;argCnt < actionArgTypes.length;argCnt++) {
-                                    if (argCnt == om.getSelfParameter()) {
-                                        loadThis();
-                                    } else if (argCnt == om.getReturnParameter()) {
-                                        if (returnIndex != -1) {
-                                            loadLocal(getReturnType(), returnIndex);
-                                        }
-                                    } else {
-                                        Type t = actionArgTypes[argCnt];
-                                        loadLocal(t, argIndex);
-                                        argIndex += t.getSize();
-                                    }
-                                }
-                                invokeBTraceAction(this, om);
-                                loadLocal(getReturnType(), returnIndex);
+
+                        if (vr == ValidationResult.INVALID) return;
+                        int argIndex = isStatic() ? 0 : 1;
+                        for (int argCnt = 0; argCnt < actionArgTypes.length; argCnt++) {
+                            if (argCnt == om.getSelfParameter()) {
+                                loadThis();
+                            } else if (argCnt == om.getClassNameParameter()) {
+                                super.visitLdcInsn(className.replace("/", "."));
+                            } else if (argCnt == om.getMethodParameter()) {
+                                loadMethodParameter();
+                            } else if (argCnt == om.getReturnParameter()) {
+                                loadReturnParameter(retOpCode);
+                            } else if (argCnt == om.getDurationParameter()) {
+                                usesTimeStamp = true;
+                                loadDurationParameter(tsindex[0], tsindex[1]);
+                            } else {
+                                if (vr == ValidationResult.ANYTYPE) {
+                                    loadArgumentArray();
+                                } else if (vr == ValidationResult.MATCH) {
+                                    Type t = actionArgTypes[argCnt];
+                                    loadLocal(t, argIndex);
+                                    argIndex += t.getSize();
+                                 }
                             }
                         }
-                    }
-
-                    private int backupReturnValue() {
-                        Type type = getReturnType();
-                        if (type == Type.VOID_TYPE) return -1;
-
-                        int varIndex = lvs.newLocal(type);
-                        storeLocal(type, varIndex);
-                        return varIndex;
+                        invokeBTraceAction(this, om);
                     }
 
                     @Override
@@ -857,6 +854,11 @@ public class Instrumentor extends ClassAdapter {
                         }
                     }
                 };
+                if (om.getDurationParameter() != -1) {
+                    return new TimeStampGenerator(lvs, tsindex, className, access, name, desc, mri, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
+                } else {
+                    return mri;
+                }
 
             case SYNC_ENTRY:
                 return new SynchronizedInstrumentor(className, mv, access, name, desc) {
@@ -956,6 +958,13 @@ public class Instrumentor extends ClassAdapter {
         }
         return mv;
     }
+
+    private void introduceTimeStampHelper() {
+        if (usesTimeStamp && !timeStampExisting) {
+            TimeStampHelper.generateTimeStampGetter(this);
+        }
+    }
+
     
     private static class CallValidationResult {
         final public boolean callValid;
@@ -1042,6 +1051,7 @@ public class Instrumentor extends ClassAdapter {
                      getActionMethodName(om.getTargetName()),
                      ACC_STATIC | ACC_PRIVATE));
         }
+        introduceTimeStampHelper();
         MethodCopier copier = new MethodCopier(btraceClass, cv, mi) {
             @Override 
             protected MethodVisitor addMethod(int access, String name, String desc,
@@ -1167,6 +1177,12 @@ public class Instrumentor extends ClassAdapter {
             }
             specialArgsCount++;
         }
+        if (om.getDurationParameter() != -1) {
+            if (actionArgTypes[om.getDurationParameter()] != Type.LONG_TYPE) {
+                return ValidationResult.INVALID;
+            }
+            specialArgsCount++;
+        }
 
         Type[] cleansedArgArray = new Type[actionArgTypes.length - specialArgsCount];
 
@@ -1175,7 +1191,8 @@ public class Instrumentor extends ClassAdapter {
             if (argIndex != om.getSelfParameter() &&
                     argIndex != om.getReturnParameter() &&
                     argIndex != om.getCalledInstanceParameter() &&
-                    argIndex != om.getCalledMethodParameter()) {
+                    argIndex != om.getCalledMethodParameter() &&
+                    argIndex != om.getDurationParameter()) {
                 cleansedArgArray[counter++] = actionArgTypes[argIndex];
             }
         }

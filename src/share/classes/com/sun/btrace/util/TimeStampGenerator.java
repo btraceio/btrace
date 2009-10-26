@@ -6,6 +6,7 @@
 package com.sun.btrace.util;
 
 import com.sun.btrace.org.objectweb.asm.Label;
+import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import com.sun.btrace.org.objectweb.asm.Type;
@@ -14,7 +15,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
  *
  * @author Jaroslav Bachorik
  */
-public class TimeStampGenerator extends LocalVariablesSorter {
+public class TimeStampGenerator extends MethodAdapter {
     final public static String TIME_STAMP_NAME = "$btrace$time$stamp";
     
     private static final String CONSTRUCTOR = "<init>";
@@ -28,13 +29,19 @@ public class TimeStampGenerator extends LocalVariablesSorter {
 
     private String methodName;
     private String className;
+    final private LocalVariablesSorter lvs;
 
     public TimeStampGenerator(String className, int access, String name, String desc, MethodVisitor mv) {
         this(new int[] {-1, -1}, className, access, name, desc, mv, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
     }
 
     public TimeStampGenerator(int[] tsindex, String className, int access, String name, String desc, MethodVisitor mv, int[] exitOpcodes) {
-        super(access, desc, mv);
+        this(new LocalVariablesSorter(access, desc, mv), tsindex, className, access, name, desc, mv, exitOpcodes);
+    }
+
+    public TimeStampGenerator(LocalVariablesSorter lvs, int[] tsindex, String className, int access, String name, String desc, MethodVisitor mv, int[] exitOpcodes) {
+        super(mv);
+        this.lvs = lvs;
         this.methodName = name;
         this.className = className;
         this.ts_index = tsindex;
@@ -185,7 +192,7 @@ public class TimeStampGenerator extends LocalVariablesSorter {
         if (opcode == LSTORE) {
             if (!generatingIndex) {
                 if (capturing) {
-                    ts_index[capturingIndex] = remap(var, Type.LONG_TYPE);
+                    ts_index[capturingIndex] = var; //lvs.remap(var, Type.LONG_TYPE);
                 }
                 capturing = false;
             }
@@ -204,10 +211,8 @@ public class TimeStampGenerator extends LocalVariablesSorter {
         try {
             generatingIndex = true;
             TimeStampHelper.generateTimeStampAccess(this, className);
-            int varIndex = newLocal(Type.LONG_TYPE);
-            int remappedIndex = remap(varIndex, Type.LONG_TYPE);
-            visitVarInsn(Type.LONG_TYPE.getOpcode(ISTORE), varIndex);
-            ts_index[index] = remappedIndex;
+            ts_index[index] = lvs.newLocal(Type.LONG_TYPE);
+            visitVarInsn(Type.LONG_TYPE.getOpcode(ISTORE), ts_index[index]);
         } finally {
             generatingIndex = false;
         }

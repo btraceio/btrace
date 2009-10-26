@@ -33,6 +33,7 @@ import java.util.List;
 import com.sun.btrace.VerifierException;
 import com.sun.btrace.annotations.CalledInstance;
 import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.annotations.Kind;
@@ -63,6 +64,7 @@ public class Verifier extends ClassAdapter {
     public static final String BTRACE_RETURN_DESC = Type.getDescriptor(Return.class);
     public static final String BTRACE_CALLEDMETHOD_DESC = Type.getDescriptor(CalledMethod.class);
     public static final String BTRACE_CALLEDINSTANCE_DESC = Type.getDescriptor(CalledInstance.class);
+    public static final String BTRACE_DURATION_DESC = Type.getDescriptor(Duration.class);
 
     private boolean seenBTrace;
     private String className;
@@ -205,6 +207,15 @@ public class Verifier extends ClassAdapter {
                             om.setCalledInstanceParameter(parameter);
                         } else {
                             reportError("called-instance.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
+                        }
+                    }
+                }
+                if (desc.equals(BTRACE_DURATION_DESC)) {
+                    if (om != null) {
+                        if (om.getLocation().getValue() == Kind.RETURN || om.getLocation().getValue() == Kind.ERROR) {
+                            om.setDurationParameter(parameter);
+                        } else {
+                            reportError("duration.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
                         }
                     }
                 }

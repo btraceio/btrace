@@ -29,6 +29,7 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
 
 /**
  * Base class for all out method instrumenting classes.
@@ -178,6 +179,10 @@ public class MethodInstrumentor extends MethodAdapter {
         super.visitVarInsn(ALOAD, 0);
     }
 
+    public void loadMethodParameter() {
+        super.visitLdcInsn(getName() + getDescriptor());
+    }
+
     public int loadArgumentArray() {
         int count = argumentTypes.length;
         boolean isStatic = ((access & ACC_STATIC) != 0);
@@ -199,7 +204,7 @@ public class MethodInstrumentor extends MethodAdapter {
     }
 
     protected final boolean isConstructor() {
-        return "<init>".equals(name);
+        return CONSTRUCTOR.equals(name);
     }
 
     public void returnValue() {
