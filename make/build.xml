@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<xml version="1.0" encoding="UTF-8"?>
 <project name="BTrace" default="all" basedir=".">
 
   <!-- Property Definitions -->
@@ -161,6 +161,7 @@
     </target>
     
     <target name="build.traces" depends="jar">
+        <echo>executing ${bin.dir}/${btracec}</echo>
         <apply executable="${bin.dir}/${btracec}" >
             <fileset dir="${traces.dir}" includes="**/*.java"/>
             <arg value="-d ${tests.dir}"/>
