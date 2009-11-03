@@ -113,7 +113,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             }
             if (classBeingRedefined != null &&
                 skipRetransforms == false &&
-                filter.isCandidate(classBeingRedefined)) {
+                filter.isCandidate(classBeingRedefined, checkAnnotations())) {
                 if (debug) Main.debugPrint("client " + className + ": instrumenting " + cname);
                 return instrument(classBeingRedefined, cname, classfileBuffer);
             } else if (filter.isCandidate(classfileBuffer)) {
@@ -217,6 +217,10 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     protected abstract void closeAll() throws IOException;
 
+    protected boolean checkAnnotations() {
+        return true;
+    }
+
     protected void errorExit(Throwable th) throws IOException {
         if (debug) Main.debugPrint("sending error command");
         onCommand(new ErrorCommand(th));
@@ -246,7 +250,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (isBTraceClass(cname)) {
             return false;
         } else {
-            return filter.isCandidate(c);
+            return filter.isCandidate(c, checkAnnotations());
         }
     }
 

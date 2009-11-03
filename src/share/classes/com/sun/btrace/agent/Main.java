@@ -234,6 +234,10 @@ public final class Main {
                 if (isDebug()) debugPrint(re);
             } catch (IOException ioexp) {
                 if (isDebug()) debugPrint(ioexp);
+            } catch (UnmodifiableClassException uce) {
+                if (isDebug()) {
+                    debugPrint(uce);
+                }
             }
         }
     }
@@ -241,7 +245,23 @@ public final class Main {
     // This is really a *private* interface to Glassfish monitoring.
     // For now, please avoid using this in any other scenario. 
     public static void handleFlashLightClient(byte[] code, PrintWriter traceWriter) {
-        handleNewClient(code, traceWriter);
+        try {
+            FileClient fc = new FileClient(inst, code, traceWriter);
+            fc.setFlashlightClient(true);
+            handleNewClient(fc);
+        } catch (RuntimeException re) {
+            if (isDebug()) {
+                debugPrint(re);
+            }
+        } catch (IOException ioexp) {
+            if (isDebug()) {
+                debugPrint(ioexp);
+            }
+        } catch (UnmodifiableClassException uce) {
+            if (isDebug()) {
+                debugPrint(uce);
+            }
+        }
     }
 
     // This is really a *private* interface to Glassfish monitoring.
@@ -293,62 +313,41 @@ public final class Main {
                 if (isDebug()) debugPrint(re);
             } catch (IOException ioexp) {
                 if (isDebug()) debugPrint(ioexp);
-            }
-        }
-    }
-
-    private static void handleNewClient(byte[] code, PrintWriter traceWriter) {
-        try {
-            handleNewClient(new FileClient(inst, code, traceWriter));
-        } catch (RuntimeException re) {
-            if (isDebug()) {
-                debugPrint(re);
-            }
-        } catch (IOException ioexp) {
-            if (isDebug()) {
-                debugPrint(ioexp);
-            }
-        }
-    }
-
-    private static void handleNewClient(final Client client) {
-        serializedExecutor.submit(new Runnable() {
-
-            public void run() {
-                try {
-                    if (isDebug()) debugPrint("new Client created " + client);
-                    if (client.shouldAddTransformer()) {
-                        Class[] classes = inst.getAllLoadedClasses();
-                        ArrayList<Class> list = new ArrayList<Class>();
-                        if (isDebug()) debugPrint("filtering loaded classes");
-                        for (Class c : classes) {
-                            if (inst.isModifiableClass(c) &&
-                                client.isCandidate(c)) {
-                                if (isDebug()) debugPrint("candidate " + c + " added");
-                                list.add(c);
-                            }
-                        }
-                        list.trimToSize();
-                        int size = list.size();
-                        if (isDebug()) debugPrint("added as ClassFileTransformer");
-                        inst.addTransformer(client, true);
-                        if (size > 0) {
-                            classes = new Class[size];
-                            list.toArray(classes);
-                            if (isDebug()) debugPrint("calling retransformClasses");
-                            inst.retransformClasses(classes);
-                            client.skipRetransforms();
-                            if (isDebug()) debugPrint("finished retransformClasses");
-                        }
-                    }
-                } catch (UnmodifiableClassException uce) {
-                    if (isDebug()) {
-                        debugPrint(uce);
-                    }
+            } catch (UnmodifiableClassException uce) {
+                if (isDebug()) {
+                    debugPrint(uce);
                 }
             }
-        });
-        
+        }
+    }
+
+    private static void handleNewClient(Client client)
+        throws UnmodifiableClassException, IOException {
+        if (isDebug()) debugPrint("new Client created " + client);
+        if (client.shouldAddTransformer()) {
+            Class[] classes = inst.getAllLoadedClasses();
+            ArrayList<Class> list = new ArrayList<Class>();
+            if (isDebug()) debugPrint("filtering loaded classes");
+            for (Class c : classes) {
+                if (inst.isModifiableClass(c) &&
+                    client.isCandidate(c)) {
+                    if (isDebug()) debugPrint("candidate " + c + " added");
+                    list.add(c);
+                }
+            }
+            list.trimToSize();
+            int size = list.size();
+            if (isDebug()) debugPrint("added as ClassFileTransformer");
+            inst.addTransformer(client, true);
+            if (size > 0) {
+                classes = new Class[size];
+                list.toArray(classes);
+                if (isDebug()) debugPrint("calling retransformClasses");
+                inst.retransformClasses(classes);
+                client.skipRetransforms();
+                if (isDebug()) debugPrint("finished retransformClasses");
+            }
+        }
     }
 
     private static void error(String msg) {

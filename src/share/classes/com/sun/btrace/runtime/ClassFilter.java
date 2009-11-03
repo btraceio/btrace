@@ -75,14 +75,20 @@ public class ClassFilter {
     }
 
     public boolean isCandidate(Class target) {
+        return isCandidate(target, true);
+    }
+
+    public boolean isCandidate(Class target, boolean checkAnnotations) {
         if (target.isInterface() || target.isPrimitive() || target.isArray()) {
             return false;
         }
 
-        // ignore classes annotated with @BTrace -
-        // We don't want to instrument tracing classes!
-        if (target.getAnnotation(BTrace.class) != null) {
-            return false;
+        if (checkAnnotations) { // GFv3 FlashLight hack
+            // ignore classes annotated with @BTrace -
+            // We don't want to instrument tracing classes!
+            if (target.getAnnotation(BTrace.class) != null) {
+                return false;
+            }
         }
 
         String className = target.getName();
@@ -104,24 +110,26 @@ public class ClassFilter {
             }
         }
 
-        Annotation[] annotations = target.getAnnotations();
-        String[] annoTypes = new String[annotations.length];
-        for (int i = 0; i < annotations.length; i++) {
-            annoTypes[i] = annotations[i].annotationType().getName();
-        }
+        if (checkAnnotations) { // GFv3 FlashLight hack
+            Annotation[] annotations = target.getAnnotations();
+            String[] annoTypes = new String[annotations.length];
+            for (int i = 0; i < annotations.length; i++) {
+                annoTypes[i] = annotations[i].annotationType().getName();
+            }
 
-        for (String name : annotationClasses) {
-            for (int i = 0; i < annoTypes.length; i++) {
-                if (name.equals(annoTypes[i])) {
-                    return true;
+            for (String name : annotationClasses) {
+                for (int i = 0; i < annoTypes.length; i++) {
+                    if (name.equals(annoTypes[i])) {
+                        return true;
+                    }
                 }
             }
-        }
 
-        for (Pattern pat : annotationClassPatterns) {
-            for (int i = 0; i < annoTypes.length; i++) {
-                if (pat.matcher(annoTypes[i]).matches()) {
-                    return true;
+            for (Pattern pat : annotationClassPatterns) {
+                for (int i = 0; i < annoTypes.length; i++) {
+                    if (pat.matcher(annoTypes[i]).matches()) {
+                        return true;
+                    }
                 }
             }
         }

@@ -60,6 +60,25 @@ class FileClient extends Client {
         this(inst, readAll(scriptFile), traceWriter);
     }
 
+    // =======================================================
+    // special handling of GFv3 FlashLight
+    // =======================================================
+    private volatile boolean flashlightClient = false;
+    boolean isFlashlightClient() {
+        return flashlightClient;
+    }
+
+    void setFlashlightClient(boolean flashlightClient) {
+        this.flashlightClient = flashlightClient;
+    }
+
+    @Override
+    protected boolean checkAnnotations() {
+        return !this.flashlightClient;
+    }
+
+    // =======================================================
+
     public void onCommand(Command cmd) throws IOException {
         if (out == null) {
             throw new IOException("no output stream");
