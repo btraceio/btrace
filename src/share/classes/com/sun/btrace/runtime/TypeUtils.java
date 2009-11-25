@@ -79,6 +79,12 @@ class TypeUtils {
             int sort2 = right.getSort();
             return (sort2 == Type.OBJECT || sort2 == Type.ARRAY);               
         } else {
+            try {
+                // those classes should already have been loaded at this point
+                Class clzLeft = Class.forName(left.getClassName());
+                Class clzRight = Class.forName(right.getClassName());
+                return (clzLeft.isAssignableFrom(clzRight));
+            } catch (Exception e) {}
             return false;
         }
     }
