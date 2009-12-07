@@ -119,6 +119,7 @@ public final class BTraceRuntime {
 
     // a dummy BTraceRuntime instance
     private static BTraceRuntime dummy;
+    private static BTraceRuntime NULL;
 
     // are we running with DTrace support enabled?
     private static boolean dtraceEnabled;
@@ -128,6 +129,7 @@ public final class BTraceRuntime {
 
     static {
         dummy = new BTraceRuntime();
+        NULL = new BTraceRuntime();
         LINE_SEPARATOR = System.getProperty("line.separator");
     }
 
@@ -137,6 +139,8 @@ public final class BTraceRuntime {
     // other BTrace clients that may be running concurrently.
     private static ThreadLocal<BTraceRuntime> tls =
         new ThreadLocal<BTraceRuntime>();
+
+    private static ThreadEnteredMap<BTraceRuntime> map = new ThreadEnteredMap<BTraceRuntime>(NULL);
 
     // BTraceRuntime against BTrace class name
     private static Map<String, BTraceRuntime> runtimes =
@@ -370,13 +374,15 @@ public final class BTraceRuntime {
      * before the probe actions start.
      */
     public static boolean enter(BTraceRuntime current) {
-        // check we have entered already or disabled
-        if (current.disabled || (tls.get() != null)) {
-            return false;
-        } else {
-            tls.set(current);
-            return true;
-        }
+        if (current.disabled) return false;
+        return map.enter(current);
+//        // check we have entered already or disabled
+//        if (current.disabled || (tls.get() != null)) {
+//            return false;
+//        } else {
+//            tls.set(current);
+//            return true;
+//        }
     }
 
     public static boolean enter() {
@@ -389,7 +395,8 @@ public final class BTraceRuntime {
      * method continues).
      */
     public static void leave() {
-        tls.remove();
+        map.exit();
+//        tls.remove();
     }
 
     /**
@@ -408,7 +415,8 @@ public final class BTraceRuntime {
             String event = ecmd.getEvent();
             Method eventHandler = eventHandlers.get(event);
             if (eventHandler != null) {
-                BTraceRuntime oldRuntime = tls.get();
+//                BTraceRuntime oldRuntime = tls.get();
+                BTraceRuntime oldRuntime = map.get();
                 leave();
                 try {
                     eventHandler.invoke(null, (Object[])null);
@@ -1457,7 +1465,8 @@ public final class BTraceRuntime {
      * if there is one.
      */
     private static BTraceRuntime getCurrent() {
-        BTraceRuntime current = tls.get();
+//        BTraceRuntime current = tls.get();
+        BTraceRuntime current = map.get();
         assert current != null : "BTraceRuntime is null!";
         return current;
     }

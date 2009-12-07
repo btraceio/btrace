@@ -28,6 +28,10 @@ package com.sun.btrace.runtime;
 import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.util.LocalVariablesSorter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
 
@@ -96,11 +100,157 @@ public class MethodInstrumentor extends MethodAdapter {
     public static final String FLOAT_VALUE_DESC= "()F";
     public static final String DOUBLE_VALUE_DESC= "()D";
 
+    protected static enum ValidationResult {
+        INVALID, MATCH, ANYTYPE
+    }
+    
+    protected class Arguments {
+        private Map<Integer, ArgumentProvider> arguments = new TreeMap<Integer, ArgumentProvider>();
+
+        public Arguments() {}
+
+        public Arguments(Type[] actionArgTypes, OnMethod om) {
+            this(actionArgTypes, (int[])null, om);
+        }
+
+        public Arguments(Type[] actionArgTypes, ArgumentProvider[] extraArgs, OnMethod om) {
+            int index = 0;
+            int argIndex = 0;
+            for(final Type t : actionArgTypes) {
+                if (index == om.getSelfParameter()) {
+                    addArgument(index, new ArgumentProvider() {
+                        public void provide() {
+                            loadThis();
+                        }
+                    });
+                } else if (index != om.getClassNameParameter() &&
+                    index != om.getMethodParameter() &&
+                    index != om.getReturnParameter() &&
+                    index != om.getDurationParameter() &&
+                    index != om.getCalledInstanceParameter() &&
+                    index != om.getCalledMethodParameter()) {
+
+                    addArgument(index, extraArgs[argIndex]);
+                    argIndex++;
+                }
+                index++;
+            }
+        }
+
+        public Arguments(Type[] actionArgTypes, final int[] remap, OnMethod om) {
+            int index = 0;
+            int ptr = isStatic() ? 0 : 1;
+            int argIndex = 0;
+//            if (remap != null) {
+//                for(int i=0;i<remap.length;i++) {
+//                    System.err.println("***** remap[" + i + "] = " + remap[i]);
+//                }
+//            }
+            for(final Type t : actionArgTypes) {
+                if (index == om.getSelfParameter()) {
+                    addArgument(index, new ArgumentProvider() {
+                        public void provide() {
+                            loadThis();
+                        }
+                    });
+                } else if (index != om.getClassNameParameter() &&
+                    index != om.getMethodParameter() &&
+                    index != om.getReturnParameter() &&
+                    index != om.getDurationParameter() &&
+                    index != om.getCalledInstanceParameter() &&
+                    index != om.getCalledMethodParameter()) {
+
+                    final int usedPtr = (remap == null ? ptr : remap[argIndex]);
+                    if (TypeUtils.isAnyTypeArray(t)) {
+                        addArgument(index, new AnyTypeArgProvider(usedPtr));
+                    } else {
+                        addArgument(index, new ArgumentProvider(){
+                            public void provide() {
+                                loadLocal(t, usedPtr);
+                            }
+                        });
+                    }
+                    argIndex++;
+                    ptr += t.getSize();
+                }
+                index++;
+            }
+        }
+
+        public Arguments addArgument(int index, ArgumentProvider provider) {
+            if (index != -1) {
+                arguments.put(index, provider);
+            }
+            return this;
+        }
+
+        public void load() {
+            for(Map.Entry<Integer, ArgumentProvider> entry : arguments.entrySet()) {
+                entry.getValue().provide();
+            }
+        }
+    }
+
+    protected interface ArgumentProvider {
+        void provide();
+    }
+
+    protected class LocalVarArgProvider implements ArgumentProvider {
+        private Type type;
+        private int ptr;
+
+        public LocalVarArgProvider(Type type, int ptr) {
+            this.type = type;
+            this.ptr = ptr;
+        }
+
+        public void provide() {
+            loadLocal(type, ptr);
+        }
+
+    }
+
+    protected class ConstantArgProvider implements ArgumentProvider {
+        private Object constant;
+
+        public ConstantArgProvider(Object constant) {
+            this.constant = constant;
+        }
+        
+        public void provide() {
+            visitLdcInsn(constant);
+        }
+    }
+
+    protected class AnyTypeArgProvider implements ArgumentProvider {
+        private int argPtr;
+
+        public AnyTypeArgProvider(int basePtr) {
+            this.argPtr = basePtr;
+        }
+
+        public void provide() {
+            push(argumentTypes.length);
+            visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
+            for (int j = 0; j < argumentTypes.length; j++) {
+                dup();
+                push(j);
+                Type argType = argumentTypes[j];
+                loadLocal(argType, argPtr);
+                box(argType);
+                arrayStore(TypeUtils.objectType);
+                argPtr += argType.getSize();
+            }
+        }
+
+    }
+
     private final int access;
     private final String name;
     private final String desc;
     private Type returnType;
     private Type[] argumentTypes;
+    private Map<Integer, Type> extraTypes;
 
     public MethodInstrumentor(MethodVisitor mv, int access, 
         String name, String desc) {
@@ -110,6 +260,7 @@ public class MethodInstrumentor extends MethodAdapter {
         this.desc = desc;
         this.returnType = Type.getReturnType(desc);
         this.argumentTypes = Type.getArgumentTypes(desc);
+        extraTypes = new HashMap<Integer, Type>();
     }
 
     public int getAccess() {
@@ -128,48 +279,10 @@ public class MethodInstrumentor extends MethodAdapter {
         return returnType;
     }
 
-    public final Type[] getArgumentTypes() {
-        return argumentTypes;
-    }    
-    
-    public void loadArgument(int arg) {
-        loadLocal(argumentTypes[arg], getArgumentIndex(arg));
-    }
-
-    public void loadArguments(final int arg, final int count , final int selfParam, final int returnParam, final int retOpCode) {
-        int loadedIndex = 0;
-        int index = getArgumentIndex(arg);
-        for (int i = 0; i < count; ++i) {
-            if (loadedIndex == selfParam) {
-                if (!isStatic()) {
-                    loadThis();
-                }
-                continue;
-            } else if (loadedIndex == returnParam) {
-                dupReturnValue(retOpCode);
-                continue;
-            }
-            loadedIndex++;
-            Type t = argumentTypes[arg + i];
-            loadLocal(t, index);
-
-            index += t.getSize();
+    protected void addExtraTypeInfo(int index, Type type) {
+        if (index != -1) {
+            extraTypes.put(index, type);
         }
-        if (loadedIndex == selfParam) {
-            if (!isStatic()) {
-                loadThis();
-            }
-        } else if (loadedIndex == returnParam) {
-            dupReturnValue(retOpCode);
-        }
-    }
-
-    public void loadArguments(OnMethod onMethod) {
-        loadArguments(onMethod, Integer.MIN_VALUE);
-    }
-
-    public void loadArguments(OnMethod onMethod, int retOpCode) {
-        loadArguments(0, argumentTypes.length, onMethod.getSelfParameter(), onMethod.getReturnParameter(), retOpCode);
     }
 
     public void loadThis() {
@@ -183,20 +296,33 @@ public class MethodInstrumentor extends MethodAdapter {
         super.visitLdcInsn(getName() + getDescriptor());
     }
 
-    public int loadArgumentArray() {
-        int count = argumentTypes.length;
-        boolean isStatic = ((access & ACC_STATIC) != 0);
-        push(count);
-        super.visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
-        int start = isStatic? 0 : 1;
+    public int[] backupStack(LocalVariablesSorter lvs, boolean isStatic) {
+        int[] backupArgsIndexes = new int[argumentTypes.length + 1];
+        int upper = argumentTypes.length - 1;
+
         for (int i = 0; i < argumentTypes.length; i++) {
-            dup();
-            push(i + start);
-            loadArgument(i);
-            box(argumentTypes[i]);
-            arrayStore(TypeUtils.objectType);
+            int index = lvs.newLocal(argumentTypes[upper - i]);
+            storeLocal(argumentTypes[upper - i], index);
+            backupArgsIndexes[upper -  i + 1] = index;
         }
-        return count;
+
+        if (!isStatic) {
+            int index = lvs.newLocal(TypeUtils.objectType);
+            storeLocal(TypeUtils.objectType, index); // store *callee*
+            backupArgsIndexes[0] = index;
+        }
+        return backupArgsIndexes;
+    }
+
+    public void restoreStack(int[] backupArgsIndexes, boolean isStatic) {
+        int upper = argumentTypes.length - 1;
+        if (!isStatic) {
+            loadLocal(TypeUtils.objectType, backupArgsIndexes[0]);
+        }
+
+        for (int i = argumentTypes.length - 1; i > -1; i--) {
+            loadLocal(argumentTypes[upper - i], backupArgsIndexes[upper - i + 1]);
+        }
     }
 
     protected final boolean isStatic() {
@@ -495,6 +621,95 @@ public class MethodInstrumentor extends MethodAdapter {
 
     public void invokeStatic(String owner, String method, String desc) {
         super.visitMethodInsn(INVOKESTATIC, owner, method, desc);
+    }
+
+    protected ValidationResult validateArguments(OnMethod om, boolean staticFlag, Type[] actionArgTypes, Type[] methodArgTypes) {
+        int specialArgsCount = 0;
+
+        if (om.getSelfParameter() != -1) {
+            if (staticFlag) {
+                return ValidationResult.INVALID;
+            }
+            Type selfType = extraTypes.get(om.getSelfParameter());
+            if ((selfType == null && !TypeUtils.isObject(actionArgTypes[om.getSelfParameter()])) ||
+                (selfType != null && !TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter()], selfType))) {
+//                System.err.println("Invalid @Self parameter. Expected '" + Type.getObjectType(className) + ", received " + actionArgTypes[om.getSelfParameter()]);
+                return ValidationResult.INVALID;
+            }
+            specialArgsCount++;
+        }
+        if (om.getReturnParameter() != -1) {
+            Type type = extraTypes.get(om.getReturnParameter());
+            if (type == null) {
+                type = returnType;
+            }
+            if (type == null ||
+                (!TypeUtils.isObject(actionArgTypes[om.getReturnParameter()])) &&
+                (!TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter()], type))) {
+//                System.err.println("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
+                return ValidationResult.INVALID;
+            }
+            specialArgsCount++;
+        }
+        if (om.getCalledMethodParameter() != -1) {
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getCalledMethodParameter()], Type.getType(String.class)))) {
+//                System.err.println("Invalid @CalledMethod parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getCalledMethodParameter()]);
+                return ValidationResult.INVALID;
+            }
+            specialArgsCount++;
+        }
+        if (om.getCalledInstanceParameter() != -1) {
+            Type calledType = extraTypes.get(om.getCalledInstanceParameter());
+            if ((calledType == null && !(TypeUtils.isObject(actionArgTypes[om.getCalledInstanceParameter()]))) ||
+                (calledType != null && !(TypeUtils.isCompatible(actionArgTypes[om.getCalledInstanceParameter()], calledType)))) {
+//                System.err.println("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getCalledInstanceParameter()]);
+                return ValidationResult.INVALID;
+            }
+            specialArgsCount++;
+        }
+        if (om.getDurationParameter() != -1) {
+            if (actionArgTypes[om.getDurationParameter()] != Type.LONG_TYPE) {
+                return ValidationResult.INVALID;
+            }
+            specialArgsCount++;
+        }
+        if (om.getClassNameParameter() != -1) {
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], Type.getType(String.class)))) {
+                return ValidationResult.INVALID;
+            }
+            specialArgsCount++;
+        }
+        if (om.getMethodParameter() != -1) {
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], Type.getType(String.class)))) {
+                return ValidationResult.INVALID;
+            }
+            specialArgsCount++;
+        }
+
+        Type[] cleansedArgArray = new Type[actionArgTypes.length - specialArgsCount];
+
+        int counter = 0;
+        for (int argIndex = 0; argIndex < actionArgTypes.length; argIndex++) {
+            if (argIndex != om.getSelfParameter() &&
+                    argIndex != om.getClassNameParameter() &&
+                    argIndex != om.getMethodParameter() &&
+                    argIndex != om.getReturnParameter() &&
+                    argIndex != om.getCalledInstanceParameter() &&
+                    argIndex != om.getCalledMethodParameter() &&
+                    argIndex != om.getDurationParameter()) {
+                cleansedArgArray[counter++] = actionArgTypes[argIndex];
+            }
+        }
+        if (cleansedArgArray.length == 1 && TypeUtils.isAnyTypeArray(cleansedArgArray[0])) {
+            return ValidationResult.ANYTYPE;
+        } else {
+            if (cleansedArgArray.length > 0) {
+                if (!TypeUtils.isCompatible(cleansedArgArray, methodArgTypes)) {
+                    return ValidationResult.INVALID;
+                }
+            }
+        }
+        return ValidationResult.MATCH;
     }
 
     // Internals only below this point

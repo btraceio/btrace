@@ -23,10 +23,12 @@
  * have any questions.
  */
 
-package traces.methodentry;
+package traces.onmethod;
 
+import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -34,9 +36,9 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class StaticNoArgs {
-    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="noargs$static")
-    public static void argsEmpty() {
-        println("args empty");
+public class AnytypeArgs {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
+    public static void args(@Self Object self, AnyType[] args) {
+        println("args");
     }
 }

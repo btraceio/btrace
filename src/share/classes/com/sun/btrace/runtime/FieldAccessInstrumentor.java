@@ -43,6 +43,8 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  * @author A. Sundararajan
  */
 public class FieldAccessInstrumentor extends MethodInstrumentor {
+    protected boolean isStaticAccess = false;
+
     public FieldAccessInstrumentor(MethodVisitor mv, int access,
         String name, String desc) {
         super(mv, access, name, desc);
@@ -56,6 +58,7 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
         } else {
             get = false;
         }
+        isStaticAccess = (opcode == GETSTATIC || opcode == PUTSTATIC);
 
         if (get) {
             onBeforeGetField(opcode, owner, name, desc);
@@ -71,24 +74,16 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
     }
 
     protected void onBeforeGetField(int opcode,
-        String owner, String name, String desc) {
-        println("before get: " + owner + "." + name);
-    }
+        String owner, String name, String desc) {}
 
     protected void onAfterGetField(int opcode,
-        String owner, String name, String desc) {
-        println("after get: " + owner + "." + name);
-    }
+        String owner, String name, String desc) {}
 
     protected void onBeforePutField(int opcode,
-        String owner, String name, String desc) {
-        println("before put: " + owner + "." + name);
-    }
+        String owner, String name, String desc) {}
 
     protected void onAfterPutField(int opcode,
-        String owner, String name, String desc) {
-        println("after put: " + owner + "." + name);
-    }
+        String owner, String name, String desc) {}
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
@@ -107,7 +102,29 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new FieldAccessInstrumentor(mv, access, name, desc);
+                     return new FieldAccessInstrumentor(mv, access, name, desc) {
+
+                        @Override
+                        protected void onAfterGetField(int opcode, String owner, String name, String desc) {
+                            println("after get: " + owner + "." + name);
+                        }
+
+                        @Override
+                        protected void onAfterPutField(int opcode, String owner, String name, String desc) {
+                            println("after put: " + owner + "." + name);
+                        }
+
+                        @Override
+                        protected void onBeforeGetField(int opcode, String owner, String name, String desc) {
+                            println("before get: " + owner + "." + name);
+                        }
+
+                        @Override
+                        protected void onBeforePutField(int opcode, String owner, String name, String desc) {
+                            println("before put: " + owner + "." + name);
+                        }
+
+                     };
                  }
             });
         fos.write(writer.toByteArray());

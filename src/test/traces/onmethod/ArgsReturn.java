@@ -23,10 +23,13 @@
  * have any questions.
  */
 
-package traces.methodentry;
+package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
 
@@ -35,9 +38,9 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class StaticArgsSelf {
-    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="args$static")
-    public static void args(@Self Object self, String a, int b, String[] c, int[] d) {
+public class ArgsReturn {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
+    public static void args(@Self Object self, @Return long retVal, String a, long b, String[] c, int[] d) {
         println("args");
     }
 }

@@ -23,10 +23,15 @@
  * have any questions.
  */
 
-package traces.methodentry;
+package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
 
@@ -35,9 +40,12 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class Args {
-    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="args")
-    public static void args(@Self Object self, String a, int b, String[] c, int[] d) {
+public class StaticMethodCallStatic {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevelStatic",
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTargetStatic"))
+    public static void args(String a, long b,
+                            @CalledMethod String calledMethod,
+                            @ProbeClassName String className, @ProbeMethodName String methodName) {
         println("args");
     }
 }

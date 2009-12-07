@@ -38,8 +38,8 @@ import static com.sun.btrace.BTraceUtils.*;
         clazz="/javax\\.swing\\..*/",
         method="/.*/"
     )
-    public static void m() {
-        print(strcat("entered ", name(probeClass())));
-        println(strcat(".", probeMethod()));
+    public static void m(@ProbeClassName String probeClass, @ProbeMethodName String probeMethod) {
+        print(strcat("entered ", probeClass));
+        println(strcat(".", probeMethod));
     }
 } 

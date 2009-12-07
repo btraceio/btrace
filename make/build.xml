@@ -161,9 +161,10 @@
     </target>
     
     <target name="build.traces" depends="jar">
-        <echo>executing ${bin.dir}/${btracec}</echo>
-        <apply executable="${bin.dir}/${btracec}" >
+        <echo>executing ${bin.dir}/${btracec} -cp ${build.dir}/test -d ${tests.dir} ${traces.dir}/*.java</echo>
+        <apply executable="${bin.dir}/${btracec}"  verbose="true">
             <fileset dir="${traces.dir}" includes="**/*.java"/>
+            <arg value="-cp ${build.dir}/test"/>
             <arg value="-d ${tests.dir}"/>
         </apply>
     </target>

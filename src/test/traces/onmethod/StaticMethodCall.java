@@ -23,11 +23,16 @@
  * have any questions.
  */
 
-package traces.methodentry;
+package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.CalledInstance;
+import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -35,24 +40,12 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class NoArgs {
-    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="args")
-    public static void argsEmpty(@Self Object x) {
-        println("args empty");
+public class StaticMethodCall {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevelStatic",
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"))
+    public static void args(String a, long b,
+                            @CalledInstance Object calledSelf, @CalledMethod String calledMethod,
+                            @ProbeClassName String className, @ProbeMethodName String methodName) {
+        println("args");
     }
-
-//    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="args")
-//    public static void argsNoSelf(String a, int b, String[] c, int[] d) {
-//        println("args no self");
-//    }
-//
-//    @OnMethod(clazz="/.*/", method="args")
-//    public static void args(@Self Object self, String a, int b, String[] c, int[] d) {
-//        println("args");
-//    }
-//
-//    @OnMethod(clazz="/.*/", method="args$static")
-//    public static void staticArgs() {
-//        println("args$static");
-//    }
 }

@@ -50,14 +50,17 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
 
     public void visitTypeInsn(int opcode, String desc) {
         if (opcode == NEW) {            
-            onObjectNew(desc);
+            beforeObjectNew(desc);
         }
         super.visitTypeInsn(opcode, desc);
+        if (opcode == NEW) {
+            afterObjectNew(desc);
+        }
     }
 
-    protected void onObjectNew(String desc) {
-        println("before allocating an object of " + desc);
-    }
+    protected void beforeObjectNew(String desc) {}
+
+    protected void afterObjectNew(String desc) {}
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
@@ -76,7 +79,18 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new ObjectAllocInstrumentor(mv, access, name, desc);
+                     return new ObjectAllocInstrumentor(mv, access, name, desc) {
+
+                        @Override
+                        protected void afterObjectNew(String desc) {
+                            println("after allocating an object of " + desc);
+                        }
+
+                        @Override
+                        protected void beforeObjectNew(String desc) {
+                            println("before allocating an object of " + desc);
+                        }
+                     };
                  }
             });
         fos.write(writer.toByteArray());

@@ -23,10 +23,15 @@
  * have any questions.
  */
 
-package traces.methodentry;
+package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.Where;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -34,9 +39,10 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class ArgsNoSelf {
-    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="args")
-    public static void argsNoSelf(String a, int b, String[] c, int[] d) {
-        println("args no self");
+public class NewArrayIntAfter {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="newArray",
+              location=@Location(value=Kind.NEWARRAY, clazz="int", where=Where.AFTER))
+    public static void args(@Self Object self, @Return int[] retVal) {
+        println("args");
     }
 }

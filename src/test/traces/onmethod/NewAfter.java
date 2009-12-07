@@ -23,12 +23,16 @@
  * have any questions.
  */
 
-package traces.methodentry;
+package traces.onmethod;
 
-import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.Where;
+import java.util.Map;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -36,9 +40,10 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class AnytypeArgs {
-    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="args")
-    public static void args(@Self Object self, AnyType[] args) {
+public class NewAfter {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="newObject",
+              location=@Location(value=Kind.NEW, clazz="/.*/", where=Where.AFTER))
+    public static void args(@Self Object self, @Return Map instance, String instanceClassName) {
         println("args");
     }
 }

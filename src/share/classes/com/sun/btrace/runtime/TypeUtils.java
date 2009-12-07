@@ -244,7 +244,27 @@ class TypeUtils {
         return buf.toString();
     }    
 
-    private static String objectOrArrayType(String type) {
+    public static String getJavaType(String desc) {
+        int arrIndex = desc.lastIndexOf("[") + 1;
+        desc = desc.substring(arrIndex);
+        if (desc.startsWith("L")) {
+            desc = desc.substring(1, desc.length() - 1).replace('/', '.');
+        } else {
+            for(Map.Entry<String, String> entry : primitives.entrySet()) {
+                if (entry.getValue().equals(desc)) {
+                    desc = entry.getKey();
+                    break;
+                }
+            }
+        }
+        StringBuilder sb = new StringBuilder(desc);
+        for(int i=0;i<arrIndex;i++) {
+            sb.append("[]");
+        }
+        return sb.toString();
+    }
+
+    public static String objectOrArrayType(String type) {
         StringBuilder buf = new StringBuilder();
         int index = 0;
         while ((index = type.indexOf("[]", index) + 1) > 0) {

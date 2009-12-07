@@ -79,21 +79,13 @@ public class ArrayAccessInstrumentor extends MethodInstrumentor {
         }
     }
 
-    protected void onBeforeArrayLoad(int opcode) {
-        println("before array load");
-    }
+    protected void onBeforeArrayLoad(int opcode) {}
 
-    protected void onAfterArrayLoad(int opcode) {
-        println("after array load");
-    }
+    protected void onAfterArrayLoad(int opcode) {}
 
-    protected void onBeforeArrayStore(int opcode) {
-        println("before array store");
-    }
+    protected void onBeforeArrayStore(int opcode) {}
 
-    protected void onAfterArrayStore(int opcode) {
-        println("after array store");
-    }
+    protected void onAfterArrayStore(int opcode) {}
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
@@ -112,7 +104,29 @@ public class ArrayAccessInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new ArrayAccessInstrumentor(mv, access, name, desc);
+                     return new ArrayAccessInstrumentor(mv, access, name, desc) {
+
+                    @Override
+                    protected void onAfterArrayLoad(int opcode) {
+                        println("after array load");
+                    }
+
+                    @Override
+                    protected void onAfterArrayStore(int opcode) {
+                        println("after array store");
+                    }
+
+                    @Override
+                    protected void onBeforeArrayLoad(int opcode) {
+                        println("before array load");
+                    }
+
+                    @Override
+                    protected void onBeforeArrayStore(int opcode) {
+                        println("before array store");
+                    }
+
+                     };
                  }
             });
         fos.write(writer.toByteArray());

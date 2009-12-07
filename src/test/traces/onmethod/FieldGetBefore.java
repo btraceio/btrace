@@ -23,9 +23,13 @@
  * have any questions.
  */
 
-package traces.methodentry;
+package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.CalledInstance;
+import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
@@ -35,9 +39,10 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class StaticNoArgsSelf {
-    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="noargs$static")
-    public static void argsEmpty(@Self Object self) {
-        println("args empty");
+public class FieldGetBefore {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="field",
+              location=@Location(value=Kind.FIELD_GET, clazz="/.*\\.OnMethodTest/", field="field"))
+    public static void args(@Self Object self, @CalledInstance Object inst, @CalledMethod String fldName) {
+        println("args");
     }
 }

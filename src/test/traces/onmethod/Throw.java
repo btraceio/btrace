@@ -23,11 +23,15 @@
  * have any questions.
  */
 
-package traces.methodentry;
+package traces.onmethod;
 
-import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
+import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -35,9 +39,10 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class AnytypeArgsNoSelf {
-    @OnMethod(clazz="/.*\\.MethodEntryTest/", method="args")
-    public static void argsNoSelf(AnyType[] args) {
-        println("args no self");
+public class Throw {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="exception",
+              location=@Location(value=Kind.THROW))
+    public static void args(@Self Object self, @ProbeClassName String pcn, @ProbeMethodName String pmn, Throwable e) {
+        println("args");
     }
 }

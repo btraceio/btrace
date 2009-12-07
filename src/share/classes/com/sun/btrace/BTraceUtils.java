@@ -45,6 +45,8 @@ import sun.reflect.Reflection;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
 import java.util.Deque;
 
 /**
@@ -986,6 +988,7 @@ public final class BTraceUtils {
     /**
      * Returns the Class object of the currently 
      * probed (or traced) class.
+     * @deprecated Since 1.1. Use {@linkplain ProbeClassName} annotation instead
      */
     public static Class probeClass() {
         return Reflection.getCallerClass(STACK_DEC);
@@ -993,6 +996,7 @@ public final class BTraceUtils {
   
     /**
      * Returns the currently probed method's name.
+     * @deprecated Since 1.1. Use {@linkplain ProbeMethodName} annotation instead
      */
     @Deprecated
     public static String probeMethod() {

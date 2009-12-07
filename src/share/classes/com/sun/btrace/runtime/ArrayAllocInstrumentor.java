@@ -52,28 +52,29 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
         String desc = null;
         if (opcode == NEWARRAY) {
             desc = InstrumentUtils.arrayDescriptorFor(operand);
-            onBeforeArrayNew(desc, 1);
+            onBeforeArrayNew(getPlainType(desc), 1);
         } 
         super.visitIntInsn(opcode, operand);
         if (opcode == NEWARRAY) {
-            onAfterArrayNew(desc, 1);
+            onAfterArrayNew(getPlainType(desc), 1);
         }
     }
 
     public void visitTypeInsn(int opcode, String desc) {
         if (opcode == ANEWARRAY) {
-            onBeforeArrayNew("[" + desc, 1);
+            onBeforeArrayNew("L" + desc + ";", 1);
         }
         super.visitTypeInsn(opcode, desc);
         if (opcode == ANEWARRAY) {
-            onAfterArrayNew("[" + desc, 1);
+            onAfterArrayNew("L" + desc + ";", 1);
         }
     }
 
     public void visitMultiANewArrayInsn(String desc, int dims) {
-        onBeforeArrayNew(desc, dims);
+        String type = getPlainType(desc);
+        onBeforeArrayNew(type, dims);
         super.visitMultiANewArrayInsn(desc, dims);
-        onAfterArrayNew(desc, dims);
+        onAfterArrayNew(type, dims);
     }
 
     protected void onBeforeArrayNew(String desc, int dims) {
@@ -83,6 +84,14 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
     protected void onAfterArrayNew(String desc, int dims) {
         visitInsn(DUP);
         printObject();
+    }
+
+    private String getPlainType(String desc) {
+        int index = desc.lastIndexOf("[") + 1;
+        if (index > 0) {
+            return desc.substring(index);
+        }
+        return desc;
     }
 
     public static void main(String[] args) throws Exception {
