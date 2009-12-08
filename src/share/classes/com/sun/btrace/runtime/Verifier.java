@@ -179,22 +179,9 @@ public class Verifier extends ClassAdapter {
             @Override
             public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
                 if (desc.equals(BTRACE_SELF_DESC)) {
+                    // all allowed
                     if (om != null) {
-                        if (om.getLocation().getValue() == Kind.ENTRY ||
-                            om.getLocation().getValue() == Kind.RETURN ||
-                            om.getLocation().getValue() == Kind.CALL ||
-                            om.getLocation().getValue() == Kind.CATCH ||
-                            om.getLocation().getValue() == Kind.THROW ||
-                            om.getLocation().getValue() == Kind.ARRAY_GET ||
-                            om.getLocation().getValue() == Kind.ARRAY_SET ||
-                            om.getLocation().getValue() == Kind.FIELD_GET ||
-                            om.getLocation().getValue() == Kind.FIELD_SET ||
-                            om.getLocation().getValue() == Kind.NEW ||
-                            om.getLocation().getValue() == Kind.NEWARRAY) {
-                            om.setSelfParameter(parameter);
-                        } else {
-                            reportError("self.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
-                        }
+                        om.setSelfParameter(parameter);
                     }
                 }
                 if (desc.equals(BTRACE_RETURN_DESC)) {
@@ -243,31 +230,15 @@ public class Verifier extends ClassAdapter {
                     }
                 }
                 if (desc.equals(BTRACE_PROBECLASSNAME_DESC)) {
+                    // allowed for all
                     if (om != null) {
-                        if (om.getLocation().getValue() == Kind.ENTRY || 
-                            om.getLocation().getValue() == Kind.RETURN ||
-                            om.getLocation().getValue() == Kind.CALL ||
-                            om.getLocation().getValue() == Kind.THROW ||
-                            om.getLocation().getValue() == Kind.ARRAY_GET ||
-                            om.getLocation().getValue() == Kind.ARRAY_SET) { // TODO: enable other locations
-                            om.setClassNameParameter(parameter);
-                        } else {
-                            reportError("probeclass.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
-                        }
+                        om.setClassNameParameter(parameter);
                     }
                 }
                 if (desc.equals(BTRACE_PROBEMETHODNAME_DESC)) {
+                    // allowed for all
                     if (om != null) {
-                        if (om.getLocation().getValue() == Kind.ENTRY || 
-                            om.getLocation().getValue() == Kind.RETURN ||
-                            om.getLocation().getValue() == Kind.CALL ||
-                            om.getLocation().getValue() == Kind.THROW ||
-                            om.getLocation().getValue() == Kind.ARRAY_GET ||
-                            om.getLocation().getValue() == Kind.ARRAY_SET) {
-                            om.setMethodParameter(parameter);
-                        } else {
-                            reportError("probemethod.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
-                        }
+                        om.setMethodParameter(parameter);
                     }
                 }
                 return super.visitParameterAnnotation(parameter, desc, visible);

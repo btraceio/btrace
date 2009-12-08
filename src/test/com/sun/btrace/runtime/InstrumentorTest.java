@@ -62,6 +62,42 @@ public class InstrumentorTest {
     }
 
     @Test
+    public void methodEntryCheckcastBefore() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/CheckcastBefore");
+
+        checkTransformation("DUP\nASTORE 3\nALOAD 0\nLDC \"resources.OnMethodTest\"\nALOAD 3\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V");
+    }
+
+    @Test
+    public void methodEntryCheckcastAfter() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/CheckcastAfter");
+
+        checkTransformation("DUP\nASTORE 3\nALOAD 0\nLDC \"casts\"\nALOAD 3\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n");
+    }
+
+    @Test
+    public void methodEntryInstanceofBefore() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/InstanceofBefore");
+
+        checkTransformation("DUP\nASTORE 4\nALOAD 0\nLDC \"resources.OnMethodTest\"\nALOAD 4\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V");
+    }
+
+    @Test
+    public void methodEntryInstanceofAfter() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/InstanceofAfter");
+
+        checkTransformation("DUP\nASTORE 4\nALOAD 0\nLDC \"casts\"\nALOAD 4\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n");
+    }
+
+    @Test
     public void methodEntryCatch() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Catch");
@@ -75,8 +111,27 @@ public class InstrumentorTest {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Throw");
 
-        checkTransformation("DUP\nASTORE 2\nALOAD 0\nALOAD 2\n" +
+        checkTransformation("DUP\nASTORE 2\nALOAD 0\nLDC \"resources.OnMethodTest\"\nLDC \"exception\"\nALOAD 2\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Throw$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V");
+    }
+
+    @Test
+    public void methodEntryError() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/Error");
+
+        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\nDUP\nASTORE 2\nALOAD 0\nLDC \"uncaught\"\nALOAD 2\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Error$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V");
+    }
+
+    @Test
+    public void methodEntryLine() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/Line");
+
+        checkTransformation("LDC \"field\"\nLDC 64\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
+                            "ALOAD 0");
     }
 
     @Test
@@ -96,6 +151,25 @@ public class InstrumentorTest {
         checkTransformation("ASTORE 2\nALOAD 0\nALOAD 2\nLDC \"java.util.HashMap\"\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewAfter$args (Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V\n" +
                             "DUP");
+    }
+
+    @Test
+    public void methodEntrySyncEntry() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/SyncEntry");
+
+        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nDUP\nASTORE 3\nALOAD 0\nLDC \"sync\"\nALOAD 3\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V");
+    }
+
+    @Test
+    public void methodEntrySyncExit() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/SyncExit");
+
+        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nPOP\nL6\nLINENUMBER 90 L6\n" +
+                            "DUP\nDUP\nASTORE 3\nALOAD 0\nLDC \"resources/OnMethodTest\"\nALOAD 3\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n");
     }
 
     @Test

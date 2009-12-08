@@ -49,6 +49,10 @@ public class OnMethodTest {
         }
     }
 
+    public void uncaught() {
+        throw new RuntimeException("ho-hey");
+    }
+
     public void array(int a) {
         int[] arr = new int[10];
 
@@ -69,5 +73,20 @@ public class OnMethodTest {
         int[][] b = new int[1][1];
         String[] c = new String[1];
         String[][] d = new String[1][1];
+    }
+
+    public void casts() {
+        Map<String, String> c = new HashMap<String, String>();
+        HashMap<String, String> d = (HashMap<String, String>)c;
+
+        if (c instanceof HashMap) {
+            System.err.println("hey ho");
+        }
+    }
+
+    public void sync() {
+        synchronized(this) {
+            System.err.println("ho hey");
+        }
     }
 }

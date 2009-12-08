@@ -52,7 +52,7 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
     }
 
     public void visitLineNumber(int line, Label start) {
-        if (lastLine != 0) { 
+        if (lastLine != 0) {
             onAfterLine(line - 1); 
         }
         onBeforeLine(line);
