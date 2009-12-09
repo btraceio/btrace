@@ -29,9 +29,10 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.LocalVariablesSorter;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
 
@@ -100,136 +101,134 @@ public class MethodInstrumentor extends MethodAdapter {
     public static final String FLOAT_VALUE_DESC= "()F";
     public static final String DOUBLE_VALUE_DESC= "()D";
 
-    protected static enum ValidationResult {
-        INVALID, MATCH, ANYTYPE
-    }
-    
-    protected class Arguments {
-        private Map<Integer, ArgumentProvider> arguments = new TreeMap<Integer, ArgumentProvider>();
+    final protected static class ValidationResult {
+        final static private int[] EMPTY_ARRAY = new int[0];
+        final private boolean isValid;
+        final private int[] argsIndex;
 
-        public Arguments() {}
-
-        public Arguments(Type[] actionArgTypes, OnMethod om) {
-            this(actionArgTypes, (int[])null, om);
+        public ValidationResult(boolean valid, int[] argsIndex) {
+            this.isValid = valid;
+            this.argsIndex = argsIndex;
         }
 
-        public Arguments(Type[] actionArgTypes, ArgumentProvider[] extraArgs, OnMethod om) {
-            int index = 0;
-            int argIndex = 0;
-            for(final Type t : actionArgTypes) {
-                if (index == om.getSelfParameter()) {
-                    addArgument(index, new ArgumentProvider() {
-                        public void provide() {
-                            loadThis();
-                        }
-                    });
-                } else if (index != om.getClassNameParameter() &&
-                    index != om.getMethodParameter() &&
-                    index != om.getReturnParameter() &&
-                    index != om.getDurationParameter() &&
-                    index != om.getCalledInstanceParameter() &&
-                    index != om.getCalledMethodParameter()) {
-
-                    addArgument(index, extraArgs[argIndex]);
-                    argIndex++;
-                }
-                index++;
-            }
+        public ValidationResult(boolean valid) {
+            this(valid, EMPTY_ARRAY);
         }
 
-        public Arguments(Type[] actionArgTypes, final int[] remap, OnMethod om) {
-            int index = 0;
-            int ptr = isStatic() ? 0 : 1;
-            int argIndex = 0;
-//            if (remap != null) {
-//                for(int i=0;i<remap.length;i++) {
-//                    System.err.println("***** remap[" + i + "] = " + remap[i]);
-//                }
-//            }
-            for(final Type t : actionArgTypes) {
-                if (index == om.getSelfParameter()) {
-                    addArgument(index, new ArgumentProvider() {
-                        public void provide() {
-                            loadThis();
-                        }
-                    });
-                } else if (index != om.getClassNameParameter() &&
-                    index != om.getMethodParameter() &&
-                    index != om.getReturnParameter() &&
-                    index != om.getDurationParameter() &&
-                    index != om.getCalledInstanceParameter() &&
-                    index != om.getCalledMethodParameter()) {
-
-                    final int usedPtr = (remap == null ? ptr : remap[argIndex]);
-                    if (TypeUtils.isAnyTypeArray(t)) {
-                        addArgument(index, new AnyTypeArgProvider(usedPtr));
-                    } else {
-                        addArgument(index, new ArgumentProvider(){
-                            public void provide() {
-                                loadLocal(t, usedPtr);
-                            }
-                        });
-                    }
-                    argIndex++;
-                    ptr += t.getSize();
-                }
-                index++;
-            }
+        public int getArgIdx(int ptr) {
+            return ptr > -1 && ptr < argsIndex.length ? argsIndex[ptr] : -1;
         }
 
-        public Arguments addArgument(int index, ArgumentProvider provider) {
-            if (index != -1) {
-                arguments.put(index, provider);
-            }
-            return this;
+        public int getArgCnt() {
+            return argsIndex.length;
         }
 
-        public void load() {
-            for(Map.Entry<Integer, ArgumentProvider> entry : arguments.entrySet()) {
-                entry.getValue().provide();
+        public boolean isAny() {
+            return argsIndex.length == 0;
+        }
+
+        public boolean isValid() {
+            return isValid;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
             }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final ValidationResult other = (ValidationResult) obj;
+            if (this.isValid != other.isValid) {
+                return false;
+            }
+            if (!Arrays.equals(this.argsIndex, other.argsIndex)) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 59 * hash + (this.isValid ? 1 : 0);
+            hash = 59 * hash + Arrays.hashCode(this.argsIndex);
+            return hash;
         }
     }
 
-    protected interface ArgumentProvider {
-        void provide();
+    final private static ValidationResult INVALID = new ValidationResult(false);
+    final private static ValidationResult ANY = new ValidationResult(true);
+
+    protected abstract class ArgumentProvider {
+        private int index;
+
+        public ArgumentProvider(int index) {
+            this.index = index;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+
+        final public void provide() {
+            if (index > -1) {
+                doProvide();
+            }
+        }
+
+        abstract protected void doProvide();
     }
 
-    protected class LocalVarArgProvider implements ArgumentProvider {
+    protected class LocalVarArgProvider extends ArgumentProvider {
         private Type type;
         private int ptr;
 
-        public LocalVarArgProvider(Type type, int ptr) {
+        public LocalVarArgProvider(int index, Type type, int ptr) {
+            super(index);
             this.type = type;
             this.ptr = ptr;
         }
 
-        public void provide() {
+        public void doProvide() {
             loadLocal(type, ptr);
         }
 
+        @Override
+        public String toString() {
+            return "LocalVar #" + ptr + " of type " + type + " (@" + getIndex() + ")";
+        }
+
     }
 
-    protected class ConstantArgProvider implements ArgumentProvider {
+    protected class ConstantArgProvider extends ArgumentProvider {
         private Object constant;
 
-        public ConstantArgProvider(Object constant) {
+        public ConstantArgProvider(int index, Object constant) {
+            super(index);
             this.constant = constant;
         }
         
-        public void provide() {
+        public void doProvide() {
             visitLdcInsn(constant);
+        }
+
+        @Override
+        public String toString() {
+            return "Constant " + constant + " (@" + getIndex() + ")";
         }
     }
 
-    protected class AnyTypeArgProvider implements ArgumentProvider {
+    protected class AnyTypeArgProvider extends ArgumentProvider {
         private int argPtr;
 
-        public AnyTypeArgProvider(int basePtr) {
+        public AnyTypeArgProvider(int index, int basePtr) {
+            super(index);
             this.argPtr = basePtr;
         }
 
-        public void provide() {
+        public void doProvide() {
             push(argumentTypes.length);
             visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
             for (int j = 0; j < argumentTypes.length; j++) {
@@ -282,6 +281,39 @@ public class MethodInstrumentor extends MethodAdapter {
     protected void addExtraTypeInfo(int index, Type type) {
         if (index != -1) {
             extraTypes.put(index, type);
+        }
+    }
+
+    protected void loadArguments(ArgumentProvider ... argumentProviders) {
+        System.err.println("============== Before sort =================");
+        for(ArgumentProvider a : argumentProviders) {
+            System.err.println(a);
+        }
+        Arrays.sort(argumentProviders, new Comparator<ArgumentProvider>() {
+            public int compare(ArgumentProvider o1, ArgumentProvider o2) {
+                if (o1 == null && o2 == null) {
+                    return 0;
+                }
+                if (o1 != null && o2 == null) return -1;
+                if (o2 != null && o1 == null) return 1;
+                
+                if (o1.getIndex() == o2.getIndex()) {
+                    return 0;
+                }
+                if (o1.getIndex() < o2.getIndex()) {
+                    return -1;
+                }
+                return 1;
+            }
+        });
+
+        System.err.println("============== After sort =================");
+        for(ArgumentProvider a : argumentProviders) {
+            System.err.println(a);
+        }
+
+        for(ArgumentProvider provider : argumentProviders) {
+            if (provider != null) provider.provide();
         }
     }
 
@@ -628,13 +660,13 @@ public class MethodInstrumentor extends MethodAdapter {
 
         if (om.getSelfParameter() != -1) {
             if (staticFlag) {
-                return ValidationResult.INVALID;
+                return INVALID;
             }
             Type selfType = extraTypes.get(om.getSelfParameter());
             if ((selfType == null && !TypeUtils.isObject(actionArgTypes[om.getSelfParameter()])) ||
                 (selfType != null && !TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter()], selfType))) {
-//                System.err.println("Invalid @Self parameter. Expected '" + Type.getObjectType(className) + ", received " + actionArgTypes[om.getSelfParameter()]);
-                return ValidationResult.INVALID;
+                System.err.println("Invalid @Self parameter. Expected " + selfType + ", Received " + actionArgTypes[om.getSelfParameter()]);
+                return INVALID;
             }
             specialArgsCount++;
         }
@@ -646,47 +678,48 @@ public class MethodInstrumentor extends MethodAdapter {
             if (type == null ||
                 (!TypeUtils.isObject(actionArgTypes[om.getReturnParameter()])) &&
                 (!TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter()], type))) {
-//                System.err.println("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
-                return ValidationResult.INVALID;
+                System.err.println("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
+                return INVALID;
             }
             specialArgsCount++;
         }
-        if (om.getCalledMethodParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getCalledMethodParameter()], Type.getType(String.class)))) {
-//                System.err.println("Invalid @CalledMethod parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getCalledMethodParameter()]);
-                return ValidationResult.INVALID;
+        if (om.getTargetMethodOrFieldParameter() != -1) {
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], Type.getType(String.class)))) {
+                System.err.println("Invalid @CalledMethod parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
+                return INVALID;
             }
             specialArgsCount++;
         }
-        if (om.getCalledInstanceParameter() != -1) {
-            Type calledType = extraTypes.get(om.getCalledInstanceParameter());
-            if ((calledType == null && !(TypeUtils.isObject(actionArgTypes[om.getCalledInstanceParameter()]))) ||
-                (calledType != null && !(TypeUtils.isCompatible(actionArgTypes[om.getCalledInstanceParameter()], calledType)))) {
-//                System.err.println("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getCalledInstanceParameter()]);
-                return ValidationResult.INVALID;
+        if (om.getTargetInstanceParameter() != -1) {
+            Type calledType = extraTypes.get(om.getTargetInstanceParameter());
+            if ((calledType == null && !(TypeUtils.isObject(actionArgTypes[om.getTargetInstanceParameter()]))) ||
+                (calledType != null && !(TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)))) {
+                System.err.println("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
+                return INVALID;
             }
             specialArgsCount++;
         }
         if (om.getDurationParameter() != -1) {
             if (actionArgTypes[om.getDurationParameter()] != Type.LONG_TYPE) {
-                return ValidationResult.INVALID;
+                return INVALID;
             }
             specialArgsCount++;
         }
         if (om.getClassNameParameter() != -1) {
             if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], Type.getType(String.class)))) {
-                return ValidationResult.INVALID;
+                return INVALID;
             }
             specialArgsCount++;
         }
         if (om.getMethodParameter() != -1) {
             if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], Type.getType(String.class)))) {
-                return ValidationResult.INVALID;
+                return INVALID;
             }
             specialArgsCount++;
         }
 
         Type[] cleansedArgArray = new Type[actionArgTypes.length - specialArgsCount];
+        int[] cleansedArgIndex = new int[cleansedArgArray.length];
 
         int counter = 0;
         for (int argIndex = 0; argIndex < actionArgTypes.length; argIndex++) {
@@ -694,22 +727,25 @@ public class MethodInstrumentor extends MethodAdapter {
                     argIndex != om.getClassNameParameter() &&
                     argIndex != om.getMethodParameter() &&
                     argIndex != om.getReturnParameter() &&
-                    argIndex != om.getCalledInstanceParameter() &&
-                    argIndex != om.getCalledMethodParameter() &&
+                    argIndex != om.getTargetInstanceParameter() &&
+                    argIndex != om.getTargetMethodOrFieldParameter() &&
                     argIndex != om.getDurationParameter()) {
-                cleansedArgArray[counter++] = actionArgTypes[argIndex];
+                cleansedArgArray[counter] = actionArgTypes[argIndex];
+                cleansedArgIndex[counter] = argIndex;
+                counter++;
             }
         }
-        if (cleansedArgArray.length == 1 && TypeUtils.isAnyTypeArray(cleansedArgArray[0])) {
-            return ValidationResult.ANYTYPE;
+        if (cleansedArgArray.length == 0) {
+            return ANY;
         } else {
             if (cleansedArgArray.length > 0) {
-                if (!TypeUtils.isCompatible(cleansedArgArray, methodArgTypes)) {
-                    return ValidationResult.INVALID;
+                if (!TypeUtils.isAnyTypeArray(cleansedArgArray[0]) &&
+                    !TypeUtils.isCompatible(cleansedArgArray, methodArgTypes)) {
+                    return INVALID;
                 }
             }
         }
-        return ValidationResult.MATCH;
+        return new ValidationResult(true, cleansedArgIndex);
     }
 
     // Internals only below this point

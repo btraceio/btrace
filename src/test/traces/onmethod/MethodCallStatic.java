@@ -26,7 +26,7 @@
 package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.TargetMethodOrField;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
@@ -44,7 +44,7 @@ public class MethodCallStatic {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
               location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTargetStatic"))
     public static void args(@Self Object self, String a, long b,
-                            @CalledMethod String calledMethod,
+                            @TargetMethodOrField String calledMethod,
                             @ProbeClassName String className, @ProbeMethodName String methodName) {
         println("args");
     }

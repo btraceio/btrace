@@ -26,8 +26,8 @@
 package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.CalledInstance;
-import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.TargetInstance;
+import com.sun.btrace.annotations.TargetMethodOrField;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
@@ -44,7 +44,7 @@ import static com.sun.btrace.BTraceUtils.*;
 public class FieldGetAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="field",
               location=@Location(value=Kind.FIELD_GET, clazz="resources.OnMethodTest", field="field", where=Where.AFTER))
-    public static void args(@Self Object self, @CalledInstance Object inst, @CalledMethod String fldName, @Return int fldVal) {
+    public static void args(@Self Object self, @TargetInstance Object inst, @TargetMethodOrField String fldName, @Return int fldVal) {
         println("args");
     }
 }

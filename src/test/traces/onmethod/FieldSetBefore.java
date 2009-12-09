@@ -26,8 +26,8 @@
 package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.CalledInstance;
-import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.TargetInstance;
+import com.sun.btrace.annotations.TargetMethodOrField;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
@@ -42,7 +42,7 @@ import static com.sun.btrace.BTraceUtils.*;
 public class FieldSetBefore {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="field",
               location=@Location(value=Kind.FIELD_SET, clazz="/.*\\.OnMethodTest/", field="field"))
-    public static void args(@Self Object self, @CalledInstance Object inst, @CalledMethod String fldName, int value) {
+    public static void args(@Self Object self, @TargetInstance Object inst, @TargetMethodOrField String fldName, int value) {
         println("args");
     }
 }

@@ -50,8 +50,8 @@ public class OnMethod {
     private int methodParameter = -1;
     private int classNameParameter = -1;
     private int returnParameter = -1;
-    private int calledMethodParameter = -1;
-    private int calledInstanceParameter = -1;
+    private int targetMethodOrFieldParameter = -1;
+    private int targetInstanceParameter = -1;
     private int durationParameter = -1;
     
     public OnMethod() {
@@ -144,20 +144,20 @@ public class OnMethod {
         this.returnParameter = returnParameter;
     }
 
-    public int getCalledMethodParameter() {
-        return calledMethodParameter;
+    public int getTargetMethodOrFieldParameter() {
+        return targetMethodOrFieldParameter;
     }
 
-    public void setCalledMethodParameter(int calledMethodParameter) {
-        this.calledMethodParameter = calledMethodParameter;
+    public void setTargetMethodOrFieldParameter(int calledMethodParameter) {
+        this.targetMethodOrFieldParameter = calledMethodParameter;
     }
 
-    public int getCalledInstanceParameter() {
-        return calledInstanceParameter;
+    public int getTargetInstanceParameter() {
+        return targetInstanceParameter;
     }
 
-    public void setCalledInstanceParameter(int calledInstanceParameter) {
-        this.calledInstanceParameter = calledInstanceParameter;
+    public void setTargetInstanceParameter(int calledInstanceParameter) {
+        this.targetInstanceParameter = calledInstanceParameter;
     }
 
     public int getDurationParameter() {

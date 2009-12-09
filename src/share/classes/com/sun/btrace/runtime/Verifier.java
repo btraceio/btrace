@@ -31,8 +31,8 @@ import java.io.BufferedInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import com.sun.btrace.VerifierException;
-import com.sun.btrace.annotations.CalledInstance;
-import com.sun.btrace.annotations.CalledMethod;
+import com.sun.btrace.annotations.TargetInstance;
+import com.sun.btrace.annotations.TargetMethodOrField;
 import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
@@ -64,8 +64,8 @@ import com.sun.btrace.org.objectweb.asm.Type;
 public class Verifier extends ClassAdapter {
     public static final String BTRACE_SELF_DESC = Type.getDescriptor(Self.class);
     public static final String BTRACE_RETURN_DESC = Type.getDescriptor(Return.class);
-    public static final String BTRACE_CALLEDMETHOD_DESC = Type.getDescriptor(CalledMethod.class);
-    public static final String BTRACE_CALLEDINSTANCE_DESC = Type.getDescriptor(CalledInstance.class);
+    public static final String BTRACE_TARGETMETHOD_DESC = Type.getDescriptor(TargetMethodOrField.class);
+    public static final String BTRACE_TARGETINSTANCE_DESC = Type.getDescriptor(TargetInstance.class);
     public static final String BTRACE_DURATION_DESC = Type.getDescriptor(Duration.class);
     public static final String BTRACE_PROBECLASSNAME_DESC = Type.getDescriptor(ProbeClassName.class);
     public static final String BTRACE_PROBEMETHODNAME_DESC = Type.getDescriptor(ProbeMethodName.class);
@@ -198,23 +198,23 @@ public class Verifier extends ClassAdapter {
                         }
                     }
                 }
-                if (desc.equals(BTRACE_CALLEDMETHOD_DESC)) {
+                if (desc.equals(BTRACE_TARGETMETHOD_DESC)) {
                     if (om != null) {
                         if (om.getLocation().getValue() == Kind.CALL ||
                             om.getLocation().getValue() == Kind.FIELD_GET ||
                             om.getLocation().getValue() == Kind.FIELD_SET) {
-                            om.setCalledMethodParameter(parameter);
+                            om.setTargetMethodOrFieldParameter(parameter);
                         } else {
                             reportError("called-method.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
                         }
                     }
                 }
-                if (desc.equals(BTRACE_CALLEDINSTANCE_DESC)) {
+                if (desc.equals(BTRACE_TARGETINSTANCE_DESC)) {
                     if (om != null) {
                         if (om.getLocation().getValue() == Kind.CALL ||
                             om.getLocation().getValue() == Kind.FIELD_GET ||
                             om.getLocation().getValue() == Kind.FIELD_SET) {
-                            om.setCalledInstanceParameter(parameter);
+                            om.setTargetInstanceParameter(parameter);
                         } else {
                             reportError("called-instance.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
                         }
