@@ -48,6 +48,9 @@ import com.sun.btrace.aggregation.AggregationKey;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Deque;
 
 /**
@@ -1350,6 +1353,23 @@ public final class BTraceUtils {
      */
     public static long timeNanos() {
         return System.nanoTime();
+    }
+
+    /**
+     * <p>Generates a string timestamp (current date&time)
+     * @param format The format to be used - see {@linkplain SimpleDateFormat}
+     * @return Returns a string representing current date&time
+     */
+    public static String timestamp(String format) {
+        return new SimpleDateFormat(format).format(Calendar.getInstance().getTime());
+    }
+
+    /**
+     * <p>Generates a string timestamp (current date&time) in the default system format
+     * @return Returns a string representing current date&time
+     */
+    public static String timestamp() {
+        return new SimpleDateFormat().format(Calendar.getInstance().getTime());
     }
     
     // String utilities
