@@ -285,10 +285,6 @@ public class MethodInstrumentor extends MethodAdapter {
     }
 
     protected void loadArguments(ArgumentProvider ... argumentProviders) {
-        System.err.println("============== Before sort =================");
-        for(ArgumentProvider a : argumentProviders) {
-            System.err.println(a);
-        }
         Arrays.sort(argumentProviders, new Comparator<ArgumentProvider>() {
             public int compare(ArgumentProvider o1, ArgumentProvider o2) {
                 if (o1 == null && o2 == null) {
@@ -306,11 +302,6 @@ public class MethodInstrumentor extends MethodAdapter {
                 return 1;
             }
         });
-
-        System.err.println("============== After sort =================");
-        for(ArgumentProvider a : argumentProviders) {
-            System.err.println(a);
-        }
 
         for(ArgumentProvider provider : argumentProviders) {
             if (provider != null) provider.provide();
