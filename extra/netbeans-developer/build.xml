@@ -31,4 +31,7 @@
             <fileset dir="${basedir}/../../build" includes="**/*.jar"/>
         </copy>
     </target>
+    <target name="clean" depends="projectized-common.clean">
+        <delete dir="${basedir}/release/modules/ext"/>
+    </target>
 </project>

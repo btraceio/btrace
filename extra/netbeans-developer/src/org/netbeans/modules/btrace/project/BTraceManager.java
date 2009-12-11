@@ -35,7 +35,7 @@ import org.netbeans.api.project.Project;
 import org.netbeans.modules.btrace.project.BTraceActionProvider;
 import org.netbeans.modules.btrace.project.BTraceProject;
 import org.netbeans.modules.btrace.project.BTraceProjectUtil;
-import org.netbeans.modules.btrace.project.ui.actions.RerunBTraceScriptAction;
+//import org.netbeans.modules.btrace.project.ui.actions.RerunBTraceScriptAction;
 import org.netbeans.modules.btrace.ui.EventChooser;
 import org.netbeans.spi.project.ActionProvider;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
@@ -45,11 +45,14 @@ import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import org.netbeans.api.project.FileOwnerQuery;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
 import org.openide.filesystems.FileObject;
+import org.openide.filesystems.FileUtil;
 import org.openide.modules.InstalledFileLocator;
 import org.openide.util.Cancellable;
+import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
 import org.openide.util.Utilities;
@@ -102,26 +105,26 @@ public class BTraceManager {
         final AtomicReference<byte[]> bytecode = new AtomicReference<byte[]>(loadCompiledScript(scriptPath));
                 
         final Action[] actions = new Action[3];
-//        actions[0] = new AbstractAction("Rerun", new ImageIcon(Utilities.loadImage("org/netbeans/modules/btrace/ui/resources/rerun.png"))) {
-//            public void actionPerformed(ActionEvent e) {
-//                try {
-//                    Project prj = FileOwnerQuery.getOwner(FileUtil.toFileObject(new File(scriptPath)));
-//                    BTraceActionProvider ap = prj.getLookup().lookup(BTraceActionProvider.class);
-//                    recompile(prj, ap);
-//                    
-//                    bytecode.set(loadCompiledScript(scriptPath));
-//                    deployScript(client, port[0], Integer.toString(pid), agentPath, bytecode.get(), actions, isStopEnabled, isRerunEnabled, IOProvider.getDefault().getIO("BTrace: " + scriptPath, false));
-//                } catch (IOException ex) {
-//                    Exceptions.printStackTrace(ex);
-//                }
-//            }
-//
-//            @Override
-//            public boolean isEnabled() {
-//                return isRerunEnabled.get();
-//            }
-//        };
-        actions[0] = SystemAction.findObject(RerunBTraceScriptAction.class);
+        actions[0] = new AbstractAction("Rerun", new ImageIcon(Utilities.loadImage("org/netbeans/modules/btrace/ui/resources/rerun.png"))) {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    Project prj = FileOwnerQuery.getOwner(FileUtil.toFileObject(new File(scriptPath)));
+                    BTraceActionProvider ap = prj.getLookup().lookup(BTraceActionProvider.class);
+                    recompile(prj, ap);
+                    
+                    bytecode.set(loadCompiledScript(scriptPath));
+                    deployScript(client, port[0], Integer.toString(pid), agentPath, bytecode.get(), actions, isStopEnabled, isRerunEnabled, IOProvider.getDefault().getIO("BTrace: " + scriptPath, false));
+                } catch (IOException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+            }
+
+            @Override
+            public boolean isEnabled() {
+                return isRerunEnabled.get();
+            }
+        };
+//        actions[0] = SystemAction.findObject(RerunBTraceScriptAction.class);
         actions[1] = new AbstractAction("Send Event...", new ImageIcon(Utilities.loadImage("org/netbeans/modules/btrace/ui/resources/event.png"))) {
             private Set<String> eventNames = getUsedEvents(bytecode.get());
             public void actionPerformed(ActionEvent e) {

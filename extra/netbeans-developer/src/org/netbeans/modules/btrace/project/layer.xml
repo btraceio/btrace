@@ -367,4 +367,9 @@
             <attr name="originalFile" stringvalue="Actions/Other/org-netbeans-modules-btrace-project-ui-actions-RerunBTraceScriptAction.instance"/>
         </file>
     </folder>
+    <folder name="org-netbeans-api-project-libraries">
+        <folder name="Libraries">
+            <file name="btrace.xml" url="btrace.xml"/>
+        </folder>
+    </folder>
 </filesystem>
