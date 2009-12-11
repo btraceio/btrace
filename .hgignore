@@ -2,11 +2,13 @@
 (^|/)\.hg($|/)
 (^|/)\.hgtags($|/)
 (^|/)build($|/)
+(^|/)release($|/)
 (^|/)dist($|/)
 (^|/)private($|/)
 (^|/)output($|/)
 patches
 webrev*
+website
 ^project.log$
 ^tailor.state$
 ^tailor.state.old$
