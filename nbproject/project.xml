@@ -28,7 +28,7 @@
             <ide-actions>
                 <action name="build">
                     <script>${ant.script}</script>
-                    <target>dist</target>
+                    <target>jar</target>
                 </action>
                 <action name="clean">
                     <script>${ant.script}</script>
@@ -37,7 +37,7 @@
                 <action name="rebuild">
                     <script>${ant.script}</script>
                     <target>clean</target>
-                    <target>dist</target>
+                    <target>jar</target>
                 </action>
                 <action name="test">
                     <script>${ant.script}</script>
@@ -91,13 +91,13 @@
                 <type>folder</type>
                 <location>build/classes</location>
                 <script>${ant.script}</script>
-                <build-target>dist</build-target>
+                <build-target>jar</build-target>
             </export>
             <export>
                 <type>folder</type>
                 <location>build/test</location>
                 <script>${ant.script}</script>
-                <build-target>dist</build-target>
+                <build-target>jar</build-target>
             </export>
             <view>
                 <items>
@@ -123,6 +123,11 @@
                     <ide-action name="clean"/>
                     <ide-action name="javadoc"/>
                     <ide-action name="test"/>
+                    <action>
+                        <script>${ant.script}</script>
+                        <label>Create Distribution</label>
+                        <target>dist</target>
+                    </action>
                 </context-menu>
             </view>
             <subprojects/>
