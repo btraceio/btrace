@@ -998,7 +998,6 @@ public class Instrumentor extends ClassAdapter {
                         }
                         if (om.getReturnParameter() != -1) {
                             retValIndex = lvs.newLocal(getReturnType());
-                            System.err.println("!!! Return index = " + retValIndex);
                             dupReturnValue(retOpCode);
                             storeLocal(getReturnType(), retValIndex);
                         }
@@ -1048,7 +1047,6 @@ public class Instrumentor extends ClassAdapter {
                     }
                 };
                 if (om.getDurationParameter() != -1) {
-                    System.err.println("!!! " + name + ";" + desc + " : " + lvs.getFirstLocal());
                     return new TimeStampGenerator(lvs, tsindex, className, access, name, desc, mri, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
                 } else {
                     return mri;

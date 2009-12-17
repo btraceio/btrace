@@ -203,10 +203,7 @@ public class TimeStampGenerator extends MethodAdapter {
         try {
             generatingIndex = true;
             TimeStampHelper.generateTimeStampAccess(this, className);
-            System.err.println("@@@ " + lvs.getFirstLocal());
-            System.err.println("@@@ " + lvs.getNextLocal());
             ts_index[index] = lvs.newLocal(Type.LONG_TYPE);
-            System.err.println("@@@ " + lvs.getNextLocal());
             visitVarInsn(Type.LONG_TYPE.getOpcode(ISTORE), ts_index[index]);
         } finally {
             generatingIndex = false;
