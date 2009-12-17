@@ -50,6 +50,8 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * @author Eric Bruneton
  */
 public class LocalVariablesSorter extends MethodAdapter {
+    private final static int FIRST_LOCAL_INDEX = 0;
+    private final static int NEXT_LOCAL_INDEX = 1;
 
     private static final Type OBJECT_TYPE = Type.getObjectType("java/lang/Object");
 
@@ -65,20 +67,22 @@ public class LocalVariablesSorter extends MethodAdapter {
      */
     private Object[] newLocals = new Object[20];
 
-    /**
-     * Index of the first local variable, after formal parameters.
-     */
-    protected final int firstLocal;
-
-    /**
-     * Index of the next local variable to be created by {@link #newLocal}.
-     */
-    protected int nextLocal;
+//    /**
+//     * Index of the first local variable, after formal parameters.
+//     */
+//    protected final int firstLocal;
+//
+//    /**
+//     * Index of the next local variable to be created by {@link #newLocal}.
+//     */
+//    protected int nextLocal;
 
     /**
      * Indicates if at least one local variable has moved due to remapping.
      */
     private boolean changed;
+
+    private int[] externalState;
 
     /**
      * Creates a new {@link LocalVariablesSorter}.
@@ -90,15 +94,19 @@ public class LocalVariablesSorter extends MethodAdapter {
     public LocalVariablesSorter(
         final int access,
         final String desc,
-        final MethodVisitor mv)
+        final MethodVisitor mv,
+        final int[] externalState)
     {
         super(mv);
+        assert(externalState.length == 2);
+        
+        this.externalState = externalState;
         Type[] args = Type.getArgumentTypes(desc);
-        nextLocal = (Opcodes.ACC_STATIC & access) == 0 ? 1 : 0;
+        externalState[NEXT_LOCAL_INDEX] = (Opcodes.ACC_STATIC & access) == 0 ? 1 : 0;
         for (int i = 0; i < args.length; i++) {
-            nextLocal += args[i].getSize();
+            externalState[NEXT_LOCAL_INDEX] += args[i].getSize();
         }
-        firstLocal = nextLocal;
+        externalState[FIRST_LOCAL_INDEX] = externalState[NEXT_LOCAL_INDEX];
     }
 
     @Override
@@ -144,7 +152,7 @@ public class LocalVariablesSorter extends MethodAdapter {
 
     @Override
     public void visitMaxs(final int maxStack, final int maxLocals) {
-        mv.visitMaxs(maxStack, nextLocal);
+        mv.visitMaxs(maxStack, externalState[NEXT_LOCAL_INDEX]);
     }
 
     @Override
@@ -254,15 +262,19 @@ public class LocalVariablesSorter extends MethodAdapter {
                 t = type.getInternalName();
                 break;
         }
-        int local = nextLocal;
-        nextLocal += type.getSize();
+        int local = getNextLocal();
+        externalState[NEXT_LOCAL_INDEX] += type.getSize();
         setLocalType(local, type);
         setFrameLocal(local, t);
         return local;
     }
 
     public int getFirstLocal() {
-        return firstLocal;
+        return externalState[FIRST_LOCAL_INDEX];
+    }
+
+    public int getNextLocal() {
+        return externalState[NEXT_LOCAL_INDEX];
     }
 
     /**
@@ -287,7 +299,7 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     public int remap(final int var, final Type type) {
-        if (var < firstLocal) {
+        if (var < getFirstLocal()) {
             return var;
         }
         int key = 2 * var + type.getSize() - 1;
@@ -312,13 +324,13 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     protected int newLocalMapping(final Type type) {
-        int local = nextLocal;
-        nextLocal += type.getSize();
+        int local = getNextLocal();
+        externalState[NEXT_LOCAL_INDEX] += type.getSize();
         return local;
     }
 
     private int remap(final int var, final int size) {
-       if (var < firstLocal || !changed) {
+       if (var < getFirstLocal() || !changed) {
             return var;
         }
         int key = 2 * var + size - 1;

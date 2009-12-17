@@ -174,11 +174,12 @@ public class Instrumentor extends ClassAdapter {
         // used to create new local variables while keeping the class internals consistent
         // Call "int index = lvs.newVar(<type>)" to create a new local variable.
         // Then use the generated index to get hold of the variable
-        final LocalVariablesSorter lvs = new LocalVariablesSorter(access, desc, methodVisitor);
+        int[] lvsState = new int[]{-1, -1};
+        final LocalVariablesSorter[] lvs = new LocalVariablesSorter[]{new LocalVariablesSorter(access, desc, methodVisitor, lvsState)};
 
         for (OnMethod om : applicableOnMethods) {
             if (om.getLocation().getValue() == Kind.LINE) {
-                methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
+                methodVisitor = instrumentorFor(om, methodVisitor, lvs[0], access, name, desc);
             } else {
                 String methodName = om.getMethod();
                 if (methodName.equals("")) {
@@ -186,15 +187,16 @@ public class Instrumentor extends ClassAdapter {
                 }
                 if (methodName.equals(name) &&
                     typeMatches(om.getType(), desc)) {
-                    methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
+                    methodVisitor = instrumentorFor(om, methodVisitor, lvs[0], access, name, desc);
                 } else if (methodName.charAt(0) == '/' &&
                            REGEX_SPECIFIER.matcher(methodName).matches()) {
                     methodName = methodName.substring(1, methodName.length() - 1);
                     if (name.matches(methodName) &&
                         typeMatches(om.getType(), desc)) {
-                        methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
+                        methodVisitor = instrumentorFor(om, methodVisitor, lvs[0], access, name, desc);
                     }
                 }
+                lvs[0] = new LocalVariablesSorter(access, desc, methodVisitor, lvsState);
             }
         }
 
@@ -212,10 +214,10 @@ public class Instrumentor extends ClassAdapter {
                         if (REGEX_SPECIFIER.matcher(annoName).matches()) {
                             annoName = annoName.substring(1, annoName.length() - 1);
                             if (extAnnoName.matches(annoName)) {
-                                mv = instrumentorFor(om, mv, lvs, access, name, desc);
+                                mv = instrumentorFor(om, mv, lvs[0], access, name, desc);
                             }
                         } else if (annoName.equals(extAnnoName)) {
-                            mv = instrumentorFor(om, mv, lvs, access, name, desc);
+                            mv = instrumentorFor(om, mv, lvs[0], access, name, desc);
                         }
                     }                   
                 }               
@@ -234,7 +236,7 @@ public class Instrumentor extends ClassAdapter {
 
         // a helper structure for creating timestamps
         final int[] tsindex = new int[]{-1, -1};
-
+        
         switch (loc.getValue()) {            
             case ARRAY_GET:
                 // <editor-fold defaultstate="collapsed" desc="Array Get Instrumentor">
@@ -996,6 +998,7 @@ public class Instrumentor extends ClassAdapter {
                         }
                         if (om.getReturnParameter() != -1) {
                             retValIndex = lvs.newLocal(getReturnType());
+                            System.err.println("!!! Return index = " + retValIndex);
                             dupReturnValue(retOpCode);
                             storeLocal(getReturnType(), retValIndex);
                         }
@@ -1045,6 +1048,7 @@ public class Instrumentor extends ClassAdapter {
                     }
                 };
                 if (om.getDurationParameter() != -1) {
+                    System.err.println("!!! " + name + ";" + desc + " : " + lvs.getFirstLocal());
                     return new TimeStampGenerator(lvs, tsindex, className, access, name, desc, mri, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
                 } else {
                     return mri;

@@ -31,14 +31,6 @@ public class TimeStampGenerator extends MethodAdapter {
     private String className;
     final private LocalVariablesSorter lvs;
 
-    public TimeStampGenerator(String className, int access, String name, String desc, MethodVisitor mv) {
-        this(new int[] {-1, -1}, className, access, name, desc, mv, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
-    }
-
-    public TimeStampGenerator(int[] tsindex, String className, int access, String name, String desc, MethodVisitor mv, int[] exitOpcodes) {
-        this(new LocalVariablesSorter(access, desc, mv), tsindex, className, access, name, desc, mv, exitOpcodes);
-    }
-
     public TimeStampGenerator(LocalVariablesSorter lvs, int[] tsindex, String className, int access, String name, String desc, MethodVisitor mv, int[] exitOpcodes) {
         super(mv);
         this.lvs = lvs;
@@ -211,7 +203,10 @@ public class TimeStampGenerator extends MethodAdapter {
         try {
             generatingIndex = true;
             TimeStampHelper.generateTimeStampAccess(this, className);
+            System.err.println("@@@ " + lvs.getFirstLocal());
+            System.err.println("@@@ " + lvs.getNextLocal());
             ts_index[index] = lvs.newLocal(Type.LONG_TYPE);
+            System.err.println("@@@ " + lvs.getNextLocal());
             visitVarInsn(Type.LONG_TYPE.getOpcode(ISTORE), ts_index[index]);
         } finally {
             generatingIndex = false;

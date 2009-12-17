@@ -327,11 +327,14 @@ public class InstrumentorTest {
     public void methodEntryArgsDuration2() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDuration2");
-        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 8\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 12\n" +
-                            "DUP2\nLSTORE 16\nALOAD 0\nLLOAD 16\nLLOAD 12\nLLOAD 8\nLSUB\nALOAD 1\n" +
+        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 10\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 16\n" +
+                            "DUP2\nLSTORE 22\nALOAD 0\nLLOAD 22\nLLOAD 16\nLLOAD 10\nLSUB\nALOAD 1\n" +
                             "LLOAD 2\nALOAD 4\nALOAD 5\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
+                            "DUP2\nLSTORE 26\nALOAD 0\nLLOAD 26\nLLOAD 16\nLLOAD 10\nLSUB\nALOAD 1\n" +
+                            "LLOAD 2\nALOAD 4\nALOAD 5\n" +
+                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
                             "MAXSTACK");
     }
 
@@ -442,6 +445,15 @@ public class InstrumentorTest {
                             "LDC \"callTopLevelStatic\"\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticMethodCallStatic$args (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
                             "ALOAD 9\nLLOAD 6");
+    }
+
+    @Test
+    public void methodEntryNoArgsEntryReturn() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/NoArgsEntryReturn");
+
+        checkTransformation("ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyEntry (Ljava/lang/Object;)V\n" +
+                            "ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyReturn (Ljava/lang/Object;)V");
     }
     
     private void checkTransformation(String expected) throws IOException {
