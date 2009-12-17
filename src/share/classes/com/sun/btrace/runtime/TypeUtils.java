@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.StringTokenizer;
 import com.sun.btrace.org.objectweb.asm.Type;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 class TypeUtils {
     private TypeUtils() {}
@@ -79,13 +81,23 @@ class TypeUtils {
             int sort2 = right.getSort();
             return (sort2 == Type.OBJECT || sort2 == Type.ARRAY);               
         } else {
+            // those classes should already have been loaded at this point
+            Class clzLeft, clzRight;
             try {
-                // those classes should already have been loaded at this point
-                Class clzLeft = Class.forName(left.getClassName());
-                Class clzRight = Class.forName(right.getClassName());
-                return (clzLeft.isAssignableFrom(clzRight));
-            } catch (Exception e) {}
-            return false;
+                clzLeft = Class.forName(left.getClassName());
+            } catch (NoClassDefFoundError e) {
+                clzLeft = Object.class;
+            } catch (ClassNotFoundException e) {
+                clzLeft = Object.class;
+            }
+            try {
+                clzRight = Class.forName(right.getClassName());
+            } catch (NoClassDefFoundError e) {
+                clzRight = Object.class;
+            } catch (ClassNotFoundException e) {
+                clzRight = Object.class;
+            }
+            return (clzLeft.isAssignableFrom(clzRight));
         }
     }
 
