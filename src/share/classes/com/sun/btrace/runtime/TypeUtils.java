@@ -85,16 +85,18 @@ class TypeUtils {
             Class clzLeft, clzRight;
             try {
                 clzLeft = Class.forName(left.getClassName());
-            } catch (NoClassDefFoundError e) {
-                clzLeft = Object.class;
-            } catch (ClassNotFoundException e) {
+            } catch (Throwable e) {
                 clzLeft = Object.class;
             }
+
+            // anything is assignable to Object
+            if (clzLeft == Object.class) {
+                return true;
+            }
+
             try {
                 clzRight = Class.forName(right.getClassName());
-            } catch (NoClassDefFoundError e) {
-                clzRight = Object.class;
-            } catch (ClassNotFoundException e) {
+            } catch (Throwable e) {
                 clzRight = Object.class;
             }
             return (clzLeft.isAssignableFrom(clzRight));
