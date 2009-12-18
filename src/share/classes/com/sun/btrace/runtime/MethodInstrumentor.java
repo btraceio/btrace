@@ -320,12 +320,17 @@ public class MethodInstrumentor extends MethodAdapter {
     }
 
     public int[] backupStack(LocalVariablesSorter lvs, boolean isStatic) {
-        int[] backupArgsIndexes = new int[argumentTypes.length + 1];
-        int upper = argumentTypes.length - 1;
+        return backupStack(lvs, argumentTypes, isStatic);
+    }
 
-        for (int i = 0; i < argumentTypes.length; i++) {
-            int index = lvs.newLocal(argumentTypes[upper - i]);
-            storeLocal(argumentTypes[upper - i], index);
+    public int[] backupStack(LocalVariablesSorter lvs, Type[] methodArgTypes, boolean isStatic) {
+        int[] backupArgsIndexes = new int[methodArgTypes.length + 1];
+        int upper = methodArgTypes.length - 1;
+
+        for (int i = 0; i < methodArgTypes.length; i++) {
+            System.err.println("!!! Argument type[" + (upper - i) + "]: " + methodArgTypes[upper - i].toString());
+            int index = lvs.newLocal(methodArgTypes[upper - i]);
+            storeLocal(methodArgTypes[upper - i], index);
             backupArgsIndexes[upper -  i + 1] = index;
         }
 
@@ -338,13 +343,17 @@ public class MethodInstrumentor extends MethodAdapter {
     }
 
     public void restoreStack(int[] backupArgsIndexes, boolean isStatic) {
-        int upper = argumentTypes.length - 1;
+        restoreStack(backupArgsIndexes, argumentTypes, isStatic);
+    }
+
+    public void restoreStack(int[] backupArgsIndexes, Type[] methodArgTypes, boolean isStatic) {
+        int upper = methodArgTypes.length - 1;
         if (!isStatic) {
             loadLocal(TypeUtils.objectType, backupArgsIndexes[0]);
         }
 
-        for (int i = argumentTypes.length - 1; i > -1; i--) {
-            loadLocal(argumentTypes[upper - i], backupArgsIndexes[upper - i + 1]);
+        for (int i = methodArgTypes.length - 1; i > -1; i--) {
+            loadLocal(methodArgTypes[upper - i], backupArgsIndexes[upper - i + 1]);
         }
     }
 

@@ -145,6 +145,8 @@
             </condition>
         </fail>
     </target>
+    <target name="prepare-tests" depends="compile-tests, build-traces"/>
+
     <target name="compile-tests" depends="check-junit, compile-src" description="Compiles the tests">
         <javac srcdir="${test.src.dir}" destdir="${tests.dir}" debug="on" deprecation="on">
             <classpath refid="javac.classpath"/>
@@ -157,10 +159,9 @@
             </classpath>
             <exclude name="traces/**"/>
         </javac>
-        <antcall target="build.traces"/>
     </target>
     
-    <target name="build.traces" depends="jar">
+    <target name="build-traces" depends="jar">
         <echo>executing ${bin.dir}/${btracec} -cp ${build.dir}/test -d ${tests.dir} ${traces.dir}/*.java</echo>
         <apply executable="${bin.dir}/${btracec}"  verbose="true">
             <fileset dir="${traces.dir}" includes="**/*.java"/>
@@ -194,7 +195,7 @@
         <echo message="Loading build properties file"/>
         <property file="build.properties"/>
     </target>
-    <target name="dist" depends="jar, test">
+    <target name="dist" depends="jar, test-dist">
         <delete dir="vi${dist.dir}"/>
         <mkdir dir="${dist.dir}"/>
         <mkdir dir="${dist.dir}/build"/>
@@ -243,10 +244,12 @@
                     <include name="**/*.java"/>
                     <exclude name="resources/**"/>
                     <exclude name="traces/**"/>
+                    <exclude name="support/**"/>
                 </fileset>
             </batchtest>
         </junit>
     </target>
+    <target name="test-dist" depends="build-traces, test"/>
     <target name="all" depends="jar, javadoc" description="Builds sources and deployment jars"/>
 </project>
 

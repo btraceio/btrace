@@ -74,6 +74,10 @@ public class MethodReturnInstrumentor extends MethodInstrumentor {
         println("leaving " + getName() + getDescriptor());
     }
 
+    public boolean usesTimeStamp() {
+        return false;
+    }
+
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.MethodReturnInstrumentor <class>");

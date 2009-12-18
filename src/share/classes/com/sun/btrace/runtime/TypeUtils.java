@@ -31,8 +31,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.StringTokenizer;
 import com.sun.btrace.org.objectweb.asm.Type;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 class TypeUtils {
     private TypeUtils() {}
@@ -77,7 +75,7 @@ class TypeUtils {
     public static boolean isCompatible(Type left, Type right) {
         if (left.equals(right)) {
             return true;
-        } else if(isAnyType(left)) {
+        } else if(isObjectOrAnyType(left)) {
             int sort2 = right.getSort();
             return (sort2 == Type.OBJECT || sort2 == Type.ARRAY);               
         } else {

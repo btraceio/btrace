@@ -34,6 +34,8 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A {@link MethodAdapter} that renumbers local variables in their order of
@@ -48,41 +50,38 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * @author Chris Nokleberg
  * @author Eugene Kuleshov
  * @author Eric Bruneton
+ * @author Jaroslav Bachorik
  */
 public class LocalVariablesSorter extends MethodAdapter {
-    private final static int FIRST_LOCAL_INDEX = 0;
-    private final static int NEXT_LOCAL_INDEX = 1;
-
     private static final Type OBJECT_TYPE = Type.getObjectType("java/lang/Object");
 
-    /**
-     * Mapping from old to new local variable indexes. A local variable at index
-     * i of size 1 is remapped to 'mapping[2*i]', while a local variable at
-     * index i of size 2 is remapped to 'mapping[2*i+1]'.
-     */
-    private int[] mapping = new int[40];
+    public static class Memento {
+        /**
+         * Index of the first local variable, after formal parameters.
+         */
+        private int firstLocal;
+        /**
+         * Index of the next local variable to be created by {@link #newLocal}.
+         */
+        private int nextLocal;
+        /**
+         * Mapping from old to new local variable indexes. A local variable at index
+         * i of size 1 is remapped to 'mapping[2*i]', while a local variable at
+         * index i of size 2 is remapped to 'mapping[2*i+1]'.
+         */
+        private int[] mapping = new int[40];
+        /**
+         * Array used to store stack map local variable types after remapping.
+         */
+        private Object[] newLocals = new Object[20];
+        /**
+         * Indicates if at least one local variable has moved due to remapping.
+         */
+        private boolean changed;
+    }
 
-    /**
-     * Array used to store stack map local variable types after remapping.
-     */
-    private Object[] newLocals = new Object[20];
-
-//    /**
-//     * Index of the first local variable, after formal parameters.
-//     */
-//    protected final int firstLocal;
-//
-//    /**
-//     * Index of the next local variable to be created by {@link #newLocal}.
-//     */
-//    protected int nextLocal;
-
-    /**
-     * Indicates if at least one local variable has moved due to remapping.
-     */
-    private boolean changed;
-
-    private int[] externalState;
+    private Memento memento = new Memento();
+    private Set<Integer> frozen = new HashSet<Integer>();
 
     /**
      * Creates a new {@link LocalVariablesSorter}.
@@ -95,18 +94,16 @@ public class LocalVariablesSorter extends MethodAdapter {
         final int access,
         final String desc,
         final MethodVisitor mv,
-        final int[] externalState)
+        final Memento memento)
     {
         super(mv);
-        assert(externalState.length == 2);
-        
-        this.externalState = externalState;
+        this.memento = memento;
         Type[] args = Type.getArgumentTypes(desc);
-        externalState[NEXT_LOCAL_INDEX] = (Opcodes.ACC_STATIC & access) == 0 ? 1 : 0;
+        memento.nextLocal = (Opcodes.ACC_STATIC & access) == 0 ? 1 : 0;
         for (int i = 0; i < args.length; i++) {
-            externalState[NEXT_LOCAL_INDEX] += args[i].getSize();
+            memento.nextLocal += args[i].getSize();
         }
-        externalState[FIRST_LOCAL_INDEX] = externalState[NEXT_LOCAL_INDEX];
+        memento.firstLocal = memento.nextLocal;
     }
 
     @Override
@@ -142,6 +139,7 @@ public class LocalVariablesSorter extends MethodAdapter {
             default:
                 type = Type.VOID_TYPE;
         }
+        int newIndex = remap(var, type);
         mv.visitVarInsn(opcode, remap(var, type));
     }
 
@@ -152,7 +150,7 @@ public class LocalVariablesSorter extends MethodAdapter {
 
     @Override
     public void visitMaxs(final int maxStack, final int maxLocals) {
-        mv.visitMaxs(maxStack, externalState[NEXT_LOCAL_INDEX]);
+        mv.visitMaxs(maxStack, memento.nextLocal);
     }
 
     @Override
@@ -180,14 +178,14 @@ public class LocalVariablesSorter extends MethodAdapter {
             throw new IllegalStateException("ClassReader.accept() should be called with EXPAND_FRAMES flag");
         }
 
-        if (!changed) { // optimization for the case where mapping = identity
+        if (!memento.changed) { // optimization for the case where mapping = identity
             mv.visitFrame(type, nLocal, local, nStack, stack);
             return;
         }
 
         // creates a copy of newLocals
-        Object[] oldLocals = new Object[newLocals.length];
-        System.arraycopy(newLocals, 0, oldLocals, 0, oldLocals.length);
+        Object[] oldLocals = new Object[memento.newLocals.length];
+        System.arraycopy(memento.newLocals, 0, oldLocals, 0, oldLocals.length);
 
         // copies types from 'local' to 'newLocals'
         // 'newLocals' already contains the variables added with 'newLocal'
@@ -207,24 +205,24 @@ public class LocalVariablesSorter extends MethodAdapter {
 
         index = 0;
         number = 0;
-        for (int i = 0; index < newLocals.length; ++i) {
-            Object t = newLocals[index++];
+        for (int i = 0; index < memento.newLocals.length; ++i) {
+            Object t = memento.newLocals[index++];
             if (t != null && t != Opcodes.TOP) {
-                newLocals[i] = t;
+                memento.newLocals[i] = t;
                 number = i + 1;
                 if (t == Opcodes.LONG || t == Opcodes.DOUBLE) {
                     index += 1;
                 }
             } else {
-                newLocals[i] = Opcodes.TOP;
+                memento.newLocals[i] = Opcodes.TOP;
             }
         }
 
         // visits remapped frame
-        mv.visitFrame(type, number, newLocals, nStack, stack);
+        mv.visitFrame(type, number, memento.newLocals, nStack, stack);
 
         // restores original value of 'newLocals'
-        newLocals = oldLocals;
+        memento.newLocals = oldLocals;
     }
 
     // -------------
@@ -263,18 +261,26 @@ public class LocalVariablesSorter extends MethodAdapter {
                 break;
         }
         int local = getNextLocal();
-        externalState[NEXT_LOCAL_INDEX] += type.getSize();
+        memento.nextLocal += type.getSize();
         setLocalType(local, type);
         setFrameLocal(local, t);
         return local;
     }
 
+    public void freeze(int index) {
+        frozen.add(index);
+    }
+
+    public void unfreeze(int index) {
+        frozen.remove(index);
+    }
+
     public int getFirstLocal() {
-        return externalState[FIRST_LOCAL_INDEX];
+        return memento.firstLocal;
     }
 
     public int getNextLocal() {
-        return externalState[NEXT_LOCAL_INDEX];
+        return memento.nextLocal;
     }
 
     /**
@@ -289,52 +295,53 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     private void setFrameLocal(final int local, final Object type) {
-        int l = newLocals.length;
+        int l = memento.newLocals.length;
         if (local >= l) {
             Object[] a = new Object[Math.max(2 * l, local + 1)];
-            System.arraycopy(newLocals, 0, a, 0, l);
-            newLocals = a;
+            System.arraycopy(memento.newLocals, 0, a, 0, l);
+            memento.newLocals = a;
         }
-        newLocals[local] = type;
+        memento.newLocals[local] = type;
     }
 
     public int remap(final int var, final Type type) {
-        if (var < getFirstLocal()) {
+        // don't remap arguments
+        if (var < getNextLocal() && !frozen.contains(var)) {
             return var;
         }
         int key = 2 * var + type.getSize() - 1;
-        int size = mapping.length;
+        int size = memento.mapping.length;
         if (key >= size) {
             int[] newMapping = new int[Math.max(2 * size, key + 1)];
-            System.arraycopy(mapping, 0, newMapping, 0, size);
-            mapping = newMapping;
+            System.arraycopy(memento.mapping, 0, newMapping, 0, size);
+            memento.mapping = newMapping;
         }
-        int value = mapping[key];
+        int value = memento.mapping[key];
         if (value == 0) {
             value = newLocalMapping(type);
             setLocalType(value, type);
-            mapping[key] = value + 1;
+            memento.mapping[key] = value + 1;
         } else {
             value--;
         }
         if (value != var) {
-            changed = true;
+            memento.changed = true;
         }
         return value;
     }
 
     protected int newLocalMapping(final Type type) {
         int local = getNextLocal();
-        externalState[NEXT_LOCAL_INDEX] += type.getSize();
+        memento.nextLocal += type.getSize();
         return local;
     }
 
     private int remap(final int var, final int size) {
-       if (var < getFirstLocal() || !changed) {
+       if ((var < getNextLocal() && !frozen.contains(var)) || !memento.changed) {
             return var;
         }
         int key = 2 * var + size - 1;
-        int value = key < mapping.length ? mapping[key] : 0;
+        int value = key < memento.mapping.length ? memento.mapping[key] : 0;
         if (value == 0) {
             throw new IllegalStateException("Unknown local variable " + var);
         }

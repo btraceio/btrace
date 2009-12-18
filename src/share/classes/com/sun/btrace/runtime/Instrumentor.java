@@ -47,7 +47,6 @@ import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.LocalVariablesSorter;
 import com.sun.btrace.util.TimeStampGenerator;
 import com.sun.btrace.util.TimeStampHelper;
-import java.util.Arrays;
 import static com.sun.btrace.runtime.Constants.*;
 
 /**
@@ -174,12 +173,13 @@ public class Instrumentor extends ClassAdapter {
         // used to create new local variables while keeping the class internals consistent
         // Call "int index = lvs.newVar(<type>)" to create a new local variable.
         // Then use the generated index to get hold of the variable
-        int[] lvsState = new int[]{-1, -1};
-        final LocalVariablesSorter[] lvs = new LocalVariablesSorter[]{new LocalVariablesSorter(access, desc, methodVisitor, lvsState)};
+        LocalVariablesSorter.Memento externalState = new LocalVariablesSorter.Memento();
+        final LocalVariablesSorter lvs = new LocalVariablesSorter(access, desc, methodVisitor, externalState);
+        methodVisitor = lvs;
 
         for (OnMethod om : applicableOnMethods) {
             if (om.getLocation().getValue() == Kind.LINE) {
-                methodVisitor = instrumentorFor(om, methodVisitor, lvs[0], access, name, desc);
+                methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
             } else {
                 String methodName = om.getMethod();
                 if (methodName.equals("")) {
@@ -187,16 +187,16 @@ public class Instrumentor extends ClassAdapter {
                 }
                 if (methodName.equals(name) &&
                     typeMatches(om.getType(), desc)) {
-                    methodVisitor = instrumentorFor(om, methodVisitor, lvs[0], access, name, desc);
+                    methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
                 } else if (methodName.charAt(0) == '/' &&
                            REGEX_SPECIFIER.matcher(methodName).matches()) {
                     methodName = methodName.substring(1, methodName.length() - 1);
                     if (name.matches(methodName) &&
                         typeMatches(om.getType(), desc)) {
-                        methodVisitor = instrumentorFor(om, methodVisitor, lvs[0], access, name, desc);
+                        methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
                     }
                 }
-                lvs[0] = new LocalVariablesSorter(access, desc, methodVisitor, lvsState);
+//                lvs[0] = new LocalVariablesSorter(access, desc, methodVisitor, externalState);
             }
         }
 
@@ -214,10 +214,10 @@ public class Instrumentor extends ClassAdapter {
                         if (REGEX_SPECIFIER.matcher(annoName).matches()) {
                             annoName = annoName.substring(1, annoName.length() - 1);
                             if (extAnnoName.matches(annoName)) {
-                                mv = instrumentorFor(om, mv, lvs[0], access, name, desc);
+                                mv = instrumentorFor(om, mv, lvs, access, name, desc);
                             }
                         } else if (annoName.equals(extAnnoName)) {
-                            mv = instrumentorFor(om, mv, lvs[0], access, name, desc);
+                            mv = instrumentorFor(om, mv, lvs, access, name, desc);
                         }
                     }                   
                 }               
@@ -240,7 +240,7 @@ public class Instrumentor extends ClassAdapter {
         switch (loc.getValue()) {            
             case ARRAY_GET:
                 // <editor-fold defaultstate="collapsed" desc="Array Get Instrumentor">
-                return new ArrayAccessInstrumentor(lvs, access, name, desc) {
+                return new ArrayAccessInstrumentor(mv, access, name, desc) {
                     int[] argsIndex = new int[]{-1, -1};
                     final private int INSTANCE_PTR = 0;
                     final private int INDEX_PTR = 1;
@@ -306,7 +306,7 @@ public class Instrumentor extends ClassAdapter {
 
             case ARRAY_SET:
                 // <editor-fold defaultstate="collapsed" desc="Array Set Instrumentor">
-                return new ArrayAccessInstrumentor(lvs, access, name, desc) {
+                return new ArrayAccessInstrumentor(mv, access, name, desc) {
                     int[] argsIndex = new int[]{-1, -1, -1};
                     final private int INSTANCE_PTR = 0, INDEX_PTR = 1, VALUE_PTR = 2;
 
@@ -369,7 +369,7 @@ public class Instrumentor extends ClassAdapter {
 
             case CALL:
                 // <editor-fold defaultstate="collapsed" desc="Method Call Instrumentor">
-                return new MethodCallInstrumentor(lvs, access, name, desc) {
+                return new MethodCallInstrumentor(mv, access, name, desc) {
 
                     private String localClassName = loc.getClazz();
                     private String localMethodName = loc.getMethod();
@@ -429,12 +429,12 @@ public class Instrumentor extends ClassAdapter {
                                     }
                                 }
                                 // will store the call args into local variables
-                                backupArgsIndexes = backupStack(lvs, isStaticCall);
+                                backupArgsIndexes = backupStack(lvs, Type.getArgumentTypes(desc), isStaticCall);
                                 if (where == Where.BEFORE) {
                                     injectBtrace(vr, method, Type.getReturnType(desc));
                                 }
                                 // put the call args back on stack so the method call can find them
-                                restoreStack(backupArgsIndexes, isStaticCall);
+                                restoreStack(backupArgsIndexes, Type.getArgumentTypes(desc), isStaticCall);
                             }
                         }
                     }
@@ -475,7 +475,7 @@ public class Instrumentor extends ClassAdapter {
 
             case CATCH:
                 // <editor-fold defaultstate="collapsed" desc="Catch Instrumentor">
-                return new CatchInstrumentor(lvs, access, name, desc) {
+                return new CatchInstrumentor(mv, access, name, desc) {
 
                     @Override
                     protected void onCatch(String type) {
@@ -502,7 +502,7 @@ public class Instrumentor extends ClassAdapter {
 
             case CHECKCAST:
                 // <editor-fold defaultstate="collapsed" desc="CheckCast Instrumentor">
-                return new TypeCheckInstrumentor(lvs, access, name, desc) {
+                return new TypeCheckInstrumentor(mv, access, name, desc) {
 
                     private void callAction(int opcode, String desc) {
                         if (opcode == Opcodes.CHECKCAST) {
@@ -546,7 +546,7 @@ public class Instrumentor extends ClassAdapter {
 
             case ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="Method Entry Instrumentor">
-                return new MethodEntryInstrumentor(lvs, access, name, desc) {
+                return new MethodEntryInstrumentor(mv, access, name, desc) {
                     private void injectBtrace(ValidationResult vr) {
                         ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 3];
                         int ptr = isStatic() ? 0 : 1;
@@ -593,7 +593,7 @@ public class Instrumentor extends ClassAdapter {
 
             case ERROR:
                 // <editor-fold defaultstate="collapsed" desc="Error Instrumentor">
-                return new ErrorReturnInstrumentor(lvs, access, name, desc) {
+                return new ErrorReturnInstrumentor(mv, access, name, desc) {
 
                     @Override
                     protected void onErrorReturn() {
@@ -619,7 +619,7 @@ public class Instrumentor extends ClassAdapter {
 
             case FIELD_GET:
                 // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">
-                return new FieldAccessInstrumentor(lvs, access, name, desc) {
+                return new FieldAccessInstrumentor(mv, access, name, desc) {
 
                     int calledInstanceIndex = -1;
                     private String targetClassName = loc.getClazz();
@@ -698,7 +698,7 @@ public class Instrumentor extends ClassAdapter {
 
             case FIELD_SET:
                 // <editor-fold defaultstate="collapsed" desc="Field Set Instrumentor">
-                return new FieldAccessInstrumentor(lvs, access, name, desc) {
+                return new FieldAccessInstrumentor(mv, access, name, desc) {
                     private String targetClassName = loc.getClazz();
                     private String targetFieldName = loc.getField();
                     private int calledInstanceIndex = -1;
@@ -780,7 +780,7 @@ public class Instrumentor extends ClassAdapter {
 
             case INSTANCEOF:
                 // <editor-fold defaultstate="collapsed" desc="InstanceOf Instrumentor">
-                return new TypeCheckInstrumentor(lvs, access, name, desc) {
+                return new TypeCheckInstrumentor(mv, access, name, desc) {
 
                     private void callAction(int opcode, String desc) {
                         if (opcode == Opcodes.INSTANCEOF) {
@@ -825,7 +825,7 @@ public class Instrumentor extends ClassAdapter {
 
             case LINE:
                 // <editor-fold defaultstate="collapsed" desc="Line Instrumentor">
-                return new LineNumberInstrumentor(lvs, access, name, desc) {
+                return new LineNumberInstrumentor(mv, access, name, desc) {
 
                     private int onLine = loc.getLine();
 
@@ -862,7 +862,7 @@ public class Instrumentor extends ClassAdapter {
 
             case NEW:
                 // <editor-fold defaultstate="collapsed" desc="New Instance Instrumentor">
-                return new ObjectAllocInstrumentor(lvs, access, name, desc) {
+                return new ObjectAllocInstrumentor(mv, access, name, desc) {
 
                     @Override
                     protected void beforeObjectNew(String desc) {
@@ -917,7 +917,7 @@ public class Instrumentor extends ClassAdapter {
 
             case NEWARRAY:
                 // <editor-fold defaultstate="collapsed" desc="New Array Instrumentor">
-                return new ArrayAllocInstrumentor(lvs, access, name, desc) {
+                return new ArrayAllocInstrumentor(mv, access, name, desc) {
 
                     @Override
                     protected void onBeforeArrayNew(String desc, int dims) {
@@ -983,15 +983,18 @@ public class Instrumentor extends ClassAdapter {
                 if (where != Where.BEFORE) {
                     return mv;
                 }
-                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(lvs, access, name, desc) {
+                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, access, name, desc) {
 
                     int retValIndex;
-
-                    private void callAction(int retOpCode) {
+                    ValidationResult vr;
+                    {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                         addExtraTypeInfo(om.getReturnParameter(), getReturnType());
-                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, Type.getArgumentTypes(getDescriptor()));
 
+                        vr = validateArguments(om, isStatic(), actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+                    }
+
+                    private void callAction(int retOpCode) {
                         if (!vr.isValid()) {
                             return;
 
@@ -1044,6 +1047,11 @@ public class Instrumentor extends ClassAdapter {
                         } else {
                             callAction(opcode);
                         }
+                    }
+
+                    @Override
+                    public boolean usesTimeStamp() {
+                        return vr.isValid() && om.getDurationParameter() != -1;
                     }
                 };
                 if (om.getDurationParameter() != -1) {
@@ -1147,7 +1155,7 @@ public class Instrumentor extends ClassAdapter {
 
             case THROW:
                 // <editor-fold defaultstate="collapsed" desc="Throw Instrumentor">
-                return new ThrowInstrumentor(lvs, access, name, desc) {
+                return new ThrowInstrumentor(mv, access, name, desc) {
 
                     @Override
                     protected void onThrow() {

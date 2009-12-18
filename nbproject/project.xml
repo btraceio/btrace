@@ -86,6 +86,32 @@
                         </arity>
                     </context>
                 </action>
+                <action name="run.single">
+                    <script>nbproject/ide-file-targets.xml</script>
+                    <target>run-selected-file-in-test</target>
+                    <context>
+                        <property>run.class</property>
+                        <folder>src/test</folder>
+                        <pattern>\.java$</pattern>
+                        <format>java-name</format>
+                        <arity>
+                            <one-file-only/>
+                        </arity>
+                    </context>
+                </action>
+                <action name="compile.single">
+                    <script>nbproject/ide-file-targets.xml</script>
+                    <target>compile-selected-files-in-test</target>
+                    <context>
+                        <property>files</property>
+                        <folder>src/test</folder>
+                        <pattern>\.java$</pattern>
+                        <format>relative-path</format>
+                        <arity>
+                            <separated-files>,</separated-files>
+                        </arity>
+                    </context>
+                </action>
             </ide-actions>
             <export>
                 <type>folder</type>
@@ -127,6 +153,11 @@
                         <script>${ant.script}</script>
                         <label>Create Distribution</label>
                         <target>dist</target>
+                    </action>
+                    <action>
+                        <script>${ant.script}</script>
+                        <label>Build Test Scripts</label>
+                        <target>build-traces</target>
                     </action>
                 </context-menu>
             </view>

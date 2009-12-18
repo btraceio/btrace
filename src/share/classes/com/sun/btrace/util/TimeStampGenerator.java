@@ -10,6 +10,7 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.runtime.MethodReturnInstrumentor;
 
 /**
  *
@@ -134,16 +135,18 @@ public class TimeStampGenerator extends MethodAdapter {
             capturing = true;
             capturingIndex++;
         }
-        if (capturingIndex == -1) {
-            if (!CONSTRUCTOR.equals(methodName) || !CONSTRUCTOR.equals(name)) {
-                check();
-            } else if (entryCalled) {
-                check();
-            }
-        }
+//        if (capturingIndex == -1) {
+//            if (!CONSTRUCTOR.equals(methodName) || !CONSTRUCTOR.equals(name)) {
+//                check();
+//            } else if (entryCalled) {
+//                check();
+//            }
+//        }
+        check();
         super.visitMethodInsn(opcode, owner, name, desc);
-        if (capturingIndex == -1) {
-            if (CONSTRUCTOR.equals(methodName) && CONSTRUCTOR.equals(name) & !entryCalled) {
+        if (!entryCalled && CONSTRUCTOR.equals(name)) {
+            entryCalled = true;
+            if (capturingIndex == -1) {
                 check();
             }
         }
@@ -193,18 +196,27 @@ public class TimeStampGenerator extends MethodAdapter {
     }
 
     private void check() {
-        entryCalled = true;
+        if (!entryCalled && CONSTRUCTOR.equals(methodName)) return; // wait for call to superconstructor
+
         capturing = false;
         generateTS(0);
     }
 
     private void generateTS(int index) {
+        if (mv instanceof MethodReturnInstrumentor) {
+            if (!((MethodReturnInstrumentor)mv).usesTimeStamp()) return; // the method return instrumentor is not using timestamp; no need to generate time stamp collectors
+        }
         if (ts_index[index] > -1) return;
         try {
             generatingIndex = true;
             TimeStampHelper.generateTimeStampAccess(this, className);
             ts_index[index] = lvs.newLocal(Type.LONG_TYPE);
             visitVarInsn(Type.LONG_TYPE.getOpcode(ISTORE), ts_index[index]);
+            if (index == 0) {
+                lvs.freeze(ts_index[0]);
+            } else {
+                lvs.unfreeze(ts_index[0]);
+            }
         } finally {
             generatingIndex = false;
         }

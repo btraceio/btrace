@@ -1,49 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project basedir=".." name="BTrace-IDE">
-    <property name="ant.script" value="make/build.xml"/>
+    <property name="ant.script" value="../make/build.xml"/>
+
     <!-- TODO: edit the following target according to your needs -->
-    <!-- (more info: http://www.netbeans.org/kb/articles/freeform-config.html#runsingle) -->
-    <target name="debug-selected-file-in-classes">
-        <fail unless="debug.class">Must set property 'debug.class'</fail>
-        <path id="cp">
-            <pathelement path="lib/btrace-asm-3.1.jar:/opt/java/default/lib/tools.jar"/>
-            <pathelement location="build/classes"/>
-        </path>
-        <nbjpdastart addressproperty="jpda.address" name="BTrace" transport="dt_socket">
-            <classpath refid="cp"/>
-        </nbjpdastart>
-        <java classname="${debug.class}" fork="true">
-            <classpath refid="cp"/>
-            <jvmarg value="-Xdebug"/>
-            <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${jpda.address}"/>
-        </java>
-    </target>
-    <!-- TODO: edit the following target according to your needs -->
-    <!-- (more info: http://www.netbeans.org/kb/articles/freeform-config.html#runsingle) -->
-    <target name="run-selected-file-in-classes">
-        <fail unless="run.class">Must set property 'run.class'</fail>
-        <java classname="${run.class}" failonerror="true" fork="true">
-            <classpath>
-                <pathelement path="lib/btrace-asm-3.1.jar:/opt/java/default/lib/tools.jar"/>
-                <pathelement location="build/classes"/>
-            </classpath>
-        </java>
-    </target>
-    <!-- TODO: edit the following target according to your needs -->
-    <!-- (more info: http://www.netbeans.org/kb/articles/freeform-config.html#runsingle) -->
-    <target name="debug-selected-file-in-test">
-        <fail unless="debug.class">Must set property 'debug.class'</fail>
-        <path id="cp">
-            <pathelement path="/opt/junit4/junit-4.6.jar:build/classes:test-lib/asm-3.1.jar:lib/btrace-asm-3.1.jar:test-lib/asm-util-3.1.jar"/>
-            <pathelement location="build/test"/>
-        </path>
-        <nbjpdastart addressproperty="jpda.address" name="BTrace" transport="dt_socket">
-            <classpath refid="cp"/>
-        </nbjpdastart>
-        <java classname="${debug.class}" fork="true">
-            <classpath refid="cp"/>
-            <jvmarg value="-Xdebug"/>
-            <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${jpda.address}"/>
-        </java>
+    <!-- (more info: http://www.netbeans.org/kb/articles/freeform-config.html#compilesingle) -->
+    <target name="compile-selected-files-in-test">
+        <fail unless="files">Must set property 'files'</fail>
+        <echo>${files}</echo>
+        <apply executable="bin/btracec"  verbose="true">
+            <fileset dir="src/test" includes="${files}"/>
+            <arg value="-cp build/test"/>
+            <arg value="-d build/test"/>
+        </apply>
     </target>
 </project>
