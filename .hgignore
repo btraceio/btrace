@@ -3,6 +3,7 @@
 (^|/)\.hgtags($|/)
 (^|/)build($|/)
 (^|/)release($|/)
+(^|/)javadoc($|/)
 (^|/)dist($|/)
 (^|/)private($|/)
 (^|/)output($|/)
