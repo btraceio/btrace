@@ -23,14 +23,15 @@
  * have any questions.
  */
 
-package traces.issues;
+package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.Duration;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -38,9 +39,9 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class BTRACE22 {
-@OnMethod(clazz="/.*\\.BTRACE22/", method="testDouble", location=@Location(value=Kind.RETURN))
-    public static void tracker(@Self Object x, @Duration long dur) {
-        println("args empty");
+public class ArgsDurationBoxed {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
+    public static void args(@Self Object self, @Return long retVal, @Duration Long dur, String a, long b, String[] c, int[] d) {
+        println("args");
     }
 }

@@ -23,24 +23,25 @@
  * have any questions.
  */
 
-package traces.issues;
+package com.sun.btrace.runtime;
 
-import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.Duration;
-import com.sun.btrace.annotations.Kind;
-import com.sun.btrace.annotations.Location;
-import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.Self;
-import static com.sun.btrace.BTraceUtils.*;
+import support.InstrumentorTestBase;
+import org.junit.Test;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
-@BTrace
-public class BTRACE22 {
-@OnMethod(clazz="/.*\\.BTRACE22/", method="testDouble", location=@Location(value=Kind.RETURN))
-    public static void tracker(@Self Object x, @Duration long dur) {
-        println("args empty");
+public class BTRACE28Test extends InstrumentorTestBase {
+    @Test
+    public void bytecodeValidation() throws Exception {
+        originalBC = loadTargetClass("issues/BTRACE28");
+        transform("issues/BTRACE28");
+        checkTransformation("LDC \"resources.issues.BTRACE28\"\nLDC \"<init>\"\n" +
+                            "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V\n" +
+                            "MAXSTACK = 2\n" +
+                            "LDC \"resources.issues.BTRACE28\"\n" +
+                            "LDC \"serveResource\"\n" +
+                            "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V");
     }
 }

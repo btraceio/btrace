@@ -306,6 +306,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void methodEntryArgsDurationBoxed() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsDurationBoxed");
+        checkTransformation("");
+    }
+
+    @Test
     public void methodEntryArgsDurationConstrucor() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDurationConstructor");

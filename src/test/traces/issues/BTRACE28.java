@@ -26,11 +26,11 @@
 package traces.issues;
 
 import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.Duration;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -38,9 +38,11 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class BTRACE22 {
-@OnMethod(clazz="/.*\\.BTRACE22/", method="testDouble", location=@Location(value=Kind.RETURN))
-    public static void tracker(@Self Object x, @Duration long dur) {
+public class BTRACE28 {
+    @OnMethod(clazz="/.*\\.BTRACE28/", method="/.*/", location=@Location(value=Kind.RETURN))
+    public static void tracker(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
+        println(pcn);
+        println(pmn);
         println("args empty");
     }
 }

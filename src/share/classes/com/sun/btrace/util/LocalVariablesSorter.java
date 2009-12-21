@@ -139,7 +139,6 @@ public class LocalVariablesSorter extends MethodAdapter {
             default:
                 type = Type.VOID_TYPE;
         }
-        int newIndex = remap(var, type);
         mv.visitVarInsn(opcode, remap(var, type));
     }
 
@@ -305,8 +304,10 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     public int remap(final int var, final Type type) {
-        // don't remap arguments
-        if (var < getNextLocal() && !frozen.contains(var)) {
+        if (!frozen.contains(var)) {
+            if (var >= getNextLocal()) {
+                memento.nextLocal = var + type.getSize();
+            }
             return var;
         }
         int key = 2 * var + type.getSize() - 1;
@@ -337,9 +338,13 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     private int remap(final int var, final int size) {
-       if ((var < getNextLocal() && !frozen.contains(var)) || !memento.changed) {
+        if (!frozen.contains(var) || !memento.changed) {
+            if (var >= getNextLocal()) {
+                memento.nextLocal = var + size;
+            }
             return var;
         }
+
         int key = 2 * var + size - 1;
         int value = key < memento.mapping.length ? memento.mapping[key] : 0;
         if (value == 0) {
