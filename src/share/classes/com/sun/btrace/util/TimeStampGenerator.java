@@ -211,12 +211,11 @@ public class TimeStampGenerator extends MethodAdapter {
             generatingIndex = true;
             TimeStampHelper.generateTimeStampAccess(this, className);
             ts_index[index] = lvs.newLocal(Type.LONG_TYPE);
-            visitVarInsn(Type.LONG_TYPE.getOpcode(ISTORE), ts_index[index]);
-            if (index == 0) {
-                lvs.freeze(ts_index[0]);
-            } else {
-                lvs.unfreeze(ts_index[0]);
-            }
+//            if (index == 0) {
+//                lvs.freeze(ts_index[0]);
+//            } else {
+//                lvs.unfreeze(ts_index[0]);
+//            }
         } finally {
             generatingIndex = false;
         }

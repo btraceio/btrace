@@ -328,15 +328,12 @@ public class MethodInstrumentor extends MethodAdapter {
         int upper = methodArgTypes.length - 1;
 
         for (int i = 0; i < methodArgTypes.length; i++) {
-            System.err.println("!!! Argument type[" + (upper - i) + "]: " + methodArgTypes[upper - i].toString());
             int index = lvs.newLocal(methodArgTypes[upper - i]);
-            storeLocal(methodArgTypes[upper - i], index);
             backupArgsIndexes[upper -  i + 1] = index;
         }
 
         if (!isStatic) {
-            int index = lvs.newLocal(TypeUtils.objectType);
-            storeLocal(TypeUtils.objectType, index); // store *callee*
+            int index = lvs.newLocal(TypeUtils.objectType); // store *callee*
             backupArgsIndexes[0] = index;
         }
         return backupArgsIndexes;

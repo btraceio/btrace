@@ -39,9 +39,8 @@ public class BTRACE28Test extends InstrumentorTestBase {
         transform("issues/BTRACE28");
         checkTransformation("LDC \"resources.issues.BTRACE28\"\nLDC \"<init>\"\n" +
                             "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V\n" +
-                            "MAXSTACK = 2\n" +
-                            "LDC \"resources.issues.BTRACE28\"\n" +
-                            "LDC \"serveResource\"\n" +
+                            "MAXSTACK = 2\nASTORE 5\nASTORE 6\nASTORE 7\nALOAD 7\nASTORE 8\nALOAD 8\n" +
+                            "LDC \"resources.issues.BTRACE28\"\nLDC \"serveResource\"\n" +
                             "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V");
     }
 }

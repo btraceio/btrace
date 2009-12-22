@@ -41,7 +41,6 @@ public class BTRACE22Test extends InstrumentorTestBase {
                             "DSTORE 3\nDLOAD 3\nDLOAD 3\n" +
                             "INVOKESTATIC resources/issues/BTRACE22.$btrace$time$stamp ()J\nLSTORE 5\n" +
                             "ALOAD 0\nLLOAD 5\nLLOAD 1\nLSUB\n" +
-                            "INVOKESTATIC resources/issues/BTRACE22.$btrace$traces$issues$BTRACE22$tracker (Ljava/lang/Object;J)V\n" +
-                            "MAXSTACK");
+                            "INVOKESTATIC resources/issues/BTRACE22.$btrace$traces$issues$BTRACE22$tracker (Ljava/lang/Object;J)V");
     }
 }

@@ -34,7 +34,9 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -81,7 +83,8 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     private Memento memento = new Memento();
-    private Set<Integer> frozen = new HashSet<Integer>();
+    private boolean frozen = false;
+    private Set<Integer> newLocalIndices = new HashSet<Integer>();
 
     /**
      * Creates a new {@link LocalVariablesSorter}.
@@ -263,15 +266,18 @@ public class LocalVariablesSorter extends MethodAdapter {
         memento.nextLocal += type.getSize();
         setLocalType(local, type);
         setFrameLocal(local, t);
+        // store the local variable
+        mv.visitVarInsn(type.getOpcode(Opcodes.ISTORE), local);
+        newLocalIndices.add(local);
         return local;
     }
 
-    public void freeze(int index) {
-        frozen.add(index);
+    public void freeze() {
+        frozen = true;
     }
 
-    public void unfreeze(int index) {
-        frozen.remove(index);
+    public void unfreeze() {
+        frozen = false;
     }
 
     public int getFirstLocal() {
@@ -304,12 +310,10 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     public int remap(final int var, final Type type) {
-        if (!frozen.contains(var)) {
-            if (var >= getNextLocal()) {
-                memento.nextLocal = var + type.getSize();
-            }
-            return var;
-        }
+        if (frozen) return var;
+
+        if (var < getFirstLocal()) return var;
+        
         int key = 2 * var + type.getSize() - 1;
         int size = memento.mapping.length;
         if (key >= size) {
@@ -338,12 +342,8 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     private int remap(final int var, final int size) {
-        if (!frozen.contains(var) || !memento.changed) {
-            if (var >= getNextLocal()) {
-                memento.nextLocal = var + size;
-            }
-            return var;
-        }
+        if (frozen) return var;
+        if (var < getFirstLocal()) return var;
 
         int key = 2 * var + size - 1;
         int value = key < memento.mapping.length ? memento.mapping[key] : 0;

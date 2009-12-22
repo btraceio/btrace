@@ -83,10 +83,10 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryCatch() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Catch");
-
+        
         checkTransformation("DUP\nALOAD 0\nALOAD 1\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Catch$args (Ljava/lang/Object;Ljava/io/IOException;)V\n" +
-                            "ASTORE 1");
+                            "ASTORE 2");
     }
 
     @Test
@@ -214,7 +214,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArraySetBefore");
 
-        checkTransformation("ISTORE 6\nDUP2\nISTORE 5\nASTORE 4\nILOAD 6\nALOAD 0\nALOAD 4\nILOAD 5\nILOAD 6\n" +
+        checkTransformation("ISTORE 4\nDUP2\nISTORE 5\nASTORE 6\nILOAD 4\nALOAD 0\nALOAD 6\nILOAD 5\nILOAD 4\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetBefore$args (Ljava/lang/Object;[III)V");
     }
 
@@ -223,7 +223,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArraySetAfter");
 
-        checkTransformation("ISTORE 6\nDUP2\nISTORE 5\nASTORE 4\nILOAD 6\nALOAD 0\nALOAD 4\nILOAD 5\nILOAD 6\n" +
+        checkTransformation("ISTORE 4\nDUP2\nISTORE 5\nASTORE 6\nILOAD 4\nALOAD 0\nALOAD 6\nILOAD 5\nILOAD 4\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetAfter$args (Ljava/lang/Object;[III)V");
     }
 
