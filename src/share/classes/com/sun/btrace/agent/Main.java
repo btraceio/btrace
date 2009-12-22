@@ -64,6 +64,7 @@ public final class Main {
     private static volatile boolean dumpClasses;
     private static volatile String dumpDir;
     private static volatile String probeDescPath;
+    private static volatile String scriptOutputFile;
 
     private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor();
 
@@ -182,6 +183,10 @@ public final class Main {
         p = argMap.get("debug");
         debugMode = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("debugMode is " + debugMode);
+        scriptOutputFile = argMap.get("scriptOutputFile");
+        if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
+            if (isDebug()) debugPrint("scriptOutputFile is " + scriptOutputFile);
+        }
 	p = argMap.get("unsafe");
         unsafeMode = "true".equals(p);
         if (isDebug()) debugPrint("unsafeMode is " + unsafeMode);
@@ -271,7 +276,11 @@ public final class Main {
             if (traceToStdOut) {
                 traceWriter = new PrintWriter(System.out);
             } else {
-                traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(filename + ".btrace"))));
+                if (scriptOutputFile == null || scriptOutputFile.length() == 0) {
+                    scriptOutputFile = filename + ".btrace";
+                    if (isDebug()) debugPrint("scriptOutputFile not specified. defaulting to " + scriptOutputFile);
+                }
+                traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(scriptOutputFile))));
             }
 
             Client client = new FileClient(inst, traceScript, traceWriter);
@@ -301,6 +310,9 @@ public final class Main {
         try {
             if (isDebug()) debugPrint("starting server at " + port);
             System.setProperty("btrace.port", String.valueOf(port));
+            if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
+                System.setProperty("btrace.output", scriptOutputFile);
+            }
             ss = new ServerSocket(port);
         } catch (IOException ioexp) {
             ioexp.printStackTrace();
