@@ -355,6 +355,7 @@ public final class Main {
                 try {
                     if (isDebug()) debugPrint("new Client created " + client);
                     if (client.shouldAddTransformer()) {
+                        inst.addTransformer(client, true);
                         Class[] classes = inst.getAllLoadedClasses();
                         ArrayList<Class> list = new ArrayList<Class>();
                         if (isDebug()) debugPrint("filtering loaded classes");
@@ -368,7 +369,6 @@ public final class Main {
                         list.trimToSize();
                         int size = list.size();
                         if (isDebug()) debugPrint("added as ClassFileTransformer");
-                        inst.addTransformer(client, true);
                         if (size > 0) {
                             classes = new Class[size];
                             list.toArray(classes);
