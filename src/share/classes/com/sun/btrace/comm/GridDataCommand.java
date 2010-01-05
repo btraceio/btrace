@@ -37,6 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.sun.btrace.aggregation.HistogramData;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A data command that holds tabular data.
@@ -46,19 +48,37 @@ import com.sun.btrace.aggregation.HistogramData;
  * @author Christian Glencross
  */
 public class GridDataCommand extends DataCommand {
-
+    private static final Pattern INDEX_PATTERN = Pattern.compile("%(\\d)+\\$");
+    
     private List<Object[]> data;
 
     private String format;
 
+    /**
+     * Used when deserializing a {@linkplain GridDataCommand} instance.<br/>
+     * The instance is then initialized by calling the {@linkplain GridDataCommand#read(java.io.ObjectInput) } method
+     */
     public GridDataCommand() {
         this(null, null);
     }
 
+    /**
+     * Creates a new instance of {@linkplain GridDataCommand} with implicit format
+     * @param name The aggregation name
+     * @param data The aggregation data
+     */
     public GridDataCommand(String name, List<Object[]> data) {
         this(name, data, null);
     }
 
+    /**
+     * Creates a new instance of {@linkplain GridDataCommand} with explicit format
+     * @param name The aggregation name
+     * @param data The aggregation data
+     * @param format The format to use. It mimics {@linkplain String#format(java.lang.String, java.lang.Object[]) } behaviour
+     *               with the addition of the ability to address the key title as a 0-indexed item
+     * @see String#format(java.lang.String, java.lang.Object[])
+     */
     public GridDataCommand(String name, List<Object[]> data, String format) {
         super(GRID_DATA, name);
         this.data = data;
@@ -70,9 +90,6 @@ public class GridDataCommand extends DataCommand {
     }
 
     public void print(PrintWriter out) {
-        if (name != null && !name.equals("")) {
-            out.println(name);
-        }
         if (data != null) {
             for (Object[] dataRow : data) {
 
@@ -98,16 +115,43 @@ public class GridDataCommand extends DataCommand {
                 }
 
                 // Format the text
-                String format = this.format;
-                if (format == null) {
+                String usedFormat = this.format;
+                if (usedFormat == null) {
+                    if (name != null && !name.equals("")) {
+                        out.println(name);
+                    }
                     StringBuilder buffer = new StringBuilder();
                     for (int i = 0; i < printRow.length; i++) {
                         buffer.append("  ");
                         buffer.append(getFormat(printRow[i]));
                     }
-                    format = buffer.toString();
+                    usedFormat = buffer.toString();
+                } else {
+                    // remap the indices in format
+                    Matcher m = INDEX_PATTERN.matcher(usedFormat);
+                    // find the highest used index
+                    int maxIndex = -1;
+                    int minIndex = Integer.MAX_VALUE;
+
+                    while (m.find()) {
+                        int index = Integer.valueOf(m.group(1)).intValue();
+                        if (index > maxIndex) {
+                            maxIndex = index;
+                        }
+                        if (index < minIndex) {
+                            minIndex = index;
+                        }
+                    }
+
+                    // store the title in the array to print
+                    Object[] titledRow = new Object[printRow.length + 1];
+                    System.arraycopy(printRow, 0, titledRow, 0, printRow.length);
+                    titledRow[printRow.length] = name;
+
+                    usedFormat = minIndex > 0 ? getFormat(titledRow[printRow.length]).replace("%", "%" + (maxIndex + 1) + "$") + " " + usedFormat : usedFormat.replace("%0$", "%" + titledRow.length + "$");
+                    printRow = titledRow;
                 }
-                String line = String.format(format, printRow);
+                String line = String.format(usedFormat, printRow);
 
                 out.println(line);
             }
@@ -124,7 +168,7 @@ public class GridDataCommand extends DataCommand {
         typeFormats.put(Double.class, "%15f");
         typeFormats.put(Float.class, "%15f");
         typeFormats.put(BigDecimal.class, "%15f");
-        typeFormats.put(String.class, "%-50s");
+        typeFormats.put(String.class, "%50s");
     }
 
     /**
@@ -135,11 +179,11 @@ public class GridDataCommand extends DataCommand {
         if (object == null) {
             return "%15s";
         }
-        String format = typeFormats.get(object.getClass());
-        if (format == null) {
+        String usedFormat = typeFormats.get(object.getClass());
+        if (usedFormat == null) {
             return "%15s";
         }
-        return format;
+        return usedFormat;
     }
 
     /**
@@ -159,6 +203,7 @@ public class GridDataCommand extends DataCommand {
     protected void write(ObjectOutput out) throws IOException {
         out.writeUTF(name != null ? name : "");
         if (data != null) {
+            out.writeUTF(format != null ? format : "");
             out.writeInt(data.size());
             for (Object[] row : data) {
                 out.writeInt(row.length);
@@ -173,6 +218,9 @@ public class GridDataCommand extends DataCommand {
 
     protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
         name = in.readUTF();
+        format = in.readUTF();
+        if (format.length() == 0) format = null;
+        
         int rowCount = in.readInt();
         data = new ArrayList<Object[]>(rowCount);
         for (int i = 0; i < rowCount; i++) {

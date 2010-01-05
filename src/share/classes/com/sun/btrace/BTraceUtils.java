@@ -3332,6 +3332,18 @@ public final class BTraceUtils {
     public static void printAggregation(String name, Aggregation aggregation) {
         BTraceRuntime.printAggregation(name, aggregation);
     }
+
+    /**
+     * Prints aggregation using the provided format
+     * @param name The name of the aggregation to be used in the textual output
+     * @param aggregation The aggregation to print
+     * @param format The format to use. It mimics {@linkplain String#format(java.lang.String, java.lang.Object[]) } behaviour
+     *               with the addition of the ability to address the key title as a 0-indexed item
+     * @see String#format(java.lang.String, java.lang.Object[])
+     */
+    public static void printAggregation(String name, Aggregation aggregation, String format) {
+        BTraceRuntime.printAggregation(name, aggregation, format);
+    }
     
     // Internals only below this point
     private static void checkStatic(Field field) {
