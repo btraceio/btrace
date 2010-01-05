@@ -3178,16 +3178,28 @@ public final class BTraceUtils {
     }
 
     /**
-     * Writes an XML document to persist the tree of the all 
-     * transitively reachable objects from given "root" object.
+     * Writes an XML document to persist the tree of the all the
+     * transitively reachable objects from the given "root" object.
      * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
-     * directory is created. Under that directory, a file of given
+     * directory is created. Under that directory, a file of the given
      * fileName is created.
      */
     public static void writeXML(Object obj, String fileName) {
         BTraceRuntime.writeXML(obj, fileName);
     }
 
+    /**
+     * Writes a .dot document to persist the tree of the all the
+     * transitively reachable objects from the given "root" object.
+     * .dot documents can be viewed by Graphviz application (www.graphviz.org)
+     * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+     * directory is created. Under that directory, a file of the given
+     * fileName is created.
+     */
+    public static void writeDOT(Object obj, String fileName) {
+        BTraceRuntime.writeDOT(obj, fileName);
+    }
+    
     // speculative buffer management
     /**
      * Returns an identifier for a new speculative buffer.
