@@ -1453,6 +1453,18 @@ public final class BTraceRuntime {
         getCurrent().send(new GridDataCommand(name, aggregation.getData()));
     }
 
+    /**
+     * Prints aggregation using the provided format
+     * @param name The name of the aggregation to be used in the textual output
+     * @param aggregation The aggregation to print
+     * @param format The format to use. It mimics {@linkplain String#format(java.lang.String, java.lang.Object[]) } behaviour
+     *               with the addition of the ability to address the key title as a 0-indexed item
+     * @see String#format(java.lang.String, java.lang.Object[])
+     */
+    static void printAggregation(String name, Aggregation aggregation, String format) {
+        getCurrent().send(new GridDataCommand(name, aggregation.getData(), format));
+    }
+
     // private methods below this point
     // raise DTrace USDT probe
     private static native int dtraceProbe0(String s1, String s2, int i1, int i2);
