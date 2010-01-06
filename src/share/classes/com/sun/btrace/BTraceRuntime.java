@@ -1356,6 +1356,14 @@ public final class BTraceRuntime {
         }
     }
 
+    static void writeDOT(Object obj, String fileName) {
+        DOTWriter writer = new DOTWriter(resolveFileName(fileName));
+        writer.displayStatics(true);
+        writer.expandCollections(true);
+        writer.addNode(null, obj);
+        writer.close();
+    }
+
     private static String INDENT = "    ";
     static void deadlocks(boolean stackTrace) {
         initThreadMBean();
@@ -1915,7 +1923,9 @@ public final class BTraceRuntime {
         buf.append(File.separatorChar);
         BTraceRuntime runtime = getCurrent();
         buf.append("btrace");
-        buf.append(runtime.args[0]);
+        if (runtime.args != null && runtime.args.length > 0) {
+            buf.append(runtime.args[0]);
+        }
         buf.append(File.separatorChar);
         buf.append(runtime.className);
         new File(buf.toString()).mkdirs();
