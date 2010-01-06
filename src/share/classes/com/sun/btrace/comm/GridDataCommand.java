@@ -90,7 +90,6 @@ public class GridDataCommand extends DataCommand {
     }
 
     public void print(PrintWriter out) {
-        System.err.println("### printing data grid command " + (data != null));
         if (data != null) {
             if (name != null && !name.equals("")) {
                 out.println(name);
@@ -120,7 +119,6 @@ public class GridDataCommand extends DataCommand {
 
                 // Format the text
                 String usedFormat = this.format;
-                System.err.println("### received format: " + usedFormat);
                 if (usedFormat == null || usedFormat.length() == 0) {
                     StringBuilder buffer = new StringBuilder();
                     for (int i = 0; i < printRow.length; i++) {
@@ -129,31 +127,6 @@ public class GridDataCommand extends DataCommand {
                     }
                     usedFormat = buffer.toString();
                 }
-//                else {
-//                    // remap the indices in format
-//                    Matcher m = INDEX_PATTERN.matcher(usedFormat);
-//                    // find the highest used index
-//                    int maxIndex = -1;
-//                    int minIndex = Integer.MAX_VALUE;
-//
-//                    while (m.find()) {
-//                        int index = Integer.valueOf(m.group(1)).intValue();
-//                        if (index > maxIndex) {
-//                            maxIndex = index;
-//                        }
-//                        if (index < minIndex) {
-//                            minIndex = index;
-//                        }
-//                    }
-//
-//                    // store the title in the array to print
-//                    Object[] titledRow = new Object[printRow.length + 1];
-//                    System.arraycopy(printRow, 0, titledRow, 0, printRow.length);
-//                    titledRow[printRow.length] = name;
-//
-//                    usedFormat = minIndex > 0 ? getFormat(titledRow[printRow.length]).replace("%", "%" + (maxIndex + 1) + "$") + " " + usedFormat : usedFormat.replace("%0$", "%" + titledRow.length + "$");
-//                    printRow = titledRow;
-//                }
                 String line = String.format(usedFormat, printRow);
 
                 out.println(line);
