@@ -40,7 +40,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class Line {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="field",
-              location=@Location(value=Kind.LINE, line=64))
+              location=@Location(value=Kind.LINE, line=84))
     public static void args(@Self Object self, @ProbeMethodName String pmn, int line) {
         println("args");
     }

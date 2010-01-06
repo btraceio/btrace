@@ -112,7 +112,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Line");
 
-        checkTransformation("LDC \"field\"\nLDC 64\n" +
+        checkTransformation("LDC \"field\"\nLDC 84\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
                             "ALOAD 0");
     }
@@ -150,7 +150,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/SyncExit");
 
-        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nPOP\nL6\nLINENUMBER 90 L6\n" +
+        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nPOP\nL6\nLINENUMBER 110 L6\n" +
                             "DUP\nDUP\nASTORE 2\nALOAD 0\nLDC \"resources/OnMethodTest\"\nALOAD 2\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n");
     }
