@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1359,6 +1359,7 @@ public final class BTraceUtils {
      * <p>Generates a string timestamp (current date&time)
      * @param format The format to be used - see {@linkplain SimpleDateFormat}
      * @return Returns a string representing current date&time
+     * @since 1.1
      */
     public static String timestamp(String format) {
         return new SimpleDateFormat(format).format(Calendar.getInstance().getTime());
@@ -1367,6 +1368,7 @@ public final class BTraceUtils {
     /**
      * <p>Generates a string timestamp (current date&time) in the default system format
      * @return Returns a string representing current date&time
+     * @since 1.1
      */
     public static String timestamp() {
         return new SimpleDateFormat().format(Calendar.getInstance().getTime());
@@ -3195,6 +3197,7 @@ public final class BTraceUtils {
      * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
      * directory is created. Under that directory, a file of the given
      * fileName is created.
+     * @since 1.1
      */
     public static void writeDOT(Object obj, String fileName) {
         BTraceRuntime.writeDOT(obj, fileName);
@@ -3352,6 +3355,7 @@ public final class BTraceUtils {
      * @param format The format to use. It mimics {@linkplain String#format(java.lang.String, java.lang.Object[]) } behaviour
      *               with the addition of the ability to address the key title as a 0-indexed item
      * @see String#format(java.lang.String, java.lang.Object[])
+     * @since 1.1
      */
     public static void printAggregation(String name, Aggregation aggregation, String format) {
         BTraceRuntime.printAggregation(name, aggregation, format);

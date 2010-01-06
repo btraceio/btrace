@@ -34,9 +34,7 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -48,7 +46,9 @@ import java.util.Set;
  * requires a reference back to this {@link LocalVariablesSorter}).
  *
  * !NOTE! This class is taken from the ASM distribution for the sakes of saving
- * some bandwidth by not including the whole asm-common.jar in BTrace
+ * some bandwidth by not including the whole asm-common.jar in BTrace. However,
+ * it is heavily modified to fit the BTrace specific needs so don't use this as
+ * the replacement of the same named class in ASM.
  * @author Chris Nokleberg
  * @author Eugene Kuleshov
  * @author Eric Bruneton
