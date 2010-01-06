@@ -38,7 +38,6 @@ import static com.sun.btrace.BTraceUtils.println;
 import static com.sun.btrace.BTraceUtils.put;
 import static com.sun.btrace.BTraceUtils.str;
 import static com.sun.btrace.BTraceUtils.strcmp;
-import static com.sun.btrace.BTraceUtils.timeNanos;
 
 import java.sql.Statement;
 import java.util.Map;
@@ -49,6 +48,7 @@ import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Duration;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnEvent;
@@ -83,9 +83,6 @@ public class JdbcQueries {
 
     @TLS
     private static String preparingStatement;
-
-    @TLS
-    private static long timeStampNanos;
 
     @TLS
     private static String executingStatement;
@@ -133,7 +130,6 @@ public class JdbcQueries {
 
     @OnMethod(clazz = "+java.sql.Statement", method = "/execute.*/")
     public static void onExecute(AnyType[] args) {
-        timeStampNanos = timeNanos();
         if (args.length == 1) {
             // No SQL argument; lookup the SQL from the prepared statement
             Statement currentStatement = (Statement) args[0]; // this
@@ -145,7 +141,7 @@ public class JdbcQueries {
     }
 
     @OnMethod(clazz = "+java.sql.Statement", method = "/execute.*/", location = @Location(Kind.RETURN))
-    public static void onExecuteReturn() {
+    public static void onExecuteReturn(@Duration long durationL) {
 
         if (executingStatement == null) {
             return;
@@ -154,7 +150,7 @@ public class JdbcQueries {
         print("X"); // Debug Executed
 
         AggregationKey key = newAggregationKey(executingStatement);
-        int duration = (int) (timeNanos() - timeStampNanos) / 1000;
+        int duration = (int) durationL / 1000;
 
         addToAggregation(histogram, key, duration);
         addToAggregation(average, key, duration);
