@@ -39,17 +39,13 @@ import com.sun.btrace.annotations.*;
  * implementor class name.
  */
 @BTrace public class WebServiceTracker {
-   // store webservice entry time in this thread local
-   @TLS private static long startTime;
-
    @OnMethod(
      clazz="@javax.jws.WebService", 
      method="@javax.jws.WebMethod"
    )   
-   public static void onWebserviceEntry() {
+   public static void onWebserviceEntry(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
        print("entering webservice ");
-       println(strcat(strcat(name(probeClass()), "."), probeMethod()));
-       startTime = timeMillis();
+       println(strcat(strcat(pcn, "."), pmn));
    }
 
    @OnMethod(
@@ -57,8 +53,10 @@ import com.sun.btrace.annotations.*;
      method="@javax.jws.WebMethod",
      location=@Location(Kind.RETURN)
    )   
-   public static void onWebserviceReturn() {
-       println(strcat("Time taken (msec) ", str(timeMillis() - startTime)));
+   public static void onWebserviceReturn(@ProbeClassName String pcn , @ProbeMethodName String pmn, @Duration long d) {
+       print("leaving web service ");
+       println(strcat(strcat(pcn, "."), pmn));
+       println(strcat("Time taken (msec) ", str(d / 1000)));
        println("==========================");
    }
 

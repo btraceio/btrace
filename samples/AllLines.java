@@ -41,9 +41,9 @@ public class AllLines {
         clazz="java.lang.Thread",
         location=@Location(value=Kind.LINE, line=-1)
     )
-    public static void online(int line) {
-        print(strcat(name(probeClass()), "."));
-        print(strcat(probeMethod(), ":"));
+    public static void online(@ProbeClassName String pcn, @ProbeMethodName String pmn, int line) {
+        print(strcat(pcn, "."));
+        print(strcat(pmn, ":"));
         println(line);
     } 
 }

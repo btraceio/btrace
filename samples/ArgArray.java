@@ -43,9 +43,9 @@ import static com.sun.btrace.BTraceUtils.*;
         clazz="/java\\.io\\..*/",
         method="/read.*/"
     )
-    public static void anyRead(AnyType[] args) {
-        println(probeClass());
-        println(probeMethod());
+    public static void anyRead(@ProbeClassName String pcn, @ProbeMethodName String pmn, AnyType[] args) {
+        println(pcn);
+        println(pmn);
         printArray(args);
     }
 }

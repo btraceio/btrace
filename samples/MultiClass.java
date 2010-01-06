@@ -41,7 +41,7 @@ import static com.sun.btrace.BTraceUtils.*;
         clazz="/java\\.io\\..*Input.*/",
         method="/read.*/"
     )
-    public static void onread() {
-        println(strcat("read on ", name(probeClass())));
+    public static void onread(@ProbeClassName String pcn) {
+        println(strcat("read on ", pcn));
     }
 }

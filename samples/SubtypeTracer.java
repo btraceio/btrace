@@ -38,10 +38,10 @@ public class SubtypeTracer {
         clazz="+java.lang.Runnable",
         method="run"
     )
-    public static void onRun() {
+    public static void onRun(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
         // on every Runnable.run() method entry print class.method
-        print(probeClass());
+        print(pcn);
         print('.');
-        println(probeMethod());
+        println(pmn);
     }
 }
