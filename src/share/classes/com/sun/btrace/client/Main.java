@@ -137,7 +137,6 @@ public final class Main {
         if (args.length < (count + 1)) {
             usage();
         }
-        checkPortAvailable(port);
 
         String pid = args[count];
         String fileName = args[count + 1];
@@ -166,23 +165,6 @@ public final class Main {
                 createCommandListener(client));
         } catch (IOException exp) {
             errorExit(exp.getMessage(), 1);
-        }
-    }
-
-    private static void checkPortAvailable(int port) {
-        Socket clSocket = null;
-        try {
-            clSocket = new Socket("127.0.0.1", port);
-        } catch (UnknownHostException ex) {
-        } catch (IOException ex) {
-            clSocket = null;
-        }
-        if (clSocket != null) {
-            try {
-                clSocket.close();
-            } catch (IOException e) {
-            }
-            errorExit("port " + port + " not available. exiting", -1);
         }
     }
 
