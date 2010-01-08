@@ -248,6 +248,20 @@ public class Client {
             }
             vm = VirtualMachine.attach(pid);
             if (debug) {
+                debugPrint("checking port availability: " + port);
+            }
+            int serverPort = Integer.parseInt(vm.getSystemProperties().getProperty("btrace.port", "-1"));
+            if (serverPort != -1) {
+                if (serverPort != port) {
+                    throw new IOException("Can not attach to PID " + pid + " on port " + port + ". There is already a BTrace server active on port " + serverPort + "!");
+                }
+            } else {
+                if (!isPortAvailable(port)) {
+                    throw new IOException("Port " + port + " unavailable.");
+                }
+            }
+
+            if (debug) {
                 debugPrint("attached to " + pid);
             }
 
@@ -530,5 +544,23 @@ public class Client {
             }
         }, ClassReader.SKIP_CODE);
         return result[0];
+    }
+
+    private static boolean isPortAvailable(int port) {
+        Socket clSocket = null;
+        try {
+            clSocket = new Socket("127.0.0.1", port);
+        } catch (UnknownHostException ex) {
+        } catch (IOException ex) {
+            clSocket = null;
+        }
+        if (clSocket != null) {
+            try {
+                clSocket.close();
+            } catch (IOException e) {
+            }
+            return false;
+        }
+        return true;
     }
 }
