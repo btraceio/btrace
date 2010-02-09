@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Library for constructing a dot file format file containing the state of select
@@ -282,9 +283,15 @@ public class DOTWriter {
     
     // Include List of classes.
     private List<Class> includeClasses = new ArrayList<Class>();
+
+    // Include classes which matching name pattern
+    private Pattern includeClassNames;
     
     // Exclude List of classes.
     private List<Class> excludeClasses = new ArrayList<Class>();
+
+    // Excluse classes with matching name pattern
+    private Pattern excludeClassNames;
     
     // True if collections should be expanded.
     private boolean expandCollections = false;
@@ -472,6 +479,46 @@ public class DOTWriter {
         nodeProperties.addProperties(NODEDEFAULTS);
         edgeProperties.addProperties(EDGEDEFAULTS);
     }
+
+    public static final String DOTWRITER_PREFIX = "dotwriter.";
+    public void customize(java.util.Properties props) {
+        String prop = props.getProperty(DOTWRITER_PREFIX + "objectlimit");
+        if (prop != null) {
+            this.objectLimit(Integer.parseInt(prop));
+        }
+        prop = props.getProperty(DOTWRITER_PREFIX + "fieldLimit");
+        if (prop != null) {
+            this.fieldLimit(Integer.parseInt(prop));
+        }
+        prop = props.getProperty(DOTWRITER_PREFIX + "stringLimit");
+        if (prop != null) {
+            this.stringLimit(Integer.parseInt(prop));
+        }
+        prop = props.getProperty(DOTWRITER_PREFIX + "arrayLimit");
+        if (prop != null) {
+            this.arrayLimit(Integer.parseInt(prop));
+        }
+        prop = props.getProperty(DOTWRITER_PREFIX + "expandCollections");
+        if (prop != null) {
+            this.expandCollections(Boolean.parseBoolean(prop));
+        }
+        prop = props.getProperty(DOTWRITER_PREFIX + "diaplayLinks");
+        if (prop != null) {
+            this.displayLinks(Boolean.parseBoolean(prop));
+        }
+        prop = props.getProperty(DOTWRITER_PREFIX + "displayStatics");
+        if (prop != null) {
+            this.displayStatics(Boolean.parseBoolean(prop));
+        }
+        prop = props.getProperty(DOTWRITER_PREFIX + "excludeClassNames");
+        if (prop != null) {
+            this.excludeClassNames(Pattern.compile(prop));
+        }
+        prop = props.getProperty(DOTWRITER_PREFIX + "includeClassNames");
+        if (prop != null) {
+            this.includeClassNames(Pattern.compile(prop));
+        }
+    }
     
     // All-in-one graph objects.  Specify which objects you want graphed.
     // If an object is a String then it is used as the default properties
@@ -629,12 +676,22 @@ public class DOTWriter {
         }
         filtering = true;
     }
+
+    public void includeClassNames(Pattern pattern) {
+        includeClassNames = pattern;
+        filtering = true;
+    }
     
     // Adds classes to the exclude list.
     public void excludeClasses(Class... clazzes) {
         for (Class clazz : clazzes) {
             excludeClasses.add(clazz);
         }
+        filtering = true;
+    }
+
+    public void excludeClassNames(Pattern pattern) {
+        excludeClassNames = pattern;
         filtering = true;
     }
     
@@ -746,6 +803,13 @@ public class DOTWriter {
         
             return false;
         }
+
+        if (includeClassNames != null) {
+            if (includeClassNames.matcher(object.getClass().getName()).matches()) {
+                return true;
+            }
+            return false;
+        }
         
         if (!excludeObjects.isEmpty()) {
             if (excludeObjects.contains(object)) return false;
@@ -756,7 +820,13 @@ public class DOTWriter {
                 if (clazz.isInstance(object)) return false;
             }
         }
-       
+
+        if (excludeClassNames != null) {
+            if (excludeClassNames.matcher(object.getClass().getName()).matches()) {
+                return false;
+            }
+            return true;
+        }
         return true;
     }
     

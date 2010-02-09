@@ -59,12 +59,15 @@ import com.sun.btrace.comm.NumberDataCommand;
 import com.sun.btrace.comm.NumberMapDataCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.lang.management.LockInfo;
 import java.lang.management.MemoryMXBean;
@@ -116,6 +119,8 @@ public final class BTraceRuntime {
     // we need Unsafe to load BTrace class bytes as
     // bootstrap class
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+
+    private static Properties dotWriterProps;
 
     // a dummy BTraceRuntime instance
     private static BTraceRuntime dummy;
@@ -1356,10 +1361,36 @@ public final class BTraceRuntime {
         }
     }
 
+    private synchronized static void initDOTWriterProps() {
+        if (dotWriterProps == null) {
+            dotWriterProps = new Properties();
+            InputStream is = BTraceRuntime.class.getResourceAsStream("resources/btrace.dotwriter.properties");
+            if (is != null) {
+                try {
+                    dotWriterProps.load(is);
+                } catch (IOException ioExp) {
+                    ioExp.printStackTrace();
+                }
+            }
+            try {
+                String home = System.getProperty("user.home");
+                File file = new File(home, "btrace.dotwriter.properties");
+                if (file.exists() && file.isFile()) {
+                    is = new BufferedInputStream(new FileInputStream(file));
+                    if (is != null) {
+                        dotWriterProps.load(is);
+                    }
+                }
+            } catch (Exception exp) {
+                exp.printStackTrace();
+            }
+        }
+    }
+
     static void writeDOT(Object obj, String fileName) {
         DOTWriter writer = new DOTWriter(resolveFileName(fileName));
-        writer.displayStatics(true);
-        writer.expandCollections(true);
+        initDOTWriterProps();
+        writer.customize(dotWriterProps);
         writer.addNode(null, obj);
         writer.close();
     }
