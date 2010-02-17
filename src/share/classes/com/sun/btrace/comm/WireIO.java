@@ -70,6 +70,12 @@ public class WireIO {
             case Command.GRID_DATA:
                 cmd = new GridDataCommand();
                 break;
+            case Command.RETRANSFORMATION_START:
+                cmd = new RetransformationStartNotification();
+                break;
+            case Command.RETRANSFORM_CLASS:
+                cmd = new RetransformClassNotification();
+                break;
            default:
                 throw new RuntimeException("invalid command: " + type);
         }
