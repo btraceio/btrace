@@ -104,6 +104,8 @@ public class Client {
     private final int port;
     // are we running debug mode?
     private final boolean debug;
+    // do we need to track retransforming single classes? (will impose additional overhead)
+    private final boolean trackRetransforms;
     // are we running in unsafe mode?
     private final boolean unsafe;
     // are we dumping .class files of
@@ -119,15 +121,16 @@ public class Client {
     private volatile ObjectOutputStream oos;
 
     public Client(int port) {
-        this(port, ".", false, false, false, null);
+        this(port, ".", false, false, false, false, null);
     }
 
     public Client(int port, String probeDescPath) {
-        this(port, probeDescPath, false, false, false, null);
+        this(port, probeDescPath, false, false, false, false, null);
     }
 
     public Client(int port, String probeDescPath,
-            boolean debug, boolean unsafe, boolean dumpClasses,
+            boolean debug, boolean trackRetransforms,
+            boolean unsafe, boolean dumpClasses,
             String dumpDir) {
         this.port = port;
         this.probeDescPath = probeDescPath;
@@ -135,6 +138,7 @@ public class Client {
         this.unsafe = unsafe;
         this.dumpClasses = dumpClasses;
         this.dumpDir = dumpDir;
+        this.trackRetransforms = trackRetransforms;
     }
 
     public byte[] compile(String fileName, String classPath) {
@@ -278,6 +282,9 @@ public class Client {
             if (dumpClasses) {
                 agentArgs += ",dumpClasses=true";
                 agentArgs += ",dumpDir=" + dumpDir;
+            }
+            if (trackRetransforms) {
+                agentArgs += ",trackRetransforms=true";
             }
             if (bootCp != null) {
                 agentArgs += ",bootClassPath=" + bootCp;

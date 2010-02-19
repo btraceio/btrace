@@ -292,13 +292,43 @@ public class Preprocessor extends ClassAdapter {
                   String superName,
                   String[] interfaces) {
         className = name;     
-        classType = Type.getObjectType(className);  
+        classType = Type.getObjectType(className);
         super.visit(version, access, name,
                     signature, superName, interfaces);
     }
     
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-        return super.visitAnnotation(desc, visible);
+        final AnnotationVisitor zupr = super.visitAnnotation(desc, visible);
+        if ("Lcom/sun/btrace/annotations/BTrace;".equals(desc)) {
+            return new AnnotationVisitor() {
+
+                public void visit(String string, Object o) {
+                    if ("name".equals(string)) {
+                        externalClassName = (String)o;
+                    }
+                    zupr.visit(string, o);
+                }
+
+                public void visitEnum(String string, String string1, String string2) {
+                    zupr.visitEnum(string, string1, string2);
+                }
+
+                public AnnotationVisitor visitAnnotation(String string, String string1) {
+                    // do nothing
+                    return zupr.visitAnnotation(string, string1);
+                }
+
+                public AnnotationVisitor visitArray(String string) {
+                    // do nothing
+                    return zupr.visitArray(string);
+                }
+
+                public void visitEnd() {
+                    zupr.visitEnd();
+                }
+            };
+        }
+        return zupr;
     }
     
     // prefix for BTrace perf counter names.

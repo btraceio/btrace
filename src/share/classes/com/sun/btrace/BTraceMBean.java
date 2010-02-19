@@ -182,7 +182,11 @@ public class BTraceMBean implements DynamicMBean {
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
             BTraceMBean bean = new BTraceMBean(clazz);
             try {
-                server.registerMBean(bean, new ObjectName("btrace:name=" + bean.beanName));
+                ObjectName on = new ObjectName("btrace:name=" + bean.beanName);
+                if (server.isRegistered(on)) {
+                    server.unregisterMBean(on);
+                }
+                server.registerMBean(bean, on);
             } catch (RuntimeException re) {
                 throw re;
             } catch (Exception exp) {

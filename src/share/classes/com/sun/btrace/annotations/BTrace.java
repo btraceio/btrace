@@ -44,4 +44,6 @@ public @interface BTrace {
     public String name() default "";
     // description of this trace class.
     public String description() default "";
+    // having "unsafe" set to true the script will be run in unsafe mode
+    public boolean unsafe() default false;
 }

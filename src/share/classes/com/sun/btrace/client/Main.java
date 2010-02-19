@@ -29,9 +29,6 @@ import java.io.Console;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.UnknownHostException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 import com.sun.btrace.CommandListener;
@@ -39,9 +36,7 @@ import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
-import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.util.Messages;
-import java.net.Socket;
 
 /**
  * This is the main class for a simple command line
@@ -53,6 +48,7 @@ import java.net.Socket;
 public final class Main {
     public static volatile boolean exiting;
     public static final boolean DEBUG;
+    public static final boolean TRACK_RETRANSFORM;
     public static final boolean UNSAFE;
     public static final boolean DUMP_CLASSES;
     public static final String DUMP_DIR;
@@ -64,6 +60,8 @@ public final class Main {
     static {
         DEBUG = Boolean.getBoolean("com.sun.btrace.debug");
         if (isDebug()) debugPrint("btrace debug mode is set");
+        TRACK_RETRANSFORM = Boolean.getBoolean("com.sun.btrace.trackRetransforms");
+        if (isDebug()) debugPrint("trackRetransforms flag is set");
         UNSAFE = Boolean.getBoolean("com.sun.btrace.unsafe");
         if (isDebug()) debugPrint("btrace unsafe mode is set");
         DUMP_CLASSES = Boolean.getBoolean("com.sun.btrace.dumpClasses");
@@ -147,7 +145,7 @@ public final class Main {
 
         try {
             Client client = new Client(port, PROBE_DESC_PATH, 
-                DEBUG, UNSAFE, DUMP_CLASSES, DUMP_DIR);
+                DEBUG, TRACK_RETRANSFORM, UNSAFE, DUMP_CLASSES, DUMP_DIR);
             if (! new File(fileName).exists()) {
                 errorExit("File not found: " + fileName, 1);
             }

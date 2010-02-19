@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.comm.RetransformationStartNotification;
+import com.sun.btrace.comm.WireIO;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.ProbeDescriptor;
@@ -60,6 +62,7 @@ public final class Main {
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
     private static volatile boolean debugMode;
+    private static volatile boolean trackRetransforms;
     private static volatile boolean unsafeMode;
     private static volatile boolean dumpClasses;
     private static volatile String dumpDir;
@@ -183,6 +186,9 @@ public final class Main {
         p = argMap.get("debug");
         debugMode = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("debugMode is " + debugMode);
+        p = argMap.get("trackRetransforms");
+        trackRetransforms = p != null && !"false".equals(p);
+        if (isRetransformTracking()) debugPrint("trackRetransforms is " + trackRetransforms);
         scriptOutputFile = argMap.get("scriptOutputFile");
         if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
             if (isDebug()) debugPrint("scriptOutputFile is " + scriptOutputFile);
@@ -372,10 +378,10 @@ public final class Main {
                         if (size > 0) {
                             classes = new Class[size];
                             list.toArray(classes);
-                            if (isDebug()) debugPrint("calling retransformClasses");
+                            client.startRetransformClasses(size);
                             inst.retransformClasses(classes);
+                            client.endRetransformClasses();
                             client.skipRetransforms();
-                            if (isDebug()) debugPrint("finished retransformClasses");
                         }
                     }
                 } catch (UnmodifiableClassException uce) {
@@ -468,6 +474,10 @@ public final class Main {
 
     static boolean isDebug() {
         return debugMode;
+    }
+
+    static boolean isRetransformTracking() {
+        return trackRetransforms;
     }
 
     static boolean isUnsafe() {

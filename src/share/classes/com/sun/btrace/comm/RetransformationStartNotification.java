@@ -25,42 +25,39 @@
 
 package com.sun.btrace.comm;
 
-import java.io.Serializable;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.IOException;
+import java.lang.instrument.Instrumentation;
 
-public abstract class Command implements Serializable {
-    public static final byte ERROR      = 0;
-    public static final byte EVENT      = 1;
-    public static final byte EXIT       = 2;
-    public static final byte INSTRUMENT = 3;
-    public static final byte MESSAGE    = 4;
-    public static final byte RENAME     = 5;
-    public static final byte SUCCESS    = 6;
-    public static final byte NUMBER_MAP = 7;
-    public static final byte STRING_MAP = 8;
-    public static final byte NUMBER     = 9;
-    public static final byte GRID_DATA  = 10;
-    public static final byte RETRANSFORMATION_START = 11;
-    public static final byte RETRANSFORM_CLASS = 12;
-    
-    public static final byte FIRST_COMMAND = ERROR;
-    public static final byte LAST_COMMAND = RETRANSFORM_CLASS;
+/**
+ * This command is sent out when the BTrace engine calls
+ * {@linkplain Instrumentation#retransformClasses(java.lang.Class<?>[])} method.
+ * It is followed by {@linkplain OkayCommand} command when the retransformation ends.
+ * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ */
+public class RetransformationStartNotification extends Command {
+    private int numClasses;
 
-    protected byte type;
-    protected Command(byte type) {
-        if (type < FIRST_COMMAND || type > LAST_COMMAND) {
-            throw new IllegalArgumentException();
-        }
-        this.type = type;
+    public RetransformationStartNotification() {
+        super(RETRANSFORMATION_START);
     }
 
-    protected abstract void write(ObjectOutput out) throws IOException;
-    protected abstract void read(ObjectInput in) 
-        throws IOException, ClassNotFoundException;
+    public RetransformationStartNotification(int numClasses) {
+        super(RETRANSFORMATION_START);
+        this.numClasses = numClasses;
+    }
 
-    public byte getType() {
-        return type;
+    protected void write(ObjectOutput out) throws IOException {
+        out.writeInt(numClasses);
+    }
+
+    protected void read(ObjectInput in)
+        throws IOException, ClassNotFoundException {
+        numClasses = in.readInt();
+    }
+
+    public int getNumClasses() {
+        return numClasses;
     }
 }

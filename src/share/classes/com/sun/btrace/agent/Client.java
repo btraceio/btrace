@@ -39,6 +39,8 @@ import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
+import com.sun.btrace.comm.RetransformClassNotification;
+import com.sun.btrace.comm.RetransformationStartNotification;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
 import com.sun.btrace.runtime.Instrumentor;
@@ -72,6 +74,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private volatile ClassFilter filter;
     private volatile boolean skipRetransforms;
     protected final boolean debug = Main.isDebug();
+    protected final boolean trackRetransforms = Main.isRetransformTracking();
 
     static {
         ClassFilter.class.getClass();
@@ -114,11 +117,9 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             if (classBeingRedefined != null &&
                 skipRetransforms == false &&
                 filter.isCandidate(classBeingRedefined)) {
-                if (debug) Main.debugPrint("client " + className + ": instrumenting " + cname);
-                return instrument(classBeingRedefined, cname, classfileBuffer);
+                return doTransform(classBeingRedefined, cname, classfileBuffer);
             } else if (filter.isCandidate(classfileBuffer)) {
-                if (debug) Main.debugPrint("client " + className + ": instrumenting " + cname);
-                return instrument(classBeingRedefined, cname, classfileBuffer); 
+                return doTransform(classBeingRedefined, cname, classfileBuffer);
             } else {
                 if (debug) Main.debugPrint("client " + className + ": skipping transform for " + cname);
                 return null;
@@ -128,6 +129,18 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 BTraceRuntime.leave();
             }
         }
+    }
+
+    private byte[] doTransform(Class<?> classBeingRedefined, String cname, byte[] classfileBuffer) {
+        if (debug) Main.debugPrint("client " + className + ": instrumenting " + cname);
+        if (trackRetransforms) {
+            try {
+                onCommand(new RetransformClassNotification(cname));
+            } catch (IOException e) {
+                Main.debugPrint(e);
+            }
+        }
+        return instrument(classBeingRedefined, cname, classfileBuffer);
     }
 
     protected synchronized void onExit(int exitCode) {
@@ -256,6 +269,24 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     final void skipRetransforms() {
         skipRetransforms = true;
+    }
+
+    final void startRetransformClasses(int numClasses) {
+        try {
+            onCommand(new RetransformationStartNotification(numClasses));
+            if (Main.isDebug()) Main.debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
+        } catch (IOException e) {
+            Main.debugPrint(e);
+        }
+    }
+
+    final void endRetransformClasses() {
+        try {
+            onCommand(new OkayCommand());
+            if (Main.isDebug()) Main.debugPrint("finished retransformClasses");
+        } catch (IOException e) {
+            Main.debugPrint(e);
+        }
     }
 
     // Internals only below this point
