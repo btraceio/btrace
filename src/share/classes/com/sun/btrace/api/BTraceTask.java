@@ -26,7 +26,6 @@
 package com.sun.btrace.api;
 
 import com.sun.btrace.annotations.BTrace;
-import java.io.PrintWriter;
 import java.util.EventListener;
 import java.util.List;
 import java.util.Map;
@@ -60,9 +59,10 @@ public abstract class BTraceTask {
     public static abstract class MessageDispatcher implements EventListener {
         public void onPrintMessage(String message) {};
         public void onNumberMessage(String name, Number value) {};
-        public void onGrid(String name, List<Object> data, String format) {};
+        public void onGrid(String name, List<Object[]> data) {};
         public void onNumberMap(String name, Map<String, ? extends Number> data) {};
         public void onStringMap(String name, Map<String, String> data) {};
+        public void onClassInstrumented(String name) {}
     }
 
     /**

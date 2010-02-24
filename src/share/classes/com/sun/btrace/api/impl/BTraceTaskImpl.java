@@ -35,7 +35,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import com.sun.btrace.api.BTraceEngine;
 import com.sun.btrace.api.BTraceTask;
+import com.sun.btrace.comm.GridDataCommand;
 import com.sun.btrace.comm.MessageCommand;
+import com.sun.btrace.comm.NumberDataCommand;
+import com.sun.btrace.comm.NumberMapDataCommand;
+import com.sun.btrace.comm.RetransformClassNotification;
+import com.sun.btrace.comm.StringMapDataCommand;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -276,6 +281,30 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
                     switch (cmd.getType()) {
                         case Command.MESSAGE: {
                             listener.onPrintMessage(((MessageCommand)cmd).getMessage());
+                            break;
+                        }
+                        case Command.RETRANSFORM_CLASS: {
+                            listener.onClassInstrumented(((RetransformClassNotification)cmd).getClassName());
+                            break;
+                        }
+                        case Command.NUMBER: {
+                            NumberDataCommand ndc = (NumberDataCommand)cmd;
+                            listener.onNumberMessage(ndc.getName(), ndc.getValue());
+                            break;
+                        }
+                        case Command.NUMBER_MAP: {
+                            NumberMapDataCommand nmdc = (NumberMapDataCommand)cmd;
+                            listener.onNumberMap(nmdc.getName(), nmdc.getData());
+                            break;
+                        }
+                        case Command.STRING_MAP: {
+                            StringMapDataCommand smdc = (StringMapDataCommand)cmd;
+                            listener.onStringMap(smdc.getName(), smdc.getData());
+                            break;
+                        }
+                        case Command.GRID_DATA: {
+                            GridDataCommand gdc = (GridDataCommand)cmd;
+                            listener.onGrid(gdc.getName(), gdc.getData());
                             break;
                         }
                     }

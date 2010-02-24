@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.sun.btrace.aggregation.HistogramData;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
