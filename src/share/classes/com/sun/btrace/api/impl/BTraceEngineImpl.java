@@ -230,9 +230,8 @@ public class BTraceEngineImpl extends BTraceEngine {
                 public void run() {
                     int  port = portLocator.getTaskPort(btrace);
                     LOGGER.log(Level.FINEST, "BTrace agent listening on port {0}", port);
-                    Client existingClient = clientMap.get(btrace);
                     BTraceSettings settings = settingsProvider.getSettings();
-                    final Client client = existingClient != null ? existingClient : new Client(port, ".", settings.isDebugMode(), true, btrace.isUnsafe(), settings.isDumpClasses(), settings.getDumpClassPath());
+                    final Client client = new Client(port, ".", settings.isDebugMode(), true, btrace.isUnsafe(), settings.isDumpClasses(), settings.getDumpClassPath());
                     
                     try {
                         client.attach(String.valueOf(btrace.getPid()), compiler.getAgentJarPath(), compiler.getToolsJarPath(), null);
