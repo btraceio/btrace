@@ -48,7 +48,6 @@ import com.sun.btrace.aggregation.AggregationKey;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Deque;
