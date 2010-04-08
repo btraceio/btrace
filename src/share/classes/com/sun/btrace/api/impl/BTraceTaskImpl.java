@@ -196,10 +196,9 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
      */
     @Override
     public void start() {
-        final State previousState = getState();
         setState(State.STARTING);
         if (!engine.start(this)) {
-            setState(previousState);
+            setState(State.FAILED);
         }
     }
 
