@@ -182,10 +182,10 @@
         <jar jarfile="${agent.jar}"         
          basedir="${classes.dir}"
          manifest="${share.src.dir}/META-INF/agent-manifest.mf"
-         excludes="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/*"/>
+         excludes="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/*"/>
         <jar jarfile="${boot.jar}"         
          basedir="${classes.dir}"
-         excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/**"/>
+         excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/** **/api/**/* **/spi/**/*"/>
         <jar jarfile="${client.jar}"
          basedir="${classes.dir}"
          manifest="${share.src.dir}/META-INF/client-manifest.mf"
