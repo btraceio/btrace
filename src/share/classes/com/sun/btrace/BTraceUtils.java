@@ -3078,6 +3078,15 @@ public final class BTraceUtils {
         return BTraceRuntime.getCurrentThreadUserTime();
     }
 
+    /**
+     * Returns the total amount of time spent in GarbageCollection up to this point
+     * since the application was started.
+     * @return
+     */
+    public static long getTotalGcTime() {
+    	return BTraceRuntime.getTotalGcTime();
+    }
+
     @Deprecated
     public static long getSystemNanoTime() {
         return System.nanoTime();

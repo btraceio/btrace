@@ -59,6 +59,9 @@ import com.sun.btrace.comm.NumberDataCommand;
 import com.sun.btrace.comm.NumberMapDataCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
+
+import java.lang.management.GarbageCollectorMXBean;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
@@ -165,6 +168,7 @@ public final class BTraceRuntime {
     private static volatile MemoryMXBean memoryMBean;
     private static volatile RuntimeMXBean runtimeMBean;
     private static volatile ThreadMXBean threadMBean;
+    private static volatile List<GarbageCollectorMXBean> gcBeanList;
 
     // bytecode generator that generates Runnable implementations
     private static RunnableGenerator runnableGenerator;
@@ -1324,6 +1328,15 @@ public final class BTraceRuntime {
         }
     }
 
+    static long getTotalGcTime() {
+    	initGarbageCollectionBeans();
+    	long totalGcTime = 0;
+    	for (GarbageCollectorMXBean gcBean : gcBeanList) {
+    		totalGcTime += gcBean.getCollectionTime();
+    	}
+    	return totalGcTime;
+    }
+
     static void serialize(Object obj, String fileName) {
         try {
             BufferedOutputStream bos = new BufferedOutputStream(
@@ -1681,6 +1694,29 @@ public final class BTraceRuntime {
                 });
         } catch (Exception exp) {
             throw new UnsupportedOperationException(exp);
+        }
+    }
+
+    private static List<GarbageCollectorMXBean> getGarbageCollectionMBeans() {
+        try {
+            return AccessController.doPrivileged(
+                new PrivilegedExceptionAction<List<GarbageCollectorMXBean>>() {
+                    public List<GarbageCollectorMXBean> run() throws Exception {
+                        return ManagementFactory.getGarbageCollectorMXBeans();
+                   }
+                });
+        } catch (Exception exp) {
+            throw new UnsupportedOperationException(exp);
+        }
+    }
+
+    private static void initGarbageCollectionBeans() {
+        if (gcBeanList == null) {
+            synchronized (BTraceRuntime.class) {
+                if (gcBeanList == null) {
+                	gcBeanList = getGarbageCollectionMBeans();
+                }
+            }
         }
     }
 
