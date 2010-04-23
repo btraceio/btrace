@@ -261,10 +261,13 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     }
 
     private void fireStateChange() {
+        Set<StateListener> toProcess = null;
+
         synchronized (stateListeners) {
-            for (StateListener listener : stateListeners) {
-                listener.stateChanged(getState());
-            }
+             toProcess = new HashSet<StateListener>(stateListeners);
+        }
+        for (StateListener listener : toProcess) {
+            listener.stateChanged(getState());
         }
     }
 
