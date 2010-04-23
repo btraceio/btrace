@@ -117,6 +117,7 @@ import sun.security.action.GetPropertyAction;
  *
  * @author A. Sundararajan
  * @author Christian Glencross (aggregation support)
+ * @author Joachim Skeie (GC MBean support, advanced Deque manipulation)
  */
 public final class BTraceRuntime {
     // we need Unsafe to load BTrace class bytes as
@@ -827,6 +828,46 @@ public final class BTraceRuntime {
     public static <V> void push(Deque<V> queue, V value) {
         if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
             queue.push(value);
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <V> void addLast(Deque<V> queue, V value) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            queue.addLast(value);
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <V> V peekFirst(Deque<V> queue) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            return queue.peekFirst();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <V> V peekLast(Deque<V> queue) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            return queue.peekLast();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <V> V removeLast(Deque<V> queue) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            return queue.removeLast();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    public static <V> V removeFirst(Deque<V> queue) {
+        if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
+            return queue.removeLast();
         } else {
             throw new IllegalArgumentException();
         }

@@ -59,6 +59,7 @@ import java.util.Deque;
  *
  * @author A. Sundararajan
  * @author Christian Glencross (aggregation support)
+ * @author Joachim Skeie (GC MBean support, advanced Deque manipulation)
  */
 public final class BTraceUtils {
     // standard stack depth decrement for Reflection.getCallerClass() calls
@@ -2378,7 +2379,26 @@ public final class BTraceUtils {
     public static <V> V peek(Deque<V> queue) {
         return BTraceRuntime.peek(queue);
     }
-  
+
+    public static <V> void addLast(Deque<V> queue, V value) {
+    	BTraceRuntime.addLast(queue, value);
+    }
+
+    public static <V> V peekFirst(Deque<V> queue) {
+    	return BTraceRuntime.peekFirst(queue);
+    }
+
+    public static <V> V peekLast(Deque<V> queue) {
+    	return BTraceRuntime.peekLast(queue);
+    }
+
+    public static <V> V removeLast(Deque<V> queue) {
+    	return BTraceRuntime.removeLast(queue);
+    }
+
+    public static <V> V removeFirst(Deque<V> queue) {
+    	return BTraceRuntime.removeFirst(queue);
+    }
     
     /**
      * Returns n'th command line argument. <code>null</code> if not available.
