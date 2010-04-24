@@ -355,7 +355,9 @@ public final class BTraceUtils {
     public static String str(Object obj) {
         if (obj == null) {
             return "null";
-        } else if (obj instanceof String)	 {
+        } else if (obj instanceof StringBuffer) {
+        	return ((StringBuffer)obj).toString();        
+    	} else if (obj instanceof String) {
             return (String) obj;
         } else if (obj.getClass().getClassLoader() == null) {
             return obj.toString();
@@ -2306,6 +2308,10 @@ public final class BTraceUtils {
     public static <V> Deque<V> newDeque() {
         return BTraceRuntime.newDeque();
     }
+    
+    public static StringBuffer newStringBuffer() {
+    	return BTraceRuntime.newStringBuffer();
+    }
 
     // get a particular item from a Map
     public static <K, V> V get(Map<K, V> map, Object key) {
@@ -2398,6 +2404,24 @@ public final class BTraceUtils {
 
     public static <V> V removeFirst(Deque<V> queue) {
     	return BTraceRuntime.removeFirst(queue);
+    }
+    
+	//Operations on StringBuffer
+    public static StringBuffer append(StringBuffer buffer, String strToAppend) {
+    	return BTraceRuntime.append(buffer, strToAppend);
+    	
+    }
+    
+    public static StringBuffer append(StringBuffer buffer, long longToAppend) {
+    	return BTraceRuntime.append(buffer, longToAppend);
+    }
+    
+    public static StringBuffer append(StringBuffer buffer, double doubleToAppend) {
+    	return BTraceRuntime.append(buffer, doubleToAppend);
+    }
+    
+    public static int length(StringBuffer buffer) {
+    	return BTraceRuntime.length(buffer);
     }
     
     /**

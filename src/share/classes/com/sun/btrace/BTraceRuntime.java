@@ -710,6 +710,10 @@ public final class BTraceRuntime {
     static <V> Deque<V> newDeque() {
         return new BTraceDeque<V>(new ArrayDeque<V>());
     }
+    
+    static StringBuffer newStringBuffer() {
+    	return new StringBuffer();
+    }
 
     static <E> int size(Collection<E> coll) {
         if (coll instanceof BTraceCollection || coll.getClass().getClassLoader() == null) {
@@ -895,6 +899,39 @@ public final class BTraceRuntime {
         } else {
             throw new IllegalArgumentException();
         }
+    }
+    
+    //Operations on StringBuffer
+    public static StringBuffer append(StringBuffer buffer, String strToAppend) {
+    	if (buffer != null && strToAppend != null) {
+    		return buffer.append(strToAppend);
+    	} else {
+    		throw new IllegalArgumentException();
+    	}
+    }
+    
+    public static StringBuffer append(StringBuffer buffer, long longToAppend) {
+    	if (buffer != null) {
+    		return buffer.append(longToAppend);
+    	} else {
+    		throw new IllegalArgumentException();
+    	}
+    }
+    
+    public static StringBuffer append(StringBuffer buffer, double doubleToAppend) {
+    	if (buffer != null) {
+    		return buffer.append(doubleToAppend);
+    	} else {
+    		throw new IllegalArgumentException();
+    	}
+    }
+      
+    public static int length(StringBuffer buffer) {
+    	if (buffer != null) {
+    		return buffer.length();
+    	} else {
+    		throw new IllegalArgumentException();
+    	}
     }
 
     static void printNumber(String name, Number value) {
