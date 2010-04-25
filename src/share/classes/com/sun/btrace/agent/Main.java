@@ -297,6 +297,7 @@ public final class Main {
                 traceWriter = new PrintWriter(System.out);
             } else {
             	String currentBtraceScriptOutput = scriptOutputFile;
+            	
                 if (currentBtraceScriptOutput == null || currentBtraceScriptOutput.length() == 0) {
                     currentBtraceScriptOutput = filename + ".btrace";
                     if (isDebug()) debugPrint("scriptOutputFile not specified. defaulting to " + currentBtraceScriptOutput);

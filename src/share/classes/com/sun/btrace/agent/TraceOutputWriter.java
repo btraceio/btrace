@@ -91,13 +91,14 @@ abstract public class TraceOutputWriter extends Writer {
         }
 
         @Override
-        final public void flush() throws IOException {
-            try {
+        final public void flush() throws IOException {        	
+        	try {
                 writerLock.readLock().lock();
                 currentFileWriter.flush();
             } finally {
                 writerLock.readLock().unlock();
             }
+            
             if (needsRoll()) {
                 nextWriter();
             }
@@ -125,14 +126,19 @@ abstract public class TraceOutputWriter extends Writer {
         }
 
         private FileWriter getNextWriter() throws IOException {
-            File f = new File(path + File.separator + baseName + "." + (counter++));
-            if (f.exists()) {
-                f.delete();
+        	currentFileWriter.close();
+        	File scriptOutputFile_renameFrom = new File(path + File.separator + baseName);
+        	File scriptOutputFile_renameTo = new File(path + File.separator + baseName + "." + (counter++));
+        	
+            if (scriptOutputFile_renameTo.exists()) {
+            	scriptOutputFile_renameTo.delete();
             }
+            scriptOutputFile_renameFrom.renameTo(scriptOutputFile_renameTo);
+            scriptOutputFile_renameFrom = new File(path + File.separator + baseName);
             if (counter > maxRolls) {
                 counter = 1;
             }
-            return new FileWriter(f);
+            return new FileWriter(scriptOutputFile_renameFrom);
         }
 
         abstract protected boolean needsRoll();
