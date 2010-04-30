@@ -1,6 +1,0 @@
-Manifest-Version: 1.0
-OpenIDE-Module: org.netbeans.modules.btrace.project/0
-OpenIDE-Module-Layer: org/netbeans/modules/btrace/project/layer.xml
-OpenIDE-Module-Localizing-Bundle: org/netbeans/modules/btrace/project/Bundle.properties
-OpenIDE-Module-Specification-Version: 1.2.0
-
