@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<antlib>
-    <taskdef name="btracec" classname="org.netbeans.modules.btrace.project.ant.CompilerTask"/>
-    <taskdef name="pidselect" classname="org.netbeans.modules.btrace.project.ant.SelectPIDTask"/>
-    <taskdef name="btrace" classname="org.netbeans.modules.btrace.project.ant.RunnerTask"/>
-</antlib>
