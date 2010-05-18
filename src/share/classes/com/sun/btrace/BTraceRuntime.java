@@ -1777,7 +1777,7 @@ public final class BTraceRuntime {
                                msg));
     }
 
-    private void send(Command cmd) {
+    public void send(Command cmd) {
         try {
             boolean speculated = specQueueManager.send(cmd);
             if (! speculated) {

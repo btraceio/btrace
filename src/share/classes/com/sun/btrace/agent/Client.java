@@ -134,11 +134,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private byte[] doTransform(Class<?> classBeingRedefined, String cname, byte[] classfileBuffer) {
         if (debug) Main.debugPrint("client " + className + ": instrumenting " + cname);
         if (trackRetransforms) {
-            try {
-                onCommand(new RetransformClassNotification(cname));
-            } catch (IOException e) {
-                Main.debugPrint(e);
-            }
+            this.runtime.send(new RetransformClassNotification(cname));
         }
         return instrument(classBeingRedefined, cname, classfileBuffer);
     }
