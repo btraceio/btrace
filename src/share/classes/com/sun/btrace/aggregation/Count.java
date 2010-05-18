@@ -47,7 +47,11 @@ class Count implements AggregationValue {
 
     @Override
     public void add(long delta) {
-        value.incrementAndGet();
+    	if (delta >= 0) {
+    		value.incrementAndGet();
+    	} else {
+    		value.decrementAndGet();
+    	}
     }
 
     public long getValue() {
