@@ -54,6 +54,8 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnEvent;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.TLS;
+import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Self;
 
 /**
  * BTrace script to print timings for all executed JDBC statements on an event. Demonstrates
@@ -105,7 +107,7 @@ public class JdbcQueries {
      */
     @OnMethod(clazz = "+java.sql.Connection", method = "/prepare.*/")
     public static void onPrepare(AnyType[] args) {
-        preparingStatement = useStackTrace ? jstackStr() : str(args[1]);
+        preparingStatement = useStackTrace ? jstackStr() : str(args[0]);
     }
 
     /**
@@ -115,10 +117,9 @@ public class JdbcQueries {
      *            the return value from the prepareXxx() method.
      */
     @OnMethod(clazz = "+java.sql.Connection", method = "/prepare.*/", location = @Location(Kind.RETURN))
-    public static void onPrepareReturn(AnyType arg) {
+    public static void onPrepareReturn(@Return Statement preparedStatement) {
         if (preparingStatement != null) {
             print("P"); // Debug Prepared
-            Statement preparedStatement = (Statement) arg;
             put(preparedStatementDescriptions, preparedStatement, preparingStatement);
             preparingStatement = null;
         }
@@ -129,14 +130,13 @@ public class JdbcQueries {
     // Otherwise the SQL is in the first argument.
 
     @OnMethod(clazz = "+java.sql.Statement", method = "/execute.*/")
-    public static void onExecute(AnyType[] args) {
-        if (args.length == 1) {
+    public static void onExecute(@Self Statement currentStatement, AnyType[] args) {
+        if (args.length == 0) {
             // No SQL argument; lookup the SQL from the prepared statement
-            Statement currentStatement = (Statement) args[0]; // this
             executingStatement = get(preparedStatementDescriptions, currentStatement);
         } else {
             // Direct SQL in the first argument
-            executingStatement = useStackTrace ? jstackStr() : str(args[1]);
+            executingStatement = useStackTrace ? jstackStr() : str(args[0]);
         }
     }
 
