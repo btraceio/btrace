@@ -242,12 +242,10 @@ public class BTraceEngineImpl extends BTraceEngine {
                                 LOGGER.log(Level.FINEST, "Received command: {0}", cmd.toString());
                                 switch (cmd.getType()) {
                                     case Command.SUCCESS: {
-                                        if (retransforming) {
-                                            clientMap.put(btrace, client);
+                                        if (!retransforming) {
                                             result.set(true);
+                                            clientMap.put(btrace, client);
                                             latch.countDown();
-
-                                            retransforming = false;
                                         }
                                         break;
                                     }
@@ -261,6 +259,13 @@ public class BTraceEngineImpl extends BTraceEngine {
                                         btrace.setInstrClasses(numClasses);
                                         btrace.setState(BTraceTask.State.INSTRUMENTING);
                                         retransforming = true;
+                                        break;
+                                    }
+                                    case Command.RETRANSFORMATION_END: {
+                                        if (retransforming) {
+                                            btrace.setState(BTraceTask.State.RUNNING);
+                                            retransforming = false;
+                                        }
                                         break;
                                     }
                                 }

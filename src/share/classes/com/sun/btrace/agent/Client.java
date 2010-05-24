@@ -40,6 +40,7 @@ import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
 import com.sun.btrace.comm.RetransformClassNotification;
+import com.sun.btrace.comm.RetransformationEndNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
@@ -56,6 +57,9 @@ import com.sun.btrace.util.NullVisitor;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 
 /**
  * Abstract class that represents a BTrace client
@@ -69,6 +73,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private volatile String className;
     private volatile Class btraceClazz;
     private volatile byte[] btraceCode;
+//    private volatile List<WeakReference<Class<?>>> classes = new ArrayList<WeakReference<Class<?>>>();
     private volatile List<OnMethod> onMethods;
     private volatile List<OnProbe> onProbes;
     private volatile ClassFilter filter;
@@ -143,8 +148,20 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (shouldAddTransformer()) {
             if (debug) Main.debugPrint("onExit: removing transformer for " + className);
             inst.removeTransformer(this);
-        }
-        try {
+//            List<Class<?>> retransforming = new ArrayList<Class<?>>(classes.size());
+//            for(WeakReference<Class<?>> clzRef : classes) {
+//                Class clz = clzRef.get();
+//                if (clz != null) {
+//                    retransforming.add(clz);
+                }
+//            }
+            try {
+//                inst.retransformClasses(retransforming.toArray(new Class[retransforming.size()]));
+//            } catch (UnmodifiableClassException e) {
+//                Main.debugPrint(e);
+//            }
+//        }
+//        try {
             if (debug) Main.debugPrint("onExit: closing all");
             Thread.sleep(300);
             closeAll();
@@ -196,7 +213,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         byte[] codeBuf = removeMethods(btraceCode);
         if (debug) Main.debugPrint("removed @OnMethod, @OnProbe methods");
         if (debug) Main.debugPrint("sending Okay command");
-        onCommand(new OkayCommand());
+        runtime.send(new OkayCommand());
         // This extra BTraceRuntime.enter is needed to
         // check whether we have already entered before.
         boolean enteredHere = BTraceRuntime.enter();
@@ -268,21 +285,12 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     }
 
     final void startRetransformClasses(int numClasses) {
-        try {
-            onCommand(new RetransformationStartNotification(numClasses));
-            if (Main.isDebug()) Main.debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
-        } catch (IOException e) {
-            Main.debugPrint(e);
-        }
+        runtime.send(new RetransformationStartNotification(numClasses));
+        if (Main.isDebug()) Main.debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
     }
 
     final void endRetransformClasses() {
-        try {
-            onCommand(new OkayCommand());
-            if (Main.isDebug()) Main.debugPrint("finished retransformClasses");
-        } catch (IOException e) {
-            Main.debugPrint(e);
-        }
+        runtime.send(new RetransformationEndNotification());
     }
 
     // Internals only below this point
@@ -313,6 +321,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             InstrumentUtils.accept(reader,
                 new Instrumentor(clazz, className,  btraceCode, onMethods, writer));
             instrumentedCode = writer.toByteArray();
+//            classes.add(new WeakReference<Class<?>>(clazz));
         } catch (Throwable th) {
             Main.debugPrint(th);
             return null;

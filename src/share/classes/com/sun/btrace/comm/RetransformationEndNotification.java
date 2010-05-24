@@ -25,43 +25,32 @@
 
 package com.sun.btrace.comm;
 
-import java.io.Serializable;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.IOException;
 
-public abstract class Command implements Serializable {
-    public static final byte ERROR      = 0;
-    public static final byte EVENT      = 1;
-    public static final byte EXIT       = 2;
-    public static final byte INSTRUMENT = 3;
-    public static final byte MESSAGE    = 4;
-    public static final byte RENAME     = 5;
-    public static final byte SUCCESS    = 6;
-    public static final byte NUMBER_MAP = 7;
-    public static final byte STRING_MAP = 8;
-    public static final byte NUMBER     = 9;
-    public static final byte GRID_DATA  = 10;
-    public static final byte RETRANSFORMATION_START = 11;
-    public static final byte RETRANSFORMATION_END = 12;
-    public static final byte RETRANSFORM_CLASS = 13;
-    
-    public static final byte FIRST_COMMAND = ERROR;
-    public static final byte LAST_COMMAND = RETRANSFORM_CLASS;
-
-    protected byte type;
-    protected Command(byte type) {
-        if (type < FIRST_COMMAND || type > LAST_COMMAND) {
-            throw new IllegalArgumentException();
-        }
-        this.type = type;
+/**
+ * This command is sent out when the BTrace engine has finished class retransformation.
+ * It is preceded by {@linkplain RetransformationStartNotification} command when the retransformation starts.
+ * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ */
+public class RetransformationEndNotification extends Command {
+    public RetransformationEndNotification() {
+        super(RETRANSFORMATION_END);
     }
 
-    protected abstract void write(ObjectOutput out) throws IOException;
-    protected abstract void read(ObjectInput in) 
-        throws IOException, ClassNotFoundException;
-
-    public byte getType() {
-        return type;
+    public RetransformationEndNotification(int numClasses) {
+        super(RETRANSFORMATION_END);
     }
+
+    @Override
+    protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
+        // nothing to read
+    }
+
+    @Override
+    protected void write(ObjectOutput out) throws IOException {
+        // nothing to write
+    }
+
 }
