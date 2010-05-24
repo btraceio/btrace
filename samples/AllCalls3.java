@@ -38,11 +38,11 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace public class AllCalls3 {
     @OnMethod(clazz="javax.swing.JButton", method="/.*/",
               location=@Location(value=Kind.CALL, clazz="/.*/", method="/.*/"))
-    public static void o(AnyType[] args) { // all calls to methods
+    public static void o(@Self Object self, @ProbeMethodName String pmn, AnyType[] args) { // all calls to methods
+        // self - this for the method call
+        // pmn - textual representation of the method
         // contents of args array:
-        // [0] - this for the method call
-        // [1] - textual representation of the method
-        // [2]..[n] - original method call arguments
+        // [0]..[n] - original method call arguments
         printArray(args);
     }
 } 
