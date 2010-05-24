@@ -63,6 +63,7 @@ public abstract class BTraceTask {
         public void onNumberMap(String name, Map<String, ? extends Number> data) {};
         public void onStringMap(String name, Map<String, String> data) {};
         public void onClassInstrumented(String name) {}
+        public void onError(Throwable cause) {}
     }
 
     /**

@@ -35,6 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import com.sun.btrace.api.BTraceEngine;
 import com.sun.btrace.api.BTraceTask;
+import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.GridDataCommand;
 import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.comm.NumberDataCommand;
@@ -52,7 +53,8 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     final private static Pattern NAMED_EVENT_PATTERN = Pattern.compile("@OnEvent\\s*\\(\\s*\\\"(\\w.*)\\\"\\s*\\)", Pattern.MULTILINE);
     final private static Pattern ANONYMOUS_EVENT_PATTERN = Pattern.compile("@OnEvent(?!\\s*\\()");
     final private static Pattern UNSAFE_PATTERN = Pattern.compile("@BTrace\\s*\\(.*unsafe\\s*=\\s*(true|false).*\\)", Pattern.MULTILINE);
-    final private static Pattern NAME_PATTERN = Pattern.compile("@BTrace\\s*\\(.*name\\s*=\\s*\"(.*)\".*\\)", Pattern.MULTILINE);
+    final private static Pattern NAME_ANNOTATION_PATTERN = Pattern.compile("@BTrace\\s*\\(.*name\\s*=\\s*\"(.*)\".*\\)", Pattern.MULTILINE);
+    final private static Pattern NAME_PATTERN = Pattern.compile("@BTrace.*?class\\s+(.*?)\\s+", Pattern.MULTILINE);
 
     final private AtomicReference<State> currentState = new AtomicReference<State>(State.NEW);
     final private Set<StateListener> stateListeners = new HashSet<StateListener>();
@@ -83,9 +85,14 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
 
     @Override
     public String getName() {
-        Matcher m = NAME_PATTERN.matcher(script);
+        Matcher m = NAME_ANNOTATION_PATTERN.matcher(script);
         if (m.find()) {
             return m.group(1);
+        } else {
+            m = NAME_PATTERN.matcher(script);
+            if (m.find()) {
+                return m.group(1);
+            }
         }
         return null;
     }
@@ -309,6 +316,11 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
                             listener.onGrid(gdc.getName(), gdc.getData());
                             break;
                         }
+                        case Command.ERROR: {
+                            ErrorCommand ec = (ErrorCommand)cmd;
+                            listener.onError(ec.getCause());
+                            break;
+                        }
                     }
                 }
             }
@@ -327,7 +339,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
         if (this.pid != other.pid) {
             return false;
         }
-        if (this.engine != other.engine && (this.engine == null || !this.engine.equals(other.engine))) {
+        if (this.getName() != other.getName() && (this.getName() == null || !this.getName().equals(other.getName()))) {
             return false;
         }
         return true;
@@ -337,7 +349,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     public int hashCode() {
         int hash = 7;
         hash = 19 * hash + pid;
-        hash = 19 * hash + (this.engine != null ? this.engine.hashCode() : 0);
+        hash = 19 * hash + (this.getName() != null ? this.getName().hashCode() : 0);
         return hash;
     }
 }
