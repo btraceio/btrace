@@ -87,7 +87,11 @@ public abstract class BTraceTask {
          */
         COMPILED,
         /**
-         * The BTrace agent has accepted the script and is going to instrument appropriate classes
+         * The BTrace agent has accepted the script
+         */
+        ACCEPTED,
+        /**
+         * The BTrace agent is going to instrument appropriate classes
          */
         INSTRUMENTING,
         /**

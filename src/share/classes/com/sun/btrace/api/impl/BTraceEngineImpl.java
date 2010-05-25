@@ -50,8 +50,8 @@ import com.sun.btrace.spi.impl.BTraceCompilerFactoryImpl;
 import com.sun.btrace.spi.impl.BTraceSettingsProviderImpl;
 import com.sun.btrace.spi.OutputProvider;
 import com.sun.btrace.spi.impl.PortLocatorImpl;
-import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
@@ -237,12 +237,14 @@ public class BTraceEngineImpl extends BTraceEngine {
                         client.attach(String.valueOf(btrace.getPid()), compiler.getAgentJarPath(), compiler.getToolsJarPath(), null);
                         Thread.sleep(200); // give the server side time to initialize and open the port
                         client.submit(bytecode, new String[]{}, new CommandListener() {
-                            private boolean retransforming = false;
                             public void onCommand(Command cmd) throws IOException {
                                 LOGGER.log(Level.FINEST, "Received command: {0}", cmd.toString());
                                 switch (cmd.getType()) {
                                     case Command.SUCCESS: {
-                                        if (!retransforming) {
+                                        if (btrace.getState() == BTraceTask.State.COMPILED) {
+                                            btrace.setState(BTraceTask.State.ACCEPTED);
+                                        } else if (EnumSet.of(BTraceTask.State.INSTRUMENTING, BTraceTask.State.ACCEPTED).contains(btrace.getState())) {
+                                            btrace.setState(BTraceTask.State.RUNNING);
                                             result.set(true);
                                             clientMap.put(btrace, client);
                                             latch.countDown();
@@ -250,6 +252,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                                         break;
                                     }
                                     case Command.EXIT: {
+                                        btrace.setState(BTraceTask.State.FINISHED);
                                         latch.countDown();
                                         stop(btrace);
                                         break;
@@ -258,14 +261,12 @@ public class BTraceEngineImpl extends BTraceEngine {
                                         int numClasses = ((RetransformationStartNotification)cmd).getNumClasses();
                                         btrace.setInstrClasses(numClasses);
                                         btrace.setState(BTraceTask.State.INSTRUMENTING);
-                                        retransforming = true;
                                         break;
                                     }
-                                    case Command.RETRANSFORMATION_END: {
-                                        if (retransforming) {
-                                            btrace.setState(BTraceTask.State.RUNNING);
-                                            retransforming = false;
-                                        }
+                                    case Command.ERROR: {
+                                        btrace.setState(BTraceTask.State.FAILED);
+                                        latch.countDown();
+                                        stop(btrace);
                                         break;
                                     }
                                 }

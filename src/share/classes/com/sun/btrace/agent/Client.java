@@ -40,7 +40,6 @@ import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
 import com.sun.btrace.comm.RetransformClassNotification;
-import com.sun.btrace.comm.RetransformationEndNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
@@ -57,9 +56,6 @@ import com.sun.btrace.util.NullVisitor;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
-import java.lang.instrument.UnmodifiableClassException;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 
 /**
  * Abstract class that represents a BTrace client
@@ -287,10 +283,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     final void startRetransformClasses(int numClasses) {
         runtime.send(new RetransformationStartNotification(numClasses));
         if (Main.isDebug()) Main.debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
-    }
-
-    final void endRetransformClasses() {
-        runtime.send(new RetransformationEndNotification());
     }
 
     // Internals only below this point

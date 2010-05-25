@@ -43,8 +43,7 @@ public abstract class Command implements Serializable {
     public static final byte NUMBER     = 9;
     public static final byte GRID_DATA  = 10;
     public static final byte RETRANSFORMATION_START = 11;
-    public static final byte RETRANSFORMATION_END = 12;
-    public static final byte RETRANSFORM_CLASS = 13;
+    public static final byte RETRANSFORM_CLASS = 12;
     
     public static final byte FIRST_COMMAND = ERROR;
     public static final byte LAST_COMMAND = RETRANSFORM_CLASS;

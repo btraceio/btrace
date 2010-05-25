@@ -73,9 +73,6 @@ public class WireIO {
             case Command.RETRANSFORMATION_START:
                 cmd = new RetransformationStartNotification();
                 break;
-            case Command.RETRANSFORMATION_END:
-                cmd = new RetransformationEndNotification();
-                break;
             case Command.RETRANSFORM_CLASS:
                 cmd = new RetransformClassNotification();
                 break;

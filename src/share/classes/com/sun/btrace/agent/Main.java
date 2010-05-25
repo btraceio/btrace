@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.comm.ErrorCommand;
+import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.ProbeDescriptor;
@@ -400,14 +402,15 @@ public final class Main {
                             list.toArray(classes);
                             client.startRetransformClasses(size);
                             inst.retransformClasses(classes);
-                            client.endRetransformClasses();
                             client.skipRetransforms();
                         }
                     }
+                    client.getRuntime().send(new OkayCommand());
                 } catch (UnmodifiableClassException uce) {
                     if (isDebug()) {
                         debugPrint(uce);
                     }
+                    client.getRuntime().send(new ErrorCommand(uce));
                 }
             }
         });
