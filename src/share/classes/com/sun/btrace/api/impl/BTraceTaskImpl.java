@@ -80,16 +80,16 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
 
     @Override
     public String getScript() {
-        return script;
+        return script != null ? script : "";
     }
 
     @Override
     public String getName() {
-        Matcher m = NAME_ANNOTATION_PATTERN.matcher(script);
+        Matcher m = NAME_ANNOTATION_PATTERN.matcher(getScript());
         if (m.find()) {
             return m.group(1);
         } else {
-            m = NAME_PATTERN.matcher(script);
+            m = NAME_PATTERN.matcher(getScript());
             if (m.find()) {
                 return m.group(1);
             }
@@ -100,7 +100,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     @Override
     public void setScript(String newValue) {
         script = newValue;
-        Matcher m = UNSAFE_PATTERN.matcher(script);
+        Matcher m = UNSAFE_PATTERN.matcher(getScript());
         if (m.find()) {
             unsafe = Boolean.parseBoolean(m.group(1));
         }
