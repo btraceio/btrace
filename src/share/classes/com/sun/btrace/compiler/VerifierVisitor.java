@@ -37,6 +37,17 @@ import com.sun.source.util.TreeScanner;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.util.Messages;
+import com.sun.source.util.TreePath;
+import com.sun.tools.javac.tree.JCTree;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashSet;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
 
 /**
  * This class tree visitor validates a BTrace program's ClassTree.
@@ -48,9 +59,16 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     private String className;
     private boolean insideMethod;
     private volatile static Method[] btraceMethods;
+    private volatile static Class[] btraceClasses;
 
-    public VerifierVisitor(Verifier verifier) {
+    public VerifierVisitor(Verifier verifier, Element clzElement) {
         this.verifier = verifier;
+        Collection<ExecutableElement> shared = new ArrayList<ExecutableElement>();
+        for(Element e : clzElement.getEnclosedElements()) {
+            if (e.getKind() == ElementKind.METHOD && e.getModifiers().containsAll(EnumSet.of(Modifier.STATIC, Modifier.PRIVATE))) {
+                shared.add((ExecutableElement)e);
+            }
+        }
     }
 
     public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
@@ -68,10 +86,12 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 return super.visitMethodInvocation(node, v);
             } // else fall through ..
         } else if (methodSelect.getKind() == Tree.Kind.MEMBER_SELECT) {
-            String name = methodSelect.toString();            
-            if (name.startsWith("BTraceUtils.") ||
-                name.startsWith("com.sun.btrace.BTraceUtils.")) {
-                name = name.substring(name.lastIndexOf(".") + 1);
+            String name = ((MemberSelectTree)methodSelect).getIdentifier().toString();
+            String clzName = ((MemberSelectTree)methodSelect).getExpression().toString();
+            if (clzName.startsWith("BTraceUtils.") ||
+                clzName.startsWith("com.sun.btrace.BTraceUtils.") ||
+                isBTraceClass(clzName)) {
+//                name = name.substring(name.lastIndexOf(".") + 1);
                 int numArgs = 0;
                 List<? extends Tree> args = node.getArguments();
                 if (args != null) {
@@ -215,7 +235,11 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                             return super.visitMethod(node, v);
                         }
                     } else {
-                        return reportError("method.should.be.public", node);
+                        // force the "public" modifier only on the annotated methods
+                        if (isAnnotated(node)) {
+                            return reportError("method.should.be.public", node);
+                        }
+                        return super.visitMethod(node, v);
                     }
                 } else {
                     return reportError("no.instance.method", node);
@@ -237,10 +261,20 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     public Boolean visitReturn(ReturnTree node, Void v) {
         if (node.getExpression() != null) {
-            return reportError("return.type.should.be.void", node);
-        } else {
-            return super.visitReturn(node, v);
+            TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), node);
+            while (tp != null) {
+                tp = tp.getParentPath();
+                Tree leaf = tp.getLeaf();
+                if (leaf.getKind() == Tree.Kind.METHOD) {
+                    if (isAnnotated((MethodTree)leaf)) {
+                        return reportError("return.type.should.be.void", node);
+                    } else {
+                        return super.visitReturn(node, v);
+                    }
+                }
+            }
         }
+        return super.visitReturn(node, v);
     }
 
     public Boolean visitMemberSelect(MemberSelectTree node, Void v) {
@@ -298,6 +332,18 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return false;
     }
 
+    private boolean isAnnotated(MethodTree node) {
+        ModifiersTree mt = node.getModifiers();
+        List<? extends AnnotationTree> annos = mt.getAnnotations();
+        for(AnnotationTree at : annos) {
+            String annFqn = ((JCTree)at.getAnnotationType()).type.tsym.getQualifiedName().toString();
+            if (annFqn.startsWith("com.sun.btrace.annotations")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean checkLValue(Tree variable) {
         if (variable.getKind() == Tree.Kind.ARRAY_ACCESS) {
             reportError("no.assignment", variable);
@@ -321,7 +367,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     }
 
     private static boolean isBTraceMethod(String name, int numArgs) {
-        initBTraceMethods();
+        initBTraceClassesAndMethods();
         for (Method m : btraceMethods) {
             if (m.getName().equals(name) &&
                 m.getParameterTypes().length == numArgs) {
@@ -331,11 +377,30 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return false;
     }
 
-    private static void initBTraceMethods() {
+    private static boolean isBTraceClass(String name) {
+        initBTraceClassesAndMethods();
+        String postFix = "$" + name;
+        for (Class c : btraceClasses) {
+            if (c.getName().endsWith(postFix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void initBTraceClassesAndMethods() {
         if (btraceMethods == null) {
             synchronized (VerifierVisitor.class) {
                 if (btraceMethods == null) {
-                    btraceMethods = BTraceUtils.class.getDeclaredMethods();
+                    Collection<Method> methods = new ArrayList<Method>();
+                    Collection<Class> classes = new ArrayList<Class>();
+                    methods.addAll(Arrays.asList(BTraceUtils.class.getDeclaredMethods()));
+                    for(Class clz : BTraceUtils.class.getDeclaredClasses()) {
+                        classes.add(clz);
+                        methods.addAll(Arrays.asList(clz.getDeclaredMethods()));
+                    }
+                    btraceMethods = methods.toArray(new Method[methods.size()]);
+                    btraceClasses = classes.toArray(new Class[classes.size()]);
                 }
             }
         }

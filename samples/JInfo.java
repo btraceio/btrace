@@ -26,7 +26,7 @@
 package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
-import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtilsAll.*;
 
 /*
  * A simple sample that prints system properties, flags and exits.

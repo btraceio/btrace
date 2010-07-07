@@ -88,7 +88,7 @@ import static com.sun.btrace.BTraceUtils.*;
     )
     public static void onthrowreturn() {
         if (currentException != null) {
-            jstack(currentException);
+            Threads.jstack(currentException);
             println("=====================");
             currentException = null;
         }

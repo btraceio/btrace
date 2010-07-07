@@ -42,7 +42,7 @@ import static com.sun.btrace.BTraceUtils.*;
         method="start"
     ) 
     public static void onnewThread(@Self Thread t) {
-        dtraceProbe("jthreadstart", name(t));
-        println(strcat("starting ", name(t)));
+        D.probe("jthreadstart", Threads.name(t));
+        println(Strings.strcat("starting ", Threads.name(t)));
     }
 }

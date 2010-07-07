@@ -37,13 +37,13 @@ import java.lang.reflect.Field;
  * field using "field()" and "objectValue()" built-ins.
  */
 @BTrace public class LogTracer {
-    private static Field msgField = field("java.util.logging.LogRecord", "message");
+    private static Field msgField = Reflective.field("java.util.logging.LogRecord", "message");
 
     @OnMethod(
         clazz="+java.util.logging.Logger",
         method="log"
     )
     public static void onLog(@Self Logger self, LogRecord record) {
-        println(get(msgField, record));
+        println(Reflective.get(msgField, record));
     }
 }

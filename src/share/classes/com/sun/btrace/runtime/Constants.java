@@ -34,6 +34,7 @@ import com.sun.btrace.annotations.OnProbe;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.AnyType;
+import com.sun.btrace.BTraceUtilsAll;
 import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
@@ -59,6 +60,8 @@ public abstract class Constants {
     // BTrace specific stuff
     public static final String BTRACE_UTILS =
         Type.getInternalName(BTraceUtils.class);
+    public static final String BTRACE_UTILS_ALL =
+        Type.getInternalName(BTraceUtilsAll.class);
     public static final String BTRACE_DESC =
         Type.getDescriptor(BTrace.class);
 

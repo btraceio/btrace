@@ -816,12 +816,12 @@ public final class BTraceRuntime {
                 Map<String, String> m = new HashMap<String, String>();
                 Set<Map.Entry<Object, Object>> entries = map.entrySet();
                 for (Map.Entry<Object, Object> e : entries) {
-                   m.put(BTraceUtils.str(e.getKey()), BTraceUtils.str(e.getValue()));
+                   m.put(BTraceUtils.Strings.str(e.getKey()), BTraceUtils.Strings.str(e.getValue()));
                 }
                 printStringMap(null, m);
             }
         } else {
-            print(BTraceUtils.str(map));
+            print(BTraceUtils.Strings.str(map));
         }
     }
 

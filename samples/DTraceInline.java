@@ -44,7 +44,7 @@ public class DTraceInline {
         method="start"
     )
     public static void newThread(Thread th) {
-        println(name(th));
-        dtraceProbe("mstack", "");
+        println(Threads.name(th));
+        D.probe("mstack", "");
     } 
 }

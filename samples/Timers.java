@@ -27,6 +27,8 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtils.Strings.*;
+import static com.sun.btrace.BTraceUtils.Sys.VM.*;
 
 /**
  * Demonstrates multiple timer probes with different
@@ -47,7 +49,7 @@ import static com.sun.btrace.BTraceUtils.*;
 
    @OnTimer(3000) 
    public static void f1() {
-     println(strcat("3000 msec: ", str(timeMillis())));
+     println(strcat("3000 msec: ", str(Time.millis())));
    }
 
 }

@@ -25,19 +25,10 @@
 
 package com.sun.btrace.samples;
 
-import static com.sun.btrace.BTraceUtils.$;
-import static com.sun.btrace.BTraceUtils.addToAggregation;
-import static com.sun.btrace.BTraceUtils.get;
-import static com.sun.btrace.BTraceUtils.jstackStr;
-import static com.sun.btrace.BTraceUtils.newAggregation;
-import static com.sun.btrace.BTraceUtils.newAggregationKey;
-import static com.sun.btrace.BTraceUtils.newWeakMap;
-import static com.sun.btrace.BTraceUtils.print;
-import static com.sun.btrace.BTraceUtils.printAggregation;
-import static com.sun.btrace.BTraceUtils.println;
-import static com.sun.btrace.BTraceUtils.put;
-import static com.sun.btrace.BTraceUtils.str;
-import static com.sun.btrace.BTraceUtils.strcmp;
+import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtils.Collections.*;
+import static com.sun.btrace.BTraceUtils.Aggregations.*;
+import static com.sun.btrace.BTraceUtils.Threads.*;
 
 import java.sql.Statement;
 import java.util.Map;
@@ -94,7 +85,7 @@ public class JdbcQueries {
      * 
      * Otherwise we print the SQL.
      */
-    private static boolean useStackTrace = $(2) != null && strcmp("--stack", $(2)) == 0;
+    private static boolean useStackTrace = Sys.$(2) != null && Strings.strcmp("--stack", Sys.$(2)) == 0;
 
     // The first couple of probes capture whenever prepared statement and callable statements are
     // instantiated, in order to let us track what SQL they contain.
@@ -167,7 +158,7 @@ public class JdbcQueries {
     public static void onEvent() {
 
         // Top 10 queries only
-        BTraceUtils.truncateAggregation(histogram, 10);
+        truncateAggregation(histogram, 10);
 
         println("---------------------------------------------");
         printAggregation("Count", count);

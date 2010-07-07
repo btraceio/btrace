@@ -27,6 +27,8 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtils.Sys.*;
+import static com.sun.btrace.BTraceUtils.Strings.*;
 
 /**
  * This BTrace program demonstrates command line
@@ -40,7 +42,7 @@ import static com.sun.btrace.BTraceUtils.*;
         method="run"
     )
     public static void started() {
-        if (strcmp(name(currentThread()), $(2)) == 0) {
+        if (strcmp(Threads.name(Threads.currentThread()), $(2)) == 0) {
             println(strcat("started ", $(2)));
         }
     }

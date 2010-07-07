@@ -27,6 +27,8 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtils.Sys.*;
+import static com.sun.btrace.BTraceUtils.Sys.Memory.*;
 
 /*
  * A simple sample that dumps heap of the target at start and exits.

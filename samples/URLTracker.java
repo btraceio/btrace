@@ -27,6 +27,7 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtils.Strings.*;
 import java.net.*;
 
 /*
@@ -70,7 +71,7 @@ import java.net.*;
     public static void openURL() {
         if (url != null) {
             println(strcat("open ", str(url)));
-            dtraceProbe("java-url-open", str(url));
+            D.probe("java-url-open", str(url));
             url = null;
         }
     }

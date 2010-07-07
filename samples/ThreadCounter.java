@@ -58,6 +58,6 @@ import com.sun.btrace.annotations.Export;
         // as from jvmstat counter directly.
         println(count);
         // or equivalently ...
-        println(perfLong("btrace.com.sun.btrace.samples.ThreadCounter.count"));
+        println(Counters.perfLong("btrace.com.sun.btrace.samples.ThreadCounter.count"));
     }
 }

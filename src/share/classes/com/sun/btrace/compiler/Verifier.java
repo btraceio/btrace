@@ -90,7 +90,7 @@ public class Verifier extends AbstractProcessor
             for (Element e: elements) {
                 Tree tree = treeUtils.getTree(e);
                 if (tree.getKind().equals(Tree.Kind.CLASS)) {
-                    verify((ClassTree)tree);
+                    verify((ClassTree)tree, e);
                 }
             }
         }
@@ -151,7 +151,7 @@ public class Verifier extends AbstractProcessor
     }
 
     // verify each BTrace class
-    private boolean verify(ClassTree ct) {
+    private boolean verify(ClassTree ct, Element topElement) {
         currentClass = ct;
         CompilationUnitTree cut = getCompilationUnit();
         String className = ct.getSimpleName().toString();
@@ -161,7 +161,7 @@ public class Verifier extends AbstractProcessor
         }
         classNames.add(className);
         Boolean value = unsafe? Boolean.TRUE : 
-            ct.accept(new VerifierVisitor(this), null);
+            ct.accept(new VerifierVisitor(this, topElement), null);
         return value == null? true : value.booleanValue();
     }
 }

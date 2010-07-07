@@ -51,8 +51,8 @@ import com.sun.btrace.annotations.*;
      location=@Location(Kind.RETURN)
    )   
    public static void defineclass(Class cl) {
-       println(strcat("loaded ", name(cl)));
-       jstack();
+       println(Strings.strcat("loaded ", Reflective.name(cl)));
+       Threads.jstack();
        println("==========================");
    }
 }

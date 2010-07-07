@@ -27,6 +27,7 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtils.Strings.*;
 
 @BTrace public class Sizeof {
     @OnMethod(
@@ -34,7 +35,7 @@ import static com.sun.btrace.BTraceUtils.*;
         method="<init>"
     ) 
     public static void onnew(@Self Object obj) {
-        println(concat("object of: ", name(classOf(obj))));
+        println(concat("object of: ", Reflective.name(Reflective.classOf(obj))));
         println(concat("size: ", str(sizeof(obj))));
     }
 }

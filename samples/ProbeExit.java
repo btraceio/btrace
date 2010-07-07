@@ -57,7 +57,7 @@ import static com.sun.btrace.BTraceUtils.*;
             // note that this exits the BTrace client
             // and not the traced program (which would
             // be a destructive action!).
-            exit(0);
+            Sys.exit(0);
         }
     }
 }

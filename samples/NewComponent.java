@@ -52,6 +52,6 @@ import java.awt.Component;
     @OnTimer(2000)
     public static void print() {
         // print the counter
-        println(strcat("component count = ", str(count)));
+        println(Strings.strcat("component count = ", str(count)));
     }
 }
