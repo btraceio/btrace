@@ -52,6 +52,7 @@ import java.io.PrintWriter;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -71,8 +72,19 @@ public final class Main {
     private static volatile String probeDescPath;
     private static volatile String scriptOutputFile;
     private static volatile Long fileRollMilliseconds;
+
+    // #BTRACE-42: Non-daemon thread prevents traced application from exiting
+    private static final ThreadFactory daemonizedThreadFactory = new ThreadFactory() {
+    ThreadFactory delegate = Executors.defaultThreadFactory();
+            @Override
+            public Thread newThread(Runnable r) {
+                    Thread result = delegate.newThread(r);
+                    result.setDaemon(true);
+                    return result;
+            }
+    };
     
-    private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor();
+    private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(daemonizedThreadFactory);
 
     public static void premain(String args, Instrumentation inst) {
         main(args, inst);
