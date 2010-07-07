@@ -1268,6 +1268,12 @@ public final class BTraceUtils {
     }
 
     public static class Collections {
+        public static <T> void forEach(Collection<T> coll, String itemLambda) {
+            for(T item : coll) {
+                BTraceRuntime.lambda(itemLambda, item);
+            }
+        }
+        
         // Create a new map
         public static <K, V> Map<K, V> newHashMap() {
             return BTraceRuntime.newHashMap();

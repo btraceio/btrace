@@ -63,7 +63,7 @@ public class MethodRemover extends ClassAdapter {
         } else {
             return new MethodAdapter(new NullVisitor()) {
                 private boolean include = true;
-                private MethodVisitor adaptee = null;
+                private MethodVisitor adaptee = addMethod(access, name, desc, signature, exceptions);
 
                 public AnnotationVisitor visitAnnotation(String annoDesc,
                                   boolean visible) {
@@ -74,8 +74,6 @@ public class MethodRemover extends ClassAdapter {
                         include = false;
                         return new NullVisitor();
                     } else {
-                        adaptee = addMethod(access, name, desc, signature,
-                                     exceptions);
                         return adaptee.visitAnnotation(annoDesc, visible);
                     }
                 }

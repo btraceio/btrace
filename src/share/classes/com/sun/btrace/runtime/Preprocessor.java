@@ -507,11 +507,21 @@ public class Preprocessor extends ClassAdapter {
              *        }
              *
              */
-            MethodVisitor adaptee = super.visitMethod(access, name, desc, 
-                                                    signature, exceptions);
             final boolean isClassInitializer = name.equals(CLASS_INITIALIZER);
             classInitializerFound = isClassInitializer;
+            
+            if (!isClassInitializer) {
+                // force the method to be public
+                if ((access & Opcodes.ACC_PRIVATE) > 0) access -= Opcodes.ACC_PRIVATE;
+                if ((access & Opcodes.ACC_PROTECTED) > 0) access -= Opcodes.ACC_PROTECTED;
+                access += Opcodes.ACC_PUBLIC;
+            }
+            
+            MethodVisitor adaptee = super.visitMethod(access, name, desc, 
+                                                    signature, exceptions);
+            
             return new MethodInstrumentor(adaptee, access, name, desc) {
+                private boolean isBTraceHandler = false;
                 private Label start = new Label();
                 private Label handler = new Label();
                 private int nextVar = 0;
@@ -642,48 +652,60 @@ public class Preprocessor extends ClassAdapter {
                     }
                 }
 
+                @Override
+                public AnnotationVisitor visitAnnotation(String name, boolean bln) {
+                    if (name.startsWith("Lcom/sun/btrace/annotations/")) {
+                        isBTraceHandler = true;
+                    }
+                    return super.visitAnnotation(name, bln);
+                }
+
+
+
                 public void visitCode() {
-                    visitTryCatchBlock(start, handler, handler,
-                                    JAVA_LANG_THROWABLE);
+                    if (isClassInitializer || isBTraceHandler) {
+                        visitTryCatchBlock(start, handler, handler,
+                                        JAVA_LANG_THROWABLE);
 
-                    if (isClassInitializer) {  
-                         visitLdcInsn(classType);
-                         visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
-                                    BTRACE_RUNTIME_FOR_CLASS, 
-                                    BTRACE_RUNTIME_FOR_CLASS_DESC);
-                         super.visitFieldInsn(PUTSTATIC, className,
-                                   BTRACE_RUNTIME_FIELD_NAME,
-                                   BTRACE_RUNTIME_DESC);                      
-                    }
-                    visitFieldInsn(GETSTATIC, className,
-                                   BTRACE_RUNTIME_FIELD_NAME,
-                                   BTRACE_RUNTIME_DESC);
-                    visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,                           
-                                    BTRACE_RUNTIME_ENTER, 
-                                    BTRACE_RUNTIME_ENTER_DESC);
-                    if (isClassInitializer) {
-                         for (FieldDescriptor fd : threadLocalFields.values()) {
-                             fd.var = nextVar;
-                             nextVar += Type.getType(fd.desc).getSize();
-                         }
-                         for (FieldDescriptor fd : exportFields.values()) {
-                             visitLdcInsn(perfCounterName(fd.name));
-                             visitLdcInsn(fd.desc);
-                             if (fd.value == null) {
-                                 visitInsn(ACONST_NULL);
-                             } else {
-                                 visitLdcInsn(fd.value);
-                                 box(fd.desc);
-                             }
+                        if (isClassInitializer) {
+                             visitLdcInsn(classType);
                              visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
-                                    BTRACE_RUNTIME_NEW_PERFCOUNTER, 
-                                    BTRACE_RUNTIME_NEW_PERFCOUNTER_DESC);                             
-                         }
-                    }
+                                        BTRACE_RUNTIME_FOR_CLASS,
+                                        BTRACE_RUNTIME_FOR_CLASS_DESC);
+                             super.visitFieldInsn(PUTSTATIC, className,
+                                       BTRACE_RUNTIME_FIELD_NAME,
+                                       BTRACE_RUNTIME_DESC);
+                        }
+                        visitFieldInsn(GETSTATIC, className,
+                                       BTRACE_RUNTIME_FIELD_NAME,
+                                       BTRACE_RUNTIME_DESC);
+                        visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                        BTRACE_RUNTIME_ENTER,
+                                        BTRACE_RUNTIME_ENTER_DESC);
+                        if (isClassInitializer) {
+                             for (FieldDescriptor fd : threadLocalFields.values()) {
+                                 fd.var = nextVar;
+                                 nextVar += Type.getType(fd.desc).getSize();
+                             }
+                             for (FieldDescriptor fd : exportFields.values()) {
+                                 visitLdcInsn(perfCounterName(fd.name));
+                                 visitLdcInsn(fd.desc);
+                                 if (fd.value == null) {
+                                     visitInsn(ACONST_NULL);
+                                 } else {
+                                     visitLdcInsn(fd.value);
+                                     box(fd.desc);
+                                 }
+                                 visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                        BTRACE_RUNTIME_NEW_PERFCOUNTER,
+                                        BTRACE_RUNTIME_NEW_PERFCOUNTER_DESC);
+                             }
+                        }
 
-                    visitJumpInsn(IFNE, start);
-                    super.visitInsn(RETURN);
-                    visitLabel(start);
+                        visitJumpInsn(IFNE, start);
+                        super.visitInsn(RETURN);
+                        visitLabel(start);
+                    }
                     super.visitCode();
                 }
 
@@ -734,13 +756,15 @@ public class Preprocessor extends ClassAdapter {
                                         BTRACE_FIELD_PREFIX + fd.name,
                                         JAVA_LANG_THREAD_LOCAL_DESC);
                             }
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,                      
-                                    BTRACE_RUNTIME_START, 
-                                    BTRACE_RUNTIME_START_DESC);
-                        } else {
                             visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                BTRACE_RUNTIME_START,
+                                BTRACE_RUNTIME_START_DESC);
+                        } else {
+                            if (isBTraceHandler) {
+                                visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_LEAVE, 
                                     BTRACE_RUNTIME_LEAVE_DESC);
+                            }
                         }
                     }
                     super.visitInsn(opcode);        
@@ -748,9 +772,11 @@ public class Preprocessor extends ClassAdapter {
 
                 public void visitMaxs(int maxStack, int maxLocals) {
                     visitLabel(handler);
-                    visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
-                                    BTRACE_RUNTIME_HANDLE_EXCEPTION,
-                                    BTRACE_RUNTIME_HANDLE_EXCEPTION_DESC);
+                    if (isBTraceHandler) {
+                        visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                        BTRACE_RUNTIME_HANDLE_EXCEPTION,
+                                        BTRACE_RUNTIME_HANDLE_EXCEPTION_DESC);
+                    }
                     super.visitInsn(RETURN);
                     super.visitMaxs(maxStack, maxLocals);
                 }

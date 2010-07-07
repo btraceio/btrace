@@ -60,6 +60,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     private boolean insideMethod;
     private volatile static Method[] btraceMethods;
     private volatile static Class[] btraceClasses;
+    private volatile static ExecutableElement[] sharedMethods;
 
     public VerifierVisitor(Verifier verifier, Element clzElement) {
         this.verifier = verifier;
@@ -69,6 +70,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 shared.add((ExecutableElement)e);
             }
         }
+        sharedMethods = shared.toArray(new ExecutableElement[shared.size()]);
     }
 
     public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
@@ -82,7 +84,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             }
 
             if (name.equals("super") || 
-                isBTraceMethod(name, numArgs)) {
+                isBTraceMethod(name, numArgs) ||
+                isSharedMethod(name, numArgs)) {
                 return super.visitMethodInvocation(node, v);
             } // else fall through ..
         } else if (methodSelect.getKind() == Tree.Kind.MEMBER_SELECT) {
@@ -379,6 +382,16 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         for (Method m : btraceMethods) {
             if (m.getName().equals(name) &&
                 m.getParameterTypes().length == numArgs) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isSharedMethod(String name, int numArgs) {
+        for(ExecutableElement m : sharedMethods) {
+            if (m.getSimpleName().contentEquals(name) &&
+                m.getParameters().size() == numArgs) {
                 return true;
             }
         }

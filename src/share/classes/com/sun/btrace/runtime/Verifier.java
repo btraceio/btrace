@@ -75,13 +75,14 @@ public class Verifier extends ClassAdapter {
     private List<OnMethod> onMethods;
     private List<OnProbe> onProbes;
     private boolean unsafe;
-
+    private CycleDetector cycleDetector;
 
     public Verifier(ClassVisitor cv, boolean unsafe) {
         super(cv);
         this.unsafe = unsafe;
         onMethods = new ArrayList<OnMethod>();
         onProbes = new ArrayList<OnProbe>();
+        cycleDetector = new CycleDetector();
     }
 
     public Verifier(ClassVisitor cv) {
@@ -98,6 +99,14 @@ public class Verifier extends ClassAdapter {
 
     public List<OnProbe> getOnProbes() {
         return onProbes;
+    }
+
+    @Override
+    public void visitEnd() {
+        if (cycleDetector.hasCycle()) {
+            reportError("execution.loop.danger");
+        }
+        super.visitEnd();
     }
 
     public void visit(int version, int access, String name, 
@@ -136,7 +145,7 @@ public class Verifier extends ClassAdapter {
         if ((access & ACC_STATIC) == 0) {
             reportError("agent.no.instance.variables", name);
         }
-        return super.visitField(access, name, desc, signature, value); 
+        return super.visitField(access, name, desc, signature, value);
     }
      
     public void visitInnerClass(String name, String outerName, 
@@ -147,14 +156,11 @@ public class Verifier extends ClassAdapter {
         }
     }
      
-    public MethodVisitor visitMethod(int access, final String methodName, 
+    public MethodVisitor visitMethod(final int access, final String methodName,
             final String methodDesc, String signature, String[] exceptions) {
+
         if (! seenBTrace) {
             reportError("not.a.btrace.program");
-        }
-        
-        if ((access & ACC_PUBLIC) == 0 && !methodName.equals(CLASS_INITIALIZER)) {
-            reportError("method.should.be.public", methodName + methodDesc);
         }
 
         if ((access & ACC_SYNCHRONIZED) != 0) {
@@ -167,14 +173,27 @@ public class Verifier extends ClassAdapter {
             }
         }
 
-        if (Type.getReturnType(methodDesc) != Type.VOID_TYPE) {
-            reportError("return.type.should.be.void", methodName + methodDesc);
-        }
-
-        MethodVisitor mv = super.visitMethod(access, methodName, 
+        MethodVisitor mv = super.visitMethod(access, methodName,
                    methodDesc, signature, exceptions);
-        return new MethodVerifier(this, mv, className) {
+
+        return new MethodVerifier(this, mv, className, cycleDetector, methodName + methodDesc) {
             private OnMethod om = null;
+            private boolean asBTrace = false;
+
+            @Override
+            public void visitEnd() {
+                if ((access & ACC_PUBLIC) == 0 && !methodName.equals(CLASS_INITIALIZER)) {
+                    if (asBTrace) { // only btrace handlers are enforced to be public
+                        reportError("method.should.be.public", methodName + methodDesc);
+                    }
+                }
+                if (Type.getReturnType(methodDesc) != Type.VOID_TYPE) {
+                    if (asBTrace) {
+                        reportError("return.type.should.be.void", methodName + methodDesc);
+                    }
+                }
+                super.visitEnd();
+            }
 
             @Override
             public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
@@ -186,7 +205,7 @@ public class Verifier extends ClassAdapter {
                 }
                 if (desc.equals(BTRACE_RETURN_DESC)) {
                     if (om != null) {
-                        if (om.getLocation().getValue() == Kind.RETURN || 
+                        if (om.getLocation().getValue() == Kind.RETURN ||
                             (om.getLocation().getValue() == Kind.CALL && om.getLocation().getWhere() == Where.AFTER) ||
                             (om.getLocation().getValue() == Kind.ARRAY_GET && om.getLocation().getWhere() == Where.AFTER) ||
                             (om.getLocation().getValue() == Kind.FIELD_GET && om.getLocation().getWhere() == Where.AFTER) ||
@@ -245,7 +264,12 @@ public class Verifier extends ClassAdapter {
             }
 
             public AnnotationVisitor visitAnnotation(String desc,
-                                  boolean visible) {      
+                                  boolean visible) {
+                if (desc.startsWith("Lcom/sun/btrace/annotations/")) {
+                    asBTrace = true;
+                    cycleDetector.addStarting(new CycleDetector.Node(methodName + methodDesc));
+                }
+
                 if (desc.equals(ONMETHOD_DESC)) {
                     om = new OnMethod();
                     onMethods.add(om);
@@ -289,7 +313,7 @@ public class Verifier extends ClassAdapter {
                                         }
                                     }
 
-                                    public void visitEnd() {                                        
+                                    public void visitEnd() {
                                         om.setLocation(loc);
                                     }
                                 };
