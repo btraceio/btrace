@@ -134,7 +134,7 @@ public class Verifier extends ClassAdapter {
             reportError("not.a.btrace.program");
         }
         if ((access & ACC_STATIC) == 0) {
-            reportError("no.instance.variables", name);
+            reportError("agent.no.instance.variables", name);
         }
         return super.visitField(access, name, desc, signature, value); 
     }

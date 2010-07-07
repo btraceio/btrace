@@ -157,9 +157,9 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             if (m.getKind() == Tree.Kind.VARIABLE) {
                 VariableTree vt = (VariableTree)m;
                 boolean isStatic = isStatic(vt.getModifiers().getFlags());
-                if (! isStatic) {
-                    return reportError("no.instance.variables", m);
-                }                
+                if (isStatic) {
+                    return reportError("no.static.variables", m);
+                }
             }
         }
 
@@ -225,25 +225,33 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 return super.visitMethod(node, v);
             } else {
                 Set<Modifier> flags = node.getModifiers().getFlags();
-                boolean isStatic = isStatic(flags);
-                if (isStatic) {
-                    boolean isPublic = isPublic(node.getModifiers().getFlags());
-                    if (isPublic) {
-                        if (isSynchronized(flags)) {
-                            return reportError("no.synchronized.methods", node);
-                        } else {
-                            return super.visitMethod(node, v);
-                        }
-                    } else {
-                        // force the "public" modifier only on the annotated methods
-                        if (isAnnotated(node)) {
-                            return reportError("method.should.be.public", node);
-                        }
-                        return super.visitMethod(node, v);
-                    }
-                } else {
-                    return reportError("no.instance.method", node);
+//                boolean isStatic = isStatic(flags);
+//                if (isStatic) {
+//                    boolean isPublic = isPublic(node.getModifiers().getFlags());
+//                    if (isPublic) {
+                boolean err = true;
+                if (isStatic(flags)) {
+                    err &= reportError("no.static.method", node);
                 }
+                if (isSynchronized(flags)) {
+                    err &= reportError("no.synchronized.methods", node);
+                }
+
+                if (err) {
+                    return false;
+                }
+
+                return super.visitMethod(node, v);
+//                    } else {
+//                        // force the "public" modifier only on the annotated methods
+//                        if (isAnnotated(node)) {
+//                            return reportError("method.should.be.public", node);
+//                        }
+//                        return super.visitMethod(node, v);
+//                    }
+//                } else {
+//                    return reportError("no.instance.method", node);
+//                }
 
             }
         } finally {
