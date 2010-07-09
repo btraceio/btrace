@@ -176,7 +176,6 @@ public class MethodVerifier extends MethodAdapter {
                 break;
             case INVOKESTATIC:
                 if (!owner.equals(BTRACE_UTILS) &&
-                    !owner.equals(BTRACE_UTILS_ALL) &&
                     !owner.startsWith(BTRACE_UTILS + "$") &&
                     !owner.equals(className)) {
                     if ("valueOf".equals(name) && isPrimitiveWrapper(owner)) {

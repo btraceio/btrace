@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.compiler;
 
+import com.sun.btrace.client.Main;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import javax.annotation.processing.Processor;
@@ -267,23 +268,27 @@ public class Compiler {
         }
 
         // collect .class bytes of all compiled classes
-        Map<String, byte[]> classBytes = manager.getClassBytes();
-        List<String> classNames = btraceVerifier.getClassNames();
-        Map<String, byte[]> result = new HashMap<String, byte[]>();
-        for (String name : classNames) {
-            if (classBytes.containsKey(name)) {
-                ClassReader cr = new ClassReader(classBytes.get(name));
-                ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-                cr.accept(new Postprocessor(cw), ClassReader.EXPAND_FRAMES + ClassReader.SKIP_DEBUG);
-                result.put(name, cw.toByteArray());
-                dump(name, cw.toByteArray());
+        try {
+            Map<String, byte[]> classBytes = manager.getClassBytes();
+            List<String> classNames = btraceVerifier.getClassNames();
+            Map<String, byte[]> result = new HashMap<String, byte[]>();
+            for (String name : classNames) {
+                if (classBytes.containsKey(name)) {
+                    dump(name + "_orig", classBytes.get(name));
+                    ClassReader cr = new ClassReader(classBytes.get(name));
+                    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+                    cr.accept(new Postprocessor(cw), ClassReader.EXPAND_FRAMES + ClassReader.SKIP_DEBUG);
+                    result.put(name, cw.toByteArray());
+                    dump(name, cw.toByteArray());
+                }
+            }
+            return result;
+        } finally {
+            try {
+                manager.close();
+            } catch (IOException exp) {
             }
         }
-        try {
-            manager.close();
-        } catch (IOException exp) {
-        }
-        return result;
     }
 
     private void dump(String name, byte[] code) {

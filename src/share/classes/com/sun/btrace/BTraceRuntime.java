@@ -654,7 +654,7 @@ public final class BTraceRuntime {
         }
     }
 
-    // package-private interface to BTraceUtil class.
+    // package-private interface to BTraceUtils class.
 
     static int speculation() {
         BTraceRuntime current = getCurrent();

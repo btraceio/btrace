@@ -1,6 +1,26 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Sun designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Sun in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * CA 95054 USA or visit www.sun.com if you need additional information or
+ * have any questions.
  */
 
 package com.sun.btrace.compiler;
@@ -29,13 +49,28 @@ import java.util.List;
  */
 public class Postprocessor extends ClassAdapter {
     private List<FieldDescriptor> fields = new ArrayList<FieldDescriptor>();
+    private boolean shortSyntax = false;
 
     public Postprocessor(ClassVisitor cv) {
         super(cv);
     }
-    
+
+    @Override
+    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        if (((access & Opcodes.ACC_PUBLIC) |
+            (access & Opcodes.ACC_PROTECTED) |
+            (access & Opcodes.ACC_PRIVATE)) == 0)
+        {
+            shortSyntax = true; // specifying "class <MyClass>" rather than "public class <MyClass>" means using short syntax
+            access |= Opcodes.ACC_PUBLIC; // force the public modifier on the btrace class
+        }
+        super.visit(version, access, name, signature, superName, interfaces);
+    }
+
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+        if (!shortSyntax) return super.visitMethod(access, name, desc, signature, exceptions);
+
         if ((access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE)) == 0) {
             access &= ~Opcodes.ACC_PROTECTED;
             access |= Opcodes.ACC_PUBLIC;
@@ -49,6 +84,8 @@ public class Postprocessor extends ClassAdapter {
 
     @Override
     public FieldVisitor visitField(final int access, final String name, final String desc, final String signature, final Object value) {
+        if (!shortSyntax) return super.visitField(access, name, desc, signature, value);
+        
         final List<Attribute> attrs = new ArrayList<Attribute>();
         return new FieldVisitor() {
 
@@ -71,7 +108,9 @@ public class Postprocessor extends ClassAdapter {
 
     @Override
     public void visitEnd() {
-        addFields();
+        if (shortSyntax) {
+            addFields();
+        }
     }
 
     private void addFields() {
@@ -389,9 +428,9 @@ public class Postprocessor extends ClassAdapter {
                     simulatedStack.poll();
                 }
             }
-            Boolean targetVal = simulatedStack.poll();
-            if (targetVal != null && targetVal) {
-                if (opcode == Opcodes.INVOKESPECIAL) {
+            if (opcode != Opcodes.INVOKESTATIC) {
+                Boolean targetVal = simulatedStack.poll();
+                if (targetVal != null && targetVal) { // "true" on stack means the original reference to "this"
                     opcode = Opcodes.INVOKESTATIC;
                 }
             }

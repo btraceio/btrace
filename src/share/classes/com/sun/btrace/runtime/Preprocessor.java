@@ -512,9 +512,9 @@ public class Preprocessor extends ClassAdapter {
             
             if (!isClassInitializer) {
                 // force the method to be public
-                if ((access & Opcodes.ACC_PRIVATE) > 0) access -= Opcodes.ACC_PRIVATE;
-                if ((access & Opcodes.ACC_PROTECTED) > 0) access -= Opcodes.ACC_PROTECTED;
-                access += Opcodes.ACC_PUBLIC;
+                if ((access & Opcodes.ACC_PRIVATE) > 0) access ^= Opcodes.ACC_PRIVATE;
+                if ((access & Opcodes.ACC_PROTECTED) > 0) access ^= Opcodes.ACC_PROTECTED;
+                access |= Opcodes.ACC_PUBLIC;
             }
             
             MethodVisitor adaptee = super.visitMethod(access, name, desc, 
@@ -656,6 +656,8 @@ public class Preprocessor extends ClassAdapter {
                 public AnnotationVisitor visitAnnotation(String name, boolean bln) {
                     if (name.startsWith("Lcom/sun/btrace/annotations/")) {
                         isBTraceHandler = true;
+                    } else {
+                        isBTraceHandler = false;
                     }
                     return super.visitAnnotation(name, bln);
                 }

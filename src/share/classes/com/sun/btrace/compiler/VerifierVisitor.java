@@ -25,6 +25,7 @@
 
 package com.sun.btrace.compiler;
 
+import com.sun.btrace.BTraceUtils;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +35,6 @@ import javax.tools.Diagnostic;
 import com.sun.source.tree.*;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreeScanner;
-import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.util.Messages;
 import com.sun.source.util.TreePath;
@@ -43,11 +43,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashSet;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
 
 /**
  * This class tree visitor validates a BTrace program's ClassTree.
@@ -61,6 +59,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     private volatile static Method[] btraceMethods;
     private volatile static Class[] btraceClasses;
     private volatile static ExecutableElement[] sharedMethods;
+
+    private boolean shortSyntax = false;
 
     public VerifierVisitor(Verifier verifier, Element clzElement) {
         this.verifier = verifier;
@@ -150,6 +150,14 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             return reportError("no.local.class", node);            
         }
 
+        // check for short BTrace syntax (inferring redundant access qualifiers)
+        Set<Modifier> mods = node.getModifiers().getFlags();
+        if (!mods.contains(Modifier.PRIVATE) &&
+            !mods.contains(Modifier.PROTECTED) &&
+            !mods.contains(Modifier.PUBLIC))
+        {
+            shortSyntax = true;
+        }
         // check for inner and nested class
         List<? extends Tree> members = node.getMembers();
         for (Tree m : members) {
@@ -160,8 +168,14 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             if (m.getKind() == Tree.Kind.VARIABLE) {
                 VariableTree vt = (VariableTree)m;
                 boolean isStatic = isStatic(vt.getModifiers().getFlags());
-                if (isStatic) {
-                    return reportError("no.static.variables", m);
+                if (shortSyntax) {
+                    if (isStatic) {
+                        return reportError("no.static.variables", m);
+                    }
+                } else {
+                    if (! isStatic) {
+                        return reportError("no.instance.variables", m);
+                    }
                 }
             }
         }
@@ -183,7 +197,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         }
 
         ModifiersTree mt = node.getModifiers();
-        if (! isPublic(mt.getFlags())) {
+        if (!shortSyntax && ! isPublic(mt.getFlags())) {
             return reportError("class.should.be.public", node);
         }
         List<? extends AnnotationTree> anno = mt.getAnnotations();
@@ -228,34 +242,39 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 return super.visitMethod(node, v);
             } else {
                 Set<Modifier> flags = node.getModifiers().getFlags();
-//                boolean isStatic = isStatic(flags);
-//                if (isStatic) {
-//                    boolean isPublic = isPublic(node.getModifiers().getFlags());
-//                    if (isPublic) {
-                boolean err = true;
-                if (isStatic(flags)) {
-                    err &= reportError("no.static.method", node);
+                if (shortSyntax) {
+                    boolean err = true;
+                    if (isStatic(flags)) {
+                        err &= reportError("no.static.method", node);
+                    }
+                    if (isSynchronized(flags)) {
+                        err &= reportError("no.synchronized.methods", node);
+                    }
+                    if (err) {
+                        return false;
+                    }
+                } else {
+                    boolean isStatic = isStatic(flags);
+                    if (isStatic) {
+                        boolean isPublic = isPublic(node.getModifiers().getFlags());
+                        if (isPublic) {
+                            if (isSynchronized(flags)) {
+                                return reportError("no.synchronized.methods", node);
+                            } else {
+                                return super.visitMethod(node, v);
+                            }
+                        } else {
+                            // force the "public" modifier only on the annotated methods
+                            if (isAnnotated(node)) {
+                                return reportError("method.should.be.public", node);
+                            }
+                            return super.visitMethod(node, v);
+                        }
+                    } else {
+                        return reportError("no.instance.method", node);
+                    }
                 }
-                if (isSynchronized(flags)) {
-                    err &= reportError("no.synchronized.methods", node);
-                }
-
-                if (err) {
-                    return false;
-                }
-
                 return super.visitMethod(node, v);
-//                    } else {
-//                        // force the "public" modifier only on the annotated methods
-//                        if (isAnnotated(node)) {
-//                            return reportError("method.should.be.public", node);
-//                        }
-//                        return super.visitMethod(node, v);
-//                    }
-//                } else {
-//                    return reportError("no.instance.method", node);
-//                }
-
             }
         } finally {
             insideMethod = oldInsideMethod;
@@ -389,6 +408,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     }
 
     private static boolean isSharedMethod(String name, int numArgs) {
+        if (sharedMethods == null) return false;
+        
         for(ExecutableElement m : sharedMethods) {
             if (m.getSimpleName().contentEquals(name) &&
                 m.getParameters().size() == numArgs) {
