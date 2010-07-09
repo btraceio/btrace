@@ -5878,6 +5878,19 @@ public class BTraceUtils {
             }
 
             /**
+             * Returns an overview of available memory pools <br>
+             * It is possible to provide a text format the overview will use
+             * @param poolFormat The text format string to format the overview. <br>
+             *                   Exactly 5 arguments are passed to the format function. <br>
+             *                   The format defaults to ";%1$s;%2$d;%3$d;%4$d;%5$d;Memory]"
+             * @return Returns the formatted value of memory pools overview
+             * @since 1.2
+             */
+            public static String getMemoryPoolUsage(String poolFormat) {
+                return BTraceRuntime.getMemoryPoolUsage(poolFormat);
+            }
+
+            /**
              * Runs the finalization methods of any objects pending finalization.
              * <p>
              * Calling this method suggests that the Java Virtual Machine expend

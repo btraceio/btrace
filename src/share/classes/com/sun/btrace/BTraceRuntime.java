@@ -170,6 +170,7 @@ public final class BTraceRuntime {
     private static volatile RuntimeMXBean runtimeMBean;
     private static volatile ThreadMXBean threadMBean;
     private static volatile List<GarbageCollectorMXBean> gcBeanList;
+    private static volatile List<MemoryPoolMXBean> memPoolList;
 
     // bytecode generator that generates Runnable implementations
     private static RunnableGenerator runnableGenerator;
@@ -1378,6 +1379,30 @@ public final class BTraceRuntime {
     	return totalGcTime;
     }
 
+    static String getMemoryPoolUsage(String poolFormat) {
+        if (poolFormat == null) {
+            poolFormat = "%1$s;%2$d;%3$d;%4$d;%5$d";
+        }
+    	Object[][] poolOutput = new Object[memPoolList.size()][5];
+
+    	StringBuilder membuffer = new StringBuilder();
+
+    	for (int i = 0; i < memPoolList.size(); i++) {
+            MemoryPoolMXBean memPool = memPoolList.get(i);
+            poolOutput[i][0] = memPool.getName();
+            poolOutput[i][1] = new Long(memPool.getUsage().getMax());
+            poolOutput[i][2] = new Long(memPool.getUsage().getUsed());
+            poolOutput[i][3] = new Long(memPool.getUsage().getCommitted());
+            poolOutput[i][4] = new Long(memPool.getUsage().getInit());
+
+    	}
+    	for (Object[] memPoolOutput : poolOutput) {
+            membuffer.append(String.format(poolFormat, memPoolOutput)).append("\n");
+        }
+
+    	return membuffer.toString();
+     }
+
     static void serialize(Object obj, String fileName) {
         try {
             BufferedOutputStream bos = new BufferedOutputStream(
@@ -1761,6 +1786,16 @@ public final class BTraceRuntime {
         }
     }
 
+    private static void initMemoryPoolList() {
+        if (memPoolList == null) {
+            synchronized (BTraceRuntime.class) {
+                if (memPoolList == null) {
+                    memPoolList = getMemoryPoolMXBeans();
+                }
+            }
+        }
+    }
+
     private static PerfReader getPerfReader() {
         if (perfReader == null) {
             throw new UnsupportedOperationException();
@@ -2004,8 +2039,8 @@ public final class BTraceRuntime {
             }
         }
 
-        List<MemoryPoolMXBean> mpools = getMemoryPoolMXBeans();
-        for (MemoryPoolMXBean mpoolBean : mpools) {
+        initMemoryPoolList();
+        for (MemoryPoolMXBean mpoolBean : memPoolList) {
             String name = mpoolBean.getName();
             if (lowMemHandlers.containsKey(name)) {
                 Method m = lowMemHandlers.get(name);
