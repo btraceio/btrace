@@ -3959,6 +3959,50 @@ public class BTraceUtils {
         public static String str(double d) {
             return Double.toString(d);
         }
+
+        /**
+         * Safely creates a new instance of an appendable string buffer <br>
+         * @param threadSafe Specifies whether the buffer should be thread safe
+         * @return Returns either {@linkplain StringBuilder} or {@linkplain StringBuffer}
+         *         instance depending on whether the instance is required to be
+         *         thread safe or not, respectively.
+         * @since 1.2
+         */
+        public static Appendable newStringBuilder(boolean threadSafe) {
+            return BTraceRuntime.newStringBuilder(threadSafe);
+        }
+
+        /**
+         * Safely creates a new instance of an appendable string buffer <br>
+         * The buffer will not be thread safe.
+         * @return Returns a new instance of {@linkplain StringBuilder} class
+         * @since 1.2
+         */
+        public static Appendable newStringBuilder() {
+            return BTraceRuntime.newStringBuilder();
+        }
+
+        /**
+         * Appends a string to an appendable buffer created by {@linkplain BTraceUtils.Strings#newStringBuilder()}
+         * @param buffer The appendable buffer to append to
+         * @param strToAppend The string to append
+         * @return Returns the same appendable buffer instance
+         * @since 1.2
+         */
+        public static Appendable append(Appendable buffer, String strToAppend) {
+            return BTraceRuntime.append(buffer, strToAppend);
+
+        }
+
+        /**
+         * Checks the length of an appendable buffer created by {@linkplain BTraceUtils.Strings#newStringBuilder()}
+         * @param buffer The appendable buffer instance
+         * @return Returns the length of the text contained by the buffer
+         * @since 1.2
+         */
+        public static int length(Appendable buffer) {
+            return BTraceRuntime.length(buffer);
+        }
     }
 
     /*
@@ -4466,7 +4510,7 @@ public class BTraceUtils {
         public static <V> Deque<V> newDeque() {
             return BTraceRuntime.newDeque();
         }
-
+        
         // get a particular item from a Map
         public static <K, V> V get(Map<K, V> map, Object key) {
             return BTraceRuntime.get(map, key);

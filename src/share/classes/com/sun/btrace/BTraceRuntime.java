@@ -712,6 +712,14 @@ public final class BTraceRuntime {
         return new BTraceDeque<V>(new ArrayDeque<V>());
     }
 
+    static Appendable newStringBuilder(boolean threadSafe) {
+    	return threadSafe ? new StringBuffer() : new StringBuilder();
+    }
+
+    static Appendable newStringBuilder() {
+    	return newStringBuilder(false);
+    }
+
     static <E> int size(Collection<E> coll) {
         if (coll instanceof BTraceCollection || coll.getClass().getClassLoader() == null) {
             return coll.size();
@@ -898,6 +906,26 @@ public final class BTraceRuntime {
         }
     }
 
+    public static Appendable append(Appendable buffer, String strToAppend) {
+    	try {
+            if (buffer != null && strToAppend != null) {
+                return buffer.append(strToAppend);
+            } else {
+                throw new IllegalArgumentException();
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    public static int length(Appendable buffer) {
+    	if (buffer != null && buffer instanceof CharSequence) {
+            return ((CharSequence)buffer).length();
+    	} else {
+            throw new IllegalArgumentException();
+    	}
+    }
+    
     static void printNumber(String name, Number value) {
         getCurrent().send(new NumberDataCommand(name, value));
     }
