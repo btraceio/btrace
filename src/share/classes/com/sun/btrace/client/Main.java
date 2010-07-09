@@ -61,11 +61,11 @@ public final class Main {
         DEBUG = Boolean.getBoolean("com.sun.btrace.debug");
         if (isDebug()) debugPrint("btrace debug mode is set");
         TRACK_RETRANSFORM = Boolean.getBoolean("com.sun.btrace.trackRetransforms");
-        if (isDebug()) debugPrint("trackRetransforms flag is set");
+        if (isDebug() && TRACK_RETRANSFORM) debugPrint("trackRetransforms flag is set");
         UNSAFE = Boolean.getBoolean("com.sun.btrace.unsafe");
-        if (isDebug()) debugPrint("btrace unsafe mode is set");
+        if (isDebug() && UNSAFE) debugPrint("btrace unsafe mode is set");
         DUMP_CLASSES = Boolean.getBoolean("com.sun.btrace.dumpClasses");
-        if (isDebug()) debugPrint("dumpClasses flag is set");
+        if (isDebug() && DUMP_CLASSES) debugPrint("dumpClasses flag is set");
         DUMP_DIR = System.getProperty("com.sun.btrace.dumpDir", ".");
         if (DUMP_CLASSES) {
             if (isDebug()) debugPrint("dumpDir is " + DUMP_DIR);
