@@ -3227,6 +3227,10 @@ public class BTraceUtils {
 
     /********** Namespaced methods ******************/
 
+    /*
+     * Wraps the threads related BTrace utility methods
+     * @since 1.2
+     */
     public static class Threads {
         // Thread and stack access
 
@@ -3474,6 +3478,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the strings related BTrace utility methods
+     * @since 1.2
+     */
     public static class Strings {
         public static boolean startsWith(String s, String start) {
             return s.startsWith(start);
@@ -3953,6 +3961,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the numbers related BTrace utility methods
+     * @since 1.2
+     */
     public static class Numbers {
         /**
          * Returns a <code>double</code> value with a positive sign, greater
@@ -4370,6 +4382,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the time related BTrace utility methods
+     * @since 1.2
+     */
     public static class Time {
         /**
          * Returns the current time in milliseconds.  Note that
@@ -4427,6 +4443,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the collections related BTrace utility methods
+     * @since 1.2
+     */
     public static class Collections {
 //        public static <T> void forEach(Collection<T> coll, String itemLambda) {
 //            for(T item : coll) {
@@ -4541,6 +4561,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the atomicity related BTrace utility methods
+     * @since 1.2
+     */
     public static class Atomic {
         /**
          * Creates a new AtomicInteger with the given initial value.
@@ -4836,6 +4860,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the aggregations related BTrace utility methods
+     * @since 1.2
+     */
     public static class Aggregations {
         /**
          * Creates a new aggregation based on the given aggregation function type.
@@ -4938,6 +4966,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the speculation related BTrace utility methods
+     * @since 1.2
+     */
     public static class Speculation {
         /**
          * Returns an identifier for a new speculative buffer.
@@ -4976,6 +5008,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the references related BTrace utility methods
+     * @since 1.2
+     */
     public static class References {
         /**
          * Creates and returns a weak reference to the given object.
@@ -5015,6 +5051,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the reflection related BTrace utility methods
+     * @since 1.2
+     */
     public static class Reflective {
         /**
          * Returns the runtime class of the given Object.
@@ -5599,6 +5639,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the data export related BTrace utility methods
+     * @since 1.2
+     */
     public static class Export {
         /**
          * Serialize a given object into the given file.
@@ -5646,7 +5690,15 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the OS related BTrace utility methods
+     * @since 1.2
+     */
     public static class Sys {
+        /*
+         * Wraps the environment related BTrace utility methods
+         * @since 1.2
+         */
         public static class Env {
             /**
              * Gets the system property indicated by the specified key.
@@ -5727,6 +5779,10 @@ public class BTraceUtils {
             }
         }
 
+        /*
+         * Wraps the memory related BTrace utility methods
+         * @since 1.2
+         */
         public static class Memory {
             // memory usage
             /**
@@ -5907,6 +5963,10 @@ public class BTraceUtils {
             }
         }
 
+        /*
+         * Wraps the VM related BTrace utility methods
+         * @since 1.2
+         */
         public static class VM {
             /**
              * Returns the input arguments passed to the Java virtual machine
@@ -6146,6 +6206,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the jvmstat counters related BTrace utility methods
+     * @since 1.2
+     */
     public static class Counters {
         /**
          * accessing jvmstat (perf) int counter
@@ -6169,6 +6233,10 @@ public class BTraceUtils {
         }
     }
 
+    /*
+     * Wraps the dtrace related BTrace utility methods
+     * @since 1.2
+     */
     public static class D {
         /**
          * BTrace to DTrace communication chennal.
