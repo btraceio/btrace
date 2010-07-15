@@ -101,10 +101,36 @@
                 </action>
                 <action name="compile.single">
                     <script>nbproject/ide-file-targets.xml</script>
+                    <target>compile-selected-btrace-files</target>
+                    <context>
+                        <property>files</property>
+                        <folder>src/test/traces</folder>
+                        <pattern>\.java$</pattern>
+                        <format>relative-path</format>
+                        <arity>
+                            <separated-files>,</separated-files>
+                        </arity>
+                    </context>
+                </action>
+                <action name="compile.single">
+                    <script>nbproject/ide-file-targets.xml</script>
                     <target>compile-selected-files-in-test</target>
                     <context>
                         <property>files</property>
                         <folder>src/test</folder>
+                        <pattern>\.java$</pattern>
+                        <format>relative-path</format>
+                        <arity>
+                            <separated-files>,</separated-files>
+                        </arity>
+                    </context>
+                </action>
+                <action name="compile.single">
+                    <script>nbproject/ide-file-targets.xml</script>
+                    <target>compile-selected-files-in-classes</target>
+                    <context>
+                        <property>files</property>
+                        <folder>src/share/classes</folder>
                         <pattern>\.java$</pattern>
                         <format>relative-path</format>
                         <arity>

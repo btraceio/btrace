@@ -14,3 +14,4 @@ website
 ^tailor.state$
 ^tailor.state.old$
 ^tailor.state.journal$
+^TEST-*.xml$
