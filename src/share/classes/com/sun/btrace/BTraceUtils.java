@@ -3209,7 +3209,7 @@ public class BTraceUtils {
      * Prints the aggregation.
      */
     public static void printAggregation(String name, Aggregation aggregation) {
-        printAggregation(name, aggregation);
+    	Aggregations.printAggregation(name, aggregation);
     }
 
     /**
@@ -3222,7 +3222,7 @@ public class BTraceUtils {
      * @since 1.1
      */
     public static void printAggregation(String name, Aggregation aggregation, String format) {
-        printAggregation(name, aggregation, format);
+    	Aggregations.printAggregation(name, aggregation, format);
     }
 
     /********** Namespaced methods ******************/
@@ -5007,6 +5007,14 @@ public class BTraceUtils {
          */
         public static void truncateAggregation(Aggregation aggregation, int count) {
             BTraceRuntime.truncateAggregation(aggregation, count);
+        }
+        
+        public static void printAggregation(String name, Aggregation aggregation) {
+        	BTraceRuntime.printAggregation(name, aggregation);
+        }
+        
+        public static void printAggregation(String name, Aggregation aggregation, String format) {
+        	BTraceRuntime.printAggregation(name, aggregation, format);
         }
     }
 
