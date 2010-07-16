@@ -68,7 +68,22 @@ public class CycleDetector {
 
         @Override
         public String toString() {
-            return "Node{" + "id=" + id + '}';
+            StringBuilder sb = new StringBuilder();
+            sb.append("Node{id='").append(id).append("'}");
+            sb.append("\n");
+            sb.append("incomming:\n");
+            sb.append("=============================\n");
+            for(Edge e : incoming) {
+                sb.append(e.from.id).append("\n");
+            }
+            sb.append("=============================\n");
+            sb.append("outgoing:\n");
+            for(Edge e : outgoing) {
+                sb.append(e.to.id).append("\n");
+            }
+            sb.append("=============================\n");
+
+            return sb.toString();
         }
     }
     public static class Edge {
@@ -220,12 +235,13 @@ public class CycleDetector {
             Iterator<Node> iter = sortedNodes.iterator();
             while (iter.hasNext()) {
                 Node n = iter.next();
-                if (n.incoming.size() + n.outgoing.size() <= 1) {
+                if ((n.incoming.isEmpty() && !startingNodes.contains(n)) ||
+                     n.outgoing.isEmpty()) {
                     changesMade = true;
-                    for(Edge e : n.incoming) {
+                    for(Edge e : new HashSet<Edge>(n.incoming)) {
                         e.delete();
                     }
-                    for (Edge e : n.outgoing) {
+                    for (Edge e : new HashSet<Edge>(n.outgoing)) {
                         e.delete();
                     }
                     iter.remove();
