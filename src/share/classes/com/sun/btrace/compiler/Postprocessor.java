@@ -78,7 +78,13 @@ public class Postprocessor extends ClassAdapter {
         final int localVarOffset = ((access & Opcodes.ACC_STATIC) == 0) ? -1 : 0;
         access |= Opcodes.ACC_STATIC;
 
-        MethodVisitor mv = new MethodConvertor(localVarOffset, "<init>".equals(name), super.visitMethod(access, name, desc, signature, exceptions));
+        boolean isconstructor = false;
+        if ("<init>".equals(name)) {
+            name = "<clinit>";
+            isconstructor = true;
+        }
+
+        MethodVisitor mv = new MethodConvertor(localVarOffset, isconstructor, super.visitMethod(access, name, desc, signature, exceptions));
         return mv;
     }
 
@@ -422,6 +428,7 @@ public class Postprocessor extends ClassAdapter {
 
         @Override
         public void visitMethodInsn(int opcode, String clazz, String method, String desc) {
+            int origOpcode = opcode;
             Type[] args = Type.getArgumentTypes(desc);
             for(Type t : args) {
                 for(int i=0;i<t.getSize();i++) {
@@ -438,7 +445,7 @@ public class Postprocessor extends ClassAdapter {
                 simulatedStack.push(Boolean.FALSE);
             }
             if (!copyEnabled) {
-                if (opcode == Opcodes.INVOKESPECIAL && isConstructor) {
+                if (origOpcode == Opcodes.INVOKESPECIAL && isConstructor) {
                     copyEnabled = true;
                 }
             } else {
