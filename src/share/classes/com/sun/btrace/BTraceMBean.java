@@ -295,7 +295,40 @@ public class BTraceMBean implements DynamicMBean {
                 // just enough to get Maps for now.
                 if (t instanceof Class) {
                     Class c = (Class) t;
-                    return classToOpenTypes.get(c);
+                    if (Profiler.class.isAssignableFrom(c)) {
+                        CompositeType record = new CompositeType("Record",
+                                "Profiler record",
+                                new String[]{"block", "invocations", "selfTime", "wallTime"},
+                                new String[]{"block", "invocations", "selfTime", "wallTime"},
+                                new OpenType[]{
+                                    typeToOpenType(String.class),
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Long.class)
+                        });
+                        CompositeType recordEntry = new CompositeType("Record Entry",
+                                "Record map entry",
+                                new String[]{"key", "value"},
+                                new String[]{"key", "value"},
+                                new OpenType[]{
+                                    typeToOpenType(String.class),
+                                    record
+                                }
+                        );
+                        CompositeType snapshot = new CompositeType("Snapshot",
+                                "Profiler snapshot",
+                                new String[]{"startTime", "lastRefresh", "data"},
+                                new String[]{"startTime", "lastRefresh", "data"},
+                                new OpenType[]{
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Long.class),
+                                    new ArrayType(1, recordEntry)
+                                }
+                        );
+                        return snapshot;
+                    } else {
+                        return classToOpenTypes.get(c);
+                    }
                 } else if (t instanceof ParameterizedType) {
                     ParameterizedType pt = (ParameterizedType) t;
                     Type rawType = pt.getRawType();
@@ -317,6 +350,7 @@ public class BTraceMBean implements DynamicMBean {
                     }
                 }
             } catch (OpenDataException ode) {
+                ode.printStackTrace();
             }
 
             // nothing seems working...
@@ -331,6 +365,67 @@ public class BTraceMBean implements DynamicMBean {
                     return Long.valueOf(((AtomicLong) value).get());
                 } else {
                     return value;
+                }
+            } else if (ot instanceof CompositeType) {
+//                System.err.println("!!! converting val of type " + value.getClass().getName());
+//                System.err.println("!!! is profiler: " + (value instanceof Profiler));
+//                System.err.println("!!! is mbean value provider: " + (value instanceof Profiler.MBeanValueProvider));
+                if (value instanceof Profiler && value instanceof Profiler.MBeanValueProvider) {
+                    CompositeType ct = (CompositeType) ot;
+                    Profiler.MBeanValueProvider p = (Profiler.MBeanValueProvider)value;
+
+                    Profiler.Snapshot snapshot = p.getMBeanValue();
+
+                    if (snapshot == null) {
+//                        System.err.println("!!! NULL snapshot");
+                        try {
+                            return new CompositeDataSupport(ct,
+                                    new String[]{"startTime", "lastRefresh", "data"},
+                                    new Object[]{
+                                        convertToOpenTypeValue(ct.getType("startTime"), ((Profiler) p).START_TIME),
+                                        convertToOpenTypeValue(ct.getType("lastRefresh"), -1L),
+                                        new CompositeData[0]
+                                    });
+                        } catch (OpenDataException e) {
+                            e.printStackTrace();
+                            return null;
+                        }
+                    }
+
+//                    System.err.println("!!! Snapshot length: " + snapshot.total.length);
+                    CompositeData[] total = new CompositeData[snapshot.total.length];
+
+                    int index = 0;
+                    for (Profiler.Record r : snapshot.total) {
+                        try {
+                            CompositeType at = (CompositeType)((ArrayType)ct.getType("data")).getElementOpenType();
+                            CompositeType rt = (CompositeType)at.getType("value");
+                            CompositeData recordData = new CompositeDataSupport(rt,
+                                    new String[]{"block", "invocations", "selfTime", "wallTime"},
+                                    new Object[]{r.blockName, r.invocations, r.selfTime, r.wallTime});
+                            total[index] = new CompositeDataSupport(at,
+                                    new String[]{"key", "value"},
+                                    new Object[]{r.blockName, recordData}
+                            );
+                        } catch (OpenDataException ode) {
+                            ode.printStackTrace();
+                        }
+                        index++;
+                    }
+
+                    CompositeData snapshotData = null;
+                    try {
+                        snapshotData = new CompositeDataSupport(ct,
+                                new String[]{"startTime", "lastRefresh", "data"},
+                                new Object[]{
+                                    convertToOpenTypeValue(ct.getType("startTime"), ((Profiler)p).START_TIME),
+                                    convertToOpenTypeValue(ct.getType("lastRefresh"), snapshot.timeStamp),
+                                    total
+                                });
+                    } catch (OpenDataException e) {
+                        e.printStackTrace();
+                    }
+                    return snapshotData;
                 }
             } else if (ot instanceof ArrayType) {
                 ArrayType at = (ArrayType) ot;
@@ -349,6 +444,7 @@ public class BTraceMBean implements DynamicMBean {
                         try {
                             array[index] = new CompositeDataSupport(ct, row);
                         } catch (OpenDataException ode) {
+                            ode.printStackTrace();
                         }
                         index++;
                     }

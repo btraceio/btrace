@@ -75,13 +75,13 @@ public final class Main {
 
     // #BTRACE-42: Non-daemon thread prevents traced application from exiting
     private static final ThreadFactory daemonizedThreadFactory = new ThreadFactory() {
-    ThreadFactory delegate = Executors.defaultThreadFactory();
-            @Override
-            public Thread newThread(Runnable r) {
-                    Thread result = delegate.newThread(r);
-                    result.setDaemon(true);
-                    return result;
-            }
+        ThreadFactory delegate = Executors.defaultThreadFactory();
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread result = delegate.newThread(r);
+            result.setDaemon(true);
+            return result;
+        }
     };
     
     private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(daemonizedThreadFactory);
