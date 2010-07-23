@@ -68,6 +68,13 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
             r.wallTime = duration;
             r.selfTime += duration - carryOver;
 
+            for(int i=0;i<stackPtr;i++) {
+                if (stackArr[i].blockName.equals(blockName)) {
+                    r.wallTime = 0;
+                    break;
+                }
+            }
+
             Record parent = peek();
             if (parent != null) {
                 parent.selfTime -= duration;
@@ -128,7 +135,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
 
         private synchronized void reset() {
             if (stackPtr > -1) {
-                System.arraycopy(measured, measuredPtr - (stackPtr + 1), measured, 0, stackPtr + 1);
+                System.arraycopy(stackArr, 0, measured, 0, stackPtr + 1);
             }
             measuredPtr = stackPtr + 1;
         }
@@ -206,7 +213,6 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
     public Snapshot snapshot(boolean reset) {
         synchronized(recorders) {
             long curSnapshotTs = System.nanoTime();
-            long snapshotDur = curSnapshotTs - lastSnapshotTs;
             lastSnapshotTs = curSnapshotTs;
 
             Map<String, Integer> idMap = new HashMap<String, Integer>();
@@ -215,6 +221,8 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
             int mergedEntries = 0, mergedCapacity = 0;
             for(Map.Entry<Thread, MethodInvocationRecorder> sEntry : recorders.entrySet()) {
                 final Record[] records = sEntry.getValue().getRecords(reset);
+                if (records == null || records.length == 0) continue; // just skip the empty data
+
                 if (mergedRecords == null) {
                     mergedRecords = records;
                     mergedCapacity = mergedRecords.length;
@@ -233,7 +241,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                     if (id == null) {
                         id = ++mergedEntries;
                         if (mergedEntries > mergedCapacity) {
-                            mergedCapacity *= 1.25;
+                            mergedCapacity = (int)((mergedEntries + 1) * 1.25);
                             Record[] newRecs = new Record[mergedCapacity];
                             System.arraycopy(mergedRecords, 0, newRecs, 0, mergedEntries - 1);
                             mergedRecords = newRecs;
