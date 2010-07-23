@@ -59,6 +59,45 @@ public abstract class Profiler {
             r.wallTime = wallTime;
             return r;
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Record other = (Record) obj;
+            if ((this.blockName == null) ? (other.blockName != null) : !this.blockName.equals(other.blockName)) {
+                return false;
+            }
+            if (this.wallTime != other.wallTime) {
+                return false;
+            }
+            if (this.selfTime != other.selfTime) {
+                return false;
+            }
+            if (this.invocations != other.invocations) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 17 * hash + (this.blockName != null ? this.blockName.hashCode() : 0);
+            hash = 17 * hash + (int) (this.wallTime ^ (this.wallTime >>> 32));
+            hash = 17 * hash + (int) (this.selfTime ^ (this.selfTime >>> 32));
+            hash = 17 * hash + (int) (this.invocations ^ (this.invocations >>> 32));
+            return hash;
+        }
+
+        @Override
+        public String toString() {
+            return "Record{" + "blockName=" + blockName + ",wallTime=" + wallTime + ",selfTime=" + selfTime + ",invocations=" + invocations + ",onStack=" + onStack + '}';
+        }
     }
 
     final public static class Snapshot {
