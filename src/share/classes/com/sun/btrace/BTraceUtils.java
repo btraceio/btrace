@@ -593,7 +593,8 @@ public class BTraceUtils {
      * class
      */
     public static Field field(String clazz, String name, boolean throwException) {
-        return Reflective.field(clazz, name, throwException);
+        ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
+        return Reflective.field(classForName(clazz, callerLoader), name, throwException);
     }
 
     /**
@@ -609,7 +610,8 @@ public class BTraceUtils {
      * class
      */
     public static Field field(String clazz, String name) {
-        return Reflective.field(clazz, name);
+        ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
+        return Reflective.field(classForName(clazz, callerLoader), name);
     }
 
     // field value get methods
