@@ -42,6 +42,7 @@ import java.util.logging.Logger;
 import com.sun.btrace.api.BTraceEngine;
 import com.sun.btrace.api.BTraceSettings;
 import com.sun.btrace.api.BTraceTask;
+import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.spi.BTraceCompilerFactory;
 import com.sun.btrace.spi.BTraceSettingsProvider;
 import com.sun.btrace.spi.ClasspathProvider;
@@ -264,6 +265,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                                         break;
                                     }
                                     case Command.ERROR: {
+                                        ((ErrorCommand)cmd).getCause().printStackTrace(outputProvider.getStdErr(btrace));
                                         btrace.setState(BTraceTask.State.FAILED);
                                         latch.countDown();
                                         stop(btrace);
