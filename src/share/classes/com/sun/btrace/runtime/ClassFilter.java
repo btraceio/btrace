@@ -295,6 +295,7 @@ public class ClassFilter {
                 String superType = className.substring(1);
                 superTypesList.add(superType);
                 superTypesInternalList.add(superType.replace('.', '/'));
+                strSrcList.add(superType);
             } else {
                 strSrcList.add(className);
             }
