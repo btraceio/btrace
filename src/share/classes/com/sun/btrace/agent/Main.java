@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.runtime.OnProbe;
