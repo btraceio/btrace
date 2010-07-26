@@ -239,7 +239,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                     Record r = records[i];
                     Integer id = idMap.get(r.blockName);
                     if (id == null) {
-                        id = ++mergedEntries;
+                        id = mergedEntries++;
                         if (mergedEntries > mergedCapacity) {
                             mergedCapacity = (int)((mergedEntries + 1) * 1.25);
                             Record[] newRecs = new Record[mergedCapacity];
