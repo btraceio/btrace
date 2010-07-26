@@ -72,7 +72,7 @@ import javax.management.openmbean.SimpleType;
 /**
  * This is a simple DynamicMBean implementation that exposes the static 
  * fields of BTrace class as attributes. The fields exposed should be
- * annotated as "@JMXAttribute".
+ * annotated as {@linkplain Property}.
  * 
  * @author A. Sundararajan
  */
@@ -375,7 +375,7 @@ public class BTraceMBean implements DynamicMBean {
                     Profiler.MBeanValueProvider p = (Profiler.MBeanValueProvider)value;
 
                     Profiler.Snapshot snapshot = p.getMBeanValue();
-
+//                    System.err.println("!!! snapshot == null :: " + (snapshot == null));
                     if (snapshot == null) {
 //                        System.err.println("!!! NULL snapshot");
                         try {
@@ -398,6 +398,7 @@ public class BTraceMBean implements DynamicMBean {
                     int index = 0;
                     for (Profiler.Record r : snapshot.total) {
                         try {
+//                            System.err.println("!!! adding record: " + r);
                             CompositeType at = (CompositeType)((ArrayType)ct.getType("data")).getElementOpenType();
                             CompositeType rt = (CompositeType)at.getType("value");
                             CompositeData recordData = new CompositeDataSupport(rt,
@@ -409,12 +410,15 @@ public class BTraceMBean implements DynamicMBean {
                             );
                         } catch (OpenDataException ode) {
                             ode.printStackTrace();
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
                         index++;
                     }
 
                     CompositeData snapshotData = null;
                     try {
+//                        System.err.println("!!! creating snapshot data");
                         snapshotData = new CompositeDataSupport(ct,
                                 new String[]{"startTime", "lastRefresh", "data"},
                                 new Object[]{
@@ -424,7 +428,10 @@ public class BTraceMBean implements DynamicMBean {
                                 });
                     } catch (OpenDataException e) {
                         e.printStackTrace();
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
+//                    System.err.println("!!! data: " + snapshot);
                     return snapshotData;
                 }
             } else if (ot instanceof ArrayType) {
