@@ -196,7 +196,7 @@ public class Verifier extends ClassAdapter {
             }
 
             @Override
-            public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
+            public AnnotationVisitor visitParameterAnnotation(int parameter, final String desc, boolean visible) {
                 if (desc.equals(BTRACE_SELF_DESC)) {
                     // all allowed
                     if (om != null) {
@@ -260,7 +260,36 @@ public class Verifier extends ClassAdapter {
                         om.setMethodParameter(parameter);
                     }
                 }
-                return super.visitParameterAnnotation(parameter, desc, visible);
+                final AnnotationVisitor superVisitor = super.visitParameterAnnotation(parameter, desc, visible);
+                return new AnnotationVisitor() {
+
+                    public void visit(String string, Object o) {
+                        if (om != null && string.equals("fqn")) { // NOI18N
+                            if (desc.equals(BTRACE_TARGETMETHOD_DESC)) {
+                                om.setTargetMethodOrFieldFqn((Boolean)o);
+                            } else if (desc.equals(BTRACE_PROBEMETHODNAME_DESC)) {
+                                om.setMethodFqn((Boolean)o);
+                            }
+                        }
+                        superVisitor.visit(string, o);
+                    }
+
+                    public void visitEnum(String string, String string1, String string2) {
+                        superVisitor.visitEnum(string, string1, string2);
+                    }
+
+                    public AnnotationVisitor visitAnnotation(String string, String string1) {
+                        return superVisitor.visitAnnotation(string, string1);
+                    }
+
+                    public AnnotationVisitor visitArray(String string) {
+                        return superVisitor.visitArray(string);
+                    }
+
+                    public void visitEnd() {
+                        superVisitor.visitEnd();
+                    }
+                };
             }
 
             public AnnotationVisitor visitAnnotation(String desc,

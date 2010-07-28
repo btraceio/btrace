@@ -44,9 +44,9 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  * @author A. Sundararajan
  */
 public class MethodReturnInstrumentor extends MethodInstrumentor {
-    public MethodReturnInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public MethodReturnInstrumentor(MethodVisitor mv, String parentClz, 
+        int access, String name, String desc) {
+        super(mv, parentClz, access, name, desc);
     }
 
 
@@ -78,7 +78,7 @@ public class MethodReturnInstrumentor extends MethodInstrumentor {
         return false;
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.MethodReturnInstrumentor <class>");
             System.exit(1);
@@ -95,7 +95,7 @@ public class MethodReturnInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new MethodReturnInstrumentor(mv, access, name, desc);
+                     return new MethodReturnInstrumentor(mv, args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

@@ -50,9 +50,9 @@ public class ErrorReturnInstrumentor extends MethodInstrumentor {
     private Label start = new Label();
     private Label end = new Label();
 
-    public ErrorReturnInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public ErrorReturnInstrumentor(MethodVisitor mv, String parentClz,
+        int access, String name, String desc) {
+        super(mv, parentClz, access, name, desc);
     }
 
     public void visitCode() {
@@ -72,7 +72,7 @@ public class ErrorReturnInstrumentor extends MethodInstrumentor {
         println("error return from " + getName() + getDescriptor());
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.ErrorReturnInstrumentor <class>");
             System.exit(1);
@@ -89,7 +89,7 @@ public class ErrorReturnInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new ErrorReturnInstrumentor(mv, access, name, desc);
+                     return new ErrorReturnInstrumentor(mv, args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

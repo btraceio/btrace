@@ -43,9 +43,9 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  * @author A. Sundararajan
  */
 public class TypeCheckInstrumentor extends MethodInstrumentor {
-    public TypeCheckInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public TypeCheckInstrumentor(MethodVisitor mv, String parentClz, 
+        int access, String name, String desc) {
+        super(mv, parentClz, access, name, desc);
     }
 
     public void visitTypeInsn(int opcode, String desc) {
@@ -67,7 +67,7 @@ public class TypeCheckInstrumentor extends MethodInstrumentor {
        println("after type checking for " + desc);
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.TypeCheckInstrumentor <class>");
             System.exit(1);
@@ -84,7 +84,7 @@ public class TypeCheckInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new TypeCheckInstrumentor(mv, access, name, desc);
+                     return new TypeCheckInstrumentor(mv, args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());
