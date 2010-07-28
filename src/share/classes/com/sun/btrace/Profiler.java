@@ -43,8 +43,8 @@ public abstract class Profiler {
         };
 
         final public String blockName;
-        public long wallTime = 0;
-        public long selfTime = 0;
+        public long wallTime = 0, wallTimeMax = 0, wallTimeMin = Long.MAX_VALUE;
+        public long selfTime = 0, selfTimeMax = 0, selfTimeMin = Long.MAX_VALUE;
         public long invocations = 1;
         public boolean onStack = false;
 
@@ -56,7 +56,11 @@ public abstract class Profiler {
             Record r = new Record(blockName);
             r.invocations = invocations;
             r.selfTime = selfTime;
+            r.selfTimeMax = selfTimeMax;
+            r.selfTimeMin = selfTimeMin;
             r.wallTime = wallTime;
+            r.wallTimeMax = wallTimeMax;
+            r.wallTimeMin = wallTimeMin;
             return r;
         }
 
@@ -102,56 +106,14 @@ public abstract class Profiler {
 
     final public static class Snapshot {
         final public long timeStamp;
+        final public long timeInterval;
         final public Record[] total;
-//        final public Record[] diff;
 
-        public Snapshot(Record[] data, long timeStamp) {
-            this.timeStamp = timeStamp;
+        public Snapshot(Record[] data, long startTs, long stopTs) {
+            this.timeStamp = stopTs;
+            this.timeInterval = stopTs - startTs;
             this.total = data;
-//            this.diff = getDiff(data, baseData);
         }
-
-//        /**
-//         * Will calculate the diff data between the total and the baseData
-//         * @param total The current total profiling data
-//         * @param baseData A base profiling data
-//         * @return Returns an array of {@linkplain Record} instances representing the diff between the base and the current state
-//         */
-//        private Record[] getDiff(Record[] total, Record[] baseData) {
-//            int diffSize = baseData == null ? total.length : (total.length > baseData.length ? total.length : baseData.length);
-//            Record[] rDiff = new Record[diffSize];
-//            boolean[] flags = new boolean[baseData != null ? baseData.length : 0];
-//            int i = 0;
-//            for(i=0;i<total.length;i++) {
-//                Record r = total[i];
-//                rDiff[i] = new Record(r.blockName);
-//                int baseIndex = baseData != null ? Arrays.binarySearch(baseData, r, Record.COMPARATOR) : -1;
-//                if (baseIndex > -1) {
-//                    Record r1 = baseData[baseIndex];
-//                    rDiff[i].invocations = r.invocations - r1.invocations;
-//                    rDiff[i].selfTime = r.selfTime - r1.selfTime;
-//                    rDiff[i].wallTime = r.wallTime - r1.wallTime;
-//                    flags[baseIndex] = true;
-//                } else {
-//                    rDiff[i].invocations = r.invocations;
-//                    rDiff[i].selfTime = r.selfTime;
-//                    rDiff[i].wallTime = r.wallTime;
-//                }
-//            }
-//            if (baseData != null) {
-//                for(int j=0;j<baseData.length;j++) {
-//                    if (!flags[j]) {
-//                        Record r = baseData[j];
-//                        Record r1 = new Record(r.blockName);
-//                        rDiff[i++] = r1;
-//                        r1.invocations = -r.invocations;
-//                        r1.selfTime = -r.selfTime;
-//                        r1.wallTime = -r.wallTime;
-//                    }
-//                }
-//            }
-//            return rDiff;
-//        }
     }
 
     public static interface MBeanValueProvider {

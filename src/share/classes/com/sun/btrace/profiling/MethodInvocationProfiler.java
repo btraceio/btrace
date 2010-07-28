@@ -42,6 +42,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
 
         private int measuredSize = 0;
         private int measuredPtr = 0;
+        private int compactedPtr = 0;
         private Record[] measured = new Record[0];
 
         private long carryOver = 0L;
@@ -155,7 +156,13 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                         Record mr = measured[newIndex];
                         mr.selfTime += m.selfTime;
                         mr.wallTime += m.wallTime;
-                        mr.invocations += m.invocations;
+                        mr.invocations++;
+                        if (compactedPtr < i) {
+                            mr.selfTimeMax = m.selfTime > mr.selfTimeMax ? m.selfTime : mr.selfTimeMax;
+                            mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
+                            mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
+                            mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
+                        }
                         for(int j=0;j<stackPtr;j++) {
                             if (stackArr[j] == m) { // if the old ref is kept on stack
                                 stackArr[j] = mr; // replace it with the compacted ref
@@ -175,23 +182,21 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
             }
             System.arraycopy(stackArr, 0, measured, lastIndex, stackPtr + 1); // add the not processed methods on the stack
             measuredPtr = lastIndex + stackPtr + 1; // move the pointer behind the methods on the stack
-
+            compactedPtr = measuredPtr;
+            
             return lastIndex;
         }
     }
 
     final private Map<Thread, MethodInvocationRecorder> recorders = new HashMap<Thread, MethodInvocationRecorder>(128);
 
-//    private Record[] lastRslt = null;
 
     volatile private Snapshot lastValidSnapshot = null;
 
     private int expectedBlockCnt;
-    private long lastSnapshotTs;
 
     public MethodInvocationProfiler(int expectedMethodCnt) {
         this.expectedBlockCnt = expectedMethodCnt;
-        this.lastSnapshotTs = System.nanoTime();
     }
 
     public void recordEntry(String blockName) {
@@ -210,11 +215,10 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         }
     }
 
+    private long lastTs = START_TIME;
+
     public Snapshot snapshot(boolean reset) {
         synchronized(recorders) {
-            long curSnapshotTs = System.nanoTime();
-            lastSnapshotTs = curSnapshotTs;
-
             Map<String, Integer> idMap = new HashMap<String, Integer>();
 
             Record[] mergedRecords = null;
@@ -261,7 +265,9 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                 System.arraycopy(mergedRecords, 0, rslt, 0, mergedEntries);
             }
 
-            Snapshot snp = new Snapshot(rslt, System.currentTimeMillis());
+            long curTs = System.currentTimeMillis();
+            Snapshot snp = new Snapshot(rslt, lastTs, curTs);
+            lastTs = curTs;
             lastValidSnapshot = snp;
             return snp;
         }

@@ -298,10 +298,42 @@ public class BTraceMBean implements DynamicMBean {
                     if (Profiler.class.isAssignableFrom(c)) {
                         CompositeType record = new CompositeType("Record",
                                 "Profiler record",
-                                new String[]{"block", "invocations", "selfTime", "wallTime"},
-                                new String[]{"block", "invocations", "selfTime", "wallTime"},
+                                new String[]{"block",
+                                             "invocations",
+                                             "selfTime.total",
+                                             "selfTime.percent",
+                                             "selfTime.avg",
+                                             "selfTime.max",
+                                             "selfTime.min",
+                                             "wallTime.total",
+                                             "wallTime.percent",
+                                             "wallTime.avg",
+                                             "wallTime.max",
+                                             "wallTime.min"
+                                },
+                                new String[]{"block",
+                                             "invocations",
+                                             "selfTime.total",
+                                             "selfTime.percent",
+                                             "selfTime.avg",
+                                             "selfTime.max",
+                                             "selfTime.min",
+                                             "wallTime.total",
+                                             "wallTime.percent",
+                                             "wallTime.avg",
+                                             "wallTime.max",
+                                             "wallTime.min"
+                                },
                                 new OpenType[]{
                                     typeToOpenType(String.class),
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Double.class),
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Long.class),
+                                    typeToOpenType(Double.class),
                                     typeToOpenType(Long.class),
                                     typeToOpenType(Long.class),
                                     typeToOpenType(Long.class)
@@ -317,9 +349,10 @@ public class BTraceMBean implements DynamicMBean {
                         );
                         CompositeType snapshot = new CompositeType("Snapshot",
                                 "Profiler snapshot",
-                                new String[]{"startTime", "lastRefresh", "data"},
-                                new String[]{"startTime", "lastRefresh", "data"},
+                                new String[]{"startTime", "lastRefresh", "interval", "data"},
+                                new String[]{"startTime", "lastRefresh", "interval", "data"},
                                 new OpenType[]{
+                                    typeToOpenType(Long.class),
                                     typeToOpenType(Long.class),
                                     typeToOpenType(Long.class),
                                     new ArrayType(1, recordEntry)
@@ -380,10 +413,11 @@ public class BTraceMBean implements DynamicMBean {
 //                        System.err.println("!!! NULL snapshot");
                         try {
                             return new CompositeDataSupport(ct,
-                                    new String[]{"startTime", "lastRefresh", "data"},
+                                    new String[]{"startTime", "lastRefresh", "interval", "data"},
                                     new Object[]{
                                         convertToOpenTypeValue(ct.getType("startTime"), ((Profiler) p).START_TIME),
                                         convertToOpenTypeValue(ct.getType("lastRefresh"), -1L),
+                                        convertToOpenTypeValue(ct.getType("interval"), 0L),
                                         new CompositeData[0]
                                     });
                         } catch (OpenDataException e) {
@@ -395,6 +429,7 @@ public class BTraceMBean implements DynamicMBean {
 //                    System.err.println("!!! Snapshot length: " + snapshot.total.length);
                     CompositeData[] total = new CompositeData[snapshot.total.length];
 
+                    long divider = snapshot.timeInterval * 1000000; // converting ms to ns divider
                     int index = 0;
                     for (Profiler.Record r : snapshot.total) {
                         try {
@@ -402,8 +437,30 @@ public class BTraceMBean implements DynamicMBean {
                             CompositeType at = (CompositeType)((ArrayType)ct.getType("data")).getElementOpenType();
                             CompositeType rt = (CompositeType)at.getType("value");
                             CompositeData recordData = new CompositeDataSupport(rt,
-                                    new String[]{"block", "invocations", "selfTime", "wallTime"},
-                                    new Object[]{r.blockName, r.invocations, r.selfTime, r.wallTime});
+                                    new String[]{"block",
+                                                 "invocations",
+                                                 "selfTime.total",
+                                                 "selfTime.percent",
+                                                 "selfTime.avg",
+                                                 "selfTime.max",
+                                                 "selfTime.min",
+                                                 "wallTime.total",
+                                                 "wallTime.percent",
+                                                 "wallTime.avg",
+                                                 "wallTime.max",
+                                                 "wallTime.min"},
+                                    new Object[]{r.blockName,
+                                                 r.invocations,
+                                                 r.selfTime,
+                                                 (double)(snapshot.timeInterval > 0 ? (double)r.selfTime / (double)divider : 0),
+                                                 r.selfTime / r.invocations,
+                                                 r.selfTimeMax,
+                                                 r.selfTimeMin == Long.MAX_VALUE ? 0 : r.selfTimeMin,
+                                                 r.wallTime,
+                                                 (double)(snapshot.timeInterval > 0 ? (double)r.wallTime / (double)divider : 0),
+                                                 r.wallTime / r.invocations,
+                                                 r.wallTimeMax,
+                                                 r.wallTimeMin});
                             total[index] = new CompositeDataSupport(at,
                                     new String[]{"key", "value"},
                                     new Object[]{r.blockName, recordData}
@@ -420,10 +477,11 @@ public class BTraceMBean implements DynamicMBean {
                     try {
 //                        System.err.println("!!! creating snapshot data");
                         snapshotData = new CompositeDataSupport(ct,
-                                new String[]{"startTime", "lastRefresh", "data"},
+                                new String[]{"startTime", "lastRefresh", "interval", "data"},
                                 new Object[]{
                                     convertToOpenTypeValue(ct.getType("startTime"), ((Profiler)p).START_TIME),
                                     convertToOpenTypeValue(ct.getType("lastRefresh"), snapshot.timeStamp),
+                                    convertToOpenTypeValue(ct.getType("interval"), snapshot.timeInterval),
                                     total
                                 });
                     } catch (OpenDataException e) {
