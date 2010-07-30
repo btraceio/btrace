@@ -42,76 +42,149 @@
 package com.sun.btrace;
 
 import java.io.IOException;
-import java.util.IdentityHashMap;
-import java.util.Map;
 
 /**
  *
  * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
  */
-public class ThreadEnteredMap<T> {
-    final private Object writeLock = new Object();
-    long[] ids;
-    private Map<Thread, T> entered;
-    private T nullValue;
+public class ThreadEnteredMap {
+    final private static int SECTIONS = 13;
+    final private static int BUCKETS = 27;
+    final private static int DEFAULT_BUCKET_SIZE = 4;
 
-    public ThreadEnteredMap(T nullValue) {
-        entered = new IdentityHashMap();
+    final private Object[][][] map = new Object[SECTIONS][BUCKETS][];
+    final private int[][] mapPtr = new int[SECTIONS][BUCKETS];
+
+    private Object nullValue;
+
+    public ThreadEnteredMap(Object nullValue) {
         this.nullValue = nullValue;
     }
 
     public static void main(String[] args) throws IOException {
-        ThreadEnteredMap<String> instance = new ThreadEnteredMap("null");
+        ThreadEnteredMap instance = new ThreadEnteredMap("null");
         long cnt = 0;
         long start = System.nanoTime();
-        for(int i=0;i<400000000;i++) {
+        for(int i=0;i<4000000;i++) {
             cnt += i;
         }
         long dur = System.nanoTime() - start;
         System.err.println("#" + cnt + " in " + dur + "ns");
-        System.err.println(dur / 400000000);
+        System.err.println(dur / 4000000);
 
         for(int i=0;i<400000;i++) {
             instance.enter("nasrat");
             instance.exit();
         }
 
+        final ThreadEnteredMap tem = new ThreadEnteredMap("null");
         cnt = 0;
         System.err.println("Ready?");
         System.in.read();
-        start = System.nanoTime();
-        for(int i=0;i<400000000;i++) {
-            instance.enter("nasrat");
+        Thread[] thrd = new Thread[200];
+        for(int i=0;i<4;i++) {
+            final int idx = i;
+            thrd[i] = new Thread(new Runnable() {
 
-            cnt += i;
-//            Thread.currentThread().getId();
-            instance.exit();
+                public void run() {
+                    long cnt = 0;
+                    long start = System.nanoTime();
+                    for(int i=0;i<4000000;i++) {
+                        tem.enter("nasrat");
+
+                        cnt += i;
+                        tem.exit();
+                    }
+                    long dur = System.nanoTime() - start;
+                    System.out.println("Thread #" + idx);
+                    System.err.println("#" + cnt + " in " + dur + "ns");
+                    System.err.println(dur / 4000000);
+                }
+            }, "Thread#" + i);
         }
-        dur = System.nanoTime() - start;
-        System.err.println("#" + cnt + " in " + dur + "ns");
-        System.err.println(dur / 400000000);
+        for(int i=0;i<4;i++) {
+            thrd[i].start();
+        }
+        
     }
 
-    public T get() {
-        T val = entered.get(Thread.currentThread());
-        return val != nullValue ? val : null;
-    }
-
-    public boolean enter(T rt) {
-        Thread t = Thread.currentThread();
-        T oldRt = entered.get(t);
-        if (oldRt != null) {
-            if (oldRt != nullValue) {
-                return false;
+    public Object get() {
+        Thread thrd = Thread.currentThread();
+        long thrdId = thrd.getId();
+        int sectionId = (int)(((thrdId << 1) - (thrdId << 8)) & (SECTIONS - 1));
+        Object[][] section = map[sectionId];
+        int[] sectionPtr = mapPtr[sectionId];
+        int bucketId = (int)(int)(((thrdId << 1) - (thrdId << 8)) & (BUCKETS - 1));
+        synchronized(section) {
+            Object[] bucket = section[bucketId];
+            if (bucket != null && bucket.length > 0) {
+                int ptr = sectionPtr[bucketId];
+                for(int i=0;i<ptr;i+=2) {
+                    if (bucket[i] == thrd) {
+                        return bucket[i+1] == nullValue ? null : bucket[i+1];
+                    }
+                }
             }
+            return null;
         }
-        synchronized(writeLock) {
-            entered.put(t, rt);
+    }
+
+    public boolean enter(Object rt) {
+        Thread thrd = Thread.currentThread();
+        long thrdId = thrd.getId();
+        int sectionId = (int)(((thrdId << 1) - (thrdId << 8)) & (SECTIONS - 1));
+        Object[][] section = map[sectionId];
+        int[] sectionPtr = mapPtr[sectionId];
+        int bucketId = (int)(int)(((thrdId << 1) - (thrdId << 8)) & (BUCKETS - 1));
+        synchronized(section) {
+            Object[] bucket = section[bucketId];
+            int ptr = sectionPtr[bucketId];
+            if (bucket != null && bucket.length > 0) {
+                for(int i=0;i<ptr;i+=2) {
+                    if (bucket[i] == thrd) {
+                        if (bucket[i+1] == nullValue) {
+                            bucket[i+1] = rt;
+                            return true;
+                        }
+                        return false;
+                    }
+                }
+            }
+            if (bucket == null || bucket.length == 0) {
+                bucket = new Object[DEFAULT_BUCKET_SIZE * 2];
+                section[bucketId] = bucket;
+            } else {
+                if (ptr >= bucket.length) {
+                    Object[] newBucket = new Object[bucket.length * 2];
+                    System.arraycopy(bucket, 0, newBucket, 0, bucket.length);
+                    bucket = newBucket;
+                    section[bucketId] = bucket;
+                }
+            }
+            bucket[ptr++] = thrd;
+            bucket[ptr++] = rt;
+            mapPtr[sectionId][bucketId] = ptr;
             return true;
         }
     }
 
     public void exit() {
-        entered.put(Thread.currentThread(), nullValue);
+        Thread thrd = Thread.currentThread();
+        long thrdId = thrd.getId();
+        int sectionId = (int)(((thrdId << 1) - (thrdId << 8)) & (SECTIONS - 1));
+        Object[][] section = map[sectionId];
+        int[] sectionPtr = mapPtr[sectionId];
+        int bucketId = (int)(int)(((thrdId << 1) - (thrdId << 8)) & (BUCKETS - 1));
+        synchronized(section) {
+            Object[] bucket = section[bucketId];
+            if (bucket != null && bucket.length > 0) {
+                int ptr = sectionPtr[bucketId];
+                for(int i=0;i<ptr;i+=2) {
+                    if (bucket[i] == thrd) {
+                        bucket[i+1] = nullValue;
+                    }
+                }
+            }
+        }
     }
 }
