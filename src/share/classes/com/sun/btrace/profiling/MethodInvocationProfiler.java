@@ -42,7 +42,6 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
 
         private int measuredSize = 0;
         private int measuredPtr = 0;
-        private int compactedPtr = 0;
         private Record[] measured = new Record[0];
 
         private long carryOver = 0L;
@@ -75,6 +74,8 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                     break;
                 }
             }
+            r.selfTimeMin = r.selfTimeMax = r.selfTime;
+            r.wallTimeMin = r.wallTimeMax = r.wallTime;
 
             Record parent = peek();
             if (parent != null) {
@@ -157,12 +158,10 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                         mr.selfTime += m.selfTime;
                         mr.wallTime += m.wallTime;
                         mr.invocations++;
-                        if (compactedPtr < i) {
-                            mr.selfTimeMax = m.selfTime > mr.selfTimeMax ? m.selfTime : mr.selfTimeMax;
-                            mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
-                            mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
-                            mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
-                        }
+                        mr.selfTimeMax = m.selfTime > mr.selfTimeMax ? m.selfTime : mr.selfTimeMax;
+                        mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
+                        mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
+                        mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
                         for(int j=0;j<stackPtr;j++) {
                             if (stackArr[j] == m) { // if the old ref is kept on stack
                                 stackArr[j] = mr; // replace it with the compacted ref
@@ -182,7 +181,6 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
             }
             System.arraycopy(stackArr, 0, measured, lastIndex, stackPtr + 1); // add the not processed methods on the stack
             measuredPtr = lastIndex + stackPtr + 1; // move the pointer behind the methods on the stack
-            compactedPtr = measuredPtr;
             
             return lastIndex;
         }
@@ -233,6 +231,8 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                     for(int i=0;i<records.length;i++) {
                         if (records[i] != null) {
                             mergedEntries = i + 1;
+                        } else {
+                            System.err.println("!!! record==null @ " + i);
                         }
                         idMap.put(records[i].blockName, i);
                     }
@@ -249,9 +249,9 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                             Record[] newRecs = new Record[mergedCapacity];
                             System.arraycopy(mergedRecords, 0, newRecs, 0, mergedEntries - 1);
                             mergedRecords = newRecs;
-                            idMap.put(r.blockName, id);
-                            mergedRecords[id] = r;
                         }
+                        idMap.put(r.blockName, id);
+                        mergedRecords[id] = r;
                     } else {
                         Record merged = mergedRecords[id];
                         merged.invocations += r.invocations;

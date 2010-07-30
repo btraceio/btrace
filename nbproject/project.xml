@@ -3,6 +3,9 @@
     <type>org.netbeans.modules.ant.freeform</type>
     <configuration>
         <general-data xmlns="http://www.netbeans.org/ns/freeform-project/1">
+            <name>BTrace</name>
+        </general-data>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/2">
             <!-- Do not use Project Properties customizer when editing this file manually. -->
             <name>BTrace</name>
             <properties>
@@ -10,19 +13,27 @@
             </properties>
             <folders>
                 <source-folder>
+                    <label>BTrace</label>
+                    <location>.</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
                     <label>src\share\classes</label>
                     <type>java</type>
                     <location>src/share/classes</location>
+                    <encoding>UTF-8</encoding>
                 </source-folder>
                 <source-folder>
                     <label>src\solaris\classes</label>
                     <type>java</type>
                     <location>src/solaris/classes</location>
+                    <encoding>UTF-8</encoding>
                 </source-folder>
                 <source-folder>
                     <label>src/test</label>
                     <type>java</type>
                     <location>src/test</location>
+                    <encoding>UTF-8</encoding>
                 </source-folder>
             </folders>
             <ide-actions>

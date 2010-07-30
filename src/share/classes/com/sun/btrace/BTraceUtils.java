@@ -38,6 +38,7 @@ import sun.reflect.Reflection;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
+import com.sun.btrace.timer.Timer;
 import java.io.Serializable;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.Reference;
@@ -1210,7 +1211,7 @@ public class BTraceUtils {
     }
 
     /**
-     * <p>Generates a string timestamp (current date&time)
+     * <p>Generates a string getTimestamp (current date&time)
      * @param format The format to be used - see {@linkplain SimpleDateFormat}
      * @return Returns a string representing current date&time
      * @since 1.1
@@ -1220,7 +1221,7 @@ public class BTraceUtils {
     }
 
     /**
-     * <p>Generates a string timestamp (current date&time) in the default system format
+     * <p>Generates a string getTimestamp (current date&time) in the default system format
      * @return Returns a string representing current date&time
      * @since 1.1
      */
@@ -5018,11 +5019,11 @@ public class BTraceUtils {
         }
         
         public static void printAggregation(String name, Aggregation aggregation) {
-        	BTraceRuntime.printAggregation(name, aggregation);
+            BTraceRuntime.printAggregation(name, aggregation);
         }
         
         public static void printAggregation(String name, Aggregation aggregation, String format) {
-        	BTraceRuntime.printAggregation(name, aggregation, format);
+            BTraceRuntime.printAggregation(name, aggregation, format);
         }
     }
 
@@ -5091,6 +5092,10 @@ public class BTraceUtils {
 
         public static void reset(Profiler profiler) {
             BTraceRuntime.resetProfiler(profiler);
+        }
+
+        public static void printSnapshot(String name, Profiler profiler) {
+            BTraceRuntime.printSnapshot(name, profiler.snapshot());
         }
     }
 

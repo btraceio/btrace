@@ -150,7 +150,7 @@ public final class BTraceRuntime {
     private static ThreadLocal<BTraceRuntime> tls =
         new ThreadLocal<BTraceRuntime>();
 
-    private static ThreadEnteredMap<BTraceRuntime> map = new ThreadEnteredMap<BTraceRuntime>(NULL);
+    private static ThreadEnteredMap map = new ThreadEnteredMap(NULL);
 
     // BTraceRuntime against BTrace class name
     private static Map<String, BTraceRuntime> runtimes =
@@ -428,7 +428,7 @@ public final class BTraceRuntime {
             Method eventHandler = eventHandlers.get(event);
             if (eventHandler != null) {
 //                BTraceRuntime oldRuntime = tls.get();
-                BTraceRuntime oldRuntime = map.get();
+                BTraceRuntime oldRuntime = (BTraceRuntime)map.get();
                 leave();
                 try {
                     eventHandler.invoke(null, (Object[])null);
@@ -1609,6 +1609,10 @@ public final class BTraceRuntime {
         getCurrent().send(new GridDataCommand(name, aggregation.getData()));
     }
 
+    static void printSnapshot(String name, Profiler.Snapshot snapshot) {
+        getCurrent().send(new GridDataCommand(name, snapshot.getGridData()));
+    }
+
     /**
      * Prints aggregation using the provided format
      * @param name The name of the aggregation to be used in the textual output
@@ -1626,7 +1630,7 @@ public final class BTraceRuntime {
      * @see BTraceUtils.Profiling#newProfiler()
      */
     static Profiler newProfiler() {
-        return new MethodInvocationProfiler(65536);
+        return new MethodInvocationProfiler(600);
     }
 
     /**
@@ -1681,7 +1685,7 @@ public final class BTraceRuntime {
      */
     private static BTraceRuntime getCurrent() {
 //        BTraceRuntime current = tls.get();
-        BTraceRuntime current = map.get();
+        BTraceRuntime current = (BTraceRuntime)map.get();
         assert current != null : "BTraceRuntime is null!";
         return current;
     }

@@ -25,7 +25,9 @@
 
 package com.sun.btrace;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  *
@@ -43,6 +45,7 @@ public abstract class Profiler {
         };
 
         final public String blockName;
+        public long threadId = Thread.currentThread().getId();
         public long wallTime = 0, wallTimeMax = 0, wallTimeMin = Long.MAX_VALUE;
         public long selfTime = 0, selfTimeMax = 0, selfTimeMin = Long.MAX_VALUE;
         public long invocations = 1;
@@ -54,6 +57,7 @@ public abstract class Profiler {
 
         public Record duplicate() {
             Record r = new Record(blockName);
+            r.threadId = threadId;
             r.invocations = invocations;
             r.selfTime = selfTime;
             r.selfTimeMax = selfTimeMax;
@@ -100,7 +104,14 @@ public abstract class Profiler {
 
         @Override
         public String toString() {
-            return "Record{" + "blockName=" + blockName + ",wallTime=" + wallTime + ",selfTime=" + selfTime + ",invocations=" + invocations + ",onStack=" + onStack + '}';
+            return "Record{\n" + "\tblockName=" + blockName + "\n," +
+                   "\twallTime=" + wallTime + ",\n" +
+                   "\twallTime.min=" + wallTimeMin + ",\n" +
+                   "\twallTime.max=" + wallTimeMax + ",\n" +
+                   "\tselfTime=" + selfTime + ",\n" +
+                   "\tselfTime.min=" + selfTimeMin + ",\n" +
+                   "\tselfTime.max=" + selfTimeMax + ",\n" +
+                   "\tinvocations=" + invocations + ",\nonStack=" + onStack + '}';
         }
     }
 
@@ -113,6 +124,29 @@ public abstract class Profiler {
             this.timeStamp = stopTs;
             this.timeInterval = stopTs - startTs;
             this.total = data;
+        }
+
+        List<Object[]> getGridData() {
+            List<Object[]>  rslt = new ArrayList<Object[]>();
+
+            Object[] titleRow = new Object[]{"Block", "Invocations", "SelfTime.Total", "SelfTime.Avg", "SelfTime.Min",
+                                             "SelfTime.Max", "WallTime.Total", "WallTime.Avg", "WallTime.Min", "WallTime.Max"};
+
+            rslt.add(titleRow);
+
+            for(Record r : total) {
+                if (r != null) {
+                    Object[] row = new Object[]{r.blockName, r.invocations, r.selfTime, r.selfTime / r.invocations,
+                                                r.selfTimeMin < Long.MAX_VALUE ? r.selfTimeMin : "N/A",
+                                                r.selfTimeMax > 0 ? r.selfTimeMax : "N/A",
+                                                r.wallTime, r.wallTime / r.invocations,
+                                                r.wallTimeMin < Long.MAX_VALUE ? r.wallTimeMin : "N/A",
+                                                r.wallTimeMax > 0 ? r.wallTimeMax : "N/A"
+                    };
+                    rslt.add(row);
+                }
+            }
+            return rslt;
         }
     }
 
