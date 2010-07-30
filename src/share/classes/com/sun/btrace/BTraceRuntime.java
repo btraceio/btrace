@@ -149,7 +149,7 @@ public final class BTraceRuntime {
     private static ThreadLocal<BTraceRuntime> tls =
         new ThreadLocal<BTraceRuntime>();
 
-    private static ThreadEnteredMap<BTraceRuntime> map = new ThreadEnteredMap<BTraceRuntime>(NULL);
+    private static ThreadEnteredMap map = new ThreadEnteredMap(NULL);
 
     // BTraceRuntime against BTrace class name
     private static Map<String, BTraceRuntime> runtimes =
@@ -427,7 +427,7 @@ public final class BTraceRuntime {
             Method eventHandler = eventHandlers.get(event);
             if (eventHandler != null) {
 //                BTraceRuntime oldRuntime = tls.get();
-                BTraceRuntime oldRuntime = map.get();
+                BTraceRuntime oldRuntime = (BTraceRuntime)map.get();
                 leave();
                 try {
                     eventHandler.invoke(null, (Object[])null);
@@ -1624,7 +1624,7 @@ public final class BTraceRuntime {
      */
     private static BTraceRuntime getCurrent() {
 //        BTraceRuntime current = tls.get();
-        BTraceRuntime current = map.get();
+        BTraceRuntime current = (BTraceRuntime)map.get();
         assert current != null : "BTraceRuntime is null!";
         return current;
     }
