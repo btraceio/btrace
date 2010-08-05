@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- *
+ * Implementation of {@linkplain Profiler}
  * @author Jaroslav Bachorik
  */
 public class MethodInvocationProfiler extends Profiler implements Profiler.MBeanValueProvider {
@@ -50,8 +50,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
             measuredSize = expectedBlockCnt * 10;
             measured = new Record[measuredSize];
         }
-
-
+        
         private synchronized void recordEntry(String blockName) {
             Record r = new Record(blockName);
             addMeasured(r);
@@ -231,8 +230,6 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                     for(int i=0;i<records.length;i++) {
                         if (records[i] != null) {
                             mergedEntries = i + 1;
-                        } else {
-                            System.err.println("!!! record==null @ " + i);
                         }
                         idMap.put(records[i].blockName, i);
                     }

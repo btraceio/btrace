@@ -25,15 +25,27 @@
 
 package com.sun.btrace;
 
+import com.sun.btrace.annotations.Property;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 /**
- *
+ * Profiler is a highly specialized aggregation-like data collector optimized
+ * for high-speed collection of the application execution call tree data.
+ * <br/><br/>
+ * <note>It is exposable as MBean via {@linkplain Property} annotation</note>
+ * 
+ * @since 1.2
+ * 
  * @author Jaroslav Bachorik
  */
 public abstract class Profiler {
+    /**
+     * Record represents an atomic unit in the application execution call tree
+     * 
+     * @since 1.2
+     */
     final public static class Record {
         final public static Comparator<Record> COMPARATOR = new Comparator<Record>() {
             public int compare(Record o1, Record o2) {
@@ -115,6 +127,14 @@ public abstract class Profiler {
         }
     }
 
+    /**
+     * Snapshot is an immutable image of the current profiling data collected
+     * by the {@linkplain Profiler}
+     * <br/><br/>
+     * It is created by calling {@linkplain Profiler#snapshot()} method
+     * 
+     * @since 1.2
+     */
     final public static class Snapshot {
         final public long timeStamp;
         final public long timeInterval;
@@ -150,21 +170,61 @@ public abstract class Profiler {
         }
     }
 
+    /**
+     * Helper interface to make accessing a {@linkplain Profiler} as an MBean
+     * type safe.
+     */
     public static interface MBeanValueProvider {
         Snapshot getMBeanValue();
     }
 
+    /**
+     * This property exposes the time of creating this particular {@linkplain Profiler} instance.
+     * <br/>
+     * The unit is milliseconds.
+     */
     final public long START_TIME;
 
+    /**
+     * Creates a new {@linkplain Profiler} instance
+     */
     public Profiler() {
         this.START_TIME = System.currentTimeMillis();
     }
 
-    public abstract void recordEntry(String methodName);
-    public abstract void recordExit(String methodName, long duration);
+    /**
+     * Records the event of entering an execution unit (eg. method)<br/>
+     * Must be paired with a call to {@linkplain Profiler#recordExit(java.lang.String, long) }
+     * with the same blockName, eventually
+     * @param blockName The execution unit identifier (eg. method FQN)
+     */
+    public abstract void recordEntry(String blockName);
+    /**
+     * Records the event of exiting an execution unit (eg. method)<br/>
+     * Must be preceded by a call to {@linkplain Profiler#recordEntry(java.lang.String, long) }
+     * with the same blockName
+     * @param blockName The execution unit identifier (eg. method FQN)
+     * @param duration Invocation duration in nanoseconds
+     */
+    public abstract void recordExit(String blockName, long duration);
+    
+    /**
+     * Creates an immutable snapshot of the collected profiling data
+     * @return Returns the immutable {@linkplain Snapshot} instance
+     */
     final public Snapshot snapshot() {
         return snapshot(false);
     }
+    /**
+     * Creates an immutable snapshot of the collected profiling data.<br/>
+     * Makes it possible to reset the profiler after creating the snapshot, eventually
+     * @param reset Signals the profiler to perform reset right after getting the snapshot (in an atomic transaction)
+     * @return Returns the immutable {@linkplain Snapshot} instance
+     */
     public abstract Snapshot snapshot(boolean reset);
+    
+    /**
+     * Resets all the collected data
+     */
     public abstract void reset();
 }
