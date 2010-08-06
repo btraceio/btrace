@@ -289,7 +289,7 @@ public class BTraceEngineImpl extends BTraceEngine {
     }
 
     private boolean doStop(BTraceTask task) {
-        Client client = clientMap.get(task);
+        Client client = clientMap.remove(task);
         if (client != null) {
             try {
                 client.sendExit(0);
