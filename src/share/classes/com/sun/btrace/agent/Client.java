@@ -165,6 +165,9 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             Thread.currentThread().interrupt();
         } catch (IOException ioexp) {
             if (debug) Main.debugPrint(ioexp);
+        } finally {
+            this.runtime = null;
+            this.btraceClazz = null;
         }
     }
 

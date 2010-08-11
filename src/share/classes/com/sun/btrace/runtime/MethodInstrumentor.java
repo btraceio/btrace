@@ -245,15 +245,17 @@ public class MethodInstrumentor extends MethodAdapter {
     }
 
     private final int access;
+    private final String parentClz;
     private final String name;
     private final String desc;
     private Type returnType;
     private Type[] argumentTypes;
     private Map<Integer, Type> extraTypes;
 
-    public MethodInstrumentor(MethodVisitor mv, int access, 
-        String name, String desc) {
+    public MethodInstrumentor(MethodVisitor mv, String parentClz,
+        int access, String name, String desc) {
         super(mv);
+        this.parentClz = parentClz;
         this.access = access;
         this.name = name;
         this.desc = desc;
@@ -267,7 +269,11 @@ public class MethodInstrumentor extends MethodAdapter {
     }
 
     public final String getName() {
-        return name;
+        return getName(false);
+    }
+
+    public final String getName(boolean fqn) {
+        return (fqn ? parentClz + "." : "") + name + (fqn ? desc : "");
     }
 
     public final String getDescriptor() {
@@ -313,10 +319,6 @@ public class MethodInstrumentor extends MethodAdapter {
             throw new IllegalStateException("no 'this' inside static method");
         }
         super.visitVarInsn(ALOAD, 0);
-    }
-
-    public void loadMethodParameter() {
-        super.visitLdcInsn(getName() + getDescriptor());
     }
 
     public int[] backupStack(LocalVariablesSorter lvs, boolean isStatic) {
@@ -650,6 +652,10 @@ public class MethodInstrumentor extends MethodAdapter {
 
     public void invokeStatic(String owner, String method, String desc) {
         super.visitMethodInsn(INVOKESTATIC, owner, method, desc);
+    }
+
+    protected String getParentClz() {
+        return parentClz;
     }
 
     protected ValidationResult validateArguments(OnMethod om, boolean staticFlag, Type[] actionArgTypes, Type[] methodArgTypes) {

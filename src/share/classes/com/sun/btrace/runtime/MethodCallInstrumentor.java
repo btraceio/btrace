@@ -43,9 +43,9 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  * @author A. Sundararajan
  */
 public class MethodCallInstrumentor extends MethodInstrumentor {
-    public MethodCallInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public MethodCallInstrumentor(MethodVisitor mv, String parentClz, 
+        int access, String name, String desc) {
+        super(mv, parentClz, access, name, desc);
     }
 
     public void visitMethodInsn(int opcode, String owner,
@@ -70,7 +70,7 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
         println("after call: " + owner + "." + name + desc);
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.MethodCallInstrumentor <class>");
             System.exit(1);
@@ -87,7 +87,7 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new MethodCallInstrumentor(mv, access, name, desc);
+                     return new MethodCallInstrumentor(mv, args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

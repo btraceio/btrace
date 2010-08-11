@@ -59,6 +59,7 @@ import com.sun.btrace.comm.NumberDataCommand;
 import com.sun.btrace.comm.NumberMapDataCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
+import com.sun.btrace.profiling.MethodInvocationProfiler;
 
 import java.lang.management.GarbageCollectorMXBean;
 
@@ -818,6 +819,15 @@ public final class BTraceRuntime {
         }
     }
 
+    static <K,V> void putAll(Map<K,V> src, Map<K,V> dst) {
+        dst.putAll(src);
+    }
+
+    static <K, V> void copy(Map<K,V> src, Map<K,V> dst) {
+        dst.clear();
+        dst.putAll(src);
+    }
+    
     static void printMap(Map map) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
@@ -1599,6 +1609,22 @@ public final class BTraceRuntime {
         getCurrent().send(new GridDataCommand(name, aggregation.getData()));
     }
 
+    static void printSnapshot(String name, Profiler.Snapshot snapshot) {
+        getCurrent().send(new GridDataCommand(name, snapshot.getGridData()));
+    }
+
+    /**
+     * Prints profiling snapshot using the provided format
+     * @param name The name of the aggregation to be used in the textual output
+     * @param snapshot The snapshot to print
+     * @param format The format to use. It mimics {@linkplain String#format(java.lang.String, java.lang.Object[]) } behaviour
+     *               with the addition of the ability to address the key title as a 0-indexed item
+     * @see String#format(java.lang.String, java.lang.Object[])
+     */
+    static void printSnapshot(String name, Profiler.Snapshot snapshot, String format) {
+        getCurrent().send(new GridDataCommand(name, snapshot.getGridData(), format));
+    }
+
     /**
      * Prints aggregation using the provided format
      * @param name The name of the aggregation to be used in the textual output
@@ -1609,6 +1635,53 @@ public final class BTraceRuntime {
      */
     static void printAggregation(String name, Aggregation aggregation, String format) {
         getCurrent().send(new GridDataCommand(name, aggregation.getData(), format));
+    }
+
+    // profiling related methods
+    /**
+     * @see BTraceUtils.Profiling#newProfiler()
+     */
+    static Profiler newProfiler() {
+        return new MethodInvocationProfiler(600);
+    }
+
+    /**
+     * @see BTraceUtils.Profiling#newProfiler(int)
+     */
+    static Profiler newProfiler(int expectedMethodCnt) {
+        return new MethodInvocationProfiler(expectedMethodCnt);
+    }
+
+    /**
+     * @see BTraceUtils.Profiling#recordEntry(com.sun.btrace.Profiler, java.lang.String)
+     */
+    static void recordEntry(Profiler profiler, String methodName) {
+        profiler.recordEntry(methodName);
+    }
+
+    /**
+     * @see BTraceUtils.Profiling#recordExit(com.sun.btrace.Profiler, java.lang.String, long)
+     */
+    static void recordExit(Profiler profiler, String methodName, long duration) {
+        profiler.recordExit(methodName, duration);
+    }
+
+    /**
+     * @see BTraceUtils.Profiling#snapshot(com.sun.btrace.Profiler) 
+     */
+    static Profiler.Snapshot snapshot(Profiler profiler) {
+        return profiler.snapshot();
+    }
+
+    /**
+     * @see BTraceUtils.Profiling#snapshotAndReset(com.sun.btrace.Profiler)
+     */
+    static Profiler.Snapshot snapshotAndReset(Profiler profiler) {
+        return profiler.snapshot(true);
+    }
+
+    static void resetProfiler(Profiler profiler) {
+        profiler.reset();
     }
 
     // private methods below this point

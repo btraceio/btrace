@@ -45,9 +45,9 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 public class FieldAccessInstrumentor extends MethodInstrumentor {
     protected boolean isStaticAccess = false;
 
-    public FieldAccessInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public FieldAccessInstrumentor(MethodVisitor mv, String parentClz, 
+        int access, String name, String desc) {
+        super(mv, parentClz, access, name, desc);
     }
 
     public void visitFieldInsn(int opcode, String owner, 
@@ -85,7 +85,7 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
     protected void onAfterPutField(int opcode,
         String owner, String name, String desc) {}
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.FieldAccessInstrumentor <class>");
             System.exit(1);
@@ -102,7 +102,7 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new FieldAccessInstrumentor(mv, access, name, desc) {
+                     return new FieldAccessInstrumentor(mv, args[0], access, name, desc) {
 
                         @Override
                         protected void onAfterGetField(int opcode, String owner, String name, String desc) {

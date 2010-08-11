@@ -520,7 +520,7 @@ public class Preprocessor extends ClassAdapter {
             MethodVisitor adaptee = super.visitMethod(access, name, desc, 
                                                     signature, exceptions);
             
-            return new MethodInstrumentor(adaptee, access, name, desc) {
+            return new MethodInstrumentor(adaptee, className, access, name, desc) {
                 private boolean isBTraceHandler = false;
                 private Label start = new Label();
                 private Label handler = new Label();
