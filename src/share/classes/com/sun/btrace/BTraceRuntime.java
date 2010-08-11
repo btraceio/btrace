@@ -1614,6 +1614,18 @@ public final class BTraceRuntime {
     }
 
     /**
+     * Prints profiling snapshot using the provided format
+     * @param name The name of the aggregation to be used in the textual output
+     * @param snapshot The snapshot to print
+     * @param format The format to use. It mimics {@linkplain String#format(java.lang.String, java.lang.Object[]) } behaviour
+     *               with the addition of the ability to address the key title as a 0-indexed item
+     * @see String#format(java.lang.String, java.lang.Object[])
+     */
+    static void printSnapshot(String name, Profiler.Snapshot snapshot, String format) {
+        getCurrent().send(new GridDataCommand(name, snapshot.getGridData(), format));
+    }
+
+    /**
      * Prints aggregation using the provided format
      * @param name The name of the aggregation to be used in the textual output
      * @param aggregation The aggregation to print

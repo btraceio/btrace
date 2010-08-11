@@ -5096,6 +5096,10 @@ public class BTraceUtils {
         public static void printSnapshot(String name, Profiler profiler) {
             BTraceRuntime.printSnapshot(name, profiler.snapshot());
         }
+
+        public static void printSnapshot(String name, Profiler profiler, String format) {
+            BTraceRuntime.printSnapshot(name, profiler.snapshot(), format);
+        }
     }
 
     /*
