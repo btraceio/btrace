@@ -313,8 +313,11 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         try {
             ClassWriter writer = InstrumentUtils.newClassWriter(target);
             ClassReader reader = new ClassReader(target);
-            InstrumentUtils.accept(reader,
-                new Instrumentor(clazz, className,  btraceCode, onMethods, writer));
+            Instrumentor i = new Instrumentor(clazz, className,  btraceCode, onMethods, writer);
+            InstrumentUtils.accept(reader, i);
+            if (Main.isDebug() && !i.hasMatch()) {
+                Main.debugPrint("*WARNING* No method was matched for class " + cname);
+            }
             instrumentedCode = writer.toByteArray();
 //            classes.add(new WeakReference<Class<?>>(clazz));
         } catch (Throwable th) {

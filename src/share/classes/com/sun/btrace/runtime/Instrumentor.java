@@ -86,6 +86,10 @@ public class Instrumentor extends ClassAdapter {
         this(clazz, btraceClassName, new ClassReader(btraceCode), onMethods, cv);
     }
 
+    final public boolean hasMatch() {
+        return !calledOnMethods.isEmpty();
+    }
+
     public void visit(int version, int access, String name, 
         String signature, String superName, String[] interfaces) {
         usesTimeStamp = false;
