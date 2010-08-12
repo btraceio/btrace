@@ -1212,7 +1212,7 @@ public final class BTraceRuntime {
     }
 
     // stack trace functions
-    static String stackTraceAllStr(int numFrames) {
+    private static String stackTraceAllStr(int numFrames, boolean printWarning) {
         Set<Map.Entry<Thread, StackTraceElement[]>> traces =
                 Thread.getAllStackTraces().entrySet();
         StringBuilder buf = new StringBuilder();
@@ -1221,23 +1221,32 @@ public final class BTraceRuntime {
             buf.append(LINE_SEPARATOR);
             buf.append(LINE_SEPARATOR);
             StackTraceElement[] st = t.getValue();
-            buf.append(stackTraceStr("\t", st, 0, numFrames));
+            buf.append(stackTraceStr("\t", st, 0, numFrames, printWarning));
             buf.append(LINE_SEPARATOR);
         }
         return buf.toString();
     }
 
+    static String stackTraceAllStr(int numFrames) {
+        return stackTraceAllStr(numFrames, false);
+    }
+
     static void stackTraceAll(int numFrames) {
-        getCurrent().send(stackTraceAllStr(numFrames));
+        getCurrent().send(stackTraceAllStr(numFrames, true));
     }
 
     static String stackTraceStr(StackTraceElement[] st,
                                  int start, int numFrames) {
-        return stackTraceStr(null, st, start, numFrames);
+        return stackTraceStr(null, st, start, numFrames, false);
     }
 
     static String stackTraceStr(String prefix, StackTraceElement[] st,
                                  int start, int numFrames) {
+        return stackTraceStr(prefix, st, start, numFrames, false);
+    }
+
+    private static String stackTraceStr(String prefix, StackTraceElement[] st,
+                                 int start, int numFrames, boolean printWarning) {
         start = start > 0 ? start : 0;
         numFrames = numFrames > 0 ? numFrames : st.length - start;
 
@@ -1248,12 +1257,12 @@ public final class BTraceRuntime {
 
         StringBuilder buf = new StringBuilder();
         for (int i = start; i < limit; i++) {
-            buf.append(prefix);
+            if (prefix != null) buf.append(prefix);
             buf.append(st[i].toString());
             buf.append(LINE_SEPARATOR);
         }
-        if (limit < st.length) {
-            buf.append(prefix);
+        if (printWarning && limit < st.length) {
+            if (prefix != null) buf.append(prefix);
             buf.append(st.length - limit);
             buf.append(" more frame(s) ...");
             buf.append(LINE_SEPARATOR);
@@ -1268,7 +1277,7 @@ public final class BTraceRuntime {
 
     static void stackTrace(String prefix, StackTraceElement[] st,
                                  int start, int numFrames) {
-        getCurrent().send(stackTraceStr(prefix, st, start, numFrames));
+        getCurrent().send(stackTraceStr(prefix, st, start, numFrames, true));
     }
 
     // print/println functions
