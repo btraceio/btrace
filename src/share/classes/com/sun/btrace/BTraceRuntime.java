@@ -119,6 +119,7 @@ import sun.security.action.GetPropertyAction;
  * @author A. Sundararajan
  * @author Christian Glencross (aggregation support)
  * @author Joachim Skeie (GC MBean support, advanced Deque manipulation)
+ * @author KLynch
  */
 public final class BTraceRuntime {
     // we need Unsafe to load BTrace class bytes as
@@ -1965,7 +1966,7 @@ public final class BTraceRuntime {
 
     private void startImpl() {
         if (timerHandlers != null && timerHandlers.length != 0) {
-            timer = new Timer();
+            timer = new Timer(true);
             RunnableGenerator gen = getRunnableGenerator();
             Runnable[] runnables = new Runnable[timerHandlers.length];
             if (gen != null) {
