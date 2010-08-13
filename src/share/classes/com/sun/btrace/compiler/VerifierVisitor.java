@@ -36,6 +36,7 @@ import com.sun.source.tree.*;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreeScanner;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.util.Messages;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.tree.JCTree;
@@ -243,6 +244,18 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             if (name.contentEquals("<init>")) {
                 return super.visitMethod(node, v);
             } else {
+                if (isExitHandler(node)) {
+                    if (node.getParameters().size() != 1 || ! "int".equals(node.getParameters().get(0).getType().toString())) {
+                        reportError("onexit.invalid", node);
+                        return false;
+                    }
+                }
+                if (isErrorHandler(node)) {
+                    if (node.getParameters().size() != 1 || ! "java.lang.Throwable".equals(node.getParameters().get(0).getType().toString())) {
+                        reportError("onerror.invalid", node);
+                        return false;
+                    }
+                }
                 Set<Modifier> flags = node.getModifiers().getFlags();
                 if (shortSyntax) {
                     boolean err = true;
@@ -358,6 +371,30 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     private boolean isPublic(Set<Modifier> modifiers) {
         for (Modifier m : modifiers) {
             if (m == Modifier.PUBLIC) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isErrorHandler(MethodTree node) {
+        ModifiersTree mt = node.getModifiers();
+        List<? extends AnnotationTree> annos = mt.getAnnotations();
+        for(AnnotationTree at : annos) {
+            String annFqn = ((JCTree)at.getAnnotationType()).type.tsym.getQualifiedName().toString();
+            if (annFqn.equals("com.sun.btrace.annotations.OnError")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isExitHandler(MethodTree node) {
+        ModifiersTree mt = node.getModifiers();
+        List<? extends AnnotationTree> annos = mt.getAnnotations();
+        for(AnnotationTree at : annos) {
+            String annFqn = ((JCTree)at.getAnnotationType()).type.tsym.getQualifiedName().toString();
+            if (annFqn.equals("com.sun.btrace.annotations.OnExit")) {
                 return true;
             }
         }

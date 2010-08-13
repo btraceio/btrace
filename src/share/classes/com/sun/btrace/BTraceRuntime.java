@@ -423,6 +423,10 @@ public final class BTraceRuntime {
         }
     }
 
+    public void handleExit(int exitCode) {
+        exitImpl(exitCode);
+    }
+
     public void handleEvent(EventCommand ecmd) {
         if (eventHandlers != null) {
             String event = ecmd.getEvent();

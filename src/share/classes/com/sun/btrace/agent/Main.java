@@ -41,6 +41,7 @@ import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.comm.ErrorCommand;
+import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.OnMethod;
@@ -85,6 +86,16 @@ public final class Main {
     };
     
     private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(daemonizedThreadFactory);
+
+    private static void registerExitHook(final Client c) {
+        Runtime.getRuntime().addShutdownHook(new Thread(
+            new Runnable() {
+                public void run() {
+                    BTraceRuntime rt = c.getRuntime();
+                    if (rt != null) rt.handleExit(0);
+                }
+            }));
+    }
 
     public static void premain(String args, Instrumentation inst) {
         main(args, inst);
@@ -365,6 +376,7 @@ public final class Main {
                 Socket sock = ss.accept();
                 if (isDebug()) debugPrint("client accepted " + sock);
                 Client client = new RemoteClient(inst, sock);
+                registerExitHook(client);
                 handleNewClient(client);
             } catch (RuntimeException re) {
                 if (isDebug()) debugPrint(re);
