@@ -292,23 +292,23 @@ public class Compiler {
     }
 
     private void dump(String name, byte[] code) {
-        OutputStream os = null;
-        try {
-            name = name.replace(".", "/") + ".class";
-            File f = new File("/tmp/" + name);
-            if (!f.exists()) {
-                f.getParentFile().createNewFile();
+//        OutputStream os = null;
+//        try {
+//            name = name.replace(".", "/") + ".class";
+//            File f = new File("/tmp/" + name);
+//            if (!f.exists()) {
+//                f.getParentFile().createNewFile();
+//            }
+//            os = new FileOutputStream(f);
+//            os.write(code);
+//        } catch (IOException e) {
+//
+//        } finally {
+//            if (os != null) {
+//                try {
+//                    os.close();
+//                } catch (IOException e) {}
+//            }
+//        }
             }
-            os = new FileOutputStream(f);
-            os.write(code);
-        } catch (IOException e) {
-
-        } finally {
-            if (os != null) {
-                try {
-                    os.close();
-                } catch (IOException e) {}
             }
-        }
-    }
-}
