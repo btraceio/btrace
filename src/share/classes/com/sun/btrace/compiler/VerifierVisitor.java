@@ -91,7 +91,13 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             } // else fall through ..
         } else if (methodSelect.getKind() == Tree.Kind.MEMBER_SELECT) {
             String name = ((MemberSelectTree)methodSelect).getIdentifier().toString();
-            String clzName = ((MemberSelectTree)methodSelect).getExpression().toString();
+            JCTree et = (JCTree)((MemberSelectTree)methodSelect).getExpression();
+
+            String clzName = et.type != null ? (et.type.tsym != null ? et.type.tsym.getQualifiedName().toString() : null) : null;
+            if (clzName == null) {
+                clzName = et.toString();
+            }
+
             if (clzName.equals("BTraceUtils") ||
                 clzName.equals("com.sun.btrace.BTraceUtils") ||
                 clzName.startsWith("BTraceUtils.") ||

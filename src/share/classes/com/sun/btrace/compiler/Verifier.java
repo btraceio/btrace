@@ -25,6 +25,7 @@
 
 package com.sun.btrace.compiler;
 
+import com.sun.source.util.TreePath;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -41,6 +42,8 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TaskEvent;
 import com.sun.source.util.TaskListener;
 import com.sun.source.util.Trees;
+import com.sun.tools.javac.processing.JavacProcessingEnvironment;
+import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -48,6 +51,7 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
+import com.sun.tools.javac.util.Context;
 
 /**
  * An annotation processor that validates a BTrace program.
@@ -58,7 +62,7 @@ import javax.lang.model.SourceVersion;
  */
 @SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
-public class Verifier extends AbstractProcessor 
+public class Verifier extends AbstractProcessor
                             implements TaskListener {
     private boolean unsafe;
     private List<String> classNames =
@@ -67,6 +71,7 @@ public class Verifier extends AbstractProcessor
     private List<CompilationUnitTree> compUnits =
         new ArrayList<CompilationUnitTree>();
     private ClassTree currentClass;
+    private final AttributionTaskListener listener = new AttributionTaskListener();
 
     public Verifier(boolean unsafe) {
         this.unsafe = unsafe;
@@ -79,21 +84,11 @@ public class Verifier extends AbstractProcessor
     public void init(ProcessingEnvironment pe) {
         super.init(pe);
         treeUtils = Trees.instance(pe);
+        prepareContext(((JavacProcessingEnvironment)pe).getContext());
     }
 
     public boolean process(Set<? extends TypeElement> annotations,
                            RoundEnvironment roundEnv) {
-        if (! roundEnv.processingOver()) {
-            Set<? extends Element> elements =
-                roundEnv.getRootElements();
-
-            for (Element e: elements) {
-                Tree tree = treeUtils.getTree(e);
-                if (tree.getKind().equals(Tree.Kind.CLASS)) {
-                    verify((ClassTree)tree, e);
-                }
-            }
-        }
         return true;
     }
 
@@ -103,7 +98,7 @@ public class Verifier extends AbstractProcessor
     public void finished(TaskEvent e) {
         CompilationUnitTree ct = e.getCompilationUnit();
         if (ct != null) {
-            compUnits.add(ct); 
+            compUnits.add(ct);
         }
     }
 
@@ -163,5 +158,77 @@ public class Verifier extends AbstractProcessor
         Boolean value = unsafe? Boolean.TRUE : 
             ct.accept(new VerifierVisitor(this, topElement), null);
         return value == null? true : value.booleanValue();
+    }
+
+    /**
+     * adds a listener for attribution.
+     */
+    private void prepareContext(Context context) {
+        TaskListener otherListener = context.get(TaskListener.class);
+        if (otherListener == null) {
+            context.put(TaskListener.class, listener);
+        } else {
+            // handle cases of multiple listeners
+            context.put(TaskListener.class, (TaskListener)null);
+            TaskListeners listeners = new TaskListeners();
+            listeners.add(otherListener);
+            listeners.add(listener);
+            context.put(TaskListener.class, listeners);
+        }
+    }
+
+    /**
+     * A task listener that invokes the processor whenever a class is fully
+     * analyzed.
+     */
+    private final class AttributionTaskListener implements TaskListener {
+
+        @Override
+        public void finished(TaskEvent e) {
+            if (e.getKind() != TaskEvent.Kind.ANALYZE) return;
+            TypeElement elem = e.getTypeElement();
+            for(Tree t : e.getCompilationUnit().getTypeDecls()) {
+                if (t.getKind() == Tree.Kind.CLASS) {
+                    if (((JCClassDecl)t).sym.equals(elem)) {
+                        currentClass = (ClassTree)t;
+                        break;
+                    }
+                }
+            }
+            if (currentClass != null) {
+                verify(currentClass, elem);
+            }
+        }
+
+        @Override
+        public void started(TaskEvent e) { }
+
+    }
+
+    /**
+     * A task listener multiplexer.
+     */
+    private static class TaskListeners implements TaskListener {
+        private final List<TaskListener> listeners = new ArrayList<TaskListener>();
+
+        public void add(TaskListener listener) {
+            listeners.add(listener);
+        }
+
+        public void remove(TaskListener listener) {
+            listeners.remove(listener);
+        }
+
+        @Override
+        public void finished(TaskEvent e) {
+            for (TaskListener listener : listeners)
+                listener.finished(e);
+        }
+
+        @Override
+        public void started(TaskEvent e) {
+            for (TaskListener listener : listeners)
+                listener.started(e);
+        }
     }
 }

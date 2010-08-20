@@ -73,7 +73,7 @@ public class ThreadEnteredMap {
         System.err.println(dur / 4000000);
 
         for(int i=0;i<400000;i++) {
-            instance.enter("nasrat");
+            instance.enter("in");
             instance.exit();
         }
 
@@ -90,7 +90,7 @@ public class ThreadEnteredMap {
                     long cnt = 0;
                     long start = System.nanoTime();
                     for(int i=0;i<4000000;i++) {
-                        tem.enter("nasrat");
+                        tem.enter("in");
 
                         cnt += i;
                         tem.exit();
