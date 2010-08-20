@@ -467,6 +467,7 @@ public final class Main {
                     file = targetClassName;
                 }
                 file += ".class";
+                new File(dir).mkdirs();
                 File out = new File(dir, file);
                 FileOutputStream fos = new FileOutputStream(out);
                 try {
