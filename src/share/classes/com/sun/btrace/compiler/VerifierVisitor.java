@@ -447,6 +447,10 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             if (m.getName().equals(name) &&
                 m.getParameterTypes().length == numArgs) {
                 return true;
+            } else if (m.getName().equals(name) &&
+                    m.getParameterTypes().length < numArgs &&
+                    m.isVarArgs()) {
+            	return true;
             }
         }
         return false;

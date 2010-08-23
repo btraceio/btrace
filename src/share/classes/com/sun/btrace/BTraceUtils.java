@@ -4578,7 +4578,11 @@ public class BTraceUtils {
             }
             return false;
         }
-
+        
+        public static <E> Object[] toArray(Collection<E> collection) {
+        	return BTraceRuntime.toArray(collection);
+        }
+        
         // operations on Deque
         public static <V> void push(Deque<V> queue, V value) {
             BTraceRuntime.push(queue, value);
@@ -5099,6 +5103,16 @@ public class BTraceUtils {
 
         public static void printSnapshot(String name, Profiler profiler, String format) {
             BTraceRuntime.printSnapshot(name, profiler.snapshot(), format);
+        }
+        
+        public static void printAggregation(String name, String format, Collection<Aggregation> aggregationList) {
+        	Aggregation[] aggregationArray = new Aggregation[aggregationList.size()];
+        	int index = 0;
+        	for (Aggregation a : aggregationList) {
+        		aggregationArray[index] = a;
+        		index++;
+        	}
+        	BTraceRuntime.printAggregation(name, format, aggregationArray);
         }
     }
 

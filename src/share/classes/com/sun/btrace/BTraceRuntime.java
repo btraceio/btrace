@@ -755,6 +755,14 @@ public final class BTraceRuntime {
         }
     }
 
+    static <E >Object[] toArray(Collection<E> collection) {
+    	if (collection == null) {
+    		return new Object[0];
+    	} else {
+    		return collection.toArray();
+    	}
+    }
+    
     static <K, V> V get(Map<K, V> map, Object key) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
@@ -1637,6 +1645,41 @@ public final class BTraceRuntime {
      */
     static void printSnapshot(String name, Profiler.Snapshot snapshot, String format) {
         getCurrent().send(new GridDataCommand(name, snapshot.getGridData(), format));
+    }
+    /**
+     * Precondition: Only values from the first Aggregation are printed. If the subsequent aggregations have 
+     * values for keys which the first aggregation does not have, these rows are ignored. 
+     * @param name
+     * @param format
+     * @param aggregationArray
+     */
+    static void printAggregation(String name, String format, Aggregation[] aggregationArray) {
+    	if (aggregationArray.length > 1 && aggregationArray[0].getKeyData().size() > 1) {
+    		int aggregationDataSize = aggregationArray[0].getKeyData().get(0).getElements().length + aggregationArray.length;
+    		
+    		List<Object[]> aggregationData = new ArrayList<Object[]>();
+    		
+    		//Iterate through all keys in the first Aggregation and build up an array of aggregationData
+    		for (AggregationKey aggKey : aggregationArray[0].getKeyData()) {
+    			int aggDataIndex = 0;
+    			Object[] currAggregationData = new Object[aggregationDataSize];
+    			
+    			//Add the key to the from of the current aggregation Data
+    			for (Object obj : aggKey.getElements()) {
+    				currAggregationData[aggDataIndex] = obj;
+    				aggDataIndex++;
+    			}
+    			
+    			for (Aggregation agg : aggregationArray) {
+    				currAggregationData[aggDataIndex] = agg.getValueForKey(aggKey);
+    				aggDataIndex++;
+            	}
+    			
+    			aggregationData.add(currAggregationData);
+    		}
+    			
+    		getCurrent().send(new GridDataCommand(name, aggregationData, format));
+    	}
     }
 
     /**
