@@ -1210,7 +1210,7 @@ public class BTraceUtils {
     }
 
     /**
-     * <p>Generates a string timestamp (current date&time)
+     * <p>Generates a string getTimestamp (current date&time)
      * @param format The format to be used - see {@linkplain SimpleDateFormat}
      * @return Returns a string representing current date&time
      * @since 1.1
@@ -1220,7 +1220,7 @@ public class BTraceUtils {
     }
 
     /**
-     * <p>Generates a string timestamp (current date&time) in the default system format
+     * <p>Generates a string getTimestamp (current date&time) in the default system format
      * @return Returns a string representing current date&time
      * @since 1.1
      */
@@ -4494,12 +4494,6 @@ public class BTraceUtils {
      * @since 1.2
      */
     public static class Collections {
-//        public static <T> void forEach(Collection<T> coll, String itemLambda) {
-//            for(T item : coll) {
-//                BTraceRuntime.lambda(itemLambda, item);
-//            }
-//        }
-
         // Create a new map
         public static <K, V> Map<K, V> newHashMap() {
             return BTraceRuntime.newHashMap();
@@ -4512,7 +4506,19 @@ public class BTraceUtils {
         public static <V> Deque<V> newDeque() {
             return BTraceRuntime.newDeque();
         }
-        
+
+        public static <K,V> void putAll(Map<K, V> src, Map<K, V> dst) {
+            BTraceRuntime.putAll(src, dst);
+        }
+
+        public static <K,V> void copy(Map<K, V> src, Map<K, V> dst) {
+            BTraceRuntime.copy(src, dst);
+        }
+
+        public static <V> void copy(Collection<V> src, Collection<V> dst) {
+
+        }
+
         // get a particular item from a Map
         public static <K, V> V get(Map<K, V> map, Object key) {
             return BTraceRuntime.get(map, key);
@@ -5010,13 +5016,89 @@ public class BTraceUtils {
         public static void truncateAggregation(Aggregation aggregation, int count) {
             BTraceRuntime.truncateAggregation(aggregation, count);
         }
-        
+
         public static void printAggregation(String name, Aggregation aggregation) {
-        	BTraceRuntime.printAggregation(name, aggregation);
+            BTraceRuntime.printAggregation(name, aggregation);
         }
-        
+
         public static void printAggregation(String name, Aggregation aggregation, String format) {
-        	BTraceRuntime.printAggregation(name, aggregation, format);
+            BTraceRuntime.printAggregation(name, aggregation, format);
+        }
+    }
+
+    /**
+     * Profiling support. It is a highly specialized aggregation (therefore not
+     * included in the generic aggregations support) which is able to calculate
+     * clean self time spent in hierarchically called methods (or bigger parts
+     * of code)
+     */
+    public static class Profiling {
+        /**
+         * Creates a new {@linkplain Profiler} instance
+         * @return A new {@linkplain Profiler} instance
+         */
+        public static Profiler newProfiler() {
+            return BTraceRuntime.newProfiler();
+        }
+
+        /**
+         * Creates a new {@linkplain Profiler} instance with the specified
+         * expected count of the distinct methods to be recorded.
+         * @param expectedBlockCnt The expected count of the distinct blocks
+         *                          to be recorded.
+         * @return Returns a new {@linkplain Profiler} instance
+         */
+        public static Profiler newProfiler(int expectedBlockCnt) {
+            return BTraceRuntime.newProfiler(expectedBlockCnt);
+        }
+
+        /**
+         * Records the entry to a particular code block
+         * @param profiler The {@linkplain Profiler} instance to use
+         * @param blockName The block identifier
+         */
+        public static void recordEntry(Profiler profiler, String blockName) {
+            BTraceRuntime.recordEntry(profiler, blockName);
+        }
+
+        /**
+         * Records the exit out of a particular code block
+         * @param profiler The {@linkplain Profiler} instance to use
+         * @param blockName The block identifier
+         * @param duration The time spent in the mentioned block
+         */
+        public static void recordExit(Profiler profiler, String blockName, long duration) {
+            BTraceRuntime.recordExit(profiler, blockName, duration);
+        }
+
+        /**
+         * Creates a new snapshot of the profiling metrics collected sofar
+         * @param profiler The {@linkplain Proilfer} instance to use
+         * @return Returns an immutable snapshot of the profiling metrics in
+         *         the form of a map where the key is the block name and
+         *         the value is a map of metrics names and the appropriate
+         *         values<br>
+         *         The supported metrics names are: "selfTime", "wallTime" and
+         *         "invocations"
+         */
+        public static Profiler.Snapshot snapshot(Profiler profiler) {
+            return BTraceRuntime.snapshot(profiler);
+        }
+
+        public static Profiler.Snapshot snapshotAndReset(Profiler profiler) {
+            return BTraceRuntime.snapshotAndReset(profiler);
+        }
+
+        public static void reset(Profiler profiler) {
+            BTraceRuntime.resetProfiler(profiler);
+        }
+
+        public static void printSnapshot(String name, Profiler profiler) {
+            BTraceRuntime.printSnapshot(name, profiler.snapshot());
+        }
+
+        public static void printSnapshot(String name, Profiler profiler, String format) {
+            BTraceRuntime.printSnapshot(name, profiler.snapshot(), format);
         }
     }
 
