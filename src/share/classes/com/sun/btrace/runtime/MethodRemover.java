@@ -63,7 +63,14 @@ public class MethodRemover extends ClassAdapter {
         } else {
             return new MethodAdapter(new NullVisitor()) {
                 private boolean include = true;
-                private MethodVisitor adaptee = addMethod(access, name, desc, signature, exceptions);
+                private MethodVisitor adaptee = null;
+
+                private MethodVisitor getAdaptee() {
+                    if (include && adaptee == null) {
+                        adaptee = addMethod(access, name, desc, signature, exceptions);
+                    }
+                    return adaptee;
+                }
 
                 public AnnotationVisitor visitAnnotation(String annoDesc,
                                   boolean visible) {
@@ -74,141 +81,141 @@ public class MethodRemover extends ClassAdapter {
                         include = false;
                         return new NullVisitor();
                     } else {
-                        return adaptee.visitAnnotation(annoDesc, visible);
+                        return getAdaptee().visitAnnotation(annoDesc, visible);
                     }
                 }
 
                 public void visitAttribute(Attribute attr) {
                     if (include) {
-                        adaptee.visitAttribute(attr);
+                        getAdaptee().visitAttribute(attr);
                     } 
                 }
 
                 public void visitCode() {
                     if (include) {
-                        adaptee.visitCode();
+                        getAdaptee().visitCode();
                     }
                 }
 
                 public void visitFrame(int type, int nLocal, 
                     Object[] local, int nStack, Object[] stack) {
                     if (include) {
-                        adaptee.visitFrame(type, nLocal, local, nStack, stack);
+                        getAdaptee().visitFrame(type, nLocal, local, nStack, stack);
                     }
                 }
 
                 public void visitInsn(int opcode) {
                     if (include) {
-                        adaptee.visitInsn(opcode);
+                        getAdaptee().visitInsn(opcode);
                     }
                 }
 
                 public void visitIntInsn(int opcode, int operand) {
                     if (include) {
-                        adaptee.visitIntInsn(opcode, operand);
+                        getAdaptee().visitIntInsn(opcode, operand);
                     }
                 }
 
                 public void visitVarInsn(int opcode, int var) {
                     if (include) {
-                        adaptee.visitVarInsn(opcode, var);
+                        getAdaptee().visitVarInsn(opcode, var);
                     }
                 }
 
                 public void visitTypeInsn(int opcode, String desc) {
                     if (include) {
-                        adaptee.visitTypeInsn(opcode, desc);
+                        getAdaptee().visitTypeInsn(opcode, desc);
                     }
                 }
 
                 public void visitFieldInsn(int opcode, String owner, 
                     String name, String desc) {
                     if (include) {
-                        adaptee.visitFieldInsn(opcode, owner, name, desc);
+                        getAdaptee().visitFieldInsn(opcode, owner, name, desc);
                     }
                 }
 
                 public void visitMethodInsn(int opcode, String owner, 
                     String name, String desc) {
                     if (include) {
-                        adaptee.visitMethodInsn(opcode, owner, name, desc);
+                        getAdaptee().visitMethodInsn(opcode, owner, name, desc);
                     }
                 }
 
                 public void visitJumpInsn(int opcode, Label label) {
                     if (include) {
-                        adaptee.visitJumpInsn(opcode, label);
+                        getAdaptee().visitJumpInsn(opcode, label);
                     }
                 }
 
                 public void visitLabel(Label label) {
                     if (include) {
-                        adaptee.visitLabel(label);
+                        getAdaptee().visitLabel(label);
                     }
                 }
 
                 public void visitLdcInsn(Object cst) {
                     if (include) {
-                        adaptee.visitLdcInsn(cst);
+                        getAdaptee().visitLdcInsn(cst);
                     }
                 }
 
                 public void visitIincInsn(int var, int increment) {
                     if (include) {
-                        adaptee.visitIincInsn(var, increment);
+                        getAdaptee().visitIincInsn(var, increment);
                     }
                 }
 
                 public void visitTableSwitchInsn(int min, int max, 
                     Label dflt, Label[] labels) {
                     if (include) {
-                        adaptee.visitTableSwitchInsn(min, max, dflt, labels);
+                        getAdaptee().visitTableSwitchInsn(min, max, dflt, labels);
                     }
                 }
 
                 public void visitLookupSwitchInsn(Label dflt, int[] keys, 
                     Label[] labels) {
                     if (include) {
-                        adaptee.visitLookupSwitchInsn(dflt, keys, labels);
+                        getAdaptee().visitLookupSwitchInsn(dflt, keys, labels);
                     }
                 }
 
                 public void visitMultiANewArrayInsn(String desc, int dims) {
                     if (include) {
-                        adaptee.visitMultiANewArrayInsn(desc, dims);
+                        getAdaptee().visitMultiANewArrayInsn(desc, dims);
                     }
                 }
 
                 public void visitTryCatchBlock(Label start, Label end, 
                     Label handler, String type) {
                     if (include) {
-                        adaptee.visitTryCatchBlock(start, end, handler, type);
+                        getAdaptee().visitTryCatchBlock(start, end, handler, type);
                     }
                 }
 
                 public void visitLocalVariable(String name, String desc, 
                     String signature, Label start, Label end, int index) {
                     if (include) {
-                        adaptee.visitLocalVariable(name, desc, signature,
+                        getAdaptee().visitLocalVariable(name, desc, signature,
                             start, end, index);
                     }
                 }
 
                 public void visitLineNumber(int line, Label start) {
                     if (include) {
-                        adaptee.visitLineNumber(line, start);
+                        getAdaptee().visitLineNumber(line, start);
                     }
                 }
 
                 public void visitMaxs(int maxStack, int maxLocals) {
                     if (include) {
-                        adaptee.visitMaxs(maxStack, maxLocals);
+                        getAdaptee().visitMaxs(maxStack, maxLocals);
                     }
                 }
 
                 public void visitEnd() {
                     if (include) {
-                        adaptee.visitEnd();
+                        getAdaptee().visitEnd();
                     }
                 }
             };

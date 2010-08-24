@@ -274,12 +274,12 @@ public class Compiler {
             Map<String, byte[]> result = new HashMap<String, byte[]>();
             for (String name : classNames) {
                 if (classBytes.containsKey(name)) {
-                    dump(name + "_orig", classBytes.get(name));
+                    dump(name + "_before", classBytes.get(name));
                     ClassReader cr = new ClassReader(classBytes.get(name));
                     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
                     cr.accept(new Postprocessor(cw), ClassReader.EXPAND_FRAMES + ClassReader.SKIP_DEBUG);
                     result.put(name, cw.toByteArray());
-                    dump(name, cw.toByteArray());
+                    dump(name + "_after", cw.toByteArray());
                 }
             }
             return result;
@@ -310,5 +310,5 @@ public class Compiler {
 //                } catch (IOException e) {}
 //            }
 //        }
-            }
-            }
+    }
+}
