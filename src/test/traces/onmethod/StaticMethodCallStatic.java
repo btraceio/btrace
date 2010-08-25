@@ -44,7 +44,7 @@ public class StaticMethodCallStatic {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevelStatic",
               location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTargetStatic"))
     public static void args(String a, long b,
-                            @TargetMethodOrField String calledMethod,
+                            @TargetMethodOrField(fqn=true) String calledMethod,
                             @ProbeClassName String className, @ProbeMethodName String methodName) {
         println("args");
     }

@@ -410,7 +410,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/MethodCall");
 
         checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 0\nALOAD 6\nLLOAD 4\nALOAD 7\n" +
-                            "LDC \"callTarget(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
+                            "LDC \"resources/OnMethodTest.callTarget(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
                             "LDC \"callTopLevel\"\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCall$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
                             "ALOAD 7\nALOAD 6\nLLOAD 4");
@@ -433,7 +433,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/MethodCallStatic");
 
         checkTransformation("LSTORE 4\nASTORE 6\nALOAD 0\nALOAD 6\nLLOAD 4\n" +
-                            "LDC \"callTargetStatic(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
+                            "LDC \"resources/OnMethodTest.callTargetStatic(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
                             "LDC \"callTopLevel\"\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallStatic$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
                             "ALOAD 6\nLLOAD 4");
@@ -445,7 +445,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/StaticMethodCall");
 
         checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 6\nLLOAD 4\nALOAD 7\n" +
-                            "LDC \"callTarget(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
+                            "LDC \"resources/OnMethodTest.callTarget(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
                             "LDC \"callTopLevelStatic\"\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticMethodCall$args (Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
                             "ALOAD 7\nALOAD 6\nLLOAD 4");
@@ -457,7 +457,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/StaticMethodCallStatic");
 
         checkTransformation("LSTORE 4\nASTORE 6\nALOAD 6\nLLOAD 4\n" +
-                            "LDC \"callTargetStatic(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
+                            "LDC \"resources/OnMethodTest.callTargetStatic(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
                             "LDC \"callTopLevelStatic\"\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticMethodCallStatic$args (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
                             "ALOAD 6\nLLOAD 4");
