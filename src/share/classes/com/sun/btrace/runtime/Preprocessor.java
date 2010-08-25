@@ -293,6 +293,7 @@ public class Preprocessor extends ClassAdapter {
                   String[] interfaces) {
         className = name;     
         classType = Type.getObjectType(className);
+        classInitializerFound = false;
         super.visit(version, access, name,
                     signature, superName, interfaces);
     }
@@ -508,8 +509,8 @@ public class Preprocessor extends ClassAdapter {
              *
              */
             final boolean isClassInitializer = name.equals(CLASS_INITIALIZER);
-            classInitializerFound = isClassInitializer;
-            
+            classInitializerFound = classInitializerFound || isClassInitializer;
+
             if (!isClassInitializer) {
                 // force the method to be public
                 if ((access & Opcodes.ACC_PRIVATE) > 0) access ^= Opcodes.ACC_PRIVATE;
