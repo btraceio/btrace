@@ -43,6 +43,7 @@ abstract public class TraceOutputWriter extends Writer {
         final private FileWriter delegate;
 
         public SimpleFileOutput(File output) throws IOException {
+            output.getParentFile().mkdirs();
             delegate = new FileWriter(output);
         }
         @Override
@@ -74,6 +75,7 @@ abstract public class TraceOutputWriter extends Writer {
         }
         
         public RollingFileWriter(File output, int maxRolls) throws IOException {
+            output.getParentFile().mkdirs();
             currentFileWriter = new FileWriter(output);
             path = output.getParentFile().getAbsolutePath();
             baseName = output.getName();
@@ -220,5 +222,22 @@ abstract public class TraceOutputWriter extends Writer {
             Main.debugPrint(e);
         }
         return instance;
+    }
+
+    private static void ensurePathExists(File f) {
+        if (f == null || f.exists()) return;
+        
+        ensurePathExists(f.getParentFile());
+        System.err.println("continuing");
+
+        if (!f.getName().endsWith(".btrace")) { // not creating the actual file
+            try {
+                System.err.println("creating new folder " + f.toString());
+                f.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+                // ignore and continue
+            }
+        }
     }
 }

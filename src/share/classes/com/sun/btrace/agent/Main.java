@@ -72,7 +72,7 @@ public final class Main {
     private static volatile String dumpDir;
     private static volatile String probeDescPath;
     private static volatile String scriptOutputFile;
-    private static volatile Long fileRollMilliseconds;
+    private static volatile Long fileRollMilliseconds;;
 
     // #BTRACE-42: Non-daemon thread prevents traced application from exiting
     private static final ThreadFactory daemonizedThreadFactory = new ThreadFactory() {
@@ -321,10 +321,11 @@ public final class Main {
             if (traceToStdOut) {
                 traceWriter = new PrintWriter(System.out);
             } else {
+                String agentName = System.getProperty("btrace.agent", null);
             	String currentBtraceScriptOutput = scriptOutputFile;
             	
                 if (currentBtraceScriptOutput == null || currentBtraceScriptOutput.length() == 0) {
-                    currentBtraceScriptOutput = filename + ".btrace";
+                    currentBtraceScriptOutput = filename + (agentName != null ? "." + agentName  : "") + ".btrace";
                     if (isDebug()) debugPrint("scriptOutputFile not specified. defaulting to " + currentBtraceScriptOutput);
                 }
                 if (fileRollMilliseconds != null && fileRollMilliseconds.longValue() > 0) {
