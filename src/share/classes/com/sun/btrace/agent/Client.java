@@ -188,6 +188,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         ClassWriter writer = InstrumentUtils.newClassWriter(btraceCode);
         ClassReader reader = new ClassReader(btraceCode);
         ClassVisitor visitor = new Preprocessor(writer);
+        Main.dumpClass(className + "_orig", className + "_orig", btraceCode);
         if (BTraceRuntime.classNameExists(className)) {
             className += "$" + getCount();
             if (debug) Main.debugPrint("class renamed to " + className);
@@ -204,12 +205,13 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             errorExit(th);
             return null;
         }
-        Main.dumpClass(className, className, btraceCode);
+        Main.dumpClass(className + "_proc", className + "_proc", btraceCode);
         if (debug) Main.debugPrint("creating BTraceRuntime instance for " + className);
         this.runtime = new BTraceRuntime(className, args, this, inst);
         if (debug) Main.debugPrint("created BTraceRuntime instance for " + className);
         if (debug) Main.debugPrint("removing @OnMethod, @OnProbe methods");
         byte[] codeBuf = removeMethods(btraceCode);
+        Main.dumpClass(className, className, codeBuf);
         if (debug) Main.debugPrint("removed @OnMethod, @OnProbe methods");
         if (debug) Main.debugPrint("sending Okay command");
         runtime.send(new OkayCommand());

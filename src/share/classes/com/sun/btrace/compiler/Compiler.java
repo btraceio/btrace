@@ -24,7 +24,6 @@
  */
 package com.sun.btrace.compiler;
 
-import com.sun.btrace.client.Main;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import javax.annotation.processing.Processor;
@@ -33,7 +32,6 @@ import com.sun.btrace.util.Messages;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -274,12 +272,12 @@ public class Compiler {
             Map<String, byte[]> result = new HashMap<String, byte[]>();
             for (String name : classNames) {
                 if (classBytes.containsKey(name)) {
-                    dump(name + "_orig", classBytes.get(name));
+                    dump(name + "_before", classBytes.get(name));
                     ClassReader cr = new ClassReader(classBytes.get(name));
                     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
                     cr.accept(new Postprocessor(cw), ClassReader.EXPAND_FRAMES + ClassReader.SKIP_DEBUG);
                     result.put(name, cw.toByteArray());
-                    dump(name, cw.toByteArray());
+                    dump(name + "_after", cw.toByteArray());
                 }
             }
             return result;
@@ -310,5 +308,5 @@ public class Compiler {
 //                } catch (IOException e) {}
 //            }
 //        }
-            }
-            }
+    }
+}

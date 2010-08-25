@@ -146,9 +146,7 @@ public class Aggregation implements Cloneable {
             int rowSize = keyElements.length + 1;
 
             Object[] row = new Object[rowSize];
-            for (int i = 0; i < keyElements.length; i++) {
-                row[i] = keyElements[i];
-            }
+            System.arraycopy(keyElements, 0, row, 0, keyElements.length);
             row[rowSize - 1] = item.getValue().getData();
             result.add(row);
         }
