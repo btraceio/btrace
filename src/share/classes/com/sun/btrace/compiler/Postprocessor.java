@@ -36,6 +36,7 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.NullVisitor;
+import com.sun.org.apache.bcel.internal.generic.BASTORE;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +51,7 @@ import java.util.List;
 public class Postprocessor extends ClassAdapter {
     private List<FieldDescriptor> fields = new ArrayList<FieldDescriptor>();
     private boolean shortSyntax = false;
+    private String className = "";
 
     public Postprocessor(ClassVisitor cv) {
         super(cv);
@@ -64,6 +66,7 @@ public class Postprocessor extends ClassAdapter {
             shortSyntax = true; // specifying "class <MyClass>" rather than "public class <MyClass>" means using short syntax
             access |= Opcodes.ACC_PUBLIC; // force the public modifier on the btrace class
         }
+        className = name;
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -142,7 +145,7 @@ public class Postprocessor extends ClassAdapter {
         }
     }
 
-    private static class MethodConvertor extends MethodAdapter {
+    private class MethodConvertor extends MethodAdapter {
         private Deque<Boolean> simulatedStack = new ArrayDeque<Boolean>();
         private int localVarOffset = 0;
         private boolean isConstructor;
@@ -172,19 +175,25 @@ public class Postprocessor extends ClassAdapter {
                     simulatedStack.push(!delegate);
                     break;
                 }
-                case Opcodes.ILOAD:
                 case Opcodes.LLOAD:
+                case Opcodes.DLOAD: {
+                    simulatedStack.push(Boolean.FALSE);
+                    // long and double occoupy 2 stack slots; fall through
+                }
+                case Opcodes.ILOAD:
                 case Opcodes.FLOAD:
-                case Opcodes.DLOAD:
                 {
                     simulatedStack.push(Boolean.FALSE);
                     break;
                 }
+                case Opcodes.LSTORE:
+                case Opcodes.DSTORE: {
+                    simulatedStack.poll();
+                    // long and double occoupy 2 stack slots; fall through
+                }
                 case Opcodes.ASTORE:
                 case Opcodes.ISTORE:
-                case Opcodes.LSTORE:
-                case Opcodes.FSTORE:
-                case Opcodes.DSTORE: {
+                case Opcodes.FSTORE: {
                     simulatedStack.poll();
                     break;
                 }
@@ -197,12 +206,20 @@ public class Postprocessor extends ClassAdapter {
         public void visitInsn(int opcode) {
             switch(opcode) {
                 case Opcodes.POP: {
-                    simulatedStack.poll();
+                    if (simulatedStack.pop()) {
+                        return;
+                    }
                     break;
                 }
                 case Opcodes.POP2: {
-                    simulatedStack.poll();
-                    simulatedStack.poll();
+                    Boolean[] vals = new Boolean[2];
+                    vals[0] = simulatedStack.poll();
+                    vals[1] = simulatedStack.poll();
+                    if (vals[0] && vals[1]) {
+                        return;
+                    } else if (vals[0] || vals[1]) {
+                        opcode = Opcodes.POP;
+                    }
                     break;
                 }
                 case Opcodes.DUP: {
@@ -213,47 +230,78 @@ public class Postprocessor extends ClassAdapter {
                     break;
                 }
                 case Opcodes.DUP_X1: {
-                    Boolean[] vals = new Boolean[]{Boolean.FALSE, Boolean.FALSE};
-                    Iterator<Boolean> iter = simulatedStack.descendingIterator();
-                    int cntr = 0;
-                    while (cntr < vals.length && iter.hasNext()) {
-                        vals[cntr++] = iter.next();
+                    if (simulatedStack.size() < 2) return;
+                    Boolean[] vals = new Boolean[2];
+                    int cntr = vals.length - 1;
+                    while (cntr >= 0) {
+                        vals[cntr--] = simulatedStack.pop();
                     }
                     simulatedStack.push(vals[vals.length - 1]);
                     simulatedStack.addAll(Arrays.asList(vals));
+                    if (vals[1]) {
+                        return;
+                    } else if (vals[0]) {
+                        opcode = Opcodes.DUP;
+                    }
                     break;
                 }
                 case Opcodes.DUP_X2: {
-                    Boolean[] vals = new Boolean[]{Boolean.FALSE, Boolean.FALSE, Boolean.FALSE};
-                    Iterator<Boolean> iter = simulatedStack.descendingIterator();
-                    int cntr = 0;
-                    while (cntr < vals.length && iter.hasNext()) {
-                        vals[cntr++] = iter.next();
+                    if (simulatedStack.size() < 3) return;
+                    Boolean[] vals = new Boolean[3];
+                    int cntr = vals.length - 1;
+                    while (cntr >= 0) {
+                        vals[cntr--] = simulatedStack.pop();
                     }
                     simulatedStack.push(vals[vals.length - 1]);
                     simulatedStack.addAll(Arrays.asList(vals));
+                    if (vals[2]) {
+                        return;
+                    } else if (vals[0] && vals[1]) {
+                        opcode = Opcodes.DUP;
+                    } else {
+                        opcode = Opcodes.DUP_X1;
+                    }
                     break;
                 }
                 case Opcodes.DUP2: {
-                    Boolean[] vals = new Boolean[]{Boolean.FALSE, Boolean.FALSE};
-                    Iterator<Boolean> iter = simulatedStack.descendingIterator();
-                    int cntr = 0;
-                    while (cntr < vals.length && iter.hasNext()) {
-                        vals[cntr++] = iter.next();
+                    if (simulatedStack.size() < 2) return;
+                    Boolean[] vals = new Boolean[2];
+                    int cntr = vals.length - 1;
+                    while (cntr >= 0) {
+                        vals[cntr--] = simulatedStack.pop();
                     }
                     simulatedStack.addAll(Arrays.asList(vals));
+                    if (vals[0] && vals[1]) {
+                        return;
+                    } else if(vals[0] || vals[1]) {
+                        opcode = Opcodes.DUP;
+                    }
                     break;
                 }
                 case Opcodes.DUP2_X1: {
-                    Boolean[] vals = new Boolean[]{Boolean.FALSE, Boolean.FALSE, Boolean.FALSE};
-                    Iterator<Boolean> iter = simulatedStack.descendingIterator();
-                    int cntr = 0;
-                    while (cntr < vals.length && iter.hasNext()) {
-                        vals[cntr++] = iter.next();
+                    if (simulatedStack.size() < 3) return;
+                    Boolean[] vals = new Boolean[3];
+                    int cntr = vals.length - 1;
+                    while (cntr >= 0) {
+                        vals[cntr--] = simulatedStack.pop();
                     }
                     simulatedStack.push(vals[vals.length - 2]);
                     simulatedStack.push(vals[vals.length - 1]);
                     simulatedStack.addAll(Arrays.asList(vals));
+                    if (vals[1] && vals[2]) {
+                        return;
+                    }
+                    if (vals[0]) {
+                        if (vals[1] || vals[2])  {
+                            opcode = Opcodes.DUP;
+                        } else {
+                            opcode = Opcodes.DUP2;
+                        }
+                    } else {
+                        if (vals[1] || vals[2]) {
+                            opcode = Opcodes.DUP_X1;
+                        }
+                    }
                     break;
                 }
                 case Opcodes.DUP2_X2: {
@@ -268,50 +316,142 @@ public class Postprocessor extends ClassAdapter {
                     simulatedStack.addAll(Arrays.asList(vals));
                     break;
                 }
-                case Opcodes.IADD:
+                case Opcodes.SWAP: {
+                    if (simulatedStack.size() < 2) return;
+                    Boolean[] vals = new Boolean[2];
+
+                    int cntr = vals.length - 1;
+                    while (cntr >= 0) {
+                        vals[cntr--] = simulatedStack.pop();
+                    }
+                    if (vals[0] || vals[1]) {
+                        return;
+                    }
+                    simulatedStack.push(vals[1]);
+                    simulatedStack.push(vals[0]);
+                }
+                // zero operand instructions
+                case Opcodes.LCONST_0:
+                case Opcodes.LCONST_1:
+                case Opcodes.DCONST_0:
+                case Opcodes.DCONST_1: {
+                    simulatedStack.push(Boolean.FALSE);
+                }
+                case Opcodes.ICONST_0:
+                case Opcodes.ICONST_1:
+                case Opcodes.ICONST_2:
+                case Opcodes.ICONST_3:
+                case Opcodes.ICONST_4:
+                case Opcodes.ICONST_5:
+                case Opcodes.ICONST_M1:
+                case Opcodes.FCONST_0:
+                case Opcodes.FCONST_1:
+                case Opcodes.FCONST_2:
+                case Opcodes.ACONST_NULL:
+                case Opcodes.MONITORENTER:
+                case Opcodes.MONITOREXIT: {
+                    simulatedStack.push(Boolean.FALSE);
+                    break;
+                }
+                
+                // one operand instructions
+                case Opcodes.INEG:
+                case Opcodes.FNEG:
+                case Opcodes.DNEG:
+                case Opcodes.LNEG:
+                case Opcodes.I2B:
+                case Opcodes.I2C:
+                case Opcodes.I2F:
+                case Opcodes.I2S:
+                case Opcodes.L2D:
+                case Opcodes.D2L:
+                case Opcodes.F2I:
+                case Opcodes.CHECKCAST:
+                case Opcodes.ARRAYLENGTH: {
+                    // nothing changes in regard to the simulated stack
+                    break;
+                }
+                case Opcodes.I2L:
+                case Opcodes.I2D: {
+                    simulatedStack.push(Boolean.FALSE); // extending the original value by one slot
+                    break;
+                }
+                    
+                // two operand instructions
                 case Opcodes.LADD:
-                case Opcodes.FADD:
                 case Opcodes.DADD:
-                case Opcodes.ISUB:
                 case Opcodes.LSUB:
-                case Opcodes.FSUB:
                 case Opcodes.DSUB:
-                case Opcodes.IMUL:
                 case Opcodes.LMUL:
                 case Opcodes.DMUL:
-                case Opcodes.IDIV:
                 case Opcodes.LDIV:
-                case Opcodes.FDIV:
                 case Opcodes.DDIV:
-                case Opcodes.IREM:
                 case Opcodes.LREM:
-                case Opcodes.FREM:
                 case Opcodes.DREM:
-                case Opcodes.ISHL:
                 case Opcodes.LSHL:
-                case Opcodes.ISHR:
                 case Opcodes.LSHR:
-                case Opcodes.IUSHR:
                 case Opcodes.LUSHR:
-                case Opcodes.IAND:
                 case Opcodes.LAND:
-                case Opcodes.IOR:
                 case Opcodes.LOR:
+                case Opcodes.LXOR: 
+                case Opcodes.LALOAD:
+                case Opcodes.DALOAD: {
+                    simulatedStack.pop();
+                    simulatedStack.pop();
+                    // remove 4 slots == 2 long/double operands and add 2 slots == 1 long/double result
+                    break;
+                }
                 case Opcodes.LCMP:
+                case Opcodes.DCMPL:
+                case Opcodes.DCMPG: {
+                    simulatedStack.pop();
+                    simulatedStack.pop();
+                    simulatedStack.pop();
+                    // remove 4 slots == 2 long/double operands and add 1 slot == 1 int result
+                    break;
+                }
+                case Opcodes.IADD:
+                case Opcodes.FADD:
+                case Opcodes.ISUB:
+                case Opcodes.FSUB:
+                case Opcodes.IMUL:
+                case Opcodes.IDIV:
+                case Opcodes.FDIV:
+                case Opcodes.IREM:
+                case Opcodes.FREM:
+                case Opcodes.ISHL:
+                case Opcodes.ISHR:
+                case Opcodes.IUSHR:
+                case Opcodes.IAND:
+                case Opcodes.IOR:
+                case Opcodes.IXOR:
                 case Opcodes.FCMPL:
                 case Opcodes.FCMPG:
-                case Opcodes.DCMPL:
-                case Opcodes.DCMPG:
                 case Opcodes.BALOAD:
                 case Opcodes.SALOAD:
                 case Opcodes.CALOAD:
                 case Opcodes.IALOAD:
-                case Opcodes.LALOAD:
                 case Opcodes.FALOAD:
-                case Opcodes.DALOAD:
                 {
                     simulatedStack.poll();
+                    // remove 2 slots == 2 intoperands and add 1 slot == 1 int result
                     break;
+                }
+
+                // three operand instructions
+                case Opcodes.LASTORE:
+                case Opcodes.DASTORE: {
+                    simulatedStack.pop();
+                    // LASTORE, DSTORE occupy one more slot compared to BASTORE etc.; falling through
+                }
+                case Opcodes.BASTORE:
+                case Opcodes.CASTORE:
+                case Opcodes.SASTORE:
+                case Opcodes.IASTORE:
+                case Opcodes.FASTORE: {
+                    simulatedStack.pop();
+                    simulatedStack.pop();
+                    simulatedStack.pop();
                 }
             }
             if (copyEnabled) {
@@ -382,6 +522,9 @@ public class Postprocessor extends ClassAdapter {
         @Override
         public void visitLdcInsn(Object o) {
             simulatedStack.push(Boolean.FALSE);
+            if (o instanceof Long || o instanceof Double) {
+                simulatedStack.push(Boolean.FALSE);
+            }
             if (copyEnabled) {
                 super.visitLdcInsn(o);
             }
@@ -408,9 +551,12 @@ public class Postprocessor extends ClassAdapter {
                     i = Opcodes.GETSTATIC;
                 }
             } else if (i == Opcodes.PUTFIELD) {
-                simulatedStack.poll();
-                Boolean opTarget = simulatedStack.poll();
-                if (opTarget != null && opTarget) {
+                simulatedStack.pop();
+                simulatedStack.pop();
+                if (desc.equals("J") || desc.equals("D")) {
+                    simulatedStack.pop();
+                }
+                if (clazz.equals(className)) { // all local fields are static
                     i = Opcodes.PUTSTATIC;
                 }
             }
@@ -418,6 +564,9 @@ public class Postprocessor extends ClassAdapter {
                 case Opcodes.GETFIELD:
                 case Opcodes.GETSTATIC: {
                     simulatedStack.push(Boolean.FALSE);
+                    if (desc.equals("J") || desc.equals("D")) {
+                        simulatedStack.push(Boolean.FALSE);
+                    }
                     break;
                 }
             }
@@ -472,6 +621,10 @@ public class Postprocessor extends ClassAdapter {
 
         @Override
         public void visitMultiANewArrayInsn(String string, int i) {
+            for(int ind=0;ind<i;ind++) {
+                simulatedStack.pop();
+            }
+            simulatedStack.push(Boolean.FALSE);
             if (copyEnabled) {
                 super.visitMultiANewArrayInsn(string, i);
             }
