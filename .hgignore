@@ -15,4 +15,4 @@ website
 ^tailor.state.old$
 ^tailor.state.journal$
 ^TEST-*
-.class
+.class$
