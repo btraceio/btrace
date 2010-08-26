@@ -39,5 +39,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface TargetMethodOrField {
+    /**
+     * Flag indicating whether a fully qualified name (FQN) or a simple method/field name should be used
+     */
     boolean fqn() default false;
 }
