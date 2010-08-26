@@ -25,6 +25,7 @@
 
 package com.sun.btrace.profiling;
 
+import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.Profiler;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,6 +35,8 @@ import java.util.Map;
  * @author Jaroslav Bachorik
  */
 public class MethodInvocationProfiler extends Profiler implements Profiler.MBeanValueProvider {
+    final private static long SAMPLING_AVG = BTraceRuntime.SAMPLER_STEP / 2;
+    
     private static class MethodInvocationRecorder {
         private int stackSize = 200;
         private int stackPtr = -1;

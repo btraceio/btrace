@@ -47,6 +47,10 @@ public class TimeStampHelper {
     }
 
     public static void generateTimeStampAccess(MethodVisitor mv, String className) {
-        mv.visitMethodInsn(INVOKESTATIC, className.replace(".", "/"), TIME_STAMP_NAME, "()J");
+        if (Boolean.getBoolean("btrace.timer.sampled")) {
+            mv.visitFieldInsn(GETSTATIC, "com/sun/btrace/BTraceRuntime", "TIMESTAMP", "J");
+        } else {
+            mv.visitMethodInsn(INVOKESTATIC, className.replace(".", "/"), TIME_STAMP_NAME, "()J");
+        }
     }
 }

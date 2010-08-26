@@ -138,10 +138,37 @@ public final class BTraceRuntime {
     private static final boolean messageTimestamp = false;
     private static final String LINE_SEPARATOR;
 
+    final private static Thread samplerThread;
+    volatile public static long TIMESTAMP = 0L;
+
     static {
         dummy = new BTraceRuntime();
         NULL = new BTraceRuntime();
         LINE_SEPARATOR = System.getProperty("line.separator");
+
+        if (Boolean.getBoolean("btrace.timer.sampled")) {
+            final long interval = Long.parseLong(System.getProperty("btrace.timer.sampled.interval", "500"));
+            long time = System.nanoTime();
+            for(int i=0;i<1000;i++) {
+                unsafe.park(false, interval);
+            }
+            time = System.nanoTime() - time;
+            final long step = (long)(time / 1000);
+
+            samplerThread = new Thread(new Runnable() {
+
+                public void run() {
+                    while (true) {
+                        unsafe.park(false, interval);
+                        TIMESTAMP+=step;
+                    }
+                }
+            }, "BTrace Sampled Timer");
+            samplerThread.setDaemon(true);
+            samplerThread.start();
+        } else {
+            samplerThread = null;
+        }
     }
 
     // at most one BTrace action method runs per thread.
