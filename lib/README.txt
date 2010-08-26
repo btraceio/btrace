@@ -1,5 +1,5 @@
-This directory contains btrace-asm-3.1.jar. This file was
-generated from "asm-3.1.jar" using the "JarJar" tool (please 
+This directory contains btrace-asm-3.3.jar. This file was
+generated from "asm-3.3.jar" using the "JarJar" tool (please
 see http://code.google.com/p/jarjar/) using the following rule:
 
 
