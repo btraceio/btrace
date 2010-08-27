@@ -5028,6 +5028,16 @@ public class BTraceUtils {
         public static void printAggregation(String name, Aggregation aggregation, String format) {
             BTraceRuntime.printAggregation(name, aggregation, format);
         }
+
+        public static void printAggregation(String name, String format, Collection<Aggregation> aggregationList) {
+            Aggregation[] aggregationArray = new Aggregation[aggregationList.size()];
+            int index = 0;
+            for (Aggregation a : aggregationList) {
+                    aggregationArray[index] = a;
+                    index++;
+            }
+            BTraceRuntime.printAggregation(name, format, aggregationArray);
+        }
     }
 
     /**
@@ -5103,16 +5113,6 @@ public class BTraceUtils {
 
         public static void printSnapshot(String name, Profiler profiler, String format) {
             BTraceRuntime.printSnapshot(name, profiler.snapshot(), format);
-        }
-        
-        public static void printAggregation(String name, String format, Collection<Aggregation> aggregationList) {
-        	Aggregation[] aggregationArray = new Aggregation[aggregationList.size()];
-        	int index = 0;
-        	for (Aggregation a : aggregationList) {
-        		aggregationArray[index] = a;
-        		index++;
-        	}
-        	BTraceRuntime.printAggregation(name, format, aggregationArray);
         }
     }
 
