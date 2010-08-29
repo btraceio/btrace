@@ -25,7 +25,6 @@
 
 package com.sun.btrace.profiling;
 
-import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.Profiler;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,8 +34,6 @@ import java.util.Map;
  * @author Jaroslav Bachorik
  */
 public class MethodInvocationProfiler extends Profiler implements Profiler.MBeanValueProvider {
-    final private static long SAMPLING_AVG = BTraceRuntime.SAMPLER_STEP / 2;
-    
     private static class MethodInvocationRecorder {
         private int stackSize = 200;
         private int stackPtr = -1;
@@ -48,9 +45,11 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         private Record[] measured = new Record[0];
 
         private long carryOver = 0L;
+        private int defaultBufferSize;
 
         public MethodInvocationRecorder(int expectedBlockCnt) {
-            measuredSize = expectedBlockCnt * 10;
+            defaultBufferSize = expectedBlockCnt * 10;
+            measuredSize = defaultBufferSize;
             measured = new Record[measuredSize];
         }
         
@@ -138,10 +137,13 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         }
 
         private synchronized void reset() {
+            Record[] newMeasured = new Record[defaultBufferSize + stackPtr + 1];
             if (stackPtr > -1) {
-                System.arraycopy(stackArr, 0, measured, 0, stackPtr + 1);
+                System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
             }
             measuredPtr = stackPtr + 1;
+            measured = newMeasured;
+            measuredSize = measured.length;
         }
 
         private int compactMeasured() {
@@ -180,6 +182,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                 Record[] newMeasured = new Record[newMeasuredSize];
                 System.arraycopy(measured, 0, newMeasured, 0, lastIndex); // copy the compacted values
                 measured = newMeasured;
+                measuredSize = newMeasuredSize;
             }
             System.arraycopy(stackArr, 0, measured, lastIndex, stackPtr + 1); // add the not processed methods on the stack
             measuredPtr = lastIndex + stackPtr + 1; // move the pointer behind the methods on the stack
