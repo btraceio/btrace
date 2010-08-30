@@ -194,7 +194,7 @@
                     <action>
                         <script>${ant.script}</script>
                         <label>Build Test Scripts</label>
-                        <target>build-traces</target>
+                        <target>prepare-tests</target>
                     </action>
                     <action>
                         <script>${ant.script}</script>

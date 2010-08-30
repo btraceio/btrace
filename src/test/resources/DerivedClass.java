@@ -41,6 +41,7 @@
 
 package resources;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 /**
@@ -48,6 +49,9 @@ import java.util.Map;
  * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
  */
 public class DerivedClass extends AbstractClass {
+    protected DerivedClass() {
+        super(new ArrayList());
+    }
 
     @Override
     public void doGet(String a, Map b) {
