@@ -46,9 +46,9 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 public class LineNumberInstrumentor extends MethodInstrumentor {
     private int lastLine;
 
-    public LineNumberInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public LineNumberInstrumentor(MethodVisitor mv, String parentName, String superClz, 
+        int access, String name, String desc) {
+        super(mv, parentName, superClz, access, name, desc);
     }
 
     public void visitLineNumber(int line, Label start) {
@@ -68,7 +68,7 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
         println("after line " + line);        
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.LineNumberInstrumentor <class>");
             System.exit(1);
@@ -85,7 +85,7 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new LineNumberInstrumentor(mv, access, name, desc);
+                     return new LineNumberInstrumentor(mv, args[0], null, access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

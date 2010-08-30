@@ -44,9 +44,9 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  * @author A. Sundararajan
  */
 public class ThrowInstrumentor extends MethodInstrumentor {
-    public ThrowInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public ThrowInstrumentor(MethodVisitor mv, String parentName, String superClz, 
+        int access, String name, String desc) {
+        super(mv, parentName, superClz, access, name, desc);
     }
 
     public void visitInsn(int opcode) {
@@ -64,7 +64,7 @@ public class ThrowInstrumentor extends MethodInstrumentor {
                     "()V");
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.ThrowInstrumentor <class>");
             System.exit(1);
@@ -81,7 +81,7 @@ public class ThrowInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new ThrowInstrumentor(mv, access, name, desc);
+                     return new ThrowInstrumentor(mv, args[0], null, access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

@@ -46,9 +46,9 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
     private boolean isConstructor;
     private boolean entryCalled;
     
-    public MethodEntryExitInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public MethodEntryExitInstrumentor(MethodVisitor mv, String parentName, String superClz, 
+        int access, String name, String desc) {
+        super(mv, parentName, superClz, access, name, desc);
         isConstructor = name.equals(CONSTRUCTOR);
     }
     
@@ -105,7 +105,7 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
         println("on method error return");
     }
     
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.ErrorReturnInstrumentor <class>");
             System.exit(1);
@@ -122,7 +122,7 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new MethodEntryExitInstrumentor(mv, access, name, desc);
+                     return new MethodEntryExitInstrumentor(mv, args[0], null, access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

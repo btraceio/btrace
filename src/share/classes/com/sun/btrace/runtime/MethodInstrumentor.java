@@ -246,16 +246,20 @@ public class MethodInstrumentor extends MethodAdapter {
 
     private final int access;
     private final String name;
+    private final String parentName;
+    private final String superClz;
     private final String desc;
     private Type returnType;
     private Type[] argumentTypes;
     private Map<Integer, Type> extraTypes;
 
-    public MethodInstrumentor(MethodVisitor mv, int access, 
-        String name, String desc) {
+    public MethodInstrumentor(MethodVisitor mv, String parentName, String superClz, 
+        int access, String name, String desc) {
         super(mv);
         this.access = access;
         this.name = name;
+        this.parentName = parentName;
+        this.superClz = superClz;
         this.desc = desc;
         this.returnType = Type.getReturnType(desc);
         this.argumentTypes = Type.getArgumentTypes(desc);
@@ -268,6 +272,10 @@ public class MethodInstrumentor extends MethodAdapter {
 
     public final String getName() {
         return name;
+    }
+    
+    public final String getParentClz() {
+        return parentName;
     }
 
     public final String getDescriptor() {
@@ -650,6 +658,10 @@ public class MethodInstrumentor extends MethodAdapter {
 
     public void invokeStatic(String owner, String method, String desc) {
         super.visitMethodInsn(INVOKESTATIC, owner, method, desc);
+    }
+    
+     protected String getSuperClz() {
+        return superClz;
     }
 
     protected ValidationResult validateArguments(OnMethod om, boolean staticFlag, Type[] actionArgTypes, Type[] methodArgTypes) {

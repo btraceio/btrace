@@ -379,7 +379,17 @@ public final class Main {
                             classes = new Class[size];
                             list.toArray(classes);
                             client.startRetransformClasses(size);
-                            inst.retransformClasses(classes);
+                            if (isDebug()) {
+                                for(Class c : classes) {
+                                    try {
+                                        inst.retransformClasses(c);
+                                    } catch (VerifyError e) {
+                                        debugPrint("verification error: " + c.getName());
+                                    }
+                                }
+                            } else {
+                                inst.retransformClasses(classes);
+                            }
                             client.endRetransformClasses();
                             client.skipRetransforms();
                         }

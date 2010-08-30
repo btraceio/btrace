@@ -44,14 +44,12 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  * @author A. Sundararajan
  */
 public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
-    private String className;
     private boolean isStatic;
     private boolean isSyncMethod;
     
-    public SynchronizedInstrumentor(String className,
-        MethodVisitor mv, int access, String name, String desc) {
-        super(mv, access, name, desc);
-        this.className = className;
+    public SynchronizedInstrumentor(MethodVisitor mv, String parentName, String superClz, 
+        int access, String name, String desc) {
+        super(mv, parentName, superClz, access, name, desc);
         isStatic = (access & ACC_STATIC) != 0;
         isSyncMethod = (access & ACC_SYNCHRONIZED) != 0;       
     }
@@ -116,13 +114,13 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
     private void pushLockedObject() {
         if (isStatic) {
             // push class object
-            super.visitLdcInsn(Type.getObjectType(className));
+            super.visitLdcInsn(Type.getObjectType(getParentClz()));
         } else {
             loadThis();
         }
     }
     
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.SynchronizedInstrumentor <class>");
             System.exit(1);
@@ -147,7 +145,7 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new SynchronizedInstrumentor(className, mv, access, name, desc);
+                     return new SynchronizedInstrumentor(mv, className, null, access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

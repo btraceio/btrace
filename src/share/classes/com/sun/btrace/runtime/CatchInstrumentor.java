@@ -47,9 +47,9 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 public class CatchInstrumentor extends MethodInstrumentor {
     private Map<Label, String> handlers = new HashMap<Label, String>();
 
-    public CatchInstrumentor(MethodVisitor mv, int access, 
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public CatchInstrumentor(MethodVisitor mv, String parentName, String superClz, 
+        int access, String name, String desc) {
+        super(mv, parentName, superClz, access, name, desc);
     }
 
     public void visitLabel(Label label) {
@@ -72,7 +72,7 @@ public class CatchInstrumentor extends MethodInstrumentor {
         println("catching " + type);
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.CatchInstrumentor <class>");
             System.exit(1);
@@ -89,7 +89,7 @@ public class CatchInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new CatchInstrumentor(mv, access, name, desc);
+                     return new CatchInstrumentor(mv, args[0], null, access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

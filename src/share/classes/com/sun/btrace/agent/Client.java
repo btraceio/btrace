@@ -306,7 +306,11 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private static boolean isSensitiveClass(String name) {
         return name.equals("java/lang/Object") ||
                name.startsWith("java/lang/ThreadLocal") ||
-               name.startsWith("sun/reflect");
+               name.startsWith("sun/reflect") ||
+               name.startsWith("sun/reflect") ||
+               name.equals("sun/misc/Unsafe")  ||
+               name.startsWith("sun/security/") ||
+               name.equals("java/lang/VerifyError");
     }
 
     private byte[] instrument(Class clazz, String cname, byte[] target) {

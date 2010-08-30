@@ -45,9 +45,9 @@ import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
  */
 public class MethodEntryInstrumentor extends MethodInstrumentor {
     private boolean entryCalled = false;
-    public MethodEntryInstrumentor(MethodVisitor mv, int access,
-        String name, String desc) {
-        super(mv, access, name, desc);
+    public MethodEntryInstrumentor(MethodVisitor mv, String parentName, String superClz, 
+        int access, String name, String desc) {
+        super(mv, parentName, superClz, access, name, desc);
     }
 
     public void visitCode() {
@@ -63,12 +63,14 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
                      String name,
                      String desc) {        
         super.visitMethodInsn(opcode, owner, name, desc);
-        if (isConstructor() && !entryCalled && name.equals(CONSTRUCTOR)) {
-            // super or this class constructor call.
-            // do method entry after that!
-            entryCalled = true;
-            onMethodEntry();
-        }
+        if (isConstructor() && !entryCalled) {
+            if (name.equals(CONSTRUCTOR) && (owner.equals(getParentClz()) || (getSuperClz() != null && owner.equals(getSuperClz())))) {
+                // super or this class constructor call.
+                // do method entry after that!
+                entryCalled = true;
+                onMethodEntry();
+            }
+         }
     }       
 
     public void visitInsn(int opcode) {
@@ -94,7 +96,7 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
         println("entering " + getName() + getDescriptor());
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.MethodEntryInstrumentor <class>");
             System.exit(1);
@@ -111,7 +113,7 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new MethodEntryInstrumentor(mv, access, name, desc);
+                     return new MethodEntryInstrumentor(mv, args[0], null, access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

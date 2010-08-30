@@ -265,6 +265,7 @@ public class Preprocessor extends ClassAdapter {
 
     // class name as appears in .class file
     private String className;
+    private String superName;
     // external class name
     private String externalClassName;
     // Type of the currently visited class
@@ -293,6 +294,7 @@ public class Preprocessor extends ClassAdapter {
                   String[] interfaces) {
         className = name;     
         classType = Type.getObjectType(className);
+        this.superName = superName;
         super.visit(version, access, name,
                     signature, superName, interfaces);
     }
@@ -511,7 +513,7 @@ public class Preprocessor extends ClassAdapter {
                                                     signature, exceptions);
             final boolean isClassInitializer = name.equals(CLASS_INITIALIZER);
             classInitializerFound = isClassInitializer;
-            return new MethodInstrumentor(adaptee, access, name, desc) {
+            return new MethodInstrumentor(adaptee, className, superName, access, name, desc) {
                 private Label start = new Label();
                 private Label handler = new Label();
                 private int nextVar = 0;
