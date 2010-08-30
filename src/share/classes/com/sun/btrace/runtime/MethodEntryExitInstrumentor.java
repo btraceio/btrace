@@ -46,9 +46,9 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
     private boolean isConstructor;
     private boolean entryCalled;
     
-    public MethodEntryExitInstrumentor(MethodVisitor mv, String parentClz, 
+    public MethodEntryExitInstrumentor(MethodVisitor mv, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv, parentClz, access, name, desc);
+        super(mv, parentClz, superClz, access, name, desc);
         isConstructor = name.equals(CONSTRUCTOR);
     }
     
@@ -122,7 +122,7 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new MethodEntryExitInstrumentor(mv, args[0], access, name, desc);
+                     return new MethodEntryExitInstrumentor(mv, args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

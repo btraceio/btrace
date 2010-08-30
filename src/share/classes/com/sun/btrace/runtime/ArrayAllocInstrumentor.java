@@ -43,9 +43,9 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  * @author A. Sundararajan
  */
 public class ArrayAllocInstrumentor extends MethodInstrumentor {
-    public ArrayAllocInstrumentor(MethodVisitor mv, String parentClz, 
+    public ArrayAllocInstrumentor(MethodVisitor mv, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv, parentClz, access, name, desc);
+        super(mv, parentClz, superClz, access, name, desc);
     }
 
     public void visitIntInsn(int opcode, int operand) {
@@ -111,7 +111,7 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new ArrayAllocInstrumentor(mv, args[0], access, name, desc);
+                     return new ArrayAllocInstrumentor(mv, args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

@@ -30,9 +30,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.ACC_INTERFACE;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.util.NullVisitor;
-import java.lang.reflect.Method;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.Attribute;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
@@ -41,6 +39,7 @@ import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * This class checks whether a given target class
@@ -279,15 +278,23 @@ public class ClassFilter {
             char firstCh = className.charAt(0);
             if (firstCh == '/' &&
                     REGEX_SPECIFIER.matcher(className).matches()) {
-                Pattern p = Pattern.compile(className.substring(1,
-                        className.length() - 1));
-                patSrcList.add(p);
+                try {
+                    Pattern p = Pattern.compile(className.substring(1,
+                            className.length() - 1));
+                    patSrcList.add(p);
+                } catch (PatternSyntaxException pse) {
+                    System.err.println("btrace ERROR: invalid regex pattern - " + className.substring(1, className.length() - 1));
+                }
             } else if (firstCh == '@') {
                 className = className.substring(1);
                 if (REGEX_SPECIFIER.matcher(className).matches()) {
-                    Pattern p = Pattern.compile(
-                            className.substring(1, className.length() - 1));
-                    patAnoList.add(p);
+                    try {
+                        Pattern p = Pattern.compile(
+                                className.substring(1, className.length() - 1));
+                        patAnoList.add(p);
+                    } catch (PatternSyntaxException pse) {
+                        System.err.println("btrace ERROR: invalid regex pattern - " + className.substring(1, className.length() - 1));
+                    }
                 } else {
                     strAnoList.add(className);
                 }

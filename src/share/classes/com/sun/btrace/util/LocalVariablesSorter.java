@@ -34,12 +34,14 @@ import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * A {@link MethodAdapter} that renumbers local variables in their order of
- * appearance. This adapter allows one to easily add new local variables to a
+ * appearance. This adapter allows one to easily add new  variables to a
  * method. It may be used by inheriting from this class, but the preferred way
  * of using it is via delegation: the next visitor in the chain can indeed add
  * new locals when needed by calling {@link #newLocal} on this adapter (this
@@ -85,6 +87,7 @@ public class LocalVariablesSorter extends MethodAdapter {
     private Memento memento = new Memento();
     private boolean frozen = false;
     private Set<Integer> newLocalIndices = new HashSet<Integer>();
+    private Map<Integer, Type> localVarTypeMap = new HashMap<Integer, Type>();
 
     /**
      * Creates a new {@link LocalVariablesSorter}.
@@ -138,9 +141,21 @@ public class LocalVariablesSorter extends MethodAdapter {
                 type = OBJECT_TYPE;
                 break;
 
+            case Opcodes.RET: {
+                type = localVarTypeMap.get(var);
+                type = type != null ? type : Type.VOID_TYPE;
+                break;
+            }
             // case RET:
             default:
                 type = Type.VOID_TYPE;
+        }
+        if (opcode == Opcodes.LSTORE ||
+            opcode == Opcodes.ISTORE ||
+            opcode == Opcodes.FSTORE ||
+            opcode == Opcodes.DSTORE ||
+            opcode == Opcodes.ASTORE) {
+            localVarTypeMap.put(var, type);
         }
         mv.visitVarInsn(opcode, remap(var, type));
     }
@@ -310,12 +325,15 @@ public class LocalVariablesSorter extends MethodAdapter {
     }
 
     public int remap(final int var, final Type type) {
-        if (frozen) return var;
+        if (frozen) {
+            return var;
+        }
 
         if (var < getFirstLocal()) return var;
         
         int key = 2 * var + type.getSize() - 1;
         int size = memento.mapping.length;
+        
         if (key >= size) {
             int[] newMapping = new int[Math.max(2 * size, key + 1)];
             System.arraycopy(memento.mapping, 0, newMapping, 0, size);

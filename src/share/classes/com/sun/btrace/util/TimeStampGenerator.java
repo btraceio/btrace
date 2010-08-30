@@ -50,13 +50,15 @@ public class TimeStampGenerator extends MethodAdapter {
 
     private String methodName;
     private String className;
+    private String superName;
     final private LocalVariablesSorter lvs;
 
-    public TimeStampGenerator(LocalVariablesSorter lvs, int[] tsindex, String className, int access, String name, String desc, MethodVisitor mv, int[] exitOpcodes) {
+    public TimeStampGenerator(LocalVariablesSorter lvs, int[] tsindex, String className, String superName, int access, String name, String desc, MethodVisitor mv, int[] exitOpcodes) {
         super(mv);
         this.lvs = lvs;
         this.methodName = name;
         this.className = className;
+        this.superName = superName;
         this.ts_index = tsindex;
         this.exitOpcodes = new int[exitOpcodes.length];
         System.arraycopy(exitOpcodes, 0, this.exitOpcodes, 0, exitOpcodes.length);
@@ -166,7 +168,7 @@ public class TimeStampGenerator extends MethodAdapter {
 //        }
         check();
         super.visitMethodInsn(opcode, owner, name, desc);
-        if (!entryCalled && CONSTRUCTOR.equals(name)) {
+        if (!entryCalled && CONSTRUCTOR.equals(name) && (owner.equals(className) || (superName != null && owner.equals(superName)))) {
             entryCalled = true;
             if (capturingIndex == -1) {
                 check();

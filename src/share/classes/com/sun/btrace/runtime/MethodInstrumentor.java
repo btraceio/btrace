@@ -246,16 +246,18 @@ public class MethodInstrumentor extends MethodAdapter {
 
     private final int access;
     private final String parentClz;
+    private final String superClz;
     private final String name;
     private final String desc;
     private Type returnType;
     private Type[] argumentTypes;
     private Map<Integer, Type> extraTypes;
 
-    public MethodInstrumentor(MethodVisitor mv, String parentClz,
+    public MethodInstrumentor(MethodVisitor mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv);
         this.parentClz = parentClz;
+        this.superClz = superClz;
         this.access = access;
         this.name = name;
         this.desc = desc;
@@ -656,6 +658,10 @@ public class MethodInstrumentor extends MethodAdapter {
 
     protected String getParentClz() {
         return parentClz;
+    }
+
+    protected String getSuperClz() {
+        return superClz;
     }
 
     protected ValidationResult validateArguments(OnMethod om, boolean staticFlag, Type[] actionArgTypes, Type[] methodArgTypes) {

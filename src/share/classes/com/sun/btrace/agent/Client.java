@@ -83,7 +83,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         Instrumentor.class.getClass();
         ClassReader.class.getClass();
         ClassWriter.class.getClass();
-        
+
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
 
@@ -100,7 +100,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     Client(Instrumentation inst) {
         this.inst = inst;
-    }  
+    }
 
     public byte[] transform(
                 ClassLoader loader,
@@ -184,7 +184,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
         this.filter = new ClassFilter(onMethods);
         if (debug) Main.debugPrint("created class filter");
-        
+
         ClassWriter writer = InstrumentUtils.newClassWriter(btraceCode);
         ClassReader reader = new ClassReader(btraceCode);
         ClassVisitor visitor = new Preprocessor(writer);
@@ -297,17 +297,20 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     /*
      * Certain classes like java.lang.ThreadLocal and it's
-     * inner classes, java.lang.Object cannot be safely 
+     * inner classes, java.lang.Object cannot be safely
      * instrumented with BTrace. This is because BTrace uses
      * ThreadLocal class to check recursive entries due to
      * BTrace's own functions. But this leads to infinite recursions
      * if BTrace instruments java.lang.ThreadLocal for example.
      * For now, we avoid such classes till we find a solution.
-     */     
+     */
     private static boolean isSensitiveClass(String name) {
         return name.equals("java/lang/Object") ||
                name.startsWith("java/lang/ThreadLocal") ||
-               name.startsWith("sun/reflect");
+               name.startsWith("sun/reflect") ||
+               name.equals("sun/misc/Unsafe")  ||
+               name.startsWith("sun/security/") ||
+               name.equals("java/lang/VerifyError");
     }
 
     private byte[] instrument(Class clazz, String cname, byte[] target) {

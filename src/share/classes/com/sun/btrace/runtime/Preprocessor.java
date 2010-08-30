@@ -265,6 +265,7 @@ public class Preprocessor extends ClassAdapter {
 
     // class name as appears in .class file
     private String className;
+    private String superName;
     // external class name
     private String externalClassName;
     // Type of the currently visited class
@@ -291,7 +292,8 @@ public class Preprocessor extends ClassAdapter {
                   String signature,
                   String superName,
                   String[] interfaces) {
-        className = name;     
+        className = name;
+        this.superName = superName;
         classType = Type.getObjectType(className);
         classInitializerFound = false;
         super.visit(version, access, name,
@@ -521,7 +523,7 @@ public class Preprocessor extends ClassAdapter {
             MethodVisitor adaptee = super.visitMethod(access, name, desc, 
                                                     signature, exceptions);
             
-            return new MethodInstrumentor(adaptee, className, access, name, desc) {
+            return new MethodInstrumentor(adaptee, className, superName, access, name, desc) {
                 private boolean isBTraceHandler = false;
                 private Label start = new Label();
                 private Label handler = new Label();

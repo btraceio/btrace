@@ -45,9 +45,9 @@ import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
  */
 public class MethodEntryInstrumentor extends MethodInstrumentor {
     private boolean entryCalled = false;
-    public MethodEntryInstrumentor(MethodVisitor mv, String parentClz, 
+    public MethodEntryInstrumentor(MethodVisitor mv, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv, parentClz, access, name, desc);
+        super(mv, parentClz, superClz, access, name, desc);
     }
 
     public void visitCode() {
@@ -63,11 +63,13 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
                      String name,
                      String desc) {        
         super.visitMethodInsn(opcode, owner, name, desc);
-        if (isConstructor() && !entryCalled && name.equals(CONSTRUCTOR)) {
-            // super or this class constructor call.
-            // do method entry after that!
-            entryCalled = true;
-            onMethodEntry();
+        if (isConstructor() && !entryCalled) {
+            if (name.equals(CONSTRUCTOR) && (owner.equals(getParentClz()) || (getSuperClz() != null && owner.equals(getSuperClz())))) {
+                // super or this class constructor call.
+                // do method entry after that!
+                entryCalled = true;
+                onMethodEntry();
+            }
         }
     }       
 
@@ -111,7 +113,7 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new MethodEntryInstrumentor(mv, args[0], access, name, desc);
+                     return new MethodEntryInstrumentor(mv, args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());
