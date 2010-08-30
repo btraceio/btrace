@@ -41,6 +41,7 @@
 
 package resources;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,5 +49,8 @@ import java.util.Map;
  * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
  */
 abstract public class AbstractClass {
+    protected AbstractClass(List lst) {
+        
+    }
     abstract public void doGet(String a, Map b);
 }
