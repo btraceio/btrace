@@ -47,6 +47,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.LocalVariablesSorter;
 import com.sun.btrace.util.TimeStampGenerator;
 import com.sun.btrace.util.TimeStampHelper;
+import java.util.regex.PatternSyntaxException;
 import static com.sun.btrace.runtime.Constants.*;
 
 /**
@@ -61,7 +62,7 @@ public class Instrumentor extends ClassAdapter {
     private List<OnMethod> onMethods;
     private List<OnMethod> applicableOnMethods;
     private Set<OnMethod> calledOnMethods;
-    private String className;
+    private String className, superName;
     private Class clazz;
 
     private boolean usesTimeStamp = false;
@@ -95,6 +96,7 @@ public class Instrumentor extends ClassAdapter {
         usesTimeStamp = false;
         timeStampExisting = false;
         className = name;
+        this.superName = superName;
         // we filter the probe methods applicable for this particular
         // class by brute force walking. FIXME: should I optimize?
         String externalName = name.replace('/', '.');
@@ -107,8 +109,12 @@ public class Instrumentor extends ClassAdapter {
             if (firstChar == '/' &&
                 REGEX_SPECIFIER.matcher(probeClazz).matches()) {
                 probeClazz = probeClazz.substring(1, probeClazz.length() - 1);
-                if (externalName.matches(probeClazz)) {
-                    applicableOnMethods.add(om);
+                try {
+                    if (externalName.matches(probeClazz)) {
+                        applicableOnMethods.add(om);
+                    }
+                } catch (PatternSyntaxException pse) {
+                    reportPatternSyntaxException(probeClazz);
                 }
             } else if (firstChar == '+') {
                 // super type being matched.
@@ -146,8 +152,12 @@ public class Instrumentor extends ClassAdapter {
                 }
                 if (REGEX_SPECIFIER.matcher(probeClazz).matches()) {
                     probeClazz = probeClazz.substring(1, probeClazz.length() - 1);
-                    if (extName.matches(probeClazz)) {
-                        applicableOnMethods.add(om);
+                    try {
+                        if (extName.matches(probeClazz)) {
+                            applicableOnMethods.add(om);
+                        }
+                    } catch (PatternSyntaxException pse) {
+                        reportPatternSyntaxException(probeClazz);
                     }
                 } else if (probeClazz.equals(extName)) { 
                     applicableOnMethods.add(om);
@@ -162,7 +172,7 @@ public class Instrumentor extends ClassAdapter {
         MethodVisitor methodVisitor = super.visitMethod(access, name, desc, 
                 signature, exceptions);
 
-        if (applicableOnMethods.size() == 0 ||
+        if (applicableOnMethods.isEmpty() ||
             (access & ACC_ABSTRACT) != 0    ||
             (access & ACC_NATIVE) != 0      ||
             name.startsWith(BTRACE_METHOD_PREFIX)) {
@@ -195,9 +205,13 @@ public class Instrumentor extends ClassAdapter {
                 } else if (methodName.charAt(0) == '/' &&
                            REGEX_SPECIFIER.matcher(methodName).matches()) {
                     methodName = methodName.substring(1, methodName.length() - 1);
-                    if (name.matches(methodName) &&
-                        typeMatches(om.getType(), desc)) {
-                        methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
+                    try {
+                        if (name.matches(methodName) &&
+                            typeMatches(om.getType(), desc)) {
+                            methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
+                        }
+                    } catch (PatternSyntaxException pse) {
+                        reportPatternSyntaxException(name);
                     }
                 }
 //                lvs[0] = new LocalVariablesSorter(access, desc, methodVisitor, externalState);
@@ -217,8 +231,12 @@ public class Instrumentor extends ClassAdapter {
                         }
                         if (REGEX_SPECIFIER.matcher(annoName).matches()) {
                             annoName = annoName.substring(1, annoName.length() - 1);
-                            if (extAnnoName.matches(annoName)) {
-                                mv = instrumentorFor(om, mv, lvs, access, name, desc);
+                            try {
+                                if (extAnnoName.matches(annoName)) {
+                                    mv = instrumentorFor(om, mv, lvs, access, name, desc);
+                                }
+                            } catch (PatternSyntaxException pse) {
+                                reportPatternSyntaxException(extAnnoName);
                             }
                         } else if (annoName.equals(extAnnoName)) {
                             mv = instrumentorFor(om, mv, lvs, access, name, desc);
@@ -244,7 +262,7 @@ public class Instrumentor extends ClassAdapter {
         switch (loc.getValue()) {            
             case ARRAY_GET:
                 // <editor-fold defaultstate="collapsed" desc="Array Get Instrumentor">
-                return new ArrayAccessInstrumentor(mv, className, access, name, desc) {
+                return new ArrayAccessInstrumentor(mv, className, superName, access, name, desc) {
                     int[] argsIndex = new int[]{-1, -1};
                     final private int INSTANCE_PTR = 0;
                     final private int INDEX_PTR = 1;
@@ -317,7 +335,7 @@ public class Instrumentor extends ClassAdapter {
 
             case ARRAY_SET:
                 // <editor-fold defaultstate="collapsed" desc="Array Set Instrumentor">
-                return new ArrayAccessInstrumentor(mv, className, access, name, desc) {
+                return new ArrayAccessInstrumentor(mv, className, superName, access, name, desc) {
                     int[] argsIndex = new int[]{-1, -1, -1};
                     final private int INSTANCE_PTR = 0, INDEX_PTR = 1, VALUE_PTR = 2;
 
@@ -386,7 +404,7 @@ public class Instrumentor extends ClassAdapter {
 
             case CALL:
                 // <editor-fold defaultstate="collapsed" desc="Method Call Instrumentor">
-                return new MethodCallInstrumentor(mv, className, access, name, desc) {
+                return new MethodCallInstrumentor(mv, className, superName, access, name, desc) {
 
                     private String localClassName = loc.getClazz();
                     private String localMethodName = loc.getMethod();
@@ -501,7 +519,7 @@ public class Instrumentor extends ClassAdapter {
 
             case CATCH:
                 // <editor-fold defaultstate="collapsed" desc="Catch Instrumentor">
-                return new CatchInstrumentor(mv, className, access, name, desc) {
+                return new CatchInstrumentor(mv, className, superName, access, name, desc) {
 
                     @Override
                     protected void onCatch(String type) {
@@ -532,7 +550,7 @@ public class Instrumentor extends ClassAdapter {
 
             case CHECKCAST:
                 // <editor-fold defaultstate="collapsed" desc="CheckCast Instrumentor">
-                return new TypeCheckInstrumentor(mv, className, access, name, desc) {
+                return new TypeCheckInstrumentor(mv, className, superName, access, name, desc) {
 
                     private void callAction(int opcode, String desc) {
                         if (opcode == Opcodes.CHECKCAST) {
@@ -580,7 +598,7 @@ public class Instrumentor extends ClassAdapter {
 
             case ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="Method Entry Instrumentor">
-                return new MethodEntryInstrumentor(mv, className, access, name, desc) {
+                return new MethodEntryInstrumentor(mv, className, superName, access, name, desc) {
                     private void injectBtrace(ValidationResult vr) {
                         lvs.freeze();
                         try {
@@ -632,7 +650,7 @@ public class Instrumentor extends ClassAdapter {
 
             case ERROR:
                 // <editor-fold defaultstate="collapsed" desc="Error Instrumentor">
-                return new ErrorReturnInstrumentor(mv, className, access, name, desc) {
+                return new ErrorReturnInstrumentor(mv, className, superName, access, name, desc) {
 
                     @Override
                     protected void onErrorReturn() {
@@ -662,7 +680,7 @@ public class Instrumentor extends ClassAdapter {
 
             case FIELD_GET:
                 // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">
-                return new FieldAccessInstrumentor(mv, className, access, name, desc) {
+                return new FieldAccessInstrumentor(mv, className, superName, access, name, desc) {
 
                     int calledInstanceIndex = -1;
                     private String targetClassName = loc.getClazz();
@@ -749,7 +767,7 @@ public class Instrumentor extends ClassAdapter {
 
             case FIELD_SET:
                 // <editor-fold defaultstate="collapsed" desc="Field Set Instrumentor">
-                return new FieldAccessInstrumentor(mv, className, access, name, desc) {
+                return new FieldAccessInstrumentor(mv, className, superName, access, name, desc) {
                     private String targetClassName = loc.getClazz();
                     private String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
                     private int calledInstanceIndex = -1;
@@ -839,7 +857,7 @@ public class Instrumentor extends ClassAdapter {
 
             case INSTANCEOF:
                 // <editor-fold defaultstate="collapsed" desc="InstanceOf Instrumentor">
-                return new TypeCheckInstrumentor(mv, className, access, name, desc) {
+                return new TypeCheckInstrumentor(mv, className, superName, access, name, desc) {
 
                     private void callAction(int opcode, String desc) {
                         if (opcode == Opcodes.INSTANCEOF) {
@@ -888,7 +906,7 @@ public class Instrumentor extends ClassAdapter {
 
             case LINE:
                 // <editor-fold defaultstate="collapsed" desc="Line Instrumentor">
-                return new LineNumberInstrumentor(mv, className, access, name, desc) {
+                return new LineNumberInstrumentor(mv, className, superName, access, name, desc) {
 
                     private int onLine = loc.getLine();
 
@@ -930,7 +948,7 @@ public class Instrumentor extends ClassAdapter {
 
             case NEW:
                 // <editor-fold defaultstate="collapsed" desc="New Instance Instrumentor">
-                return new ObjectAllocInstrumentor(mv, className, access, name, desc) {
+                return new ObjectAllocInstrumentor(mv, className, superName, access, name, desc) {
 
                     @Override
                     protected void beforeObjectNew(String desc) {
@@ -994,7 +1012,7 @@ public class Instrumentor extends ClassAdapter {
 
             case NEWARRAY:
                 // <editor-fold defaultstate="collapsed" desc="New Array Instrumentor">
-                return new ArrayAllocInstrumentor(mv, className, access, name, desc) {
+                return new ArrayAllocInstrumentor(mv, className, superName, access, name, desc) {
 
                     @Override
                     protected void onBeforeArrayNew(String desc, int dims) {
@@ -1069,7 +1087,7 @@ public class Instrumentor extends ClassAdapter {
                 if (where != Where.BEFORE) {
                     return mv;
                 }
-                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, className, access, name, desc) {
+                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, className, superName, access, name, desc) {
 
                     int retValIndex;
                     ValidationResult vr;
@@ -1145,14 +1163,14 @@ public class Instrumentor extends ClassAdapter {
                     }
                 };
                 if (om.getDurationParameter() != -1) {
-                    return new TimeStampGenerator(lvs, tsindex, className, access, name, desc, mri, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
+                    return new TimeStampGenerator(lvs, tsindex, className, superName, access, name, desc, mri, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
                 } else {
                     return mri;
                 }// </editor-fold>
 
             case SYNC_ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="SyncEntry Instrumentor">
-                return new SynchronizedInstrumentor(lvs, className, access, name, desc) {
+                return new SynchronizedInstrumentor(lvs, className, superName, access, name, desc) {
 
                     private void callAction() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
@@ -1202,7 +1220,7 @@ public class Instrumentor extends ClassAdapter {
 
             case SYNC_EXIT:
                 // <editor-fold defaultstate="collapsed" desc="SyncExit Instrumentor">
-                return new SynchronizedInstrumentor(lvs, className, access, name, desc) {
+                return new SynchronizedInstrumentor(lvs, className, superName, access, name, desc) {
 
                     private void callAction() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
@@ -1253,7 +1271,7 @@ public class Instrumentor extends ClassAdapter {
 
             case THROW:
                 // <editor-fold defaultstate="collapsed" desc="Throw Instrumentor">
-                return new ThrowInstrumentor(mv, className, access, name, desc) {
+                return new ThrowInstrumentor(mv, className, superName, access, name, desc) {
 
                     @Override
                     protected void onThrow() {
@@ -1361,7 +1379,12 @@ public class Instrumentor extends ClassAdapter {
         }
         if (pattern.charAt(0) == '/' &&
             REGEX_SPECIFIER.matcher(pattern).matches()) {
-            return input.matches(pattern.substring(1, pattern.length() - 1));
+            try {
+                return input.matches(pattern.substring(1, pattern.length() - 1));
+            } catch (PatternSyntaxException pse) {
+                reportPatternSyntaxException(pattern.substring(1, pattern.length() - 1));
+                return false;
+            }
         } else {
             return pattern.equals(input);
         }
@@ -1386,6 +1409,10 @@ public class Instrumentor extends ClassAdapter {
             }
         }
         return false;
+    }
+
+    private static void reportPatternSyntaxException(String pattern) {
+        System.err.println("btrace ERROR: invalid regex pattern - " + pattern);
     }
 }
 

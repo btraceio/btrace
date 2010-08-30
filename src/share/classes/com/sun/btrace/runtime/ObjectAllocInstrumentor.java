@@ -43,9 +43,9 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  * @author A. Sundararajan
  */
 public class ObjectAllocInstrumentor extends MethodInstrumentor {
-    public ObjectAllocInstrumentor(MethodVisitor mv, String parentClz, 
+    public ObjectAllocInstrumentor(MethodVisitor mv, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv, parentClz, access, name, desc);
+        super(mv, parentClz, superClz, access, name, desc);
     }
 
     public void visitTypeInsn(int opcode, String desc) {
@@ -79,7 +79,7 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 
                              signature, exceptions);
-                     return new ObjectAllocInstrumentor(mv, args[0], access, name, desc) {
+                     return new ObjectAllocInstrumentor(mv, args[0], args[0], access, name, desc) {
 
                         @Override
                         protected void afterObjectNew(String desc) {
