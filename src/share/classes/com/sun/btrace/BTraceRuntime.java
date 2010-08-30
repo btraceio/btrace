@@ -144,13 +144,6 @@ public final class BTraceRuntime {
         LINE_SEPARATOR = System.getProperty("line.separator");
     }
 
-    // at most one BTrace action method runs per thread.
-    // This way platform classes (which may be called by BTrace)
-    // may be instrumented. Also, this helps in inteferring with
-    // other BTrace clients that may be running concurrently.
-    private static ThreadLocal<BTraceRuntime> tls =
-        new ThreadLocal<BTraceRuntime>();
-
     private static ThreadEnteredMap map = new ThreadEnteredMap(NULL);
 
     // BTraceRuntime against BTrace class name
