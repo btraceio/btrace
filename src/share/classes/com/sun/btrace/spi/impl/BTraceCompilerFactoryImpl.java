@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Enumeration;
@@ -99,20 +100,34 @@ final public class BTraceCompilerFactoryImpl implements BTraceCompilerFactory {
             }
 
             private File getContainingJar(String clz) {
+                File jarFile;
                 URL url = getClass().getClassLoader().getResource(clz);
-                File f = new File(url.getPath());
-                String jar = f.getPath();
-                int lastPos = jar.lastIndexOf(".jar!");
-                jar = jar.substring(5, lastPos + 4);
-                f = new File(jar);
-                while (jar.length() > 0 && !f.exists()) {
-                    jar.substring(1);
-                    f = new File(jar);
+                if ("jar".equals(url.getProtocol())) { //NOI18N
+
+                    String path = url.getPath();
+                    int index = path.indexOf("!/"); //NOI18N
+
+                    if (index >= 0) {
+                        try {
+                            String jarPath = path.substring(0, index);
+                            if (jarPath.indexOf("file://") > -1 && jarPath.indexOf("file:////") == -1) {  //NOI18N
+                                /* Replace because JDK application classloader wrongly recognizes UNC paths. */
+                                jarPath = jarPath.replaceFirst("file://", "file:////");  //NOI18N
+                            }
+                            url = new URL(jarPath);
+
+                        } catch (MalformedURLException mue) {
+                            throw new RuntimeException(mue);
+                        }
+                    }
                 }
-                if (f.exists()) {
-                    return f;
+                try {
+                    jarFile = new File(url.toURI());
+                } catch (URISyntaxException ex) {
+                    throw new RuntimeException(ex);
                 }
-                return null;
+                assert jarFile.exists();
+                return jarFile;
             }
         };
     }
