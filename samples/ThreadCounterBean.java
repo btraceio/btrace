@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.Export;
 
 /**
  * This sample demonstrates that you can expose a BTrace

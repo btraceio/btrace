@@ -27,8 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Sys.*;
-import static com.sun.btrace.BTraceUtils.Sys.Memory.*;
 
 /*
  * A simple sample that dumps heap of the target at start and exits.
@@ -38,13 +36,13 @@ import static com.sun.btrace.BTraceUtils.Sys.Memory.*;
 public class JMap {
     static {
         String name;
-        if ($length() == 3) {
-            name = $(2);
+        if (Sys.$length() == 3) {
+            name = Sys.$(2);
         } else {
             name = "heap.bin";
         }
-        dumpHeap(name);
+        Sys.Memory.dumpHeap(name);
         println("heap dumped!");
-        exit(0);
+        Sys.exit(0);
     }
 }

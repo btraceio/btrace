@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
 
 /**
  * This script demonstrates the possibility to intercept
@@ -40,7 +39,7 @@ import static com.sun.btrace.BTraceUtils.Strings.*;
               location=@Location(value=Kind.CALL, clazz="/.*/", method="/.*/"))
     public static void n(@Self Object self, @ProbeClassName String pcm, @ProbeMethodName String pmn,
                          @TargetInstance Object instance, @TargetMethodOrField String method, String text) { // all calls to the methods with signature "(String)"
-        println(strcat("Context: ", strcat(pcm, strcat("#", pmn))));
+        println(Strings.strcat("Context: ", Strings.strcat(pcm, Strings.strcat("#", pmn))));
         print(method);
         print(" ");
         println(text);

@@ -27,13 +27,14 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
 import java.net.*;
 import java.nio.channels.SocketChannel;
 
 /**
  * This example tracks all server socket creations
  * and client socket accepts.
+ * <br/>
+ * Also, it shows how to use shared methods.
  */
 @BTrace public class SocketTracker {
     @TLS private static int port = -1;
@@ -58,11 +59,11 @@ import java.nio.channels.SocketChannel;
     )
     public static void onSockReturn() {
         if (port != -1) {
-            println(strcat("server socket at ", str(port)));
+            println(Strings.strcat("server socket at ", Strings.str(port)));
             port = -1;
         }
         if (inetAddr != null) {
-            println(strcat("server socket at ", str(inetAddr)));
+            println(Strings.strcat("server socket at ", Strings.str(inetAddr)));
             inetAddr = null;
         }
     }
@@ -82,10 +83,7 @@ import java.nio.channels.SocketChannel;
         location=@Location(Kind.RETURN)
     )
     public static void onBindReturn() {
-        if (sockAddr != null) {
-            println(strcat("server socket bind ", str(sockAddr)));
-            sockAddr = null;
-        }
+        socketBound();
     }
 
     @OnMethod(
@@ -103,10 +101,7 @@ import java.nio.channels.SocketChannel;
         location=@Location(Kind.RETURN)
     )
     public static void onBindReturn2() {
-        if (sockAddr != null) {
-            println(strcat("server socket bind ", str(sockAddr)));
-            sockAddr = null;
-        }
+        socketBound();
     }
 
     @OnMethod(
@@ -115,9 +110,7 @@ import java.nio.channels.SocketChannel;
         location=@Location(Kind.RETURN)
     )
     public static void onAcceptReturn(@Return Socket sock) {
-        if (sock != null) {
-            println(strcat("client socket accept ", str(sock)));
-        }
+        clientSocketAcc(sock);
     }
 
     @OnMethod(
@@ -126,7 +119,7 @@ import java.nio.channels.SocketChannel;
         location=@Location(Kind.RETURN)
     )
     public static void onSocket(@Return ServerSocket ssock) {
-        println(strcat("server socket at ", str(ssock)));
+        println(Strings.strcat("server socket at ", Strings.str(ssock)));
     }
 
     @OnMethod(
@@ -135,8 +128,19 @@ import java.nio.channels.SocketChannel;
         location=@Location(Kind.RETURN)
     )
     public static void onAcceptReturn(@Return SocketChannel sockChan) {
-        if (sockChan != null) {
-            println(strcat("client socket accept ", str(sockChan)));
+        clientSocketAcc(sockChan);
+    }
+    
+    private static void socketBound() {
+        if (sockAddr != null) {
+            println(Strings.strcat("server socket bind ", Strings.str(sockAddr)));
+            sockAddr = null;
+        }
+    }
+    
+    private static void clientSocketAcc(Object obj) {
+        if (obj != null) {
+            println(Strings.strcat("client socket accept ", Strings.str(obj)));
         }
     }
 }

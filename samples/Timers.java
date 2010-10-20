@@ -27,8 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
-import static com.sun.btrace.BTraceUtils.Sys.VM.*;
 
 /**
  * Demonstrates multiple timer probes with different
@@ -38,18 +36,18 @@ import static com.sun.btrace.BTraceUtils.Sys.VM.*;
 
    // when starting print the target VM version and start time
    static {
-       println(strcat("vm version ", vmVersion()));
-       println(strcat("vm starttime ", str(vmStartTime())));
+       println(Strings.strcat("vm version ", Sys.VM.vmVersion()));
+       println(Strings.strcat("vm starttime ", Strings.str(Sys.VM.vmStartTime())));
    }
 
    @OnTimer(1000) 
    public static void f() {
-     println(strcat("1000 msec: ", str(vmUptime())));
+     println(Strings.strcat("1000 msec: ", Strings.str(Sys.VM.vmUptime())));
    }
 
    @OnTimer(3000) 
    public static void f1() {
-     println(strcat("3000 msec: ", str(Time.millis())));
+     println(Strings.strcat("3000 msec: ", Strings.str(Time.millis())));
    }
 
 }
