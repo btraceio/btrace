@@ -133,6 +133,7 @@
             <fileset file="${share.src.dir}/com/sun/btrace/annotations/*.java"/>
             <fileset file="${share.src.dir}/com/sun/btrace/AnyType.java"/>
             <fileset file="${share.src.dir}/com/sun/btrace/BTraceUtils.java"/>
+            <fileset file="${share.src.dir}/com/sun/btrace/Profiler.java"/>
             <fileset file="${share.src.dir}/com/sun/btrace/api/*.java"/>
             <fileset file="${share.src.dir}/com/sun/btrace/spi/*.java"/>
         </javadoc>
