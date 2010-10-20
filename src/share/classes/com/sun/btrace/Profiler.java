@@ -201,7 +201,7 @@ public abstract class Profiler {
     public abstract void recordEntry(String blockName);
     /**
      * Records the event of exiting an execution unit (eg. method)<br/>
-     * Must be preceded by a call to {@linkplain Profiler#recordEntry(java.lang.String, long) }
+     * Must be preceded by a call to {@linkplain Profiler#recordEntry(java.lang.String) }
      * with the same blockName
      * @param blockName The execution unit identifier (eg. method FQN)
      * @param duration Invocation duration in nanoseconds

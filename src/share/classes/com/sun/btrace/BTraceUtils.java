@@ -54,7 +54,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 /**
- * This class is an all-in-one wrapper for methods from {@linkplain Utils}
+ * This class is an all-in-one wrapper for BTrace DSL methods
+ * @author A. Sundararajan
  * @author Jaroslav Bachorik
  */
 public class BTraceUtils {
@@ -2809,8 +2810,7 @@ public class BTraceUtils {
 
     /**
      * Returns the Java virtual machine implementation version.
-     * This method is equivalent to {@link Sys#getProperty
-     * Sys.getProperty("java.vm.version")}.
+     * This method is equivalent to <b>Sys.getProperty("java.vm.version")</b>.
      *
      * @return the Java virtual machine implementation version.
      */
@@ -2855,8 +2855,7 @@ public class BTraceUtils {
     /**
      * Returns the Java class path that is used by the system class loader
      * to search for class files.
-     * This method is equivalent to {@link Sys#getProperty
-     * Sys.getProperty("java.class.path")}.
+     * This method is equivalent to <b>Sys.getProperty("java.class.path")</b>.
      *
      * @return the Java class path.
      */
@@ -2866,8 +2865,7 @@ public class BTraceUtils {
 
     /**
      * Returns the Java library path.
-     * This method is equivalent to {@link Sys#getProperty
-     * Sys.getProperty("java.library.path")}.
+     * This method is equivalent to <b>Sys.getProperty("java.library.path")</b>.
      *
      * <p> Multiple paths in the Java library path are separated by the
      * path separator character of the platform of the Java virtual machine
@@ -2944,7 +2942,7 @@ public class BTraceUtils {
     /**
      * Returns the total amount of time spent in GarbageCollection up to this point
      * since the application was started.
-     * @return
+     * @return Returns the amount of overall time spent in GC
      */
     public static long getTotalGcTime() {
     	return Sys.Memory.getTotalGcTime();
@@ -5087,7 +5085,7 @@ public class BTraceUtils {
 
         /**
          * Creates a new snapshot of the profiling metrics collected sofar
-         * @param profiler The {@linkplain Proilfer} instance to use
+         * @param profiler The {@linkplain Profiler} instance to use
          * @return Returns an immutable snapshot of the profiling metrics in
          *         the form of a map where the key is the block name and
          *         the value is a map of metrics names and the appropriate
@@ -6077,7 +6075,7 @@ public class BTraceUtils {
             /**
              * Returns the total amount of time spent in GarbageCollection up to this point
              * since the application was started.
-             * @return
+             * @return Returns the amount of overall time spent in GC
              */
             public static long getTotalGcTime() {
                 return BTraceRuntime.getTotalGcTime();
@@ -6152,8 +6150,7 @@ public class BTraceUtils {
 
             /**
              * Returns the Java virtual machine implementation version.
-             * This method is equivalent to {@link Sys#getProperty
-             * Sys.getProperty("java.vm.version")}.
+             * This method is equivalent to <b>Sys.getProperty("java.vm.version")}</b>.
              *
              * @return the Java virtual machine implementation version.
              */
@@ -6198,8 +6195,7 @@ public class BTraceUtils {
             /**
              * Returns the Java class path that is used by the system class loader
              * to search for class files.
-             * This method is equivalent to {@link Sys#getProperty
-             * Sys.getProperty("java.class.path")}.
+             * This method is equivalent to <b>Sys.getProperty("java.class.path")</b>.
              *
              * @return the Java class path.
              */
@@ -6209,8 +6205,7 @@ public class BTraceUtils {
 
             /**
              * Returns the Java library path.
-             * This method is equivalent to {@link Sys#getProperty
-             * Sys.getProperty("java.library.path")}.
+             * This method is equivalent to <b>Sys.getProperty("java.library.path")</b>.
              *
              * <p> Multiple paths in the Java library path are separated by the
              * path separator character of the platform of the Java virtual machine
