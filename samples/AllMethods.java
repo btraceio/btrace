@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
 
 /**
  * This script traces method entry into every method of 
@@ -40,7 +39,7 @@ import static com.sun.btrace.BTraceUtils.Strings.*;
         method="/.*/"
     )
     public static void m(@ProbeClassName String probeClass, @ProbeMethodName String probeMethod) {
-        print(strcat("entered ", probeClass));
-        println(strcat(".", probeMethod));
+        print(Strings.strcat("entered ", probeClass));
+        println(Strings.strcat(".", probeMethod));
     }
 } 

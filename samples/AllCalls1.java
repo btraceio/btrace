@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
 
 /**
  * This script demonstrates the possibility to intercept
@@ -39,6 +38,6 @@ import static com.sun.btrace.BTraceUtils.Strings.*;
     @OnMethod(clazz="javax.swing.JTextField", method="/.*/",
               location=@Location(value=Kind.CALL, clazz="/.*/", method="/.*/"))
     public static void m(@Self Object self, @TargetMethodOrField String method, @ProbeMethodName String probeMethod) { // all calls to the methods with signature "()"
-        println(strcat(method, strcat(" in ", probeMethod)));
+        println(Strings.strcat(method, Strings.strcat(" in ", probeMethod)));
     }
 }

@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
 
 /**
  * This script traces method/block entry into every method of 
@@ -46,7 +45,7 @@ import static com.sun.btrace.BTraceUtils.Strings.*;
         location=@Location(value=Kind.SYNC_ENTRY, where=Where.AFTER) 
     )
     public static void onSyncEntry(Object obj) {
-        println(strcat("after synchronized entry: ", identityStr(obj)));
+        println(Strings.strcat("after synchronized entry: ", identityStr(obj)));
     }
 
     @OnMethod(
@@ -55,6 +54,6 @@ import static com.sun.btrace.BTraceUtils.Strings.*;
         location=@Location(Kind.SYNC_EXIT) 
     )
     public static void onSyncExit(Object obj) {
-        println(strcat("before synchronized exit: ", identityStr(obj)));
+        println(Strings.strcat("before synchronized exit: ", identityStr(obj)));
     }
 } 

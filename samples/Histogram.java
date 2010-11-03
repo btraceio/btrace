@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Reflective.*;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -44,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
         method="<init>"
     ) 
     public static void onnewObject(@Self Object obj) {
-        String cn = name(classOf(obj));
+        String cn = Reflective.name(classOf(obj));
         AtomicInteger ai = Collections.get(histo, cn);
         if (ai == null) {
             ai = Atomic.newAtomicInteger(1);

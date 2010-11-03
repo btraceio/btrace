@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
 
 /*
  * This sample prints a line every time any line
@@ -43,8 +42,8 @@ public class AllLines {
         location=@Location(value=Kind.LINE, line=-1)
     )
     public static void online(@ProbeClassName String pcn, @ProbeMethodName String pmn, int line) {
-        print(strcat(pcn, "."));
-        print(strcat(pmn, ":"));
+        print(Strings.strcat(pcn, "."));
+        print(Strings.strcat(pmn, ":"));
         println(line);
     } 
 }

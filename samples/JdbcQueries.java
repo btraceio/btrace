@@ -34,7 +34,6 @@ import java.sql.Statement;
 import java.util.Map;
 
 import com.sun.btrace.AnyType;
-import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
@@ -58,21 +57,21 @@ import com.sun.btrace.annotations.Self;
 @BTrace
 public class JdbcQueries {
 
-    private static Map<Statement, String> preparedStatementDescriptions = newWeakMap();
+    private static Map<Statement, String> preparedStatementDescriptions = Collections.newWeakMap();
 
-    private static Aggregation histogram = newAggregation(AggregationFunction.QUANTIZE);
+    private static Aggregation histogram = Aggregations.newAggregation(AggregationFunction.QUANTIZE);
 
-    private static Aggregation average = newAggregation(AggregationFunction.AVERAGE);
+    private static Aggregation average = Aggregations.newAggregation(AggregationFunction.AVERAGE);
 
-    private static Aggregation max = newAggregation(AggregationFunction.MAXIMUM);
+    private static Aggregation max = Aggregations.newAggregation(AggregationFunction.MAXIMUM);
 
-    private static Aggregation min = newAggregation(AggregationFunction.MINIMUM);
+    private static Aggregation min = Aggregations.newAggregation(AggregationFunction.MINIMUM);
 
-    private static Aggregation sum = newAggregation(AggregationFunction.SUM);
+    private static Aggregation sum = Aggregations.newAggregation(AggregationFunction.SUM);
 
-    private static Aggregation count = newAggregation(AggregationFunction.COUNT);
+    private static Aggregation count = Aggregations.newAggregation(AggregationFunction.COUNT);
 
-    private static Aggregation globalCount = newAggregation(AggregationFunction.COUNT);
+    private static Aggregation globalCount = Aggregations.newAggregation(AggregationFunction.COUNT);
 
     @TLS
     private static String preparingStatement;
@@ -98,7 +97,7 @@ public class JdbcQueries {
      */
     @OnMethod(clazz = "+java.sql.Connection", method = "/prepare.*/")
     public static void onPrepare(AnyType[] args) {
-        preparingStatement = useStackTrace ? jstackStr() : str(args[0]);
+        preparingStatement = useStackTrace ? Threads.jstackStr() : str(args[0]);
     }
 
     /**
@@ -111,7 +110,7 @@ public class JdbcQueries {
     public static void onPrepareReturn(@Return Statement preparedStatement) {
         if (preparingStatement != null) {
             print("P"); // Debug Prepared
-            put(preparedStatementDescriptions, preparedStatement, preparingStatement);
+            Collections.put(preparedStatementDescriptions, preparedStatement, preparingStatement);
             preparingStatement = null;
         }
     }
@@ -124,10 +123,10 @@ public class JdbcQueries {
     public static void onExecute(@Self Statement currentStatement, AnyType[] args) {
         if (args.length == 0) {
             // No SQL argument; lookup the SQL from the prepared statement
-            executingStatement = get(preparedStatementDescriptions, currentStatement);
+            executingStatement = Collections.get(preparedStatementDescriptions, currentStatement);
         } else {
             // Direct SQL in the first argument
-            executingStatement = useStackTrace ? jstackStr() : str(args[0]);
+            executingStatement = useStackTrace ? Threads.jstackStr() : str(args[0]);
         }
     }
 
@@ -140,16 +139,16 @@ public class JdbcQueries {
 
         print("X"); // Debug Executed
 
-        AggregationKey key = newAggregationKey(executingStatement);
+        AggregationKey key = Aggregations.newAggregationKey(executingStatement);
         int duration = (int) durationL / 1000;
 
-        addToAggregation(histogram, key, duration);
-        addToAggregation(average, key, duration);
-        addToAggregation(max, key, duration);
-        addToAggregation(min, key, duration);
-        addToAggregation(sum, key, duration);
-        addToAggregation(count, key, duration);
-        addToAggregation(globalCount, duration);
+        Aggregations.addToAggregation(histogram, key, duration);
+        Aggregations.addToAggregation(average, key, duration);
+        Aggregations.addToAggregation(max, key, duration);
+        Aggregations.addToAggregation(min, key, duration);
+        Aggregations.addToAggregation(sum, key, duration);
+        Aggregations.addToAggregation(count, key, duration);
+        Aggregations.addToAggregation(globalCount, duration);
 
         executingStatement = null;
     }
@@ -158,16 +157,16 @@ public class JdbcQueries {
     public static void onEvent() {
 
         // Top 10 queries only
-        truncateAggregation(histogram, 10);
+        Aggregations.truncateAggregation(histogram, 10);
 
         println("---------------------------------------------");
-        printAggregation("Count", count);
-        printAggregation("Min", min);
-        printAggregation("Max", max);
-        printAggregation("Average", average);
-        printAggregation("Sum", sum);
-        printAggregation("Histogram", histogram);
-        printAggregation("Global Count", globalCount);
+        Aggregations.printAggregation("Count", count);
+        Aggregations.printAggregation("Min", min);
+        Aggregations.printAggregation("Max", max);
+        Aggregations.printAggregation("Average", average);
+        Aggregations.printAggregation("Sum", sum);
+        Aggregations.printAggregation("Histogram", histogram);
+        Aggregations.printAggregation("Global Count", globalCount);
         println("---------------------------------------------");
     }
 

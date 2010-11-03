@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Sys.Memory.*;
 
 /**
  * Simple BTrace program that prints memory
@@ -40,8 +39,8 @@ import static com.sun.btrace.BTraceUtils.Sys.Memory.*;
     @OnTimer(4000)
     public static void printMem() {
         println("Heap:");
-        println(heapUsage());
+        println(Sys.Memory.heapUsage());
         println("Non-Heap:");
-        println(nonHeapUsage());
+        println(Sys.Memory.nonHeapUsage());
     }
 }

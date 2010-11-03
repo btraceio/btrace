@@ -26,7 +26,6 @@
 package com.sun.btrace.samples;
 
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
 import com.sun.btrace.annotations.*;
 
 /**
@@ -46,7 +45,7 @@ import com.sun.btrace.annotations.*;
    )   
    public static void onWebserviceEntry(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
        print("entering webservice ");
-       println(strcat(strcat(pcn, "."), pmn));
+       println(Strings.strcat(Strings.strcat(pcn, "."), pmn));
    }
 
    @OnMethod(
@@ -56,8 +55,8 @@ import com.sun.btrace.annotations.*;
    )   
    public static void onWebserviceReturn(@ProbeClassName String pcn , @ProbeMethodName String pmn, @Duration long d) {
        print("leaving web service ");
-       println(strcat(strcat(pcn, "."), pmn));
-       println(strcat("Time taken (msec) ", str(d / 1000)));
+       println(Strings.strcat(Strings.strcat(pcn, "."), pmn));
+       println(Strings.strcat("Time taken (msec) ", Strings.str(d / 1000)));
        println("==========================");
    }
 

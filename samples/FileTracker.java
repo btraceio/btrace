@@ -27,7 +27,6 @@ package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Strings.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -46,7 +45,7 @@ import java.io.FileOutputStream;
         method="<init>"
     )
     public static void onNewFileInputStream(@Self FileInputStream self, File f) {
-        name = str(f);
+        name = Strings.str(f);
     }
 
     @OnMethod(
