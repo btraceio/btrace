@@ -26,9 +26,6 @@
 package com.sun.btrace.samples;
 
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Collections.*;
-import static com.sun.btrace.BTraceUtils.Aggregations.*;
-import static com.sun.btrace.BTraceUtils.Threads.*;
 
 import java.sql.Statement;
 import java.util.Map;
@@ -37,15 +34,7 @@ import com.sun.btrace.AnyType;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
-import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.Duration;
-import com.sun.btrace.annotations.Kind;
-import com.sun.btrace.annotations.Location;
-import com.sun.btrace.annotations.OnEvent;
-import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.TLS;
-import com.sun.btrace.annotations.Return;
-import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.*;
 
 /**
  * BTrace script to print timings for all executed JDBC statements on an event. Demonstrates
@@ -95,7 +84,7 @@ public class JdbcQueries {
      * @param args
      *            the list of method parameters. args[1] is the SQL.
      */
-    @OnMethod(clazz = "+java.sql.Connection", method = "/prepare.*/")
+    @OnMethod(clazz = "+java.sql.Connection", method = "/prepare(Call|Statement))/")
     public static void onPrepare(AnyType[] args) {
         preparingStatement = useStackTrace ? Threads.jstackStr() : str(args[0]);
     }
@@ -106,10 +95,10 @@ public class JdbcQueries {
      * @param arg
      *            the return value from the prepareXxx() method.
      */
-    @OnMethod(clazz = "+java.sql.Connection", method = "/prepare.*/", location = @Location(Kind.RETURN))
+    @OnMethod(clazz = "+java.sql.Connection", method = "/prepare(Call|Statement)/", location = @Location(Kind.RETURN))
     public static void onPrepareReturn(@Return Statement preparedStatement) {
         if (preparingStatement != null) {
-            print("P"); // Debug Prepared
+//             print("P"); // Debug Prepared
             Collections.put(preparedStatementDescriptions, preparedStatement, preparingStatement);
             preparingStatement = null;
         }
@@ -119,7 +108,7 @@ public class JdbcQueries {
     // then it must be a prepared statement or callable statement. Get the SQL from the probes up above.
     // Otherwise the SQL is in the first argument.
 
-    @OnMethod(clazz = "+java.sql.Statement", method = "/execute.*/")
+    @OnMethod(clazz = "+java.sql.Statement", method = "/execute($|Update|Query|Batch)/")
     public static void onExecute(@Self Object currentStatement, AnyType[] args) {
         if (args.length == 0) {
             // No SQL argument; lookup the SQL from the prepared statement
@@ -130,14 +119,14 @@ public class JdbcQueries {
         }
     }
 
-    @OnMethod(clazz = "+java.sql.Statement", method = "/execute.*/", location = @Location(Kind.RETURN))
+    @OnMethod(clazz = "+java.sql.Statement", method = "/execute($|Update|Query|Batch)/", location = @Location(Kind.RETURN))
     public static void onExecuteReturn(@Duration long durationL) {
 
         if (executingStatement == null) {
             return;
         }
 
-        print("X"); // Debug Executed
+//        print("X"); // Debug Executed
 
         AggregationKey key = Aggregations.newAggregationKey(executingStatement);
         int duration = (int) durationL / 1000;
