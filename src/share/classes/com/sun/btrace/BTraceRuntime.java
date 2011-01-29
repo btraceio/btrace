@@ -919,7 +919,7 @@ public final class BTraceRuntime {
 
     public static <V> V removeFirst(Deque<V> queue) {
         if (queue instanceof BTraceDeque || queue.getClass().getClassLoader() == null) {
-            return queue.removeLast();
+            return queue.removeFirst();
         } else {
             throw new IllegalArgumentException();
         }
