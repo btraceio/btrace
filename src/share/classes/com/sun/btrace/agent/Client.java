@@ -69,7 +69,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private volatile String className;
     private volatile Class btraceClazz;
     private volatile byte[] btraceCode;
-//    private volatile List<WeakReference<Class<?>>> classes = new ArrayList<WeakReference<Class<?>>>();
     private volatile List<OnMethod> onMethods;
     private volatile List<OnProbe> onProbes;
     private volatile ClassFilter filter;
@@ -83,7 +82,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         Instrumentor.class.getClass();
         ClassReader.class.getClass();
         ClassWriter.class.getClass();
-
+        
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
 
@@ -100,7 +99,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     Client(Instrumentation inst) {
         this.inst = inst;
-    }
+    }  
 
     public byte[] transform(
                 ClassLoader loader,
@@ -135,7 +134,11 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private byte[] doTransform(Class<?> classBeingRedefined, String cname, byte[] classfileBuffer) {
         if (debug) Main.debugPrint("client " + className + ": instrumenting " + cname);
         if (trackRetransforms) {
-            this.runtime.send(new RetransformClassNotification(cname));
+            try {
+                onCommand(new RetransformClassNotification(cname));
+            } catch (IOException e) {
+                Main.debugPrint(e);
+            }
         }
         return instrument(classBeingRedefined, cname, classfileBuffer);
     }
@@ -144,20 +147,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (shouldAddTransformer()) {
             if (debug) Main.debugPrint("onExit: removing transformer for " + className);
             inst.removeTransformer(this);
-//            List<Class<?>> retransforming = new ArrayList<Class<?>>(classes.size());
-//            for(WeakReference<Class<?>> clzRef : classes) {
-//                Class clz = clzRef.get();
-//                if (clz != null) {
-//                    retransforming.add(clz);
-                }
-//            }
-            try {
-//                inst.retransformClasses(retransforming.toArray(new Class[retransforming.size()]));
-//            } catch (UnmodifiableClassException e) {
-//                Main.debugPrint(e);
-//            }
-//        }
-//        try {
+        }
+        try {
             if (debug) Main.debugPrint("onExit: closing all");
             Thread.sleep(300);
             closeAll();
@@ -165,9 +156,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             Thread.currentThread().interrupt();
         } catch (IOException ioexp) {
             if (debug) Main.debugPrint(ioexp);
-        } finally {
-            this.runtime = null;
-            this.btraceClazz = null;
         }
     }
 
@@ -184,11 +172,10 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
         this.filter = new ClassFilter(onMethods);
         if (debug) Main.debugPrint("created class filter");
-
+        
         ClassWriter writer = InstrumentUtils.newClassWriter(btraceCode);
         ClassReader reader = new ClassReader(btraceCode);
         ClassVisitor visitor = new Preprocessor(writer);
-        Main.dumpClass(className + "_orig", className + "_orig", btraceCode);
         if (BTraceRuntime.classNameExists(className)) {
             className += "$" + getCount();
             if (debug) Main.debugPrint("class renamed to " + className);
@@ -205,16 +192,15 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             errorExit(th);
             return null;
         }
-        Main.dumpClass(className + "_proc", className + "_proc", btraceCode);
+        Main.dumpClass(className, className, btraceCode);
         if (debug) Main.debugPrint("creating BTraceRuntime instance for " + className);
         this.runtime = new BTraceRuntime(className, args, this, inst);
         if (debug) Main.debugPrint("created BTraceRuntime instance for " + className);
         if (debug) Main.debugPrint("removing @OnMethod, @OnProbe methods");
         byte[] codeBuf = removeMethods(btraceCode);
-        Main.dumpClass(className, className, codeBuf);
         if (debug) Main.debugPrint("removed @OnMethod, @OnProbe methods");
         if (debug) Main.debugPrint("sending Okay command");
-        runtime.send(new OkayCommand());
+        onCommand(new OkayCommand());
         // This extra BTraceRuntime.enter is needed to
         // check whether we have already entered before.
         boolean enteredHere = BTraceRuntime.enter();
@@ -286,8 +272,21 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     }
 
     final void startRetransformClasses(int numClasses) {
-        runtime.send(new RetransformationStartNotification(numClasses));
-        if (Main.isDebug()) Main.debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
+        try {
+            onCommand(new RetransformationStartNotification(numClasses));
+            if (Main.isDebug()) Main.debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
+        } catch (IOException e) {
+            Main.debugPrint(e);
+        }
+    }
+
+    final void endRetransformClasses() {
+        try {
+            onCommand(new OkayCommand());
+            if (Main.isDebug()) Main.debugPrint("finished retransformClasses");
+        } catch (IOException e) {
+            Main.debugPrint(e);
+        }
     }
 
     // Internals only below this point
@@ -297,16 +296,17 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     /*
      * Certain classes like java.lang.ThreadLocal and it's
-     * inner classes, java.lang.Object cannot be safely
+     * inner classes, java.lang.Object cannot be safely 
      * instrumented with BTrace. This is because BTrace uses
      * ThreadLocal class to check recursive entries due to
      * BTrace's own functions. But this leads to infinite recursions
      * if BTrace instruments java.lang.ThreadLocal for example.
      * For now, we avoid such classes till we find a solution.
-     */
+     */     
     private static boolean isSensitiveClass(String name) {
         return name.equals("java/lang/Object") ||
                name.startsWith("java/lang/ThreadLocal") ||
+               name.startsWith("sun/reflect") ||
                name.startsWith("sun/reflect") ||
                name.equals("sun/misc/Unsafe")  ||
                name.startsWith("sun/security/") ||
@@ -318,13 +318,9 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         try {
             ClassWriter writer = InstrumentUtils.newClassWriter(target);
             ClassReader reader = new ClassReader(target);
-            Instrumentor i = new Instrumentor(clazz, className,  btraceCode, onMethods, writer);
-            InstrumentUtils.accept(reader, i);
-            if (Main.isDebug() && !i.hasMatch()) {
-                Main.debugPrint("*WARNING* No method was matched for class " + cname);
-            }
+            InstrumentUtils.accept(reader,
+                new Instrumentor(clazz, className,  btraceCode, onMethods, writer));
             instrumentedCode = writer.toByteArray();
-//            classes.add(new WeakReference<Class<?>>(clazz));
         } catch (Throwable th) {
             Main.debugPrint(th);
             return null;
