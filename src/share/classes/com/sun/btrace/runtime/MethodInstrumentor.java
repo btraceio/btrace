@@ -365,6 +365,10 @@ public class MethodInstrumentor extends MethodAdapter {
     protected final boolean isConstructor() {
         return CONSTRUCTOR.equals(name);
     }
+    
+    public boolean usesTimeStamp() {
+        return false;
+    }
 
     public void returnValue() {
         super.visitInsn(returnType.getOpcode(IRETURN));
@@ -755,14 +759,5 @@ public class MethodInstrumentor extends MethodAdapter {
             }
         }
         return new ValidationResult(true, cleansedArgIndex);
-    }
-
-    // Internals only below this point
-    private int getArgumentIndex(int arg) {
-        int index = (access & ACC_STATIC) == 0 ? 1 : 0;
-        for (int i = 0; i < arg; i++) {
-            index += argumentTypes[i].getSize();
-        }
-        return index;
     }
 } 

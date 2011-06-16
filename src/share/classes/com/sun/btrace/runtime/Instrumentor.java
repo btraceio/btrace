@@ -191,9 +191,11 @@ public class Instrumentor extends ClassAdapter {
         final LocalVariablesSorter lvs = new LocalVariablesSorter(access, desc, methodVisitor, externalState);
         methodVisitor = lvs;
 
+        final int[] tsIndex = new int[]{-1, -1};
+        
         for (OnMethod om : applicableOnMethods) {
             if (om.getLocation().getValue() == Kind.LINE) {
-                methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
+                methodVisitor = instrumentorFor(om, methodVisitor, lvs, tsIndex, access, name, desc);
             } else {
                 String methodName = om.getMethod();
                 if (methodName.equals("")) {
@@ -201,14 +203,14 @@ public class Instrumentor extends ClassAdapter {
                 }
                 if (methodName.equals(name) &&
                     typeMatches(om.getType(), desc)) {
-                    methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
+                    methodVisitor = instrumentorFor(om, methodVisitor, lvs, tsIndex, access, name, desc);
                 } else if (methodName.charAt(0) == '/' &&
                            REGEX_SPECIFIER.matcher(methodName).matches()) {
                     methodName = methodName.substring(1, methodName.length() - 1);
                     try {
                         if (name.matches(methodName) &&
                             typeMatches(om.getType(), desc)) {
-                            methodVisitor = instrumentorFor(om, methodVisitor, lvs, access, name, desc);
+                            methodVisitor = instrumentorFor(om, methodVisitor, lvs, tsIndex, access, name, desc);
                         }
                     } catch (PatternSyntaxException pse) {
                         reportPatternSyntaxException(name);
@@ -251,13 +253,16 @@ public class Instrumentor extends ClassAdapter {
     private MethodVisitor instrumentorFor(
         final OnMethod om, MethodVisitor mv, final LocalVariablesSorter lvs,
         int access, String name, String desc) {
+        return instrumentorFor(om, mv, lvs, null, access, name, desc);
+    }
+    
+    private MethodVisitor instrumentorFor(
+        final OnMethod om, MethodVisitor mv, final LocalVariablesSorter lvs,
+        final int[] tsIndex, int access, String name, String desc) {
         final Location loc = om.getLocation();
         final Where where = loc.getWhere();
         final Type[] actionArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
         final int numActionArgs = actionArgTypes.length;
-
-        // a helper structure for creating timestamps
-        final int[] tsindex = new int[]{-1, -1};
         
         switch (loc.getValue()) {            
             case ARRAY_GET:
@@ -650,25 +655,51 @@ public class Instrumentor extends ClassAdapter {
 
             case ERROR:
                 // <editor-fold defaultstate="collapsed" desc="Error Instrumentor">
-                return new ErrorReturnInstrumentor(mv, className, superName, access, name, desc) {
-
+                ErrorReturnInstrumentor eri = new ErrorReturnInstrumentor(mv, tsIndex, className, superName, access, name, desc) {
+                    ValidationResult vr;
+                    {
+                        addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                        vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.throwableType});
+                    }
+                    
                     @Override
                     protected void onErrorReturn() {
-                        addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.throwableType});
                         if (vr.isValid()) {
                             int throwableIndex = -1;
                             lvs.freeze();
                             try {
+                                if (om.getDurationParameter() != -1) {
+                                    usesTimeStamp = true;
+                                    // TODO: this is a nasty hack; should be in TimeStampGenerator but can't fit it there, no way :(
+                                    if (tsIndex[1] == -1) {
+                                        TimeStampHelper.generateTimeStampAccess(this, className);
+                                        tsIndex[1] = lvs.newLocal(Type.LONG_TYPE);
+                                    }
+                                }
                                 if (!vr.isAny()) {
                                     dup();
                                     throwableIndex = lvs.newLocal(TypeUtils.throwableType);
                                 }
+                                
+                                ArgumentProvider[] actionArgs = new ArgumentProvider[4 + (tsIndex != null ? 1 : 0)];
 
-                                loadArguments(new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex),
-                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                actionArgs[0] = new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex);
+                                actionArgs[1] = new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", "."));
+                                actionArgs[2] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
+                                actionArgs[3] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
+                                if (tsIndex != null) {
+                                    actionArgs[4] = new ArgumentProvider(om.getDurationParameter()) {
+                                        public void doProvide() {
+                                            if (tsIndex[0] != -1 && tsIndex[1] != -1) {
+                                                loadLocal(Type.LONG_TYPE, tsIndex[1]);
+                                                loadLocal(Type.LONG_TYPE, tsIndex[0]);
+                                                visitInsn(LSUB);
+                                            }
+                                        }
+                                    };
+                                }
+
+                                loadArguments(actionArgs);
 
                                 invokeBTraceAction(this, om);
                             } finally {
@@ -676,7 +707,17 @@ public class Instrumentor extends ClassAdapter {
                             }
                         }
                     }
-                };// </editor-fold>
+                    
+                    @Override
+                    public boolean usesTimeStamp() {
+                        return vr.isValid() && om.getDurationParameter() != -1;
+                    }
+                };
+                if (om.getDurationParameter() != -1) {
+                    return new TimeStampGenerator(lvs, tsIndex, className, superName, access, name, desc, eri, new int[0]);
+                } else {
+                    return eri;
+                }// </editor-fold>
 
             case FIELD_GET:
                 // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">
@@ -1087,7 +1128,7 @@ public class Instrumentor extends ClassAdapter {
                 if (where != Where.BEFORE) {
                     return mv;
                 }
-                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, className, superName, access, name, desc) {
+                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, tsIndex, className, superName, access, name, desc) {
 
                     int retValIndex;
                     ValidationResult vr;
@@ -1113,7 +1154,7 @@ public class Instrumentor extends ClassAdapter {
                                 usesTimeStamp = true;
                             }
 
-                            ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 5];
+                            ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 4 + (tsIndex !=null ? 1 : 0)];
                             int ptr = isStatic() ? 0 : 1;
                             for(int i=0;i<vr.getArgCnt();i++) {
                                 int index = vr.getArgIdx(i);
@@ -1129,17 +1170,18 @@ public class Instrumentor extends ClassAdapter {
                             actionArgs[actionArgTypes.length] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
                             actionArgs[actionArgTypes.length + 1] = new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", "."));
                             actionArgs[actionArgTypes.length + 2] = new LocalVarArgProvider(om.getReturnParameter(), getReturnType(), retValIndex);
-                            actionArgs[actionArgTypes.length + 3] = new ArgumentProvider(om.getDurationParameter()) {
-                                public void doProvide() {
-                                    if (tsindex[0] != -1 && tsindex[1] != -1) {
-                                        loadLocal(Type.LONG_TYPE, tsindex[1]);
-                                        loadLocal(Type.LONG_TYPE, tsindex[0]);
-                                        visitInsn(LSUB);
+                            actionArgs[actionArgTypes.length + 3] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
+                            if (tsIndex != null) {
+                                actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(om.getDurationParameter()) {
+                                    public void doProvide() {
+                                        if (tsIndex[0] != -1 && tsIndex[1] != -1) {
+                                            loadLocal(Type.LONG_TYPE, tsIndex[1]);
+                                            loadLocal(Type.LONG_TYPE, tsIndex[0]);
+                                            visitInsn(LSUB);
+                                        }
                                     }
-                                }
-                            };
-                            actionArgs[actionArgTypes.length + 4] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
-
+                                };
+                            }
                             loadArguments(actionArgs);
 
                             invokeBTraceAction(this, om);
@@ -1163,14 +1205,14 @@ public class Instrumentor extends ClassAdapter {
                     }
                 };
                 if (om.getDurationParameter() != -1) {
-                    return new TimeStampGenerator(lvs, tsindex, className, superName, access, name, desc, mri, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
+                    return new TimeStampGenerator(lvs, tsIndex, className, superName, access, name, desc, mri, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
                 } else {
                     return mri;
                 }// </editor-fold>
 
             case SYNC_ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="SyncEntry Instrumentor">
-                return new SynchronizedInstrumentor(lvs, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(lvs, tsIndex, className, superName, access, name, desc) {
 
                     private void callAction() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
@@ -1220,7 +1262,7 @@ public class Instrumentor extends ClassAdapter {
 
             case SYNC_EXIT:
                 // <editor-fold defaultstate="collapsed" desc="SyncExit Instrumentor">
-                return new SynchronizedInstrumentor(lvs, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(lvs, tsIndex, className, superName, access, name, desc) {
 
                     private void callAction() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));

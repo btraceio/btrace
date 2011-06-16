@@ -22,25 +22,24 @@
  * CA 95054 USA or visit www.sun.com if you need additional information or
  * have any questions.
  */
-
 package com.sun.btrace.runtime;
 
 import support.InstrumentorTestBase;
 import org.junit.Test;
-
 
 /**
  *
  * @author Jaroslav Bachorik
  */
 public class InstrumentorTest extends InstrumentorTestBase {
+
     @Test
     public void matchDerivedClass() throws Exception {
         originalBC = loadTargetClass("DerivedClass");
         transform("onmethod/MatchDerived");
 
-        checkTransformation("ALOAD 0\nALOAD 1\nALOAD 2\n" +
-                            "INVOKESTATIC resources/DerivedClass.$btrace$traces$onmethod$MatchDerived$args (Lresources/AbstractClass;Ljava/lang/String;Ljava/util/Map;)V");
+        checkTransformation("ALOAD 0\nALOAD 1\nALOAD 2\n"
+                + "INVOKESTATIC resources/DerivedClass.$btrace$traces$onmethod$MatchDerived$args (Lresources/AbstractClass;Ljava/lang/String;Ljava/util/Map;)V");
     }
 
     @Test
@@ -48,8 +47,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/CheckcastBefore");
 
-        checkTransformation("DUP\nASTORE 2\nALOAD 0\nLDC \"resources.OnMethodTest\"\nALOAD 2\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V");
+        checkTransformation("DUP\nASTORE 2\nALOAD 0\nLDC \"resources.OnMethodTest\"\nALOAD 2\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V");
     }
 
     @Test
@@ -57,8 +56,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/CheckcastAfter");
 
-        checkTransformation("DUP\nALOAD 0\nLDC \"casts\"\nALOAD 2\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n");
+        checkTransformation("DUP\nALOAD 0\nLDC \"casts\"\nALOAD 2\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n");
     }
 
     @Test
@@ -66,8 +65,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/InstanceofBefore");
 
-        checkTransformation("DUP\nASTORE 3\nALOAD 0\nLDC \"resources.OnMethodTest\"\nALOAD 3\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V");
+        checkTransformation("DUP\nASTORE 3\nALOAD 0\nLDC \"resources.OnMethodTest\"\nALOAD 3\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V");
     }
 
     @Test
@@ -75,18 +74,18 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/InstanceofAfter");
 
-        checkTransformation("DUP\nASTORE 3\nALOAD 0\nLDC \"casts\"\nALOAD 3\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n");
+        checkTransformation("DUP\nASTORE 3\nALOAD 0\nLDC \"casts\"\nALOAD 3\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n");
     }
 
     @Test
     public void methodEntryCatch() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Catch");
-        
-        checkTransformation("DUP\nALOAD 0\nALOAD 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Catch$args (Ljava/lang/Object;Ljava/io/IOException;)V\n" +
-                            "ASTORE 2");
+
+        checkTransformation("DUP\nALOAD 0\nALOAD 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Catch$args (Ljava/lang/Object;Ljava/io/IOException;)V\n"
+                + "ASTORE 2");
     }
 
     @Test
@@ -94,8 +93,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Throw");
 
-        checkTransformation("DUP\nASTORE 1\nALOAD 0\nLDC \"resources.OnMethodTest\"\nLDC \"exception\"\nALOAD 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Throw$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V");
+        checkTransformation("DUP\nASTORE 1\nALOAD 0\nLDC \"resources.OnMethodTest\"\nLDC \"exception\"\nALOAD 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Throw$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V");
     }
 
     @Test
@@ -103,8 +102,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Error");
 
-        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\nDUP\nASTORE 1\nALOAD 0\nLDC \"uncaught\"\nALOAD 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Error$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V");
+        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\nDUP\nASTORE 1\nALOAD 0\nLDC \"uncaught\"\nALOAD 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Error$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V");
     }
 
     @Test
@@ -112,9 +111,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Line");
 
-        checkTransformation("LDC \"field\"\nLDC 84\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
-                            "ALOAD 0");
+        checkTransformation("LDC \"field\"\nLDC 84\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V\n"
+                + "ALOAD 0");
     }
 
     @Test
@@ -122,8 +121,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/NewBefore");
 
-        checkTransformation("ALOAD 0\nLDC \"java.util.HashMap\"\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewBefore$args (Ljava/lang/Object;Ljava/lang/String;)V");
+        checkTransformation("ALOAD 0\nLDC \"java.util.HashMap\"\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewBefore$args (Ljava/lang/Object;Ljava/lang/String;)V");
     }
 
     @Test
@@ -131,9 +130,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/NewAfter");
 
-        checkTransformation("ASTORE 1\nALOAD 0\nALOAD 1\nLDC \"java.util.HashMap\"\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewAfter$args (Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V\n" +
-                            "DUP");
+        checkTransformation("ASTORE 1\nALOAD 0\nALOAD 1\nLDC \"java.util.HashMap\"\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewAfter$args (Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V\n"
+                + "DUP");
     }
 
     @Test
@@ -141,8 +140,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/SyncEntry");
 
-        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nDUP\nASTORE 2\nALOAD 0\nLDC \"sync\"\nALOAD 2\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V");
+        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nDUP\nASTORE 2\nALOAD 0\nLDC \"sync\"\nALOAD 2\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V");
     }
 
     @Test
@@ -150,9 +149,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/SyncExit");
 
-        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nPOP\nL6\nLINENUMBER 110 L6\n" +
-                            "DUP\nDUP\nASTORE 2\nALOAD 0\nLDC \"resources/OnMethodTest\"\nALOAD 2\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n");
+        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nPOP\nL6\nLINENUMBER 110 L6\n"
+                + "DUP\nDUP\nASTORE 2\nALOAD 0\nLDC \"resources/OnMethodTest\"\nALOAD 2\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n");
     }
 
     @Test
@@ -160,8 +159,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/NewArrayIntBefore");
 
-        checkTransformation("ALOAD 0\nLDC \"int\"\nLDC 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V");
+        checkTransformation("ALOAD 0\nLDC \"int\"\nLDC 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V");
     }
 
     @Test
@@ -169,8 +168,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/NewArrayStringBefore");
 
-        checkTransformation("ALOAD 0\nLDC \"java.lang.String\"\nLDC 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V");
+        checkTransformation("ALOAD 0\nLDC \"java.lang.String\"\nLDC 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V");
     }
 
     @Test
@@ -178,8 +177,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/NewArrayIntAfter");
 
-        checkTransformation("DUP\nALOAD 0\nALOAD 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntAfter$args (Ljava/lang/Object;[I)V");
+        checkTransformation("DUP\nALOAD 0\nALOAD 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntAfter$args (Ljava/lang/Object;[I)V");
     }
 
     @Test
@@ -187,8 +186,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/NewArrayStringAfter");
 
-        checkTransformation("DUP\nALOAD 0\nALOAD 3\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringAfter$args (Ljava/lang/Object;[Ljava/lang/String;)V");
+        checkTransformation("DUP\nALOAD 0\nALOAD 3\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringAfter$args (Ljava/lang/Object;[Ljava/lang/String;)V");
     }
 
     @Test
@@ -196,8 +195,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArrayGetBefore");
 
-        checkTransformation("DUP2\nISTORE 3\nASTORE 4\nALOAD 0\nALOAD 4\nILOAD 3\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetBefore$args (Ljava/lang/Object;[II)V");
+        checkTransformation("DUP2\nISTORE 3\nASTORE 4\nALOAD 0\nALOAD 4\nILOAD 3\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetBefore$args (Ljava/lang/Object;[II)V");
     }
 
     @Test
@@ -205,8 +204,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArrayGetAfter");
 
-        checkTransformation("DUP2\nISTORE 3\nASTORE 4\nDUP\nISTORE 5\nALOAD 0\nILOAD 5\nALOAD 4\nILOAD 3\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetAfter$args (Ljava/lang/Object;I[II)V");
+        checkTransformation("DUP2\nISTORE 3\nASTORE 4\nDUP\nISTORE 5\nALOAD 0\nILOAD 5\nALOAD 4\nILOAD 3\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetAfter$args (Ljava/lang/Object;I[II)V");
     }
 
     @Test
@@ -214,8 +213,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArraySetBefore");
 
-        checkTransformation("ISTORE 4\nDUP2\nISTORE 5\nASTORE 6\nILOAD 4\nALOAD 0\nALOAD 6\nILOAD 5\nILOAD 4\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetBefore$args (Ljava/lang/Object;[III)V");
+        checkTransformation("ISTORE 4\nDUP2\nISTORE 5\nASTORE 6\nILOAD 4\nALOAD 0\nALOAD 6\nILOAD 5\nILOAD 4\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetBefore$args (Ljava/lang/Object;[III)V");
     }
 
     @Test
@@ -223,8 +222,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArraySetAfter");
 
-        checkTransformation("ISTORE 4\nDUP2\nISTORE 5\nASTORE 6\nILOAD 4\nALOAD 0\nALOAD 6\nILOAD 5\nILOAD 4\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetAfter$args (Ljava/lang/Object;[III)V");
+        checkTransformation("ISTORE 4\nDUP2\nISTORE 5\nASTORE 6\nILOAD 4\nALOAD 0\nALOAD 6\nILOAD 5\nILOAD 4\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetAfter$args (Ljava/lang/Object;[III)V");
     }
 
     @Test
@@ -232,8 +231,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/FieldGetBefore");
 
-        checkTransformation("DUP\nASTORE 1\nALOAD 0\nALOAD 1\nLDC \"field\"\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldGetBefore$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V");
+        checkTransformation("DUP\nASTORE 1\nALOAD 0\nALOAD 1\nLDC \"field\"\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldGetBefore$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V");
     }
 
     @Test
@@ -241,8 +240,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/FieldGetAfter");
 
-        checkTransformation("DUP\nASTORE 1\nDUP\nISTORE 2\nALOAD 0\nALOAD 1\nLDC \"field\"\nILOAD 2\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldGetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V");
+        checkTransformation("DUP\nASTORE 1\nDUP\nISTORE 2\nALOAD 0\nALOAD 1\nLDC \"field\"\nILOAD 2\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldGetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V");
     }
 
     @Test
@@ -250,8 +249,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/FieldSetBefore");
 
-        checkTransformation("ISTORE 1\nDUP\nASTORE 2\nILOAD 1\nALOAD 0\nALOAD 2\nLDC \"field\"\nILOAD 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldSetBefore$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V");
+        checkTransformation("ISTORE 1\nDUP\nASTORE 2\nILOAD 1\nALOAD 0\nALOAD 2\nLDC \"field\"\nILOAD 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldSetBefore$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V");
     }
 
     @Test
@@ -259,8 +258,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/FieldSetAfter");
 
-        checkTransformation("ISTORE 1\nDUP\nASTORE 2\nILOAD 1\nALOAD 0\nALOAD 2\nLDC \"field\"\nILOAD 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldSetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V");
+        checkTransformation("ISTORE 1\nDUP\nASTORE 2\nILOAD 1\nALOAD 0\nALOAD 2\nLDC \"field\"\nILOAD 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldSetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V");
     }
 
     @Test
@@ -297,12 +296,12 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsDuration() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDuration");
-        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 6\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 8\n" +
-                            "DUP2\nLSTORE 10\nALOAD 0\nLLOAD 10\nLLOAD 8\nLLOAD 6\nLSUB\nALOAD 1\n" +
-                            "LLOAD 2\nALOAD 4\nALOAD 5\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
-                            "MAXSTACK");
+        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 6\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 8\n"
+                + "DUP2\nLSTORE 10\nALOAD 0\nLLOAD 10\nLLOAD 8\nLLOAD 6\nLSUB\nALOAD 1\n"
+                + "LLOAD 2\nALOAD 4\nALOAD 5\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
+                + "MAXSTACK");
     }
 
     @Test
@@ -316,13 +315,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsDurationConstrucor() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDurationConstructor");
-        System.err.println("!!!");
-        System.err.println(asmify(transformedBC));
-        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 2\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 4\n" +
-                            "ALOAD 0\nLLOAD 4\nLLOAD 2\nLSUB\nALOAD 1\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationConstructor$args (Ljava/lang/Object;JLjava/lang/String;)V\n" +
-                            "MAXSTACK");
+        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 2\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 4\n"
+                + "ALOAD 0\nLLOAD 4\nLLOAD 2\nLSUB\nALOAD 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationConstructor$args (Ljava/lang/Object;JLjava/lang/String;)V\n"
+                + "MAXSTACK");
     }
 
     @Test
@@ -330,38 +327,82 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsDuration2() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDuration2");
-        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 6\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 8\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 10\n" +
-                            "DUP2\nLSTORE 12\nALOAD 0\nLLOAD 12\nLLOAD 10\nLLOAD 8\nLSUB\nALOAD 1\n" +
-                            "LLOAD 2\nALOAD 4\nALOAD 5\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 14\n" +
-                            "DUP2\nLSTORE 16\nALOAD 0\nLLOAD 16\nLLOAD 14\nLLOAD 6\nLSUB\nALOAD 1\n" +
-                            "LLOAD 2\nALOAD 4\nALOAD 5\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
-                            "MAXSTACK");
+        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 6\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 8\n"
+                + "DUP2\nLSTORE 10\nALOAD 0\nLLOAD 10\nLLOAD 8\nLLOAD 6\nLSUB\nALOAD 1\n"
+                + "LLOAD 2\nALOAD 4\nALOAD 5\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
+                + "DUP2\nLSTORE 12\nALOAD 0\nLLOAD 12\nLLOAD 8\nLLOAD 6\nLSUB\nALOAD 1\n"
+                + "LLOAD 2\nALOAD 4\nALOAD 5\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
+                + "MAXSTACK");
+    }
+
+    @Test
+    public void methodEntryArgsDurationErr() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsDurationErr");
+        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n");
+//        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n"
+//                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\n"
+//                + "LSTORE 6\nL0\nLINENUMBER 44 L0\nLCONST_0\nLRETURN\nL1\n"
+//                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\n"
+//                + "LSTORE 8\nDUP\nASTORE 10\nALOAD 0\nLLOAD 8\nLLOAD 6\nLSUB\nALOAD 10\n"
+//                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V\n"
+//                + "ATHROW");
+    }
+
+    @Test
+    public void methodEntryArgsDurationBoxedErr() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsDurationBoxedErr");
+        checkTransformation("");
+    }
+
+    @Test
+    public void methodEntryArgsDurationConstructorErr() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsDurationConstructorErr");
+        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 1\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 3\n"
+                + "DUP\nASTORE 5\nALOAD 0\nLLOAD 3\nLLOAD 1\nLSUB\nALOAD 5\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationConstructorErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V\n"
+                + "ATHROW");
+    }
+
+    @Test
+    // check for multiple timestamps
+    public void methodEntryArgsDuration2Err() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsDuration2Err");
+        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\nTRYCATCHBLOCK L0 L2 L2 java/lang/Throwable\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 6\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$time$stamp ()J\nLSTORE 8\n"
+                + "DUP\nASTORE 10\nALOAD 0\nLLOAD 8\nLLOAD 6\nLSUB\nALOAD 10\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2Err$args2 (Ljava/lang/Object;JLjava/lang/Throwable;)V\n"
+                + "ATHROW");
     }
 
     @Test
     public void methodEntryAnytypeArgs() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/AnytypeArgs");
-        checkTransformation("ALOAD 0\nICONST_4\nANEWARRAY java/lang/Object\nDUP\n" +
-                     "ICONST_0\nALOAD 1\nAASTORE\nDUP\n" +
-                     "ICONST_1\nLLOAD 2\nINVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\nAASTORE\nDUP\n" +
-                     "ICONST_2\nALOAD 4\nAASTORE\nDUP\n" +
-                     "ICONST_3\nALOAD 5\nAASTORE\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$AnytypeArgs$args (Ljava/lang/Object;[Ljava/lang/Object;)V");
+        checkTransformation("ALOAD 0\nICONST_4\nANEWARRAY java/lang/Object\nDUP\n"
+                + "ICONST_0\nALOAD 1\nAASTORE\nDUP\n"
+                + "ICONST_1\nLLOAD 2\nINVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\nAASTORE\nDUP\n"
+                + "ICONST_2\nALOAD 4\nAASTORE\nDUP\n"
+                + "ICONST_3\nALOAD 5\nAASTORE\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$AnytypeArgs$args (Ljava/lang/Object;[Ljava/lang/Object;)V");
     }
 
     @Test
     public void methodEntryAnytypeArgsNoSelf() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/AnytypeArgsNoSelf");
-        checkTransformation("ICONST_4\nANEWARRAY java/lang/Object\nDUP\nICONST_0\nALOAD 1\nAASTORE\n" +
-                     "DUP\nICONST_1\nLLOAD 2\nINVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\nAASTORE\n" +
-                     "DUP\nICONST_2\nALOAD 4\nAASTORE\nDUP\nICONST_3\nALOAD 5\nAASTORE\n" +
-                     "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$AnytypeArgsNoSelf$argsNoSelf ([Ljava/lang/Object;)V");
+        checkTransformation("ICONST_4\nANEWARRAY java/lang/Object\nDUP\nICONST_0\nALOAD 1\nAASTORE\n"
+                + "DUP\nICONST_1\nLLOAD 2\nINVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\nAASTORE\n"
+                + "DUP\nICONST_2\nALOAD 4\nAASTORE\nDUP\nICONST_3\nALOAD 5\nAASTORE\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$AnytypeArgsNoSelf$argsNoSelf ([Ljava/lang/Object;)V");
     }
 
     @Test
@@ -409,11 +450,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCall");
 
-        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 0\nALOAD 6\nLLOAD 4\nALOAD 7\n" +
-                            "LDC \"resources/OnMethodTest.callTarget(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
-                            "LDC \"callTopLevel\"\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCall$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
-                            "ALOAD 7\nALOAD 6\nLLOAD 4");
+        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 0\nALOAD 6\nLLOAD 4\nALOAD 7\n"
+                + "LDC \"resources/OnMethodTest.callTarget(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n"
+                + "LDC \"callTopLevel\"\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCall$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n"
+                + "ALOAD 7\nALOAD 6\nLLOAD 4");
     }
 
     @Test
@@ -421,10 +462,10 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallReturn");
 
-        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 7\nALOAD 6\nLLOAD 4\n" +
-                            "LSTORE 8\nLLOAD 8\nALOAD 6\nLLOAD 4\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallReturn$args (JLjava/lang/String;J)V\n" +
-                            "LLOAD 8");
+        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 7\nALOAD 6\nLLOAD 4\n"
+                + "LSTORE 8\nLLOAD 8\nALOAD 6\nLLOAD 4\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallReturn$args (JLjava/lang/String;J)V\n"
+                + "LLOAD 8");
     }
 
     @Test
@@ -432,11 +473,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallStatic");
 
-        checkTransformation("LSTORE 4\nASTORE 6\nALOAD 0\nALOAD 6\nLLOAD 4\n" +
-                            "LDC \"resources/OnMethodTest.callTargetStatic(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
-                            "LDC \"callTopLevel\"\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallStatic$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
-                            "ALOAD 6\nLLOAD 4");
+        checkTransformation("LSTORE 4\nASTORE 6\nALOAD 0\nALOAD 6\nLLOAD 4\n"
+                + "LDC \"resources/OnMethodTest.callTargetStatic(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n"
+                + "LDC \"callTopLevel\"\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallStatic$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n"
+                + "ALOAD 6\nLLOAD 4");
     }
 
     @Test
@@ -444,11 +485,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/StaticMethodCall");
 
-        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 6\nLLOAD 4\nALOAD 7\n" +
-                            "LDC \"resources/OnMethodTest.callTarget(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
-                            "LDC \"callTopLevelStatic\"\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticMethodCall$args (Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
-                            "ALOAD 7\nALOAD 6\nLLOAD 4");
+        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 6\nLLOAD 4\nALOAD 7\n"
+                + "LDC \"resources/OnMethodTest.callTarget(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n"
+                + "LDC \"callTopLevelStatic\"\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticMethodCall$args (Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n"
+                + "ALOAD 7\nALOAD 6\nLLOAD 4");
     }
 
     @Test
@@ -456,11 +497,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/StaticMethodCallStatic");
 
-        checkTransformation("LSTORE 4\nASTORE 6\nALOAD 6\nLLOAD 4\n" +
-                            "LDC \"resources/OnMethodTest.callTargetStatic(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n" +
-                            "LDC \"callTopLevelStatic\"\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticMethodCallStatic$args (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
-                            "ALOAD 6\nLLOAD 4");
+        checkTransformation("LSTORE 4\nASTORE 6\nALOAD 6\nLLOAD 4\n"
+                + "LDC \"resources/OnMethodTest.callTargetStatic(Ljava/lang/String;J)J\"\nLDC \"resources/OnMethodTest\"\n"
+                + "LDC \"callTopLevelStatic\"\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticMethodCallStatic$args (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n"
+                + "ALOAD 6\nLLOAD 4");
     }
 
     @Test
@@ -468,7 +509,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/NoArgsEntryReturn");
 
-        checkTransformation("ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyEntry (Ljava/lang/Object;)V\n" +
-                            "ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyReturn (Ljava/lang/Object;)V");
+        checkTransformation("ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyEntry (Ljava/lang/Object;)V\n"
+                + "ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyReturn (Ljava/lang/Object;)V");
     }
 }

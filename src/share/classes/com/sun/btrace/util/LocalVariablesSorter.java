@@ -352,7 +352,7 @@ public class LocalVariablesSorter extends MethodAdapter {
         }
         return value;
     }
-
+    
     protected int newLocalMapping(final Type type) {
         int local = getNextLocal();
         memento.nextLocal += type.getSize();
