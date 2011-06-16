@@ -3792,7 +3792,12 @@ public class BTraceUtils {
             } else if (obj instanceof String)	 {
                 return (String) obj;
             } else if (obj.getClass().getClassLoader() == null) {
-                return obj.toString();
+                try {
+                    return obj.toString();
+                } catch (NullPointerException e) {
+                    // NPE can be thrown from inside the toString() method we have no control over
+                    return "null";
+                }
             } else {
                 return identityStr(obj);
             }
