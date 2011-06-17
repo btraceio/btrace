@@ -360,7 +360,7 @@ public final class BTraceRuntime {
                 } catch (InterruptedException ignored) {
                 } catch (IOException ignored) {
                 } finally {
-                    runtimes.put(className, null);
+                    runtimes.put(className, NULL);
                     queue.clear();
                     specQueueManager.clear();
                     BTraceRuntime.leave();
@@ -993,6 +993,17 @@ public final class BTraceRuntime {
         }
     }
 
+    public static void retransform(String runtimeName, Class<?> clazz) {
+        try {
+            BTraceRuntime rt = runtimes.get(runtimeName);
+            if (rt != null && rt.instrumentation.isModifiableClass(clazz)) {
+                rt.instrumentation.retransformClasses(clazz);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
     static long sizeof(Object obj) {
         BTraceRuntime runtime = getCurrent();
         return runtime.instrumentation.getObjectSize(obj);

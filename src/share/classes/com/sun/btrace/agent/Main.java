@@ -408,7 +408,7 @@ public final class Main {
                 try {
                     if (isDebug()) debugPrint("new Client created " + client);
                     if (client.shouldAddTransformer()) {
-                        inst.addTransformer(client, true);
+                        client.registerTransformer();
                         Class[] classes = inst.getAllLoadedClasses();
                         ArrayList<Class> list = new ArrayList<Class>();
                         if (isDebug()) debugPrint("filtering loaded classes");

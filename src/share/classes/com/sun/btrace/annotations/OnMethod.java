@@ -64,6 +64,10 @@ public @interface OnMethod {
      * This is method type declaration. This is like Java method
      * declaration but not including method name, parameter
      * names and throws clause.
+     * * <p>
+     * Eg. <b>public void myMethod(java.lang.String param)</b> will become
+     * <b><i>void (java.lang.String)</i></b>
+     * </p>
      */
     String type() default "";
 

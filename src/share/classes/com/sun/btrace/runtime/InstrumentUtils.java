@@ -94,8 +94,9 @@ public class InstrumentUtils {
         // itself! So, I catch LinkageError and return "java/lang/Object" in such cases.
         // Revisit this for a possible better solution.
 
+        ClassWriter cw = null;
         if (reader != null) {
-            return new ClassWriter(reader, flags) {
+            cw = new ClassWriter(reader, flags) {
                 protected String getCommonSuperClass(String type1, String type2) {
                     try {
                         return super.getCommonSuperClass(type1, type2);                   
@@ -107,7 +108,7 @@ public class InstrumentUtils {
                 }
             };
         } else {
-            return new ClassWriter(flags) {
+            cw = new ClassWriter(flags) {
                 protected String getCommonSuperClass(String type1, String type2) {
                     try {
                         return super.getCommonSuperClass(type1, type2);
@@ -119,5 +120,6 @@ public class InstrumentUtils {
                 }
             };
         }
+        return cw;
     }
 } 
