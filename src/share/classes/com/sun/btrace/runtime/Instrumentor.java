@@ -1212,7 +1212,7 @@ public class Instrumentor extends ClassAdapter {
 
             case SYNC_ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="SyncEntry Instrumentor">
-                return new SynchronizedInstrumentor(lvs, tsIndex, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(mv, tsIndex, className, superName, access, name, desc) {
 
                     private void callAction() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
@@ -1262,7 +1262,7 @@ public class Instrumentor extends ClassAdapter {
 
             case SYNC_EXIT:
                 // <editor-fold defaultstate="collapsed" desc="SyncExit Instrumentor">
-                return new SynchronizedInstrumentor(lvs, tsIndex, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(mv, tsIndex, className, superName, access, name, desc) {
 
                     private void callAction() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
