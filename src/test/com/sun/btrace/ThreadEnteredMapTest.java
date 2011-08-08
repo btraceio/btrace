@@ -41,8 +41,11 @@
 
 package com.sun.btrace;
 
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -113,16 +116,22 @@ public class ThreadEnteredMapTest {
 
         final Object lock = new Object();
         Thread[] thrds = new Thread[4096];
+        final Random r = new Random(System.nanoTime());
         for(int i=0;i<4096;i++) {
             thrds[i] = new Thread(new Runnable() {
                 Object myval = new Object();
                 public void run() {
+                    try {
+                        Thread.sleep(r.nextInt(500));
+                    } catch (InterruptedException ex) {
+                    }
                     synchronized(lock) {
                         boolean outcome = map.enter(myval);
                         outcome = outcome && myval.equals(map.get());
                         rslt.compareAndSet(true, outcome);
                         latch.countDown();
                     }
+                    
                 }
             }, "Thrd#" + i);
         }

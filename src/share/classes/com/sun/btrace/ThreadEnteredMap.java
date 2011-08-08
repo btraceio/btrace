@@ -42,12 +42,13 @@
 package com.sun.btrace;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 
 /**
  *
  * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
  */
-public class ThreadEnteredMap {
+final public class ThreadEnteredMap {
     final private static int SECTIONS = 13;
     final private static int BUCKETS = 27;
     final private static int DEFAULT_BUCKET_SIZE = 4;
@@ -120,7 +121,8 @@ public class ThreadEnteredMap {
             if (bucket != null && bucket.length > 0) {
                 int ptr = sectionPtr[bucketId];
                 for(int i=0;i<ptr;i+=2) {
-                    if (bucket[i] == thrd) {
+                    Thread bThread = ((WeakReference<Thread>)bucket[i]).get();
+                    if (bThread == thrd) {
                         return bucket[i+1] == nullValue ? null : bucket[i+1];
                     }
                 }
@@ -141,7 +143,13 @@ public class ThreadEnteredMap {
             int ptr = sectionPtr[bucketId];
             if (bucket != null && bucket.length > 0) {
                 for(int i=0;i<ptr;i+=2) {
-                    if (bucket[i] == thrd) {
+                    Thread bThread = ((WeakReference<Thread>)bucket[i]).get();
+                    if (bThread == null) {
+                        // the previous thread with the same ID has already been GCd
+                        bucket[i] = new WeakReference<Thread>(thrd);
+                        bucket[i+1] = rt;
+                        return true;
+                    } else if (bThread == thrd) {
                         if (bucket[i+1] == nullValue) {
                             bucket[i+1] = rt;
                             return true;
@@ -161,7 +169,7 @@ public class ThreadEnteredMap {
                     section[bucketId] = bucket;
                 }
             }
-            bucket[ptr++] = thrd;
+            bucket[ptr++] = new WeakReference<Thread>(thrd);
             bucket[ptr++] = rt;
             mapPtr[sectionId][bucketId] = ptr;
             return true;
@@ -180,7 +188,8 @@ public class ThreadEnteredMap {
             if (bucket != null && bucket.length > 0) {
                 int ptr = sectionPtr[bucketId];
                 for(int i=0;i<ptr;i+=2) {
-                    if (bucket[i] == thrd) {
+                    Thread bThread = ((WeakReference<Thread>)bucket[i]).get();
+                    if (bThread == thrd) {
                         bucket[i+1] = nullValue;
                     }
                 }
