@@ -225,7 +225,7 @@
             <compilation-unit>
                 <package-root>src/test</package-root>
                 <unit-tests/>
-                <classpath mode="compile">/opt/junit4/junit-4.6.jar:build/classes:test-lib/asm-3.3.jar:lib/btrace-asm-3.3.jar:test-lib/asm-util-3.1.jar</classpath>
+                <classpath mode="compile">build/classes:test-lib/asm-3.3.jar:lib/btrace-asm-3.3.jar:test-lib/asm-util-3.1.jar:/opt/junit4.8.2/junit-4.8.2.jar</classpath>
                 <built-to>build/test</built-to>
                 <source-level>1.5</source-level>
             </compilation-unit>
