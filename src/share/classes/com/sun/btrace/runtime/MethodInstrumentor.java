@@ -676,10 +676,16 @@ public class MethodInstrumentor extends MethodAdapter {
                 return INVALID;
             }
             Type selfType = extraTypes.get(om.getSelfParameter());
-            if ((selfType == null && !TypeUtils.isObject(actionArgTypes[om.getSelfParameter()])) ||
-                (selfType != null && !TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter()], selfType))) {
-                System.err.println("Invalid @Self parameter. Expected " + selfType + ", Received " + actionArgTypes[om.getSelfParameter()]);
-                return INVALID;
+            if (selfType == null) {
+                if (!TypeUtils.isObject(actionArgTypes[om.getSelfParameter()])) { 
+                    System.err.println("Invalid @Self parameter. @Self parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getSelfParameter()]); 
+                    return INVALID; 
+                }
+            } else {
+                if (!TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter()], selfType)) { 
+                    System.err.println("Invalid @Self parameter. @Self parameter is not compatible. Expected " + selfType + ", Received " + actionArgTypes[om.getSelfParameter()]); 
+                    return INVALID; 
+                }
             }
             specialArgsCount++;
         }
@@ -688,11 +694,16 @@ public class MethodInstrumentor extends MethodAdapter {
             if (type == null) {
                 type = returnType;
             }
-            if (type == null ||
-                (!TypeUtils.isObject(actionArgTypes[om.getReturnParameter()])) &&
-                (!TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter()], type))) {
-                System.err.println("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
-                return INVALID;
+            if (type == null) {
+                if (!TypeUtils.isObject(actionArgTypes[om.getReturnParameter()])) { 
+                    System.err.println("Invalid @Return parameter. @Return parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getReturnParameter()]); 
+                    return INVALID; 
+                }
+            } else {
+                if (!TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter()], type)) {
+                    System.err.println("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
+                    return INVALID;
+                }
             }
             specialArgsCount++;
         }
@@ -705,10 +716,16 @@ public class MethodInstrumentor extends MethodAdapter {
         }
         if (om.getTargetInstanceParameter() != -1) {
             Type calledType = extraTypes.get(om.getTargetInstanceParameter());
-            if ((calledType == null && !(TypeUtils.isObject(actionArgTypes[om.getTargetInstanceParameter()]))) ||
-                (calledType != null && !(TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)))) {
-                System.err.println("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
-                return INVALID;
+            if (calledType == null) {
+                if (!TypeUtils.isObject(actionArgTypes[om.getTargetInstanceParameter()])) {
+                    System.err.println("Invalid @CalledInstance parameter. @CalledInstance parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getTargetInstanceParameter()]); 
+                    return INVALID; 
+                }
+            } else {
+                if (!TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)) {
+                    System.err.println("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
+                    return INVALID;
+                }
             }
             specialArgsCount++;
         }
