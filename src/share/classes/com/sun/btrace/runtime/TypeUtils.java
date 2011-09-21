@@ -72,6 +72,19 @@ class TypeUtils {
         return t.equals(throwableType);
     }
 
+    /**
+     * Checks the type compatibility<br/>
+     * Two types are compatible when and only when:
+     * <ol>
+     * <li>They are exactly the same</li>
+     * <li>The left parameter is {@linkplain Object} or {@linkplain AnyType} and 
+     *     the right parameter is either {@linkplain Object} or an array</li>
+     * <li>The left parameter is assignable from the right one (is a superclass of the right one)</li>
+     * </ol>
+     * @param left The left type parameter
+     * @param right The right type parameter
+     * @return Returns true if a value of the left {@linkplain Type} can hold the value of the right {@linkplain Type}
+     */
     public static boolean isCompatible(Type left, Type right) {
         if (left.equals(right)) {
             return true;
@@ -79,10 +92,14 @@ class TypeUtils {
             int sort2 = right.getSort();
             return (sort2 == Type.OBJECT || sort2 == Type.ARRAY);               
         } else {
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            if (cl == null) {
+                cl = ClassLoader.getSystemClassLoader();
+            }
             // those classes should already have been loaded at this point
             Class clzLeft, clzRight;
             try {
-                clzLeft = Class.forName(left.getClassName());
+                clzLeft = cl.loadClass(left.getClassName());
             } catch (Throwable e) {
                 clzLeft = Object.class;
             }
@@ -93,7 +110,7 @@ class TypeUtils {
             }
 
             try {
-                clzRight = Class.forName(right.getClassName());
+                clzRight = cl.loadClass(left.getClassName());
             } catch (Throwable e) {
                 clzRight = Object.class;
             }
