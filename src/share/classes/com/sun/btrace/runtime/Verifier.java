@@ -150,8 +150,7 @@ public class Verifier extends ClassAdapter {
      
     public void visitInnerClass(String name, String outerName, 
             String innerName, int access) {
-        if (className.equals(outerName) ||
-            className.equals(innerName)) {
+        if (className.equals(outerName)) {
             reportError("no.nested.class");
         }
     }
