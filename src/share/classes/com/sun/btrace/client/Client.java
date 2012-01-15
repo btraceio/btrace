@@ -46,11 +46,8 @@ import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.comm.WireIO;
-import com.sun.btrace.util.NullVisitor;
+import com.sun.btrace.org.objectweb.asm.*;
 import com.sun.tools.attach.VirtualMachine;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.Type;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -508,12 +505,12 @@ public class Client {
     private Object getDTraceSource(final String fileName, byte[] code) {
         ClassReader reader = new ClassReader(code);
         final Object[] result = new Object[1];
-        reader.accept(new NullVisitor() {
+        reader.accept(new ClassVisitor(Opcodes.ASM4) {
 
             @Override
             public AnnotationVisitor visitAnnotation(String desc, boolean vis) {
                 if (desc.equals(DTRACE_DESC)) {
-                    return new NullVisitor() {
+                    return new AnnotationVisitor(Opcodes.ASM4) {
 
                         @Override
                         public void visit(String name, Object value) {
@@ -523,7 +520,7 @@ public class Client {
                         }
                     };
                 } else if (desc.equals(DTRACE_REF_DESC)) {
-                    return new NullVisitor() {
+                    return new AnnotationVisitor(Opcodes.ASM4) {
 
                         @Override
                         public void visit(String name, Object value) {

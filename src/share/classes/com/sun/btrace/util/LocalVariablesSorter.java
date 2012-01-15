@@ -30,7 +30,6 @@
 package com.sun.btrace.util;
 
 import com.sun.btrace.org.objectweb.asm.Label;
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
@@ -56,7 +55,7 @@ import java.util.Set;
  * @author Eric Bruneton
  * @author Jaroslav Bachorik
  */
-public class LocalVariablesSorter extends MethodAdapter {
+public class LocalVariablesSorter extends MethodVisitor {
     private static final Type OBJECT_TYPE = Type.getObjectType("java/lang/Object");
 
     public static class Memento {
@@ -102,7 +101,7 @@ public class LocalVariablesSorter extends MethodAdapter {
         final MethodVisitor mv,
         final Memento memento)
     {
-        super(mv);
+        super(Opcodes.ASM4, mv);
         this.memento = memento;
         Type[] args = Type.getArgumentTypes(desc);
         memento.nextLocal = (Opcodes.ACC_STATIC & access) == 0 ? 1 : 0;

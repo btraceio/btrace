@@ -36,13 +36,11 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.annotations.Export;
 import com.sun.btrace.annotations.TLS;
 import com.sun.btrace.annotations.Property;
-import com.sun.btrace.util.NullVisitor;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.Attribute;
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
@@ -77,7 +75,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * 
  * @author A. Sundararajan
  */
-public class Preprocessor extends ClassAdapter {
+public class Preprocessor extends ClassVisitor {
     public static final String JAVA_LANG_THREAD_LOCAL_DESC = "Ljava/lang/ThreadLocal;";
     // btrace specific stuff
     public static final String BTRACE_EXPORT_DESC =
@@ -280,7 +278,7 @@ public class Preprocessor extends ClassAdapter {
     private boolean classInitializerFound;
 
     public Preprocessor(ClassVisitor cv) {
-        super(cv);
+        super(Opcodes.ASM4, cv);
         fields = new ArrayList<FieldDescriptor>();
         threadLocalFields = new HashMap<String, FieldDescriptor>();
         exportFields = new HashMap<String, FieldDescriptor>();
@@ -303,7 +301,7 @@ public class Preprocessor extends ClassAdapter {
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
         final AnnotationVisitor zupr = super.visitAnnotation(desc, visible);
         if ("Lcom/sun/btrace/annotations/BTrace;".equals(desc)) {
-            return new AnnotationVisitor() {
+            return new AnnotationVisitor(Opcodes.ASM4) {
 
                 public void visit(String string, Object o) {
                     if ("name".equals(string)) {
@@ -384,7 +382,7 @@ public class Preprocessor extends ClassAdapter {
     public FieldVisitor visitField(final int access, final String name, 
             final String desc, final String signature, final Object value) {        
         final List<Attribute> attrs = new ArrayList<Attribute>();
-        return new FieldVisitor() {
+        return new FieldVisitor(Opcodes.ASM4) {
             boolean isExport;
             boolean isThreadLocal;
             boolean isProperty;
@@ -398,7 +396,7 @@ public class Preprocessor extends ClassAdapter {
                     isExport = true;                    
                 } else if (desc.equals(BTRACE_PROPERTY_DESC)) {
                     isProperty = true;
-                    return new NullVisitor() {
+                    return new AnnotationVisitor(Opcodes.ASM4) {
                         @Override
                         public void visit(String name, Object value) {
                             if (name.equals(BTRACE_PROPERTY_NAME)) {
@@ -409,7 +407,7 @@ public class Preprocessor extends ClassAdapter {
                         }
                     };
                 }
-                return new NullVisitor();
+                return new AnnotationVisitor(Opcodes.ASM4){};
             }
 
             public void visitAttribute(Attribute attr) {

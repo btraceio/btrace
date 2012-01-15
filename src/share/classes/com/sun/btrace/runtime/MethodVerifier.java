@@ -24,14 +24,13 @@
  */
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import com.sun.btrace.org.objectweb.asm.Label;
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
@@ -43,7 +42,7 @@ import static com.sun.btrace.runtime.Constants.*;
  *
  * @author A. Sundararajan
  */
-public class MethodVerifier extends MethodAdapter {
+public class MethodVerifier extends MethodVisitor {
 
     final private static Set<String> primitiveWrapperTypes;
     final private static Set<String> unboxMethods;
@@ -77,7 +76,7 @@ public class MethodVerifier extends MethodAdapter {
     private Map<Label, Label> labels;
 
     public MethodVerifier(Verifier v, MethodVisitor mv, String className, CycleDetector graph, String methodName) {
-        super(mv);
+        super(Opcodes.ASM4, mv);
         this.verifier = v;
         this.className = className;
         this.enclosingMethodName = methodName;

@@ -28,13 +28,11 @@ package com.sun.btrace.runtime;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.Label;
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
@@ -48,14 +46,14 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  *
  * @author A. Sundararajan
  */
-public class ClassRenamer extends ClassAdapter {
+public class ClassRenamer extends ClassVisitor {
     private String oldName;
     private String newName;
     private String oldNameDesc;
     private String newNameDesc;
 
     public ClassRenamer(String newName, ClassVisitor visitor) {  
-        super(visitor);
+        super(ASM4, visitor);
         newName = newName.replace('.', '/');
         this.newName = newName;
         this.newNameDesc = "L" + newName + ";";
@@ -89,7 +87,7 @@ public class ClassRenamer extends ClassAdapter {
         desc = desc.replace(oldNameDesc, newNameDesc);
         MethodVisitor adaptee = super.visitMethod(access, name, 
                                    desc, signature, exceptions);
-        return new MethodAdapter(adaptee) {
+        return new MethodVisitor(ASM4, adaptee) {
             public void visitFieldInsn(int opcode,
                           String owner,
                           String name,

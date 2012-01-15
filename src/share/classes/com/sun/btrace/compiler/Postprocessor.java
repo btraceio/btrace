@@ -27,16 +27,12 @@ package com.sun.btrace.compiler;
 
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.Attribute;
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.Label;
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
-import com.sun.btrace.util.NullVisitor;
-import com.sun.org.apache.bcel.internal.generic.BASTORE;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,13 +44,13 @@ import java.util.List;
  *
  * @author Jaroslav Bachorik
  */
-public class Postprocessor extends ClassAdapter {
+public class Postprocessor extends ClassVisitor {
     private List<FieldDescriptor> fields = new ArrayList<FieldDescriptor>();
     private boolean shortSyntax = false;
     private String className = "";
 
     public Postprocessor(ClassVisitor cv) {
-        super(cv);
+        super(Opcodes.ASM4, cv);
     }
 
     @Override
@@ -96,10 +92,11 @@ public class Postprocessor extends ClassAdapter {
         if (!shortSyntax) return super.visitField(access, name, desc, signature, value);
         
         final List<Attribute> attrs = new ArrayList<Attribute>();
-        return new FieldVisitor() {
+        return new FieldVisitor(Opcodes.ASM4) {
 
             public AnnotationVisitor visitAnnotation(String string, boolean bln) {
-                return new NullVisitor();
+                return new AnnotationVisitor(Opcodes.ASM4){
+                };
             }
 
             public void visitAttribute(Attribute atrbt) {
@@ -145,14 +142,14 @@ public class Postprocessor extends ClassAdapter {
         }
     }
 
-    private class MethodConvertor extends MethodAdapter {
+    private class MethodConvertor extends MethodVisitor {
         private Deque<Boolean> simulatedStack = new ArrayDeque<Boolean>();
         private int localVarOffset = 0;
         private boolean isConstructor;
         private boolean copyEnabled = false;
 
         public MethodConvertor(int localVarOffset, boolean isConstructor, MethodVisitor mv) {
-            super(mv);
+            super(Opcodes.ASM4, mv);
             this.localVarOffset = localVarOffset;
             this.isConstructor = isConstructor;
             this.copyEnabled = !isConstructor; // copy is enabled by default for all methods except constructor
@@ -604,12 +601,12 @@ public class Postprocessor extends ClassAdapter {
 
         @Override
         public AnnotationVisitor visitAnnotation(String string, boolean bln) {
-            return copyEnabled ? super.visitAnnotation(string, bln) : new NullVisitor();
+            return copyEnabled ? super.visitAnnotation(string, bln) : new AnnotationVisitor(Opcodes.ASM4){};
         }
 
         @Override
         public AnnotationVisitor visitAnnotationDefault() {
-            return copyEnabled ? super.visitAnnotationDefault() : new NullVisitor();
+            return copyEnabled ? super.visitAnnotationDefault() : new AnnotationVisitor(Opcodes.ASM4){};
         }
 
         @Override
@@ -632,7 +629,7 @@ public class Postprocessor extends ClassAdapter {
 
         @Override
         public AnnotationVisitor visitParameterAnnotation(int i, String string, boolean bln) {
-            return copyEnabled ? super.visitParameterAnnotation(i, string, bln) : new NullVisitor();
+            return copyEnabled ? super.visitParameterAnnotation(i, string, bln) : new AnnotationVisitor(Opcodes.ASM4){};
         }
 
         @Override

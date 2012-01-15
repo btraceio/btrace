@@ -36,11 +36,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
@@ -56,7 +54,7 @@ import static com.sun.btrace.runtime.Constants.*;
  *
  * @author A. Sundararajan
  */
-public class Instrumentor extends ClassAdapter {
+public class Instrumentor extends ClassVisitor {
     private String btraceClassName;
     private ClassReader btraceClass;
     private List<OnMethod> onMethods;
@@ -72,7 +70,7 @@ public class Instrumentor extends ClassAdapter {
     public Instrumentor(Class clazz, 
             String btraceClassName, ClassReader btraceClass, 
             List<OnMethod> onMethods, ClassVisitor cv) {
-        super(cv);
+        super(ASM4, cv);
         this.clazz = clazz;
         this.btraceClassName = btraceClassName.replace('.', '/');
         this.btraceClass = btraceClass;
@@ -220,7 +218,8 @@ public class Instrumentor extends ClassAdapter {
             }
         }
 
-        return new MethodAdapter(methodVisitor) {
+        return new MethodVisitor(ASM4, 
+                    methodVisitor) {
             public AnnotationVisitor visitAnnotation(String annoDesc,
                                   boolean visible) { 
                 for (OnMethod om : applicableOnMethods) {

@@ -25,7 +25,7 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.util.NullVisitor;
+import com.sun.btrace.org.objectweb.asm.*;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -33,15 +33,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.lang.reflect.Method;
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.Attribute;
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.FieldVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.runtime.Constants.CLASS_INITIALIZER;
 
 /**
@@ -53,7 +44,7 @@ import static com.sun.btrace.runtime.Constants.CLASS_INITIALIZER;
  * 
  * @author A. Sundararajan
  */
-public class MethodCopier extends ClassAdapter {
+public class MethodCopier extends ClassVisitor {
     private ClassReader fromClass;
     private Iterable<MethodInfo> methods;
 
@@ -74,7 +65,7 @@ public class MethodCopier extends ClassAdapter {
  
     public MethodCopier(ClassReader fromClass, ClassVisitor toClass, 
                        Iterable<MethodInfo> methods) {  
-        super(toClass);
+        super(Opcodes.ASM4, toClass);
         this.fromClass = fromClass;
         this.methods = methods;
     }
@@ -99,13 +90,13 @@ public class MethodCopier extends ClassAdapter {
     }
                 
     public void visitEnd() {
-        fromClass.accept(new ClassVisitor() {
+        fromClass.accept(new ClassVisitor(Opcodes.ASM4) {
             public void visit(int version, int access, String name, 
                 String signature, String superName, String[] interfaces) {
             }
 
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                return new NullVisitor();
+                return new AnnotationVisitor(Opcodes.ASM4) {};
             }
 
             public void visitAttribute(Attribute attr) {

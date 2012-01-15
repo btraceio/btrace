@@ -25,16 +25,13 @@
 
 package com.sun.btrace.runtime;
 
-import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.util.NullVisitor;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.Attribute;
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.Label;
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 
 /**
  * This adapter removes the methods that are
@@ -43,9 +40,9 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
  *
  * @author A. Sundararajan
  */
-public class MethodRemover extends ClassAdapter {
+public class MethodRemover extends ClassVisitor {
     public MethodRemover(ClassVisitor visitor) {  
-        super(visitor);
+        super(Opcodes.ASM4, visitor);
     }
 
     private MethodVisitor addMethod(int access, String name, 
@@ -61,7 +58,7 @@ public class MethodRemover extends ClassAdapter {
             return super.visitMethod(access, name, 
                               desc, signature, exceptions);
         } else {
-            return new MethodAdapter(new NullVisitor()) {
+            return new MethodVisitor(Opcodes.ASM4) {
                 private boolean include = true;
                 private MethodVisitor adaptee = null;
 
@@ -76,10 +73,10 @@ public class MethodRemover extends ClassAdapter {
                                   boolean visible) {
                     if (annoDesc.equals(ONMETHOD_DESC)) {
                         include = false;
-                        return new NullVisitor();
+                        return new AnnotationVisitor(Opcodes.ASM4) {};
                     } else if (annoDesc.equals(ONPROBE_DESC)) {
                         include = false;
-                        return new NullVisitor();
+                        return new AnnotationVisitor(Opcodes.ASM4) {};
                     } else {
                         return getAdaptee().visitAnnotation(annoDesc, visible);
                     }

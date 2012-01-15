@@ -25,9 +25,7 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
@@ -37,7 +35,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * BTrace class retransformation upon invoking its static initializer.
  * @author Jaroslav Bachorik
  */
-public class ClinitInjector extends ClassAdapter {
+public class ClinitInjector extends ClassVisitor {
     private static String CLINIT = "<clinit>";
     
     private boolean clinitFound = false;
@@ -46,7 +44,7 @@ public class ClinitInjector extends ClassAdapter {
     private final String cname;
     
     public ClinitInjector(ClassVisitor cv, String runtime, String cname) {
-        super(cv);
+        super(Opcodes.ASM4, cv);
         this.runtime = runtime;
         this.cname = cname;
     }
@@ -70,7 +68,7 @@ public class ClinitInjector extends ClassAdapter {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         MethodVisitor visitor = super.visitMethod(access, name, desc, signature, exceptions);
         if (CLINIT.equals(name)) {
-            visitor = new MethodAdapter(visitor) {
+            visitor = new MethodVisitor(Opcodes.ASM4, visitor) {
                 private boolean exitFound = false;
                 private int requiredStack = 0;
                 @Override

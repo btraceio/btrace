@@ -25,13 +25,10 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.org.objectweb.asm.*;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
-import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 
 /**
@@ -76,7 +73,7 @@ public class ThrowInstrumentor extends MethodInstrumentor {
         FileOutputStream fos = new FileOutputStream(args[0] + ".class");
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
-            new ClassAdapter(writer) {
+            new ClassVisitor(Opcodes.ASM4, writer) {
                  public MethodVisitor visitMethod(int access, String name, String desc, 
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc, 

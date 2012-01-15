@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.LocalVariablesSorter;
@@ -41,7 +40,7 @@ import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
  *
  * @author A. Sundararajan
  */
-public class MethodInstrumentor extends MethodAdapter {
+public class MethodInstrumentor extends MethodVisitor {
     public static final String JAVA_LANG_THREAD_LOCAL =
         Type.getInternalName(ThreadLocal.class);
     public static final String JAVA_LANG_THREAD_LOCAL_GET = "get";
@@ -255,7 +254,7 @@ public class MethodInstrumentor extends MethodAdapter {
 
     public MethodInstrumentor(MethodVisitor mv, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv);
+        super(ASM4, mv);
         this.parentClz = parentClz;
         this.superClz = superClz;
         this.access = access;

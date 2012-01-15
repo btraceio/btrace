@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.ACC_INTERFACE;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.util.NullVisitor;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.Attribute;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
@@ -39,6 +38,7 @@ import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.util.regex.PatternSyntaxException;
 
 /**
@@ -62,7 +62,6 @@ public class ClassFilter {
     static {
         CheckingVisitor.class.getClass();
         ClassReader.class.getClass();
-        NullVisitor.class.getClass();
         AnnotationVisitor.class.getClass();
         FieldVisitor.class.getClass();
         MethodVisitor.class.getClass();
@@ -158,11 +157,15 @@ public class ClassFilter {
         }
     }
 
-    private class CheckingVisitor implements ClassVisitor {
+    private class CheckingVisitor extends ClassVisitor {
 
         private boolean isInterface;
         private boolean isCandidate;
-        private NullVisitor nullVisitor = new NullVisitor();
+        private AnnotationVisitor nullAnnotationVisitor = new AnnotationVisitor(Opcodes.ASM4) {};
+
+        public CheckingVisitor() {
+            super(Opcodes.ASM4);
+        }
 
         boolean isCandidate() {
             return isCandidate;
@@ -206,14 +209,14 @@ public class ClassFilter {
 
         public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
             if (isInterface) {
-                return nullVisitor;
+                return nullAnnotationVisitor;
             }
 
             if (BTRACE_DESC.equals(desc)) {
                 // ignore classes annotated with @BTrace -
                 // we don't want to instrument tracing classes!
                 isCandidate = false;
-                return nullVisitor;
+                return nullAnnotationVisitor;
             }
 
             if (!isCandidate) {
@@ -221,18 +224,18 @@ public class ClassFilter {
                 for (String name : annotationClasses) {
                     if (annoName.equals(name)) {
                         isCandidate = true;
-                        return nullVisitor;
+                        return nullAnnotationVisitor;
                     }
                 }
                 for (Pattern pat : annotationClassPatterns) {
                     if (pat.matcher(annoName).matches()) {
                         isCandidate = true;
-                        return nullVisitor;
+                        return nullAnnotationVisitor;
                     }
                 }
             }
 
-            return nullVisitor;
+            return nullAnnotationVisitor;
         }
 
         public void visitAttribute(Attribute attr) {

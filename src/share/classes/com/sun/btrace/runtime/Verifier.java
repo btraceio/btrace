@@ -43,13 +43,12 @@ import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.util.Messages;
-import com.sun.btrace.util.NullVisitor;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassAdapter;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
@@ -61,7 +60,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * @author A. Sundararajan
  * @autohr J. Bachorik
  */
-public class Verifier extends ClassAdapter {
+public class Verifier extends ClassVisitor {
     public static final String BTRACE_SELF_DESC = Type.getDescriptor(Self.class);
     public static final String BTRACE_RETURN_DESC = Type.getDescriptor(Return.class);
     public static final String BTRACE_TARGETMETHOD_DESC = Type.getDescriptor(TargetMethodOrField.class);
@@ -78,7 +77,7 @@ public class Verifier extends ClassAdapter {
     private CycleDetector cycleDetector;
 
     public Verifier(ClassVisitor cv, boolean unsafe) {
-        super(cv);
+        super(Opcodes.ASM4, cv);
         this.unsafe = unsafe;
         onMethods = new ArrayList<OnMethod>();
         onProbes = new ArrayList<OnProbe>();
@@ -259,8 +258,8 @@ public class Verifier extends ClassAdapter {
                         om.setMethodParameter(parameter);
                     }
                 }
-                final AnnotationVisitor superVisitor = super.visitParameterAnnotation(parameter, desc, visible);
-                return new AnnotationVisitor() {
+
+                return new AnnotationVisitor(Opcodes.ASM4, super.visitParameterAnnotation(parameter, desc, visible)) {
 
                     public void visit(String string, Object o) {
                         if (om != null && string.equals("fqn")) { // NOI18N
@@ -270,23 +269,7 @@ public class Verifier extends ClassAdapter {
                                 om.setMethodFqn((Boolean)o);
                             }
                         }
-                        superVisitor.visit(string, o);
-                    }
-
-                    public void visitEnum(String string, String string1, String string2) {
-                        superVisitor.visitEnum(string, string1, string2);
-                    }
-
-                    public AnnotationVisitor visitAnnotation(String string, String string1) {
-                        return superVisitor.visitAnnotation(string, string1);
-                    }
-
-                    public AnnotationVisitor visitArray(String string) {
-                        return superVisitor.visitArray(string);
-                    }
-
-                    public void visitEnd() {
-                        superVisitor.visitEnd();
+                        super.visit(string, o);
                     }
                 };
             }
@@ -303,8 +286,8 @@ public class Verifier extends ClassAdapter {
                     onMethods.add(om);
                     om.setTargetName(methodName);
                     om.setTargetDescriptor(methodDesc);
-                    return new NullVisitor() {
-                        public void	visit(String name, Object value) {
+                    return new AnnotationVisitor(Opcodes.ASM4) {
+                        public void visit(String name, Object value) {
                             if (name.equals("clazz")) {
                                 om.setClazz((String)value);
                             } else if (name.equals("method")) {
@@ -318,7 +301,7 @@ public class Verifier extends ClassAdapter {
                                   String desc) {
                             if (desc.equals(LOCATION_DESC)) {
                                 final Location loc = new Location();
-                                return new NullVisitor() {
+                                return new AnnotationVisitor(Opcodes.ASM4) {
                                     public void visitEnum(String name, String desc, String value) {
                                         if (desc.equals(WHERE_DESC)) {
                                             loc.setWhere(Enum.valueOf(Where.class, value));
@@ -355,7 +338,7 @@ public class Verifier extends ClassAdapter {
                     onProbes.add(op);
                     op.setTargetName(methodName);
                     op.setTargetDescriptor(methodDesc);
-                    return new NullVisitor() {
+                    return new AnnotationVisitor(Opcodes.ASM4) {
                         public void	visit(String name, Object value) {
                             if (name.equals("namespace")) {
                                 op.setNamespace((String)value);
@@ -365,7 +348,7 @@ public class Verifier extends ClassAdapter {
                         }
                     };
                 } else {
-                    return new NullVisitor();
+                    return new AnnotationVisitor(Opcodes.ASM4) {};
                 }
             }
         };
@@ -407,7 +390,7 @@ public class Verifier extends ClassAdapter {
         }
         FileInputStream fis = new FileInputStream(file);
         ClassReader reader = new ClassReader(new BufferedInputStream(fis));
-        Verifier verifier = new Verifier(new NullVisitor());
+        Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM4) {});
         reader.accept(verifier, 0);
     }
 }

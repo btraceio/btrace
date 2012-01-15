@@ -41,6 +41,7 @@ import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
 import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
 import com.sun.btrace.runtime.ClinitInjector;
@@ -53,7 +54,6 @@ import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
-import com.sun.btrace.util.NullVisitor;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -386,7 +386,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     private void verify(byte[] buf) {
         ClassReader reader = new ClassReader(buf);
-        Verifier verifier = new Verifier(new NullVisitor(), Main.isUnsafe());
+        Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM4) {}, Main.isUnsafe());
         if (debug) Main.debugPrint("verifying BTrace class");
         InstrumentUtils.accept(reader, verifier);
         className = verifier.getClassName().replace('/', '.');

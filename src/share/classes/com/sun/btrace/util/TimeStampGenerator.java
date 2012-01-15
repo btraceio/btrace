@@ -25,8 +25,8 @@
 
 package com.sun.btrace.util;
 
-import com.sun.btrace.org.objectweb.asm.MethodAdapter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.runtime.MethodInstrumentor;
@@ -35,7 +35,7 @@ import com.sun.btrace.runtime.MethodInstrumentor;
  *
  * @author Jaroslav Bachorik
  */
-public class TimeStampGenerator extends MethodAdapter {
+public class TimeStampGenerator extends MethodVisitor {
     final public static String TIME_STAMP_NAME = "$btrace$time$stamp";
     
     private static final String CONSTRUCTOR = "<init>";
@@ -51,7 +51,7 @@ public class TimeStampGenerator extends MethodAdapter {
     final private LocalVariablesSorter lvs;
 
     public TimeStampGenerator(LocalVariablesSorter lvs, final int[] tsIndex, String className, String superName, int access, String name, String desc, MethodVisitor mv, int[] exitOpcodes) {
-        super(mv);
+        super(Opcodes.ASM4, mv);
         this.lvs = lvs;
         this.methodName = name;
         this.className = className;

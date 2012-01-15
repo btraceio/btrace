@@ -8,7 +8,7 @@
         <fail unless="files">Must set property 'files'</fail>
         <mkdir dir="build/test"/>
         <javac destdir="build/test" includes="${files}" source="1.5" srcdir="src/test" debug="true" debuglevel="lines,vars,source">
-            <classpath path="test-lib/junit-4.6.jar;test-lib/asm-3.3.jar;test-lib/asm-util-3.3.jar;test-lib/ant-junit.jar;build/classes;build/test"/>
+            <classpath path="test-lib/junit-4.6.jar;test-lib/asm-4.0.jar;test-lib/asm-util-4.0.jar;test-lib/ant-junit.jar;build/classes;build/test"/>
         </javac>
     </target>
     <target name="compile-selected-btrace-files">
@@ -25,14 +25,14 @@
         <fail unless="files">Must set property 'files'</fail>
         <mkdir dir="build/classes"/>
         <javac destdir="build/classes" includes="${files}" source="1.5" srcdir="src/share/classes" debug="true" debuglevel="lines,vars,source">
-            <classpath path="lib/btrace-asm-3.3.jar:/opt/java/default/lib/tools.jar"/>
+            <classpath path="lib/btrace-asm-4.0.jar:/opt/java/default/lib/tools.jar"/>
         </javac>
     </target>
 
     <target name="run-selected-file-in-classes" description="Run Single File">
       <fail unless="run.class">Must set property 'classname'</fail>
       <java classname="${run.class}">
-         <classpath path="build/classes:lib/btrace-asm-3.3.jar"/>
+         <classpath path="build/classes:lib/btrace-asm-4.0.jar"/>
       </java>
    </target>
 
@@ -40,7 +40,7 @@
         <fail unless="run.class">Must set property 'run.class'</fail>
         <path id="cp">
             <pathelement
-path="test-lib/junit-4.6.jar;test-lib/asm-3.3.jar;test-lib/asm-util-3.3.jar;test-lib/ant-junit.jar;"/>
+path="test-lib/junit-4.6.jar;test-lib/asm-4.0.jar;test-lib/asm-util-4.0.jar;test-lib/ant-junit.jar;"/>
             <pathelement path="build/test"/>
             <pathelement path="build/classes"/>
         </path>
@@ -61,7 +61,7 @@ value="-Xrunjdwp:transport=dt_socket,address=${jpda.address},suspend=y"/>-->
         <fail unless="debug.class">Must set property 'run.class'</fail>
         <path id="cp">
             <pathelement
-path="test-lib/junit-4.6.jar;test-lib/asm-3.3.jar;test-lib/asm-util-3.3.jar;test-lib/ant-junit.jar;"/>
+path="test-lib/junit-4.6.jar;test-lib/asm-4.0.jar;test-lib/asm-util-4.0.jar;test-lib/ant-junit.jar;"/>
             <pathelement path="build/test"/>
             <pathelement path="build/classes"/>
         </path>
