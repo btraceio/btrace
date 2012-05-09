@@ -54,9 +54,12 @@ import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
+import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import sun.reflect.annotation.AnnotationParser;
+import sun.reflect.annotation.AnnotationType;
 
 /**
  * Abstract class that represents a BTrace client
@@ -84,6 +87,9 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         Instrumentor.class.getClass();
         ClassReader.class.getClass();
         ClassWriter.class.getClass();
+        AnnotationParser.class.getClass();
+        AnnotationType.class.getClass();
+        Annotation.class.getClass();
         
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
