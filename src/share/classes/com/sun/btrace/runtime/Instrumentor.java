@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.AnyType;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -257,7 +258,7 @@ public class Instrumentor extends ClassVisitor {
     
     private MethodVisitor instrumentorFor(
         final OnMethod om, MethodVisitor mv, final LocalVariablesSorter lvs,
-        final int[] tsIndex, int access, String name, String desc) {
+        final int[] tsIndex, int access, String name, final String desc) {
         final Location loc = om.getLocation();
         final Where where = loc.getWhere();
         final Type[] actionArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
@@ -415,13 +416,24 @@ public class Instrumentor extends ClassVisitor {
                     private int returnVarIndex = -1;
                     int[] backupArgsIndexes;
 
-                    private void injectBtrace(ValidationResult vr, final String method, final Type returnType) {
+                    private void injectBtrace(ValidationResult vr, final String method, final Type[] callArgTypes, final Type returnType) {
                         ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 6];
                         for(int i=0;i<vr.getArgCnt();i++) {
                             int index = vr.getArgIdx(i);
                             Type t = actionArgTypes[index];
                             if (TypeUtils.isAnyTypeArray(t)) {
-                                actionArgs[i] = new AnyTypeArgProvider(i, backupArgsIndexes[i+1]);
+                                if (i < backupArgsIndexes.length - 1) {
+                                    actionArgs[i] = new AnyTypeArgProvider(index, backupArgsIndexes[i+1], callArgTypes);
+                                } else {
+                                    actionArgs[i] = new ArgumentProvider(index) {
+
+                                        @Override
+                                        protected void doProvide() {
+                                            push(0);
+                                            visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
+                                        }
+                                    };
+                                }
                             } else {
                                 actionArgs[i] = new LocalVarArgProvider(index, actionArgTypes[index], backupArgsIndexes[i+1]);;
                             }
@@ -472,7 +484,7 @@ public class Instrumentor extends ClassVisitor {
                                     // will store the call args into local variables
                                     backupArgsIndexes = backupStack(lvs, Type.getArgumentTypes(desc), isStaticCall);
                                     if (where == Where.BEFORE) {
-                                        injectBtrace(vr, method, Type.getReturnType(desc));
+                                        injectBtrace(vr, method, Type.getArgumentTypes(desc), Type.getReturnType(desc));
                                     }
                                     // put the call args back on stack so the method call can find them
                                     restoreStack(backupArgsIndexes, Type.getArgumentTypes(desc), isStaticCall);
@@ -509,7 +521,7 @@ public class Instrumentor extends ClassVisitor {
                                         returnVarIndex = index;
                                     }
                                     // will also retrieve the call args and the return value from the backup variables
-                                    injectBtrace(vr, method, returnType);
+                                    injectBtrace(vr, method, calledMethodArgs, returnType);
                                     if (withReturn) {
                                         loadLocal(returnType, returnVarIndex); // restore the return value
                                     }

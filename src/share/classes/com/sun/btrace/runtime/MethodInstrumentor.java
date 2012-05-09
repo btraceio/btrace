@@ -221,19 +221,25 @@ public class MethodInstrumentor extends MethodVisitor {
 
     protected class AnyTypeArgProvider extends ArgumentProvider {
         private int argPtr;
-
+        private Type[] myArgTypes;
         public AnyTypeArgProvider(int index, int basePtr) {
+            this(index, basePtr, argumentTypes);
+        }
+        
+        public AnyTypeArgProvider(int index, int basePtr, Type[] argTypes) {
             super(index);
             this.argPtr = basePtr;
+            this.myArgTypes = argTypes;
         }
+        
 
         public void doProvide() {
-            push(argumentTypes.length);
+            push(myArgTypes.length);
             visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
-            for (int j = 0; j < argumentTypes.length; j++) {
+            for (int j = 0; j < myArgTypes.length; j++) {
                 dup();
                 push(j);
-                Type argType = argumentTypes[j];
+                Type argType = myArgTypes[j];
                 loadLocal(argType, argPtr);
                 box(argType);
                 arrayStore(TypeUtils.objectType);
