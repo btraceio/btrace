@@ -61,42 +61,48 @@
           <param name="name" value="btrace-agent"/>
           <param name="artifact" value="btrace-agent"/>
        </antcall>
-       <install file="${build.dir}/btrace-agent.jar">
+       <install file="${agent.jar}">
            <pom file="${build.dir}/pom-btrace-agent.xml"/>
            <localRepository path="${maven.repo.local}"/>
+           <attach file="${agent-sources.jar}" type="jar" classifier="sources"/>
        </install>
        <antcall target="create.pom.file" >
           <param name="name" value="btrace-boot"/>
           <param name="artifact" value="btrace-boot"/>
        </antcall>
-       <install file="${build.dir}/btrace-boot.jar">
+       <install file="${boot.jar}">
            <pom file="${build.dir}/pom-btrace-boot.xml"/>
            <localRepository path="${maven.repo.local}"/>
+           <attach file="${boot-sources.jar}" type="jar" classifier="sources"/>
        </install>
        <antcall target="create.pom.file" >
           <param name="name" value="btrace-client"/>
           <param name="artifact" value="btrace-client"/>
        </antcall>
-       <install file="${build.dir}/btrace-client.jar">
+       <install file="${client.jar}">
            <pom file="${build.dir}/pom-btrace-client.xml"/>
            <localRepository path="${maven.repo.local}"/>
+           <attach file="${client-sources.jar}" type="jar" classifier="sources"/>
        </install>
    </target>
 
    <target name="upload.maven" depends="create.poms" description="Publish btrace binaries to Maven2 repository">
-       <deploy file="${build.dir}/btrace-agent.jar" uniqueVersion="false" >
+       <deploy file="${agent.jar}" uniqueVersion="false" >
            <pom file="${build.dir}/pom-btrace-agent.xml"/>
            <localRepository path="${maven.repo.local}"/>
+           <attach file="${agent-sources.jar}" type="jar" classifier="sources"/>
        </deploy>
 
-       <deploy file="${build.dir}/btrace-boot.jar" uniqueVersion="false" >
+       <deploy file="${boot.jar}" uniqueVersion="false" >
            <pom file="${build.dir}/pom-btrace-boot.xml"/>
            <localRepository path="${maven.repo.local}"/>
+           <attach file="${boot-sources.jar}" type="jar" classifier="sources"/>
        </deploy>
 
-       <deploy file="${build.dir}/btrace-client.jar" uniqueVersion="false" >
+       <deploy file="${client.jar}" uniqueVersion="false" >
            <pom file="${build.dir}/pom-btrace-client.xml"/>
            <localRepository path="${maven.repo.local}"/>
+           <attach file="${client-sources.jar}" type="jar" classifier="sources"/>
        </deploy>
 
    </target> 
@@ -186,13 +192,22 @@
          basedir="${classes.dir}"
          manifest="${share.src.dir}/META-INF/agent-manifest.mf"
          excludes="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/*"/>
+        <jar jarfile="${agent-sources.jar}"         
+         basedir="${share.src.dir}"
+         excludes="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/META-INF/*"/>
         <jar jarfile="${boot.jar}"         
          basedir="${classes.dir}"
          excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/** **/api/**/* **/spi/**/*"/>
+        <jar jarfile="${boot-sources.jar}"         
+         basedir="${share.src.dir}"
+         excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/** **/api/**/* **/spi/**/* **/META-INF/*"/>
         <jar jarfile="${client.jar}"
          basedir="${classes.dir}"
          manifest="${share.src.dir}/META-INF/client-manifest.mf"
          excludes="**/runtime/* **/agent/*"/>
+        <jar jarfile="${client-sources.jar}"
+         basedir="${share.src.dir}"
+         excludes="**/runtime/* **/agent/* **/META-INF/*"/>
     </target>
     <target name="load.properties">
         <echo message="Loading build properties file"/>
