@@ -84,7 +84,7 @@ public class JdbcQueries {
      * @param args
      *            the list of method parameters. args[1] is the SQL.
      */
-    @OnMethod(clazz = "+java.sql.Connection", method = "/prepare(Call|Statement))/")
+    @OnMethod(clazz = "+java.sql.Connection", method = "/prepare(Call|Statement)/")
     public static void onPrepare(AnyType[] args) {
         preparingStatement = useStackTrace ? Threads.jstackStr() : str(args[0]);
     }
