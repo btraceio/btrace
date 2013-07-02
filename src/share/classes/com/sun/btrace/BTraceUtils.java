@@ -86,7 +86,7 @@ public class BTraceUtils {
      * Prints the java stack trace of the current thread.
      */
     public static void jstack() {
-        Threads.jstack();
+        Threads.jstack(2, -1);
     }
 
     /**
@@ -97,14 +97,14 @@ public class BTraceUtils {
      *        negative all frames are printed.
      */
     public static void jstack(int numFrames) {
-        Threads.jstack(numFrames);
+        Threads.jstack(2, numFrames);
     }
 
     /**
      * Prints Java stack traces of all the Java threads.
      */
     public static void jstackAll() {
-        Threads.jstackAll();
+        Threads.jstackAll(2, -1);
     }
 
     /**
@@ -115,7 +115,7 @@ public class BTraceUtils {
      *        negative all frames are printed.
      */
     public static void jstackAll(int numFrames) {
-        Threads.jstackAll(numFrames);
+        Threads.jstackAll(2, numFrames);
     }
 
     /**
@@ -124,7 +124,7 @@ public class BTraceUtils {
      * @return the stack trace as a String.
      */
     public static String jstackStr() {
-        return Threads.jstackStr();
+        return Threads.jstackStr(2, -1);
     }
 
     /**
@@ -136,7 +136,7 @@ public class BTraceUtils {
      * @return the stack trace as a String.
      */
     public static String jstackStr(int numFrames) {
-        return Threads.jstackStr(numFrames);
+        return Threads.jstackStr(2, numFrames);
     }
 
     /**
@@ -3253,7 +3253,7 @@ public class BTraceUtils {
          * Prints the java stack trace of the current thread.
          */
         public static void jstack() {
-            jstack(-1);
+            jstack(1, -1);
         }
 
         /**
@@ -3264,17 +3264,21 @@ public class BTraceUtils {
          *        negative all frames are printed.
          */
         public static void jstack(int numFrames) {
+            // passing '5' to skip our own frames to generate stack trace
+            jstack(1, numFrames);
+        }
+        
+        private static void jstack(int strip, int numFrames) {
             if (numFrames == 0) return;
             StackTraceElement[] st = Thread.currentThread().getStackTrace();
-            // passing '5' to skip our own frames to generate stack trace
-            BTraceRuntime.stackTrace(st, 5, numFrames);
+            BTraceRuntime.stackTrace(st, strip + 2, numFrames);
         }
 
         /**
          * Prints Java stack traces of all the Java threads.
          */
         public static void jstackAll() {
-            jstackAll(-1);
+            jstackAll(1, -1);
         }
 
         /**
@@ -3285,6 +3289,10 @@ public class BTraceUtils {
          *        negative all frames are printed.
          */
         public static void jstackAll(int numFrames) {
+            jstackAll(1, numFrames);
+        }
+        
+        private static void jstackAll(int strip, int numFrames) {
             BTraceRuntime.stackTraceAll(numFrames);
         }
 
@@ -3294,7 +3302,7 @@ public class BTraceUtils {
          * @return the stack trace as a String.
          */
         public static String jstackStr() {
-            return jstackStr(-1);
+            return jstackStr(1, -1);
         }
 
         /**
@@ -3309,9 +3317,15 @@ public class BTraceUtils {
             if (numFrames == 0) {
                 return "";
             }
+            return jstackStr(1, numFrames);
+        }
+        
+        private static String jstackStr(int strip, int numFrames) {
+            if (numFrames == 0) {
+                return "";
+            }
             StackTraceElement[] st = Thread.currentThread().getStackTrace();
-            // passing '5' to skip our own frames to generate stack trace
-            return BTraceRuntime.stackTraceStr(st, 5, numFrames);
+            return BTraceRuntime.stackTraceStr(st, strip + 2, numFrames);
         }
 
         /**
@@ -3337,7 +3351,7 @@ public class BTraceUtils {
             }
             return BTraceRuntime.stackTraceAllStr(numFrames);
         }
-
+        
         /**
          * Prints the stack trace of the given exception object.
          *
