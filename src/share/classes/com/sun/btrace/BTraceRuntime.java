@@ -379,7 +379,14 @@ public final class BTraceRuntime {
     public static void init(PerfReader perfRead, RunnableGenerator runGen) {
         Class caller = Reflection.getCallerClass(2);
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-            throw new SecurityException("unsafe init");
+            // workaround for "Reflection.getCallerClass(int)" problem
+            // in JDK7u25 - requiring one additional frame to get the caller
+            if (caller.getName().equals("com.sun.btrace.BTraceRuntime")) {
+                caller = Reflection.getCallerClass(3);
+            }
+            if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
+                throw new SecurityException("unsafe init");
+            }
         }
         perfReader = perfRead;
         runnableGenerator = runGen;
@@ -389,7 +396,14 @@ public final class BTraceRuntime {
     public Class defineClass(byte[] code) {
         Class caller = Reflection.getCallerClass(2);
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-            throw new SecurityException("unsafe defineClass");
+            // workaround for "Reflection.getCallerClass(int)" problem
+            // in JDK7u25 - requiring one additional frame to get the caller
+            if (caller.getName().equals("com.sun.btrace.BTraceRuntime")) {
+                caller = Reflection.getCallerClass(3);
+            }
+            if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
+                throw new SecurityException("unsafe defineClass");
+            }
         }
         return defineClassImpl(code, true);
     }
@@ -397,7 +411,14 @@ public final class BTraceRuntime {
     public Class defineClass(byte[] code, boolean mustBeBootstrap) {
         Class caller = Reflection.getCallerClass(2);
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-            throw new SecurityException("unsafe defineClass");
+            // workaround for "Reflection.getCallerClass(int)" problem
+            // in JDK7u25 - requiring one additional frame to get the caller
+            if (caller.getName().equals("com.sun.btrace.BTraceRuntime")) {
+                caller = Reflection.getCallerClass(3);
+            }
+            if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
+                throw new SecurityException("unsafe defineClass");
+            }
         }
         return defineClassImpl(code, mustBeBootstrap);
     }
