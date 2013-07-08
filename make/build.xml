@@ -118,7 +118,8 @@
     <target name="compile-src" depends="prepare" description="Compiles the sources">
         <javac srcdir="${share.src.dir}"
            destdir="${classes.dir}"
-           debug="on" deprecation="on" includeantruntime="on" includejavaruntime="on">
+           debug="on" deprecation="on" includeantruntime="on" includejavaruntime="on"
+           target="1.6" source="1.6">
             <classpath refid="javac.classpath" />
         </javac>
     </target>

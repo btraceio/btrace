@@ -227,6 +227,10 @@ public class Compiler {
         options.add("-Xlint:all");
         options.add("-g:lines");
         options.add("-deprecation");
+        options.add("-source");
+        options.add("1.6");
+        options.add("-target");
+        options.add("1.6");
         if (sourcePath != null) {
             options.add("-sourcepath");
             options.add(sourcePath);
