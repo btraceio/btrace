@@ -25,7 +25,6 @@
 
 package com.sun.btrace.compiler;
 
-import com.sun.source.util.TreePath;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -61,7 +60,7 @@ import com.sun.tools.javac.util.Context;
  * @author A. Sundararajan
  */
 @SupportedAnnotationTypes("*")
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
+@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class Verifier extends AbstractProcessor
                             implements TaskListener {
     private boolean unsafe;
