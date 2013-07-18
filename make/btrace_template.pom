@@ -5,28 +5,14 @@
     <version>@VERSION@</version>
     <packaging>jar</packaging>
     <name>@NAME@</name>
-    <distributionManagement>
-        <repository>
-            <id>@REPOSITORY_ID@</id>
-            <url>@REPOSITORY_URL@</url>
-        </repository>
-    </distributionManagement>
-
-    <repositories>
-        <repository>
-            <id>maven2-repository.java.net</id>
-            <name>Java.net Repository for Maven</name>
-            <url>http://download.java.net/maven/2/</url>
-            <layout>default</layout>
-        </repository>
-    </repositories>
-    <build>
-        <extensions>
-          <extension>
-            <groupId>org.jvnet.wagon-svn</groupId>
-            <artifactId>wagon-svn</artifactId>
-            <version>1.9</version>
-          </extension>
-        </extensions>
-    </build>
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+    <scm>
+        <connection>scm:hg:https://hg.kenai.com/hg/btrace~hg</connection>
+        <developerConnection>scm:hg:https://hg.kenai.com/hg/btrace~hg</developerConnection>
+        <url>https://hg.kenai.com/hg/btrace~hg</url>
+    </scm>
 </project>

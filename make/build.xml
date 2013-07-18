@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="BTrace" default="all" basedir=".">
+<project name="BTrace" default="all" basedir="." xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+    <!-- Property Definitions -->
+    <property name="maven-snapshots-repository-id" value="sonatype-nexus-snapshots" />
+    <property name="maven-snapshots-repository-url" value="https://oss.sonatype.org/content/repositories/snapshots" />
+    <property name="maven-staging-repository-id" value="sonatype-nexus-staging" />
+    <property name="maven-staging-repository-url" value="https://oss.sonatype.org/service/local/staging/deploy/maven2" />
 
-  <!-- Property Definitions -->
+    <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/META-INF/*"/>
+    <property name="boot.excludes" value="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/** **/api/**/* **/spi/**/*"/>
+    <property name="client.excludes" value="**/runtime/* **/agent/* **/META-INF/*"/>
+    
     <target name="prepare" depends="load.properties">
         <mkdir dir="${classes.dir}"/>
         <mkdir dir="${javadoc.dir}"/>
@@ -28,18 +36,15 @@
         </condition>
     </target>
     <target name="initialize.maven" depends="prepare">
+        <setproxy proxyhost="emea-proxy.uk.oracle.com" proxyport="80"/>
        <get
-          src="http://maven.glassfish.org/content/repositories/maven.central/org/apache/maven/maven-ant-tasks/2.1.1/maven-ant-tasks-2.1.1.jar"
-          dest="${build.dir}/maven-ant-tasks-2.1.1.jar"
+          src="http://apache.petsads.us/maven/ant-tasks/2.1.3/binaries/maven-ant-tasks-2.1.3.jar"
+          dest="${build.dir}/maven-ant-tasks-2.1.3.jar"
           verbose="true"
           usetimestamp="true"/>
-       <path id="maven-ant-tasks.classpath" path="${build.dir}/maven-ant-tasks-2.0.9.jar" />
+       <path id="maven-ant-tasks.classpath" path="${build.dir}/maven-ant-tasks-2.1.3.jar" />
        <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
                 classpathref="maven-ant-tasks.classpath" />
-       <install-provider artifactId="wagon-svn" groupId="org.jvnet.wagon-svn" version="1.12">
-          <remoteRepository id="java.net.maven2.repository" url="http://download.java.net/maven/2/" />
-          <localRepository path="${maven.repo.local}"/>
-       </install-provider>
 
    </target>
    <target name="create.pom.file" if="artifact">
@@ -47,65 +52,156 @@
            <filterset>
                <filter token="NAME" value="${name}"/>
                <filter token="ARTIFACT_ID" value="${artifact}"/>
-               <filter token="VERSION" value="${release.version}"/>
-               <filter token="REPOSITORY_ID" value="java.net-maven2-repository"/>
-               <filter token="REPOSITORY_URL" value="java-net:/maven2-repository~svn/trunk/repository/"/>
+               <filter token="VERSION" value="${release.version}${snapshot}"/>
            </filterset>
        </copy>
    </target>
 
-   <target name="upload.maven.with.build" depends="initialize.maven,jar,upload.maven"/>
+   <target name="upload.snapshots.with.build" depends="initialize.maven,jar,upload.snapshots"/>
 
-   <target name="create.poms" depends="initialize.maven">
+  <target name="upload.staging.with.build" depends="initialize.maven,jar,upload.staging"/>
+
+   <target name="create.snapshot.poms" depends="initialize.maven">
        <antcall target="create.pom.file" >
           <param name="name" value="btrace-agent"/>
           <param name="artifact" value="btrace-agent"/>
+          <param name="snapshot" value="-SNAPSHOT"/>
        </antcall>
-       <install file="${agent.jar}">
-           <pom file="${build.dir}/pom-btrace-agent.xml"/>
-           <localRepository path="${maven.repo.local}"/>
-           <attach file="${agent-sources.jar}" type="jar" classifier="sources"/>
-       </install>
        <antcall target="create.pom.file" >
           <param name="name" value="btrace-boot"/>
           <param name="artifact" value="btrace-boot"/>
+          <param name="snapshot" value="-SNAPSHOT"/>
        </antcall>
-       <install file="${boot.jar}">
-           <pom file="${build.dir}/pom-btrace-boot.xml"/>
-           <localRepository path="${maven.repo.local}"/>
-           <attach file="${boot-sources.jar}" type="jar" classifier="sources"/>
-       </install>
        <antcall target="create.pom.file" >
           <param name="name" value="btrace-client"/>
           <param name="artifact" value="btrace-client"/>
+          <param name="snapshot" value="-SNAPSHOT"/>
        </antcall>
-       <install file="${client.jar}">
-           <pom file="${build.dir}/pom-btrace-client.xml"/>
-           <localRepository path="${maven.repo.local}"/>
-           <attach file="${client-sources.jar}" type="jar" classifier="sources"/>
-       </install>
    </target>
 
-   <target name="upload.maven" depends="create.poms" description="Publish btrace binaries to Maven2 repository">
-       <deploy file="${agent.jar}" uniqueVersion="false" >
-           <pom file="${build.dir}/pom-btrace-agent.xml"/>
-           <localRepository path="${maven.repo.local}"/>
-           <attach file="${agent-sources.jar}" type="jar" classifier="sources"/>
-       </deploy>
+  <target name="create.staging.poms" depends="initialize.maven">
+       <antcall target="create.pom.file" >
+          <param name="name" value="btrace-agent"/>
+          <param name="artifact" value="btrace-agent"/>
+          <param name="snapshot" value=""/>
+       </antcall>
+       <antcall target="create.pom.file" >
+          <param name="name" value="btrace-boot"/>
+          <param name="artifact" value="btrace-boot"/>
+          <param name="snapshot" value=""/>
+       </antcall>
+       <antcall target="create.pom.file" >
+          <param name="name" value="btrace-client"/>
+          <param name="artifact" value="btrace-client"/>
+          <param name="snapshot" value=""/>
+       </antcall>
+   </target>
 
-       <deploy file="${boot.jar}" uniqueVersion="false" >
-           <pom file="${build.dir}/pom-btrace-boot.xml"/>
-           <localRepository path="${maven.repo.local}"/>
-           <attach file="${boot-sources.jar}" type="jar" classifier="sources"/>
-       </deploy>
+   <target name="upload.snapshots" depends="create.snapshot.poms" description="Publish btrace binaries to Maven2 snapshots repository">
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-deploy-plugin:2.6:deploy-file" />
+            <arg value="-Durl=${maven-snapshots-repository-url}" />
+            <arg value="-DrepositoryId=${maven-snapshots-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-agent.xml" />
+            <arg value="-Dfile=${agent.jar}" />
+            <arg value="-X"/>
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-deploy-plugin:2.6:deploy-file" />
+            <arg value="-Durl=${maven-snapshots-repository-url}" />
+            <arg value="-DrepositoryId=${maven-snapshots-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-boot.xml" />
+            <arg value="-Dfile=${boot.jar}" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-deploy-plugin:2.6:deploy-file" />
+            <arg value="-Durl=${maven-snapshots-repository-url}" />
+            <arg value="-DrepositoryId=${maven-snapshots-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-client.xml" />
+            <arg value="-Dfile=${client.jar}" />
+        </artifact:mvn>
+   </target>
 
-       <deploy file="${client.jar}" uniqueVersion="false" >
-           <pom file="${build.dir}/pom-btrace-client.xml"/>
-           <localRepository path="${maven.repo.local}"/>
-           <attach file="${client-sources.jar}" type="jar" classifier="sources"/>
-       </deploy>
-
-   </target> 
+   <target name="upload.staging" depends="create.staging.poms, create.sources, create.javadocs" description="Publish btrace binaries to Maven2 staging repository">
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-agent.xml" />
+            <arg value="-Dfile=${agent.jar}" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-agent.xml" />
+            <arg value="-Dfile=${agent-sources.jar}" />
+            <arg value="-Dclassifier=sources" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-agent.xml" />
+            <arg value="-Dfile=${agent-javadoc.jar}" />
+            <arg value="-Dclassifier=javadoc" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-boot.xml" />
+            <arg value="-Dfile=${boot.jar}" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-boot.xml" />
+            <arg value="-Dfile=${boot-sources.jar}" />
+            <arg value="-Dclassifier=sources" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-boot.xml" />
+            <arg value="-Dfile=${boot-javadoc.jar}" />
+            <arg value="-Dclassifier=javadoc" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-client.xml" />
+            <arg value="-Dfile=${client.jar}" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-client.xml" />
+            <arg value="-Dfile=${client-sources.jar}" />
+            <arg value="-Dclassifier=sources" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+        <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${build.dir}/pom-btrace-client.xml" />
+            <arg value="-Dfile=${client-javadoc.jar}" />
+            <arg value="-Dclassifier=javadoc" />
+            <arg value="-Pgpg" />
+        </artifact:mvn>
+   </target>
 
     <target name="clean" depends="load.properties">
         <delete dir="${build.dir}"/>
@@ -170,7 +266,7 @@
             <exclude name="traces/**"/>
         </javac>
     </target>
-    
+
     <target name="build-traces" depends="jar">
         <echo>executing ${bin.dir}/${btracec} -cp ${build.dir}/test -d ${tests.dir} ${traces.dir}/*.java</echo>
         <apply executable="${bin.dir}/${btracec}"  verbose="true">
@@ -187,28 +283,50 @@
             <classpath refid="javac.classpath"/>
         </javac>
     </target>
+    
+    <target name="create.sources" depends="prepare" description="Creates source archives for maven artifacts">
+        <jar jarfile="${agent-sources.jar}"
+         basedir="${share.src.dir}"
+         excludes="${agent.excludes}"/>
+        <jar jarfile="${boot-sources.jar}"
+         basedir="${share.src.dir}"
+         excludes="${boot.excludes}"/>
+        <jar jarfile="${client-sources.jar}"
+         basedir="${share.src.dir}"
+         excludes="${client.excludes}"/>
+    </target>
+    
+    <target name="create.javadocs" depends="prepare" description="Creates javadoc archives for maven artifacts">
+        <javadoc destdir="${build.dir}/agent-javadoc" classpath="${classes.dir}" use="true">
+            <fileset dir="${share.src.dir}" excludes="${agent.excludes} **/*.index **/*.properties"/>
+        </javadoc>
+        <javadoc destdir="${build.dir}/boot-javadoc" classpath="${classes.dir}" use="true">
+            <fileset dir="${share.src.dir}" excludes="${boot.excludes} **/*.index **/*.properties **/*.mf"/>
+        </javadoc>
+        <javadoc destdir="${build.dir}/client-javadoc" classpath="${classes.dir}" use="true">
+            <fileset dir="${share.src.dir}" excludes="${client.excludes} **/*.index **/*.properties"/>
+        </javadoc>
+        <jar jarfile="${agent-javadoc.jar}"
+         basedir="${build.dir}/agent-javadoc"/>
+        <jar jarfile="${boot-javadoc.jar}"
+         basedir="${build.dir}/boot-javadoc"/>
+        <jar jarfile="${client-javadoc.jar}"
+         basedir="${build.dir}/client-javadoc"/>
+    </target>
+    
     <target name="jar" depends="compile" description="Creates deployment bundles">
         <unjar src="${lib.dir}/btrace-asm-${asm.version}.jar" dest="${classes.dir}"/>
-        <jar jarfile="${agent.jar}"         
+        <jar jarfile="${agent.jar}"
          basedir="${classes.dir}"
          manifest="${share.src.dir}/META-INF/agent-manifest.mf"
-         excludes="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/*"/>
-        <jar jarfile="${agent-sources.jar}"         
-         basedir="${share.src.dir}"
-         excludes="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/META-INF/*"/>
-        <jar jarfile="${boot.jar}"         
+         excludes="${agent.excludes}"/>
+        <jar jarfile="${boot.jar}"
          basedir="${classes.dir}"
-         excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/** **/api/**/* **/spi/**/*"/>
-        <jar jarfile="${boot-sources.jar}"         
-         basedir="${share.src.dir}"
-         excludes="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/** **/api/**/* **/spi/**/* **/META-INF/*"/>
+         excludes="${boot.excludes}"/>
         <jar jarfile="${client.jar}"
          basedir="${classes.dir}"
          manifest="${share.src.dir}/META-INF/client-manifest.mf"
-         excludes="**/runtime/* **/agent/*"/>
-        <jar jarfile="${client-sources.jar}"
-         basedir="${share.src.dir}"
-         excludes="**/runtime/* **/agent/* **/META-INF/*"/>
+         excludes="${client.excludes}"/>
     </target>
     <target name="load.properties">
         <echo message="Loading build properties file"/>
@@ -240,7 +358,7 @@
             <fileset file="${basedir}/../*.txt"/>
             <fileset file="${basedir}/../COPYRIGHT"/>
         </copy>
-        <tar basedir="${dist.dir}" destfile="${dist.dir}/btrace-bin.tar.gz" 
+        <tar basedir="${dist.dir}" destfile="${dist.dir}/btrace-bin.tar.gz"
              compression="gzip" excludes="*.zip,*.gz"/>
         <zip basedir="${dist.dir}" destfile="${dist.dir}/btrace-bin.zip"
              excludes="*.zip,*.gz"/>
