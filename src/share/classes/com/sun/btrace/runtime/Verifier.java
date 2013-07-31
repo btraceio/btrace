@@ -108,7 +108,7 @@ public class Verifier extends ClassVisitor {
         super.visitEnd();
     }
 
-    public void visit(int version, int access, String name, 
+    public void visit(int version, int access, String name,
             String signature, String superName, String[] interfaces) {
         if ((access & ACC_INTERFACE) != 0 ||
             (access & ACC_ENUM) != 0  ) {
@@ -125,18 +125,28 @@ public class Verifier extends ClassVisitor {
             reportError("no.interface.implementation");
         }
         className = name;
-        super.visit(version, access, name, signature, 
+        super.visit(version, access, name, signature,
                     superName, interfaces);
     }
 
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+        AnnotationVisitor delegate = super.visitAnnotation(desc, visible);
         if (desc.equals(BTRACE_DESC)) {
             seenBTrace = true;
+            return new AnnotationVisitor(Opcodes.ASM4, delegate) {
+                @Override
+                public void visit(String name, Object value) {
+                    if ("unsafe".equals(name) && Boolean.TRUE.equals(value)) {
+                        unsafe = true; // Found @BTrace(..., unsafe=true)
+                    }
+                    super.visit(name, value);
+                }
+            };
         }
-        return super.visitAnnotation(desc, visible);
+        return delegate;
     }
 
-    public FieldVisitor	visitField(int access, String name, 
+    public FieldVisitor	visitField(int access, String name,
             String desc, String signature, Object value) {
         if (! seenBTrace) {
             reportError("not.a.btrace.program");
@@ -146,14 +156,14 @@ public class Verifier extends ClassVisitor {
         }
         return super.visitField(access, name, desc, signature, value);
     }
-     
-    public void visitInnerClass(String name, String outerName, 
+
+    public void visitInnerClass(String name, String outerName,
             String innerName, int access) {
         if (className.equals(outerName)) {
             reportError("no.nested.class");
         }
     }
-     
+
     public MethodVisitor visitMethod(final int access, final String methodName,
             final String methodDesc, String signature, String[] exceptions) {
 
@@ -353,8 +363,8 @@ public class Verifier extends ClassVisitor {
             }
         };
     }
- 
-    public void visitOuterClass(String owner, String name, 
+
+    public void visitOuterClass(String owner, String name,
             String desc) {
         reportError("no.outer.class");
     }
