@@ -73,12 +73,12 @@ public class Verifier extends ClassVisitor {
     private String className;
     private List<OnMethod> onMethods;
     private List<OnProbe> onProbes;
-    private boolean unsafe;
+    private boolean unsafeScript, unsafeAllowed;
     private CycleDetector cycleDetector;
 
     public Verifier(ClassVisitor cv, boolean unsafe) {
         super(Opcodes.ASM4, cv);
-        this.unsafe = unsafe;
+        this.unsafeAllowed = unsafe;
         onMethods = new ArrayList<OnMethod>();
         onProbes = new ArrayList<OnProbe>();
         cycleDetector = new CycleDetector();
@@ -137,7 +137,10 @@ public class Verifier extends ClassVisitor {
                 @Override
                 public void visit(String name, Object value) {
                     if ("unsafe".equals(name) && Boolean.TRUE.equals(value)) {
-                        unsafe = true; // Found @BTrace(..., unsafe=true)
+                        if (!unsafeAllowed) {
+                            reportError("agent.unsafe.not.allowed");
+                        }
+                        unsafeScript = true; // Found @BTrace(..., unsafe=true)
                     }
                     super.visit(name, value);
                 }
@@ -374,7 +377,7 @@ public class Verifier extends ClassVisitor {
     }
 
     void reportError(String err, String msg) {
-        if (unsafe) return;
+        if (unsafeScript && unsafeAllowed) return;
         String str = Messages.get(err);
         if (msg != null) {
             str += ": " + msg;

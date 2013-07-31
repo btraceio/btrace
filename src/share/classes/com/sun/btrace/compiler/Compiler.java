@@ -61,21 +61,19 @@ public class Compiler {
     private StandardJavaFileManager stdManager;
     // null means no preprocessing isf done.
     public List<String> includeDirs;
-    private boolean unsafe;
 
-    public Compiler(String includePath, boolean unsafe) {
+    public Compiler(String includePath) {
         if (includePath != null) {
             includeDirs = new ArrayList<String>();
             String[] paths = includePath.split(File.pathSeparator);
             for (String p : paths) includeDirs.add(p);
         }
-        this.unsafe = unsafe;
         this.compiler = ToolProvider.getSystemJavaCompiler();
         this.stdManager = compiler.getStandardFileManager(null, null, null);
     }
 
     public Compiler() {
-        this(null, false);
+        this(null);
     }
 
     private static void usage(String msg) {
@@ -145,7 +143,7 @@ public class Compiler {
             }
         }
 
-        Compiler compiler = new Compiler(includePath, unsafe);
+        Compiler compiler = new Compiler(includePath);
         classPath += File.pathSeparator + System.getProperty("java.class.path");
         Map<String, byte[]> classes = compiler.compile(files,
                 new PrintWriter(System.err), ".", classPath);
@@ -245,7 +243,7 @@ public class Compiler {
         JavacTask task =
                 (JavacTask) compiler.getTask(err, manager, diagnostics,
                 options, null, compUnits);
-        Verifier btraceVerifier = new Verifier(unsafe);
+        Verifier btraceVerifier = new Verifier();
         task.setTaskListener(btraceVerifier);
 
         // we add BTrace Verifier as a (JSR 269) Processor

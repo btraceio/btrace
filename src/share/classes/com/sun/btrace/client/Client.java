@@ -163,7 +163,7 @@ public class Client {
         byte[] code = null;
         File file = new File(fileName);
         if (fileName.endsWith(".java")) {
-            Compiler compiler = new Compiler(includePath, unsafe);
+            Compiler compiler = new Compiler(includePath);
             classPath += File.pathSeparator + System.getProperty("java.class.path");
             if (debug) {
                 debugPrint("compiling " + fileName);

@@ -70,23 +70,15 @@ import com.sun.tools.javac.util.Context;
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class Verifier extends AbstractProcessor
                             implements TaskListener {
-    private boolean unsafe;
-    private List<String> classNames =
+    private final List<String> classNames =
         new ArrayList<String>();
     private Trees treeUtils;
-    private List<CompilationUnitTree> compUnits =
+    private final List<CompilationUnitTree> compUnits =
         new ArrayList<CompilationUnitTree>();
     private ClassTree currentClass;
     private final AttributionTaskListener listener = new AttributionTaskListener();
 
-    public Verifier(boolean unsafe) {
-        this.unsafe = unsafe;
-    }
-
-    public Verifier() {
-        this(false);
-    }
-
+    @Override
     public void init(ProcessingEnvironment pe) {
         super.init(pe);
         treeUtils = Trees.instance(pe);
@@ -161,7 +153,7 @@ public class Verifier extends AbstractProcessor
             className = pkgName + "." + className;
         }
         classNames.add(className);
-        if (unsafe || hasUnsafeAnnotation(ct, topElement)) {
+        if (hasUnsafeAnnotation(ct, topElement)) {
             return true;
         }
         Boolean value = ct.accept(new VerifierVisitor(this, topElement), null);

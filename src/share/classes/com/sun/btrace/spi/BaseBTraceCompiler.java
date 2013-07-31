@@ -53,7 +53,7 @@ public class BaseBTraceCompiler extends BTraceCompiler {
     final private com.sun.btrace.compiler.Compiler c;
     final private BTraceTask task;
     public BaseBTraceCompiler(BTraceTask task) {
-        c = new com.sun.btrace.compiler.Compiler(null, task.isUnsafe());
+        c = new com.sun.btrace.compiler.Compiler(null);
         this.task = task;
     }
     
