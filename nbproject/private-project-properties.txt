@@ -1,0 +1,5 @@
+In order to setup the ${tools.jar} property properly you need to create 
+a "private/project.properties" relative to this folder and put there the 
+following line:
+
+tools.jar=<path to your tools.jar>
