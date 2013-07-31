@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.tools.Diagnostic;
+import javax.tools.Diagnostic.Kind;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -259,7 +260,7 @@ public class Compiler {
         }
 
         // print dignostics messages in case of failures.
-        if (task.call() == false) {
+        if (task.call() == false || containsErrors(diagnostics)) {
             for (Diagnostic diagnostic : diagnostics.getDiagnostics()) {
                 perr.println(diagnostic.getMessage(null));
             }
@@ -289,6 +290,18 @@ public class Compiler {
             } catch (IOException exp) {
             }
         }
+    }
+
+    /** Checks if the list of diagnostic messages contains at least one error. Certain
+     * {@link JavacTask} implementations may return success error code even though errors were
+     * reported. */
+    private boolean containsErrors(DiagnosticCollector<?> diagnostics) {
+        for (Diagnostic<?> diagnostic : diagnostics.getDiagnostics()) {
+            if (diagnostic.getKind() == Kind.ERROR) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void dump(String name, byte[] code) {
