@@ -12,7 +12,11 @@ if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
     if [ "${JAVA_HOME}" != "" ]; then
         case "`uname`" in
           Darwin*)
-              TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
+              if [ -f /System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar ]; then
+                TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
+              else
+                TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
+              fi
           ;;
           *)
               TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"

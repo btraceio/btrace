@@ -16,3 +16,5 @@ website
 ^tailor.state.journal$
 ^TEST-*
 .class$
+.idea
+.iml
