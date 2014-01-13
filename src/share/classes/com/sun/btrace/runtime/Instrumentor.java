@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.runtime;
@@ -51,7 +51,7 @@ import static com.sun.btrace.runtime.Constants.*;
 
 /**
  * This instruments a probed class with BTrace probe
- * action class. 
+ * action class.
  *
  * @author A. Sundararajan
  */
@@ -68,8 +68,8 @@ public class Instrumentor extends ClassVisitor {
     private boolean timeStampExisting = false;
 
 
-    public Instrumentor(Class clazz, 
-            String btraceClassName, ClassReader btraceClass, 
+    public Instrumentor(Class clazz,
+            String btraceClassName, ClassReader btraceClass,
             List<OnMethod> onMethods, ClassVisitor cv) {
         super(ASM4, cv);
         this.clazz = clazz;
@@ -81,7 +81,7 @@ public class Instrumentor extends ClassVisitor {
     }
 
     public Instrumentor(Class clazz,
-            String btraceClassName, byte[] btraceCode, 
+            String btraceClassName, byte[] btraceCode,
             List<OnMethod> onMethods, ClassVisitor cv) {
         this(clazz, btraceClassName, new ClassReader(btraceCode), onMethods, cv);
     }
@@ -90,7 +90,7 @@ public class Instrumentor extends ClassVisitor {
         return !calledOnMethods.isEmpty();
     }
 
-    public void visit(int version, int access, String name, 
+    public void visit(int version, int access, String name,
         String signature, String superName, String[] interfaces) {
         usesTimeStamp = false;
         timeStampExisting = false;
@@ -158,17 +158,17 @@ public class Instrumentor extends ClassVisitor {
                     } catch (PatternSyntaxException pse) {
                         reportPatternSyntaxException(probeClazz);
                     }
-                } else if (probeClazz.equals(extName)) { 
+                } else if (probeClazz.equals(extName)) {
                     applicableOnMethods.add(om);
                 }
-            }                        
+            }
         }
         return av;
     }
 
-    public MethodVisitor visitMethod(final int access, final String name, 
+    public MethodVisitor visitMethod(final int access, final String name,
         final String desc, String signature, String[] exceptions) {
-        MethodVisitor methodVisitor = super.visitMethod(access, name, desc, 
+        MethodVisitor methodVisitor = super.visitMethod(access, name, desc,
                 signature, exceptions);
 
         if (applicableOnMethods.isEmpty() ||
@@ -191,7 +191,7 @@ public class Instrumentor extends ClassVisitor {
         methodVisitor = lvs;
 
         final int[] tsIndex = new int[]{-1, -1};
-        
+
         for (OnMethod om : applicableOnMethods) {
             if (om.getLocation().getValue() == Kind.LINE) {
                 methodVisitor = instrumentorFor(om, methodVisitor, lvs, tsIndex, access, name, desc);
@@ -219,10 +219,10 @@ public class Instrumentor extends ClassVisitor {
             }
         }
 
-        return new MethodVisitor(ASM4, 
+        return new MethodVisitor(ASM4,
                     methodVisitor) {
             public AnnotationVisitor visitAnnotation(String annoDesc,
-                                  boolean visible) { 
+                                  boolean visible) {
                 for (OnMethod om : applicableOnMethods) {
                     String extAnnoName = Type.getType(annoDesc).getClassName();
                     String annoName = om.getMethod();
@@ -235,27 +235,21 @@ public class Instrumentor extends ClassVisitor {
                             annoName = annoName.substring(1, annoName.length() - 1);
                             try {
                                 if (extAnnoName.matches(annoName)) {
-                                    mv = instrumentorFor(om, mv, lvs, access, name, desc);
+                                    mv = instrumentorFor(om, mv, lvs, tsIndex, access, name, desc);
                                 }
                             } catch (PatternSyntaxException pse) {
                                 reportPatternSyntaxException(extAnnoName);
                             }
                         } else if (annoName.equals(extAnnoName)) {
-                            mv = instrumentorFor(om, mv, lvs, access, name, desc);
+                            mv = instrumentorFor(om, mv, lvs, tsIndex, access, name, desc);
                         }
-                    }                   
-                }               
+                    }
+                }
                 return mv.visitAnnotation(annoDesc, visible);
             }
-        }; 
+        };
     }
 
-    private MethodVisitor instrumentorFor(
-        final OnMethod om, MethodVisitor mv, final LocalVariablesSorter lvs,
-        int access, String name, String desc) {
-        return instrumentorFor(om, mv, lvs, null, access, name, desc);
-    }
-    
     private MethodVisitor instrumentorFor(
         final OnMethod om, MethodVisitor mv, final LocalVariablesSorter lvs,
         final int[] tsIndex, int access, String name, final String desc) {
@@ -263,8 +257,8 @@ public class Instrumentor extends ClassVisitor {
         final Where where = loc.getWhere();
         final Type[] actionArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
         final int numActionArgs = actionArgTypes.length;
-        
-        switch (loc.getValue()) {            
+
+        switch (loc.getValue()) {
             case ARRAY_GET:
                 // <editor-fold defaultstate="collapsed" desc="Array Get Instrumentor">
                 return new ArrayAccessInstrumentor(mv, className, superName, access, name, desc) {
@@ -437,7 +431,7 @@ public class Instrumentor extends ClassVisitor {
                             } else {
                                 actionArgs[i] = new LocalVarArgProvider(index, actionArgTypes[index], backupArgsIndexes[i+1]);;
                             }
-                            
+
                         }
                         actionArgs[actionArgTypes.length] = new LocalVarArgProvider(om.getReturnParameter(), returnType, returnVarIndex);
                         actionArgs[actionArgTypes.length + 1] = new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, backupArgsIndexes[0]);
@@ -672,7 +666,7 @@ public class Instrumentor extends ClassVisitor {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                         vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.throwableType});
                     }
-                    
+
                     @Override
                     protected void onErrorReturn() {
                         if (vr.isValid()) {
@@ -691,24 +685,22 @@ public class Instrumentor extends ClassVisitor {
                                     dup();
                                     throwableIndex = lvs.newLocal(TypeUtils.throwableType);
                                 }
-                                
-                                ArgumentProvider[] actionArgs = new ArgumentProvider[4 + (tsIndex != null ? 1 : 0)];
+
+                                ArgumentProvider[] actionArgs = new ArgumentProvider[5];
 
                                 actionArgs[0] = new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex);
                                 actionArgs[1] = new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", "."));
                                 actionArgs[2] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
                                 actionArgs[3] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
-                                if (tsIndex != null) {
-                                    actionArgs[4] = new ArgumentProvider(om.getDurationParameter()) {
-                                        public void doProvide() {
-                                            if (tsIndex[0] != -1 && tsIndex[1] != -1) {
-                                                loadLocal(Type.LONG_TYPE, tsIndex[1]);
-                                                loadLocal(Type.LONG_TYPE, tsIndex[0]);
-                                                visitInsn(LSUB);
-                                            }
+                                actionArgs[4] = new ArgumentProvider(om.getDurationParameter()) {
+                                    public void doProvide() {
+                                        if (tsIndex[0] != -1 && tsIndex[1] != -1) {
+                                            loadLocal(Type.LONG_TYPE, tsIndex[1]);
+                                            loadLocal(Type.LONG_TYPE, tsIndex[0]);
+                                            visitInsn(LSUB);
                                         }
-                                    };
-                                }
+                                    }
+                                };
 
                                 loadArguments(actionArgs);
 
@@ -718,7 +710,7 @@ public class Instrumentor extends ClassVisitor {
                             }
                         }
                     }
-                    
+
                     @Override
                     public boolean usesTimeStamp() {
                         return vr.isValid() && om.getDurationParameter() != -1;
@@ -1133,7 +1125,7 @@ public class Instrumentor extends ClassVisitor {
                         }
                     }
                 };// </editor-fold>
-          
+
             case RETURN:
                 // <editor-fold defaultstate="collapsed" desc="Return Instrumentor">
                 if (where != Where.BEFORE) {
@@ -1182,17 +1174,15 @@ public class Instrumentor extends ClassVisitor {
                             actionArgs[actionArgTypes.length + 1] = new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", "."));
                             actionArgs[actionArgTypes.length + 2] = new LocalVarArgProvider(om.getReturnParameter(), getReturnType(), retValIndex);
                             actionArgs[actionArgTypes.length + 3] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
-                            if (tsIndex != null) {
-                                actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(om.getDurationParameter()) {
-                                    public void doProvide() {
-                                        if (tsIndex[0] != -1 && tsIndex[1] != -1) {
-                                            loadLocal(Type.LONG_TYPE, tsIndex[1]);
-                                            loadLocal(Type.LONG_TYPE, tsIndex[0]);
-                                            visitInsn(LSUB);
-                                        }
+                            actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(om.getDurationParameter()) {
+                                public void doProvide() {
+                                    if (tsIndex[0] != -1 && tsIndex[1] != -1) {
+                                        loadLocal(Type.LONG_TYPE, tsIndex[1]);
+                                        loadLocal(Type.LONG_TYPE, tsIndex[0]);
+                                        visitInsn(LSUB);
                                     }
-                                };
-                            }
+                                }
+                            };
                             loadArguments(actionArgs);
 
                             invokeBTraceAction(this, om);
@@ -1365,14 +1355,14 @@ public class Instrumentor extends ClassVisitor {
         int size = applicableOnMethods.size();
         List<MethodCopier.MethodInfo> mi = new ArrayList<MethodCopier.MethodInfo>(size);
         for (OnMethod om : calledOnMethods) {
-            mi.add(new MethodCopier.MethodInfo(om.getTargetName(), 
+            mi.add(new MethodCopier.MethodInfo(om.getTargetName(),
                      om.getTargetDescriptor(),
                      getActionMethodName(om.getTargetName()),
                      ACC_STATIC | ACC_PRIVATE));
         }
         introduceTimeStampHelper();
         MethodCopier copier = new MethodCopier(btraceClass, cv, mi) {
-            @Override 
+            @Override
             protected MethodVisitor addMethod(int access, String name, String desc,
                         String signature, String[] exceptions) {
                 desc = desc.replace(ANYTYPE_DESC, OBJECT_DESC);
@@ -1396,7 +1386,7 @@ public class Instrumentor extends ClassVisitor {
         FileInputStream fis = new FileInputStream(className);
         byte[] buf = new byte[(int)new File(className).length()];
         fis.read(buf);
-        fis.close();        
+        fis.close();
         ClassWriter writer = InstrumentUtils.newClassWriter();
         Verifier verifier = new Verifier(new Preprocessor(writer));
         InstrumentUtils.accept(new ClassReader(buf), verifier);
@@ -1406,17 +1396,17 @@ public class Instrumentor extends ClassVisitor {
         fos.close();
         String targetClass = args[1].replace('.', '/') + ".class";
         fis = new FileInputStream(targetClass);
-        writer = InstrumentUtils.newClassWriter();  
-        ClassReader reader = new ClassReader(fis);        
+        writer = InstrumentUtils.newClassWriter();
+        ClassReader reader = new ClassReader(fis);
         InstrumentUtils.accept(reader, new Instrumentor(null,
-                    verifier.getClassName(), buf, 
+                    verifier.getClassName(), buf,
                     verifier.getOnMethods(), writer));
         fos = new FileOutputStream(targetClass);
         fos.write(writer.toByteArray());
     }
 
     private String getActionMethodName(String name) {
-        return Constants.BTRACE_METHOD_PREFIX + 
+        return Constants.BTRACE_METHOD_PREFIX +
                btraceClassName.replace('/', '$') + "$" + name;
     }
 
@@ -1454,7 +1444,7 @@ public class Instrumentor extends ClassVisitor {
             return TypeUtils.isCompatible(args1, args2);
         }
     }
-    
+
     private static boolean isInArray(String[] candidates, String given) {
         for (String c : candidates) {
             if (c.equals(given)) {
