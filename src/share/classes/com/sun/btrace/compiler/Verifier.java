@@ -91,12 +91,27 @@ public class Verifier extends AbstractProcessor
     }
 
     public void started(TaskEvent e) {
+        if (e.getKind() == TaskEvent.Kind.ENTER) {
+            CompilationUnitTree ct = e.getCompilationUnit();
+            if (ct != null) {
+                compUnits.add(ct);
+            }
+        }
     }
 
     public void finished(TaskEvent e) {
-        CompilationUnitTree ct = e.getCompilationUnit();
-        if (ct != null) {
-            compUnits.add(ct);
+        if (e.getKind() != TaskEvent.Kind.ANALYZE) return;
+        TypeElement elem = e.getTypeElement();
+        for(Tree t : e.getCompilationUnit().getTypeDecls()) {
+            if (t.getKind() == Tree.Kind.CLASS) {
+                if (((JCClassDecl)t).sym.equals(elem)) {
+                    currentClass = (ClassTree)t;
+                    break;
+                }
+            }
+        }
+        if (currentClass != null) {
+            verify(currentClass, elem);
         }
     }
 

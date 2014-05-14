@@ -48,13 +48,14 @@ import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.comm.WireIO;
 import com.sun.btrace.org.objectweb.asm.*;
 import com.sun.tools.attach.VirtualMachine;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class represents a BTrace client. This can be
  * used to create command line as well as a GUI based
- * BTrace clients. The BTrace compilation, traced JVM attach, 
- * submission of compiled program and and I/O to the traced 
+ * BTrace clients. The BTrace compilation, traced JVM attach,
+ * submission of compiled program and and I/O to the traced
  * JVM are handled by this class.
  *
  * @author A. Sundararajan
@@ -71,7 +72,7 @@ public class Client {
         try {
             /*
              * Check for DTrace Consumer class -- if we don't have that
-             * either /usr/lib/share/java/dtrace.jar is not in CLASSPATH 
+             * either /usr/lib/share/java/dtrace.jar is not in CLASSPATH
              * or we are not running on Solaris 11+.
              */
             Class dtraceConsumerClass = Class.forName("org.opensolaris.os.dtrace.Consumer");
@@ -142,7 +143,7 @@ public class Client {
         return compile(fileName, classPath, new PrintWriter(System.err), null);
     }
 
-    /** 
+    /**
      * Compiles given BTrace program using given classpath.
      */
     public byte[] compile(String fileName, String classPath, String includePath) {
@@ -154,7 +155,7 @@ public class Client {
         return compile(fileName, classPath, err, null);
     }
 
-    /** 
+    /**
      * Compiles given BTrace program using given classpath.
      * Errors and warning are written to given PrintWriter.
      */
@@ -251,7 +252,8 @@ public class Client {
             if (debug) {
                 debugPrint("checking port availability: " + port);
             }
-            int serverPort = Integer.parseInt(vm.getSystemProperties().getProperty("btrace.port", "-1"));
+            Properties serverVmProps = vm.getSystemProperties();
+            int serverPort = Integer.parseInt(serverVmProps.getProperty("btrace.port", "-1"));
             if (serverPort != -1) {
                 if (serverPort != port) {
                     throw new IOException("Can not attach to PID " + pid + " on port " + port + ". There is already a BTrace server active on port " + serverPort + "!");
@@ -287,7 +289,10 @@ public class Client {
                 agentArgs += ",bootClassPath=" + bootCp;
             }
             if (sysCp == null) {
-                sysCp = getToolsJarPath();
+                sysCp = getToolsJarPath(
+                    serverVmProps.getProperty("java.class.path"),
+                    serverVmProps.getProperty("java.home")
+                );
             }
             agentArgs += ",systemClassPath=" + sysCp;
             agentArgs += ",probeDescPath=" + probeDescPath;
@@ -404,10 +409,10 @@ public class Client {
     }
 
     //-- Internals only below this point
-    private String getToolsJarPath() {
+    private String getToolsJarPath(String javaClassPath, String javaHome) {
         // try to get absolute path of tools.jar
         // first check this application's classpath
-        String[] components = System.getProperty("java.class.path").split(File.pathSeparator);
+        String[] components = javaClassPath.split(File.pathSeparator);
         for (String c : components) {
             if (c.endsWith("tools.jar")) {
                 return new File(c).getAbsolutePath();
@@ -415,14 +420,13 @@ public class Client {
                 return new File(c).getAbsolutePath();
             }
         }
-        // we didn't find -- make a guess! If this app is running on a JDK rather 
+        // we didn't find -- make a guess! If this app is running on a JDK rather
         // than a JRE there will be a tools.jar in $JDK_HOME/lib directory.
         if(System.getProperty("os.name").startsWith("Mac")) {
-            String java_home = System.getProperty("java.home");
-            String java_mac_home = java_home.substring(0,java_home.indexOf("/Home"));
+            String java_mac_home = javaHome.substring(0,javaHome.indexOf("/Home"));
             return java_mac_home + "/Classes/classes.jar";
         } else {
-            return System.getProperty("java.home") + "../lib/tools.jar";
+            return javaHome + "/../lib/tools.jar";
         }
     }
 

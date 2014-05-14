@@ -107,6 +107,7 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 import sun.misc.Perf;
 import sun.misc.Unsafe;
+import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
 import sun.security.action.GetPropertyAction;
 
@@ -376,49 +377,31 @@ public final class BTraceRuntime {
         return runtimes.containsKey(name);
     }
 
+    @CallerSensitive
     public static void init(PerfReader perfRead, RunnableGenerator runGen) {
-        Class caller = Reflection.getCallerClass(2);
+        Class caller = Reflection.getCallerClass();
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-            // workaround for "Reflection.getCallerClass(int)" problem
-            // in JDK7u25 - requiring one additional frame to get the caller
-            if (caller.getName().equals("com.sun.btrace.BTraceRuntime")) {
-                caller = Reflection.getCallerClass(3);
-            }
-            if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-                throw new SecurityException("unsafe init");
-            }
+            throw new SecurityException("unsafe init");
         }
         perfReader = perfRead;
         runnableGenerator = runGen;
         loadLibrary(perfRead.getClass().getClassLoader());
     }
 
+    @CallerSensitive
     public Class defineClass(byte[] code) {
-        Class caller = Reflection.getCallerClass(2);
+        Class caller = Reflection.getCallerClass();
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-            // workaround for "Reflection.getCallerClass(int)" problem
-            // in JDK7u25 - requiring one additional frame to get the caller
-            if (caller.getName().equals("com.sun.btrace.BTraceRuntime")) {
-                caller = Reflection.getCallerClass(3);
-            }
-            if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-                throw new SecurityException("unsafe defineClass");
-            }
+            throw new SecurityException("unsafe defineClass");
         }
         return defineClassImpl(code, true);
     }
 
+    @CallerSensitive
     public Class defineClass(byte[] code, boolean mustBeBootstrap) {
-        Class caller = Reflection.getCallerClass(2);
+        Class caller = Reflection.getCallerClass();
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-            // workaround for "Reflection.getCallerClass(int)" problem
-            // in JDK7u25 - requiring one additional frame to get the caller
-            if (caller.getName().equals("com.sun.btrace.BTraceRuntime")) {
-                caller = Reflection.getCallerClass(3);
-            }
-            if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
-                throw new SecurityException("unsafe defineClass");
-            }
+            throw new SecurityException("unsafe defineClass");
         }
         return defineClassImpl(code, mustBeBootstrap);
     }
@@ -803,7 +786,7 @@ public final class BTraceRuntime {
     		return collection.toArray();
     	}
     }
-    
+
     static <K, V> V get(Map<K, V> map, Object key) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
@@ -881,7 +864,7 @@ public final class BTraceRuntime {
         dst.clear();
         dst.putAll(src);
     }
-    
+
     static void printMap(Map map) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
@@ -989,7 +972,7 @@ public final class BTraceRuntime {
             throw new IllegalArgumentException();
     	}
     }
-    
+
     static void printNumber(String name, Number value) {
         getCurrent().send(new NumberDataCommand(name, value));
     }
@@ -1024,7 +1007,7 @@ public final class BTraceRuntime {
             e.printStackTrace();
         }
     }
-    
+
     static long sizeof(Object obj) {
         BTraceRuntime runtime = getCurrent();
         return runtime.instrumentation.getObjectSize(obj);
@@ -1278,7 +1261,7 @@ public final class BTraceRuntime {
 
     // the number of stack frames taking a thread dump adds
     private static final int THRD_DUMP_FRAMES = 1;
-    
+
     // stack trace functions
     private static String stackTraceAllStr(int numFrames, boolean printWarning) {
         Set<Map.Entry<Thread, StackTraceElement[]>> traces =
@@ -1702,8 +1685,8 @@ public final class BTraceRuntime {
         getCurrent().send(new GridDataCommand(name, snapshot.getGridData(), format));
     }
     /**
-     * Precondition: Only values from the first Aggregation are printed. If the subsequent aggregations have 
-     * values for keys which the first aggregation does not have, these rows are ignored. 
+     * Precondition: Only values from the first Aggregation are printed. If the subsequent aggregations have
+     * values for keys which the first aggregation does not have, these rows are ignored.
      * @param name
      * @param format
      * @param aggregationArray
@@ -1711,28 +1694,28 @@ public final class BTraceRuntime {
     static void printAggregation(String name, String format, Aggregation[] aggregationArray) {
     	if (aggregationArray.length > 1 && aggregationArray[0].getKeyData().size() > 1) {
     		int aggregationDataSize = aggregationArray[0].getKeyData().get(0).getElements().length + aggregationArray.length;
-    		
+
     		List<Object[]> aggregationData = new ArrayList<Object[]>();
-    		
+
     		//Iterate through all keys in the first Aggregation and build up an array of aggregationData
     		for (AggregationKey aggKey : aggregationArray[0].getKeyData()) {
     			int aggDataIndex = 0;
     			Object[] currAggregationData = new Object[aggregationDataSize];
-    			
+
     			//Add the key to the from of the current aggregation Data
     			for (Object obj : aggKey.getElements()) {
     				currAggregationData[aggDataIndex] = obj;
     				aggDataIndex++;
     			}
-    			
+
     			for (Aggregation agg : aggregationArray) {
     				currAggregationData[aggDataIndex] = agg.getValueForKey(aggKey);
     				aggDataIndex++;
             	}
-    			
+
     			aggregationData.add(currAggregationData);
     		}
-    			
+
     		getCurrent().send(new GridDataCommand(name, aggregationData, format));
     	}
     }
@@ -1779,7 +1762,7 @@ public final class BTraceRuntime {
     }
 
     /**
-     * @see BTraceUtils.Profiling#snapshot(com.sun.btrace.Profiler) 
+     * @see BTraceUtils.Profiling#snapshot(com.sun.btrace.Profiler)
      */
     static Profiler.Snapshot snapshot(Profiler profiler) {
         return profiler.snapshot();
@@ -2306,7 +2289,7 @@ public final class BTraceRuntime {
                 System.loadLibrary("btrace");
                 dtraceEnabled = true;
             } catch (LinkageError le) {
-                if (loader == null || 
+                if (loader == null ||
                     loader.getResource("com/sun/btrace") == null) {
                     System.err.println("cannot load libbtrace.so, will miss DTrace probes from BTrace");
                     return;
