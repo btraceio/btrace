@@ -130,6 +130,7 @@
             <arg value="-DrepositoryId=${maven-staging-repository-id}" />
             <arg value="-DpomFile=${build.dir}/pom-btrace-agent.xml" />
             <arg value="-Dfile=${agent.jar}" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
         <artifact:mvn>
@@ -139,6 +140,7 @@
             <arg value="-DpomFile=${build.dir}/pom-btrace-agent.xml" />
             <arg value="-Dfile=${agent-sources.jar}" />
             <arg value="-Dclassifier=sources" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
         <artifact:mvn>
@@ -148,6 +150,7 @@
             <arg value="-DpomFile=${build.dir}/pom-btrace-agent.xml" />
             <arg value="-Dfile=${agent-javadoc.jar}" />
             <arg value="-Dclassifier=javadoc" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
         <artifact:mvn>
@@ -156,6 +159,7 @@
             <arg value="-DrepositoryId=${maven-staging-repository-id}" />
             <arg value="-DpomFile=${build.dir}/pom-btrace-boot.xml" />
             <arg value="-Dfile=${boot.jar}" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
         <artifact:mvn>
@@ -165,6 +169,7 @@
             <arg value="-DpomFile=${build.dir}/pom-btrace-boot.xml" />
             <arg value="-Dfile=${boot-sources.jar}" />
             <arg value="-Dclassifier=sources" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
         <artifact:mvn>
@@ -174,6 +179,7 @@
             <arg value="-DpomFile=${build.dir}/pom-btrace-boot.xml" />
             <arg value="-Dfile=${boot-javadoc.jar}" />
             <arg value="-Dclassifier=javadoc" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
         <artifact:mvn>
@@ -182,6 +188,7 @@
             <arg value="-DrepositoryId=${maven-staging-repository-id}" />
             <arg value="-DpomFile=${build.dir}/pom-btrace-client.xml" />
             <arg value="-Dfile=${client.jar}" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
         <artifact:mvn>
@@ -191,6 +198,7 @@
             <arg value="-DpomFile=${build.dir}/pom-btrace-client.xml" />
             <arg value="-Dfile=${client-sources.jar}" />
             <arg value="-Dclassifier=sources" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
         <artifact:mvn>
@@ -200,6 +208,7 @@
             <arg value="-DpomFile=${build.dir}/pom-btrace-client.xml" />
             <arg value="-Dfile=${client-javadoc.jar}" />
             <arg value="-Dclassifier=javadoc" />
+            <arg value="-Dgpg.passphrase=${gpg.passphrase}"/>
             <arg value="-Pgpg" />
         </artifact:mvn>
    </target>
@@ -337,6 +346,7 @@
     <target name="load.properties">
         <echo message="Loading build properties file"/>
         <property file="build.properties"/>
+        <property file="private.properties"/>
     </target>
     <target name="dist" depends="jar, test-dist">
         <delete dir="vi${dist.dir}"/>

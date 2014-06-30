@@ -18,3 +18,4 @@ website
 .class$
 .idea
 .iml
+^make/private\.properties$
