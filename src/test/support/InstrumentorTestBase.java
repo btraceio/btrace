@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright 2008-2014 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ abstract public class InstrumentorTestBase {
     protected static class Trace {
         final byte[] content;
         final List<OnMethod> onMethods;
-        final String className;
+        public final String className;
 
         public Trace(byte[] content, List<OnMethod> onMethods, String className) {
             this.content = content;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,15 +34,16 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * This class adapter injects a freshly loaded class with instructions to invoke
  * BTrace class retransformation upon invoking its static initializer.
  * @author Jaroslav Bachorik
+ * @since 1.2.1
  */
 public class ClinitInjector extends ClassVisitor {
-    private static String CLINIT = "<clinit>";
-    
+    private static final String CLINIT = "<clinit>";
+
     private boolean clinitFound = false;
     private boolean transformed = false;
     private final String runtime;
     private final String cname;
-    
+
     public ClinitInjector(ClassVisitor cv, String runtime, String cname) {
         super(Opcodes.ASM4, cv);
         this.runtime = runtime;
@@ -52,22 +53,23 @@ public class ClinitInjector extends ClassVisitor {
     public boolean isTransformed() {
         return transformed;
     }
-    
+
     @Override
     public void visit(int version, int access, String name, String signature, String supername, String[] interfaces) {
-        if (((access & (Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION)) != 0) ||
-            (supername.equals("java/lang/Object") && interfaces.length == 0)) return;
-        transformed = true;
+        if (!(((access & (Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION)) != 0) ||
+            (supername.equals("java/lang/Object") && interfaces.length == 0))) {
+            transformed = true;
+        }
         int major = version & 0x0000ffff;
         super.visit(major < Opcodes.V1_5 ? Opcodes.V1_5 : version, access, name, signature, supername, interfaces);
     }
-    
-    
+
+
 
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         MethodVisitor visitor = super.visitMethod(access, name, desc, signature, exceptions);
-        if (CLINIT.equals(name)) {
+        if (transformed && CLINIT.equals(name)) {
             visitor = new MethodVisitor(Opcodes.ASM4, visitor) {
                 private boolean exitFound = false;
                 private int requiredStack = 0;
@@ -85,7 +87,7 @@ public class ClinitInjector extends ClassVisitor {
                 @Override
                 public void visitInsn(int i) {
                     // checking for existence of a proper exit instruction
-                    if (i == Opcodes.RETURN || i == Opcodes.IRETURN || 
+                    if (i == Opcodes.RETURN || i == Opcodes.IRETURN ||
                         i == Opcodes.LRETURN || i == Opcodes.DRETURN ||
                         i == Opcodes.FRETURN || i == Opcodes.ATHROW) {
                         exitFound = true;
@@ -106,10 +108,10 @@ public class ClinitInjector extends ClassVisitor {
         }
         return visitor;
     }
-    
+
     @Override
     public void visitEnd() {
-        if (!clinitFound) {
+        if (transformed && !clinitFound) {
             MethodVisitor mv = visitMethod(Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC, CLINIT, "()V", null, null); // NOI18N
             // this will call this method's visitMethod method, effectively generating the clinit content
             mv.visitCode();
@@ -120,17 +122,17 @@ public class ClinitInjector extends ClassVisitor {
         }
         super.visitEnd();
     }
-    
+
     private int generateClinit(MethodVisitor mv) {
         Type clazz = Type.getType("L" + cname + ";");
-        
+
         // the client name (the BTrace script class name)
         mv.visitLdcInsn(runtime);
         // the name of the currently processed class
         mv.visitLdcInsn(clazz); // NOI18N
         // invocatio nof BTraceRuntime.retransform() method
         mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/sun/btrace/BTraceRuntime", "retransform", "(Ljava/lang/String;Ljava/lang/Class;)V"); // NOI18N
-        
+
         return clazz.getSize() + Type.getType(String.class).getSize();
     }
 }
