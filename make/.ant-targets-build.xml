@@ -1,0 +1,10 @@
+all
+compile
+compile-src
+compile-tests
+create.javadocs
+create.sources
+jar
+javadoc
+upload.snapshots
+upload.staging

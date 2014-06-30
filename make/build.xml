@@ -274,6 +274,11 @@
             <arg value="-cp ${build.dir}/test"/>
             <arg value="-d ${tests.dir}"/>
         </apply>
+        <echo>copying source traces</echo>
+        <copy todir="${tests.dir}" >
+            <fileset dir="${traces.dir}" includes="**/*.java"/>
+            <globmapper from="*.btrace" to="*.java"/>
+        </copy>
     </target>
 
     <target name="compile-dtrace" if="libdtrace.jni.available" depends="prepare">

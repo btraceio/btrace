@@ -3267,7 +3267,7 @@ public class BTraceUtils {
             // passing '5' to skip our own frames to generate stack trace
             jstack(1, numFrames);
         }
-        
+
         private static void jstack(int strip, int numFrames) {
             if (numFrames == 0) return;
             StackTraceElement[] st = Thread.currentThread().getStackTrace();
@@ -3291,7 +3291,7 @@ public class BTraceUtils {
         public static void jstackAll(int numFrames) {
             jstackAll(1, numFrames);
         }
-        
+
         private static void jstackAll(int strip, int numFrames) {
             BTraceRuntime.stackTraceAll(numFrames);
         }
@@ -3319,7 +3319,7 @@ public class BTraceUtils {
             }
             return jstackStr(1, numFrames);
         }
-        
+
         private static String jstackStr(int strip, int numFrames) {
             if (numFrames == 0) {
                 return "";
@@ -3351,7 +3351,7 @@ public class BTraceUtils {
             }
             return BTraceRuntime.stackTraceAllStr(numFrames);
         }
-        
+
         /**
          * Prints the stack trace of the given exception object.
          *
@@ -4595,11 +4595,11 @@ public class BTraceUtils {
             }
             return false;
         }
-        
+
         public static <E> Object[] toArray(Collection<E> collection) {
         	return BTraceRuntime.toArray(collection);
         }
-        
+
         // operations on Deque
         public static <V> void push(Deque<V> queue, V value) {
             BTraceRuntime.push(queue, value);
@@ -6273,6 +6273,25 @@ public class BTraceUtils {
              */
             public static long daemonThreadCount() {
                 return BTraceRuntime.getDaemonThreadCount();
+            }
+
+            /**
+             * Returns the system load average for the last minute
+             *
+             * @return the system load average for the last minute
+             */
+            public static double systemLoadAverage() {
+                return BTraceRuntime.getSystemLoadAverage();
+            }
+
+            /**
+             * Returns the CPU time used by the process on which the Java virtual machine is running in nanoseconds.
+             *
+             * @return the CPU time used by the process on which the JVM is running in nanoseconds. Returns -1 if
+             * this operation is not supported on this platform
+             */
+            public static long processCPUTime() {
+                return BTraceRuntime.getProcessCPUTime();
             }
 
             /**

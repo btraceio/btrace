@@ -105,6 +105,10 @@ import javax.management.NotificationEmitter;
 import javax.management.NotificationListener;
 import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
+
+import java.lang.management.OperatingSystemMXBean;
+
+import com.sun.management.UnixOperatingSystemMXBean;
 import sun.misc.Perf;
 import sun.misc.Unsafe;
 import sun.reflect.CallerSensitive;
@@ -194,6 +198,7 @@ public final class BTraceRuntime {
     private static volatile ThreadMXBean threadMBean;
     private static volatile List<GarbageCollectorMXBean> gcBeanList;
     private static volatile List<MemoryPoolMXBean> memPoolList;
+    private static volatile OperatingSystemMXBean operatingSystemMXBean;
 
     // bytecode generator that generates Runnable implementations
     private static RunnableGenerator runnableGenerator;
@@ -1501,6 +1506,20 @@ public final class BTraceRuntime {
     	return membuffer.toString();
      }
 
+    static double getSystemLoadAverage() {
+        initOperatingSystemBean();
+        return operatingSystemMXBean.getSystemLoadAverage();
+    }
+
+    static long getProcessCPUTime() {
+        initOperatingSystemBean();
+        if (operatingSystemMXBean instanceof com.sun.management.OperatingSystemMXBean) {
+            return ((com.sun.management.OperatingSystemMXBean)operatingSystemMXBean).getProcessCpuTime();
+        }
+
+        return -1;
+    }
+
     static void serialize(Object obj, String fileName) {
         try {
             BufferedOutputStream bos = new BufferedOutputStream(
@@ -1987,6 +2006,29 @@ public final class BTraceRuntime {
             synchronized (BTraceRuntime.class) {
                 if (memPoolList == null) {
                     memPoolList = getMemoryPoolMXBeans();
+                }
+            }
+        }
+    }
+
+    private static OperatingSystemMXBean getOperatingSystemMXBean() {
+        try {
+            return AccessController.doPrivileged(
+                new PrivilegedExceptionAction<OperatingSystemMXBean>() {
+                    public OperatingSystemMXBean run() throws Exception {
+                        return ManagementFactory.getOperatingSystemMXBean();
+                    }
+                });
+        } catch (Exception exp) {
+            throw new UnsupportedOperationException(exp);
+        }
+    }
+
+    private static void initOperatingSystemBean() {
+        if (operatingSystemMXBean == null) {
+            synchronized (BTraceRuntime.class) {
+                if (operatingSystemMXBean == null) {
+                    operatingSystemMXBean = getOperatingSystemMXBean();
                 }
             }
         }
