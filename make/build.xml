@@ -9,7 +9,7 @@
     <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/META-INF/*"/>
     <property name="boot.excludes" value="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/* **/asm/** **/api/**/* **/spi/**/*"/>
     <property name="client.excludes" value="**/runtime/* **/agent/* **/META-INF/*"/>
-    
+
     <target name="prepare" depends="load.properties">
         <mkdir dir="${classes.dir}"/>
         <mkdir dir="${javadoc.dir}"/>
@@ -44,6 +44,7 @@
           usetimestamp="true"/>
        <path id="maven-ant-tasks.classpath" path="${build.dir}/maven-ant-tasks-2.1.3.jar" />
        <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
+                uri="antlib:org.apache.maven.artifact.ant"
                 classpathref="maven-ant-tasks.classpath" />
 
    </target>
@@ -97,7 +98,7 @@
        </antcall>
    </target>
 
-   <target name="upload.snapshots" depends="create.snapshot.poms" description="Publish btrace binaries to Maven2 snapshots repository">
+   <target name="upload.snapshots" depends="initialize.maven,create.snapshot.poms" description="Publish btrace binaries to Maven2 snapshots repository">
         <artifact:mvn>
             <arg value="org.apache.maven.plugins:maven-deploy-plugin:2.6:deploy-file" />
             <arg value="-Durl=${maven-snapshots-repository-url}" />
@@ -288,7 +289,7 @@
             <classpath refid="javac.classpath"/>
         </javac>
     </target>
-    
+
     <target name="create.sources" depends="prepare" description="Creates source archives for maven artifacts">
         <jar jarfile="${agent-sources.jar}"
          basedir="${share.src.dir}"
@@ -300,7 +301,7 @@
          basedir="${share.src.dir}"
          excludes="${client.excludes}"/>
     </target>
-    
+
     <target name="create.javadocs" depends="prepare" description="Creates javadoc archives for maven artifacts">
         <javadoc destdir="${build.dir}/agent-javadoc" classpath="${classes.dir}" use="true">
             <fileset dir="${share.src.dir}" excludes="${agent.excludes} **/*.index **/*.properties"/>
@@ -318,7 +319,7 @@
         <jar jarfile="${client-javadoc.jar}"
          basedir="${build.dir}/client-javadoc"/>
     </target>
-    
+
     <target name="jar" depends="compile" description="Creates deployment bundles">
         <unjar src="${lib.dir}/btrace-asm-${asm.version}.jar" dest="${classes.dir}"/>
         <jar jarfile="${agent.jar}"
