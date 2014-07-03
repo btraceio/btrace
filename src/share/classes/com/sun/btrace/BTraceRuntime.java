@@ -26,7 +26,6 @@
 package com.sun.btrace;
 
 import java.lang.management.ManagementFactory;
-import static java.lang.management.ManagementFactory.*;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -186,7 +185,12 @@ public final class BTraceRuntime {
         }
     }
 
-    private static ThreadEnteredMap map = new ThreadEnteredMap(NULL);
+    private static ThreadLocal<BTraceRuntime> rt = new ThreadLocal<BTraceRuntime>() {
+        @Override
+        protected BTraceRuntime initialValue() {
+            return NULL;
+        }
+    };
 
     // BTraceRuntime against BTrace class name
     private static Map<String, BTraceRuntime> runtimes =
@@ -427,15 +431,13 @@ public final class BTraceRuntime {
      */
     public static boolean enter(BTraceRuntime current) {
         if (current.disabled) return false;
-        return map.enter(current);
-//        // check we have entered already or disabled
-//        if (current.disabled || (tls.get() != null)) {
-//            return false;
-//        } else {
-//            tls.set(current);
-//            return true;
-//        }
+        if (rt.get() != NULL) {
+            return false;
+        } else {
+            rt.set(current);
+            return true;
         }
+    }
 
     public static boolean enter() {
         return enter(dummy);
@@ -447,8 +449,7 @@ public final class BTraceRuntime {
      * method continues).
      */
     public static void leave() {
-        map.exit();
-//        tls.remove();
+        rt.remove();
     }
 
     /**
@@ -471,8 +472,7 @@ public final class BTraceRuntime {
             String event = ecmd.getEvent();
             Method eventHandler = eventHandlers.get(event);
             if (eventHandler != null) {
-//                BTraceRuntime oldRuntime = tls.get();
-                BTraceRuntime oldRuntime = (BTraceRuntime)map.get();
+                BTraceRuntime oldRuntime = rt.get();
                 leave();
                 try {
                     eventHandler.invoke(null, (Object[])null);
@@ -1820,8 +1820,7 @@ public final class BTraceRuntime {
      * if there is one.
      */
     private static BTraceRuntime getCurrent() {
-//        BTraceRuntime current = tls.get();
-        BTraceRuntime current = (BTraceRuntime)map.get();
+        BTraceRuntime current = rt.get();
         assert current != null : "BTraceRuntime is null!";
         return current;
     }
