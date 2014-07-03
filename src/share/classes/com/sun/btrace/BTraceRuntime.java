@@ -108,7 +108,6 @@ import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
 
-import com.sun.management.UnixOperatingSystemMXBean;
 import sun.misc.Perf;
 import sun.misc.Unsafe;
 import sun.reflect.CallerSensitive;
@@ -146,7 +145,18 @@ public final class BTraceRuntime {
     final private static Thread samplerThread;
     volatile public static long TIMESTAMP = 0L;
 
+    private static boolean isNewerThan8 = false;
+
     static {
+        try {
+            Reflection.class.getMethod("getCallerClass");
+            isNewerThan8 = true;
+        } catch (NoSuchMethodException ex) {
+            // ignore
+        } catch (SecurityException ex) {
+            // ignore
+        }
+
         dummy = new BTraceRuntime();
         NULL = new BTraceRuntime();
         LINE_SEPARATOR = System.getProperty("line.separator");
@@ -384,7 +394,7 @@ public final class BTraceRuntime {
 
     @CallerSensitive
     public static void init(PerfReader perfRead, RunnableGenerator runGen) {
-        Class caller = Reflection.getCallerClass();
+        Class caller = isNewerThan8 ? Reflection.getCallerClass() : Reflection.getCallerClass(2);
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
             throw new SecurityException("unsafe init");
         }
@@ -395,7 +405,7 @@ public final class BTraceRuntime {
 
     @CallerSensitive
     public Class defineClass(byte[] code) {
-        Class caller = Reflection.getCallerClass();
+        Class caller = isNewerThan8 ? Reflection.getCallerClass() : Reflection.getCallerClass(2);
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
             throw new SecurityException("unsafe defineClass");
         }
@@ -404,7 +414,7 @@ public final class BTraceRuntime {
 
     @CallerSensitive
     public Class defineClass(byte[] code, boolean mustBeBootstrap) {
-        Class caller = Reflection.getCallerClass();
+        Class caller = isNewerThan8 ? Reflection.getCallerClass() : Reflection.getCallerClass(2);
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
             throw new SecurityException("unsafe defineClass");
         }
@@ -425,7 +435,7 @@ public final class BTraceRuntime {
 //            tls.set(current);
 //            return true;
 //        }
-    }
+        }
 
     public static boolean enter() {
         return enter(dummy);
