@@ -77,7 +77,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private volatile List<OnProbe> onProbes;
     private volatile ClassFilter filter;
     private volatile boolean skipRetransforms;
-    private volatile boolean hasSubclassChecks;    
+    private volatile boolean hasSubclassChecks;
     protected final boolean debug = Main.isDebug();
     protected final boolean trackRetransforms = Main.isRetransformTracking();
 
@@ -90,7 +90,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         AnnotationParser.class.getClass();
         AnnotationType.class.getClass();
         Annotation.class.getClass();
-        
+
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
 
@@ -99,7 +99,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         @Override
         public byte[] transform(ClassLoader loader, final String cname, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
             if (!hasSubclassChecks || classBeingRedefined != null || isBTraceClass(cname) || isSensitiveClass(cname)) return null;
-            
+
             if (!skipRetransforms) {
                 if (debug) Main.debugPrint("injecting <clinit> for " + cname); // NOI18N
                 ClassReader cr = new ClassReader(classfileBuffer);
@@ -117,7 +117,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             return null;
         }
     };
-    
+
     private static PerfReader createPerfReaderImpl() {
         // see if we can access any jvmstat class
         try {
@@ -131,7 +131,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     Client(Instrumentation inst) {
         this.inst = inst;
-    }  
+    }
 
     public byte[] transform(
                 ClassLoader loader,
@@ -142,6 +142,13 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         throws IllegalClassFormatException {
         boolean entered = BTraceRuntime.enter();
         try {
+            if (cname == null) {
+                cname = readClassName(classfileBuffer);
+                if (cname == null) {
+                    if (debug) Main.debugPrint("skipping transform for unknown class"); // NOI18N
+                    return null;
+                }
+            }
             if (isBTraceClass(cname) || isSensitiveClass(cname)) {
                 if (debug) Main.debugPrint("skipping transform for BTrace class " + cname); // NOI18N
                 return null;
@@ -164,7 +171,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                         }
                     }
                 }
-            
+
             return null; // ignore
         } catch (Exception e) {
             e.printStackTrace();
@@ -178,12 +185,12 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             }
         }
     }
-    
+
     void registerTransformer() {
         inst.addTransformer(clInitTransformer, false);
         inst.addTransformer(this, true);
     }
-    
+
     void unregisterTransformer() {
         inst.removeTransformer(this);
         inst.removeTransformer(clInitTransformer);
@@ -230,7 +237,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
         this.filter = new ClassFilter(onMethods);
         if (debug) Main.debugPrint("created class filter");
-        
+
         ClassWriter writer = InstrumentUtils.newClassWriter(btraceCode);
         ClassReader reader = new ClassReader(btraceCode);
         ClassVisitor visitor = new Preprocessor(writer);
@@ -355,13 +362,13 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     /*
      * Certain classes like java.lang.ThreadLocal and it's
-     * inner classes, java.lang.Object cannot be safely 
+     * inner classes, java.lang.Object cannot be safely
      * instrumented with BTrace. This is because BTrace uses
      * ThreadLocal class to check recursive entries due to
      * BTrace's own functions. But this leads to infinite recursions
      * if BTrace instruments java.lang.ThreadLocal for example.
      * For now, we avoid such classes till we find a solution.
-     */     
+     */
     private static boolean isSensitiveClass(String name) {
         return name.equals("java/lang/Object") || // NOI18N
                name.startsWith("java/lang/ThreadLocal") || // NOI18N
@@ -416,6 +423,14 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         ClassReader reader = new ClassReader(buf);
         InstrumentUtils.accept(reader, new MethodRemover(writer));
         return writer.toByteArray();
+    }
+
+    private static String readClassName(byte[] classfileBuffer) {
+        if (classfileBuffer == null || classfileBuffer.length == 0) {
+            return null;
+        }
+        ClassReader cr = new ClassReader(classfileBuffer);
+        return cr.getClassName();
     }
 
     private static long count = 0L;
