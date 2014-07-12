@@ -106,6 +106,7 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
+import java.util.concurrent.BlockingQueue;
 
 import sun.misc.Perf;
 import sun.misc.Unsafe;
@@ -146,7 +147,16 @@ public final class BTraceRuntime {
 
     private static boolean isNewerThan8 = false;
 
+    // the command FIFO queue related settings
+    private static final int CMD_QUEUE_LIMIT_DEFAULT = 100;
+    public static final String CMD_QUEUE_LIMIT_KEY = "com.sun.btrace.runtime.cmdQueueLimit";
+
+    // the command FIFO queue upper limit
+    private static int CMD_QUEUE_LIMIT;
+
     static {
+        setupCmdQueueParams();
+
         try {
             Reflection.class.getMethod("getCallerClass");
             isNewerThan8 = true;
@@ -258,7 +268,7 @@ public final class BTraceRuntime {
     private volatile NotificationListener memoryListener;
 
     // Command queue for the client
-    private volatile LinkedBlockingQueue<Command> queue;
+    private volatile BlockingQueue<Command> queue;
 
     private static class SpeculativeQueueManager {
         // maximum number of speculative buffers
@@ -315,10 +325,10 @@ public final class BTraceRuntime {
             currentSpeculationId.set(id);
         }
 
-        void commit(int id, LinkedBlockingQueue<Command> result) {
+        void commit(int id, BlockingQueue<Command> result) {
             validateId(id);
             currentSpeculationId.set(null);
-            LinkedBlockingQueue<Command> sb = speculativeQueues.get(id);
+            BlockingQueue<Command> sb = speculativeQueues.get(id);
             if (sb != null) {
                 result.addAll(sb);
                 sb.clear();
@@ -360,7 +370,7 @@ public final class BTraceRuntime {
                          final CommandListener cmdListener,
                          Instrumentation inst) {
         this.args = args;
-        this.queue = new LinkedBlockingQueue<Command>();
+        this.queue = new LinkedBlockingQueue<Command>(CMD_QUEUE_LIMIT);
         this.specQueueManager = new SpeculativeQueueManager();
         this.cmdListener = cmdListener;
         this.className = className;
@@ -2368,5 +2378,27 @@ public final class BTraceRuntime {
                 }
             }
         }
+    }
+
+    private static void setupCmdQueueParams() {
+        String maxQLen = System.getProperty(CMD_QUEUE_LIMIT_KEY, null);
+        if (maxQLen == null) {
+            CMD_QUEUE_LIMIT = CMD_QUEUE_LIMIT_DEFAULT;
+            debugPrint("\"" + CMD_QUEUE_LIMIT_KEY + "\" not provided. " +
+                    "Using the default cmd queue limit of " + CMD_QUEUE_LIMIT_DEFAULT);
+        } else {
+            try {
+                CMD_QUEUE_LIMIT = Integer.parseInt(maxQLen);
+                debugPrint("The cmd queue limit set to " + CMD_QUEUE_LIMIT);
+            } catch (NumberFormatException e) {
+                debugPrint("\"" + maxQLen + "\" is not a valid int number. " +
+                        "Using the default cmd queue limit of " + CMD_QUEUE_LIMIT_DEFAULT);
+                CMD_QUEUE_LIMIT = CMD_QUEUE_LIMIT_DEFAULT;
+            }
+        }
+    }
+
+    private static void debugPrint(String msg) {
+        System.out.println("btrace DEBUG: " + msg);
     }
 }

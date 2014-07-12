@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.client;
 
+import com.sun.btrace.BTraceRuntime;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -293,6 +294,10 @@ public class Client {
                     serverVmProps.getProperty("java.class.path"),
                     serverVmProps.getProperty("java.home")
                 );
+            }
+            String cmdQueueLimit = System.getProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, null);
+            if (cmdQueueLimit != null) {
+                agentArgs += ",cmdQueueLimit=" + cmdQueueLimit;
             }
             agentArgs += ",systemClassPath=" + sysCp;
             agentArgs += ",probeDescPath=" + probeDescPath;

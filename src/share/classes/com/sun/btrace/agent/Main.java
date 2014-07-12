@@ -84,7 +84,7 @@ public final class Main {
             return result;
         }
     };
-    
+
     private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(daemonizedThreadFactory);
 
     private static void registerExitHook(final Client c) {
@@ -212,6 +212,13 @@ public final class Main {
         p = argMap.get("debug");
         debugMode = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("debugMode is " + debugMode);
+
+        p = argMap.get("cmdQueueLimit");
+        if (p != null) {
+            debugPrint("cmdQueueLimit provided: " + p);
+            System.setProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, p);
+        }
+
         p = argMap.get("trackRetransforms");
         trackRetransforms = p != null && !"false".equals(p);
         if (isRetransformTracking()) debugPrint("trackRetransforms is " + trackRetransforms);
@@ -219,6 +226,7 @@ public final class Main {
         if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
             if (isDebug()) debugPrint("scriptOutputFile is " + scriptOutputFile);
         }
+
         p = argMap.get("fileRollMilliseconds");
         if (p != null && p.length() > 0) {
             Long msParsed = null;
@@ -283,13 +291,13 @@ public final class Main {
     }
 
     // This is really a *private* interface to Glassfish monitoring.
-    // For now, please avoid using this in any other scenario. 
+    // For now, please avoid using this in any other scenario.
     public static void handleFlashLightClient(byte[] code, PrintWriter traceWriter) {
         handleNewClient(code, traceWriter);
     }
 
     // This is really a *private* interface to Glassfish monitoring.
-    // For now, please avoid using this in any other scenario. 
+    // For now, please avoid using this in any other scenario.
     public static void handleFlashLightClient(byte[] code) {
         try {
             String twn = "flashlighttrace" + (new Date()).getTime();
@@ -306,7 +314,7 @@ public final class Main {
     private static void loadBTraceScript(String filename, boolean traceToStdOut) {
         try {
             if (! filename.endsWith(".class")) {
-                if (isDebug()) { 
+                if (isDebug()) {
                     debugPrint("refusing " + filename + ". script should be a pre-compiled .class file");
                 }
                 return;
@@ -323,7 +331,7 @@ public final class Main {
             } else {
                 String agentName = System.getProperty("btrace.agent", null);
             	String currentBtraceScriptOutput = scriptOutputFile;
-            	
+
                 if (currentBtraceScriptOutput == null || currentBtraceScriptOutput.length() == 0) {
                     currentBtraceScriptOutput = filename + (agentName != null ? "." + agentName  : "") + ".btrace";
                     if (isDebug()) debugPrint("scriptOutputFile not specified. defaulting to " + currentBtraceScriptOutput);
@@ -449,7 +457,7 @@ public final class Main {
                 }
             }
         });
-        
+
     }
 
     private static void error(String msg) {
