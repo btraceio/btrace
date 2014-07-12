@@ -207,7 +207,7 @@
                     <action>
                         <script>${ant.script}</script>
                         <label>Create POMs</label>
-                        <target>create.poms</target>
+                        <target>create.snapshot.poms</target>
                     </action>
                 </context-menu>
             </view>
