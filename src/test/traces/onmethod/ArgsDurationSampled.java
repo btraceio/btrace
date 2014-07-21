@@ -23,29 +23,25 @@
  * have any questions.
  */
 
-package com.sun.btrace.runtime;
+package traces.onmethod;
 
-import support.InstrumentorTestBase;
-import org.junit.Test;
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.Duration;
+import static com.sun.btrace.BTraceUtils.*;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
-public class BTRACE69Test extends InstrumentorTestBase {
-    @Test
-    public void bytecodeValidation() throws Exception {
-        originalBC = loadTargetClass("OnMethodTest");
-        transform("issues/BTRACE69");
-        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
-                            "TRYCATCHBLOCK L4 L6 L6 java/lang/Throwable\n" +
-                            "DUP\nASTORE 2\nALOAD 2\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncEntry (Ljava/lang/Object;)V\n" +
-                            "L7\nLINENUMBER 110 L7\nDUP\nASTORE 3\nALOAD 3\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
-                            "GOTO L8\nASTORE 4\nDUP\n" +
-                            "ASTORE 5\nALOAD 5\n" +
-                            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
-                            "ALOAD 4\nATHROW\nL8\nLINENUMBER 111 L8\nRETURN\nL5\nATHROW");
+@BTrace
+public class ArgsDurationSampled {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
+    public static void args(@Self Object self, @Return long retVal, @Duration(samplingInterval = 10) long dur, String a, long b, String[] c, int[] d) {
+        println("args");
     }
 }

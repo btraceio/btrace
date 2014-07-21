@@ -48,7 +48,7 @@ public class OnMethodTest {
         OnMethodTest instance  = new OnMethodTest();
         return callTargetStatic(a, b) + instance.callTarget(a, b);
     }
-    
+
     public static long callTargetStatic(String a, long b) {
         return 3L;
     }
@@ -65,7 +65,7 @@ public class OnMethodTest {
         try {
             throw new IOException("hello world");
         } catch (IOException e) {
-            
+            e.printStackTrace();
         }
     }
 

@@ -23,29 +23,39 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
-
-import support.InstrumentorTestBase;
-import org.junit.Test;
+package com.sun.btrace.util.templates;
 
 /**
- * Tests that specifying a class by its associated annotation does not cause NPE
+ * An interface to be implemented by the template expanders
  * @author Jaroslav Bachorik
+ * @since 1.3
  */
-public class BTRACE106Test extends InstrumentorTestBase {
-    @Test
-    public void annotatedClass() throws Exception {
-        originalBC = loadTargetClass("issues/BTRACE106");
-        transform("issues/BTRACE106");
-        checkTransformation("ALOAD 0\nLDC \"aMethod\"\n"
-                + "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LSTORE 1\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LSTORE 3\nALOAD 0\nLDC \"bMethod\"\nLLOAD 3\nLLOAD 1\nLSUB\n"
-                + "DUP2\nLSTORE 5\n"
-                + "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
-                + "MAXSTACK = 6\nMAXLOCALS = 7"
-        );
+public interface TemplateExpander {
+    /**
+     * The result of expansion
+     * <ul>
+     * <li><b>CONSUMED</b> = expander has claimed and expanded the template</li>
+     * <li><b>IGNORED</b> = expander has claimed the template but didn't expanded it</li>
+     * <li><b>PASSED</b> = expander has not claimed the template</li>
+     * </ul>
+     */
+    public static enum Result {
+        CONSUMED, IGNORED, PASSED
     }
+
+    /**
+     * A knockoff of the java.util.function.Consumer interface for pre-8 usage
+     * @param <T>
+     */
+    public static interface Consumer<T> {
+        void consume(T visitor);
+    }
+
+    /**
+     * The expander identifies and, possibly, expands the given template
+     * @param v The expander parent
+     * @param t The template to process
+     * @return appropriate {@linkplain Result} value
+     */
+    Result expand(TemplateExpanderVisitor v, Template t);
 }

@@ -36,22 +36,24 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * This visitor helps in inserting code whenever a method 
- * "returns" because of an exception (i.e., no exception 
+ * This visitor helps in inserting code whenever a method
+ * "returns" because of an exception (i.e., no exception
  * handler in the method and so it's frame poped). The code
- * to insert on method error return may be decided by derived 
- * class. By default, this class inserts code to print message 
+ * to insert on method error return may be decided by derived
+ * class. By default, this class inserts code to print message
  * to say "no handler here".
  *
  * @author A. Sundararajan
  */
-public class ErrorReturnInstrumentor extends MethodInstrumentor {
+public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
     private Label start = new Label();
     private Label end = new Label();
 
-    public ErrorReturnInstrumentor(MethodVisitor mv, final int[] tsIndex, String parentClz, String superClz,
+    public ErrorReturnInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
@@ -68,7 +70,7 @@ public class ErrorReturnInstrumentor extends MethodInstrumentor {
         visitInsn(ATHROW);
         super.visitMaxs(maxStack, maxLocals);
     }
- 
+
     protected void onErrorReturn() {
         println("error return from " + getName() + getDescriptor());
     }
@@ -86,11 +88,11 @@ public class ErrorReturnInstrumentor extends MethodInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new ErrorReturnInstrumentor(mv, null, args[0], args[0], access, name, desc);
+                     return new ErrorReturnInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

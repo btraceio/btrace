@@ -36,10 +36,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
+import java.net.URL;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.objectweb.asm.util.TraceClassVisitor;
 import static org.junit.Assert.*;
+import org.junit.Before;
+import sun.misc.Unsafe;
 
 /**
  *
@@ -58,17 +63,40 @@ abstract public class InstrumentorTestBase {
         }
     }
 
+    private static Unsafe unsafe;
+
+    static {
+        try {
+            Field unsafeFld = AtomicInteger.class.getDeclaredField("unsafe");
+            unsafeFld.setAccessible(true);
+            unsafe = (Unsafe)unsafeFld.get(null);
+        } catch (Exception e) {
+        }
+    }
+
     protected byte[] originalBC;
     protected byte[] transformedBC;
+
+    private ClassLoader cl;
 
     @After
     public void tearDown() {
         cleanup();
     }
 
+    @Before
+    public void startup() {
+        cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {};
+    }
+
     protected void cleanup() {
         originalBC = null;
         transformedBC = null;
+    }
+
+    protected void load() {
+        String clzName = new ClassReader(transformedBC).getClassName().replace('.', '/');
+        unsafe.defineClass(clzName, transformedBC, 0, transformedBC.length, cl, null);
     }
 
     protected void checkTransformation(String expected) throws IOException {
@@ -87,6 +115,7 @@ abstract public class InstrumentorTestBase {
                     btrace.onMethods, writer));
 
         transformedBC = writer.toByteArray();
+        load();
         System.err.println("==== " + traceName);
     }
 

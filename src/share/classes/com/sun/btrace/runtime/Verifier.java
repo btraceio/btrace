@@ -252,7 +252,11 @@ public class Verifier extends ClassVisitor {
                 }
                 if (desc.equals(BTRACE_DURATION_DESC)) {
                     if (om != null) {
-                        if (om.getLocation().getValue() == Kind.RETURN || om.getLocation().getValue() == Kind.ERROR) {
+                        if (om.getLocation().getValue() == Kind.RETURN ||
+                            om.getLocation().getValue() == Kind.ERROR) {
+                            om.setDurationParameter(parameter);
+                        } else if (om.getLocation().getValue() == Kind.CALL &&
+                                   om.getLocation().getWhere() == Where.AFTER) {
                             om.setDurationParameter(parameter);
                         } else {
                             reportError("duration.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
@@ -275,11 +279,17 @@ public class Verifier extends ClassVisitor {
                 return new AnnotationVisitor(Opcodes.ASM4, super.visitParameterAnnotation(parameter, desc, visible)) {
 
                     public void visit(String string, Object o) {
-                        if (om != null && string.equals("fqn")) { // NOI18N
-                            if (desc.equals(BTRACE_TARGETMETHOD_DESC)) {
-                                om.setTargetMethodOrFieldFqn((Boolean)o);
-                            } else if (desc.equals(BTRACE_PROBEMETHODNAME_DESC)) {
-                                om.setMethodFqn((Boolean)o);
+                        System.err.println(string + " : " + o);
+                        if (om != null) {
+                            if (string.equals("fqn")) {
+                                if (desc.equals(BTRACE_TARGETMETHOD_DESC)) {
+                                    om.setTargetMethodOrFieldFqn((Boolean)o);
+                                } else if (desc.equals(BTRACE_PROBEMETHODNAME_DESC)) {
+                                    om.setMethodFqn((Boolean)o);
+                                }
+                            } else if (string.equals("samplingInterval") &&
+                                       desc.equals(BTRACE_DURATION_DESC)) {
+                                om.setDurationSamplingInterval((Integer)o);
                             }
                         }
                         super.visit(string, o);

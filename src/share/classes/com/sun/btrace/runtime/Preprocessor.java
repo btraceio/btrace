@@ -49,6 +49,7 @@ import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.util.LocalVariableHelperImpl;
 
 /**
  * This class preprocesses a compiled BTrace program.
@@ -72,7 +73,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
  *       BTraceRuntime.handleException on exception catch
  *    7. add a field to store client's BTraceRuntime instance
  *
- * 
+ *
  * @author A. Sundararajan
  */
 public class Preprocessor extends ClassVisitor {
@@ -86,8 +87,8 @@ public class Preprocessor extends ClassVisitor {
         Type.getDescriptor(Property.class);
     public static final String BTRACE_PROPERTY_NAME = "name";
     public static final String BTRACE_PROPERTY_DESCRIPTION = "description";
-    
-        
+
+
     // stuff from BTraceRuntime class
     public static final String BTRACE_RUNTIME =
         Type.getInternalName(BTraceRuntime.class);
@@ -102,9 +103,9 @@ public class Preprocessor extends ClassVisitor {
     public static final String BTRACE_RUNTIME_ENTER;
     public static final String BTRACE_RUNTIME_ENTER_DESC;
     public static final String BTRACE_RUNTIME_LEAVE;
-    public static final String BTRACE_RUNTIME_LEAVE_DESC; 
+    public static final String BTRACE_RUNTIME_LEAVE_DESC;
     public static final String BTRACE_RUNTIME_START;
-    public static final String BTRACE_RUNTIME_START_DESC; 
+    public static final String BTRACE_RUNTIME_START_DESC;
     public static final String BTRACE_RUNTIME_FOR_CLASS;
     public static final String BTRACE_RUNTIME_FOR_CLASS_DESC;
     public static final String BTRACE_RUNTIME_NEW_THREAD_LOCAL;
@@ -132,128 +133,128 @@ public class Preprocessor extends ClassVisitor {
     public static final String BTRACE_RUNTIME_PUT_PERFDOUBLE;
     public static final String BTRACE_RUNTIME_PUT_PERFDOUBLE_DESC;
 
-    static {     
+    static {
        try {
-           Method handleException = 
+           Method handleException =
                        BTraceRuntime.class.getMethod(
-                       "handleException", 
+                       "handleException",
                        new Class[] { Throwable.class });
-           BTRACE_RUNTIME_HANDLE_EXCEPTION = 
+           BTRACE_RUNTIME_HANDLE_EXCEPTION =
                        handleException.getName();
-           BTRACE_RUNTIME_HANDLE_EXCEPTION_DESC = 
+           BTRACE_RUNTIME_HANDLE_EXCEPTION_DESC =
                        Type.getMethodDescriptor(handleException);
 
            Method enter = BTraceRuntime.class.getMethod(
                        "enter",
                        new Class[] { BTraceRuntime.class });
            BTRACE_RUNTIME_ENTER = enter.getName();
-           BTRACE_RUNTIME_ENTER_DESC = 
+           BTRACE_RUNTIME_ENTER_DESC =
                        Type.getMethodDescriptor(enter);
 
            Method leave = BTraceRuntime.class.getMethod(
                        "leave",
                        new Class[0]);
            BTRACE_RUNTIME_LEAVE = leave.getName();
-           BTRACE_RUNTIME_LEAVE_DESC = 
+           BTRACE_RUNTIME_LEAVE_DESC =
                        Type.getMethodDescriptor(leave);
 
            Method start = BTraceRuntime.class.getMethod(
                        "start",
                        new Class[0]);
            BTRACE_RUNTIME_START = start.getName();
-           BTRACE_RUNTIME_START_DESC = 
+           BTRACE_RUNTIME_START_DESC =
                        Type.getMethodDescriptor(start);
 
            Method forClass = BTraceRuntime.class.getMethod(
                        "forClass",
                        new Class[] { Class.class });
            BTRACE_RUNTIME_FOR_CLASS = forClass.getName();
-           BTRACE_RUNTIME_FOR_CLASS_DESC = 
+           BTRACE_RUNTIME_FOR_CLASS_DESC =
                        Type.getMethodDescriptor(forClass);
 
            Method newThreadLocal = BTraceRuntime.class.getMethod(
                        "newThreadLocal",
                        new Class[] { Object.class });
            BTRACE_RUNTIME_NEW_THREAD_LOCAL = newThreadLocal.getName();
-           BTRACE_RUNTIME_NEW_THREAD_LOCAL_DESC = 
+           BTRACE_RUNTIME_NEW_THREAD_LOCAL_DESC =
                        Type.getMethodDescriptor(newThreadLocal);
 
            Method newPerfCounter = BTraceRuntime.class.getMethod(
                        "newPerfCounter",
                        new Class[] { String.class, String.class, Object.class });
            BTRACE_RUNTIME_NEW_PERFCOUNTER = newPerfCounter.getName();
-           BTRACE_RUNTIME_NEW_PERFCOUNTER_DESC = 
+           BTRACE_RUNTIME_NEW_PERFCOUNTER_DESC =
                        Type.getMethodDescriptor(newPerfCounter);
 
            Method getPerfString = BTraceRuntime.class.getMethod(
                        "getPerfString",
                        new Class[] { String.class });
            BTRACE_RUNTIME_GET_PERFSTRING = getPerfString.getName();
-           BTRACE_RUNTIME_GET_PERFSTRING_DESC = 
+           BTRACE_RUNTIME_GET_PERFSTRING_DESC =
                        Type.getMethodDescriptor(getPerfString);
 
            Method getPerfInt = BTraceRuntime.class.getMethod(
                        "getPerfInt",
                        new Class[] { String.class });
            BTRACE_RUNTIME_GET_PERFINT = getPerfInt.getName();
-           BTRACE_RUNTIME_GET_PERFINT_DESC = 
+           BTRACE_RUNTIME_GET_PERFINT_DESC =
                        Type.getMethodDescriptor(getPerfInt);
 
            Method getPerfLong = BTraceRuntime.class.getMethod(
                        "getPerfLong",
                        new Class[] { String.class });
            BTRACE_RUNTIME_GET_PERFLONG = getPerfLong.getName();
-           BTRACE_RUNTIME_GET_PERFLONG_DESC = 
+           BTRACE_RUNTIME_GET_PERFLONG_DESC =
                        Type.getMethodDescriptor(getPerfLong);
 
            Method getPerfFloat = BTraceRuntime.class.getMethod(
                        "getPerfFloat",
                        new Class[] { String.class });
            BTRACE_RUNTIME_GET_PERFFLOAT = getPerfFloat.getName();
-           BTRACE_RUNTIME_GET_PERFFLOAT_DESC = 
+           BTRACE_RUNTIME_GET_PERFFLOAT_DESC =
                        Type.getMethodDescriptor(getPerfFloat);
 
            Method getPerfDouble = BTraceRuntime.class.getMethod(
                        "getPerfDouble",
                        new Class[] { String.class });
            BTRACE_RUNTIME_GET_PERFDOUBLE = getPerfDouble.getName();
-           BTRACE_RUNTIME_GET_PERFDOUBLE_DESC = 
+           BTRACE_RUNTIME_GET_PERFDOUBLE_DESC =
                        Type.getMethodDescriptor(getPerfDouble);
 
            Method putPerfString = BTraceRuntime.class.getMethod(
                        "putPerfString",
                        new Class[] { String.class, String.class });
            BTRACE_RUNTIME_PUT_PERFSTRING = putPerfString.getName();
-           BTRACE_RUNTIME_PUT_PERFSTRING_DESC = 
+           BTRACE_RUNTIME_PUT_PERFSTRING_DESC =
                        Type.getMethodDescriptor(putPerfString);
 
            Method putPerfInt = BTraceRuntime.class.getMethod(
                        "putPerfInt",
                        new Class[] { int.class, String.class });
            BTRACE_RUNTIME_PUT_PERFINT = putPerfInt.getName();
-           BTRACE_RUNTIME_PUT_PERFINT_DESC = 
+           BTRACE_RUNTIME_PUT_PERFINT_DESC =
                        Type.getMethodDescriptor(putPerfInt);
 
            Method putPerfLong = BTraceRuntime.class.getMethod(
                        "putPerfLong",
                        new Class[] { long.class, String.class });
            BTRACE_RUNTIME_PUT_PERFLONG = putPerfLong.getName();
-           BTRACE_RUNTIME_PUT_PERFLONG_DESC = 
+           BTRACE_RUNTIME_PUT_PERFLONG_DESC =
                        Type.getMethodDescriptor(putPerfLong);
 
            Method putPerfFloat = BTraceRuntime.class.getMethod(
                        "putPerfFloat",
                        new Class[] { float.class, String.class });
            BTRACE_RUNTIME_PUT_PERFFLOAT = putPerfFloat.getName();
-           BTRACE_RUNTIME_PUT_PERFFLOAT_DESC = 
+           BTRACE_RUNTIME_PUT_PERFFLOAT_DESC =
                        Type.getMethodDescriptor(putPerfFloat);
 
            Method putPerfDouble = BTraceRuntime.class.getMethod(
                        "putPerfDouble",
                        new Class[] { double.class, String.class });
            BTRACE_RUNTIME_PUT_PERFDOUBLE = putPerfDouble.getName();
-           BTRACE_RUNTIME_PUT_PERFDOUBLE_DESC = 
-                       Type.getMethodDescriptor(putPerfDouble);           
+           BTRACE_RUNTIME_PUT_PERFDOUBLE_DESC =
+                       Type.getMethodDescriptor(putPerfDouble);
        } catch (RuntimeException re) {
            throw re;
        } catch (Exception exp) {
@@ -297,7 +298,7 @@ public class Preprocessor extends ClassVisitor {
         super.visit(version, access, name,
                     signature, superName, interfaces);
     }
-    
+
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
         final AnnotationVisitor zupr = super.visitAnnotation(desc, visible);
         if ("Lcom/sun/btrace/annotations/BTrace;".equals(desc)) {
@@ -331,7 +332,7 @@ public class Preprocessor extends ClassVisitor {
         }
         return zupr;
     }
-    
+
     // prefix for BTrace perf counter names.
     private String externalClassName() {
         if (externalClassName == null) {
@@ -379,8 +380,8 @@ public class Preprocessor extends ClassVisitor {
         }
     }
 
-    public FieldVisitor visitField(final int access, final String name, 
-            final String desc, final String signature, final Object value) {        
+    public FieldVisitor visitField(final int access, final String name,
+            final String desc, final String signature, final Object value) {
         final List<Attribute> attrs = new ArrayList<Attribute>();
         return new FieldVisitor(Opcodes.ASM4) {
             boolean isExport;
@@ -388,12 +389,12 @@ public class Preprocessor extends ClassVisitor {
             boolean isProperty;
             String propName = "";
             String propDescription = "";
-            
+
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 if (desc.equals(BTRACE_TLS_DESC)) {
                     isThreadLocal = true;
                 } else if (desc.equals(BTRACE_EXPORT_DESC)) {
-                    isExport = true;                    
+                    isExport = true;
                 } else if (desc.equals(BTRACE_PROPERTY_DESC)) {
                     isProperty = true;
                     return new AnnotationVisitor(Opcodes.ASM4) {
@@ -415,12 +416,12 @@ public class Preprocessor extends ClassVisitor {
             }
 
             public void visitEnd() {
-                FieldDescriptor fd = new FieldDescriptor(access, name, desc, 
+                FieldDescriptor fd = new FieldDescriptor(access, name, desc,
                                     signature, value, attrs,
                                     isThreadLocal, isExport, isProperty,
                                     propName, propDescription);
                 fields.add(fd);
-                if (isThreadLocal) {         
+                if (isThreadLocal) {
                     threadLocalFields.put(name, fd);
                 } else if (isExport) {
                     exportFields.put(name, fd);
@@ -428,7 +429,7 @@ public class Preprocessor extends ClassVisitor {
             }
         };
     }
-    
+
     public void visitEnd() {
         if (! classInitializerFound) {
             // add a dummy <clinit> method that just returns.
@@ -465,7 +466,7 @@ public class Preprocessor extends ClassVisitor {
             fieldAccess &= ~ACC_PROTECTED;
             fieldAccess |= ACC_PUBLIC;
 
-            FieldVisitor fv = super.visitField(fieldAccess,  
+            FieldVisitor fv = super.visitField(fieldAccess,
                                  BTRACE_FIELD_PREFIX + fieldName,
                                  fieldDesc, fieldSignature, fieldValue);
             if (fd.isProperty) {
@@ -483,14 +484,14 @@ public class Preprocessor extends ClassVisitor {
 
         // add a special field to store client's BTraceRuntime
         super.visitField(ACC_PUBLIC|ACC_STATIC, BTRACE_RUNTIME_FIELD_NAME,
-                   BTRACE_RUNTIME_DESC, null, null);        
+                   BTRACE_RUNTIME_DESC, null, null);
     }
 
-    public MethodVisitor visitMethod(int access, String name, 
+    public MethodVisitor visitMethod(int access, String name,
             String desc, String signature, String[] exceptions) {
         if (name.equals(CONSTRUCTOR)) {
             return super.visitMethod(access, name, desc, signature, exceptions);
-        } else {            
+        } else {
             /*
              * For each probe method, we generate epilog and prolog as shown
              * below:
@@ -500,7 +501,7 @@ public class Preprocessor extends ClassVisitor {
              *        } else {
              *            try {
              *                // user's probe code here with this change:
-             *                // bfore every return in user's code, call 
+             *                // bfore every return in user's code, call
              *                // BTraceRuntime.leave();
              *            } catch (Throwable t) {
              *                BTraceRuntime.handleException(t);
@@ -517,11 +518,11 @@ public class Preprocessor extends ClassVisitor {
                 if ((access & Opcodes.ACC_PROTECTED) > 0) access ^= Opcodes.ACC_PROTECTED;
                 access |= Opcodes.ACC_PUBLIC;
             }
-            
-            MethodVisitor adaptee = super.visitMethod(access, name, desc, 
+
+            MethodVisitor adaptee = super.visitMethod(access, name, desc,
                                                     signature, exceptions);
-            
-            return new MethodInstrumentor(adaptee, className, superName, access, name, desc) {
+
+            return new MethodInstrumentor(new LocalVariableHelperImpl(adaptee, access, desc), className, superName, access, name, desc) {
                 private boolean isBTraceHandler = false;
                 private Label start = new Label();
                 private Label handler = new Label();
@@ -584,7 +585,7 @@ public class Preprocessor extends ClassVisitor {
                             if (desc.equals(JAVA_LANG_STRING_DESC)) {
                                 visitLdcInsn(name);
                                 visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
-                                    BTRACE_RUNTIME_PUT_PERFSTRING, 
+                                    BTRACE_RUNTIME_PUT_PERFSTRING,
                                     BTRACE_RUNTIME_PUT_PERFSTRING_DESC);
                             } else {
                                 visitInsn(POP);
@@ -712,26 +713,26 @@ public class Preprocessor extends ClassVisitor {
                     super.visitCode();
                 }
 
-                public void visitFieldInsn(int opcode, String owner, 
+                public void visitFieldInsn(int opcode, String owner,
                                                String name, String desc) {
                     String fieldName = name;
-                    if (owner.equals(className)) {   
+                    if (owner.equals(className)) {
                         if (exportFields.get(name) != null) {
                             if (opcode == GETSTATIC) {
                                 generateExportGet(perfCounterName(name), desc);
                             } else {
                                 generateExportPut(perfCounterName(name), desc);
                             }
-                            return;                       
+                            return;
                         }
 
                         if (! name.equals(BTRACE_RUNTIME_FIELD_NAME)) {
-                            fieldName = BTRACE_FIELD_PREFIX + name; 
+                            fieldName = BTRACE_FIELD_PREFIX + name;
                         }
 
                         FieldDescriptor fd = threadLocalFields.get(name);
                         if (fd != null) {
-                            if (opcode == GETSTATIC) {                                
+                            if (opcode == GETSTATIC) {
                                 generateThreadLocalGet(fd);
                             } else {
                                 generateThreadLocalPut(fd);
@@ -765,12 +766,12 @@ public class Preprocessor extends ClassVisitor {
                         } else {
                             if (isBTraceHandler) {
                                 visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
-                                    BTRACE_RUNTIME_LEAVE, 
+                                    BTRACE_RUNTIME_LEAVE,
                                     BTRACE_RUNTIME_LEAVE_DESC);
                             }
                         }
                     }
-                    super.visitInsn(opcode);        
+                    super.visitInsn(opcode);
                 }
 
                 public void visitMaxs(int maxStack, int maxLocals) {
@@ -802,7 +803,7 @@ public class Preprocessor extends ClassVisitor {
         FileInputStream fis = new FileInputStream(className + ".class");
         ClassReader reader = new ClassReader(new BufferedInputStream(fis));
         FileOutputStream fos = new FileOutputStream(newName + ".class");
-        ClassWriter writer = InstrumentUtils.newClassWriter();  
+        ClassWriter writer = InstrumentUtils.newClassWriter();
         ClassVisitor cv;
         if (renamed) {
             cv = new ClassRenamer(args[1], new Preprocessor(writer));
@@ -811,5 +812,5 @@ public class Preprocessor extends ClassVisitor {
         }
         InstrumentUtils.accept(reader, cv);
         fos.write(writer.toByteArray());
-    } 
+    }
 }

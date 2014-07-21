@@ -35,24 +35,26 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
  * Instruments method entry and exit points. For exit, both normal and abnormal
  * (exception) return points are instrumented. Subclasses can decide what code
  * is inserted at entry/exit points.
- * 
+ *
  * @author A. Sundararajan
  */
 public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
     private boolean isConstructor;
     private boolean entryCalled;
-    
-    public MethodEntryExitInstrumentor(MethodVisitor mv, int[] tsIndex, String parentClz, String superClz,
+
+    public MethodEntryExitInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv, tsIndex, parentClz, superClz, access, name, desc);
+        super(mv, parentClz, superClz, access, name, desc);
         isConstructor = name.equals(CONSTRUCTOR);
     }
-    
+
     public void visitCode() {
         if (!isConstructor) {
             entryCalled = true;
@@ -60,11 +62,11 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
         }
         super.visitCode();
     }
-    
+
     public void visitMethodInsn(int opcode,
                      String owner,
                      String name,
-                     String desc) {        
+                     String desc) {
         super.visitMethodInsn(opcode, owner, name, desc);
         if (isConstructor && !entryCalled && name.equals(CONSTRUCTOR)) {
             // super or this class constructor call.
@@ -73,12 +75,12 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
             onMethodEntry();
         }
     }
-    
+
     public void visitInsn(int opcode) {
         switch (opcode) {
             case IRETURN:
             case ARETURN:
-            case FRETURN:                           
+            case FRETURN:
             case LRETURN:
             case DRETURN:
             case RETURN:
@@ -88,24 +90,24 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
                 }
                 onMethodReturn(opcode);
                 break;
-            default:                           
+            default:
                 break;
         }
         super.visitInsn(opcode);
     }
-    
+
     protected void onMethodEntry() {
         println("on method entry");
     }
-    
+
     protected void onMethodReturn(int opcode) {
         println("on method return");
     }
-    
+
     protected void onErrorReturn() {
         println("on method error return");
     }
-    
+
     public static void main(final String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: java com.sun.btrace.runtime.ErrorReturnInstrumentor <class>");
@@ -119,11 +121,11 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new MethodEntryExitInstrumentor(mv, null, args[0], args[0], access, name, desc);
+                     return new MethodEntryExitInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

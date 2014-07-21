@@ -34,11 +34,13 @@ import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
  * This visitor helps in inserting code whenever an field access
- * is done. The code to insert on field access may be decided by 
- * derived class. By default, this class inserts code to print 
+ * is done. The code to insert on field access may be decided by
+ * derived class. By default, this class inserts code to print
  * the field access.
  *
  * @author A. Sundararajan
@@ -46,12 +48,12 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 public class FieldAccessInstrumentor extends MethodInstrumentor {
     protected boolean isStaticAccess = false;
 
-    public FieldAccessInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    public FieldAccessInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
-    public void visitFieldInsn(int opcode, String owner, 
+    public void visitFieldInsn(int opcode, String owner,
         String name, String desc) {
         boolean get;
         if (opcode == GETFIELD || opcode == GETSTATIC) {
@@ -99,11 +101,11 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new FieldAccessInstrumentor(mv, args[0], args[0], access, name, desc) {
+                     return new FieldAccessInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc) {
 
                         @Override
                         protected void onAfterGetField(int opcode, String owner, String name, String desc) {

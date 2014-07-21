@@ -196,6 +196,11 @@
                     </action>
                     <action>
                         <script>${ant.script}</script>
+                        <label>Compile Tests</label>
+                        <target>compile-tests</target>
+                    </action>
+                    <action>
+                        <script>${ant.script}</script>
                         <label>Build Test Scripts</label>
                         <target>prepare-tests</target>
                     </action>

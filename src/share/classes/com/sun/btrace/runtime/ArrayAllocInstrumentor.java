@@ -34,17 +34,19 @@ import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * This visitor helps in inserting code whenever an array 
- * is allocated. The code to insert on method entry may be 
- * decided by derived class. By default, this class inserts 
+ * This visitor helps in inserting code whenever an array
+ * is allocated. The code to insert on method entry may be
+ * decided by derived class. By default, this class inserts
  * code to print allocated array objects.
  *
  * @author A. Sundararajan
  */
 public class ArrayAllocInstrumentor extends MethodInstrumentor {
-    public ArrayAllocInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    public ArrayAllocInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
@@ -54,7 +56,7 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
         if (opcode == NEWARRAY) {
             desc = InstrumentUtils.arrayDescriptorFor(operand);
             onBeforeArrayNew(getPlainType(desc), 1);
-        } 
+        }
         super.visitIntInsn(opcode, operand);
         if (opcode == NEWARRAY) {
             onAfterArrayNew(getPlainType(desc), 1);
@@ -108,11 +110,11 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new ArrayAllocInstrumentor(mv, args[0], args[0], access, name, desc);
+                     return new ArrayAllocInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

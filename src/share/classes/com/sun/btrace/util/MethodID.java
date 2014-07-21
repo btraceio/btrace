@@ -25,12 +25,33 @@
 
 package com.sun.btrace.util;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * A factory class for shared method ids
  * @author Jaroslav Bachorik
  */
 public class MethodID {
-    final public static String create(String name, String description) {
-        return name + "#" + description;
+    private static final ConcurrentMap<String, Integer> methodIds = new ConcurrentHashMap<String, Integer>();
+    static final AtomicInteger lastMehodId = new AtomicInteger(1);
+
+    /**
+     * Generates a unique method id based on the provided method tag
+     * @param methodTag The tag used to distinguish between methods
+     * @return An ID belonging to the provided method tag
+     */
+    public static int getMethodId(String methodTag) {
+        Integer id = null;
+        if (methodIds.putIfAbsent(methodTag, -1) == null) {
+            id = lastMehodId.getAndIncrement();
+            methodIds.put(methodTag, id);
+        } else {
+            while ((id = methodIds.get(methodTag)) == -1) {
+                Thread.yield();
+            }
+        }
+        return id;
     }
 }

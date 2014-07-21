@@ -37,9 +37,10 @@ public class BTRACE53Test extends InstrumentorTestBase {
     public void bytecodeValidation() throws Exception {
         originalBC = loadTargetClass("DerivedClass");
         transform("issues/BTRACE53");
-        checkTransformation("INVOKESTATIC resources/DerivedClass.$btrace$time$stamp ()J\nLSTORE 1\n"
-                          + "INVOKESTATIC resources/DerivedClass.$btrace$time$stamp ()J\nLSTORE 3\n"
-                          + "LLOAD 3\nLLOAD 1\nLSUB\nINVOKESTATIC resources/DerivedClass.$btrace$traces$issues$BTRACE53$onInit (J)V\n"
-                          + "MAXSTACK = 4\nMAXLOCALS = 5");
+        checkTransformation("INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 1\n"
+                          + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 3\n"
+                          + "LLOAD 3\nLLOAD 1\nLSUB\nDUP2\nLSTORE 5\n"
+                          + "INVOKESTATIC resources/DerivedClass.$btrace$traces$issues$BTRACE53$onInit (J)V\n"
+                          + "MAXSTACK = 4\nMAXLOCALS = 7");
     }
 }

@@ -30,10 +30,10 @@ package com.sun.btrace.runtime;
  * com.sun.btrace.annotations.OnMethod. We can not read the
  * OnMethod annotation using reflection API [because we strip
  * @OnMethod annotated methods before defineClass]. Instead,
- * we read OnMethod annotation while parsing the BTrace class and 
+ * we read OnMethod annotation while parsing the BTrace class and
  * store the data in an instance of this class. Please note that
  * the get/set methods have to be in sync with OnMethod annotation.
- * 
+ *
  * @author A. Sundararajan
  */
 public class OnMethod {
@@ -53,9 +53,10 @@ public class OnMethod {
     private int targetMethodOrFieldParameter = -1;
     private int targetInstanceParameter = -1;
     private int durationParameter = -1;
+    private int durationSamplingInterval = 1;
     private boolean methodFqn = false;
     private boolean targetMethodFqn = false;
-    
+
     public OnMethod() {
     }
 
@@ -186,5 +187,11 @@ public class OnMethod {
         this.durationParameter = durationParameter;
     }
 
+    public void setDurationSamplingInterval(int interval) {
+        this.durationSamplingInterval = interval;
+    }
 
+    public int getDurationSamplingInterval() {
+        return durationSamplingInterval;
+    }
 }

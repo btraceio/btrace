@@ -30,23 +30,25 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * This visitor helps in inserting code whenever an object 
- * is allocated. The code to insert on object alloc may be 
- * decided by  derived class. By default, this class inserts 
+ * This visitor helps in inserting code whenever an object
+ * is allocated. The code to insert on object alloc may be
+ * decided by  derived class. By default, this class inserts
  * code to print a message.
  *
  * @author A. Sundararajan
  */
 public class ObjectAllocInstrumentor extends MethodInstrumentor {
-    public ObjectAllocInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    public ObjectAllocInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
     public void visitTypeInsn(int opcode, String desc) {
-        if (opcode == NEW) {            
+        if (opcode == NEW) {
             beforeObjectNew(desc);
         }
         super.visitTypeInsn(opcode, desc);
@@ -72,11 +74,11 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new ObjectAllocInstrumentor(mv, args[0], args[0], access, name, desc) {
+                     return new ObjectAllocInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc) {
 
                         @Override
                         protected void afterObjectNew(String desc) {

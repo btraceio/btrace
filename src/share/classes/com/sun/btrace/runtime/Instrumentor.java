@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.AnyType;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -43,11 +42,15 @@ import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
-import com.sun.btrace.util.LocalVariablesSorter;
-import com.sun.btrace.util.TimeStampGenerator;
+import com.sun.btrace.util.templates.TemplateExpanderVisitor;
 import com.sun.btrace.util.TimeStampHelper;
 import java.util.regex.PatternSyntaxException;
 import static com.sun.btrace.runtime.Constants.*;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.util.templates.impl.MethodTimeStampExpander;
+import com.sun.btrace.util.templates.impl.TimeStampExpander;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This instruments a probed class with BTrace probe
@@ -183,18 +186,17 @@ public class Instrumentor extends ClassVisitor {
             return methodVisitor;
         }
 
-        // used to create new local variables while keeping the class internals consistent
-        // Call "int index = lvs.newVar(<type>)" to create a new local variable.
-        // Then use the generated index to get hold of the variable
-        LocalVariablesSorter.Memento externalState = new LocalVariablesSorter.Memento();
-        final LocalVariablesSorter lvs = new LocalVariablesSorter(access, desc, methodVisitor, externalState);
-        methodVisitor = lvs;
+        LocalVariableHelperImpl lvs = new LocalVariableHelperImpl(methodVisitor, access, desc);
 
-        final int[] tsIndex = new int[]{-1, -1};
+        TemplateExpanderVisitor tse = new TemplateExpanderVisitor(
+            lvs, className, name, desc
+        );
+
+        LocalVariableHelper visitor = tse;
 
         for (OnMethod om : applicableOnMethods) {
             if (om.getLocation().getValue() == Kind.LINE) {
-                methodVisitor = instrumentorFor(om, methodVisitor, lvs, tsIndex, access, name, desc);
+                visitor = instrumentorFor(om, visitor, access, name, desc);
             } else {
                 String methodName = om.getMethod();
                 if (methodName.equals("")) {
@@ -202,27 +204,26 @@ public class Instrumentor extends ClassVisitor {
                 }
                 if (methodName.equals(name) &&
                     typeMatches(om.getType(), desc)) {
-                    methodVisitor = instrumentorFor(om, methodVisitor, lvs, tsIndex, access, name, desc);
+                    visitor = instrumentorFor(om, visitor, access, name, desc);
                 } else if (methodName.charAt(0) == '/' &&
                            REGEX_SPECIFIER.matcher(methodName).matches()) {
                     methodName = methodName.substring(1, methodName.length() - 1);
                     try {
                         if (name.matches(methodName) &&
                             typeMatches(om.getType(), desc)) {
-                            methodVisitor = instrumentorFor(om, methodVisitor, lvs, tsIndex, access, name, desc);
+                            visitor = instrumentorFor(om, visitor, access, name, desc);
                         }
                     } catch (PatternSyntaxException pse) {
                         reportPatternSyntaxException(name);
                     }
                 }
-//                lvs[0] = new LocalVariablesSorter(access, desc, methodVisitor, externalState);
             }
         }
 
-        return new MethodVisitor(ASM4,
-                    methodVisitor) {
+        return new MethodVisitor(Opcodes.ASM5, (MethodVisitor)visitor) {
             public AnnotationVisitor visitAnnotation(String annoDesc,
                                   boolean visible) {
+                LocalVariableHelper visitor = (LocalVariableHelper)mv;
                 for (OnMethod om : applicableOnMethods) {
                     String extAnnoName = Type.getType(annoDesc).getClassName();
                     String annoName = om.getMethod();
@@ -235,24 +236,24 @@ public class Instrumentor extends ClassVisitor {
                             annoName = annoName.substring(1, annoName.length() - 1);
                             try {
                                 if (extAnnoName.matches(annoName)) {
-                                    mv = instrumentorFor(om, mv, lvs, tsIndex, access, name, desc);
+                                    visitor = instrumentorFor(om, visitor, access, name, desc);
                                 }
                             } catch (PatternSyntaxException pse) {
                                 reportPatternSyntaxException(extAnnoName);
                             }
                         } else if (annoName.equals(extAnnoName)) {
-                            mv = instrumentorFor(om, mv, lvs, tsIndex, access, name, desc);
+                            visitor = instrumentorFor(om, visitor, access, name, desc);
                         }
                     }
                 }
-                return mv.visitAnnotation(annoDesc, visible);
+                return ((MethodVisitor)visitor).visitAnnotation(annoDesc, visible);
             }
         };
     }
 
-    private MethodVisitor instrumentorFor(
-        final OnMethod om, MethodVisitor mv, final LocalVariablesSorter lvs,
-        final int[] tsIndex, int access, String name, final String desc) {
+    private LocalVariableHelper instrumentorFor(
+        final OnMethod om, LocalVariableHelper mv,
+        final int access, final String name, final String desc) {
         final Location loc = om.getLocation();
         final Where where = loc.getWhere();
         final Type[] actionArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
@@ -276,25 +277,20 @@ public class Instrumentor extends ClassVisitor {
                         }
                         ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{arrtype, Type.INT_TYPE});
                         if (vr.isValid()) {
-                            lvs.freeze();
-                            try {
-                                if (!vr.isAny()) {
-                                    dup2();
-                                    argsIndex[INDEX_PTR] = lvs.newLocal(Type.INT_TYPE);
-                                    argsIndex[INSTANCE_PTR] = lvs.newLocal(arrtype);
-                                }
-                                if (where == Where.BEFORE) {
-                                    loadArguments(
-                                        new LocalVarArgProvider(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                        new LocalVarArgProvider(vr.getArgIdx(INSTANCE_PTR), arrtype, argsIndex[INSTANCE_PTR]),
-                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                            if (!vr.isAny()) {
+                                dup2();
+                                argsIndex[INDEX_PTR] = storeNewLocal(Type.INT_TYPE);
+                                argsIndex[INSTANCE_PTR] = storeNewLocal(arrtype);
+                            }
+                            if (where == Where.BEFORE) {
+                                loadArguments(
+                                    new LocalVarArgProvider(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
+                                    new LocalVarArgProvider(vr.getArgIdx(INSTANCE_PTR), arrtype, argsIndex[INSTANCE_PTR]),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                    invokeBTraceAction(this, om);
-                                }
-                            } finally {
-                                lvs.unfreeze();
+                                invokeBTraceAction(this, om);
                             }
                         }
                     }
@@ -308,25 +304,20 @@ public class Instrumentor extends ClassVisitor {
                             addExtraTypeInfo(om.getReturnParameter(), retType);
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{arrtype, Type.INT_TYPE});
                             if (vr.isValid()) {
-                                lvs.freeze();
-                                try {
-                                    int retValIndex = -1;
-                                    if (om.getReturnParameter() != -1) {
-                                        dupArrayValue(opcode);
-                                        retValIndex = lvs.newLocal(retType);
-                                    }
-
-                                    loadArguments(
-                                        new LocalVarArgProvider(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                        new LocalVarArgProvider(vr.getArgIdx(INSTANCE_PTR), arrtype, argsIndex[INSTANCE_PTR]),
-                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                        new LocalVarArgProvider(om.getReturnParameter(), retType, retValIndex),
-                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-                                    invokeBTraceAction(this, om);
-                                } finally {
-                                    lvs.unfreeze();
+                                int retValIndex = -1;
+                                if (om.getReturnParameter() != -1) {
+                                    dupArrayValue(opcode);
+                                    retValIndex = storeNewLocal(retType);
                                 }
+
+                                loadArguments(
+                                    new LocalVarArgProvider(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
+                                    new LocalVarArgProvider(vr.getArgIdx(INSTANCE_PTR), arrtype, argsIndex[INSTANCE_PTR]),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getReturnParameter(), retType, retValIndex),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                invokeBTraceAction(this, om);
                             }
                         }
                     }
@@ -346,29 +337,24 @@ public class Instrumentor extends ClassVisitor {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                         ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{arrayType, Type.INT_TYPE, elementType});
                         if (vr.isValid()) {
-                            lvs.freeze();
-                            try {
-                                if (!vr.isAny()) {
-                                    argsIndex[VALUE_PTR] = lvs.newLocal(elementType);
-                                    dup2();
-                                    argsIndex[INDEX_PTR] = lvs.newLocal(Type.INT_TYPE);
-                                    argsIndex[INSTANCE_PTR] = lvs.newLocal(TypeUtils.getArrayType(opcode));
-                                    loadLocal(elementType, argsIndex[VALUE_PTR]);
-                                }
+                            if (!vr.isAny()) {
+                                argsIndex[VALUE_PTR] = storeNewLocal(elementType);
+                                dup2();
+                                argsIndex[INDEX_PTR] = storeNewLocal(Type.INT_TYPE);
+                                argsIndex[INSTANCE_PTR] = storeNewLocal(TypeUtils.getArrayType(opcode));
+                                loadLocal(elementType, argsIndex[VALUE_PTR]);
+                            }
 
-                                if (where == Where.BEFORE) {
-                                    loadArguments(
-                                        new LocalVarArgProvider(vr.getArgIdx(INSTANCE_PTR), arrayType, argsIndex[INSTANCE_PTR]),
-                                        new LocalVarArgProvider(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                        new LocalVarArgProvider(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR]),
-                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                            if (where == Where.BEFORE) {
+                                loadArguments(
+                                    new LocalVarArgProvider(vr.getArgIdx(INSTANCE_PTR), arrayType, argsIndex[INSTANCE_PTR]),
+                                    new LocalVarArgProvider(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
+                                    new LocalVarArgProvider(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR]),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                    invokeBTraceAction(this, om);
-                                }
-                            } finally {
-                                lvs.unfreeze();
+                                invokeBTraceAction(this, om);
                             }
                         }
                     }
@@ -382,20 +368,15 @@ public class Instrumentor extends ClassVisitor {
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{arrayType, Type.INT_TYPE, elementType});
                             if (vr.isValid()) {
-                                lvs.freeze();
-                                try {
-                                    loadArguments(
-                                        new LocalVarArgProvider(vr.getArgIdx(INSTANCE_PTR), arrayType, argsIndex[INSTANCE_PTR]),
-                                        new LocalVarArgProvider(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                        new LocalVarArgProvider(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR]),
-                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                loadArguments(
+                                    new LocalVarArgProvider(vr.getArgIdx(INSTANCE_PTR), arrayType, argsIndex[INSTANCE_PTR]),
+                                    new LocalVarArgProvider(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
+                                    new LocalVarArgProvider(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR]),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                    invokeBTraceAction(this, om);
-                                } finally {
-                                    lvs.unfreeze();
-                                }
+                                invokeBTraceAction(this, om);
                             }
                         }
                     }
@@ -462,29 +443,24 @@ public class Instrumentor extends ClassVisitor {
                             }
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, calledMethodArgs);
                             if (vr.isValid()) {
-                                lvs.freeze();
-                                try {
-                                    boolean isStaticCall = (opcode == INVOKESTATIC);
-                                    if (isStaticCall) {
-                                        if (om.getTargetInstanceParameter() != -1) {
-                                            return;
+                                boolean isStaticCall = (opcode == INVOKESTATIC);
+                                if (isStaticCall) {
+                                    if (om.getTargetInstanceParameter() != -1) {
+                                        return;
 
-                                        }
-                                    } else {
-                                        if (where == Where.BEFORE && name.equals(CONSTRUCTOR)) {
-                                            return;
-                                        }
                                     }
-                                    // will store the call args into local variables
-                                    backupArgsIndexes = backupStack(lvs, Type.getArgumentTypes(desc), isStaticCall);
-                                    if (where == Where.BEFORE) {
-                                        injectBtrace(vr, method, Type.getArgumentTypes(desc), Type.getReturnType(desc));
+                                } else {
+                                    if (where == Where.BEFORE && name.equals(CONSTRUCTOR)) {
+                                        return;
                                     }
-                                    // put the call args back on stack so the method call can find them
-                                    restoreStack(backupArgsIndexes, Type.getArgumentTypes(desc), isStaticCall);
-                                } finally {
-                                    lvs.unfreeze();
                                 }
+                                // will store the call args into local variables
+                                backupArgsIndexes = backupStack(Type.getArgumentTypes(desc), isStaticCall);
+                                if (where == Where.BEFORE) {
+                                    injectBtrace(vr, method, Type.getArgumentTypes(desc), Type.getReturnType(desc));
+                                }
+                                // put the call args back on stack so the method call can find them
+                                restoreStack(backupArgsIndexes, Type.getArgumentTypes(desc), isStaticCall);
                             }
                         }
                     }
@@ -505,22 +481,17 @@ public class Instrumentor extends ClassVisitor {
                             addExtraTypeInfo(om.getReturnParameter(), returnType);
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, calledMethodArgs);
                             if (vr.isValid()) {
-                                lvs.freeze();
-                                try {
-                                    String method = name + desc;
-                                    boolean withReturn = om.getReturnParameter() != -1 && returnType != Type.VOID_TYPE;
-                                    if (withReturn) {
-                                        // store the return value to a local variable
-                                        int index = lvs.newLocal(returnType);
-                                        returnVarIndex = index;
-                                    }
-                                    // will also retrieve the call args and the return value from the backup variables
-                                    injectBtrace(vr, method, calledMethodArgs, returnType);
-                                    if (withReturn) {
-                                        loadLocal(returnType, returnVarIndex); // restore the return value
-                                    }
-                                } finally {
-                                    lvs.unfreeze();
+                                String method = name + desc;
+                                boolean withReturn = om.getReturnParameter() != -1 && returnType != Type.VOID_TYPE;
+                                if (withReturn) {
+                                    // store the return value to a local variable
+                                    int index = storeNewLocal(returnType);
+                                    returnVarIndex = index;
+                                }
+                                // will also retrieve the call args and the return value from the backup variables
+                                injectBtrace(vr, method, calledMethodArgs, returnType);
+                                if (withReturn) {
+                                    loadLocal(returnType, returnVarIndex); // restore the return value
                                 }
                             }
                         }
@@ -538,22 +509,17 @@ public class Instrumentor extends ClassVisitor {
                         ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{exctype});
                         if (vr.isValid()) {
                             int index = -1;
-                            lvs.freeze();
-                            try {
-                                if (!vr.isAny()) {
-                                    dup();
-                                    index = lvs.newLocal(exctype);
-                                }
-                                loadArguments(
-                                    new LocalVarArgProvider(vr.getArgIdx(0), exctype, index),
-                                    new ConstantArgProvider(om.getClassNameParameter(), className),
-                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-
-                                invokeBTraceAction(this, om);
-                            } finally {
-                                lvs.unfreeze();
+                            if (!vr.isAny()) {
+                                dup();
+                                index = storeNewLocal(exctype);
                             }
+                            loadArguments(
+                                new LocalVarArgProvider(vr.getArgIdx(0), exctype, index),
+                                new ConstantArgProvider(om.getClassNameParameter(), className),
+                                new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+
+                            invokeBTraceAction(this, om);
                         }
                     }
                 };// </editor-fold>
@@ -570,23 +536,18 @@ public class Instrumentor extends ClassVisitor {
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{castType});
                             if (vr.isValid()) {
-                                lvs.freeze();
-                                try {
-                                    int castTypeIndex = -1;
-                                    if (!vr.isAny()) {
-                                        dup();
-                                        castTypeIndex = lvs.newLocal(castType);
-                                    }
-                                    loadArguments(
-                                        new LocalVarArgProvider(vr.getArgIdx(0), castType, castTypeIndex),
-                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-
-                                    invokeBTraceAction(this, om);
-                                } finally {
-                                    lvs.unfreeze();
+                                int castTypeIndex = -1;
+                                if (!vr.isAny()) {
+                                    dup();
+                                    castTypeIndex = storeNewLocal(castType);
                                 }
+                                loadArguments(
+                                    new LocalVarArgProvider(vr.getArgIdx(0), castType, castTypeIndex),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+
+                                invokeBTraceAction(this, om);
                             }
                         }
                     }
@@ -610,30 +571,25 @@ public class Instrumentor extends ClassVisitor {
                 // <editor-fold defaultstate="collapsed" desc="Method Entry Instrumentor">
                 return new MethodEntryInstrumentor(mv, className, superName, access, name, desc) {
                     private void injectBtrace(ValidationResult vr) {
-                        lvs.freeze();
-                        try {
-                            ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 3];
-                            int ptr = isStatic() ? 0 : 1;
-                            for(int i=0;i<vr.getArgCnt();i++) {
-                                int index = vr.getArgIdx(i);
-                                Type t = actionArgTypes[index];
-                                if (TypeUtils.isAnyTypeArray(t)) {
-                                    actionArgs[i] = new AnyTypeArgProvider(index, ptr);
-                                    ptr++;
-                                } else {
-                                    actionArgs[i] = new LocalVarArgProvider(index, t, ptr);
-                                    ptr += actionArgTypes[index].getSize();
-                                }
+                        ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 3];
+                        int ptr = isStatic() ? 0 : 1;
+                        for(int i=0;i<vr.getArgCnt();i++) {
+                            int index = vr.getArgIdx(i);
+                            Type t = actionArgTypes[index];
+                            if (TypeUtils.isAnyTypeArray(t)) {
+                                actionArgs[i] = new AnyTypeArgProvider(index, ptr);
+                                ptr++;
+                            } else {
+                                actionArgs[i] = new LocalVarArgProvider(index, t, ptr);
+                                ptr += actionArgTypes[index].getSize();
                             }
-                            actionArgs[actionArgTypes.length] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
-                            actionArgs[actionArgTypes.length + 1] = new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", "."));
-                            actionArgs[actionArgTypes.length + 2] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
-                            loadArguments(actionArgs);
-
-                            invokeBTraceAction(this, om);
-                        } finally {
-                            lvs.unfreeze();
                         }
+                        actionArgs[actionArgTypes.length] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
+                        actionArgs[actionArgTypes.length + 1] = new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", "."));
+                        actionArgs[actionArgTypes.length + 2] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
+                        loadArguments(actionArgs);
+
+                        invokeBTraceAction(this, om);
                     }
 
                     private void callAction() {
@@ -660,7 +616,7 @@ public class Instrumentor extends ClassVisitor {
 
             case ERROR:
                 // <editor-fold defaultstate="collapsed" desc="Error Instrumentor">
-                ErrorReturnInstrumentor eri = new ErrorReturnInstrumentor(mv, tsIndex, className, superName, access, name, desc) {
+                ErrorReturnInstrumentor eri = new ErrorReturnInstrumentor(mv, className, superName, access, name, desc) {
                     ValidationResult vr;
                     {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
@@ -671,56 +627,65 @@ public class Instrumentor extends ClassVisitor {
                     protected void onErrorReturn() {
                         if (vr.isValid()) {
                             int throwableIndex = -1;
-                            lvs.freeze();
-                            try {
-                                if (om.getDurationParameter() != -1) {
-                                    usesTimeStamp = true;
-                                    // TODO: this is a nasty hack; should be in TimeStampGenerator but can't fit it there, no way :(
-                                    if (tsIndex[1] == -1) {
-                                        TimeStampHelper.generateTimeStampAccess(this, className);
-                                        tsIndex[1] = lvs.newLocal(Type.LONG_TYPE);
-                                    }
-                                }
-                                if (!vr.isAny()) {
-                                    dup();
-                                    throwableIndex = lvs.newLocal(TypeUtils.throwableType);
-                                }
 
-                                ArgumentProvider[] actionArgs = new ArgumentProvider[5];
-
-                                actionArgs[0] = new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex);
-                                actionArgs[1] = new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", "."));
-                                actionArgs[2] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
-                                actionArgs[3] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
-                                actionArgs[4] = new ArgumentProvider(om.getDurationParameter()) {
-                                    public void doProvide() {
-                                        if (tsIndex[0] != -1 && tsIndex[1] != -1) {
-                                            loadLocal(Type.LONG_TYPE, tsIndex[1]);
-                                            loadLocal(Type.LONG_TYPE, tsIndex[0]);
-                                            visitInsn(LSUB);
-                                        }
-                                    }
-                                };
-
-                                loadArguments(actionArgs);
-
-                                invokeBTraceAction(this, om);
-                            } finally {
-                                lvs.unfreeze();
+                            if (om.getDurationParameter() != -1) {
+                                MethodTimeStampExpander.END_TIME.insert(mv, "transient");
                             }
+
+                            if (!vr.isAny()) {
+                                dup();
+                                throwableIndex = storeNewLocal(TypeUtils.throwableType);
+                            }
+
+                            ArgumentProvider[] actionArgs = new ArgumentProvider[5];
+
+                            actionArgs[0] = new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex);
+                            actionArgs[1] = new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", "."));
+                            actionArgs[2] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
+                            actionArgs[3] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
+                            actionArgs[4] = new ArgumentProvider(om.getDurationParameter()) {
+                                public void doProvide() {
+                                    MethodTimeStampExpander.DURATION.insert(mv, "transient");
+                                }
+                            };
+
+                            loadArguments(actionArgs);
+
+                            invokeBTraceAction(this, om);
                         }
                     }
 
+                    private boolean generatingCode = false;
+
                     @Override
-                    public boolean usesTimeStamp() {
-                        return vr.isValid() && om.getDurationParameter() != -1;
+                    protected void onMethodEntry() {
+                        if (vr.isValid()) {
+                            if (om.getDurationParameter() != -1) {
+                                try {
+                                    if (!generatingCode) {
+                                        generatingCode = true;
+                                        MethodTimeStampExpander.START_TIME.insert(
+                                            mv,
+                                            TimeStampExpander.SAMPLING_INTERVAl +
+                                                "=" + om.getDurationSamplingInterval()
+                                        );
+                                    }
+                                } finally {
+                                    generatingCode = false;
+                                }
+                            }
+                        }
                     }
                 };
-                if (om.getDurationParameter() != -1) {
-                    return new TimeStampGenerator(lvs, tsIndex, className, superName, access, name, desc, eri, new int[0]);
-                } else {
+//                if (om.getDurationParameter() != -1) {
+//                    return new TimeStampExpander(
+//                        lvs, tsIndex, className, superName, access, name, desc,
+//                        eri, new int[0], 1
+//                    );
+//                } else {
                     return eri;
-                }// </editor-fold>
+//                }
+            // </editor-fold>
 
             case FIELD_GET:
                 // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">
@@ -746,24 +711,19 @@ public class Instrumentor extends ClassVisitor {
                             }
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[0]);
                             if (vr.isValid()) {
-                                lvs.freeze();
-                                try {
-                                    if (om.getTargetInstanceParameter() != -1) {
-                                        dup();
-                                        calledInstanceIndex = lvs.newLocal(TypeUtils.objectType);
-                                    }
-                                    if (where == Where.BEFORE) {
-                                        loadArguments(
-                                            new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
-                                            new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), targetFieldName),
-                                            new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                            new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                            new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                if (om.getTargetInstanceParameter() != -1) {
+                                    dup();
+                                    calledInstanceIndex = storeNewLocal(TypeUtils.objectType);
+                                }
+                                if (where == Where.BEFORE) {
+                                    loadArguments(
+                                        new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
+                                        new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), targetFieldName),
+                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                        invokeBTraceAction(this, om);
-                                    }
-                                } finally {
-                                    lvs.unfreeze();
+                                    invokeBTraceAction(this, om);
                                 }
                             }
                         }
@@ -785,25 +745,20 @@ public class Instrumentor extends ClassVisitor {
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[0]);
                             if (vr.isValid()) {
                                 int returnValIndex = -1;
-                                lvs.freeze();
-                                try {
-                                    if (om.getReturnParameter() != -1) {
-                                        dupValue(desc);
-                                        returnValIndex = lvs.newLocal(fldType);
-                                    }
-
-                                    loadArguments(
-                                        new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
-                                        new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), targetFieldName),
-                                        new LocalVarArgProvider(om.getReturnParameter(), fldType, returnValIndex),
-                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-
-                                    invokeBTraceAction(this, om);
-                                } finally {
-                                    lvs.unfreeze();
+                                if (om.getReturnParameter() != -1) {
+                                    dupValue(desc);
+                                    returnValIndex = storeNewLocal(fldType);
                                 }
+
+                                loadArguments(
+                                    new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
+                                    new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), targetFieldName),
+                                    new LocalVarArgProvider(om.getReturnParameter(), fldType, returnValIndex),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+
+                                invokeBTraceAction(this, om);
                             }
                         }
                     }
@@ -832,33 +787,28 @@ public class Instrumentor extends ClassVisitor {
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{fieldType});
 
                             if (vr.isValid()) {
-                                lvs.freeze();
-                                try {
-                                    if (!vr.isAny()) {
-                                        fldValueIndex = lvs.newLocal(fieldType);
-                                    }
-                                    if (om.getTargetInstanceParameter() != -1) {
-                                        dup();
-                                        calledInstanceIndex = lvs.newLocal(TypeUtils.objectType);
-                                    }
-                                    if (!vr.isAny()) {
-                                        // need to put the set value back on stack
-                                        loadLocal(fieldType, fldValueIndex);
-                                    }
+                                if (!vr.isAny()) {
+                                    fldValueIndex = storeNewLocal(fieldType);
+                                }
+                                if (om.getTargetInstanceParameter() != -1) {
+                                    dup();
+                                    calledInstanceIndex = storeNewLocal(TypeUtils.objectType);
+                                }
+                                if (!vr.isAny()) {
+                                    // need to put the set value back on stack
+                                    loadLocal(fieldType, fldValueIndex);
+                                }
 
-                                    if (where == Where.BEFORE) {
-                                        loadArguments(
-                                            new LocalVarArgProvider(vr.getArgIdx(0), fieldType, fldValueIndex),
-                                            new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
-                                            new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), targetFieldName),
-                                            new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                            new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                            new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                if (where == Where.BEFORE) {
+                                    loadArguments(
+                                        new LocalVarArgProvider(vr.getArgIdx(0), fieldType, fldValueIndex),
+                                        new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
+                                        new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), targetFieldName),
+                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                        invokeBTraceAction(this, om);
-                                    }
-                                } finally {
-                                    lvs.unfreeze();
+                                    invokeBTraceAction(this, om);
                                 }
                             }
                         }
@@ -880,20 +830,15 @@ public class Instrumentor extends ClassVisitor {
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{fieldType});
 
                             if (vr.isValid()) {
-                                lvs.freeze();
-                                try {
-                                    loadArguments(
-                                            new LocalVarArgProvider(vr.getArgIdx(0), fieldType, fldValueIndex),
-                                            new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
-                                            new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), targetFieldName),
-                                            new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                            new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                            new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                loadArguments(
+                                        new LocalVarArgProvider(vr.getArgIdx(0), fieldType, fldValueIndex),
+                                        new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
+                                        new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), targetFieldName),
+                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                    invokeBTraceAction(this, om);
-                                } finally {
-                                    lvs.unfreeze();
-                                }
+                                invokeBTraceAction(this, om);
                             }
                         }
                     }
@@ -912,23 +857,18 @@ public class Instrumentor extends ClassVisitor {
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{castType});
                             if (vr.isValid()) {
                                 int castTypeIndex = -1;
-                                lvs.freeze();
-                                try {
-                                    if (!vr.isAny()) {
-                                        dup();
-                                        castTypeIndex = lvs.newLocal(castType);
-                                    }
-
-                                    loadArguments(
-                                        new LocalVarArgProvider(vr.getArgIdx(0), castType, castTypeIndex),
-                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-
-                                    invokeBTraceAction(this, om);
-                                } finally {
-                                    lvs.unfreeze();
+                                if (!vr.isAny()) {
+                                    dup();
+                                    castTypeIndex = storeNewLocal(castType);
                                 }
+
+                                loadArguments(
+                                    new LocalVarArgProvider(vr.getArgIdx(0), castType, castTypeIndex),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+
+                                invokeBTraceAction(this, om);
                             }
                         }
                     }
@@ -958,18 +898,13 @@ public class Instrumentor extends ClassVisitor {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                         ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{Type.INT_TYPE});
                         if (vr.isValid()) {
-                            lvs.freeze();
-                            try {
-                                loadArguments(
-                                    new ConstantArgProvider(vr.getArgIdx(0), line),
-                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                            loadArguments(
+                                new ConstantArgProvider(vr.getArgIdx(0), line),
+                                new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                invokeBTraceAction(this, om);
-                            } finally {
-                                lvs.unfreeze();
-                            }
+                            invokeBTraceAction(this, om);
                         }
                     }
 
@@ -1002,18 +937,13 @@ public class Instrumentor extends ClassVisitor {
                                 addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                                 ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
                                 if (vr.isValid()) {
-                                    lvs.freeze();
-                                    try {
-                                        loadArguments(
-                                            new ConstantArgProvider(vr.getArgIdx(0), extName),
-                                            new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                            new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                            new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                    loadArguments(
+                                        new ConstantArgProvider(vr.getArgIdx(0), extName),
+                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                        invokeBTraceAction(this, om);
-                                    } finally {
-                                        lvs.unfreeze();
-                                    }
+                                    invokeBTraceAction(this, om);
                                 }
                             }
                         }
@@ -1031,23 +961,18 @@ public class Instrumentor extends ClassVisitor {
                                 ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
                                 if (vr.isValid()) {
                                     int returnValIndex = -1;
-                                    lvs.freeze();
-                                    try {
-                                        if (om.getReturnParameter() != -1) {
-                                            dupValue(instType);
-                                            returnValIndex = lvs.newLocal(instType);
-                                        }
-                                        loadArguments(
-                                            new ConstantArgProvider(vr.getArgIdx(0), extName),
-                                            new LocalVarArgProvider(om.getReturnParameter(), instType, returnValIndex),
-                                            new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                            new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                            new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-
-                                        invokeBTraceAction(this, om);
-                                    } finally {
-                                        lvs.unfreeze();
+                                    if (om.getReturnParameter() != -1) {
+                                        dupValue(instType);
+                                        returnValIndex = storeNewLocal(instType);
                                     }
+                                    loadArguments(
+                                        new ConstantArgProvider(vr.getArgIdx(0), extName),
+                                        new LocalVarArgProvider(om.getReturnParameter(), instType, returnValIndex),
+                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+
+                                    invokeBTraceAction(this, om);
                                 }
                             }
                         }
@@ -1067,19 +992,14 @@ public class Instrumentor extends ClassVisitor {
                                 addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                                 ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType, Type.INT_TYPE});
                                 if (vr.isValid()) {
-                                    lvs.freeze();
-                                    try {
-                                        loadArguments(
-                                            new ConstantArgProvider(vr.getArgIdx(0), extName),
-                                            new ConstantArgProvider(vr.getArgIdx(1), dims),
-                                            new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                            new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                            new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                    loadArguments(
+                                        new ConstantArgProvider(vr.getArgIdx(0), extName),
+                                        new ConstantArgProvider(vr.getArgIdx(1), dims),
+                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                        invokeBTraceAction(this, om);
-                                    } finally {
-                                        lvs.unfreeze();
-                                    }
+                                    invokeBTraceAction(this, om);
                                 }
                             }
                         }
@@ -1102,24 +1022,19 @@ public class Instrumentor extends ClassVisitor {
                                 ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType, Type.INT_TYPE});
                                 if (vr.isValid()) {
                                     int returnValIndex = -1;
-                                    lvs.freeze();
-                                    try {
-                                        if (om.getReturnParameter() != -1) {
-                                            dupValue(instType);
-                                            returnValIndex = lvs.newLocal(instType);
-                                        }
-                                        loadArguments(
-                                            new ConstantArgProvider(vr.getArgIdx(0), extName),
-                                            new ConstantArgProvider(vr.getArgIdx(1), dims),
-                                            new LocalVarArgProvider(om.getReturnParameter(), instType, returnValIndex),
-                                            new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                            new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                            new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-
-                                        invokeBTraceAction(this, om);
-                                    } finally {
-                                        lvs.unfreeze();
+                                    if (om.getReturnParameter() != -1) {
+                                        dupValue(instType);
+                                        returnValIndex = storeNewLocal(instType);
                                     }
+                                    loadArguments(
+                                        new ConstantArgProvider(vr.getArgIdx(0), extName),
+                                        new ConstantArgProvider(vr.getArgIdx(1), dims),
+                                        new LocalVarArgProvider(om.getReturnParameter(), instType, returnValIndex),
+                                        new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                        new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                        new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+
+                                    invokeBTraceAction(this, om);
                                 }
                             }
                         }
@@ -1131,7 +1046,7 @@ public class Instrumentor extends ClassVisitor {
                 if (where != Where.BEFORE) {
                     return mv;
                 }
-                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, tsIndex, className, superName, access, name, desc) {
+                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, className, superName, access, name, desc) {
 
                     int retValIndex;
                     ValidationResult vr;
@@ -1147,17 +1062,17 @@ public class Instrumentor extends ClassVisitor {
                             return;
 
                         }
-                        lvs.freeze();
+
                         try {
+                            if (om.getDurationParameter() != -1) {
+                                MethodTimeStampExpander.END_TIME.insert(mv);
+                            }
                             if (om.getReturnParameter() != -1) {
                                 dupReturnValue(retOpCode);
-                                retValIndex = lvs.newLocal(getReturnType());
-                            }
-                            if (om.getDurationParameter() != -1) {
-                                usesTimeStamp = true;
+                                retValIndex = storeNewLocal(getReturnType());
                             }
 
-                            ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 4 + (tsIndex !=null ? 1 : 0)];
+                            ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 5];
                             int ptr = isStatic() ? 0 : 1;
                             for(int i=0;i<vr.getArgCnt();i++) {
                                 int index = vr.getArgIdx(i);
@@ -1176,18 +1091,16 @@ public class Instrumentor extends ClassVisitor {
                             actionArgs[actionArgTypes.length + 3] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(om.getDurationParameter()) {
                                 public void doProvide() {
-                                    if (tsIndex[0] != -1 && tsIndex[1] != -1) {
-                                        loadLocal(Type.LONG_TYPE, tsIndex[1]);
-                                        loadLocal(Type.LONG_TYPE, tsIndex[0]);
-                                        visitInsn(LSUB);
-                                    }
+                                    MethodTimeStampExpander.DURATION.insert(mv);
                                 }
                             };
                             loadArguments(actionArgs);
 
                             invokeBTraceAction(this, om);
                         } finally {
-                            lvs.unfreeze();
+                            if (getSkipLabel() != null) {
+                                visitLabel(getSkipLabel());
+                            }
                         }
                     }
 
@@ -1200,55 +1113,70 @@ public class Instrumentor extends ClassVisitor {
                         }
                     }
 
+                    private boolean generatingCode = false;
+
                     @Override
-                    public boolean usesTimeStamp() {
-                        return vr.isValid() && om.getDurationParameter() != -1;
+                    protected void onMethodEntry() {
+                        if (vr.isValid()) {
+                            if (om.getDurationParameter() != -1) {
+                                try {
+                                    if (!generatingCode) {
+                                        generatingCode = true;
+                                        MethodTimeStampExpander.START_TIME.insert(
+                                            mv,
+                                            TimeStampExpander.SAMPLING_INTERVAl +
+                                                "=" + om.getDurationSamplingInterval()
+                                        );
+                                    }
+                                } finally {
+                                    generatingCode = false;
+                                }
+                            }
+                        }
                     }
                 };
-                if (om.getDurationParameter() != -1) {
-                    return new TimeStampGenerator(lvs, tsIndex, className, superName, access, name, desc, mri, new int[]{RETURN, IRETURN, FRETURN, DRETURN, LRETURN, ARETURN});
-                } else {
-                    return mri;
-                }// </editor-fold>
+                return mri;
+                // </editor-fold>
 
             case SYNC_ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="SyncEntry Instrumentor">
-                return new SynchronizedInstrumentor(mv, tsIndex, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(mv, className, superName, access, name, desc) {
+                    int storedObjIdx = -1;
 
-                    private void callAction() {
+                    @Override
+                    protected void onBeforeSyncEntry() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                         ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
                         if (vr.isValid()) {
-                            int index = -1;
-                            lvs.freeze();
-                            try {
-                                if (!vr.isAny()) {
-                                    dup();
-                                    index = lvs.newLocal(TypeUtils.objectType);
-                                }
+                            if (!vr.isAny()) {
+                                dup();
+                                storedObjIdx = storeNewLocal(TypeUtils.objectType);
+                            }
+
+                            if (where == Where.BEFORE) {
                                 loadArguments(
-                                    new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.objectType, index),
+                                    new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
                                     new ConstantArgProvider(om.getClassNameParameter(), className),
                                     new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(this, om);
-                            } finally {
-                                lvs.unfreeze();
                             }
-                        }
-                    }
-
-                    @Override
-                    protected void onBeforeSyncEntry() {
-                        if (where == Where.BEFORE) {
-                            callAction();
                         }
                     }
 
                     @Override
                     protected void onAfterSyncEntry() {
                         if (where == Where.AFTER) {
-                            callAction();
+                            addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
+                            if (vr.isValid()) {
+                                loadArguments(
+                                    new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                invokeBTraceAction(this, om);
+                            }
                         }
                     }
 
@@ -1263,34 +1191,44 @@ public class Instrumentor extends ClassVisitor {
 
             case SYNC_EXIT:
                 // <editor-fold defaultstate="collapsed" desc="SyncExit Instrumentor">
-                return new SynchronizedInstrumentor(mv, tsIndex, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(mv, className, superName, access, name, desc) {
+                    int storedObjIdx = -1;
 
-                    private void callAction() {
+                    @Override
+                    protected void onBeforeSyncExit() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
+                        MethodInstrumentor.ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
                         if (vr.isValid()) {
-                            int index = -1;
-                            lvs.freeze();
-                            try {
-                                if (!vr.isAny()) {
-                                    dup();
-                                    index = lvs.newLocal(TypeUtils.objectType);
-                                }
+                            if (!vr.isAny()) {
+                                dup();
+                                storedObjIdx = storeNewLocal(TypeUtils.objectType);
+                            }
+
+                            if (where == Where.BEFORE) {
                                 loadArguments(
-                                    new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.objectType, index),
+                                    new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
                                     new ConstantArgProvider(om.getClassNameParameter(), className),
                                     new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-
                                 invokeBTraceAction(this, om);
-                            } finally {
-                                lvs.unfreeze();
                             }
                         }
                     }
 
                     @Override
-                    protected void onBeforeSyncEntry() {
+                    protected void onAfterSyncExit() {
+                        if (where == Where.AFTER) {
+                            addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                            MethodInstrumentor.ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
+                            if (vr.isValid()) {
+                                loadArguments(
+                                    new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
+                                    new ConstantArgProvider(om.getClassNameParameter(), className),
+                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                invokeBTraceAction(this, om);
+                            }
+                        }
                     }
 
                     @Override
@@ -1298,17 +1236,7 @@ public class Instrumentor extends ClassVisitor {
                     }
 
                     @Override
-                    protected void onBeforeSyncExit() {
-                        if (where == Where.BEFORE) {
-                            callAction();
-                        }
-                    }
-
-                    @Override
-                    protected void onAfterSyncExit() {
-                        if (where == Where.AFTER) {
-                            callAction();
-                        }
+                    protected void onBeforeSyncEntry() {
                     }
                 };// </editor-fold>
 
@@ -1322,22 +1250,17 @@ public class Instrumentor extends ClassVisitor {
                         ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.throwableType});
                         if (vr.isValid()) {
                             int throwableIndex = -1;
-                            lvs.freeze();
-                            try {
-                                if (!vr.isAny()) {
-                                    dup();
-                                    throwableIndex = lvs.newLocal(TypeUtils.throwableType);
-                                }
-                                loadArguments(
-                                    new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex),
-                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                    new ConstantArgProvider(om.getMethodParameter(),getName(om.isMethodFqn())),
-                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
-
-                                invokeBTraceAction(this, om);
-                            } finally {
-                                lvs.unfreeze();
+                            if (!vr.isAny()) {
+                                dup();
+                                throwableIndex = storeNewLocal(TypeUtils.throwableType);
                             }
+                            loadArguments(
+                                new LocalVarArgProvider(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex),
+                                new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                new ConstantArgProvider(om.getMethodParameter(),getName(om.isMethodFqn())),
+                                new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+
+                            invokeBTraceAction(this, om);
                         }
                     }
                 };// </editor-fold>

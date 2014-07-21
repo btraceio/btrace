@@ -35,18 +35,20 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * This visitor helps in inserting code whenever a method 
- * is entered. The code to insert on method entry may be 
- * decided by derived class. By default, this class inserts 
+ * This visitor helps in inserting code whenever a method
+ * is entered. The code to insert on method entry may be
+ * decided by derived class. By default, this class inserts
  * code to print name and signature of the method entered.
  *
  * @author A. Sundararajan
  */
 public class MethodEntryInstrumentor extends MethodInstrumentor {
     private boolean entryCalled = false;
-    public MethodEntryInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    public MethodEntryInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
@@ -62,7 +64,7 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
     public void visitMethodInsn(int opcode,
                      String owner,
                      String name,
-                     String desc) {        
+                     String desc) {
         super.visitMethodInsn(opcode, owner, name, desc);
         if (isConstructor() && !entryCalled) {
             if (name.equals(CONSTRUCTOR) && (owner.equals(getParentClz()) || (getSuperClz() != null && owner.equals(getSuperClz())))) {
@@ -72,13 +74,13 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
                 onMethodEntry();
             }
         }
-    }       
+    }
 
     public void visitInsn(int opcode) {
         switch (opcode) {
             case IRETURN:
             case ARETURN:
-            case FRETURN:                           
+            case FRETURN:
             case LRETURN:
             case DRETURN:
             case RETURN:
@@ -87,7 +89,7 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
                     onMethodEntry();
                 }
                 break;
-            default:                           
+            default:
                 break;
         }
         super.visitInsn(opcode);
@@ -108,13 +110,13 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
         ClassReader reader = new ClassReader(new BufferedInputStream(fis));
         FileOutputStream fos = new FileOutputStream(args[0] + ".class");
         ClassWriter writer = InstrumentUtils.newClassWriter();
-        InstrumentUtils.accept(reader, 
+        InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new MethodEntryInstrumentor(mv, args[0], args[0], access, name, desc);
+                     return new MethodEntryInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

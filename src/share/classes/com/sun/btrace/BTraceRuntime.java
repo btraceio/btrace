@@ -106,7 +106,11 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
+import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import sun.misc.Perf;
 import sun.misc.Unsafe;
@@ -142,9 +146,6 @@ public final class BTraceRuntime {
     private static final boolean messageTimestamp = false;
     private static final String LINE_SEPARATOR;
 
-    final private static Thread samplerThread;
-    volatile public static long TIMESTAMP = 0L;
-
     private static boolean isNewerThan8 = false;
 
     // the command FIFO queue related settings
@@ -169,30 +170,6 @@ public final class BTraceRuntime {
         dummy = new BTraceRuntime();
         NULL = new BTraceRuntime();
         LINE_SEPARATOR = System.getProperty("line.separator");
-
-        if (Boolean.getBoolean("btrace.timer.sampled")) {
-            final long interval = Long.parseLong(System.getProperty("btrace.timer.sampled.interval", "500"));
-            long time = System.nanoTime();
-            for(int i=0;i<1000;i++) {
-                unsafe.park(false, interval);
-            }
-            time = System.nanoTime() - time;
-            final long step = (long)(time / 1000);
-
-            samplerThread = new Thread(new Runnable() {
-
-                public void run() {
-                    while (true) {
-                        unsafe.park(false, interval);
-                        TIMESTAMP+=step;
-                    }
-                }
-            }, "BTrace Sampled Timer");
-            samplerThread.setDaemon(true);
-            samplerThread.start();
-        } else {
-            samplerThread = null;
-        }
     }
 
     private static ThreadLocal<BTraceRuntime> rt = new ThreadLocal<BTraceRuntime>() {
@@ -2384,12 +2361,12 @@ public final class BTraceRuntime {
         String maxQLen = System.getProperty(CMD_QUEUE_LIMIT_KEY, null);
         if (maxQLen == null) {
             CMD_QUEUE_LIMIT = CMD_QUEUE_LIMIT_DEFAULT;
-            debugPrint("\"" + CMD_QUEUE_LIMIT_KEY + "\" not provided. " +
-                    "Using the default cmd queue limit of " + CMD_QUEUE_LIMIT_DEFAULT);
+//            debugPrint("\"" + CMD_QUEUE_LIMIT_KEY + "\" not provided. " +
+//                    "Using the default cmd queue limit of " + CMD_QUEUE_LIMIT_DEFAULT);
         } else {
             try {
                 CMD_QUEUE_LIMIT = Integer.parseInt(maxQLen);
-                debugPrint("The cmd queue limit set to " + CMD_QUEUE_LIMIT);
+//                debugPrint("The cmd queue limit set to " + CMD_QUEUE_LIMIT);
             } catch (NumberFormatException e) {
                 debugPrint("\"" + maxQLen + "\" is not a valid int number. " +
                         "Using the default cmd queue limit of " + CMD_QUEUE_LIMIT_DEFAULT);

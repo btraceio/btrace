@@ -23,29 +23,34 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
+package com.sun.btrace.util.templates.impl;
 
-import support.InstrumentorTestBase;
-import org.junit.Test;
+import com.sun.btrace.util.templates.BTraceTemplates;
+import com.sun.btrace.util.templates.Template;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Tests that specifying a class by its associated annotation does not cause NPE
+ * A timestamp expander for method duration related templates
  * @author Jaroslav Bachorik
+ * @since 1.3
  */
-public class BTRACE106Test extends InstrumentorTestBase {
-    @Test
-    public void annotatedClass() throws Exception {
-        originalBC = loadTargetClass("issues/BTRACE106");
-        transform("issues/BTRACE106");
-        checkTransformation("ALOAD 0\nLDC \"aMethod\"\n"
-                + "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LSTORE 1\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LSTORE 3\nALOAD 0\nLDC \"bMethod\"\nLLOAD 3\nLLOAD 1\nLSUB\n"
-                + "DUP2\nLSTORE 5\n"
-                + "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
-                + "MAXSTACK = 6\nMAXLOCALS = 7"
-        );
+public class MethodTimeStampExpander extends TimeStampExpander {
+
+    public static final Template START_TIME = new Template("methodStartTime", "()J");
+    public static final Template END_TIME = new Template("methodEndTime", "()J");
+    public static final Template DURATION = new Template("methodDuration", "()J");
+
+    static {
+        BTraceTemplates.registerTemplates(START_TIME, END_TIME, DURATION);
+    }
+
+    public MethodTimeStampExpander(String className,
+                                   String methodName,
+                                   String desc
+    ) {
+        super(className, methodName, desc,
+              START_TIME,
+              END_TIME,
+              DURATION);
     }
 }

@@ -26,15 +26,17 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.org.objectweb.asm.*;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
 
 /**
- * This visitor helps in inserting code whenever a source 
- * line is reached. The code to insert on line number may 
- * be decided by  derived class. By default, this class 
+ * This visitor helps in inserting code whenever a source
+ * line is reached. The code to insert on line number may
+ * be decided by  derived class. By default, this class
  * inserts code to print the line.
  *
  * @author A. Sundararajan
@@ -42,18 +44,18 @@ import java.io.FileOutputStream;
 public class LineNumberInstrumentor extends MethodInstrumentor {
     private int lastLine;
 
-    public LineNumberInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    public LineNumberInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
     public void visitLineNumber(int line, Label start) {
         if (lastLine != 0) {
-            onAfterLine(line - 1); 
+            onAfterLine(line - 1);
         }
         onBeforeLine(line);
         lastLine = line;
-        super.visitLineNumber(line, start);        
+        super.visitLineNumber(line, start);
     }
 
     protected void onBeforeLine(int line) {
@@ -61,7 +63,7 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
     }
 
     protected void onAfterLine(int line) {
-        println("after line " + line);        
+        println("after line " + line);
     }
 
     public static void main(final String[] args) throws Exception {
@@ -75,13 +77,13 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
         ClassReader reader = new ClassReader(new BufferedInputStream(fis));
         FileOutputStream fos = new FileOutputStream(args[0] + ".class");
         ClassWriter writer = InstrumentUtils.newClassWriter();
-        InstrumentUtils.accept(reader, 
+        InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new LineNumberInstrumentor(mv, args[0], args[0], access, name, desc);
+                     return new LineNumberInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

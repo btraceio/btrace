@@ -33,17 +33,21 @@ import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * This visitor helps in inserting code whenever a method call 
- * is done. The code to insert on method calls may be decided by 
- * derived class. By default, this class inserts code to print 
+ * This visitor helps in inserting code whenever a method call
+ * is done. The code to insert on method calls may be decided by
+ * derived class. By default, this class inserts code to print
  * the called method.
  *
  * @author A. Sundararajan
  */
 public class MethodCallInstrumentor extends MethodInstrumentor {
-    public MethodCallInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    private int callId = 0;
+
+    public MethodCallInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
@@ -57,7 +61,7 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
 
         onBeforeCallMethod(opcode, owner, name, desc);
         super.visitMethodInsn(opcode, owner, name, desc);
-        onAfterCallMethod(opcode, owner, name, desc);     
+        onAfterCallMethod(opcode, owner, name, desc);
     }
 
     protected void onBeforeCallMethod(int opcode,
@@ -81,13 +85,13 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
         ClassReader reader = new ClassReader(new BufferedInputStream(fis));
         FileOutputStream fos = new FileOutputStream(args[0] + ".class");
         ClassWriter writer = InstrumentUtils.newClassWriter();
-        InstrumentUtils.accept(reader, 
+        InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new MethodCallInstrumentor(mv, args[0], args[0], access, name, desc);
+                     return new MethodCallInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

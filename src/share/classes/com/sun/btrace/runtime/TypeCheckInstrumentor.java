@@ -34,17 +34,19 @@ import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * This class helps in inserting code whenever a type check 
- * (instanceof or checkcact) is done. The code to insert on 
- * type check may be decided by  derived class. By default, 
+ * This class helps in inserting code whenever a type check
+ * (instanceof or checkcact) is done. The code to insert on
+ * type check may be decided by  derived class. By default,
  * this class inserts code to print message.
  *
  * @author A. Sundararajan
  */
 public class TypeCheckInstrumentor extends MethodInstrumentor {
-    public TypeCheckInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    public TypeCheckInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
@@ -81,11 +83,11 @@ public class TypeCheckInstrumentor extends MethodInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new TypeCheckInstrumentor(mv, args[0], args[0], access, name, desc);
+                     return new TypeCheckInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

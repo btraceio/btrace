@@ -36,11 +36,13 @@ import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * This visitor helps in inserting code whenever an exception 
- * is caught or finally block is reached. The code to insert on 
- * exception catch or finally may be decided by  derived class. 
+ * This visitor helps in inserting code whenever an exception
+ * is caught or finally block is reached. The code to insert on
+ * exception catch or finally may be decided by  derived class.
  * By default, this class inserts code to print a message.
  *
  * @author A. Sundararajan
@@ -48,7 +50,7 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
 public class CatchInstrumentor extends MethodInstrumentor {
     private Map<Label, String> handlers = new HashMap<Label, String>();
 
-    public CatchInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    public CatchInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
@@ -66,9 +68,9 @@ public class CatchInstrumentor extends MethodInstrumentor {
         if (type != null) {
             handlers.put(handler, type);
         }
-        super.visitTryCatchBlock(start, end, handler, type); 
+        super.visitTryCatchBlock(start, end, handler, type);
     }
-    
+
     protected void onCatch(String type) {
         println("catching " + type);
     }
@@ -84,13 +86,13 @@ public class CatchInstrumentor extends MethodInstrumentor {
         ClassReader reader = new ClassReader(new BufferedInputStream(fis));
         FileOutputStream fos = new FileOutputStream(args[0] + ".class");
         ClassWriter writer = InstrumentUtils.newClassWriter();
-        InstrumentUtils.accept(reader, 
+        InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new CatchInstrumentor(mv, args[0], args[0], access, name, desc);
+                     return new CatchInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

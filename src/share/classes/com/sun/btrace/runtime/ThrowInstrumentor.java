@@ -30,18 +30,20 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.util.LocalVariableHelperImpl;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * This visitor helps in inserting code whenever an 
- * exception is about to be thrown. The code to insert 
- * on exception throw may be decided by derived class. 
- * By default, this class inserts code to print stack 
+ * This visitor helps in inserting code whenever an
+ * exception is about to be thrown. The code to insert
+ * on exception throw may be decided by derived class.
+ * By default, this class inserts code to print stack
  * trace of the exception thrown.
  *
  * @author A. Sundararajan
  */
 public class ThrowInstrumentor extends MethodInstrumentor {
-    public ThrowInstrumentor(MethodVisitor mv, String parentClz, String superClz,
+    public ThrowInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
@@ -50,13 +52,13 @@ public class ThrowInstrumentor extends MethodInstrumentor {
         if (opcode == ATHROW) {
             onThrow();
         }
-        super.visitInsn(opcode);   
+        super.visitInsn(opcode);
     }
 
     protected void onThrow() {
         visitInsn(DUP);
-        visitMethodInsn(INVOKEVIRTUAL, 
-                    "java/lang/Throwable", 
+        visitMethodInsn(INVOKEVIRTUAL,
+                    "java/lang/Throwable",
                     "printStackTrace",
                     "()V");
     }
@@ -74,11 +76,11 @@ public class ThrowInstrumentor extends MethodInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM4, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc, 
+                 public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc, 
+                     MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new ThrowInstrumentor(mv, args[0], args[0], access, name, desc);
+                     return new ThrowInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());
