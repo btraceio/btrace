@@ -32,14 +32,17 @@ import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.Preprocessor;
 import com.sun.btrace.runtime.Verifier;
+import com.sun.btrace.util.MethodID;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
-import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.After;
 import org.objectweb.asm.util.TraceClassVisitor;
 import static org.junit.Assert.*;
@@ -86,7 +89,23 @@ abstract public class InstrumentorTestBase {
 
     @Before
     public void startup() {
-        cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {};
+        try {
+            cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {};
+
+            Field lastFld = MethodID.class.getDeclaredField("lastMehodId");
+            Field mapFld = MethodID.class.getDeclaredField("methodIds");
+
+            lastFld.setAccessible(true);
+            mapFld.setAccessible(true);
+
+            AtomicInteger last = (AtomicInteger)lastFld.get(null);
+            Map map = (Map)mapFld.get(null);
+
+            last.set(1);
+            map.clear();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     protected void cleanup() {

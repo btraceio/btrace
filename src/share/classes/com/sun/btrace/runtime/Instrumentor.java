@@ -48,6 +48,7 @@ import java.util.regex.PatternSyntaxException;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.util.templates.impl.CallTimeStampExpander;
 import com.sun.btrace.util.templates.impl.MethodTimeStampExpander;
 import com.sun.btrace.util.templates.impl.TimeStampExpander;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -383,22 +384,21 @@ public class Instrumentor extends ClassVisitor {
                 };// </editor-fold>
 
             case CALL:
-                // <editor-fold defaultstate="collapsed" desc="Method Call Instrumentor">
                 return new MethodCallInstrumentor(mv, className, superName, access, name, desc) {
 
-                    private String localClassName = loc.getClazz();
-                    private String localMethodName = loc.getMethod();
+                    private final String localClassName = loc.getClazz();
+                    private final String localMethodName = loc.getMethod();
                     private int returnVarIndex = -1;
-                    int[] backupArgsIndexes;
+                    int[] backupArgsIndices;
 
                     private void injectBtrace(ValidationResult vr, final String method, final Type[] callArgTypes, final Type returnType) {
-                        ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 6];
+                        ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 7];
                         for(int i=0;i<vr.getArgCnt();i++) {
                             int index = vr.getArgIdx(i);
                             Type t = actionArgTypes[index];
                             if (TypeUtils.isAnyTypeArray(t)) {
-                                if (i < backupArgsIndexes.length - 1) {
-                                    actionArgs[i] = new AnyTypeArgProvider(index, backupArgsIndexes[i+1], callArgTypes);
+                                if (i < backupArgsIndices.length - 1) {
+                                    actionArgs[i] = new AnyTypeArgProvider(index, backupArgsIndices[i+1], callArgTypes);
                                 } else {
                                     actionArgs[i] = new ArgumentProvider(index) {
 
@@ -410,16 +410,21 @@ public class Instrumentor extends ClassVisitor {
                                     };
                                 }
                             } else {
-                                actionArgs[i] = new LocalVarArgProvider(index, actionArgTypes[index], backupArgsIndexes[i+1]);;
+                                actionArgs[i] = new LocalVarArgProvider(index, actionArgTypes[index], backupArgsIndices[i+1]);;
                             }
 
                         }
                         actionArgs[actionArgTypes.length] = new LocalVarArgProvider(om.getReturnParameter(), returnType, returnVarIndex);
-                        actionArgs[actionArgTypes.length + 1] = new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, backupArgsIndexes[0]);
+                        actionArgs[actionArgTypes.length + 1] = new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, backupArgsIndices[0]);
                         actionArgs[actionArgTypes.length + 2] = new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), method);
                         actionArgs[actionArgTypes.length + 3] = new ConstantArgProvider(om.getClassNameParameter(), className);
                         actionArgs[actionArgTypes.length + 4] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
                         actionArgs[actionArgTypes.length + 5] = new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0);
+                        actionArgs[actionArgTypes.length + 6] = new ArgumentProvider(om.getDurationParameter()) {
+                                public void doProvide() {
+                                    CallTimeStampExpander.DURATION.insert(mv, "id=" + getCallId(), "transient");
+                                }
+                            };
 
                         loadArguments(actionArgs);
 
@@ -454,13 +459,20 @@ public class Instrumentor extends ClassVisitor {
                                         return;
                                     }
                                 }
+                                if (where == Where.AFTER && om.getDurationParameter() != -1) {
+                                    CallTimeStampExpander.START_TIME.insert(
+                                        mv,
+                                        TimeStampExpander.SAMPLING_INTERVAl + "=" + om.getDurationSamplingInterval(),
+                                        CallTimeStampExpander.CALLID + "=" + getCallId()
+                                    );
+                                }
                                 // will store the call args into local variables
-                                backupArgsIndexes = backupStack(Type.getArgumentTypes(desc), isStaticCall);
+                                backupArgsIndices = backupStack(Type.getArgumentTypes(desc), isStaticCall);
                                 if (where == Where.BEFORE) {
                                     injectBtrace(vr, method, Type.getArgumentTypes(desc), Type.getReturnType(desc));
                                 }
                                 // put the call args back on stack so the method call can find them
-                                restoreStack(backupArgsIndexes, Type.getArgumentTypes(desc), isStaticCall);
+                                restoreStack(backupArgsIndices, Type.getArgumentTypes(desc), isStaticCall);
                             }
                         }
                     }
@@ -481,6 +493,12 @@ public class Instrumentor extends ClassVisitor {
                             addExtraTypeInfo(om.getReturnParameter(), returnType);
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, calledMethodArgs);
                             if (vr.isValid()) {
+                                if (om.getDurationParameter() != -1) {
+                                    CallTimeStampExpander.END_TIME.insert(
+                                        mv,
+                                        CallTimeStampExpander.CALLID + "=" + getCallId()
+                                    );
+                                }
                                 String method = name + desc;
                                 boolean withReturn = om.getReturnParameter() != -1 && returnType != Type.VOID_TYPE;
                                 if (withReturn) {

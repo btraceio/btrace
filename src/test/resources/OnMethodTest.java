@@ -109,4 +109,14 @@ public class OnMethodTest {
             System.err.println("ho hey");
         }
     }
+
+    public long callTopLevel1(String a, long b) {
+        long i = callTarget(a, b) + callTargetStatic(a, b);
+        return i + calLTargetX(a, b);
+    }
+
+    private long calLTargetX(String a, long b) {
+        return 5L;
+    }
+
 }

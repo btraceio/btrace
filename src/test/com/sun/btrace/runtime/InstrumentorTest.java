@@ -520,6 +520,90 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void methodCallDuration() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/MethodCallDuration");
+
+        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\n"
+                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 8\nALOAD 7\nALOAD 6\nLLOAD 4\nLSTORE 10\n"
+                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 12\nLLOAD 10\nLLOAD 12\nLLOAD 8\nLSUB\n"
+                + "ALOAD 6\nLLOAD 4\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDuration$args (JJLjava/lang/String;J)V\n"
+                + "LLOAD 10\nMAXSTACK = 7\nMAXLOCALS = 14\n");
+    }
+
+    @Test
+    public void methodCallDurationSampled() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/MethodCallDurationSampled");
+
+        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\n"
+                + "LDC 0\nLSTORE 8\nLDC 20\nLDC 1\n"
+                + "INVOKESTATIC com/sun/btrace/util/SamplingSupport.sampleHit (II)Z\n"
+                + "DUP\nISTORE 10\nIFEQ L1\nINVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 8\nL1\nALOAD 7\nALOAD 6\nLLOAD 4\nLSTORE 11\n"
+                + "LDC 0\nLSTORE 13\nILOAD 10\nIFEQ L2\n"
+                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 13\nL2\nLLOAD 11\nILOAD 10\nIFEQ L3\n"
+                + "LLOAD 13\nLLOAD 8\nLSUB\nGOTO L4\nL3\nLDC 0\n"
+                + "L4\nALOAD 6\nLLOAD 4\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDurationSampled$args (JJLjava/lang/String;J)V\n"
+                + "LLOAD 11");
+    }
+
+    @Test
+    public void methodCallDurationSampledMulti() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/MethodCallDurationSampledMulti");
+
+        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\n"
+                + "LDC 0\nLSTORE 8\nLDC 20\nLDC 1\n"
+                + "INVOKESTATIC com/sun/btrace/util/SamplingSupport.sampleHit (II)Z\n"
+                + "DUP\nISTORE 10\nIFEQ L1\nINVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 8\nL1\nALOAD 7\nALOAD 6\nLLOAD 4\nLSTORE 11\n"
+                + "LDC 0\nLSTORE 13\nILOAD 10\nIFEQ L2\n"
+                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 13\nL2\nLLOAD 11\nILOAD 10\nIFEQ L3\n"
+                + "LLOAD 13\nLLOAD 8\nLSUB\nGOTO L4\nL3\nLDC 0\n"
+                + "L4\nALOAD 6\nLLOAD 4\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V\n"
+                + "LLOAD 11\nLSTORE 15\nASTORE 17\nLDC 0\nLSTORE 18\n"
+                + "LDC 20\nLDC 2\nINVOKESTATIC com/sun/btrace/util/SamplingSupport.sampleHit (II)Z\n"
+                + "DUP\nISTORE 20\nIFEQ L5\nINVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 18\nL5\nALOAD 17\nLLOAD 15\nLSTORE 21\nLDC 0\n"
+                + "LSTORE 23\nILOAD 20\nIFEQ L6\nINVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 23\nL6\nLLOAD 21\nILOAD 20\nIFEQ L7\nLLOAD 23\n"
+                + "LLOAD 18\nLSUB\nGOTO L8\nL7\nLDC 0\nL8\nALOAD 17\nLLOAD 15\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V\n"
+                + "LLOAD 21\nLSTORE 25\nL9\nLINENUMBER 115 L9\nLLOAD 25\nL10\n"
+                + "LOCALVARIABLE this Lresources/OnMethodTest; L0 L10 0\n"
+                + "LOCALVARIABLE a Ljava/lang/String; L0 L10 1\n"
+                + "LOCALVARIABLE b J L0 L10 2\n"
+                + "LOCALVARIABLE i J L9 L10 25\n"
+                + "MAXSTACK = 9\n"
+                +"MAXLOCALS = 27");
+    }
+
+    // multiple instrumentation of a call site is not handled well
+//    @Test
+//    public void methodCallDuration2() throws Exception {
+//        originalBC = loadTargetClass("OnMethodTest");
+//        transform("onmethod/MethodCallDuration2");
+//
+//        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\n"
+//                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+//                + "LSTORE 8\nALOAD 7\nALOAD 6\nLLOAD 4\nLSTORE 10\n"
+//                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+//                + "LSTORE 12\nLLOAD 10\nLLOAD 12\nLLOAD 8\nLSUB\n"
+//                + "ALOAD 6\nLLOAD 4\n"
+//                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDuration$args (JJLjava/lang/String;J)V\n"
+//                + "LLOAD 10\nMAXSTACK = 7\nMAXLOCALS = 14\n");
+//    }
+
+
+    @Test
     public void methodCallStatic() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallStatic");

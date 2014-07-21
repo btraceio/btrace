@@ -112,6 +112,7 @@ abstract public class TimeStampExpander implements TemplateExpander {
                     for(String tag : lastTemplate.getTags()) {
                         if (tag.startsWith(SAMPLING_INTERVAl + "=")) {
                             sinter = Integer.valueOf(tag.substring(SAMPLING_INTERVAl.length() + 1));
+                            break;
                         }
                     }
                     samplingInterval = Math.min(samplingInterval, sinter);
@@ -205,7 +206,7 @@ abstract public class TimeStampExpander implements TemplateExpander {
                 startTimeIndex = v.storeNewLocal(Type.LONG_TYPE);
                 startTimeSet = true;
                 v.visitLdcInsn(getSamplingInterval() * 2); // to get average "rate" we need a uniform distribution (0, 2*rate)
-                v.visitLdcInsn(MethodID.getMethodId(className + "#" + methodName + "#" + desc));
+                v.visitLdcInsn(MethodID.getMethodId(getMethodIdString(lastTemplate)));
                 v.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(SamplingSupport.class), "sampleHit", "(II)Z", false);
                 v.visitInsn(Opcodes.DUP);
                 // store the measurement flag for later reuse
@@ -227,4 +228,7 @@ abstract public class TimeStampExpander implements TemplateExpander {
         return samplingInterval == Integer.MAX_VALUE ? 1 : samplingInterval;
     }
 
+    protected String getMethodIdString(Template t) {
+        return className + "#" + methodName + "#" + desc;
+    }
 }

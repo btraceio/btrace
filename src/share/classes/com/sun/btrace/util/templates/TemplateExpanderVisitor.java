@@ -31,6 +31,7 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.util.templates.impl.CallTimeStampExpander;
 import com.sun.btrace.util.templates.impl.MethodTimeStampExpander;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,6 +53,7 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
         this.lvs = lvs;
 
         this.expanders.add(new MethodTimeStampExpander(className, methodName, desc));
+        this.expanders.add(new CallTimeStampExpander(className, methodName, desc));
     }
 
     public int storeNewLocal(Type type) {
