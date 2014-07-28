@@ -49,20 +49,28 @@ import com.sun.btrace.util.LocalVariableHelper;
  *
  * @author A. Sundararajan
  */
-public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
-    private Label start = new Label();
-    private Label end = new Label();
+abstract public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
+    private final Label start = new Label();
+    private final Label end = new Label();
 
     public ErrorReturnInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
-    public void visitCode() {
+    @Override
+    protected void visitMethodPrologue() {
+        generateEntryTimeStamp();
         visitLabel(start);
-        super.visitCode();
     }
 
+    @Override
+    protected void onMethodEntry() {
+    }
+
+    abstract protected void generateEntryTimeStamp();
+
+    @Override
     public void visitMaxs(int maxStack, int maxLocals) {
         visitLabel(end);
         visitTryCatchBlock(start, end, end, JAVA_LANG_THROWABLE);
@@ -92,7 +100,10 @@ public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new ErrorReturnInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
+                     return new ErrorReturnInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc) {
+                         @Override
+                         protected void generateEntryTimeStamp() {}
+                     };
                  }
             });
         fos.write(writer.toByteArray());

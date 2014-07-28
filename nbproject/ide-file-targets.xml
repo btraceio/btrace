@@ -41,7 +41,7 @@
         <fail unless="run.class">Must set property 'run.class'</fail>
         <path id="cp">
             <pathelement
-path="test-lib/junit-4.6.jar;test-lib/asm-${asm.version}.jar;test-lib/asm-util-${asm.version}.jar;test-lib/ant-junit.jar;"/>
+path="test-lib/junit-4.6.jar;test-lib/asm-${asm.version}.jar;test-lib/asm-all-${asm.version}.jar;test-lib/ant-junit.jar;"/>
             <pathelement path="build/test"/>
             <pathelement path="build/classes"/>
         </path>
@@ -62,7 +62,7 @@ value="-Xrunjdwp:transport=dt_socket,address=${jpda.address},suspend=y"/>-->
         <fail unless="debug.class">Must set property 'run.class'</fail>
         <path id="cp">
             <pathelement
-path="test-lib/junit-4.6.jar;test-lib/asm-${asm.version}.jar;test-lib/asm-util-${asm.version}.jar;test-lib/ant-junit.jar;"/>
+path="test-lib/junit-4.6.jar;test-lib/asm-${asm.version}.jar;test-lib/asm-all-${asm.version}.jar;test-lib/ant-junit.jar;"/>
             <pathelement path="build/test"/>
             <pathelement path="build/classes"/>
         </path>

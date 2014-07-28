@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.annotations.Where;
 import com.sun.btrace.org.objectweb.asm.*;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -33,8 +32,6 @@ import java.io.FileOutputStream;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
-import java.util.EnumSet;
-import java.util.Set;
 
 /**
  * This visitor helps in inserting code whenever a synchronized
@@ -55,6 +52,11 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
 
         isStatic = (access & ACC_STATIC) != 0;
         isSyncMethod = (access & ACC_SYNCHRONIZED) != 0;
+    }
+
+    @Override
+    protected void generateEntryTimeStamp() {
+        // no timestamp collection
     }
 
     @Override

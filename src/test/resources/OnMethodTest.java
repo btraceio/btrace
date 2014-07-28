@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- *
+ * !!! Only append the new methods; line numbers need to be kept intact !!!
  * @author Jaroslav Bachorik
  */
 public class OnMethodTest {
@@ -119,4 +119,18 @@ public class OnMethodTest {
         return 5L;
     }
 
+    public long argsMultiReturn(String a, long b, String[] c, int[] d) {
+        if (System.currentTimeMillis() > 325723059) {
+            return 0L;
+        }
+
+        if (System.currentTimeMillis() > 32525) {
+            return 1L;
+        }
+
+        {
+            System.out.println("fdsfg");
+            return -1L;
+        }
+    }
 }

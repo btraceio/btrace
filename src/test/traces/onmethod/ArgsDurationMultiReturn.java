@@ -29,7 +29,9 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -37,14 +39,9 @@ import static com.sun.btrace.BTraceUtils.*;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class NoArgsEntryReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    public static void argsEmptyEntry(@Self Object x) {
-        println("entry");
-    }
-
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
-    public static void argsEmptyReturn(@Self Object x) {
-        println("return");
+public class ArgsDurationMultiReturn {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="argsMultiReturn", location=@Location(value=Kind.RETURN))
+    public static void args(@Self Object self, @Return long retVal, @Duration long dur, String a, long b, String[] c, int[] d) {
+        println("args");
     }
 }

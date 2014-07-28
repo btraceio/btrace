@@ -175,23 +175,23 @@ public class Instrumentor extends ClassVisitor {
         MethodVisitor methodVisitor = super.visitMethod(access, name, desc,
                 signature, exceptions);
 
-        if (applicableOnMethods.isEmpty() ||
-            (access & ACC_ABSTRACT) != 0    ||
-            (access & ACC_NATIVE) != 0      ||
-            name.startsWith(BTRACE_METHOD_PREFIX)) {
-            return methodVisitor;
-        }
-
-        if (name.equals(TimeStampHelper.TIME_STAMP_NAME)) {
-            timeStampExisting = true;
-            return methodVisitor;
-        }
-
         LocalVariableHelperImpl lvs = new LocalVariableHelperImpl(methodVisitor, access, desc);
 
         TemplateExpanderVisitor tse = new TemplateExpanderVisitor(
             lvs, className, name, desc
         );
+
+        if (applicableOnMethods.isEmpty() ||
+            (access & ACC_ABSTRACT) != 0    ||
+            (access & ACC_NATIVE) != 0      ||
+            name.startsWith(BTRACE_METHOD_PREFIX)) {
+            return tse;
+        }
+
+        if (name.equals(TimeStampHelper.TIME_STAMP_NAME)) {
+            timeStampExisting = true;
+            return tse;
+        }
 
         LocalVariableHelper visitor = tse;
 
@@ -384,6 +384,7 @@ public class Instrumentor extends ClassVisitor {
                 };// </editor-fold>
 
             case CALL:
+                // <editor-fold defaultstate="collapsed" desc="Method Call Instrumentor">
                 return new MethodCallInstrumentor(mv, className, superName, access, name, desc) {
 
                     private final String localClassName = loc.getClazz();
@@ -676,7 +677,7 @@ public class Instrumentor extends ClassVisitor {
                     private boolean generatingCode = false;
 
                     @Override
-                    protected void onMethodEntry() {
+                    protected void generateEntryTimeStamp() {
                         if (vr.isValid()) {
                             if (om.getDurationParameter() != -1) {
                                 try {
@@ -865,43 +866,56 @@ public class Instrumentor extends ClassVisitor {
             case INSTANCEOF:
                 // <editor-fold defaultstate="collapsed" desc="InstanceOf Instrumentor">
                 return new TypeCheckInstrumentor(mv, className, superName, access, name, desc) {
+                    ValidationResult vr;
+                    Type castType = TypeUtils.objectType;
+                    int castTypeIndex = -1;
+
+                    {
+                        addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                    }
 
                     private void callAction(int opcode, String desc) {
-                        if (opcode == Opcodes.INSTANCEOF) {
-                            // TODO not really usefull
-                            // It would be better to check for the original and desired type
-                            Type castType = Type.getObjectType(desc);
-                            addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{castType});
-                            if (vr.isValid()) {
-                                int castTypeIndex = -1;
-                                if (!vr.isAny()) {
-                                    dup();
-                                    castTypeIndex = storeNewLocal(castType);
-                                }
+                        // TODO not really usefull
+                        // It would be better to check for the original and desired type
 
-                                loadArguments(
-                                    new LocalVarArgProvider(vr.getArgIdx(0), castType, castTypeIndex),
-                                    new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
-                                    new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
+                        if (vr.isValid()) {
+                            loadArguments(
+                                new LocalVarArgProvider(vr.getArgIdx(0), castType, castTypeIndex),
+                                new ConstantArgProvider(om.getClassNameParameter(), className.replace("/", ".")),
+                                new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                new LocalVarArgProvider(om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                                invokeBTraceAction(this, om);
-                            }
+                            invokeBTraceAction(this, om);
                         }
                     }
 
                     @Override
                     protected void onBeforeTypeCheck(int opcode, String desc) {
-                        if (where == Where.BEFORE) {
-                            callAction(opcode, desc);
+                        if (opcode == Opcodes.INSTANCEOF) {
+                            castType = Type.getObjectType(desc);
+                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{castType});
+                            if (vr.isValid()) {
+                                if (!vr.isAny()) {
+                                    dup();
+                                    castTypeIndex = storeNewLocal(castType);
+                                }
+                                if (where == Where.BEFORE) {
+                                    callAction(opcode, desc);
+                                }
+                            }
                         }
                     }
 
                     @Override
                     protected void onAfterTypeCheck(int opcode, String desc) {
-                        if (where == Where.AFTER) {
-                            callAction(opcode, desc);
+                        if (opcode == Opcodes.INSTANCEOF) {
+                            castType = Type.getObjectType(desc);
+                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{castType});
+                            if (vr.isValid()) {
+                                if (where == Where.AFTER) {
+                                    callAction(opcode, desc);
+                                }
+                            }
                         }
                     }
                 };// </editor-fold>

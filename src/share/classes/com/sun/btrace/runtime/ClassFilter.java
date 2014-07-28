@@ -77,9 +77,18 @@ public class ClassFilter {
             return false;
         }
 
-        // ignore classes annotated with @BTrace -
-        // We don't want to instrument tracing classes!
-        if (target.getAnnotation(BTrace.class) != null) {
+        try {
+            // ignore classes annotated with @BTrace -
+            // We don't want to instrument tracing classes!
+            if (target.getAnnotation(BTrace.class) != null) {
+                return false;
+            }
+        } catch (NullPointerException e) {
+            // thrown from java.lang.Class.initAnnotationsIfNecessary()
+            // seems to be a case when trying to access non-existing annotations
+            // on a superclass
+            // * messed up situation - ignore the class *
+
             return false;
         }
 

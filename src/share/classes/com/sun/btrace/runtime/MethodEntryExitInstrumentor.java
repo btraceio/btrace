@@ -45,7 +45,7 @@ import com.sun.btrace.util.LocalVariableHelper;
  *
  * @author A. Sundararajan
  */
-public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
+abstract public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
     private boolean isConstructor;
     private boolean entryCalled;
 
@@ -53,27 +53,6 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
         isConstructor = name.equals(CONSTRUCTOR);
-    }
-
-    public void visitCode() {
-        if (!isConstructor) {
-            entryCalled = true;
-            onMethodEntry();
-        }
-        super.visitCode();
-    }
-
-    public void visitMethodInsn(int opcode,
-                     String owner,
-                     String name,
-                     String desc) {
-        super.visitMethodInsn(opcode, owner, name, desc);
-        if (isConstructor && !entryCalled && name.equals(CONSTRUCTOR)) {
-            // super or this class constructor call.
-            // do method entry after that!
-            entryCalled = true;
-            onMethodEntry();
-        }
     }
 
     public void visitInsn(int opcode) {
@@ -86,7 +65,7 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
             case RETURN:
                 if (!entryCalled) {
                     entryCalled = true;
-                    onMethodEntry();
+                    doMethodEntry();
                 }
                 onMethodReturn(opcode);
                 break;
@@ -96,16 +75,8 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
         super.visitInsn(opcode);
     }
 
-    protected void onMethodEntry() {
-        println("on method entry");
-    }
-
     protected void onMethodReturn(int opcode) {
         println("on method return");
-    }
-
-    protected void onErrorReturn() {
-        println("on method error return");
     }
 
     public static void main(final String[] args) throws Exception {
@@ -125,7 +96,10 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new MethodEntryExitInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
+                     return new MethodEntryExitInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc) {
+                         @Override
+                         protected void generateEntryTimeStamp() {}
+                     };
                  }
             });
         fos.write(writer.toByteArray());

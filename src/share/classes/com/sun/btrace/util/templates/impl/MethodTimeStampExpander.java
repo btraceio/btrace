@@ -27,7 +27,6 @@ package com.sun.btrace.util.templates.impl;
 
 import com.sun.btrace.util.templates.BTraceTemplates;
 import com.sun.btrace.util.templates.Template;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A timestamp expander for method duration related templates
@@ -52,5 +51,10 @@ public class MethodTimeStampExpander extends TimeStampExpander {
               START_TIME,
               END_TIME,
               DURATION);
+    }
+
+    @Override
+    protected void resetStartTime() {
+        // never reset the start time in the method body
     }
 }

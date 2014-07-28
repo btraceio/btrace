@@ -102,7 +102,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Error");
 
-        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\nDUP\nASTORE 1\nALOAD 0\nLDC \"uncaught\"\nALOAD 1\n"
+        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n"
+                + "DUP\nASTORE 1\nALOAD 0\nLDC \"uncaught\"\nALOAD 1\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Error$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V");
     }
 
@@ -115,7 +116,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
                 + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 3\nDUP\nASTORE 5\nALOAD 0\nLDC \"uncaught\"\n"
                 + "LLOAD 3\nLLOAD 1\nLSUB\nALOAD 5\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ErrorDuration$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Throwable;)V\n"
-                + "ATHROW\nMAXSTACK = 7\nMAXLOCALS = 6"
+                + "ATHROW"
         );
     }
 
@@ -153,7 +154,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/SyncEntry");
 
-        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nDUP\nASTORE 2\nALOAD 0\nLDC \"sync\"\nALOAD 2\n"
+        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nL6\n"
+                + "LINENUMBER 108 L6\nDUP\nASTORE 2\nALOAD 0\nLDC \"sync\"\nALOAD 2\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V");
     }
 
@@ -162,7 +164,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/SyncExit");
 
-        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nL6\nLINENUMBER 110 L6\n"
+        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\nL6\n"
+                + "LINENUMBER 108 L6\nL7\nLINENUMBER 110 L7\n"
                 + "DUP\nASTORE 2\nALOAD 0\nLDC \"resources/OnMethodTest\"\nALOAD 2\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n");
     }
@@ -312,9 +315,63 @@ public class InstrumentorTest extends InstrumentorTestBase {
         checkTransformation("INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 6\n"
                 + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 8\n"
                 + "DUP2\nLSTORE 10\nALOAD 0\nLLOAD 10\nLLOAD 8\nLLOAD 6\nLSUB\n"
-                + "DUP2\nLSTORE 12\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
+                + "ALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
                 + "MAXSTACK");
+    }
+
+    @Test
+    public void methodEntryArgsDurationMultiReturn() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsDurationMultiReturn");
+        checkTransformation(
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 6\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 8\n" +
+            "DUP2\n" +
+            "LSTORE 10\n" +
+            "ALOAD 0\n" +
+            "LLOAD 10\n" +
+            "LLOAD 8\n" +
+            "LLOAD 6\n" +
+            "LSUB\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 12\n" +
+            "DUP2\n" +
+            "LSTORE 14\n" +
+            "ALOAD 0\n" +
+            "LLOAD 14\n" +
+            "LLOAD 12\n" +
+            "LLOAD 6\n" +
+            "LSUB\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 16\n" +
+            "DUP2\n" +
+            "LSTORE 18\n" +
+            "ALOAD 0\n" +
+            "LLOAD 18\n" +
+            "LLOAD 16\n" +
+            "LLOAD 6\n" +
+            "LSUB\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 12\n" +
+            "MAXLOCALS = 20"
+        );
     }
 
     @Test
@@ -323,11 +380,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/ArgsDurationSampled");
         checkTransformation(
             "LDC 0\nLSTORE 6\nLDC 20\nLDC 1\nINVOKESTATIC com/sun/btrace/util/SamplingSupport.sampleHit (II)Z\n" +
-            "DUP\nISTORE 8\nIFEQ L1\nINVOKESTATIC java/lang/System.nanoTime ()J\n" +
-            "LSTORE 6\nL1\nLDC 0\nLSTORE 9\nILOAD 8\nIFEQ L2\nINVOKESTATIC java/lang/System.nanoTime ()J\n" +
-            "LSTORE 9\nL2\nDUP2\nLSTORE 11\nALOAD 0\nLLOAD 11\n" +
-            "ILOAD 8\nIFEQ L3\nLLOAD 9\nLLOAD 6\nLSUB\nGOTO L4\n" +
-            "L3\nLDC 0\nL4\nDUP2\nLSTORE 13\n" +
+            "DUP\nISTORE 8\nIFEQ L0\nINVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 6\nLDC 0\nLSTORE 9\nILOAD 8\nIFEQ L1\nINVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 9\nL1\nDUP2\nLSTORE 11\nALOAD 0\nLLOAD 11\n" +
+            "ILOAD 8\nIFEQ L2\nLLOAD 9\nLLOAD 6\nLSUB\nGOTO L3\n" +
+            "L2\nLDC 0\nL3\n" +
             "ALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationSampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
         );
@@ -346,7 +403,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/ArgsDurationConstructor");
         checkTransformation("INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 2\n"
                 + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 4\n"
-                + "ALOAD 0\nLLOAD 4\nLLOAD 2\nLSUB\nDUP2\nLSTORE 6\nALOAD 1\n"
+                + "ALOAD 0\nLLOAD 4\nLLOAD 2\nLSUB\nALOAD 1\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationConstructor$args (Ljava/lang/Object;JLjava/lang/String;)V\n"
                 + "MAXSTACK");
     }
@@ -359,10 +416,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         checkTransformation("INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 6\n"
                 + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 8\n"
                 + "DUP2\nLSTORE 10\nALOAD 0\nLLOAD 10\nLLOAD 8\nLLOAD 6\nLSUB\n"
-                + "DUP2\nLSTORE 12\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
-                + "DUP2\nLSTORE 14\nALOAD 0\nLLOAD 14\nLLOAD 12\n"
                 + "ALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
+                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
+                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 12\nDUP2\nLSTORE 14\nALOAD 0\nLLOAD 14\n"
+                + "LLOAD 12\nLLOAD 6\nLSUB\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
                 + "MAXSTACK = 12\nMAXLOCALS = 16");
     }
@@ -374,17 +432,18 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/ArgsDuration2Sampled");
         checkTransformation("LDC 0\nLSTORE 6\nLDC 20\nLDC 1\n"
                 + "INVOKESTATIC com/sun/btrace/util/SamplingSupport.sampleHit (II)Z\n"
-                + "DUP\nISTORE 8\nIFEQ L1\n"
+                + "DUP\nISTORE 8\nIFEQ L0\n"
                 + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 6\n"
-                + "L1\nLDC 0\nLSTORE 9\nILOAD 8\nIFEQ L2\n"
+                + "LDC 0\nLSTORE 9\nILOAD 8\nIFEQ L1\n"
                 + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 9\n"
-                + "L2\nDUP2\nLSTORE 11\nALOAD 0\nLLOAD 11\n"
-                + "ILOAD 8\nIFEQ L3\nLLOAD 9\nLLOAD 6\nLSUB\nGOTO L4\n"
-                + "L3\nLDC 0\nL4\nDUP2\nLSTORE 13\n"
+                + "L1\nDUP2\nLSTORE 11\nALOAD 0\nLLOAD 11\n"
+                + "ILOAD 8\nIFEQ L2\nLLOAD 9\nLLOAD 6\nLSUB\nGOTO L3\n"
+                + "L2\nLDC 0\nL3\n"
                 + "ALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2Sampled$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
-                + "DUP2\nLSTORE 15\nALOAD 0\nLLOAD 15\nLLOAD 13\n"
-                + "ALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
+                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 13\nDUP2\nLSTORE 15\nALOAD 0\nLLOAD 15\nLLOAD 13\n"
+                + "LLOAD 6\nLSUB\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2Sampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n");
     }
 
@@ -414,10 +473,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDurationConstructorErr");
         checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 1\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 3\n"
-                + "DUP\nASTORE 5\nALOAD 0\nLLOAD 3\nLLOAD 1\nLSUB\n"
-                + "ALOAD 5\n"
+                + "L2\n"
+                + "LINENUMBER 39 L2\n"
+                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 1\nL0\n"
+                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+                + "LSTORE 3\nDUP\nASTORE 5\nALOAD 0\nLLOAD 3\n"
+                + "LLOAD 1\nLSUB\nALOAD 5\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationConstructorErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V\n"
                 + "ATHROW");
     }

@@ -38,7 +38,7 @@ import java.util.Set;
  * @since 1.3
  */
 public final class Template {
-    private final String owner = "BTrace$Templates";
+    private final String owner = "com/sun/btrace/Templates";
     private final String name;
     private final String sig;
     private final Set<String> tags = new HashSet<String>();

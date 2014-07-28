@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011-2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,7 @@ public class ClinitInjector extends ClassVisitor {
 
     @Override
     public void visit(int version, int access, String name, String signature, String supername, String[] interfaces) {
-        if (!(((access & (Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION)) != 0) ||
+        if (!(((access & (Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION | Opcodes.ACC_FINAL)) != 0) ||
             (supername.equals("java/lang/Object") && interfaces.length == 0))) {
             transformed = true;
         }

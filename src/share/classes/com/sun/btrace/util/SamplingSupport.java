@@ -24,7 +24,9 @@
  */
 package com.sun.btrace.util;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -34,8 +36,45 @@ import java.util.concurrent.ThreadLocalRandom;
  * @author Jaroslav Bachorik
  */
 final public class SamplingSupport {
+    private static interface RandomIntProvider {
+        int nextInt(int bound);
+    }
+
+    private static final class SharedRandomIntProvider implements RandomIntProvider {
+        private final Random rnd = new Random(System.nanoTime());
+
+        public int nextInt(int bound) {
+            return rnd.nextInt(bound);
+        }
+    }
+
+    private static final class ThreadLocalRandomIntProvider implements RandomIntProvider {
+        public int nextInt(int bound) {
+            return ThreadLocalRandom.current().nextInt(bound);
+        }
+    }
+
 
     private static final ThreadLocal<int[]> iCounters = new ThreadLocal<int[]>();
+
+    private static Method nextIntMtd;
+    private static Object threadLocalRandom;
+
+    private static final RandomIntProvider rndIntProvider;
+
+    static {
+        Class clz = null;
+        try {
+            clz = Class.forName("java.util.concurrent.ThreadLocalRandom");
+        } catch (Throwable e) {
+            // ThreadLocalRandom not accessible -> pre JDK8
+        }
+        if (clz != null) {
+            rndIntProvider = new ThreadLocalRandomIntProvider();
+        } else {
+            rndIntProvider = new SharedRandomIntProvider();
+        }
+    }
 
     /**
      * Used from the injected code to figure out whether it should record the invocation.
@@ -55,7 +94,7 @@ final public class SamplingSupport {
             }
         }
         if (sampleCntrs[methodId] == 0) {
-            sampleCntrs[methodId] = ThreadLocalRandom.current().nextInt(rate);
+            sampleCntrs[methodId] = rndIntProvider.nextInt(rate);
             return true;
         }
 

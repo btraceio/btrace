@@ -41,12 +41,11 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.After;
 import org.objectweb.asm.util.TraceClassVisitor;
 import static org.junit.Assert.*;
 import org.junit.Before;
+import org.objectweb.asm.util.CheckClassAdapter;
 import sun.misc.Unsafe;
 
 /**
@@ -119,6 +118,16 @@ abstract public class InstrumentorTestBase {
     }
 
     protected void checkTransformation(String expected) throws IOException {
+        org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(transformedBC);
+
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        CheckClassAdapter.verify(cr, false, pw);
+        if (sw.toString().contains("AnalyzerException")) {
+            System.err.println(sw.toString());
+            fail();
+        }
+
         String diff = diff();
         System.err.println(diff);
         assertEquals(expected, diff.substring(0, diff.length() > expected.length() ? expected.length() : diff.length()));

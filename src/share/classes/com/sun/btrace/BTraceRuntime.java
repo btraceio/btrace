@@ -1005,8 +1005,11 @@ public final class BTraceRuntime {
             if (rt != null && rt.instrumentation.isModifiableClass(clazz)) {
                 rt.instrumentation.retransformClasses(clazz);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable e) {
+            if (e instanceof VerifyError) {
+                System.out.println("btrace DEBUG: " + ((VerifyError)e).getMessage());
+            }
+            e.printStackTrace(System.out);
         }
     }
 

@@ -53,12 +53,17 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
-    public void visitCode() {
+    final public void visitCode() {
         if (!isConstructor()) {
             entryCalled = true;
-            onMethodEntry();
+            doMethodEntry();
         }
         super.visitCode();
+    }
+
+    final protected void doMethodEntry() {
+        visitMethodPrologue();
+        onMethodEntry();
     }
 
     public void visitMethodInsn(int opcode,
@@ -71,7 +76,7 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
                 // super or this class constructor call.
                 // do method entry after that!
                 entryCalled = true;
-                onMethodEntry();
+                doMethodEntry();
             }
         }
     }
@@ -98,6 +103,8 @@ public class MethodEntryInstrumentor extends MethodInstrumentor {
     protected void onMethodEntry() {
         println("entering " + getName() + getDescriptor());
     }
+
+    protected void visitMethodPrologue() {}
 
     public static void main(final String[] args) throws Exception {
         if (args.length != 1) {

@@ -68,6 +68,10 @@ class TypeUtils {
         return t.equals(stringType);
     }
 
+    public static boolean isArray(Type t) {
+        return t.getInternalName().startsWith("[");
+    }
+
     public static boolean isThrowable(Type t) {
         return t.equals(throwableType);
     }
@@ -77,7 +81,7 @@ class TypeUtils {
      * Two types are compatible when and only when:
      * <ol>
      * <li>They are exactly the same</li>
-     * <li>The left parameter is {@linkplain Object} or {@linkplain AnyType} and 
+     * <li>The left parameter is {@linkplain Object} or {@linkplain AnyType} and
      *     the right parameter is either {@linkplain Object} or an array</li>
      * <li>The left parameter is assignable from the right one (is a superclass of the right one)</li>
      * </ol>
@@ -88,9 +92,11 @@ class TypeUtils {
     public static boolean isCompatible(Type left, Type right) {
         if (left.equals(right)) {
             return true;
+        } else if (isArray(left)) {
+            return false;
         } else if(isObjectOrAnyType(left)) {
             int sort2 = right.getSort();
-            return (sort2 == Type.OBJECT || sort2 == Type.ARRAY);               
+            return (sort2 == Type.OBJECT || sort2 == Type.ARRAY);
         } else {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
             if (cl == null) {
@@ -131,7 +137,7 @@ class TypeUtils {
                  * then we allow it - because AnyType is mapped to
                  * java.lang.Object.
                  */
-                if (isAnyType(args1[i]) && 
+                if (isAnyType(args1[i]) &&
                    (sort2 == Type.OBJECT || sort2 == Type.ARRAY)) {
                     continue;
                 } else {
@@ -144,31 +150,31 @@ class TypeUtils {
 
     public static Type getArrayType(int arrayOpcode) {
         switch (arrayOpcode) {
-            case IALOAD: 
-            case IASTORE: 
+            case IALOAD:
+            case IASTORE:
                 return Type.getType("[I");
 
             case BALOAD:
             case BASTORE:
                 return Type.getType("[B");
 
-            case AALOAD: 
+            case AALOAD:
             case AASTORE:
                 return objectArrayType;
 
             case CALOAD:
-            case CASTORE: 
+            case CASTORE:
                 return Type.getType("[C");
 
             case FALOAD:
-            case FASTORE: 
+            case FASTORE:
                 return Type.getType("[F");
 
             case SALOAD:
-            case SASTORE: 
+            case SASTORE:
                 return Type.getType("[S");
 
-            case LALOAD: 
+            case LALOAD:
             case LASTORE:
                 return Type.getType("[J");
 
@@ -176,38 +182,38 @@ class TypeUtils {
             case DASTORE:
                 return Type.getType("[D");
 
-            default:    
+            default:
                 throw new RuntimeException("invalid array opcode");
         }
     }
 
     public static Type getElementType(int arrayOpcode) {
         switch (arrayOpcode) {
-            case IALOAD: 
-            case IASTORE: 
+            case IALOAD:
+            case IASTORE:
                 return Type.INT_TYPE;
 
             case BALOAD:
             case BASTORE:
                 return Type.BYTE_TYPE;
 
-            case AALOAD: 
+            case AALOAD:
             case AASTORE:
                 return objectType;
 
             case CALOAD:
-            case CASTORE: 
+            case CASTORE:
                 return Type.CHAR_TYPE;
 
             case FALOAD:
-            case FASTORE: 
+            case FASTORE:
                 return Type.FLOAT_TYPE;
 
             case SALOAD:
-            case SASTORE: 
+            case SASTORE:
                 return Type.SHORT_TYPE;
 
-            case LALOAD: 
+            case LALOAD:
             case LASTORE:
                 return Type.LONG_TYPE;
 
@@ -215,7 +221,7 @@ class TypeUtils {
             case DASTORE:
                 return Type.DOUBLE_TYPE;
 
-            default:    
+            default:
                 throw new RuntimeException("invalid array opcode");
         }
     }
@@ -271,7 +277,7 @@ class TypeUtils {
         }
         buf.append(descriptor);
         return buf.toString();
-    }    
+    }
 
     public static String getJavaType(String desc) {
         int arrIndex = desc.lastIndexOf("[") + 1;
@@ -313,5 +319,5 @@ class TypeUtils {
             buf.append(';');
         }
         return buf.toString();
-    }    
+    }
 }
