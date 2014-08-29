@@ -4,7 +4,7 @@ btrace
 BTrace - a safe, dynamic tracing tool for the Java platform
 
 ## Version
-1
+1.2
 
 ## Quick Summary
 BTrace is a safe, dynamic tracing tool for the Java platform. 
