@@ -1,10 +1,10 @@
 DO NOT TRANSLATE OR LOCALIZE.
 
-%% The following software is used by BTrace: ASM 3.0; Use of any of this software is governed by the terms of the license below: 
+%% The following software is used by BTrace: ASM 5.0; Use of any of this software is governed by the terms of the license below: 
 
 /***
  * ASM: a very small and fast Java bytecode manipulation framework
- * Copyright (c) 2000-2005 INRIA, France Telecom
+ * Copyright (c) 2000-2011 INRIA, France Telecom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
