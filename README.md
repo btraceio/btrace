@@ -1,7 +1,7 @@
 btrace
 ======
 
-BTrace - a safe, dynamic tracing tool for the Java platform
+A safe, dynamic tracing tool for the Java platform
 
 ## Version
 1.2
