@@ -1,6 +1,6 @@
 language: java
 
 jdk:
-  - openjdk8
+  - openjdk7
 script:
   ant -f make/build.xml jar build-traces create-dist
