@@ -3,4 +3,4 @@ language: java
 jdk:
   - openjdk7
 script:
-  ant -f make/build.xml jar prepare-tests build-traces dist
+  ant -f make/build.xml jar prepare-tests dist
