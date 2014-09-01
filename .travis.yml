@@ -1,0 +1,6 @@
+language: java
+
+jdk:
+  - openjdk8
+script:
+  ant -f make/build.xml jar build-traces create-dist
