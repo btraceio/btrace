@@ -45,3 +45,7 @@ You may enhance the system environment variable __PATH__ with __$BTRACE_HOME/bin
 * `<btrace>/bin/btracer <compiled_script> <args to launch a java app>` will start the specified java application with the btrace agent running and the script previously compiled by *btracec* loaded
 
 For the detailed user guide, please, check the [Wiki](https://github.com/jbachorik/btrace/wiki/Home).
+
+## CI
+
+A continuous integration is being run on [Travis CI](https://travis-ci.org/jbachorik/btrace)
