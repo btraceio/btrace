@@ -51,7 +51,6 @@ import com.sun.btrace.util.LocalVariableHelper;
 import com.sun.btrace.util.templates.impl.CallTimeStampExpander;
 import com.sun.btrace.util.templates.impl.MethodTimeStampExpander;
 import com.sun.btrace.util.templates.impl.TimeStampExpander;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This instruments a probed class with BTrace probe
@@ -413,10 +412,9 @@ public class Instrumentor extends ClassVisitor {
                             } else {
                                 actionArgs[i] = new LocalVarArgProvider(index, actionArgTypes[index], backupArgsIndices[i+1]);;
                             }
-
                         }
                         actionArgs[actionArgTypes.length] = new LocalVarArgProvider(om.getReturnParameter(), returnType, returnVarIndex);
-                        actionArgs[actionArgTypes.length + 1] = new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, backupArgsIndices[0]);
+                        actionArgs[actionArgTypes.length + 1] = new LocalVarArgProvider(om.getTargetInstanceParameter(), TypeUtils.objectType, backupArgsIndices.length == 0 ? -1 : backupArgsIndices[0]);
                         actionArgs[actionArgTypes.length + 2] = new ConstantArgProvider(om.getTargetMethodOrFieldParameter(), method);
                         actionArgs[actionArgTypes.length + 3] = new ConstantArgProvider(om.getClassNameParameter(), className);
                         actionArgs[actionArgTypes.length + 4] = new ConstantArgProvider(om.getMethodParameter(), getName(om.isMethodFqn()));
@@ -467,13 +465,20 @@ public class Instrumentor extends ClassVisitor {
                                         CallTimeStampExpander.CALLID + "=" + getCallId()
                                     );
                                 }
+                                Type[] argTypes = Type.getArgumentTypes(desc);
+                                boolean shouldBackup = !vr.isAny() || om.getTargetInstanceParameter() != -1;
+
                                 // will store the call args into local variables
-                                backupArgsIndices = backupStack(Type.getArgumentTypes(desc), isStaticCall);
+                                backupArgsIndices = shouldBackup ? backupStack(argTypes, isStaticCall) : new int[0];
+
                                 if (where == Where.BEFORE) {
-                                    injectBtrace(vr, method, Type.getArgumentTypes(desc), Type.getReturnType(desc));
+                                    injectBtrace(vr, method, argTypes, Type.getReturnType(desc));
                                 }
+
                                 // put the call args back on stack so the method call can find them
-                                restoreStack(backupArgsIndices, Type.getArgumentTypes(desc), isStaticCall);
+                                if (shouldBackup) {
+                                    restoreStack(backupArgsIndices, argTypes, isStaticCall);
+                                }
                             }
                         }
                     }

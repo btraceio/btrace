@@ -23,28 +23,23 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
+package traces.onmethod;
 
-import support.InstrumentorTestBase;
-import org.junit.Test;
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
+import com.sun.btrace.annotations.OnMethod;
+import static com.sun.btrace.BTraceUtils.*;
 
 /**
- * Tests that specifying a class by its associated annotation does not cause NPE
+ *
  * @author Jaroslav Bachorik
  */
-public class BTRACE106Test extends InstrumentorTestBase {
-    @Test
-    public void annotatedClass() throws Exception {
-        originalBC = loadTargetClass("issues/BTRACE106");
-        transform("issues/BTRACE106");
-        checkTransformation("ALOAD 0\nLDC \"aMethod\"\n"
-                + "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LSTORE 1\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LSTORE 3\nALOAD 0\nLDC \"bMethod\"\nLLOAD 3\nLLOAD 1\nLSUB\n"
-                + "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
-                + "MAXSTACK = 6\nMAXLOCALS = 5"
-        );
+@BTrace
+public class MethodCallNoArgs {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"))
+    public static void args() {
+        println("args");
     }
 }

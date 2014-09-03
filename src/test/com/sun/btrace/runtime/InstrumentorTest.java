@@ -571,6 +571,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void methodCallNoArgs() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("onmethod/MethodCallNoArgs");
+
+        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallNoArgs$args ()V");
+    }
+
+    @Test
     public void methodCallReturn() throws Exception {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallReturn");

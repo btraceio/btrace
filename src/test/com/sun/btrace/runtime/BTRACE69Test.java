@@ -39,13 +39,13 @@ public class BTRACE69Test extends InstrumentorTestBase {
         transform("issues/BTRACE69");
         checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
                             "TRYCATCHBLOCK L4 L6 L6 java/lang/Throwable\n" +
-                            "DUP\nASTORE 2\nALOAD 2\n" +
+                            "L7\nLINENUMBER 108 L7\nDUP\nASTORE 2\nALOAD 2\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncEntry (Ljava/lang/Object;)V\n" +
-                            "L7\nLINENUMBER 110 L7\nDUP\nASTORE 3\nALOAD 3\n" +
+                            "L8\nLINENUMBER 110 L8\nDUP\nASTORE 3\nALOAD 3\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
-                            "GOTO L8\nASTORE 4\nDUP\n" +
+                            "GOTO L4\nASTORE 4\nDUP\n" +
                             "ASTORE 5\nALOAD 5\n" +
                             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
-                            "ALOAD 4\nATHROW\nL8\nLINENUMBER 111 L8\nRETURN\nL5\nATHROW");
+                            "ALOAD 4\nATHROW\nL4\nLINENUMBER 111 L4\nRETURN\nL5\nATHROW");
     }
 }

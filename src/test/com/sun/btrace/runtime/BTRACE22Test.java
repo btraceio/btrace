@@ -41,7 +41,6 @@ public class BTRACE22Test extends InstrumentorTestBase {
                             "DSTORE 3\nDLOAD 3\nDLOAD 3\n" +
                             "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 5\n" +
                             "ALOAD 0\nLLOAD 5\nLLOAD 1\nLSUB\n" +
-                            "DUP2\nLSTORE 7\n" +
                             "INVOKESTATIC resources/issues/BTRACE22.$btrace$traces$issues$BTRACE22$tracker (Ljava/lang/Object;J)V");
     }
 }
