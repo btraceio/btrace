@@ -41,11 +41,10 @@ public class OSMBeanTest {
         try {
             double la = Sys.VM.systemLoadAverage();
             long t = Sys.VM.processCPUTime();
-            System.out.println(la + " # " + t);
+            println(la + " # " + t);
         } catch (Throwable e) {
-            System.out.println("FAILED");
-            e.printStackTrace(System.out);
-            System.out.flush();
+            println("FAILED");
+            println(e.getMessage());
         }
     }
 }

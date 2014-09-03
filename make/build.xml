@@ -275,6 +275,9 @@
             </classpath>
             <exclude name="traces/**"/>
         </javac>
+        <copy todir="${tests.dir}/traces">
+            <fileset dir="${test.src.dir}/traces" includes="**/*.java"/>
+        </copy>
     </target>
 
     <target name="build-traces" depends="jar">
