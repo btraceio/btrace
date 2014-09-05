@@ -16,3 +16,4 @@ docs
 nbproject/private
 TEST-*
 make/junit*
+benchmark/target
