@@ -30,8 +30,7 @@ import java.io.ObjectOutput;
 
 public class WireIO {
 
-    private WireIO() {
-    }
+    private WireIO() {}
 
     public static Command read(ObjectInput in) throws IOException {
         byte type = in.readByte();
@@ -87,10 +86,12 @@ public class WireIO {
         return cmd;
     }
 
-    public static void write(ObjectOutput out, Command cmd)
+    static void write(ObjectOutput out, Command cmd)
             throws IOException {
         out.writeByte(cmd.getType());
         cmd.write(out);
-        out.flush();
+        if (cmd.isUrgent()) {
+            out.flush();
+        }
     }
 }

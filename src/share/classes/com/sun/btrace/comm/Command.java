@@ -44,7 +44,7 @@ public abstract class Command implements Serializable {
     public static final byte GRID_DATA  = 10;
     public static final byte RETRANSFORMATION_START = 11;
     public static final byte RETRANSFORM_CLASS = 12;
-    
+
     public static final byte FIRST_COMMAND = ERROR;
     public static final byte LAST_COMMAND = RETRANSFORM_CLASS;
 
@@ -57,10 +57,25 @@ public abstract class Command implements Serializable {
     }
 
     protected abstract void write(ObjectOutput out) throws IOException;
-    protected abstract void read(ObjectInput in) 
+    protected abstract void read(ObjectInput in)
         throws IOException, ClassNotFoundException;
 
     public byte getType() {
         return type;
+    }
+
+    public final boolean isUrgent() {
+        switch (type) {
+            case MESSAGE:
+            case NUMBER_MAP:
+            case STRING_MAP:
+            case NUMBER:
+            case GRID_DATA: {
+                return false;
+            }
+            default: {
+                return true;
+            }
+        }
     }
 }
