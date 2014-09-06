@@ -84,7 +84,6 @@ import java.lang.management.ThreadMXBean;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -106,6 +105,8 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 
@@ -198,7 +199,7 @@ public final class BTraceRuntime  {
 
     // BTraceRuntime against BTrace class name
     private static Map<String, BTraceRuntime> runtimes =
-        Collections.synchronizedMap(new HashMap<String, BTraceRuntime>());
+        new ConcurrentHashMap<String, BTraceRuntime>();
 
     // jvmstat related stuff
     // to read and write perf counters
@@ -272,12 +273,12 @@ public final class BTraceRuntime  {
         // next speculative buffer id
         private int nextSpeculationId;
         // speculative buffers map
-        private ConcurrentHashMap<Integer, LinkedBlockingQueue<Command>> speculativeQueues;
+        private ConcurrentHashMap<Integer, BlockingQueue<Command>> speculativeQueues;
         // per thread current speculative buffer id
         private ThreadLocal<Integer> currentSpeculationId;
 
         SpeculativeQueueManager() {
-            speculativeQueues = new ConcurrentHashMap<Integer, LinkedBlockingQueue<Command>>();
+            speculativeQueues = new ConcurrentHashMap<Integer, BlockingQueue<Command>>();
             currentSpeculationId = new ThreadLocal<Integer>();
         }
 
@@ -300,7 +301,7 @@ public final class BTraceRuntime  {
         boolean send(Command cmd) {
             Integer curId = currentSpeculationId.get();
             if ((curId != null) && (cmd.getType() != Command.EXIT)) {
-                LinkedBlockingQueue<Command> sb = speculativeQueues.get(curId);
+                BlockingQueue<Command> sb = speculativeQueues.get(curId);
                 if (sb != null) {
                     try {
                         sb.add(cmd);
@@ -364,7 +365,7 @@ public final class BTraceRuntime  {
                          final CommandListener cmdListener,
                          Instrumentation inst) {
         this.args = args;
-        this.queue = new LinkedBlockingQueue<Command>(CMD_QUEUE_LIMIT);
+        this.queue = new ArrayBlockingQueue<Command>(CMD_QUEUE_LIMIT);
         this.specQueueManager = new SpeculativeQueueManager();
         this.cmdListener = cmdListener;
         this.className = className;
