@@ -106,11 +106,8 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
-import java.util.Arrays;
-import java.util.Random;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.Callable;
 
 import sun.misc.Perf;
 import sun.misc.Unsafe;
@@ -129,7 +126,29 @@ import sun.security.action.GetPropertyAction;
  * @author Joachim Skeie (GC MBean support, advanced Deque manipulation)
  * @author KLynch
  */
-public final class BTraceRuntime {
+public final class BTraceRuntime  {
+    private static final class RTWrapper {
+       private BTraceRuntime rt = null;
+
+        boolean set(BTraceRuntime other) {
+            if (rt != null) return false;
+            rt = other;
+            return true;
+        }
+
+        void escape(Callable<Void> c) {
+            BTraceRuntime oldRuntime = rt;
+            rt = null;
+            try {
+                c.call();
+            } catch (Exception ignored) {
+            } finally {
+                if (oldRuntime != null) {
+                    rt = oldRuntime;
+                }
+            }
+        }
+    }
     // we need Unsafe to load BTrace class bytes as
     // bootstrap class
     private static final Unsafe unsafe = Unsafe.getUnsafe();
@@ -138,7 +157,6 @@ public final class BTraceRuntime {
 
     // a dummy BTraceRuntime instance
     private static BTraceRuntime dummy;
-    private static BTraceRuntime NULL;
 
     // are we running with DTrace support enabled?
     private static boolean dtraceEnabled;
@@ -168,14 +186,13 @@ public final class BTraceRuntime {
         }
 
         dummy = new BTraceRuntime();
-        NULL = new BTraceRuntime();
         LINE_SEPARATOR = System.getProperty("line.separator");
     }
 
-    private static ThreadLocal<BTraceRuntime> rt = new ThreadLocal<BTraceRuntime>() {
+    private static ThreadLocal<RTWrapper> rt = new ThreadLocal<RTWrapper>() {
         @Override
-        protected BTraceRuntime initialValue() {
-            return NULL;
+        protected RTWrapper initialValue() {
+            return new RTWrapper();
         }
     };
 
@@ -367,7 +384,7 @@ public final class BTraceRuntime {
                 } catch (InterruptedException ignored) {
                 } catch (IOException ignored) {
                 } finally {
-                    runtimes.put(className, NULL);
+                    runtimes.put(className, null);
                     queue.clear();
                     specQueueManager.clear();
                     BTraceRuntime.leave();
@@ -418,12 +435,7 @@ public final class BTraceRuntime {
      */
     public static boolean enter(BTraceRuntime current) {
         if (current.disabled) return false;
-        if (rt.get() != NULL) {
-            return false;
-        } else {
-            rt.set(current);
-            return true;
-        }
+        return rt.get().set(current);
     }
 
     public static boolean enter() {
@@ -436,7 +448,7 @@ public final class BTraceRuntime {
      * method continues).
      */
     public static void leave() {
-        rt.remove();
+        rt.get().set(null);
     }
 
     /**
@@ -457,18 +469,14 @@ public final class BTraceRuntime {
     public void handleEvent(EventCommand ecmd) {
         if (eventHandlers != null) {
             String event = ecmd.getEvent();
-            Method eventHandler = eventHandlers.get(event);
+            final Method eventHandler = eventHandlers.get(event);
             if (eventHandler != null) {
-                BTraceRuntime oldRuntime = rt.get();
-                leave();
-                try {
-                    eventHandler.invoke(null, (Object[])null);
-                } catch (Throwable ignored) {
-                } finally {
-                    if (oldRuntime != null) {
-                        enter(oldRuntime);
+                rt.get().escape(new Callable<Void>() {
+                    public Void call() throws Exception {
+                        eventHandler.invoke(null, (Object[])null);
+                        return null;
                     }
-                }
+                });
             }
         }
     }
@@ -1810,7 +1818,7 @@ public final class BTraceRuntime {
      * if there is one.
      */
     private static BTraceRuntime getCurrent() {
-        BTraceRuntime current = rt.get();
+        BTraceRuntime current = rt.get().rt;
         assert current != null : "BTraceRuntime is null!";
         return current;
     }
