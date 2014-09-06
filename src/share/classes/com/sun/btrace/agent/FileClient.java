@@ -34,6 +34,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Represents a local client communicated by trace file.
@@ -41,8 +43,10 @@ import java.io.PrintWriter;
  * or a byte array containing bytecode of the trace script.
  *
  * @author A. Sundararajan
+ * @author J.Bachorik
  */
 class FileClient extends Client {
+    private final Timer flusher;
 
     private volatile PrintWriter out;
 
@@ -54,6 +58,24 @@ class FileClient extends Client {
         if (btraceClazz == null) {
             throw new RuntimeException("can not load BTrace class");
         }
+
+        int flushInterval;
+        String flushIntervalStr = System.getProperty("com.sun.btrace.FileClient.flush", "5");
+        try {
+            flushInterval = Integer.parseInt(flushIntervalStr);
+        } catch (NumberFormatException e) {
+            flushInterval = 5; // default
+        }
+
+        final int flushSec  = flushInterval;
+
+        flusher = new Timer("BTrace FileClient Flusher", true);
+        flusher.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                out.flush();
+            }
+        }, flushSec, flushSec);
     }
 
     FileClient(Instrumentation inst, File scriptFile, PrintWriter traceWriter) throws IOException {
@@ -65,7 +87,7 @@ class FileClient extends Client {
             throw new IOException("no output stream");
         }
         if (debug) {
-            
+
             Main.debugPrint("client " + getClassName() + ": got " + cmd);
         }
         switch (cmd.getType()) {
@@ -75,22 +97,19 @@ class FileClient extends Client {
             case Command.ERROR: {
                 ErrorCommand ecmd = (ErrorCommand) cmd;
                 Throwable cause = ecmd.getCause();
-                if (cause != null) {
-                    cause.printStackTrace(out);
-                    out.flush();
-                }
+                cause.printStackTrace(out);
                 break;
             }
             default:
                 if (cmd instanceof DataCommand) {
                     ((DataCommand) cmd).print(out);
-                    out.flush();
                 }
                 break;
         }
     }
 
     protected synchronized void closeAll() throws IOException {
+        flusher.cancel();
         if (out != null) {
             out.close();
         }
