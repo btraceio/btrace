@@ -86,7 +86,7 @@ public class WireIO {
         return cmd;
     }
 
-    static void write(ObjectOutput out, Command cmd)
+    public static void write(ObjectOutput out, Command cmd)
             throws IOException {
         out.writeByte(cmd.getType());
         cmd.write(out);

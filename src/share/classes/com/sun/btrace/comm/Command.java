@@ -64,7 +64,7 @@ public abstract class Command implements Serializable {
         return type;
     }
 
-    public final boolean isUrgent() {
+    final boolean isUrgent() {
         switch (type) {
             case MESSAGE:
             case NUMBER_MAP:
