@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.util;
 
+import com.sun.btrace.BTraceRuntime;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Random;
@@ -63,16 +64,22 @@ final public class SamplingSupport {
     private static final RandomIntProvider rndIntProvider;
 
     static {
-        Class clz = null;
+        boolean entered = false;
         try {
-            clz = Class.forName("java.util.concurrent.ThreadLocalRandom");
-        } catch (Throwable e) {
-            // ThreadLocalRandom not accessible -> pre JDK8
-        }
-        if (clz != null) {
-            rndIntProvider = new ThreadLocalRandomIntProvider();
-        } else {
-            rndIntProvider = new SharedRandomIntProvider();
+            entered = BTraceRuntime.enter();
+            Class clz = null;
+            try {
+                clz = Class.forName("java.util.concurrent.ThreadLocalRandom");
+            } catch (Throwable e) {
+                // ThreadLocalRandom not accessible -> pre JDK8
+            }
+            if (clz != null) {
+                rndIntProvider = new ThreadLocalRandomIntProvider();
+            } else {
+                rndIntProvider = new SharedRandomIntProvider();
+            }
+        } finally {
+            if (entered) BTraceRuntime.leave();
         }
     }
 
@@ -83,22 +90,30 @@ final public class SamplingSupport {
      * @return Returns {@code true} if the invocation is to be recorded
      */
     public static boolean sampleHit(int rate, int methodId) {
-        int[] sampleCntrs = iCounters.get();
-        if (sampleCntrs == null) {
-            sampleCntrs = new int[(int) (MethodID.lastMehodId.get() * 1.5)];
-            Arrays.fill(sampleCntrs, 0);
-            iCounters.set(sampleCntrs);
-        } else {
-            if (methodId >= sampleCntrs.length) {
-                sampleCntrs = Arrays.copyOf(sampleCntrs, (int) (MethodID.lastMehodId.get() * 1.5));
+        boolean entered = false;
+        try {
+            entered = BTraceRuntime.enter();
+            int[] sampleCntrs = iCounters.get();
+            if (sampleCntrs == null) {
+                sampleCntrs = new int[(int) (MethodID.lastMehodId.get() * 1.5)];
+                Arrays.fill(sampleCntrs, 0);
+                iCounters.set(sampleCntrs);
+            } else {
+                if (methodId >= sampleCntrs.length) {
+                    sampleCntrs = Arrays.copyOf(sampleCntrs, (int) (MethodID.lastMehodId.get() * 1.5));
+                }
+            }
+            if (sampleCntrs[methodId] == 0) {
+                sampleCntrs[methodId] = rndIntProvider.nextInt(rate);
+                return true;
+            }
+
+            sampleCntrs[methodId]--;
+            return false;
+        } finally {
+            if (entered) {
+                BTraceRuntime.leave();
             }
         }
-        if (sampleCntrs[methodId] == 0) {
-            sampleCntrs[methodId] = rndIntProvider.nextInt(rate);
-            return true;
-        }
-
-        sampleCntrs[methodId]--;
-        return false;
     }
 }
