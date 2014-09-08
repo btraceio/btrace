@@ -385,7 +385,7 @@ public final class BTraceRuntime  {
                 } catch (InterruptedException ignored) {
                 } catch (IOException ignored) {
                 } finally {
-                    runtimes.put(className, null);
+                    runtimes.remove(className);
                     queue.clear();
                     specQueueManager.clear();
                     BTraceRuntime.leave();
