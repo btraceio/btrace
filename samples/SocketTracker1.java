@@ -48,7 +48,7 @@ import com.sun.btrace.AnyType;
         clazz="java.net.ServerSocket",
         method="<init>"
     )
-    public static void onServerSocket(@Self ServerSocket self, 
+    public static void onServerSocket(@Self ServerSocket self,
         int p, int backlog, InetAddress bindAddr) {
         port = p;
         inetAddr = bindAddr;
@@ -62,11 +62,11 @@ import com.sun.btrace.AnyType;
     )
     public static void onSockReturn() {
         if (port != -1) {
-            println(Strings.strcat("server socket at ", Strings.str(port)));
+            println("server socket at " + port);
             port = -1;
         }
         if (inetAddr != null) {
-            println(Strings.strcat("server socket at ", Strings.str(inetAddr)));
+            println("server socket at " + inetAddr);
             inetAddr = null;
         }
     }
@@ -76,7 +76,7 @@ import com.sun.btrace.AnyType;
         name="server-socket-creator"
     )
     public static void onSocket(@Return ServerSocket ssock) {
-        println(Strings.strcat("server socket at ", Strings.str(ssock)));
+        println("server socket at " + ssock);
     }
 
     @OnProbe(
@@ -93,7 +93,7 @@ import com.sun.btrace.AnyType;
     )
     public static void onBindReturn() {
         if (sockAddr != null) {
-            println(Strings.strcat("server socket bind ", Strings.str(sockAddr)));
+            println("server socket bind " + sockAddr);
             sockAddr = null;
         }
     }
@@ -104,7 +104,7 @@ import com.sun.btrace.AnyType;
     )
     public static void onAcceptReturn(AnyType sock) {
         if (sock != null) {
-            println(Strings.strcat("client socket accept ", Strings.str(sock)));
+            println("client socket accept " + sock);
         }
     }
 }

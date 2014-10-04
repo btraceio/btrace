@@ -42,8 +42,6 @@ public class AllLines {
         location=@Location(value=Kind.LINE, line=-1)
     )
     public static void online(@ProbeClassName String pcn, @ProbeMethodName String pmn, int line) {
-        print(Strings.strcat(pcn, "."));
-        print(Strings.strcat(pmn, ":"));
-        println(line);
-    } 
+        print(pcn + "." + pmn +  ":" + line);
+    }
 }

@@ -40,9 +40,9 @@ import static com.sun.btrace.BTraceUtils.*;
     @OnMethod(
         clazz="java.lang.Thread",
         method="start"
-    ) 
+    )
     public static void onnewThread(@Self Thread t) {
         D.probe("jthreadstart", Threads.name(t));
-        println(Strings.strcat("starting ", Threads.name(t)));
+        println("starting " + Threads.name(t));
     }
 }

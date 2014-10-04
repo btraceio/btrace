@@ -45,7 +45,7 @@ import java.nio.channels.SocketChannel;
         clazz="java.net.ServerSocket",
         method="<init>"
     )
-    public static void onServerSocket(@Self ServerSocket self, 
+    public static void onServerSocket(@Self ServerSocket self,
         int p, int backlog, InetAddress bindAddr) {
         port = p;
         inetAddr = bindAddr;
@@ -59,11 +59,11 @@ import java.nio.channels.SocketChannel;
     )
     public static void onSockReturn() {
         if (port != -1) {
-            println(Strings.strcat("server socket at ", Strings.str(port)));
+            println("server socket at " + port);
             port = -1;
         }
         if (inetAddr != null) {
-            println(Strings.strcat("server socket at ", Strings.str(inetAddr)));
+            println("server socket at " + inetAddr);
             inetAddr = null;
         }
     }
@@ -130,17 +130,17 @@ import java.nio.channels.SocketChannel;
     public static void onAcceptReturn(@Return SocketChannel sockChan) {
         clientSocketAcc(sockChan);
     }
-    
+
     private static void socketBound() {
         if (sockAddr != null) {
-            println(Strings.strcat("server socket bind ", Strings.str(sockAddr)));
+            println("server socket bind " +sockAddr);
             sockAddr = null;
         }
     }
-    
+
     private static void clientSocketAcc(Object obj) {
         if (obj != null) {
-            println(Strings.strcat("client socket accept ", Strings.str(obj)));
+            println("client socket accept " + obj);
         }
     }
 }

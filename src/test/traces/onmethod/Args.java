@@ -38,6 +38,7 @@ import static com.sun.btrace.BTraceUtils.*;
 public class Args {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
     public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
+        println("this = " + self);
         println("args");
     }
 }

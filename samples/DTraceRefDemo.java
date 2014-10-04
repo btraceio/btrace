@@ -46,12 +46,12 @@ import com.sun.btrace.annotations.*;
    }
 
    @OnMethod(
-     clazz="java.lang.ClassLoader", 
+     clazz="java.lang.ClassLoader",
      method="defineClass",
      location=@Location(Kind.RETURN)
-   )   
+   )
    public static void defineclass(Class cl) {
-       println(Strings.strcat("loaded ", Reflective.name(cl)));
+       println("loaded " +  Reflective.name(cl));
        Threads.jstack();
        println("==========================");
    }

@@ -39,9 +39,6 @@ import static com.sun.btrace.BTraceUtils.*;
               location=@Location(value=Kind.CALL, clazz="/.*/", method="/.*/"))
     public static void n(@Self Object self, @ProbeClassName String pcm, @ProbeMethodName String pmn,
                          @TargetInstance Object instance, @TargetMethodOrField String method, String text) { // all calls to the methods with signature "(String)"
-        println(Strings.strcat("Context: ", Strings.strcat(pcm, Strings.strcat("#", pmn))));
-        print(method);
-        print(" ");
-        println(text);
+        println("Context: " + pcm + "#" +  pmn + method + " " + text);
     }
-} 
+}

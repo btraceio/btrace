@@ -34,7 +34,7 @@ import java.io.FileOutputStream;
 /**
  * This sample prints all files opened for read/write
  * by a Java process. Note that if you pass FileDescriptor
- * to File{Input/Output}Stream or File{Reader/Writer}, 
+ * to File{Input/Output}Stream or File{Reader/Writer},
  * that is not tracked by this script.
  */
 @BTrace public class FileTracker {
@@ -56,7 +56,7 @@ import java.io.FileOutputStream;
     )
     public static void onNewFileInputStreamReturn() {
         if (name != null) {
-            println(Strings.strcat("opened for read ", name));
+            println("opened for read " + name);
             name = null;
         }
     }
@@ -77,7 +77,7 @@ import java.io.FileOutputStream;
     )
     public static void OnNewFileOutputStreamReturn() {
         if (name != null) {
-            println(Strings.strcat("opened for write ", name));
+            println("opened for write " + name);
             name = null;
         }
     }

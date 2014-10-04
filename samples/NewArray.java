@@ -56,6 +56,6 @@ import static com.sun.btrace.BTraceUtils.*;
     @OnTimer(2000)
     public static void print() {
         // print the counter
-        println(Strings.strcat("char[] count = ", str(count)));
+        println("char[] count = " + count);
     }
 }

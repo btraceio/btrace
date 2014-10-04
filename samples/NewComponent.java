@@ -42,7 +42,7 @@ import java.awt.Component;
 
     @OnMethod(
       clazz="java.awt.Component",
-      method="<init>"    
+      method="<init>"
     )
     public static void onnew(@Self Component c) {
         // increment counter on constructor entry
@@ -52,6 +52,6 @@ import java.awt.Component;
     @OnTimer(2000)
     public static void print() {
         // print the counter
-        println(Strings.strcat("component count = ", str(count)));
+        println("component count = " + count);
     }
 }

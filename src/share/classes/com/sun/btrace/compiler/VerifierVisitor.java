@@ -121,18 +121,6 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return reportError("no.asserts", node);        
     }
 
-    public Boolean visitBinary(BinaryTree node, Void v) {
-        if (node.getKind() == Tree.Kind.PLUS) {
-            Tree left = node.getLeftOperand();
-            Tree right = node.getRightOperand();
-            if (left.getKind() == Tree.Kind.STRING_LITERAL ||
-                right.getKind() == Tree.Kind.STRING_LITERAL) {
-                return reportError("no.string.concatenation", node);
-            }
-        }
-        return super.visitBinary(node, v);
-    }
-
     public Boolean visitAssignment(AssignmentTree node, Void v) {        
         if (checkLValue(node.getVariable())) {
             return super.visitAssignment(node, v);
