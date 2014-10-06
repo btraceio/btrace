@@ -696,6 +696,32 @@ public final class BTraceRuntime  {
         }
     }
 
+    public static String safeStr(Object obj) {
+        if (obj == null) {
+            return "null";
+        } else if (obj instanceof String) {
+            return (String) obj;
+        } else if (obj.getClass().getClassLoader() == null) {
+            try {
+                String str = obj.toString();
+                return str;
+            } catch (NullPointerException e) {
+                // NPE can be thrown from inside the toString() method we have no control over
+                return "null";
+            } catch (Throwable e) {
+                e.printStackTrace();
+                return "error";
+            }
+        } else {
+            return identityStr(obj);
+        }
+    }
+
+    private static String identityStr(Object obj) {
+        int hashCode = java.lang.System.identityHashCode(obj);
+        return obj.getClass().getName() + "@" + Integer.toHexString(hashCode);
+    }
+
     // package-private interface to BTraceUtils class.
 
     static int speculation() {

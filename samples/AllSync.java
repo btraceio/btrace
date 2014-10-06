@@ -29,8 +29,8 @@ import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
- * This script traces method/block entry into every method of 
- * every class in javax.swing package! Think before using 
+ * This script traces method/block entry into every method of
+ * every class in javax.swing package! Think before using
  * this script -- this will slow down your app significantly!!
  * Note tha Where.BEFORE is default. For synchronized blocks, BEFORE
  * means before "monitorenter" bytecode. For synchronized methods, we
@@ -42,18 +42,18 @@ import static com.sun.btrace.BTraceUtils.*;
     @OnMethod(
         clazz="/javax\\.swing\\..*/",
         method="/.*/",
-        location=@Location(value=Kind.SYNC_ENTRY, where=Where.AFTER) 
+        location=@Location(value=Kind.SYNC_ENTRY, where=Where.AFTER)
     )
     public static void onSyncEntry(Object obj) {
-        println(Strings.strcat("after synchronized entry: ", identityStr(obj)));
+        println("after synchronized entry: " + identityStr(obj));
     }
 
     @OnMethod(
         clazz="/javax\\.swing\\..*/",
         method="/.*/",
-        location=@Location(Kind.SYNC_EXIT) 
+        location=@Location(Kind.SYNC_EXIT)
     )
     public static void onSyncExit(Object obj) {
-        println(Strings.strcat("before synchronized exit: ", identityStr(obj)));
+        println("before synchronized exit: " + identityStr(obj));
     }
-} 
+}

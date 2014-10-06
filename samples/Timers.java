@@ -22,32 +22,31 @@
  * CA 95054 USA or visit www.sun.com if you need additional information or
  * have any questions.
  */
-
 package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
- * Demonstrates multiple timer probes with different
- * periods to fire.
+ * Demonstrates multiple timer probes with different periods to fire.
  */
-@BTrace public class Timers {
+@BTrace
+public class Timers {
 
-   // when starting print the target VM version and start time
-   static {
-       println(Strings.strcat("vm version ", Sys.VM.vmVersion()));
-       println(Strings.strcat("vm starttime ", Strings.str(Sys.VM.vmStartTime())));
-   }
+    // when starting print the target VM version and start time
+    static {
+        println("vm version " + Sys.VM.vmVersion());
+        println("vm starttime " + Sys.VM.vmStartTime());
+    }
 
-   @OnTimer(1000) 
-   public static void f() {
-     println(Strings.strcat("1000 msec: ", Strings.str(Sys.VM.vmUptime())));
-   }
+    @OnTimer(1000)
+    public static void f() {
+        println("1000 msec: " + Sys.VM.vmUptime());
+    }
 
-   @OnTimer(3000) 
-   public static void f1() {
-     println(Strings.strcat("3000 msec: ", Strings.str(Time.millis())));
-   }
+    @OnTimer(3000)
+    public static void f1() {
+        println("3000 msec: " + Time.millis());
+    }
 
 }

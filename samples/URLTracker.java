@@ -70,7 +70,7 @@ import java.net.*;
     )
     public static void openURL() {
         if (url != null) {
-            println(Strings.strcat("open ", Strings.str(url)));
+            println("open " + url);
             D.probe("java-url-open", Strings.str(url));
             url = null;
         }

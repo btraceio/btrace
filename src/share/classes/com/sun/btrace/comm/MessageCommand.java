@@ -50,16 +50,28 @@ public class MessageCommand extends DataCommand {
     protected MessageCommand() {
         this(0L, null);
     }
-    
+
     protected void write(ObjectOutput out) throws IOException {
         out.writeLong(time);
-        out.writeUTF(msg != null? msg : "");
+        byte[] bytes = msg != null ? msg.getBytes("utf-8") : new byte[0];
+        out.writeInt(bytes.length);
+        if (bytes.length > 0) {
+            out.write(bytes);
+        }
     }
 
-    protected void read(ObjectInput in) 
+    protected void read(ObjectInput in)
                    throws ClassNotFoundException, IOException {
         time = in.readLong();
-        msg = in.readUTF();
+        int len = in.readInt();
+        byte[] bytes = new byte[len];
+
+        int ptr = 0;
+        while (ptr < len) {
+            ptr += in.read(bytes, ptr, len - ptr);
+        }
+
+        msg = new String(bytes, "utf-8");
     }
 
     public long getTime() {
@@ -69,7 +81,7 @@ public class MessageCommand extends DataCommand {
     public String getMessage() {
         return msg;
     }
-    
+
     public void print(PrintWriter out) {
         if (time != 0L) {
             out.print(DATE_FORMAT.format(new Date(time)));

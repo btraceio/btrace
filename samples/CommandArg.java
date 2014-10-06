@@ -41,7 +41,7 @@ import static com.sun.btrace.BTraceUtils.*;
     )
     public static void started() {
         if (Strings.strcmp(Threads.name(Threads.currentThread()), Sys.$(2)) == 0) {
-            println(Strings.strcat("started ", Sys.$(2)));
+            println("started " + Sys.$(2));
         }
     }
 }

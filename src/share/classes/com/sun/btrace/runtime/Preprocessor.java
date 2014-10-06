@@ -774,6 +774,36 @@ public class Preprocessor extends ClassVisitor {
                     super.visitInsn(opcode);
                 }
 
+                @Override
+                public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                    if (owner.equals(Type.getInternalName(StringBuilder.class))) {
+                        // allow string concatenation via StringBuilder
+                        if (name.equals("append")) {
+                            // wrap Object args to append by a 'safe wrapper'
+                            if (desc.equals(Type.getMethodDescriptor(
+                                    Type.getType(StringBuilder.class),
+                                    Type.getType(Object.class))
+                                )) {
+                                super.visitMethodInsn(
+                                    Opcodes.INVOKESTATIC,
+                                    Type.getInternalName(BTraceRuntime.class),
+                                    "safeStr",
+                                    Type.getMethodDescriptor(
+                                        Type.getType(String.class),
+                                        Type.getType(Object.class)
+                                    ),
+                                    false
+                                );
+                                desc = Type.getMethodDescriptor(
+                                    Type.getType(StringBuilder.class),
+                                    Type.getType(String.class)
+                                );
+                            }
+                        }
+                    }
+                    super.visitMethodInsn(opcode, owner, name, desc, itf);
+                }
+
                 public void visitMaxs(int maxStack, int maxLocals) {
                     visitLabel(handler);
                     if (isBTraceHandler) {
