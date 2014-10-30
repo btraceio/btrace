@@ -82,12 +82,12 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
 
                         @Override
                         protected void afterObjectNew(String desc) {
-                            println("after allocating an object of " + desc);
+                            asm.println("after allocating an object of " + desc);
                         }
 
                         @Override
                         protected void beforeObjectNew(String desc) {
-                            println("before allocating an object of " + desc);
+                            asm.println("before allocating an object of " + desc);
                         }
                      };
                  }

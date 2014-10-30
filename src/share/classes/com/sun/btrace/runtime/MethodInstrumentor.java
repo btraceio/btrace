@@ -33,7 +33,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
+import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.LocalVariableHelper;
 
 /**
@@ -42,64 +42,8 @@ import com.sun.btrace.util.LocalVariableHelper;
  * @author A. Sundararajan
  */
 public class MethodInstrumentor extends MethodVisitor implements LocalVariableHelper {
-    public static final String JAVA_LANG_THREAD_LOCAL =
-        Type.getInternalName(ThreadLocal.class);
-    public static final String JAVA_LANG_THREAD_LOCAL_GET = "get";
-    public static final String JAVA_LANG_THREAD_LOCAL_GET_DESC = "()Ljava/lang/Object;";
-    public static final String JAVA_LANG_THREAD_LOCAL_SET = "set";
-    public static final String JAVA_LANG_THREAD_LOCAL_SET_DESC = "(Ljava/lang/Object;)V";
-
-    public static final String JAVA_LANG_STRING =
-        Type.getInternalName(String.class);
-    public static final String JAVA_LANG_STRING_DESC =
-        Type.getDescriptor(String.class);
-
-    public static final String JAVA_LANG_NUMBER =
-        Type.getInternalName(Number.class);
-    public static final String JAVA_LANG_BOOLEAN =
-        Type.getInternalName(Boolean.class);
-    public static final String JAVA_LANG_CHARACTER =
-        Type.getInternalName(Character.class);
-    public static final String JAVA_LANG_BYTE =
-        Type.getInternalName(Byte.class);
-    public static final String JAVA_LANG_SHORT =
-        Type.getInternalName(Short.class);
-    public static final String JAVA_LANG_INTEGER =
-        Type.getInternalName(Integer.class);
-    public static final String JAVA_LANG_LONG =
-        Type.getInternalName(Long.class);
-    public static final String JAVA_LANG_FLOAT =
-        Type.getInternalName(Float.class);
-    public static final String JAVA_LANG_DOUBLE =
-        Type.getInternalName(Double.class);
-
-    public static final String BOX_VALUEOF = "valueOf";
-    public static final String BOX_BOOLEAN_DESC = "(Z)Ljava/lang/Boolean;";
-    public static final String BOX_CHARACTER_DESC = "(C)Ljava/lang/Character;";
-    public static final String BOX_BYTE_DESC = "(B)Ljava/lang/Byte;";
-    public static final String BOX_SHORT_DESC = "(S)Ljava/lang/Short;";
-    public static final String BOX_INTEGER_DESC = "(I)Ljava/lang/Integer;";
-    public static final String BOX_LONG_DESC = "(J)Ljava/lang/Long;";
-    public static final String BOX_FLOAT_DESC = "(F)Ljava/lang/Float;";
-    public static final String BOX_DOUBLE_DESC = "(D)Ljava/lang/Double;";
-
-    public static final String BOOLEAN_VALUE = "booleanValue";
-    public static final String CHAR_VALUE = "charValue";
-    public static final String BYTE_VALUE = "byteValue";
-    public static final String SHORT_VALUE = "shortValue";
-    public static final String INT_VALUE = "intValue";
-    public static final String LONG_VALUE = "longValue";
-    public static final String FLOAT_VALUE = "floatValue";
-    public static final String DOUBLE_VALUE = "doubleValue";
-
-    public static final String BOOLEAN_VALUE_DESC= "()Z";
-    public static final String CHAR_VALUE_DESC= "()C";
-    public static final String BYTE_VALUE_DESC= "()B";
-    public static final String SHORT_VALUE_DESC= "()S";
-    public static final String INT_VALUE_DESC= "()I";
-    public static final String LONG_VALUE_DESC= "()J";
-    public static final String FLOAT_VALUE_DESC= "()F";
-    public static final String DOUBLE_VALUE_DESC= "()D";
+    protected void visitMethodPrologue() {
+    }
 
     final protected static class ValidationResult {
         final static private int[] EMPTY_ARRAY = new int[0];
@@ -124,7 +68,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         }
 
         public boolean isAny() {
-            return argsIndex.length == 0;
+            return isValid && argsIndex.length == 0;
         }
 
         public boolean isValid() {
@@ -156,16 +100,18 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             hash = 59 * hash + Arrays.hashCode(this.argsIndex);
             return hash;
         }
+
+        final protected static ValidationResult INVALID = new ValidationResult(false);
+        final protected static ValidationResult ANY = new ValidationResult(true);
     }
 
-    final private static ValidationResult INVALID = new ValidationResult(false);
-    final private static ValidationResult ANY = new ValidationResult(true);
+    public static abstract class ArgumentProvider {
+        private final int index;
+        protected final Assembler asm;
 
-    protected abstract class ArgumentProvider {
-        private int index;
-
-        public ArgumentProvider(int index) {
+        public ArgumentProvider(Assembler asm, int index) {
             this.index = index;
+            this.asm = asm;
         }
 
         public int getIndex() {
@@ -181,18 +127,18 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         abstract protected void doProvide();
     }
 
-    protected class LocalVarArgProvider extends ArgumentProvider {
-        private Type type;
-        private int ptr;
+    private static class LocalVarArgProvider extends ArgumentProvider {
+        private final Type type;
+        private final int ptr;
 
-        public LocalVarArgProvider(int index, Type type, int ptr) {
-            super(index);
+        public LocalVarArgProvider(Assembler asm, int index, Type type, int ptr) {
+            super(asm, index);
             this.type = type;
             this.ptr = ptr;
         }
 
         public void doProvide() {
-            loadLocal(type, ptr);
+            asm.loadLocal(type, ptr);
         }
 
         @Override
@@ -202,16 +148,16 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
 
     }
 
-    protected class ConstantArgProvider extends ArgumentProvider {
+    private static class ConstantArgProvider extends ArgumentProvider {
         private Object constant;
 
-        public ConstantArgProvider(int index, Object constant) {
-            super(index);
+        public ConstantArgProvider(Assembler asm, int index, Object constant) {
+            super(asm, index);
             this.constant = constant;
         }
 
         public void doProvide() {
-            visitLdcInsn(constant);
+            asm.ldc(constant);
         }
 
         @Override
@@ -223,27 +169,27 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     protected class AnyTypeArgProvider extends ArgumentProvider {
         private int argPtr;
         private Type[] myArgTypes;
-        public AnyTypeArgProvider(int index, int basePtr) {
-            this(index, basePtr, argumentTypes);
+        public AnyTypeArgProvider(Assembler asm, int index, int basePtr) {
+            this(asm, index, basePtr, argumentTypes);
         }
 
-        public AnyTypeArgProvider(int index, int basePtr, Type[] argTypes) {
-            super(index);
+        public AnyTypeArgProvider(Assembler asm, int index, int basePtr, Type[] argTypes) {
+            super(asm, index);
             this.argPtr = basePtr;
             this.myArgTypes = argTypes;
         }
 
 
         public void doProvide() {
-            push(myArgTypes.length);
-            visitTypeInsn(ANEWARRAY, TypeUtils.objectType.getInternalName());
+            asm.push(myArgTypes.length);
+            asm.newArray(TypeUtils.objectType);
             for (int j = 0; j < myArgTypes.length; j++) {
-                dup();
-                push(j);
                 Type argType = myArgTypes[j];
-                loadLocal(argType, argPtr);
-                box(argType);
-                arrayStore(TypeUtils.objectType);
+                asm.dup()
+                   .push(j)
+                   .loadLocal(argType, argPtr)
+                   .box(argType)
+                   .arrayStore(TypeUtils.objectType);
                 argPtr += argType.getSize();
             }
         }
@@ -259,8 +205,12 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     private Type[] argumentTypes;
     private Map<Integer, Type> extraTypes;
     private Label skipLabel;
+    private boolean prologueVisited = false;
 
     private final LocalVariableHelper lvt;
+    protected final Assembler asm;
+
+    protected MethodInstrumentor parent = null;
 
     public MethodInstrumentor(
         LocalVariableHelper lvt, String parentClz,
@@ -276,6 +226,52 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         this.argumentTypes = Type.getArgumentTypes(desc);
         extraTypes = new HashMap<Integer, Type>();
         this.lvt = lvt;
+        if (lvt instanceof MethodInstrumentor) {
+            ((MethodInstrumentor)lvt).parent = this;
+        }
+        this.asm = new Assembler(this);
+    }
+
+    final public void visitCode() {
+        if (!isConstructor()) {
+            prologueVisited = true;
+            visitMethodPrologue();
+        }
+        super.visitCode();
+    }
+
+    public void visitMethodInsn(int opcode,
+                     String owner,
+                     String name,
+                     String desc) {
+        super.visitMethodInsn(opcode, owner, name, desc);
+        if (isConstructor() && !prologueVisited) {
+            if (name.equals(CONSTRUCTOR) && (owner.equals(getParentClz()) || (getSuperClz() != null && owner.equals(getSuperClz())))) {
+                // super or this class constructor call.
+                // do method entry after that!
+                prologueVisited = true;
+                visitMethodPrologue();
+            }
+        }
+    }
+
+    public void visitInsn(int opcode) {
+        switch (opcode) {
+            case IRETURN:
+            case ARETURN:
+            case FRETURN:
+            case LRETURN:
+            case DRETURN:
+            case RETURN:
+                if (!prologueVisited) {
+                    prologueVisited = true;
+                    visitMethodPrologue();
+                }
+                break;
+            default:
+                break;
+        }
+        super.visitInsn(opcode);
     }
 
     public int getAccess() {
@@ -370,13 +366,29 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     public void restoreStack(int[] backupArgsIndexes, Type[] methodArgTypes, boolean isStatic) {
         int upper = methodArgTypes.length - 1;
         if (!isStatic) {
-            loadLocal(TypeUtils.objectType, backupArgsIndexes[0]);
+            asm.loadLocal(TypeUtils.objectType, backupArgsIndexes[0]);
         }
 
-            for (int i = methodArgTypes.length - 1; i > -1; i--) {
-                loadLocal(methodArgTypes[upper - i], backupArgsIndexes[upper - i + 1]);
-            }
+        for (int i = methodArgTypes.length - 1; i > -1; i--) {
+            asm.loadLocal(methodArgTypes[upper - i], backupArgsIndexes[upper - i + 1]);
         }
+    }
+
+    protected final ArgumentProvider localVarArg(int index, Type type, int ptr) {
+        return new LocalVarArgProvider(asm, index, type, ptr);
+    }
+
+    protected final ArgumentProvider constArg(int index, Object val) {
+        return new ConstantArgProvider(asm, index, val);
+    }
+
+    protected final ArgumentProvider anytypeArg(int index, int basePtr) {
+        return new AnyTypeArgProvider(asm, index, basePtr);
+    }
+
+    protected final ArgumentProvider anytypeArg(int index, int basePtr, Type ... argTypes) {
+        return new AnyTypeArgProvider(asm, index, basePtr, argTypes);
+    }
 
     protected final boolean isStatic() {
         return (getAccess() & ACC_STATIC) != 0;
@@ -388,292 +400,6 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
 
     public void returnValue() {
         super.visitInsn(returnType.getOpcode(IRETURN));
-    }
-
-    public void push(int value) {
-        if (value >= -1 && value <= 5) {
-            super.visitInsn(ICONST_0 + value);
-        } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
-            super.visitIntInsn(BIPUSH, value);
-        } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
-            super.visitIntInsn(SIPUSH, value);
-        } else {
-            super.visitLdcInsn(Integer.valueOf(value));
-        }
-    }
-
-    public void arrayLoad(Type type) {
-        super.visitInsn(type.getOpcode(IALOAD));
-    }
-
-    public void arrayStore(Type type) {
-        super.visitInsn(type.getOpcode(IASTORE));
-    }
-
-    public void loadLocal(Type type, int index) {
-        super.visitVarInsn(type.getOpcode(ILOAD), index);
-    }
-
-    public void storeLocal(Type type, int index) {
-        super.visitVarInsn(type.getOpcode(ISTORE), index);
-    }
-
-    public void pop() {
-        super.visitInsn(POP);
-    }
-
-    public void dup() {
-        super.visitInsn(DUP);
-    }
-
-    public void dup2() {
-        super.visitInsn(DUP2);
-    }
-
-    public void dupArrayValue(int arrayOpcode) {
-        switch (arrayOpcode) {
-            case IALOAD: case FALOAD:
-            case AALOAD: case BALOAD:
-            case CALOAD: case SALOAD:
-            case IASTORE: case FASTORE:
-            case AASTORE: case BASTORE:
-            case CASTORE: case SASTORE:
-                dup();
-            break;
-
-            case LALOAD: case DALOAD:
-            case LASTORE: case DASTORE:
-                dup2();
-            break;
-        }
-    }
-
-    public void dupReturnValue(int returnOpcode) {
-        switch (returnOpcode) {
-            case IRETURN:
-            case FRETURN:
-            case ARETURN:
-                super.visitInsn(DUP);
-                return;
-            case LRETURN:
-            case DRETURN:
-                super.visitInsn(DUP2);
-                return;
-            case RETURN:
-                return;
-            default:
-                throw new IllegalArgumentException("not return");
-        }
-    }
-
-    public void dupValue(Type type) {
-        switch (type.getSize()) {
-            case 1:
-                dup();
-            break;
-            case 2:
-                dup2();
-            break;
-        }
-    }
-
-    public void dupValue(String desc) {
-        int typeCode = desc.charAt(0);
-        switch (typeCode) {
-            case '[':
-            case 'L':
-            case 'Z':
-            case 'C':
-            case 'B':
-            case 'S':
-            case 'I':
-                super.visitInsn(DUP);
-                break;
-            case 'J':
-            case 'D':
-                super.visitInsn(DUP2);
-                break;
-            default:
-                throw new RuntimeException("invalid signature");
-        }
-    }
-
-    public void box(Type type) {
-        box(type.getDescriptor());
-    }
-
-    public void box(String desc) {
-        int typeCode = desc.charAt(0);
-        switch (typeCode) {
-            case '[':
-            case 'L':
-                break;
-            case 'Z':
-                super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_BOOLEAN,
-                                BOX_VALUEOF,
-                                BOX_BOOLEAN_DESC);
-                break;
-            case 'C':
-                super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_CHARACTER,
-                                BOX_VALUEOF,
-                                BOX_CHARACTER_DESC);
-                break;
-            case 'B':
-                super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_BYTE,
-                                BOX_VALUEOF,
-                                BOX_BYTE_DESC);
-                break;
-            case 'S':
-                super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_SHORT,
-                                BOX_VALUEOF,
-                                BOX_SHORT_DESC);
-                break;
-            case 'I':
-                super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_INTEGER,
-                                BOX_VALUEOF,
-                                BOX_INTEGER_DESC);
-                break;
-            case 'J':
-                super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_LONG,
-                                BOX_VALUEOF,
-                                BOX_LONG_DESC);
-                break;
-            case 'F':
-                super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_FLOAT,
-                                BOX_VALUEOF,
-                                BOX_FLOAT_DESC);
-                break;
-            case 'D':
-                super.visitMethodInsn(INVOKESTATIC, JAVA_LANG_DOUBLE,
-                                BOX_VALUEOF,
-                                BOX_DOUBLE_DESC);
-                break;
-        }
-    }
-
-    public void unbox(Type type) {
-        unbox(type.getDescriptor());
-    }
-
-    public void unbox(String desc) {
-        int typeCode = desc.charAt(0);
-        switch (typeCode) {
-            case '[':
-            case 'L':
-                super.visitTypeInsn(CHECKCAST, Type.getType(desc).getInternalName());
-                break;
-            case 'Z':
-                super.visitTypeInsn(CHECKCAST, JAVA_LANG_BOOLEAN);
-                super.visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_BOOLEAN,
-                                BOOLEAN_VALUE,
-                                BOOLEAN_VALUE_DESC);
-                break;
-            case 'C':
-                super.visitTypeInsn(CHECKCAST, JAVA_LANG_CHARACTER);
-                super.visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_CHARACTER,
-                                CHAR_VALUE,
-                                CHAR_VALUE_DESC);
-                break;
-            case 'B':
-                super.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
-                super.visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_NUMBER,
-                                BYTE_VALUE,
-                                BYTE_VALUE_DESC);
-                break;
-            case 'S':
-                super.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
-                super.visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_NUMBER,
-                                SHORT_VALUE,
-                                SHORT_VALUE_DESC);
-                break;
-            case 'I':
-                super.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
-                super.visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_NUMBER,
-                                INT_VALUE,
-                                INT_VALUE_DESC);
-                break;
-            case 'J':
-                super.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
-                super.visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_NUMBER,
-                                LONG_VALUE,
-                                LONG_VALUE_DESC);
-                break;
-            case 'F':
-                super.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
-                super.visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_NUMBER,
-                                FLOAT_VALUE,
-                                FLOAT_VALUE_DESC);
-                break;
-            case 'D':
-                super.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
-                super.visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_NUMBER,
-                                DOUBLE_VALUE,
-                                DOUBLE_VALUE_DESC);
-                break;
-        }
-    }
-
-    public void defaultValue(String desc) {
-        int typeCode = desc.charAt(0);
-        switch (typeCode) {
-            case '[':
-            case 'L':
-                super.visitInsn(ACONST_NULL);
-                break;
-            case 'Z':
-            case 'C':
-            case 'B':
-            case 'S':
-            case 'I':
-                super.visitInsn(ICONST_0);
-                break;
-            case 'J':
-                super.visitInsn(LCONST_0);
-                break;
-            case 'F':
-                super.visitInsn(FCONST_0);
-                break;
-            case 'D':
-                super.visitInsn(DCONST_0);
-                break;
-        }
-    }
-
-    public void println(String msg) {
-        super.visitFieldInsn(GETSTATIC,
-                    "java/lang/System",
-                    "out",
-                    "Ljava/io/PrintStream;");
-        super.visitLdcInsn(msg);
-        super.visitMethodInsn(INVOKEVIRTUAL,
-                    "java/io/PrintStream",
-                    "println",
-                    "(Ljava/lang/String;)V");
-    }
-
-    // print the object on the top of the stack
-    public void printObject() {
-        super.visitFieldInsn(GETSTATIC,
-                    "java/lang/System",
-                    "out",
-                    "Ljava/io/PrintStream;");
-        super.visitInsn(SWAP);
-        super.visitMethodInsn(INVOKEVIRTUAL,
-                    "java/io/PrintStream",
-                    "println",
-                    "(Ljava/lang/Object;)V");
-    }
-
-    public void invokeVirtual(String owner, String method, String desc) {
-        super.visitMethodInsn(INVOKEVIRTUAL, owner, method, desc);
-    }
-
-    public void invokeSpecial(String owner, String method, String desc) {
-        super.visitMethodInsn(INVOKESPECIAL, owner, method, desc);
-    }
-
-    public void invokeStatic(String owner, String method, String desc) {
-        super.visitMethodInsn(INVOKESTATIC, owner, method, desc);
     }
 
     protected String getParentClz() {
@@ -689,18 +415,18 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
 
         if (om.getSelfParameter() != -1) {
             if (staticFlag) {
-                return INVALID;
+                return ValidationResult.INVALID;
             }
             Type selfType = extraTypes.get(om.getSelfParameter());
             if (selfType == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getSelfParameter()])) {
                     System.err.println("Invalid @Self parameter. @Self parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getSelfParameter()]);
-                    return INVALID;
+                    return ValidationResult.INVALID;
                 }
             } else {
                 if (!TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter()], selfType)) {
                     System.err.println("Invalid @Self parameter. @Self parameter is not compatible. Expected " + selfType + ", Received " + actionArgTypes[om.getSelfParameter()]);
-                    return INVALID;
+                    return ValidationResult.INVALID;
                 }
             }
             specialArgsCount++;
@@ -713,12 +439,12 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             if (type == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getReturnParameter()])) {
                     System.err.println("Invalid @Return parameter. @Return parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getReturnParameter()]);
-                    return INVALID;
+                    return ValidationResult.INVALID;
                 }
             } else {
                 if (!TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter()], type)) {
                     System.err.println("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
-                    return INVALID;
+                    return ValidationResult.INVALID;
                 }
             }
             specialArgsCount++;
@@ -726,7 +452,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         if (om.getTargetMethodOrFieldParameter() != -1) {
             if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], Type.getType(String.class)))) {
                 System.err.println("Invalid @CalledMethod parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
-                return INVALID;
+                return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
@@ -735,31 +461,31 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             if (calledType == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getTargetInstanceParameter()])) {
                     System.err.println("Invalid @CalledInstance parameter. @CalledInstance parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getTargetInstanceParameter()]);
-                    return INVALID;
+                    return ValidationResult.INVALID;
                 }
             } else {
                 if (!TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)) {
                     System.err.println("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
-                    return INVALID;
+                    return ValidationResult.INVALID;
                 }
             }
             specialArgsCount++;
         }
         if (om.getDurationParameter() != -1) {
             if (actionArgTypes[om.getDurationParameter()] != Type.LONG_TYPE) {
-                return INVALID;
+                return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
         if (om.getClassNameParameter() != -1) {
             if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], Type.getType(String.class)))) {
-                return INVALID;
+                return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
         if (om.getMethodParameter() != -1) {
             if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], Type.getType(String.class)))) {
-                return INVALID;
+                return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
@@ -782,12 +508,12 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             }
         }
         if (cleansedArgArray.length == 0) {
-            return ANY;
+            return ValidationResult.ANY;
         } else {
             if (cleansedArgArray.length > 0) {
                 if (!TypeUtils.isAnyTypeArray(cleansedArgArray[0]) &&
                     !TypeUtils.isCompatible(cleansedArgArray, methodArgTypes)) {
-                    return INVALID;
+                    return ValidationResult.INVALID;
                 }
             }
         }

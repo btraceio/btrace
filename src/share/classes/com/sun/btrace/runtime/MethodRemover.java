@@ -35,27 +35,27 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
 
 /**
  * This adapter removes the methods that are
- * annotated by @OnMethod or @OnProbe from a 
+ * annotated by @OnMethod or @OnProbe from a
  * BTrace class.
  *
  * @author A. Sundararajan
  */
 public class MethodRemover extends ClassVisitor {
-    public MethodRemover(ClassVisitor visitor) {  
+    public MethodRemover(ClassVisitor visitor) {
         super(Opcodes.ASM4, visitor);
     }
 
-    private MethodVisitor addMethod(int access, String name, 
+    private MethodVisitor addMethod(int access, String name,
             String desc, String signature, String[] exceptions) {
-        return super.visitMethod(access, name, 
+        return super.visitMethod(access, name,
                               desc, signature, exceptions);
     }
 
-    public MethodVisitor visitMethod(final int access, final String name, 
+    public MethodVisitor visitMethod(final int access, final String name,
             final String desc, final String signature, final String[] exceptions) {
         if (name.equals(CONSTRUCTOR) ||
             name.equals(CLASS_INITIALIZER)) {
-            return super.visitMethod(access, name, 
+            return super.visitMethod(access, name,
                               desc, signature, exceptions);
         } else {
             return new MethodVisitor(Opcodes.ASM4) {
@@ -71,21 +71,25 @@ public class MethodRemover extends ClassVisitor {
 
                 public AnnotationVisitor visitAnnotation(String annoDesc,
                                   boolean visible) {
-                    if (annoDesc.equals(ONMETHOD_DESC)) {
-                        include = false;
-                        return new AnnotationVisitor(Opcodes.ASM4) {};
-                    } else if (annoDesc.equals(ONPROBE_DESC)) {
-                        include = false;
-                        return new AnnotationVisitor(Opcodes.ASM4) {};
+                    if (include) {
+                        if (ONMETHOD_DESC.equals(annoDesc)) {
+                            include = false;
+                            return new AnnotationVisitor(Opcodes.ASM4) {};
+                        } else if (ONPROBE_DESC.equals(annoDesc)) {
+                            include = false;
+                            return new AnnotationVisitor(Opcodes.ASM4) {};
+                        } else {
+                            return getAdaptee().visitAnnotation(annoDesc, visible);
+                        }
                     } else {
-                        return getAdaptee().visitAnnotation(annoDesc, visible);
+                        return new AnnotationVisitor(Opcodes.ASM4) {};
                     }
                 }
 
                 public void visitAttribute(Attribute attr) {
                     if (include) {
                         getAdaptee().visitAttribute(attr);
-                    } 
+                    }
                 }
 
                 public void visitCode() {
@@ -94,7 +98,7 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
-                public void visitFrame(int type, int nLocal, 
+                public void visitFrame(int type, int nLocal,
                     Object[] local, int nStack, Object[] stack) {
                     if (include) {
                         getAdaptee().visitFrame(type, nLocal, local, nStack, stack);
@@ -125,14 +129,14 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
-                public void visitFieldInsn(int opcode, String owner, 
+                public void visitFieldInsn(int opcode, String owner,
                     String name, String desc) {
                     if (include) {
                         getAdaptee().visitFieldInsn(opcode, owner, name, desc);
                     }
                 }
 
-                public void visitMethodInsn(int opcode, String owner, 
+                public void visitMethodInsn(int opcode, String owner,
                     String name, String desc) {
                     if (include) {
                         getAdaptee().visitMethodInsn(opcode, owner, name, desc);
@@ -163,14 +167,14 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
-                public void visitTableSwitchInsn(int min, int max, 
+                public void visitTableSwitchInsn(int min, int max,
                     Label dflt, Label[] labels) {
                     if (include) {
                         getAdaptee().visitTableSwitchInsn(min, max, dflt, labels);
                     }
                 }
 
-                public void visitLookupSwitchInsn(Label dflt, int[] keys, 
+                public void visitLookupSwitchInsn(Label dflt, int[] keys,
                     Label[] labels) {
                     if (include) {
                         getAdaptee().visitLookupSwitchInsn(dflt, keys, labels);
@@ -183,14 +187,14 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
-                public void visitTryCatchBlock(Label start, Label end, 
+                public void visitTryCatchBlock(Label start, Label end,
                     Label handler, String type) {
                     if (include) {
                         getAdaptee().visitTryCatchBlock(start, end, handler, type);
                     }
                 }
 
-                public void visitLocalVariable(String name, String desc, 
+                public void visitLocalVariable(String name, String desc,
                     String signature, Label start, Label end, int index) {
                     if (include) {
                         getAdaptee().visitLocalVariable(name, desc, signature,

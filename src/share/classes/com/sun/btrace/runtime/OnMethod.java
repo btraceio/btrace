@@ -25,6 +25,8 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.annotations.Sampled;
+
 /**
  * This class is used to store data of the annotation
  * com.sun.btrace.annotations.OnMethod. We can not read the
@@ -53,7 +55,8 @@ public class OnMethod {
     private int targetMethodOrFieldParameter = -1;
     private int targetInstanceParameter = -1;
     private int durationParameter = -1;
-    private int durationSamplingInterval = 1;
+    private int samplerMean = 0;
+    private Sampled.Sampler samplerKind = Sampled.Sampler.None;
     private boolean methodFqn = false;
     private boolean targetMethodFqn = false;
 
@@ -187,11 +190,19 @@ public class OnMethod {
         this.durationParameter = durationParameter;
     }
 
-    public void setDurationSamplingInterval(int interval) {
-        this.durationSamplingInterval = interval;
+    public void setSamplerKind(Sampled.Sampler kind) {
+        this.samplerKind = kind;
     }
 
-    public int getDurationSamplingInterval() {
-        return durationSamplingInterval;
+    public Sampled.Sampler getSamplerKind() {
+        return this.samplerKind;
+    }
+
+    public void setSamplerMean(int mean) {
+        this.samplerMean = mean;
+    }
+
+    public int getSamplerMean() {
+        return samplerMean;
     }
 }

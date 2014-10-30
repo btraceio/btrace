@@ -26,13 +26,12 @@
 package traces.onmethod;
 
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
-import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Return;
-import com.sun.btrace.annotations.Where;
-import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.Duration;
 import com.sun.btrace.annotations.Sampled;
 
 /**
@@ -40,11 +39,10 @@ import com.sun.btrace.annotations.Sampled;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class MethodCallDurationSampled {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER))
+public class ArgsReturnSampled {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
     @Sampled
-    public static void args(@Return long retVal, @Duration long dur, String a, long b) {
+    public static void args(@Self Object self, @Return long retVal, String a, long b, String[] c, int[] d) {
         println("args");
     }
 }

@@ -33,8 +33,6 @@ import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
-import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
 import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 
@@ -45,38 +43,14 @@ import com.sun.btrace.util.LocalVariableHelper;
  *
  * @author A. Sundararajan
  */
-abstract public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
-    private boolean isConstructor;
-    private boolean entryCalled;
-
+public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
     public MethodEntryExitInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
-        isConstructor = name.equals(CONSTRUCTOR);
-    }
-
-    public void visitInsn(int opcode) {
-        switch (opcode) {
-            case IRETURN:
-            case ARETURN:
-            case FRETURN:
-            case LRETURN:
-            case DRETURN:
-            case RETURN:
-                if (!entryCalled) {
-                    entryCalled = true;
-                    doMethodEntry();
-                }
-                onMethodReturn(opcode);
-                break;
-            default:
-                break;
-        }
-        super.visitInsn(opcode);
     }
 
     protected void onMethodReturn(int opcode) {
-        println("on method return");
+        asm.println("on method return");
     }
 
     public static void main(final String[] args) throws Exception {
@@ -96,10 +70,7 @@ abstract public class MethodEntryExitInstrumentor extends ErrorReturnInstrumento
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new MethodEntryExitInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc) {
-                         @Override
-                         protected void generateEntryTimeStamp() {}
-                     };
+                     return new MethodEntryExitInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

@@ -40,6 +40,7 @@ import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.util.Messages;
@@ -287,9 +288,6 @@ public class Verifier extends ClassVisitor {
                                 } else if (desc.equals(BTRACE_PROBEMETHODNAME_DESC)) {
                                     om.setMethodFqn((Boolean)o);
                                 }
-                            } else if (string.equals("samplingInterval") &&
-                                       desc.equals(BTRACE_DURATION_DESC)) {
-                                om.setDurationSamplingInterval((Integer)o);
                             }
                         }
                         super.visit(string, o);
@@ -362,11 +360,32 @@ public class Verifier extends ClassVisitor {
                     op.setTargetName(methodName);
                     op.setTargetDescriptor(methodDesc);
                     return new AnnotationVisitor(Opcodes.ASM4) {
-                        public void	visit(String name, Object value) {
+                        public void visit(String name, Object value) {
                             if (name.equals("namespace")) {
                                 op.setNamespace((String)value);
                             } else if (name.equals("name")) {
                                 op.setName((String)value);
+                            }
+                        }
+                    };
+                } else if (desc.equals(SAMPLER_DESC)) {
+                    if (om == null) {
+                        reportError("sampler.position.invalid");
+                    }
+                    om.setSamplerKind(Sampled.Sampler.Avg);
+                    om.setSamplerMean(Sampled.MEAN_DEFAULT);
+                    return new AnnotationVisitor(Opcodes.ASM4) {
+                        @Override
+                        public void visit(String name, Object value) {
+                            if (name.equals("mean")) {
+                                om.setSamplerMean((Integer)value);
+                            }
+                        }
+
+                        @Override
+                        public void visitEnum(String name, String desc, String value) {
+                            if (name.equals("kind") && desc.equals(Type.getDescriptor(Sampled.Sampler.class))) {
+                                om.setSamplerKind(Sampled.Sampler.valueOf(value));
                             }
                         }
                     };

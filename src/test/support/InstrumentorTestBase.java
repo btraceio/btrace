@@ -138,9 +138,13 @@ abstract public class InstrumentorTestBase {
         ClassReader reader = new ClassReader(originalBC);
         ClassWriter writer = InstrumentUtils.newClassWriter();
 
-        InstrumentUtils.accept(reader, new Instrumentor(null,
-                    btrace.className, btrace.content,
-                    btrace.onMethods, writer));
+        try {
+            InstrumentUtils.accept(reader, new Instrumentor(null,
+                        btrace.className, btrace.content,
+                        btrace.onMethods, writer));
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
 
         transformedBC = writer.toByteArray();
         load();

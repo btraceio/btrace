@@ -33,8 +33,6 @@ import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
-import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import static com.sun.btrace.runtime.Constants.CONSTRUCTOR;
 import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 
@@ -47,64 +45,19 @@ import com.sun.btrace.util.LocalVariableHelper;
  * @author A. Sundararajan
  */
 public class MethodEntryInstrumentor extends MethodInstrumentor {
-    private boolean entryCalled = false;
     public MethodEntryInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
-    final public void visitCode() {
-        if (!isConstructor()) {
-            entryCalled = true;
-            doMethodEntry();
-        }
-        super.visitCode();
-    }
-
-    final protected void doMethodEntry() {
-        visitMethodPrologue();
+    @Override
+    protected void visitMethodPrologue() {
         onMethodEntry();
     }
 
-    public void visitMethodInsn(int opcode,
-                     String owner,
-                     String name,
-                     String desc) {
-        super.visitMethodInsn(opcode, owner, name, desc);
-        if (isConstructor() && !entryCalled) {
-            if (name.equals(CONSTRUCTOR) && (owner.equals(getParentClz()) || (getSuperClz() != null && owner.equals(getSuperClz())))) {
-                // super or this class constructor call.
-                // do method entry after that!
-                entryCalled = true;
-                doMethodEntry();
-            }
-        }
-    }
-
-    public void visitInsn(int opcode) {
-        switch (opcode) {
-            case IRETURN:
-            case ARETURN:
-            case FRETURN:
-            case LRETURN:
-            case DRETURN:
-            case RETURN:
-                if (!entryCalled) {
-                    entryCalled = true;
-                    onMethodEntry();
-                }
-                break;
-            default:
-                break;
-        }
-        super.visitInsn(opcode);
-    }
-
     protected void onMethodEntry() {
-        println("entering " + getName() + getDescriptor());
+        asm.println("entering " + getName() + getDescriptor());
     }
-
-    protected void visitMethodPrologue() {}
 
     public static void main(final String[] args) throws Exception {
         if (args.length != 1) {

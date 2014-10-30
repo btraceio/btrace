@@ -112,22 +112,22 @@ public class ArrayAccessInstrumentor extends MethodInstrumentor {
 
                     @Override
                     protected void onAfterArrayLoad(int opcode) {
-                        println("after array load");
+                        asm.println("after array load");
                     }
 
                     @Override
                     protected void onAfterArrayStore(int opcode) {
-                        println("after array store");
+                        asm.println("after array store");
                     }
 
                     @Override
                     protected void onBeforeArrayLoad(int opcode) {
-                        println("before array load");
+                        asm.println("before array load");
                     }
 
                     @Override
                     protected void onBeforeArrayStore(int opcode) {
-                        println("before array store");
+                        asm.println("before array store");
                     }
 
                      };

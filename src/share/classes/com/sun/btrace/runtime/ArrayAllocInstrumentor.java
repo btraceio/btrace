@@ -81,12 +81,12 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
     }
 
     protected void onBeforeArrayNew(String desc, int dims) {
-        println("before allocating " + desc);
+        asm.println("before allocating " + desc);
     }
 
     protected void onAfterArrayNew(String desc, int dims) {
-        visitInsn(DUP);
-        printObject();
+        asm.dup()
+           .printObject();
     }
 
     private String getPlainType(String desc) {

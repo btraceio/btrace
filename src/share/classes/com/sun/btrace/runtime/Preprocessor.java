@@ -522,26 +522,29 @@ public class Preprocessor extends ClassVisitor {
             MethodVisitor adaptee = super.visitMethod(access, name, desc,
                                                     signature, exceptions);
 
-            return new MethodInstrumentor(new LocalVariableHelperImpl(adaptee, access, desc), className, superName, access, name, desc) {
+            // return new MethodInstrumentor(new LocalVariableHelperImpl(adaptee, access, desc), className, superName, access, name, desc) {
+            return new MethodVisitor(Opcodes.ASM4, new LocalVariableHelperImpl(adaptee, access, desc)) {
                 private boolean isBTraceHandler = false;
-                private Label start = new Label();
-                private Label handler = new Label();
+                private final Label start = new Label();
+                private final Label handler = new Label();
                 private int nextVar = 0;
+
+                private final Assembler asm = new Assembler(this);
 
                 private void generateExportGet(String name, String desc) {
                     int typeCode = desc.charAt(0);
                     switch (typeCode) {
                         case '[':
-                            visitInsn(ACONST_NULL);
+                            asm.loadNull();
                             break;
                         case 'L':
                             if (desc.equals(JAVA_LANG_STRING_DESC)) {
-                                visitLdcInsn(name);
-                                visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                asm.ldc(name)
+                                   .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_GET_PERFSTRING,
                                     BTRACE_RUNTIME_GET_PERFSTRING_DESC);
                             } else {
-                                visitInsn(ACONST_NULL);
+                                asm.loadNull();
                             }
                             break;
                         case 'Z':
@@ -549,26 +552,26 @@ public class Preprocessor extends ClassVisitor {
                         case 'B':
                         case 'S':
                         case 'I':
-                            visitLdcInsn(name);
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.ldc(name)
+                               .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_GET_PERFINT,
                                     BTRACE_RUNTIME_GET_PERFINT_DESC);
                             break;
                         case 'J':
-                            visitLdcInsn(name);
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.ldc(name)
+                               .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_GET_PERFLONG,
                                     BTRACE_RUNTIME_GET_PERFLONG_DESC);
                             break;
                         case 'F':
-                            visitLdcInsn(name);
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.ldc(name)
+                               .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_GET_PERFFLOAT,
                                     BTRACE_RUNTIME_GET_PERFFLOAT_DESC);
                             break;
                         case 'D':
-                            visitLdcInsn(name);
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.ldc(name)
+                               .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_GET_PERFDOUBLE,
                                     BTRACE_RUNTIME_GET_PERFDOUBLE_DESC);
                             break;
@@ -579,16 +582,16 @@ public class Preprocessor extends ClassVisitor {
                     int typeCode = desc.charAt(0);
                     switch (typeCode) {
                         case '[':
-                            visitInsn(POP);
+                            asm.pop();
                             break;
                         case 'L':
                             if (desc.equals(JAVA_LANG_STRING_DESC)) {
-                                visitLdcInsn(name);
-                                visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                asm.ldc(name)
+                                   .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_PUT_PERFSTRING,
                                     BTRACE_RUNTIME_PUT_PERFSTRING_DESC);
                             } else {
-                                visitInsn(POP);
+                                asm.pop();
                             }
                             break;
                         case 'Z':
@@ -596,26 +599,26 @@ public class Preprocessor extends ClassVisitor {
                         case 'B':
                         case 'S':
                         case 'I':
-                            visitLdcInsn(name);
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.ldc(name)
+                               .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_PUT_PERFINT,
                                     BTRACE_RUNTIME_PUT_PERFINT_DESC);
                             break;
                         case 'J':
-                            visitLdcInsn(name);
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.ldc(name)
+                               .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_PUT_PERFLONG,
                                     BTRACE_RUNTIME_PUT_PERFLONG_DESC);
                             break;
                         case 'F':
-                            visitLdcInsn(name);
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.ldc(name)
+                               .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_PUT_PERFFLOAT,
                                     BTRACE_RUNTIME_PUT_PERFFLOAT_DESC);
                             break;
                         case 'D':
-                            visitLdcInsn(name);
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.ldc(name)
+                               .invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_PUT_PERFDOUBLE,
                                     BTRACE_RUNTIME_PUT_PERFDOUBLE_DESC);
                             break;
@@ -625,32 +628,36 @@ public class Preprocessor extends ClassVisitor {
                 private void generateThreadLocalGet(FieldDescriptor fd) {
                     if (isClassInitializer) {
                         if (fd.initialized) {
-                            super.visitVarInsn(Type.getType(fd.desc).getOpcode(Opcodes.ILOAD), fd.var);
+                            asm.loadLocal(Type.getType(fd.desc), fd.var);
                         } else if (fd.value != null) {
-                            visitLdcInsn(fd.value);
+                            asm.ldc(fd.value);
                         } else {
-                            defaultValue(fd.desc);
+                            asm.defaultValue(fd.desc);
                         }
                     } else {
                         String fieldName = BTRACE_FIELD_PREFIX + fd.name;
-                        super.visitFieldInsn(GETSTATIC, className, fieldName, JAVA_LANG_THREAD_LOCAL_DESC);
-                        visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_THREAD_LOCAL,
-                                     JAVA_LANG_THREAD_LOCAL_GET, JAVA_LANG_THREAD_LOCAL_GET_DESC);
-                        unbox(fd.desc);
+                        asm.getStatic(className, fieldName, JAVA_LANG_THREAD_LOCAL_DESC)
+                           .invokeVirtual(
+                                JAVA_LANG_THREAD_LOCAL,
+                                JAVA_LANG_THREAD_LOCAL_GET,
+                                JAVA_LANG_THREAD_LOCAL_GET_DESC)
+                           .unbox(fd.desc);
                     }
                 }
 
                 private void generateThreadLocalPut(FieldDescriptor fd) {
                     if (isClassInitializer) {
-                        super.visitVarInsn(Type.getType(fd.desc).getOpcode(Opcodes.ISTORE), fd.var);
+                        asm.storeLocal(Type.getType(fd.desc), fd.var);
                         fd.initialized = true;
                     } else {
                         String fieldName = BTRACE_FIELD_PREFIX + fd.name;
-                        box(fd.desc);
-                        super.visitFieldInsn(GETSTATIC, className, fieldName, JAVA_LANG_THREAD_LOCAL_DESC);
-                        visitInsn(SWAP);
-                        visitMethodInsn(INVOKEVIRTUAL, JAVA_LANG_THREAD_LOCAL,
-                                    JAVA_LANG_THREAD_LOCAL_SET, JAVA_LANG_THREAD_LOCAL_SET_DESC);
+                        asm.box(fd.desc)
+                           .getStatic(className, fieldName, JAVA_LANG_THREAD_LOCAL_DESC)
+                           .swap()
+                           .invokeVirtual(
+                                JAVA_LANG_THREAD_LOCAL,
+                                JAVA_LANG_THREAD_LOCAL_SET,
+                                JAVA_LANG_THREAD_LOCAL_SET_DESC);
                     }
                 }
 
@@ -664,26 +671,24 @@ public class Preprocessor extends ClassVisitor {
                     return super.visitAnnotation(name, bln);
                 }
 
-
-
                 public void visitCode() {
                     if (isClassInitializer || isBTraceHandler) {
                         visitTryCatchBlock(start, handler, handler,
                                         JAVA_LANG_THROWABLE);
 
                         if (isClassInitializer) {
-                             visitLdcInsn(classType);
-                             visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                             asm.ldc(classType)
+                                .invokeStatic(BTRACE_RUNTIME,
                                         BTRACE_RUNTIME_FOR_CLASS,
-                                        BTRACE_RUNTIME_FOR_CLASS_DESC);
-                             super.visitFieldInsn(PUTSTATIC, className,
+                                        BTRACE_RUNTIME_FOR_CLASS_DESC)
+                                .putStatic(className,
                                        BTRACE_RUNTIME_FIELD_NAME,
                                        BTRACE_RUNTIME_DESC);
                         }
-                        visitFieldInsn(GETSTATIC, className,
+                        asm.getStatic(className,
                                        BTRACE_RUNTIME_FIELD_NAME,
-                                       BTRACE_RUNTIME_DESC);
-                        visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                       BTRACE_RUNTIME_DESC)
+                           .invokeStatic(BTRACE_RUNTIME,
                                         BTRACE_RUNTIME_ENTER,
                                         BTRACE_RUNTIME_ENTER_DESC);
                         if (isClassInitializer) {
@@ -692,15 +697,15 @@ public class Preprocessor extends ClassVisitor {
                                  nextVar += Type.getType(fd.desc).getSize();
                              }
                              for (FieldDescriptor fd : exportFields.values()) {
-                                 visitLdcInsn(perfCounterName(fd.name));
-                                 visitLdcInsn(fd.desc);
+                                 asm.ldc(perfCounterName(fd.name))
+                                    .ldc(fd.desc);
                                  if (fd.value == null) {
-                                     visitInsn(ACONST_NULL);
+                                     asm.loadNull();
                                  } else {
-                                     visitLdcInsn(fd.value);
-                                     box(fd.desc);
+                                     asm.ldc(fd.value)
+                                        .box(fd.desc);
                                  }
-                                 visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                 asm.invokeStatic(BTRACE_RUNTIME,
                                         BTRACE_RUNTIME_NEW_PERFCOUNTER,
                                         BTRACE_RUNTIME_NEW_PERFCOUNTER_DESC);
                              }
@@ -752,20 +757,20 @@ public class Preprocessor extends ClassVisitor {
                         if (isClassInitializer) {
                             for (FieldDescriptor fd : threadLocalFields.values()) {
                                 generateThreadLocalGet(fd); // generates var load here
-                                box(fd.desc);
-                                visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                asm.box(fd.desc)
+                                   .invokeStatic(BTRACE_RUNTIME,
                                         BTRACE_RUNTIME_NEW_THREAD_LOCAL,
-                                        BTRACE_RUNTIME_NEW_THREAD_LOCAL_DESC);
-                                super.visitFieldInsn(PUTSTATIC, className,
+                                        BTRACE_RUNTIME_NEW_THREAD_LOCAL_DESC)
+                                   .putStatic(className,
                                         BTRACE_FIELD_PREFIX + fd.name,
                                         JAVA_LANG_THREAD_LOCAL_DESC);
                             }
-                            visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                            asm.invokeStatic(BTRACE_RUNTIME,
                                 BTRACE_RUNTIME_START,
                                 BTRACE_RUNTIME_START_DESC);
                         } else {
                             if (isBTraceHandler) {
-                                visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
+                                asm.invokeStatic(BTRACE_RUNTIME,
                                     BTRACE_RUNTIME_LEAVE,
                                     BTRACE_RUNTIME_LEAVE_DESC);
                             }

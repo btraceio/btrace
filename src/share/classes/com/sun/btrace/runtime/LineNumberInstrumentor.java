@@ -59,11 +59,11 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
     }
 
     protected void onBeforeLine(int line) {
-        println("before line " + line);
+        asm.println("before line " + line);
     }
 
     protected void onAfterLine(int line) {
-        println("after line " + line);
+        asm.println("after line " + line);
     }
 
     public static void main(final String[] args) throws Exception {

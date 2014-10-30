@@ -72,7 +72,7 @@ public class CatchInstrumentor extends MethodInstrumentor {
     }
 
     protected void onCatch(String type) {
-        println("catching " + type);
+        asm.println("catching " + type);
     }
 
     public static void main(final String[] args) throws Exception {

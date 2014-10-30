@@ -55,11 +55,6 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
     }
 
     @Override
-    protected void generateEntryTimeStamp() {
-        // no timestamp collection
-    }
-
-    @Override
     protected void onMethodEntry() {
         if (isSyncMethod) {
             onAfterSyncEntry();
@@ -93,28 +88,19 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
     }
 
     protected void onBeforeSyncEntry() {
-        println("before synchronized entry");
+        asm.println("before synchronized entry");
     }
 
     protected void onAfterSyncEntry() {
-        println("after synchronized entry");
+        asm.println("after synchronized entry");
     }
 
     protected void onBeforeSyncExit() {
-        println("before synchronized exit");
+        asm.println("before synchronized exit");
     }
 
     protected void onAfterSyncExit() {
-        println("after synchronized exit");
-    }
-
-    private void pushLockedObject() {
-        if (isStatic) {
-            // push class object
-            super.visitLdcInsn(Type.getObjectType(getParentClz()));
-        } else {
-            loadThis();
-        }
+        asm.println("after synchronized exit");
     }
 
     public static void main(String[] args) throws Exception {

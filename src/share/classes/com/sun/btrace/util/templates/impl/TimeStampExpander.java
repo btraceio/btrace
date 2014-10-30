@@ -76,7 +76,7 @@ abstract public class TimeStampExpander implements TemplateExpander {
     public Result expand(TemplateExpanderVisitor v, Template t) {
         if (lastTemplate == null) {
             if (!(durationTemplate.equals(t) || endTimeTemplate.equals(t) || startTimeTemplate.equals(t))) {
-                return Result.PASSED;
+                return Result.IGNORED;
             }
         }
         try {
@@ -96,7 +96,7 @@ abstract public class TimeStampExpander implements TemplateExpander {
                     resetDuration();
                     samplingInterval = Integer.MAX_VALUE;
 
-                    return t != null ? Result.CONSUMED : Result.PASSED;
+                    return t != null ? Result.EXPANDED : Result.IGNORED;
                 } else if (startTimeTemplate.equals(lastTemplate)) {
                     int sinter = 1;
                     for(String tag : lastTemplate.getTags()) {
@@ -111,19 +111,19 @@ abstract public class TimeStampExpander implements TemplateExpander {
                             expandCallStartTime(visitor);
                         }
                     });
-                    return t != null ? Result.CONSUMED : Result.PASSED;
+                    return t != null ? Result.EXPANDED : Result.IGNORED;
                 } else if (endTimeTemplate.equals(lastTemplate)) {
                     v.expand(new Consumer<TemplateExpanderVisitor>() {
                         public void consume(TemplateExpanderVisitor visitor) {
                             expandCallEndTime(visitor);
                         }
                     });
-                    return t != null ? Result.CONSUMED : Result.PASSED;
+                    return t != null ? Result.EXPANDED : Result.IGNORED;
                 } else {
-                    return Result.IGNORED;
+                    return Result.CLAIMED;
                 }
             } else {
-                return Result.IGNORED;
+                return Result.CLAIMED;
             }
         } finally {
             lastTemplate = t;
@@ -228,5 +228,11 @@ abstract public class TimeStampExpander implements TemplateExpander {
     protected void resetStartTime() {
         startTimeIndex = -1;
         startTimeSet = false;
+    }
+
+    public void resetState() {
+        resetStartTime();
+        resetEndTime();
+        resetDuration();
     }
 }

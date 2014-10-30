@@ -63,11 +63,11 @@ public class TypeCheckInstrumentor extends MethodInstrumentor {
     }
 
     protected void onBeforeTypeCheck(int opcode, String desc) {
-        println("before type checking for " + desc);
+        asm.println("before type checking for " + desc);
     }
 
     protected void onAfterTypeCheck(int opcode, String desc) {
-       println("after type checking for " + desc);
+       asm.println("after type checking for " + desc);
     }
 
     public static void main(final String[] args) throws Exception {

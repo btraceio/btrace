@@ -41,9 +41,4 @@ import java.lang.annotation.Target;
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Duration {
-    /**
-     * Allows to capture only each n-th invocation in average
-     * @return The sampling interval
-     */
-    int samplingInterval() default 1;
 }

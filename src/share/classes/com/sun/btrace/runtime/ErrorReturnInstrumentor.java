@@ -49,7 +49,7 @@ import com.sun.btrace.util.LocalVariableHelper;
  *
  * @author A. Sundararajan
  */
-abstract public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
+public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
     private final Label start = new Label();
     private final Label end = new Label();
 
@@ -60,15 +60,9 @@ abstract public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
 
     @Override
     protected void visitMethodPrologue() {
-        generateEntryTimeStamp();
         visitLabel(start);
+        super.visitMethodPrologue();
     }
-
-    @Override
-    protected void onMethodEntry() {
-    }
-
-    abstract protected void generateEntryTimeStamp();
 
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
@@ -79,8 +73,11 @@ abstract public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
         super.visitMaxs(maxStack, maxLocals);
     }
 
+    @Override
+    protected void onMethodEntry() {}
+
     protected void onErrorReturn() {
-        println("error return from " + getName() + getDescriptor());
+        asm.println("error return from " + getName() + getDescriptor());
     }
 
     public static void main(final String[] args) throws Exception {
@@ -100,10 +97,7 @@ abstract public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc,
                              signature, exceptions);
-                     return new ErrorReturnInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc) {
-                         @Override
-                         protected void generateEntryTimeStamp() {}
-                     };
+                     return new ErrorReturnInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
                  }
             });
         fos.write(writer.toByteArray());

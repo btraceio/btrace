@@ -148,7 +148,21 @@ public class BTraceBench {
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
+    public void testInstrumentedMethodSampled() {
+        counter++;
+    }
+
+    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
     public void testInstrumentedMethodPrintln1() {
+        counter++;
+    }
+
+    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
+    public void testInstrumentedMethodPrintln1Sampled() {
         counter++;
     }
 
@@ -185,6 +199,13 @@ public class BTraceBench {
     @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
     public void testInstrDurationSampled() {
+        sampleCounter++;
+    }
+
+    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
+    public void testInstrDurationSampledAdaptive() {
         sampleCounter++;
     }
 
@@ -226,7 +247,7 @@ public class BTraceBench {
                     .addProfiler(ProfilerFactory.getProfilerByName("gc"))
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*testInstrumented.*")
                     .build();
 
             new Runner(opt).run();

@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.org.objectweb.asm.Type;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -52,7 +51,6 @@ public class MethodReturnInstrumentor extends MethodEntryInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
-
     public void visitInsn(int opcode) {
         switch (opcode) {
             case IRETURN:
@@ -69,12 +67,8 @@ public class MethodReturnInstrumentor extends MethodEntryInstrumentor {
         super.visitInsn(opcode);
     }
 
-    protected void loadReturnParameter(int opcode) {
-        super.dupReturnValue(opcode);
-    }
-
     protected void onMethodReturn(int opcode) {
-        println("leaving " + getName() + getDescriptor());
+        asm.println("leaving " + getName() + getDescriptor());
     }
 
     public static void main(final String[] args) throws Exception {
@@ -98,13 +92,5 @@ public class MethodReturnInstrumentor extends MethodEntryInstrumentor {
                  }
             });
         fos.write(writer.toByteArray());
-    }
-
-    protected void loadDurationParameter(int localVarIndex1, int localVarIndex2) {
-        if (localVarIndex1 != -1 && localVarIndex2 != -1) {
-            super.loadLocal(Type.LONG_TYPE, localVarIndex2);
-            super.loadLocal(Type.LONG_TYPE, localVarIndex1);
-            super.visitInsn(LSUB);
-        }
     }
 }

@@ -54,4 +54,8 @@ public class MethodID {
         }
         return id;
     }
+
+    public static int getMethodId(String className, String method, String desc) {
+        return getMethodId(className + "#" + method + "#" + desc);
+    }
 }

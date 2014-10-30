@@ -28,8 +28,11 @@ package com.sun.btrace.util.templates;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -95,7 +98,25 @@ public final class Template {
         return Collections.unmodifiableSet(this.tags);
     }
 
-    void setTags(Set<String> tags) {
+    public Map<String, String> getTagMap() {
+        Map<String, String> tMap = new HashMap<String, String>();
+
+        for(String t : tags) {
+            if (t.contains("=")) {
+                String[] kv = t.split("=");
+                tMap.put(kv[0], kv[1]);
+            } else {
+                tMap.put(t, "");
+            }
+        }
+        return tMap;
+    }
+
+    void setTags(String ... tags) {
+        setTags(Arrays.asList(tags));
+    }
+
+    void setTags(Collection<String> tags) {
         this.tags.clear();
         this.tags.addAll(tags);
     }
