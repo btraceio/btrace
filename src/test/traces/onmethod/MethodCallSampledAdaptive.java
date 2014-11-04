@@ -23,38 +23,32 @@
  * questions.
  */
 
-package com.sun.btrace.util.templates.impl;
+package traces.onmethod;
 
-import com.sun.btrace.util.templates.BTraceTemplates;
-import com.sun.btrace.util.templates.Template;
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.TargetInstance;
+import com.sun.btrace.annotations.TargetMethodOrField;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Sampled;
 
 /**
- * A timestamp expander for method duration related templates
+ *
  * @author Jaroslav Bachorik
- * @since 1.3
  */
-public class MethodTimeStampExpander extends TimeStampExpander {
-
-    public static final Template START_TIME = new Template("methodStartTime", "()J");
-    public static final Template END_TIME = new Template("methodEndTime", "()J");
-    public static final Template DURATION = new Template("methodDuration", "()J");
-
-    static {
-        BTraceTemplates.registerTemplates(START_TIME, END_TIME, DURATION);
-    }
-
-    public MethodTimeStampExpander(String className,
-                                   String methodName,
-                                   String desc
-    ) {
-        super(className, methodName, desc,
-              START_TIME,
-              END_TIME,
-              DURATION);
-    }
-
-    @Override
-    protected void resetStartTime() {
-        // never reset the start time in the method body
+@BTrace
+public class MethodCallSampledAdaptive {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"))
+    @Sampled(kind = Sampled.Sampler.Adaptive)
+    public static void args(@Self Object self, String a, long b,
+                            @TargetInstance Object calledSelf, @TargetMethodOrField(fqn=true) String calledMethod,
+                            @ProbeClassName String className, @ProbeMethodName String methodName) {
+        println("args");
     }
 }

@@ -247,7 +247,7 @@ public class BTraceBench {
                     .addProfiler(ProfilerFactory.getProfilerByName("gc"))
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*testInstrumented.*")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
                     .build();
 
             new Runner(opt).run();

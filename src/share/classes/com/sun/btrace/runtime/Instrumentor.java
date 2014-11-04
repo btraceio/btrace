@@ -50,7 +50,7 @@ import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 import com.sun.btrace.util.MethodID;
-import com.sun.btrace.util.templates.impl.MethodCounterExpander;
+import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
 
 /**
  * This instruments a probed class with BTrace probe
@@ -422,7 +422,7 @@ public class Instrumentor extends ClassVisitor {
                         actionArgs[actionArgTypes.length + 5] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                         actionArgs[actionArgTypes.length + 6] = new ArgumentProvider(asm, om.getDurationParameter()) {
                             public void doProvide() {
-                                MethodCounterExpander.M_LAST_DUR.insert(mv);
+                                MethodTrackingExpander.DURATION.insert(mv);
                             }
                         };
 
@@ -440,6 +440,11 @@ public class Instrumentor extends ClassVisitor {
                                 && matches(localMethodName, cName)
                                 && typeMatches(loc.getType(), cDesc)) {
 
+                            /*
+                            * Generate a synthetic method id for the method call.
+                            * It will be diferent from the 'native' method id
+                            * in order to prevent double accounting for one hit.
+                            */
                             int parentMid = MethodID.getMethodId(className, name, desc);
                             int mid = MethodID.getMethodId("c$" + parentMid + "$" + cOwner, cName, cDesc);
 
@@ -466,29 +471,27 @@ public class Instrumentor extends ClassVisitor {
                                     try {
                                         generatingCode = true;
                                         if (om.getDurationParameter() != -1) {
-                                            MethodCounterExpander.M_ENTRY.insert(
-                                                mv,
-                                                MethodCounterExpander.MEAN_TAG +
+                                            MethodTrackingExpander.ENTRY.insert(mv,
+                                                MethodTrackingExpander.$MEAN +
                                                     "=" +
                                                     om.getSamplerMean(),
-                                                MethodCounterExpander.SAMPLER_TAG +
+                                                MethodTrackingExpander.$SAMPLER +
                                                     "=" +
                                                     om.getSamplerKind(),
-                                                MethodCounterExpander.TIMED_TAG,
-                                                MethodCounterExpander.METHODID_TAG +
+                                                MethodTrackingExpander.$TIMED,
+                                                MethodTrackingExpander.$METHODID +
                                                     "=" +
                                                     mid
                                             );
                                         } else {
-                                            MethodCounterExpander.M_ENTRY.insert(
-                                                mv,
-                                                MethodCounterExpander.MEAN_TAG +
+                                            MethodTrackingExpander.ENTRY.insert(mv,
+                                                MethodTrackingExpander.$MEAN +
                                                     "=" +
                                                     om.getSamplerMean(),
-                                                MethodCounterExpander.SAMPLER_TAG +
+                                                MethodTrackingExpander.$SAMPLER +
                                                     "=" +
                                                     om.getSamplerKind(),
-                                                MethodCounterExpander.METHODID_TAG +
+                                                MethodTrackingExpander.$METHODID +
                                                     "=" +
                                                     mid
                                             );
@@ -506,14 +509,13 @@ public class Instrumentor extends ClassVisitor {
                                 backupArgsIndices = shouldBackup ? backupStack(argTypes, isStaticCall) : new int[0];
 
                                 if (where == Where.BEFORE) {
-                                    MethodCounterExpander.M_TEST.insert(
-                                        mv,
-                                        MethodCounterExpander.METHODID_TAG +
+                                    MethodTrackingExpander.TEST.insert(mv,
+                                        MethodTrackingExpander.$METHODID +
                                             "=" +
                                             mid
                                     );
                                     injectBtrace(vr, method, argTypes, Type.getReturnType(cDesc));
-                                    MethodCounterExpander.M_TEST_ELSE.insert(mv);
+                                    MethodTrackingExpander.ELSE.insert(mv);
                                 }
 
                                 // put the call args back on stack so the method call can find them
@@ -530,10 +532,9 @@ public class Instrumentor extends ClassVisitor {
                         if (isStatic() && om.getSelfParameter() != -1) {
                             return;
                         }
-                        if (where == Where.AFTER
-                                && matches(localClassName, cOwner.replace('/', '.'))
-                                && matches(localMethodName, cName)
-                                && typeMatches(loc.getType(), cDesc)) {
+                        if (matches(localClassName, cOwner.replace('/', '.'))
+                            && matches(localMethodName, cName)
+                            && typeMatches(loc.getType(), cDesc)) {
 
                             int parentMid = MethodID.getMethodId(className, name, desc);
                             int mid = MethodID.getMethodId("c$" + parentMid + "$" + cOwner, cName, cDesc);
@@ -544,29 +545,41 @@ public class Instrumentor extends ClassVisitor {
                             addExtraTypeInfo(om.getReturnParameter(), returnType);
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, calledMethodArgs);
                             if (vr.isValid()) {
-                                MethodCounterExpander.M_TEST.insert(
-                                    mv,
-                                    MethodCounterExpander.TIMED_TAG,
-                                    MethodCounterExpander.METHODID_TAG
-                                        + "="
-                                        + mid
-                                );
+                                if (om.getDurationParameter() == -1) {
+                                    MethodTrackingExpander.EXIT.insert(mv);
+                                }
+                                if (where == Where.AFTER) {
+                                    if (om.getDurationParameter() != -1) {
+                                        MethodTrackingExpander.TEST.insert(mv,
+                                            MethodTrackingExpander.$TIMED,
+                                            MethodTrackingExpander.$METHODID
+                                                + "="
+                                                + mid
+                                        );
+                                    } else {
+                                        MethodTrackingExpander.TEST.insert(mv,
+                                            MethodTrackingExpander.$METHODID
+                                                + "="
+                                                + mid
+                                        );
+                                    }
 
-                                String method = cName + cDesc;
-                                boolean withReturn = om.getReturnParameter() != -1 && returnType != Type.VOID_TYPE;
-                                if (withReturn) {
-                                    // store the return value to a local variable
-                                    int index = storeNewLocal(returnType);
-                                    returnVarIndex = index;
-                                }
-                                // will also retrieve the call args and the return value from the backup variables
-                                injectBtrace(vr, method, calledMethodArgs, returnType);
-                                if (withReturn) {
-                                    asm.loadLocal(returnType, returnVarIndex); // restore the return value
-                                }
-                                MethodCounterExpander.M_TEST_ELSE.insert(mv);
-                                if (this.parent == null) {
-                                    MethodCounterExpander.M_RESET.insert(mv);
+                                    String method = cName + cDesc;
+                                    boolean withReturn = om.getReturnParameter() != -1 && returnType != Type.VOID_TYPE;
+                                    if (withReturn) {
+                                        // store the return value to a local variable
+                                        int index = storeNewLocal(returnType);
+                                        returnVarIndex = index;
+                                    }
+                                    // will also retrieve the call args and the return value from the backup variables
+                                    injectBtrace(vr, method, calledMethodArgs, returnType);
+                                    if (withReturn) {
+                                        asm.loadLocal(returnType, returnVarIndex); // restore the return value
+                                    }
+                                    MethodTrackingExpander.ELSE.insert(mv);
+                                    if (this.parent == null) {
+                                        MethodTrackingExpander.RESET.insert(mv);
+                                    }
                                 }
                             }
                         }
@@ -681,10 +694,9 @@ public class Instrumentor extends ClassVisitor {
                     protected void visitMethodPrologue() {
                         if (vr.isValid() || vr.isAny()) {
                             if (om.getSamplerKind() != Sampled.Sampler.None) {
-                                MethodCounterExpander.M_ENTRY.insert(
-                                    mv,
-                                    MethodCounterExpander.SAMPLER_TAG + "=" + om.getSamplerKind(),
-                                    MethodCounterExpander.MEAN_TAG + "=" + om.getSamplerMean()
+                                MethodTrackingExpander.ENTRY.insert(mv,
+                                    MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
+                                    MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean()
                                 );
                             }
                         }
@@ -695,7 +707,7 @@ public class Instrumentor extends ClassVisitor {
                     protected void onMethodEntry() {
                         if (vr.isValid() || vr.isAny()) {
                             if (om.getSamplerKind() != Sampled.Sampler.None) {
-                                MethodCounterExpander.M_TEST.insert(mv, MethodCounterExpander.TIMED_TAG);
+                                MethodTrackingExpander.TEST.insert(mv, MethodTrackingExpander.$TIMED);
                             }
                             if (numActionArgs == 0) {
                                 invokeBTraceAction(asm, om);
@@ -703,7 +715,7 @@ public class Instrumentor extends ClassVisitor {
                                 injectBtrace();
                             }
                             if (om.getSamplerKind() != Sampled.Sampler.None) {
-                                MethodCounterExpander.M_TEST_ELSE.insert(mv);
+                                MethodTrackingExpander.ELSE.insert(mv);
                             }
                         }
                     }
@@ -712,7 +724,7 @@ public class Instrumentor extends ClassVisitor {
                     protected void onMethodReturn(int opcode) {
                         if (vr.isValid() || vr.isAny()) {
                             if (om.getSamplerKind() == Sampled.Sampler.Adaptive) {
-                                MethodCounterExpander.M_EXIT.insert(mv);
+                                MethodTrackingExpander.EXIT.insert(mv);
                             }
                         }
                     }
@@ -732,7 +744,7 @@ public class Instrumentor extends ClassVisitor {
                         if (vr.isValid()) {
                             int throwableIndex = -1;
 
-                            MethodCounterExpander.M_TEST.insert(mv, MethodCounterExpander.TIMED_TAG);
+                            MethodTrackingExpander.TEST.insert(mv, MethodTrackingExpander.$TIMED);
 
                             if (!vr.isAny()) {
                                 asm.dup();
@@ -747,14 +759,14 @@ public class Instrumentor extends ClassVisitor {
                             actionArgs[3] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[4] = new ArgumentProvider(asm, om.getDurationParameter()) {
                                 public void doProvide() {
-                                    MethodCounterExpander.M_LAST_DUR.insert(mv);
+                                    MethodTrackingExpander.DURATION.insert(mv);
                                 }
                             };
 
                             loadArguments(actionArgs);
 
                             invokeBTraceAction(asm, om);
-                            MethodCounterExpander.M_TEST_ELSE.insert(mv);
+                            MethodTrackingExpander.ELSE.insert(mv);
                         }
                     }
 
@@ -767,23 +779,21 @@ public class Instrumentor extends ClassVisitor {
                                 try {
                                     generatingCode = true;
                                     if (om.getDurationParameter() != -1) {
-                                        MethodCounterExpander.M_ENTRY.insert(
-                                            mv,
-                                            MethodCounterExpander.MEAN_TAG +
+                                        MethodTrackingExpander.ENTRY.insert(mv,
+                                            MethodTrackingExpander.$MEAN +
                                                 "=" +
                                                 om.getSamplerMean(),
-                                            MethodCounterExpander.SAMPLER_TAG +
+                                            MethodTrackingExpander.$SAMPLER +
                                                 "=" +
                                                 om.getSamplerKind(),
-                                            MethodCounterExpander.TIMED_TAG
+                                            MethodTrackingExpander.$TIMED
                                         );
                                     } else {
-                                        MethodCounterExpander.M_ENTRY.insert(
-                                            mv,
-                                            MethodCounterExpander.MEAN_TAG +
+                                        MethodTrackingExpander.ENTRY.insert(mv,
+                                            MethodTrackingExpander.$MEAN +
                                                 "=" +
                                                 om.getSamplerMean(),
-                                            MethodCounterExpander.SAMPLER_TAG +
+                                            MethodTrackingExpander.$SAMPLER +
                                                 "=" +
                                                 om.getSamplerKind()
                                         );
@@ -798,6 +808,7 @@ public class Instrumentor extends ClassVisitor {
                 };
                 return eri;
 //                }
+            // </editor-fold>//                }
             // </editor-fold>
 
             case FIELD_GET:
@@ -1212,7 +1223,7 @@ public class Instrumentor extends ClassVisitor {
                             actionArgs[actionArgTypes.length + 3] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(asm, om.getDurationParameter()) {
                                 public void doProvide() {
-                                    MethodCounterExpander.M_LAST_DUR.insert(mv);
+                                    MethodTrackingExpander.DURATION.insert(mv);
                                 }
                             };
                             loadArguments(actionArgs);
@@ -1228,13 +1239,13 @@ public class Instrumentor extends ClassVisitor {
                     @Override
                     protected void onMethodReturn(int opcode) {
                         if (vr.isValid() || vr.isAny()) {
-                            MethodCounterExpander.M_TEST.insert(mv, MethodCounterExpander.TIMED_TAG);
+                            MethodTrackingExpander.TEST.insert(mv, MethodTrackingExpander.$TIMED);
                             if (numActionArgs == 0) {
                                 invokeBTraceAction(asm, om);
                             } else {
                                 callAction(opcode);
                             }
-                            MethodCounterExpander.M_TEST_ELSE.insert(mv);
+                            MethodTrackingExpander.ELSE.insert(mv);
                         }
                     }
 
@@ -1248,23 +1259,21 @@ public class Instrumentor extends ClassVisitor {
                                     generatingCode = true;
 
                                     if (om.getDurationParameter() != -1) {
-                                        MethodCounterExpander.M_ENTRY.insert(
-                                            mv,
-                                            MethodCounterExpander.MEAN_TAG +
+                                        MethodTrackingExpander.ENTRY.insert(mv,
+                                            MethodTrackingExpander.$MEAN +
                                                 "=" +
                                                 om.getSamplerMean(),
-                                            MethodCounterExpander.SAMPLER_TAG +
+                                            MethodTrackingExpander.$SAMPLER +
                                                 "=" +
                                                 om.getSamplerKind(),
-                                            MethodCounterExpander.TIMED_TAG
+                                            MethodTrackingExpander.$TIMED
                                         );
                                     } else {
-                                        MethodCounterExpander.M_ENTRY.insert(
-                                            mv,
-                                            MethodCounterExpander.MEAN_TAG +
+                                        MethodTrackingExpander.ENTRY.insert(mv,
+                                            MethodTrackingExpander.$MEAN +
                                                 "=" +
                                                 om.getSamplerMean(),
-                                            MethodCounterExpander.SAMPLER_TAG +
+                                            MethodTrackingExpander.$SAMPLER +
                                                 "=" +
                                                 om.getSamplerKind()
                                         );
@@ -1277,7 +1286,7 @@ public class Instrumentor extends ClassVisitor {
                     }
                 };
                 return mri;
-                // </editor-fold>
+                // </editor-fold>                // </editor-fold>
 
             case SYNC_ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="SyncEntry Instrumentor">
