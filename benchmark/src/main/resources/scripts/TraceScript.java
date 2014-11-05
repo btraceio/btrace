@@ -21,7 +21,7 @@ public class TraceScript {
     }
 
     @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethodSampled")
-    @Sampled
+    @Sampled(kind = Sampled.Sampler.Const)
     public static void onMethodEntryEmptySampled(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
 
     }
@@ -32,13 +32,13 @@ public class TraceScript {
     }
 
     @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrDurationSampled", location = @Location(Kind.RETURN))
-    @Sampled
+    @Sampled(kind = Sampled.Sampler.Const)
     public static void onMethodRetDurationSampled(@ProbeClassName String pcn, @ProbeMethodName String pmn, @Duration long dur) {
 
     }
 
     @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrDurationSampledAdaptive", location = @Location(Kind.RETURN))
-    @Sampled(kind = Sampled.Sampler.Adaptive)
+    @Sampled
     public static void onMethodRetDurationSampledAdaptive(@ProbeClassName String pcn, @ProbeMethodName String pmn, @Duration long dur) {
 
     }

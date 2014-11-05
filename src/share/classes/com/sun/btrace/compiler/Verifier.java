@@ -172,7 +172,7 @@ public class Verifier extends AbstractProcessor
             return true;
         }
         Boolean value = ct.accept(new VerifierVisitor(this, topElement), null);
-        return value == null? true : value.booleanValue();
+        return value == null? true : value;
     }
 
     /** Detects if the class is annotated as @BTrace(unsafe=true). */

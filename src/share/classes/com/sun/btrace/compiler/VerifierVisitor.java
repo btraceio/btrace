@@ -36,9 +36,13 @@ import com.sun.source.tree.*;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreeScanner;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.OnExit;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.util.Messages;
 import com.sun.source.util.TreePath;
+import com.sun.source.util.TreePathScanner;
 import com.sun.tools.javac.tree.JCTree;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,7 +58,7 @@ import javax.lang.model.element.ExecutableElement;
  * @author A. Sundararajan
  */
 public class VerifierVisitor extends TreeScanner<Boolean, Void> {
-    private Verifier verifier;
+    private final Verifier verifier;
     private String className;
     private boolean insideMethod;
     private volatile static Method[] btraceMethods;
@@ -74,6 +78,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         sharedMethods = shared.toArray(new ExecutableElement[shared.size()]);
     }
 
+    @Override
     public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
         ExpressionTree methodSelect = node.getMethodSelect();
         if (methodSelect.getKind() == Tree.Kind.IDENTIFIER) {
@@ -84,7 +89,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 numArgs = args.size();
             }
 
-            if (name.equals("super") || 
+            if (name.equals("super") ||
                 isBTraceMethod(name, numArgs) ||
                 isSharedMethod(name, numArgs)) {
                 return super.visitMethodInvocation(node, v);
@@ -103,7 +108,6 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 clzName.startsWith("BTraceUtils.") ||
                 clzName.startsWith("com.sun.btrace.BTraceUtils.") ||
                 isBTraceClass(clzName)) {
-//                name = name.substring(name.lastIndexOf(".") + 1);
                 int numArgs = 0;
                 List<? extends Tree> args = node.getArguments();
                 if (args != null) {
@@ -112,16 +116,18 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 if (isBTraceMethod(name, numArgs)) {
                     return super.visitMethodInvocation(node, v);
                 } // else fall through..
-            } // else fall through..            
-        } // else fall through..    
-        return reportError("no.method.calls", node);         
+            } // else fall through..
+        } // else fall through..
+        return reportError("no.method.calls", node);
     }
 
+    @Override
     public Boolean visitAssert(AssertTree node, Void v) {
-        return reportError("no.asserts", node);        
+        return reportError("no.asserts", node);
     }
 
-    public Boolean visitAssignment(AssignmentTree node, Void v) {        
+    @Override
+    public Boolean visitAssignment(AssignmentTree node, Void v) {
         if (checkLValue(node.getVariable())) {
             return super.visitAssignment(node, v);
         } else {
@@ -129,6 +135,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         }
     }
 
+    @Override
     public Boolean visitCompoundAssignment(CompoundAssignmentTree node, Void v) {
         if (checkLValue(node.getVariable())) {
             return super.visitCompoundAssignment(node, v);
@@ -137,14 +144,16 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         }
     }
 
+    @Override
     public Boolean visitCatch(CatchTree node, Void v) {
-        return reportError("no.catch", node);        
+        return reportError("no.catch", node);
     }
 
+    @Override
     public Boolean visitClass(ClassTree node, Void v) {
         // check for local class
         if (insideMethod) {
-            return reportError("no.local.class", node);            
+            return reportError("no.local.class", node);
         }
 
         // check for short BTrace syntax (inferring redundant access qualifiers)
@@ -183,14 +192,14 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             String name = superClass.toString();
             if (!name.equals("Object") &&
                 !name.equals("java.lang.Object")) {
-                return reportError("object.superclass.required", superClass);                
+                return reportError("object.superclass.required", superClass);
             }
         }
 
         // should not implement interfaces
         List<? extends Tree> interfaces = node.getImplementsClause();
         if (interfaces != null && interfaces.size() > 0) {
-            return reportError("no.interface.implementation", interfaces.get(0));            
+            return reportError("no.interface.implementation", interfaces.get(0));
         }
 
         ModifiersTree mt = node.getModifiers();
@@ -218,26 +227,35 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return reportError("not.a.btrace.program", node);
     }
 
+    @Override
     public Boolean visitDoWhileLoop(DoWhileLoopTree node, Void v) {
-        return reportError("no.do.while", node);        
+        return reportError("no.do.while", node);
     }
 
+    @Override
     public Boolean visitEnhancedForLoop(EnhancedForLoopTree node, Void v) {
-        return reportError("no.enhanced.for", node);        
+        return reportError("no.enhanced.for", node);
     }
 
+    @Override
     public Boolean visitForLoop(ForLoopTree node, Void v) {
-        return reportError("no.for.loop", node);        
+        return reportError("no.for.loop", node);
     }
 
+    @Override
     public Boolean visitMethod(MethodTree node, Void v) {
-        boolean oldInsideMethod = insideMethod;         
+        boolean oldInsideMethod = insideMethod;
         insideMethod = true;
         try {
             Name name = node.getName();
             if (name.contentEquals("<init>")) {
                 return super.visitMethod(node, v);
             } else {
+                verifier.getMessager().printMessage(Diagnostic.Kind.NOTE, "Going to check for sampler");
+                if (!checkSampling(node)) {
+                    verifier.getMessager().printMessage(Diagnostic.Kind.NOTE, "Verifier should fail");
+                    return false;
+                }
                 if (isExitHandler(node)) {
                     if (node.getParameters().size() != 1 || ! "int".equals(node.getParameters().get(0).getType().toString())) {
                         reportError("onexit.invalid", node);
@@ -283,21 +301,25 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                         return reportError("no.instance.method", node);
                     }
                 }
-                return super.visitMethod(node, v);
+
+                return false;
             }
         } finally {
             insideMethod = oldInsideMethod;
         }
     }
 
+    @Override
     public Boolean visitNewArray(NewArrayTree node, Void v) {
-        return reportError("no.array.creation", node);        
+        return reportError("no.array.creation", node);
     }
 
+    @Override
     public Boolean visitNewClass(NewClassTree node, Void v) {
-        return reportError("no.new.object", node);        
+        return reportError("no.new.object", node);
     }
 
+    @Override
     public Boolean visitReturn(ReturnTree node, Void v) {
         if (node.getExpression() != null) {
             TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), node);
@@ -316,6 +338,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return super.visitReturn(node, v);
     }
 
+    @Override
     public Boolean visitMemberSelect(MemberSelectTree node, Void v) {
         if (node.getIdentifier().contentEquals("class")) {
             return reportError("no.class.literals", node);
@@ -324,22 +347,27 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         }
     }
 
+    @Override
     public Boolean visitSynchronized(SynchronizedTree node, Void v) {
-        return reportError("no.synchronized.blocks", node);        
+        return reportError("no.synchronized.blocks", node);
     }
 
+    @Override
     public Boolean visitThrow(ThrowTree node, Void v) {
-        return reportError("no.throw", node);        
+        return reportError("no.throw", node);
     }
 
+    @Override
     public Boolean visitTry(TryTree node, Void v) {
         return reportError("no.try", node);
-    } 
+    }
 
+    @Override
     public Boolean visitWhileLoop(WhileLoopTree node, Void v)  {
         return reportError("no.while.loop", node);
     }
-    
+
+    @Override
     public Boolean visitOther(Tree node, Void v) {
         return reportError("no.other", node);
     }
@@ -407,6 +435,29 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return false;
     }
 
+    private boolean checkSampling(MethodTree node) {
+        TreePath mPath = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), node);
+        ExecutableElement ee = (ExecutableElement)verifier.getTreeUtils().getElement(mPath);
+
+        Sampled s = ee.getAnnotation(Sampled.class);
+        OnMethod om = ee.getAnnotation(OnMethod.class);
+
+        if (s != null && om != null) {
+            Kind k = om.location().value();
+            switch (k) {
+                case ENTRY:
+                case RETURN:
+                case ERROR:
+                case CALL: {
+                    return true;
+                }
+            }
+            reportError("sampler.invalid.location", node);
+            return false;
+        }
+        return true;
+    }
+
     private boolean checkLValue(Tree variable) {
         if (variable.getKind() == Tree.Kind.ARRAY_ACCESS) {
             reportError("no.assignment", variable);
@@ -424,7 +475,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             } else {
                 reportError("no.assignment", variable);
                 return false;
-            }            
+            }
         }
         return true;
     }
@@ -446,7 +497,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     private static boolean isSharedMethod(String name, int numArgs) {
         if (sharedMethods == null) return false;
-        
+
         for(ExecutableElement m : sharedMethods) {
             if (m.getSimpleName().contentEquals(name) &&
                 m.getParameters().size() == numArgs) {
@@ -489,11 +540,11 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         SourcePositions srcPos = verifier.getSourcePositions();
         CompilationUnitTree compUnit = verifier.getCompilationUnit();
         if (compUnit != null) {
-            long pos = srcPos.getStartPosition(compUnit, node);            
+            long pos = srcPos.getStartPosition(compUnit, node);
             long line = compUnit.getLineMap().getLineNumber(pos);
             String name = compUnit.getSourceFile().getName();
             msg = String.format("%s:%d:%s", name, line, Messages.get(msg));
-            verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg); 
+            verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
         } else {
             verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
         }
