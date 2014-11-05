@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,26 +18,24 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+package com.sun.btrace.instr.random;
 
-package com.sun.btrace;
-
-import java.lang.reflect.Method;
+import com.sun.btrace.instr.RandomIntProvider;
+import java.util.Random;
 
 /**
- * This interface is used to generate .class bytes
- * for a Runnable interface implementor that calls
- * given (static public, no-arg) method.
  *
- * @author A. Sundararajan
+ * @author Jaroslav Bachorik
  */
-public interface RunnableGenerator {
-    /**
-     * Generate class bytes for java.lang.Runnable
-     * implementation and return the same.
-     */
-    public byte[] generate(Method method, String className);
+final public class SharedRandomIntProvider extends RandomIntProvider {
+    private final Random rnd = new Random(System.nanoTime());
+
+    public int nextInt(int bound) {
+        return rnd.nextInt(bound);
+    }
+
 }

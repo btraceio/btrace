@@ -44,7 +44,6 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.templates.TemplateExpanderVisitor;
-import com.sun.btrace.util.TimeStampHelper;
 import java.util.regex.PatternSyntaxException;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.LocalVariableHelperImpl;
@@ -184,11 +183,6 @@ public class Instrumentor extends ClassVisitor {
             (access & ACC_ABSTRACT) != 0    ||
             (access & ACC_NATIVE) != 0      ||
             name.startsWith(BTRACE_METHOD_PREFIX)) {
-            return tse;
-        }
-
-        if (name.equals(TimeStampHelper.TIME_STAMP_NAME)) {
-            timeStampExisting = true;
             return tse;
         }
 
@@ -1418,12 +1412,6 @@ public class Instrumentor extends ClassVisitor {
         return mv;
     }
 
-    private void introduceTimeStampHelper() {
-        if (usesTimeStamp && !timeStampExisting) {
-            TimeStampHelper.generateTimeStampGetter(this);
-        }
-    }
-
     public void visitEnd() {
         int size = applicableOnMethods.size();
         List<MethodCopier.MethodInfo> mi = new ArrayList<MethodCopier.MethodInfo>(size);
@@ -1433,7 +1421,6 @@ public class Instrumentor extends ClassVisitor {
                      getActionMethodName(om.getTargetName()),
                      ACC_STATIC | ACC_PRIVATE));
         }
-        introduceTimeStampHelper();
         MethodCopier copier = new MethodCopier(btraceClass, cv, mi) {
             @Override
             protected MethodVisitor addMethod(int access, String name, String desc,

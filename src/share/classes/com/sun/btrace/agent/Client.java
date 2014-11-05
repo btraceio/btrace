@@ -54,8 +54,7 @@ import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
-import com.sun.btrace.util.templates.impl.CallTimeStampExpander;
-import com.sun.btrace.util.templates.impl.MethodTimeStampExpander;
+import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -92,8 +91,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         AnnotationParser.class.getClass();
         AnnotationType.class.getClass();
         Annotation.class.getClass();
-        MethodTimeStampExpander.class.getClass();
-        CallTimeStampExpander.class.getClass();
+        MethodTrackingExpander.class.getClass();
 
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }

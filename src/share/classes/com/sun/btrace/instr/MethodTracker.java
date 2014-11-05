@@ -22,12 +22,11 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.btrace;
+package com.sun.btrace.instr;
 
 import com.sun.btrace.util.MethodID;
+import com.sun.btrace.instr.RandomIntProvider;
 import java.util.Arrays;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -37,45 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Jaroslav Bachorik
  */
 final public class MethodTracker {
-    private static interface RandomIntProvider {
-        int nextInt(int bound);
-    }
-
-    private static final class SharedRandomIntProvider implements RandomIntProvider {
-        private final Random rnd = new Random(System.nanoTime());
-
-        public int nextInt(int bound) {
-            return rnd.nextInt(bound);
-        }
-    }
-
-    private static final class ThreadLocalRandomIntProvider implements RandomIntProvider {
-        public int nextInt(int bound) {
-            return ThreadLocalRandom.current().nextInt(0, bound);
-        }
-    }
-
-    private static final RandomIntProvider rndIntProvider;
-
-    static {
-        boolean entered = false;
-        try {
-            entered = BTraceRuntime.enter();
-            Class clz = null;
-            try {
-                clz = Class.forName("java.util.concurrent.ThreadLocalRandom");
-            } catch (Throwable e) {
-                // ThreadLocalRandom not accessible -> pre JDK8
-            }
-            if (clz != null) {
-                rndIntProvider = new ThreadLocalRandomIntProvider();
-            } else {
-                rndIntProvider = new SharedRandomIntProvider();
-            }
-        } finally {
-            if (entered) BTraceRuntime.leave();
-        }
-    }
+    private static final RandomIntProvider rndIntProvider = RandomIntProvider.getInstance();
 
     private static AtomicLong[] counters = new AtomicLong[50];
     private static ThreadLocal<Long>[] tsArray = new ThreadLocal[50];
@@ -123,12 +84,13 @@ final public class MethodTracker {
      * @return {@code true} if the invocation should be traced
      */
     public static boolean hit(int methodId) {
-        if (means[methodId] == 0) {
+        int mean = means[methodId];
+        if (mean == 0) {
             return true;
         }
         AtomicLong l = counters[methodId];
-        if (l.getAndDecrement() == 0) {
-            int inc = rndIntProvider.nextInt(means[methodId]) + 1;
+        if (l.getAndDecrement() <= 0) {
+            int inc = rndIntProvider.nextInt(mean) + 1;
             l.addAndGet(inc);
             return true;
         }
@@ -144,15 +106,16 @@ final public class MethodTracker {
      * @return a positive number (invocation time stamp) if the invocation should be traced
      */
     public static long hitTimed(int methodId) {
-        if (means[methodId] == 0) {
+        int mean = means[methodId];
+        if (mean == 0) {
             long ts = System.nanoTime();
             tsArray[methodId].set(ts);
             return ts;
         }
         AtomicLong l = counters[methodId];
-        if (l.getAndDecrement() == 0) {
+        if (l.getAndDecrement() <= 0) {
             long ts = System.nanoTime();
-            int inc = rndIntProvider.nextInt(means[methodId]) + 1;
+            int inc = rndIntProvider.nextInt(mean) + 1;
             l.addAndGet(inc);
             tsArray[methodId].set(ts);
             return ts;
@@ -171,7 +134,7 @@ final public class MethodTracker {
         AtomicLong cntr = counters[methodId];
         int origMean = origMeans[methodId];
         int mean = means[methodId];
-        if (mean == 0 || cntr.getAndDecrement() == 0) {
+        if (cntr.getAndDecrement() <= 0) {
             long ts = System.nanoTime();
             ThreadLocal<Long> tsRef = (ThreadLocal<Long>)tsArray[methodId];
             long ts1 = tsRef.get();
@@ -179,20 +142,19 @@ final public class MethodTracker {
                 long diff = ts - ts1;
                 if (mean < 1500 && diff < origMean) {
                     synchronized(rLocks[methodId]) {
-                        means[methodId] = mean + 1;
+                        means[methodId] = ++mean;
                     }
-                } else if (mean > 0 && diff > origMean) {
+                } else if (mean > 1 && diff > origMean) {
                     synchronized(rLocks[methodId]) {
-                        means[methodId] = mean - 1;
+                        means[methodId] = --mean;
                     }
                 }
             }
             tsRef.set(ts);
 
-            if (means[methodId] != 0) {
-                int inc = rndIntProvider.nextInt(means[methodId]) + 1;
-                cntr.addAndGet(inc);
-            }
+            int inc = rndIntProvider.nextInt(mean) + 1;
+            cntr.addAndGet(inc);
+
             return true;
         }
         return false;
@@ -208,30 +170,29 @@ final public class MethodTracker {
      */
     public static long hitTimedAdaptive(int methodId) {
         AtomicLong cntr = counters[methodId];
-        int rate = means[methodId];
+        int mean = means[methodId];
         int origMean = origMeans[methodId];
-        if (rate == 0 || cntr.getAndDecrement() == 0) {
+        if (cntr.getAndDecrement() <= 0) {
             long ts = System.nanoTime();
             ThreadLocal<Long> tsRef = (ThreadLocal<Long>)tsArray[methodId];
             long ts1 = tsRef.get();
             if (ts1 != 0) {
                 long diff = ts - ts1;
-                if (rate < 1500 && diff < origMean) {
+                if (mean < 1500 && diff < origMean) {
                     synchronized(rLocks[methodId]) {
-                        means[methodId] = rate + 1;
+                        means[methodId] = ++mean;
                     }
-                } else if (rate > 0 && diff > origMean) {
+                } else if (mean > 1 && diff > origMean) {
                     synchronized(rLocks[methodId]) {
-                        means[methodId] = rate - 1;
+                        means[methodId] = --mean;
                     }
                 }
             }
             tsRef.set(ts);
 
-            if (means[methodId] != 0) {
-                int inc = rndIntProvider.nextInt(means[methodId]) + 1;
-                cntr.addAndGet(inc);
-            }
+            int inc = rndIntProvider.nextInt(mean) + 1;
+            cntr.addAndGet(inc);
+
             return ts;
         }
         return 0L;

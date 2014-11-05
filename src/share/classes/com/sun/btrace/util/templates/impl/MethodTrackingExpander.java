@@ -24,7 +24,7 @@
  */
 package com.sun.btrace.util.templates.impl;
 
-import com.sun.btrace.MethodTracker;
+import com.sun.btrace.instr.MethodTracker;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
@@ -87,7 +87,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     public static final String $SAMPLER = "sampler";
     public static final String $METHODID = "methodid";
 
-    private static final String METHOD_COUNTER_CLASS = "com/sun/btrace/MethodTracker";
+    private static final String METHOD_COUNTER_CLASS = "com/sun/btrace/instr/MethodTracker";
 
     private boolean isTimed = false;
     private boolean isSampled = false;

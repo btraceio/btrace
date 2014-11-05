@@ -24,6 +24,9 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.instr.RandomIntProvider;
+import java.lang.reflect.Field;
+import org.junit.BeforeClass;
 import support.InstrumentorTestBase;
 import org.junit.Test;
 
@@ -32,6 +35,16 @@ import org.junit.Test;
  * @author Jaroslav Bachorik
  */
 public class InstrumentorTest extends InstrumentorTestBase {
+    @BeforeClass
+    public static void classSetup() throws Exception {
+        try {
+            Field f = RandomIntProvider.class.getDeclaredField("useBtraceEnter");
+            f.setAccessible(true);
+            f.setBoolean(null, false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @Test
     public void matchDerivedClass() throws Exception {

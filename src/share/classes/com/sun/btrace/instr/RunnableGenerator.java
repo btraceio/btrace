@@ -23,30 +23,21 @@
  * have any questions.
  */
 
-package com.sun.btrace.util;
+package com.sun.btrace.instr;
 
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-
+import java.lang.reflect.Method;
 
 /**
+ * This interface is used to generate .class bytes
+ * for a Runnable interface implementor that calls
+ * given (static public, no-arg) method.
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author A. Sundararajan
  */
-public class TimeStampHelper {
-    final public static String TIME_STAMP_NAME = "$btrace$time$stamp";
-
-    public static void generateTimeStampGetter(ClassVisitor cv) {
-        MethodVisitor timestamp = cv.visitMethod(ACC_STATIC + ACC_PRIVATE + ACC_FINAL, TIME_STAMP_NAME, "()J", null, new String[0]);
-        timestamp.visitCode();
-        timestamp.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J");
-        timestamp.visitInsn(LRETURN);
-        timestamp.visitMaxs(1, 0);
-        timestamp.visitEnd();
-    }
-
-    public static void generateTimeStampAccess(MethodVisitor mv, String className) {
-        mv.visitMethodInsn(INVOKESTATIC, className.replace(".", "/"), TIME_STAMP_NAME, "()J", false);
-    }
+public interface RunnableGenerator {
+    /**
+     * Generate class bytes for java.lang.Runnable
+     * implementation and return the same.
+     */
+    public byte[] generate(Method method, String className);
 }

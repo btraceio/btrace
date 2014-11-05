@@ -63,10 +63,12 @@ class RemoteClient extends Client {
         } else {
             errorExit(new IllegalArgumentException("expecting instrument command!"));
             throw new IOException("expecting instrument command!");
-        } 
+        }
+
+        BTraceRuntime.initUnsafe();
         Thread cmdHandler = new Thread(new Runnable() {
             public void run() {
-                BTraceRuntime.enter();                
+                BTraceRuntime.enter();
                 while (true) {
                     try {
                         Command cmd = WireIO.read(ois);
@@ -89,7 +91,7 @@ class RemoteClient extends Client {
                             getRuntime().handleEvent((EventCommand)cmd);
                             break;
                         }
-                        default: 
+                        default:
                             if (debug) Main.debugPrint("received " + cmd);
                             // ignore any other command
                         }
@@ -129,7 +131,7 @@ class RemoteClient extends Client {
         if (ois != null) {
             ois.close();
         }
-        if (sock != null) { 
+        if (sock != null) {
             sock.close();
         }
     }

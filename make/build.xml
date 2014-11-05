@@ -6,9 +6,9 @@
     <property name="maven-staging-repository-id" value="sonatype-nexus-staging" />
     <property name="maven-staging-repository-url" value="https://oss.sonatype.org/service/local/staging/deploy/maven2" />
 
-    <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/asm/signature/** **/asm/tree/** **/asm/util/** **/asm/xml/** **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/META-INF/*"/>
+    <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/asm/signature/** **/asm/tree/** **/asm/util/** **/asm/xml/** **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/instr/** **/META-INF/*"/>
     <property name="boot.excludes" value="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/**/* **/asm/** **/api/**/* **/spi/**/*"/>
-    <property name="client.excludes" value="**/runtime/* **/agent/* **/util/TimeStamp* **/util/MethodId **/util/SamplingSupport **/util/templates/**/* **/META-INF/*"/>
+    <property name="client.excludes" value="**/runtime/* **/agent/* **/util/TimeStamp* **/util/MethodId **/util/SamplingSupport **/util/templates/**/* **/instr/** **/META-INF/*"/>
 
     <target name="prepare" depends="load.properties">
         <mkdir dir="${classes.dir}"/>

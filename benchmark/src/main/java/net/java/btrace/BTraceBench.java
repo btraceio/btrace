@@ -28,7 +28,7 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.MessageCommand;
-import com.sun.btrace.util.SamplingSupport;
+import com.sun.btrace.instr.MethodTracker;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -119,6 +119,10 @@ public class BTraceBench {
 
     @Setup
     public void setup() {
+        MethodTracker.registerCounter(1, 10);
+        MethodTracker.registerCounter(2, 50);
+        MethodTracker.registerCounter(3, 100);
+
         Random r = new Random(System.currentTimeMillis());
         sampleCounter = 0;
         durCounter = 0;
@@ -223,10 +227,32 @@ public class BTraceBench {
     @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
     @Measurement(iterations = 20, time = 100, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
-    @Threads(4)
+    @Threads(2)
     public void testSampleHit10() {
         sampleHit10Checks++;
-        if (SamplingSupport.sampleHit(20, 1)) {
+        if (MethodTracker.hit(1)) {
+            sampleHit10Sampled++;
+        }
+    }
+
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 20, time = 100, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
+    @Threads(2)
+    public void testSampleHit50() {
+        sampleHit10Checks++;
+        if (MethodTracker.hit(2)) {
+            sampleHit10Sampled++;
+        }
+    }
+
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 20, time = 100, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
+    @Threads(2)
+    public void testSampleHit100() {
+        sampleHit10Checks++;
+        if (MethodTracker.hit(3)) {
             sampleHit10Sampled++;
         }
     }
@@ -236,7 +262,10 @@ public class BTraceBench {
         System.err.println();
         if (sampleHit10Checks > 0) {
             System.err.println("=== testSampleHit10");
-            System.err.println("#sampling rate ~ " + (sampleHit10Checks / sampleHit10Sampled));
+            System.err.println("#samples ~ " + sampleHit10Sampled);
+            if (sampleHit10Sampled > 0) {
+                System.err.println("#sampling rate ~ " + (sampleHit10Checks / sampleHit10Sampled));
+            }
         }
     }
 

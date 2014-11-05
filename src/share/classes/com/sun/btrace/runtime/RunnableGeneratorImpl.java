@@ -28,7 +28,7 @@ package com.sun.btrace.runtime;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import com.sun.btrace.RunnableGenerator;
+import com.sun.btrace.instr.RunnableGenerator;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
