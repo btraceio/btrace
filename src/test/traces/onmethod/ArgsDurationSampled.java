@@ -42,7 +42,7 @@ import com.sun.btrace.annotations.Sampled;
 @BTrace
 public class ArgsDurationSampled {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
-    @Sampled(mean = 20)
+    @Sampled(kind = Sampled.Sampler.Const, mean = 20)
     public static void args(@Self Object self, @Return long retVal, @Duration long dur, String a, long b, String[] c, int[] d) {
         println("args");
     }

@@ -44,7 +44,7 @@ public class ArgsSampledNoSampling {
     }
 
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    @Sampled
+    @Sampled(kind = Sampled.Sampler.Const)
     public static void argsSampled(@Self Object self, String a, long b, String[] c, int[] d) {
         println("this = " + self);
         println("args");

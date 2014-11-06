@@ -333,7 +333,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsSampledNoSampling");
         checkTransformation("LDC 5\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hit (I)Z\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
             "ILOAD 6\n" +
             "IFEQ L0\n" +
@@ -359,7 +359,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsSampled");
         checkTransformation("LDC 5\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hit (I)Z\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
             "ILOAD 6\n" +
             "IFEQ L0\n" +
@@ -379,7 +379,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/Args2Sampled");
         checkTransformation("LDC 5\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hit (I)Z\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
             "ILOAD 6\n" +
             "IFEQ L0\n" +
@@ -408,7 +408,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsSampledAdaptive");
         checkTransformation("LDC 5\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hitAdaptive (I)Z\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitAdaptive (I)Z\n" +
             "ISTORE 6\n" +
             "ILOAD 6\n" +
             "IFEQ L0\n" +
@@ -421,8 +421,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 6\n" +
             "IFEQ L1\n" +
             "LDC 5\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.updateEndTs (I)J\n" +
-            "POP2\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.updateEndTs (I)V\n" +
             "L1\n" +
             "L2"
         );
@@ -440,7 +439,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsReturnSampled");
         checkTransformation("LDC 5\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hit (I)Z\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
             "ILOAD 6\n" +
             "IFEQ L1\n" +
@@ -531,9 +530,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDurationSampled");
         checkTransformation(
-            "LDC 0\nLSTORE 6\nLDC 5\nINVOKESTATIC com/sun/btrace/MethodTracker.hitTimed (I)J\n" +
+            "LDC 0\nLSTORE 6\nLDC 5\nINVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\nLSTORE 8\nL2I\nISTORE 10\nILOAD 10\nIFEQ L1\n" +
-            "LDC 5\nINVOKESTATIC com/sun/btrace/MethodTracker.updateEndTs (I)J\n" +
+            "LDC 5\nINVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
             "LLOAD 8\nLSUB\nLSTORE 6\nDUP2\nLSTORE 11\n" +
             "ALOAD 0\nLLOAD 11\nLLOAD 6\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationSampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
@@ -585,9 +584,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDuration2Sampled");
         checkTransformation("LDC 0\nLSTORE 6\nLDC 5\n"
-                + "INVOKESTATIC com/sun/btrace/MethodTracker.hitTimed (I)J\n"
+                + "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n"
                 + "DUP2\nLSTORE 8\nL2I\nISTORE 10\nILOAD 10\nIFEQ L1\n"
-                + "LDC 5\nINVOKESTATIC com/sun/btrace/MethodTracker.updateEndTs (I)J\n"
+                + "LDC 5\nINVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n"
                 + "LLOAD 8\nLSUB\nLSTORE 6\nDUP2\nLSTORE 11\n"
                 + "ALOAD 0\nLLOAD 11\nLLOAD 6\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2Sampled$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
@@ -838,7 +837,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/MethodCallSampled");
 
         checkTransformation("LDC 10\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hit (I)Z\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 4\n" +
             "LSTORE 5\n" +
             "ASTORE 7\n" +
@@ -866,7 +865,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/MethodCallSampledAdaptive");
 
         checkTransformation("LDC 10\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hitAdaptive (I)Z\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitAdaptive (I)Z\n" +
             "ISTORE 4\n" +
             "LSTORE 5\n" +
             "ASTORE 7\n" +
@@ -888,8 +887,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 4\n" +
             "IFEQ L2\n" +
             "LDC 9\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.updateEndTs (I)J\n" +
-            "POP2\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.updateEndTs (I)V\n" +
             "L2\n" +
             "L3");
     }
@@ -951,7 +949,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         checkTransformation("LDC 0\n" +
             "LSTORE 4\n" +
             "LDC 10\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hitTimed (I)J\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
             "LSTORE 6\n" +
             "L2I\n" +
@@ -965,7 +963,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 8\n" +
             "IFEQ L1\n" +
             "LDC 10\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.updateEndTs (I)J\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
             "LLOAD 6\n" +
             "LSUB\n" +
             "LSTORE 4\n" +
@@ -988,7 +986,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         checkTransformation("LDC 0\n" +
             "LSTORE 4\n" +
             "LDC 20\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hitTimed (I)J\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
             "LSTORE 6\n" +
             "L2I\n" +
@@ -1002,7 +1000,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 8\n" +
             "IFEQ L1\n" +
             "LDC 20\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.updateEndTs (I)J\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
             "LLOAD 6\n" +
             "LSUB\n" +
             "LSTORE 4\n" +
@@ -1015,7 +1013,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 13\n" +
             "L1\n" +
             "LDC 21\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.hitTimed (I)J\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
             "LSTORE 15\n" +
             "L2I\n" +
@@ -1027,7 +1025,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 17\n" +
             "IFEQ L2\n" +
             "LDC 21\n" +
-            "INVOKESTATIC com/sun/btrace/MethodTracker.updateEndTs (I)J\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
             "LLOAD 15\n" +
             "LSUB\n" +
             "LSTORE 21\n" +

@@ -43,7 +43,7 @@ import com.sun.btrace.annotations.Sampled;
 public class MethodCallDurationSampledMulti {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel1",
               location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="/callTarget.*/", where=Where.AFTER))
-    @Sampled
+    @Sampled(kind = Sampled.Sampler.Const)
     public static void args(@Return long retVal, @Duration long dur, String a, long b) {
         println("args");
     }
