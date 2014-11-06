@@ -34,13 +34,13 @@ public interface TemplateExpander {
     /**
      * The result of expansion
      * <ul>
-     * <li><b>CONSUMED</b> = expander has claimed and expanded the template</li>
-     * <li><b>IGNORED</b> = expander has claimed the template but didn't expanded it</li>
-     * <li><b>PASSED</b> = expander has not claimed the template</li>
+     * <li><b>EXPANDED</b> = expander has claimed and expanded the template</li>
+     * <li><b>CLAIMED</b> = expander has claimed the template but didn't expand it</li>
+     * <li><b>IGNORED</b> = expander has not claimed the template</li>
      * </ul>
      */
     public static enum Result {
-        CONSUMED, IGNORED, PASSED
+        EXPANDED, CLAIMED, IGNORED
     }
 
     /**
@@ -58,4 +58,9 @@ public interface TemplateExpander {
      * @return appropriate {@linkplain Result} value
      */
     Result expand(TemplateExpanderVisitor v, Template t);
+
+    /**
+     * Called upon code points invalidating the current expander status
+     */
+    void resetState();
 }

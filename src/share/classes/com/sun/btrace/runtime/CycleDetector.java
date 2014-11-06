@@ -126,10 +126,10 @@ public class CycleDetector {
             return hash;
         }
     }
-    
+
     final private Set<Node> nodes = new HashSet<Node>();
     final private Set<Node> startingNodes = new HashSet<Node>();
-    
+
     public void addEdge(String fromId, String toId) {
         Node fromNode = null;
         Node toNode = null;

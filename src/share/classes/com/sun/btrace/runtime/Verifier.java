@@ -40,6 +40,7 @@ import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.util.Messages;
@@ -190,6 +191,7 @@ public class Verifier extends ClassVisitor {
         return new MethodVerifier(this, mv, className, cycleDetector, methodName + methodDesc) {
             private OnMethod om = null;
             private boolean asBTrace = false;
+            private boolean sampled = false;
 
             @Override
             public void visitEnd() {
@@ -202,6 +204,9 @@ public class Verifier extends ClassVisitor {
                     if (asBTrace) {
                         reportError("return.type.should.be.void", methodName + methodDesc);
                     }
+                }
+                if (om != null) {
+                    validateSamplerLocation();
                 }
                 super.visitEnd();
             }
@@ -287,9 +292,6 @@ public class Verifier extends ClassVisitor {
                                 } else if (desc.equals(BTRACE_PROBEMETHODNAME_DESC)) {
                                     om.setMethodFqn((Boolean)o);
                                 }
-                            } else if (string.equals("samplingInterval") &&
-                                       desc.equals(BTRACE_DURATION_DESC)) {
-                                om.setDurationSamplingInterval((Integer)o);
                             }
                         }
                         super.visit(string, o);
@@ -362,7 +364,7 @@ public class Verifier extends ClassVisitor {
                     op.setTargetName(methodName);
                     op.setTargetDescriptor(methodDesc);
                     return new AnnotationVisitor(Opcodes.ASM4) {
-                        public void	visit(String name, Object value) {
+                        public void visit(String name, Object value) {
                             if (name.equals("namespace")) {
                                 op.setNamespace((String)value);
                             } else if (name.equals("name")) {
@@ -370,8 +372,73 @@ public class Verifier extends ClassVisitor {
                             }
                         }
                     };
+                } else if (desc.equals(SAMPLER_DESC)) {
+                    if (om != null) {
+                        om.setSamplerKind(Sampled.Sampler.Adaptive);
+                        return new AnnotationVisitor(Opcodes.ASM4) {
+                            private boolean meanSet = false;
+                            @Override
+                            public void visit(String name, Object value) {
+                                if (name.equals("mean")) {
+                                    om.setSamplerMean((Integer)value);
+                                    meanSet = true;
+                                }
+                            }
+
+                            @Override
+                            public void visitEnum(String name, String desc, String value) {
+                                if (name.equals("kind") && desc.equals(Type.getDescriptor(Sampled.Sampler.class))) {
+                                    om.setSamplerKind(Sampled.Sampler.valueOf(value));
+                                }
+                            }
+
+                            @Override
+                            public void visitEnd() {
+                                if (!meanSet) {
+                                    if (om.getSamplerKind() == Sampled.Sampler.Adaptive) {
+                                        om.setSamplerMean(500);
+                                    } else if (om.getSamplerKind() == Sampled.Sampler.Const) {
+                                        om.setSamplerMean(Sampled.MEAN_DEFAULT);
+                                    }
+                                }
+                                if (om.getSamplerKind() == Sampled.Sampler.Adaptive) {
+                                    // the time frame for adaptive sampling
+                                    // should be at least 180ns -
+                                    // (80ns timestamps + 15ns stub) * 2 safety margin
+                                    if (om.getSamplerMean() < 180) {
+                                        System.err.println("Setting the adaptive sampler time windows to the default of 180ns");
+                                        om.setSamplerMean(180);
+                                    }
+                                }
+                                super.visitEnd();
+                            }
+                        };
+                    }
+                    sampled = true;
+                    return new AnnotationVisitor(Opcodes.ASM4) {};
                 } else {
                     return new AnnotationVisitor(Opcodes.ASM4) {};
+                }
+            }
+
+            private void validateSamplerLocation() {
+                if (om == null && sampled) {
+                    reportError("sampler.invalid.location", methodName + methodDesc);
+                    return;
+                }
+                if (om.getSamplerKind() != Sampled.Sampler.None) {
+                    switch (om.getLocation().getValue()) {
+                        case ENTRY:
+                        case RETURN:
+                        case ERROR:
+                        case CALL: {
+                            // ok
+                            break;
+                        }
+                        default: {
+                            reportError("sampler.invalid.location", methodName + methodDesc);
+                        }
+                    }
                 }
             }
         };

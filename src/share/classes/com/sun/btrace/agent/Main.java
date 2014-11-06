@@ -169,6 +169,7 @@ public final class Main {
                 }
             }
         });
+        BTraceRuntime.initUnsafe();
         BTraceRuntime.enter();
         try {
             agentThread.setDaemon(true);

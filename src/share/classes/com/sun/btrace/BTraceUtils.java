@@ -59,6 +59,10 @@ import java.util.regex.Pattern;
  * @author Jaroslav Bachorik
  */
 public class BTraceUtils {
+    static {
+        BTraceRuntime.initUnsafe();
+    }
+    
     // standard stack depth decrement for Reflection.getCallerClass() calls
     private static final int STACK_DEC = 2;
 

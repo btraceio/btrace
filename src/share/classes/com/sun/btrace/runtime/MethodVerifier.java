@@ -24,7 +24,6 @@
  */
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.BTraceRuntime;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;

@@ -23,21 +23,25 @@
  * have any questions.
  */
 
-package com.sun.btrace;
+package com.sun.btrace.samples;
 
-import java.lang.reflect.Method;
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
 
 /**
- * This interface is used to generate .class bytes
- * for a Runnable interface implementor that calls
- * given (static public, no-arg) method.
+ * This script demonstrates the possibility to intercept
+ * method calls that are about to be executed from the body of
+ * a certain method. This is achieved by using the {@linkplain Kind#CALL}
+ * location value.
  *
- * @author A. Sundararajan
+ * Not all instances of the method call are intercepted, however. Adaptive sampling
+ * is used to balance the captured data and incurred overhead.
  */
-public interface RunnableGenerator {
-    /**
-     * Generate class bytes for java.lang.Runnable
-     * implementation and return the same.
-     */
-    public byte[] generate(Method method, String className);
+@BTrace public class AllCalls1Sampled {
+    @OnMethod(clazz="javax.swing.JTextField", method="/.*/",
+              location=@Location(value=Kind.CALL, clazz="/.*/", method="/.*/"))
+    @Sampled(kind = Sampled.Sampler.Adaptive)
+    public static void m(@Self Object self, @TargetMethodOrField String method, @ProbeMethodName String probeMethod) { // all calls to the methods with signature "()"
+        println(method + " in " + probeMethod);
+    }
 }

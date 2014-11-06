@@ -23,30 +23,26 @@
  * have any questions.
  */
 
-package com.sun.btrace.util;
+package com.sun.btrace.samples;
 
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
 
 /**
+ * This script demonstrates the possibility to intercept
+ * method calls that are about to be executed from the body of
+ * a certain method. This is achieved by using the {@linkplain Kind#CALL}
+ * location value.
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * Not all instances of the method call are intercepted, however.  Sampling
+ * is used to pick only statistically representative ones.
  */
-public class TimeStampHelper {
-    final public static String TIME_STAMP_NAME = "$btrace$time$stamp";
-
-    public static void generateTimeStampGetter(ClassVisitor cv) {
-        MethodVisitor timestamp = cv.visitMethod(ACC_STATIC + ACC_PRIVATE + ACC_FINAL, TIME_STAMP_NAME, "()J", null, new String[0]);
-        timestamp.visitCode();
-        timestamp.visitMethodInsn(INVOKESTATIC, "java/lang/System", "nanoTime", "()J");
-        timestamp.visitInsn(LRETURN);
-        timestamp.visitMaxs(1, 0);
-        timestamp.visitEnd();
-    }
-
-    public static void generateTimeStampAccess(MethodVisitor mv, String className) {
-        mv.visitMethodInsn(INVOKESTATIC, className.replace(".", "/"), TIME_STAMP_NAME, "()J", false);
+@BTrace public class AllCalls2Sampled {
+    @OnMethod(clazz="/javax\\.swing\\..*/", method="/.*/",
+              location=@Location(value=Kind.CALL, clazz="/.*/", method="/.*/"))
+    @Sampled
+    public static void n(@Self Object self, @ProbeClassName String pcm, @ProbeMethodName String pmn,
+                         @TargetInstance Object instance, @TargetMethodOrField String method, String text) { // all calls to the methods with signature "(String)"
+        println("Context: " + pcm + "#" +  pmn + method + " " + text);
     }
 }

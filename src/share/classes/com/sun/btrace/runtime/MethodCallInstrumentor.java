@@ -68,12 +68,12 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
 
     protected void onBeforeCallMethod(int opcode,
         String owner, String name, String desc) {
-        println("before call: " + owner + "." + name + desc);
+        asm.println("before call: " + owner + "." + name + desc);
     }
 
     protected void onAfterCallMethod(int opcode,
         String owner, String name, String desc) {
-        println("after call: " + owner + "." + name + desc);
+        asm.println("after call: " + owner + "." + name + desc);
     }
 
     protected int getCallId() {

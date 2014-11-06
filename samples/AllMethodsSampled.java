@@ -23,38 +23,28 @@
  * questions.
  */
 
-package com.sun.btrace.util.templates.impl;
+package com.sun.btrace.samples;
 
-import com.sun.btrace.util.templates.BTraceTemplates;
-import com.sun.btrace.util.templates.Template;
+import com.sun.btrace.annotations.*;
+import static com.sun.btrace.BTraceUtils.*;
 
 /**
- * A timestamp expander for method duration related templates
- * @author Jaroslav Bachorik
- * @since 1.3
+ * This script traces method entry into every method of
+ * every class in javax.swing package. Think before using
+ * this script -- this will slow down your app significantly!!
+ *
+ * Not all calls are intercepted, however. Sampling
+ * is used to pick only statistically representative ones.
  */
-public class MethodTimeStampExpander extends TimeStampExpander {
-
-    public static final Template START_TIME = new Template("methodStartTime", "()J");
-    public static final Template END_TIME = new Template("methodEndTime", "()J");
-    public static final Template DURATION = new Template("methodDuration", "()J");
-
-    static {
-        BTraceTemplates.registerTemplates(START_TIME, END_TIME, DURATION);
-    }
-
-    public MethodTimeStampExpander(String className,
-                                   String methodName,
-                                   String desc
-    ) {
-        super(className, methodName, desc,
-              START_TIME,
-              END_TIME,
-              DURATION);
-    }
-
-    @Override
-    protected void resetStartTime() {
-        // never reset the start time in the method body
+@BTrace public class AllMethodsSampled {
+    @OnMethod(
+        clazz="/javax\\.swing\\..*/",
+        method="/.*/"
+    )
+    @Sampled
+    public static void m(@Self Object o, @ProbeClassName String probeClass, @ProbeMethodName String probeMethod) {
+        println("this = " + o);
+        print("entered " + probeClass);
+        println("." + probeMethod);
     }
 }

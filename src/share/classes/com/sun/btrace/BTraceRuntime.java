@@ -25,6 +25,7 @@
 
 package com.sun.btrace;
 
+import com.sun.btrace.instr.RunnableGenerator;
 import java.lang.management.ManagementFactory;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
@@ -105,7 +106,6 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
-import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -152,7 +152,7 @@ public final class BTraceRuntime  {
     }
     // we need Unsafe to load BTrace class bytes as
     // bootstrap class
-    private static final Unsafe unsafe = Unsafe.getUnsafe();
+    private static volatile Unsafe unsafe = null;
 
     private static Properties dotWriterProps;
 
@@ -397,12 +397,20 @@ public final class BTraceRuntime  {
         cmdThread.start();
     }
 
+    public static void initUnsafe() {
+        if (unsafe == null) {
+            unsafe = Unsafe.getUnsafe();
+        }
+    }
+
     public static boolean classNameExists(String name) {
         return runtimes.containsKey(name);
     }
 
     @CallerSensitive
     public static void init(PerfReader perfRead, RunnableGenerator runGen) {
+        initUnsafe();
+        
         Class caller = isNewerThan8 ? Reflection.getCallerClass() : Reflection.getCallerClass(2);
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
             throw new SecurityException("unsafe init");

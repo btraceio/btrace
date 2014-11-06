@@ -6,9 +6,9 @@
     <property name="maven-staging-repository-id" value="sonatype-nexus-staging" />
     <property name="maven-staging-repository-url" value="https://oss.sonatype.org/service/local/staging/deploy/maven2" />
 
-    <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/asm/signature/** **/asm/tree/** **/asm/util/** **/asm/xml/** **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/META-INF/*"/>
+    <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/asm/signature/** **/asm/tree/** **/asm/util/** **/asm/xml/** **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/instr/** **/META-INF/*"/>
     <property name="boot.excludes" value="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/**/* **/asm/** **/api/**/* **/spi/**/*"/>
-    <property name="client.excludes" value="**/runtime/* **/agent/* **/util/TimeStamp* **/util/MethodId **/util/SamplingSupport **/util/templates/**/* **/META-INF/*"/>
+    <property name="client.excludes" value="**/runtime/* **/agent/* **/util/TimeStamp* **/util/MethodId **/util/SamplingSupport **/util/templates/**/* **/instr/** **/META-INF/*"/>
 
     <target name="prepare" depends="load.properties">
         <mkdir dir="${classes.dir}"/>
@@ -78,6 +78,20 @@
           <param name="artifact" value="btrace-client"/>
           <param name="snapshot" value="-SNAPSHOT"/>
        </antcall>
+
+       <artifact:pom id="btrace-agent" file="../build/pom-btrace-agent.xml" />
+        <artifact:pom id="btrace-boot" file="../build/pom-btrace-boot.xml" />
+        <artifact:pom id="btrace-client" file="../build/pom-btrace-client.xml" />
+
+        <artifact:install file="${agent.jar}">
+            <pom refid="btrace-agent"/>
+        </artifact:install>
+        <artifact:install file="${boot.jar}">
+            <pom refid="btrace-boot"/>
+        </artifact:install>
+        <artifact:install file="${client.jar}">
+            <pom refid="btrace-client"/>
+        </artifact:install>
    </target>
 
   <target name="create.staging.poms" depends="initialize.maven">
@@ -282,7 +296,7 @@
 
     <target name="build-traces" depends="jar">
         <echo>executing ${bin.dir}/${btracec} -cp ${build.dir}/test -d ${tests.dir} ${traces.dir}/*.java</echo>
-        <apply executable="${bin.dir}/${btracec}"  verbose="true">
+        <apply executable="${bin.dir}/${btracec}"  verbose="true" failonerror="true">
             <fileset dir="${traces.dir}" includes="**/*.java"/>
             <arg value="-cp ${build.dir}/test"/>
             <arg value="-d ${tests.dir}"/>

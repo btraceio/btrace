@@ -31,7 +31,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 /**
- * A central place for bytecode templated
+ * A central place for bytecode templates
  * @author Jaroslav Bachorik
  * @since 1.3
  */

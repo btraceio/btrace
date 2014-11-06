@@ -109,22 +109,22 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
 
                         @Override
                         protected void onAfterGetField(int opcode, String owner, String name, String desc) {
-                            println("after get: " + owner + "." + name);
+                            asm.println("after get: " + owner + "." + name);
                         }
 
                         @Override
                         protected void onAfterPutField(int opcode, String owner, String name, String desc) {
-                            println("after put: " + owner + "." + name);
+                            asm.println("after put: " + owner + "." + name);
                         }
 
                         @Override
                         protected void onBeforeGetField(int opcode, String owner, String name, String desc) {
-                            println("before get: " + owner + "." + name);
+                            asm.println("before get: " + owner + "." + name);
                         }
 
                         @Override
                         protected void onBeforePutField(int opcode, String owner, String name, String desc) {
-                            println("before put: " + owner + "." + name);
+                            asm.println("before put: " + owner + "." + name);
                         }
 
                      };

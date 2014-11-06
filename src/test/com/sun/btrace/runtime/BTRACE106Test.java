@@ -37,14 +37,23 @@ public class BTRACE106Test extends InstrumentorTestBase {
     public void annotatedClass() throws Exception {
         originalBC = loadTargetClass("issues/BTRACE106");
         transform("issues/BTRACE106");
-        checkTransformation("ALOAD 0\nLDC \"aMethod\"\n"
-                + "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LSTORE 1\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LSTORE 3\nALOAD 0\nLDC \"bMethod\"\nLLOAD 3\nLLOAD 1\nLSUB\n"
-                + "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
-                + "MAXSTACK = 6\nMAXLOCALS = 5"
+        checkTransformation("ALOAD 0\n" +
+            "LDC \"aMethod\"\n" +
+            "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n" +
+            "LDC 0\n" +
+            "LSTORE 1\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 3\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LLOAD 3\n" +
+            "LSUB\n" +
+            "LSTORE 1\n" +
+            "ALOAD 0\n" +
+            "LDC \"bMethod\"\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 5"
         );
     }
 }

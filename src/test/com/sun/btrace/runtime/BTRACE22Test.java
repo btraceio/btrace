@@ -37,10 +37,22 @@ public class BTRACE22Test extends InstrumentorTestBase {
     public void bytecodeValidation() throws Exception {
         originalBC = loadTargetClass("issues/BTRACE22");
         transform("issues/BTRACE22");
-        checkTransformation("INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 1\n" +
-                            "DSTORE 3\nDLOAD 3\nDLOAD 3\n" +
-                            "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 5\n" +
-                            "ALOAD 0\nLLOAD 5\nLLOAD 1\nLSUB\n" +
-                            "INVOKESTATIC resources/issues/BTRACE22.$btrace$traces$issues$BTRACE22$tracker (Ljava/lang/Object;J)V");
+        checkTransformation("LDC 0\n" +
+            "LSTORE 1\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 3\n" +
+            "DSTORE 5\n" +
+            "DLOAD 5\n" +
+            "DLOAD 5\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LLOAD 3\n" +
+            "LSUB\n" +
+            "LSTORE 1\n" +
+            "ALOAD 0\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC resources/issues/BTRACE22.$btrace$traces$issues$BTRACE22$tracker (Ljava/lang/Object;J)V\n" +
+            "LOCALVARIABLE d D L1 L3 5\n" +
+            "MAXSTACK = 6\n" +
+            "MAXLOCALS = 7");
     }
 }
