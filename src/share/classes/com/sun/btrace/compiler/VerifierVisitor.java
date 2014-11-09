@@ -36,13 +36,12 @@ import com.sun.source.tree.*;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreeScanner;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.Kind;
-import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.util.Messages;
 import com.sun.source.util.TreePath;
-import com.sun.source.util.TreePathScanner;
 import com.sun.tools.javac.tree.JCTree;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,6 +50,9 @@ import java.util.EnumSet;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
 
 /**
  * This class tree visitor validates a BTrace program's ClassTree.
@@ -66,6 +68,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     private volatile static ExecutableElement[] sharedMethods;
 
     private boolean shortSyntax = false;
+    private TypeMirror btraceServiceTm = null;
+    private TypeMirror serviceInjectorTm = null;
 
     public VerifierVisitor(Verifier verifier, Element clzElement) {
         this.verifier = verifier;
@@ -76,10 +80,22 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             }
         }
         sharedMethods = shared.toArray(new ExecutableElement[shared.size()]);
+        btraceServiceTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.spi.BTraceService").asType();
+        serviceInjectorTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.api.Service").asType();
     }
 
     @Override
     public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
+        Element e = getElement(node);
+        if (e.getKind() == ElementKind.METHOD) {
+            ExecutableElement ee = (ExecutableElement)e;
+            TypeMirror owner = ee.getEnclosingElement().asType();
+            if (verifier.getTypeUtils().isSubtype(owner, btraceServiceTm) ||
+                verifier.getTypeUtils().isSubtype(owner, serviceInjectorTm)) {
+                return super.visitMethodInvocation(node, v);
+            }
+        }
+
         ExpressionTree methodSelect = node.getMethodSelect();
         if (methodSelect.getKind() == Tree.Kind.IDENTIFIER) {
             String name = ((IdentifierTree)methodSelect).getName().toString();
@@ -341,10 +357,12 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     @Override
     public Boolean visitMemberSelect(MemberSelectTree node, Void v) {
         if (node.getIdentifier().contentEquals("class")) {
-            return reportError("no.class.literals", node);
-        } else {
-            return super.visitMemberSelect(node, v);
+            TypeElement e = (TypeElement)getElement(node.getExpression());
+            if (!verifier.getTypeUtils().isSubtype(e.asType(), btraceServiceTm)) {
+                return reportError("no.class.literals", node);
+            }
         }
+        return super.visitMemberSelect(node, v);
     }
 
     @Override
@@ -360,6 +378,19 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     @Override
     public Boolean visitTry(TryTree node, Void v) {
         return reportError("no.try", node);
+    }
+
+    @Override
+    public Boolean visitVariable(VariableTree vt, Void p) {
+        VariableElement ve = (VariableElement)getElement(vt);
+
+        if (verifier.getTypeUtils().isSubtype(ve.asType(), btraceServiceTm)) {
+            if (ve.getAnnotation(Injected.class) == null) {
+                return reportError("missing.injected", vt);
+            }
+        }
+
+        return super.visitVariable(vt, p);
     }
 
     @Override
@@ -549,5 +580,10 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
         }
         return Boolean.FALSE;
+    }
+
+    private Element getElement(Tree t) {
+        TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), t);
+        return verifier.getTreeUtils().getElement(tp);
     }
 }
