@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,7 +34,12 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.org.objectweb.asm.TypePath;
 import static com.sun.btrace.runtime.Constants.*;
+import com.sun.btrace.services.api.Service;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * This class verifies that the BTrace "action" method is
@@ -42,7 +48,7 @@ import static com.sun.btrace.runtime.Constants.*;
  *
  * @author A. Sundararajan
  */
-public class MethodVerifier extends MethodVisitor {
+public class MethodVerifier extends StackTrackingMethodVisitor {
 
     final private static Set<String> primitiveWrapperTypes;
     final private static Set<String> unboxMethods;
@@ -75,8 +81,10 @@ public class MethodVerifier extends MethodVisitor {
     private CycleDetector graph;
     private Map<Label, Label> labels;
 
+    private Object delayedClzLoad = null;
+
     public MethodVerifier(Verifier v, MethodVisitor mv, String className, CycleDetector graph, String methodName) {
-        super(Opcodes.ASM4, mv);
+        super(mv);
         this.verifier = v;
         this.className = className;
         this.enclosingMethodName = methodName;
@@ -147,13 +155,13 @@ public class MethodVerifier extends MethodVisitor {
 
     public void visitLdcInsn(Object cst) {
         if (cst instanceof Type) {
-            reportError("no.class.literals", cst.toString());
+            delayedClzLoad = cst;
         }
         super.visitLdcInsn(cst);
     }
 
     public void visitMethodInsn(int opcode, String owner,
-            String name, String desc) {
+            String name, String desc, boolean itf) {
         switch (opcode) {
             case INVOKEVIRTUAL:
                 if (isPrimitiveWrapper(owner) && unboxMethods.contains(name)) {
@@ -163,7 +171,10 @@ public class MethodVerifier extends MethodVisitor {
                 } else if (owner.equals(Type.getInternalName(StringBuilder.class))) {
                    // allow string concatenation via StringBuilder
                 } else {
-                    reportError("no.method.calls", owner + "." + name + desc);
+                    List<StackItem> args = getMethodParams(desc, false);
+                    if (!isServiceTarget(args.get(0))) {
+                        reportError("no.method.calls", owner + "." + name + desc);
+                    }
                 }
                 break;
             case INVOKEINTERFACE:
@@ -179,7 +190,9 @@ public class MethodVerifier extends MethodVisitor {
                 }
                 break;
             case INVOKESTATIC:
-                if (!owner.equals(BTRACE_UTILS) &&
+                if (owner.equals(SERVICE)) {
+                    delayedClzLoad = null;
+                } else if (!owner.equals(BTRACE_UTILS) &&
                     !owner.startsWith(BTRACE_UTILS + "$") &&
                     !owner.equals(className)) {
                     if ("valueOf".equals(name) && isPrimitiveWrapper(owner)) {
@@ -193,7 +206,10 @@ public class MethodVerifier extends MethodVisitor {
                 graph.addEdge(enclosingMethodName, name + desc);
                 break;
         }
-        super.visitMethodInsn(opcode, owner, name, desc);
+        if (delayedClzLoad != null) {
+            reportError("no.class.literals", delayedClzLoad.toString());
+        }
+        super.visitMethodInsn(opcode, owner, name, desc, itf);
     }
 
     public void visitMultiANewArrayInsn(String desc, int dims) {
@@ -235,5 +251,19 @@ public class MethodVerifier extends MethodVisitor {
 
     private static boolean isPrimitiveWrapper(String type) {
         return primitiveWrapperTypes.contains(type);
+    }
+
+    private static boolean isServiceTarget(StackItem si) {
+        if (si instanceof ResultItem) {
+            if (((ResultItem)si).getOwner().equals(Type.getInternalName(Service.class))) {
+                return true;
+            }
+        }
+        for(StackItem p : si.getParents()) {
+            if (isServiceTarget(p)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

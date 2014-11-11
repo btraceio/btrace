@@ -34,8 +34,10 @@ import com.sun.btrace.annotations.OnProbe;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.AnyType;
 import com.sun.btrace.BTraceUtils;
+import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.services.api.Service;
 
 /**
  * Constants shared by few classes.
@@ -60,6 +62,10 @@ public abstract class Constants {
     // BTrace specific stuff
     public static final String BTRACE_UTILS =
         Type.getInternalName(BTraceUtils.class);
+
+    public static final String SERVICE =
+        Type.getInternalName(Service.class);
+
     public static final String BTRACE_DESC =
         Type.getDescriptor(BTrace.class);
 
@@ -80,6 +86,9 @@ public abstract class Constants {
 
     public static final String KIND_DESC =
         Type.getDescriptor(Kind.class);
+
+    public static final String INJECTED_DESC =
+        Type.getDescriptor(Injected.class);
 
     // class name pattern is specified with this pattern
     public static final Pattern REGEX_SPECIFIER = Pattern.compile("/.+/");

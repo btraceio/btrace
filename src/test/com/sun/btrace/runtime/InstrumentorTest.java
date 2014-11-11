@@ -1104,4 +1104,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
         checkTransformation("ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyEntry (Ljava/lang/Object;)V\n"
                 + "ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyReturn (Ljava/lang/Object;)V");
     }
+
+    @Test
+    public void servicesTest() throws Exception {
+        // a sanity test for the runtime verifier accepting the services method calls
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("ServicesTest");
+
+        checkTransformation("");
+    }
 }
