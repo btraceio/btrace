@@ -522,14 +522,15 @@ public class Preprocessor extends ClassVisitor {
             MethodVisitor adaptee = super.visitMethod(access, name, desc,
                                                     signature, exceptions);
 
+            LocalVariableHelperImpl lvh = new LocalVariableHelperImpl(adaptee, access, desc);
+            final Assembler asm = new Assembler(lvh);
+
             // return new MethodInstrumentor(new LocalVariableHelperImpl(adaptee, access, desc), className, superName, access, name, desc) {
-            return new MethodVisitor(Opcodes.ASM4, new LocalVariableHelperImpl(adaptee, access, desc)) {
+            return new MethodVisitor(Opcodes.ASM4, lvh) {
                 private boolean isBTraceHandler = false;
                 private final Label start = new Label();
                 private final Label handler = new Label();
                 private int nextVar = 0;
-
-                private final Assembler asm = new Assembler(this);
 
                 private void generateExportGet(String name, String desc) {
                     int typeCode = desc.charAt(0);
@@ -779,8 +780,57 @@ public class Preprocessor extends ClassVisitor {
                     super.visitInsn(opcode);
                 }
 
+                private Type delayedClzLiteral = null;
+                private String lastStringLiteral = null;
+
+                @Override
+                public void visitLdcInsn(Object o) {
+                    // class literals allowed only for instantiating services
+                    if (o instanceof Type) {
+                        delayedClzLiteral = (Type)o;
+                    } else {
+                        if (o instanceof String && delayedClzLiteral != null) {
+                            lastStringLiteral = (String)o;
+                        } else {
+                            super.visitLdcInsn(o);
+                        }
+                    }
+                }
+
                 @Override
                 public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                    if (owner.equals(SERVICE)) {
+                        if (name.equals("simple")) {
+                            if (lastStringLiteral == null) {
+                                asm.newInstance(delayedClzLiteral)
+                                   .dup()
+                                   .invokeSpecial(
+                                        delayedClzLiteral.getInternalName(),
+                                        "<init>",
+                                        "()V"
+                                   );
+                            } else {
+                                asm.invokeStatic(
+                                        delayedClzLiteral.getInternalName(),
+                                        lastStringLiteral,
+                                        "()" + delayedClzLiteral.getDescriptor()
+                                );
+                            }
+                        } else if (name.equals("runtime")) {
+                            asm.newInstance(delayedClzLiteral)
+                               .dup()
+                               .getStatic(className,
+                                    BTRACE_RUNTIME_FIELD_NAME,
+                                    BTRACE_RUNTIME_DESC)
+                               .invokeSpecial(
+                                    delayedClzLiteral.getInternalName(),
+                                    "<init>",
+                                    "(" + BTRACE_RUNTIME_DESC + ")V"
+                               );
+                        }
+                        delayedClzLiteral = null;
+                        return;
+                    }
                     if (owner.equals(Type.getInternalName(StringBuilder.class))) {
                         // allow string concatenation via StringBuilder
                         if (name.equals("append")) {

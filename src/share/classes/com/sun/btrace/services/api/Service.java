@@ -40,4 +40,8 @@ final public class Service {
     public static <S extends SimpleService> S simple(Class<S> clz) {
         throw new IllegalStateException("BTrace service injection failed");
     }
+
+    public static <S extends SimpleService> S simple(String factoryMethod, Class<S> clz) {
+        throw new IllegalStateException("BTrace service injection failed");
+    }
 }

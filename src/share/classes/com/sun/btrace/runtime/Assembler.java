@@ -112,6 +112,11 @@ final public class Assembler {
         return this;
     }
 
+    public Assembler newInstance(Type t) {
+        mv.visitTypeInsn(NEW, t.getInternalName());
+        return this;
+    }
+
     public Assembler newArray(Type t) {
         mv.visitTypeInsn(ANEWARRAY, t.getInternalName());
         return this;

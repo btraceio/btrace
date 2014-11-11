@@ -27,6 +27,14 @@ package resources.services;
 import com.sun.btrace.services.spi.SimpleService;
 
 public class DummySimpleService extends SimpleService {
+    private static final class Singleton {
+        private static final DummySimpleService INSTANCE = new DummySimpleService();
+    }
+    
+    public static DummySimpleService getInstance() {
+        return Singleton.INSTANCE;
+    }
+
     public void doit(String a, int b) {
         System.out.println(a + " - " + b);
     }

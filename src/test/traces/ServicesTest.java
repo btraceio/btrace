@@ -51,4 +51,11 @@ public class ServicesTest {
 
         ds.doit("hello", 10);
     }
+
+    @OnMethod(clazz = "/.*/", method="/.*/")
+    public static void testSingletonService() {
+        @Injected DummySimpleService ds = Service.simple("getInstance", DummySimpleService.class);
+
+        ds.doit("hello", 10);
+    }
 }
