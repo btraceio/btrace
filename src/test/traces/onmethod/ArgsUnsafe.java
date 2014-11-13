@@ -22,31 +22,29 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.btrace.annotations;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package traces.onmethod;
+
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
 
 /**
- * Annotates a field as an injected service.
+ *
  * @author Jaroslav Bachorik
  */
-@Target(ElementType.FIELD)
-@Retention(RetentionPolicy.CLASS)
-public @interface Injected {
-    /**
-     * The injected service type
-     * @return
-     */
-    ServiceType value() default ServiceType.SIMPLE;
-    /**
-     * The factory method to be used.
-     * <p>
-     * It must be a static method declared by the service class
-     * and returning the service class instance
-     * @return The name of the static method to be used as the factory method or an empty string
-     */
-    String factoryMethod() default "";
+@BTrace(unsafe = true)
+public class ArgsUnsafe {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
+    public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
+        try {
+            double la = Sys.VM.systemLoadAverage();
+            long t = Sys.VM.processCPUTime();
+            println(la + " # " + t);
+        } catch (Throwable e) {
+            println("FAILED");
+            println(e.getMessage());
+        }
+    }
 }

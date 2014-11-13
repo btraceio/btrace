@@ -22,31 +22,42 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.btrace.annotations;
+package com.sun.btrace.services.impl;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.comm.MessageCommand;
+import com.sun.btrace.services.spi.BTraceService;
+import com.sun.btrace.services.spi.RuntimeService;
 
 /**
- * Annotates a field as an injected service.
+ * A very rudimentary printer service.
+ * <p>
+ * Currently, this is a showcase for how to implement a {@linkplain BTraceService}.
+ * It might be extended to a grown-up printer service later on.
+ *
  * @author Jaroslav Bachorik
  */
-@Target(ElementType.FIELD)
-@Retention(RetentionPolicy.CLASS)
-public @interface Injected {
-    /**
-     * The injected service type
-     * @return
-     */
-    ServiceType value() default ServiceType.SIMPLE;
-    /**
-     * The factory method to be used.
-     * <p>
-     * It must be a static method declared by the service class
-     * and returning the service class instance
-     * @return The name of the static method to be used as the factory method or an empty string
-     */
-    String factoryMethod() default "";
+final public class Printer extends RuntimeService {
+    private static final String LINE_SEPARATOR = System.getProperty("line.separator");
+
+    public Printer(BTraceRuntime rt) {
+        super(rt);
+    }
+
+    public void print(String str) {
+        send(str);
+    }
+
+    public void println(String str) {
+        print(str + LINE_SEPARATOR);
+    }
+
+    public void println() {
+        send(LINE_SEPARATOR);
+    }
+
+    private void send(String msg) {
+        rt.send(new MessageCommand(0L, msg));
+    }
+
 }

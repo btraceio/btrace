@@ -38,7 +38,7 @@ import support.InstrumentorTestBase;
 
 /**
  *
- * @author jbachorik
+ * @author Jaroslav Bachorik
  */
 public class StackTrackingMethodVisitorTest extends InstrumentorTestBase {
     private ClassReader reader;
@@ -67,10 +67,17 @@ public class StackTrackingMethodVisitorTest extends InstrumentorTestBase {
         // just make sure that a sufficiently complex methods won't cause
         // any problems for tracking the stack
         reader.accept(new ClassVisitor(Opcodes.ASM5) {
+            private String clzName;
             @Override
-            public MethodVisitor visitMethod(int opcode, String name, String desc, String sig, String[] exceptions) {
-                MethodVisitor mv = super.visitMethod(opcode, name, desc, sig, exceptions);
-                return new StackTrackingMethodVisitor(mv);
+            public void visit(int i, int i1, String className, String string1, String string2, String[] strings) {
+                this.clzName = className;
+                super.visit(i, i1, className, string1, string2, strings);
+            }
+
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exceptions) {
+                MethodVisitor mv = super.visitMethod(access, name, desc, sig, exceptions);
+                return new StackTrackingMethodVisitor(mv, clzName, desc, ((access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC));
             }
 
         }, ClassReader.EXPAND_FRAMES);

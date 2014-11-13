@@ -24,29 +24,19 @@
  */
 package com.sun.btrace.annotations;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.sun.btrace.BTraceRuntime;
 
 /**
- * Annotates a field as an injected service.
+ * Service type enumeration
  * @author Jaroslav Bachorik
  */
-@Target(ElementType.FIELD)
-@Retention(RetentionPolicy.CLASS)
-public @interface Injected {
+public enum ServiceType {
     /**
-     * The injected service type
-     * @return
+     * A simple service; possibly a globally shared singleton
      */
-    ServiceType value() default ServiceType.SIMPLE;
+    SIMPLE,
     /**
-     * The factory method to be used.
-     * <p>
-     * It must be a static method declared by the service class
-     * and returning the service class instance
-     * @return The name of the static method to be used as the factory method or an empty string
+     * A runtime-aware service; requires an instance per {@linkplain BTraceRuntime}
      */
-    String factoryMethod() default "";
+    RUNTIME
 }

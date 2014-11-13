@@ -1,7 +1,26 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 package com.sun.btrace.runtime;
 
@@ -12,6 +31,7 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,8 +42,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- *
- * @author jbachorik
+ * This extended {@linkplain MethodVisitor} keeps track of the values
+ * currently on the stack and their origin. This way it is eg. possible
+ * to allow invocation of virtual methods only on instances obtained only
+ * through a certain factory method.
+ * 
+ * @author Jaroslav Bachorik
  */
 public class StackTrackingMethodVisitor extends MethodVisitor {
     abstract public static class StackItem {
@@ -267,6 +291,19 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
             states.add(fState.duplicate());
         }
 
+        public void branch(Label l, Type throwable) {
+            if (visitedLabels.contains(l)) return; // back loop should preserve the stack
+
+            Set<FrameState> states = stateMap.get(l);
+            if (states == null) {
+                states = new HashSet<FrameState>();
+                stateMap.put(l, states);
+            }
+            FrameState duplicated = fState.duplicate();
+            duplicated.push(new InstanceItem(throwable));
+            states.add(duplicated);
+        }
+
         public void join(Label l) {
             Set<FrameState> states = stateMap.remove(l);
             if (states != null) {
@@ -323,14 +360,25 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
     }
 
     private final State state = new State();
-    private final Map<Label, Label> tryCatchStart = new HashMap<Label, Label>();
-    private final Map<Label, Label> tryCatchEnd = new HashMap<Label, Label>();
+    private final Map<Label, Collection<Label>> tryCatchStart = new HashMap<Label, Collection<Label>>();
+    private final Map<Label, Collection<Label>> tryCatchEnd = new HashMap<Label, Collection<Label>>();
     private final Set<Label> effectiveHandlers = new HashSet<Label>();
-    private final Set<Label> handlers = new HashSet<Label>();
+    private final Collection<Label> handlers = new ArrayList<Label>();
     private final Set<Label> visitedLabels = new HashSet<Label>();
 
-    public StackTrackingMethodVisitor(MethodVisitor mv) {
+    public StackTrackingMethodVisitor(MethodVisitor mv, String className, String desc, boolean isStatic) {
         super(Opcodes.ASM5, mv);
+        Type[] args = Type.getArgumentTypes(desc);
+        int index = 0;
+        if (!isStatic) {
+            state.fState.vars.put(index++, new InstanceItem(Type.getType(className)));
+        }
+        for(Type t : args) {
+            state.fState.vars.put(index++, new InstanceItem(t));
+            if (t == Type.LONG_TYPE || t == Type.DOUBLE_TYPE) {
+                index++;
+            }
+        }
     }
 
     @Override
@@ -1035,21 +1083,38 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
     @Override
     public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
         super.visitTryCatchBlock(start, end, handler, type);
-        tryCatchStart.put(start, handler);
-        tryCatchEnd.put(end, handler);
+        Collection<Label> labels = tryCatchStart.get(start);
+        if (labels == null) {
+            labels = new ArrayList<Label>();
+            tryCatchStart.put(start, labels);
+        }
+        labels.add(handler);
+
+        addToMappedCollection(tryCatchStart, start, handler);
+        addToMappedCollection(tryCatchEnd, end, handler);
+
         handlers.add(handler);
+    }
+
+    private void addToMappedCollection(Map<Label, Collection<Label>> map, Label l, Label handler) {
+        Collection<Label> labels = map.get(l);
+        if (labels == null) {
+            labels = new ArrayList<Label>();
+            map.put(l, labels);
+        }
+        labels.add(handler);
     }
 
     @Override
     public void visitLabel(Label label) {
         super.visitLabel(label);
-        Label h = tryCatchStart.remove(label);
-        if (h != null) {
-            effectiveHandlers.add(h);
+        Collection<Label> labels = tryCatchStart.get(label);
+        if (labels != null) {
+            effectiveHandlers.addAll(labels);
         } else {
-            h = tryCatchEnd.remove(label);
-            if (h != null) {
-                effectiveHandlers.remove(h);
+            labels = tryCatchEnd.get(label);
+            if (labels != null) {
+                effectiveHandlers.removeAll(labels);
             } else {
                 state.join(label);
                 if (handlers.contains(label)) {

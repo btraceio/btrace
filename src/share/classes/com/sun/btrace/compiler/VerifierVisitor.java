@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.compiler;
@@ -69,6 +69,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     private boolean shortSyntax = false;
     private TypeMirror btraceServiceTm = null;
+    private TypeMirror runtimeServiceTm = null;
+    private TypeMirror simpleServiceTm = null;
     private TypeMirror serviceInjectorTm = null;
 
     public VerifierVisitor(Verifier verifier, Element clzElement) {
@@ -81,6 +83,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         }
         sharedMethods = shared.toArray(new ExecutableElement[shared.size()]);
         btraceServiceTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.spi.BTraceService").asType();
+        runtimeServiceTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.spi.RuntimeService").asType();
+        simpleServiceTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.spi.SimpleService").asType();
         serviceInjectorTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.api.Service").asType();
     }
 
@@ -90,8 +94,13 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         if (e.getKind() == ElementKind.METHOD) {
             ExecutableElement ee = (ExecutableElement)e;
             TypeMirror owner = ee.getEnclosingElement().asType();
-            if (verifier.getTypeUtils().isSubtype(owner, btraceServiceTm) ||
-                verifier.getTypeUtils().isSubtype(owner, serviceInjectorTm)) {
+            if (verifier.getTypeUtils().isSubtype(owner, serviceInjectorTm)) {
+                if (validateInjectionParams(node)) {
+                    return super.visitMethodInvocation(node, v);
+                } else {
+                    return reportError("service.injector.literals", node);
+                }
+            } else if (verifier.getTypeUtils().isSubtype(owner, btraceServiceTm)) {
                 return super.visitMethodInvocation(node, v);
             }
         }
@@ -267,9 +276,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             if (name.contentEquals("<init>")) {
                 return super.visitMethod(node, v);
             } else {
-                verifier.getMessager().printMessage(Diagnostic.Kind.NOTE, "Going to check for sampler");
                 if (!checkSampling(node)) {
-                    verifier.getMessager().printMessage(Diagnostic.Kind.NOTE, "Verifier should fail");
                     return false;
                 }
                 if (isExitHandler(node)) {
@@ -384,9 +391,31 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     public Boolean visitVariable(VariableTree vt, Void p) {
         VariableElement ve = (VariableElement)getElement(vt);
 
-        if (verifier.getTypeUtils().isSubtype(ve.asType(), btraceServiceTm)) {
-            if (ve.getAnnotation(Injected.class) == null) {
-                return reportError("missing.injected", vt);
+        if (ve.getEnclosingElement().getKind() == ElementKind.CLASS) {
+            // only applying to fields
+            if (verifier.getTypeUtils().isSubtype(ve.asType(), btraceServiceTm)) {
+                Injected i = ve.getAnnotation(Injected.class);
+                if (i == null) {
+                    return reportError("missing.injected", vt);
+                } else {
+                    switch (i.value()) {
+                        case RUNTIME: {
+                            if (!verifier.getTypeUtils().isSubtype(ve.asType(), runtimeServiceTm)) {
+                                return reportError("injected.no.runtime", vt);
+                            }
+                            break;
+                        }
+                        case SIMPLE: {
+                            if (!verifier.getTypeUtils().isSubtype(ve.asType(), simpleServiceTm)) {
+                                return reportError("injected.no.simple", vt);
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (vt.getInitializer() != null) {
+                    return reportError("injected.no.initializer", vt.getInitializer());
+                }
             }
         }
 
@@ -586,4 +615,29 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), t);
         return verifier.getTreeUtils().getElement(tp);
     }
+
+    private boolean validateInjectionParams(MethodInvocationTree node) {
+        boolean allLiterals = true;
+        outer:
+        for(ExpressionTree arg : node.getArguments()) {
+            switch (arg.getKind()) {
+                case MEMBER_SELECT: {
+                    if (!arg.toString().endsWith(".class")) {
+                        allLiterals = false;
+                        break outer;
+                    }
+                }
+                case STRING_LITERAL: {
+                    // allowed parameters
+                    break;
+                }
+                default: {
+                    allLiterals = false;
+                    break outer;
+                }
+            }
+        }
+        return allLiterals;
+    }
+
 }

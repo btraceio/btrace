@@ -29,33 +29,46 @@ import resources.services.DummyRuntimService;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ServiceType;
 import com.sun.btrace.services.api.Service;
 import resources.services.DummySimpleService;
 
 /**
+ * Sanity test to make sure the injected services are properly intialized
+ * and referenced further on.
  *
  * @author Jaroslav Bachorik
  */
 @BTrace
 public class ServicesTest {
-    @OnMethod(clazz = "/.*/", method="/.*/")
-    public static void testRuntimeService() {
-        @Injected DummyRuntimService ds = Service.runtime(DummyRuntimService.class);
+    @Injected(ServiceType.RUNTIME)
+    private static DummyRuntimService printer;
+
+    @OnMethod(clazz = "resources.OnMethodTest", method="args")
+    public static void testRuntimeService(String a, long b, String[] c, int[] d) {
+        DummyRuntimService ds = Service.runtime(DummyRuntimService.class);
 
         ds.doit(10, "hello");
     }
 
-    @OnMethod(clazz = "/.*/", method="/.*/")
+    @OnMethod(clazz = "resources.OnMethodTest", method="noargs")
     public static void testSimpleService() {
-        @Injected DummySimpleService ds = Service.simple(DummySimpleService.class);
+        DummySimpleService ds = Service.simple(DummySimpleService.class);
 
         ds.doit("hello", 10);
     }
 
-    @OnMethod(clazz = "/.*/", method="/.*/")
-    public static void testSingletonService() {
-        @Injected DummySimpleService ds = Service.simple("getInstance", DummySimpleService.class);
+    @OnMethod(clazz = "resources.OnMethodTest", method="args$static")
+    public static void testSingletonService(String a, long b, String[] c, int[] d) {
+        DummySimpleService ds = Service.simple("getInstance", DummySimpleService.class);
 
         ds.doit("hello", 10);
+    }
+
+    @OnMethod(clazz = "resources.OnMethodTest", method="noargs$static")
+    public static void testFieldInjection(@ProbeClassName String pcn) {
+        printer.doit(10, "hey");
+        printer.doit(20, "ho");
     }
 }
