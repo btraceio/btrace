@@ -294,7 +294,7 @@
         </copy>
     </target>
 
-    <target name="build-traces" depends="jar">
+    <target name="build-traces" depends="jar, compile-tests">
         <echo>executing ${bin.dir}/${btracec} -cp ${build.dir}/test -d ${tests.dir} ${traces.dir}/*.java</echo>
         <apply executable="${bin.dir}/${btracec}"  verbose="true" failonerror="true">
             <fileset dir="${traces.dir}" includes="**/*.java"/>

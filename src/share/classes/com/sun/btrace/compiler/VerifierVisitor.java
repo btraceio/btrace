@@ -95,17 +95,15 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         if (xt.getKind() == Tree.Kind.MEMBER_SELECT) {
             MemberSelectTree mst = (MemberSelectTree)xt;
             xt = mst.getExpression();
-            if (xt.toString().endsWith("Service")) {
-                TypeMirror tm = getType(xt);
-                if (verifier.getTypeUtils().isSubtype(tm, serviceInjectorTm)) {
-                    if (validateInjectionParams(node)) {
-                        return super.visitMethodInvocation(node, v);
-                    } else {
-                        return reportError("service.injector.literals", node);
-                    }
-                } else if (verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
+            TypeMirror tm = getType(xt);
+            if (verifier.getTypeUtils().isSubtype(tm, serviceInjectorTm)) {
+                if (validateInjectionParams(node)) {
                     return super.visitMethodInvocation(node, v);
+                } else {
+                    return reportError("service.injector.literals", node);
                 }
+            } else if (verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
+                return super.visitMethodInvocation(node, v);
             }
         }
 
