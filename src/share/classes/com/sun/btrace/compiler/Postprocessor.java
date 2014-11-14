@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.compiler;
@@ -45,7 +45,7 @@ import java.util.List;
  * @author Jaroslav Bachorik
  */
 public class Postprocessor extends ClassVisitor {
-    private List<FieldDescriptor> fields = new ArrayList<FieldDescriptor>();
+    private final List<FieldDescriptor> fields = new ArrayList<FieldDescriptor>();
     private boolean shortSyntax = false;
     private String className = "";
 
@@ -90,24 +90,20 @@ public class Postprocessor extends ClassVisitor {
     @Override
     public FieldVisitor visitField(final int access, final String name, final String desc, final String signature, final Object value) {
         if (!shortSyntax) return super.visitField(access, name, desc, signature, value);
-        
+
         final List<Attribute> attrs = new ArrayList<Attribute>();
         return new FieldVisitor(Opcodes.ASM4) {
 
-            public AnnotationVisitor visitAnnotation(String string, boolean bln) {
-                return new AnnotationVisitor(Opcodes.ASM4){
-                };
-            }
-
             public void visitAttribute(Attribute atrbt) {
+                super.visitAttribute(atrbt);
                 attrs.add(atrbt);
-
             }
 
             public void visitEnd() {
                 FieldDescriptor fd = new FieldDescriptor(access, name, desc,
                     signature, value, attrs);
                 fields.add(fd);
+                super.visitEnd();
             }
         };
     }
@@ -350,7 +346,7 @@ public class Postprocessor extends ClassVisitor {
                     simulatedStack.push(Boolean.FALSE);
                     break;
                 }
-                
+
                 // one operand instructions
                 case Opcodes.INEG:
                 case Opcodes.FNEG:
@@ -373,7 +369,7 @@ public class Postprocessor extends ClassVisitor {
                     simulatedStack.push(Boolean.FALSE); // extending the original value by one slot
                     break;
                 }
-                    
+
                 // two operand instructions
                 case Opcodes.LADD:
                 case Opcodes.DADD:
@@ -390,7 +386,7 @@ public class Postprocessor extends ClassVisitor {
                 case Opcodes.LUSHR:
                 case Opcodes.LAND:
                 case Opcodes.LOR:
-                case Opcodes.LXOR: 
+                case Opcodes.LXOR:
                 case Opcodes.LALOAD:
                 case Opcodes.DALOAD: {
                     simulatedStack.pop();

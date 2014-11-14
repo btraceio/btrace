@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.runtime;
@@ -34,6 +34,9 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.annotations.Export;
+import com.sun.btrace.annotations.ServiceType;
+import static com.sun.btrace.annotations.ServiceType.RUNTIME;
+import static com.sun.btrace.annotations.ServiceType.SIMPLE;
 import com.sun.btrace.annotations.TLS;
 import com.sun.btrace.annotations.Property;
 import java.io.BufferedInputStream;
@@ -49,6 +52,8 @@ import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.services.spi.RuntimeService;
+import com.sun.btrace.services.spi.SimpleService;
 import com.sun.btrace.util.LocalVariableHelperImpl;
 
 /**
@@ -72,6 +77,7 @@ import com.sun.btrace.util.LocalVariableHelperImpl;
  *       to insert BTraceRuntime.enter/leave and also to call
  *       BTraceRuntime.handleException on exception catch
  *    7. add a field to store client's BTraceRuntime instance
+ *    8. initialize and reference any service instances
  *
  *
  * @author A. Sundararajan
@@ -271,9 +277,10 @@ public class Preprocessor extends ClassVisitor {
     private Type classType;
 
     // FieldDescriptor (see below) for all fields
-    private List<FieldDescriptor> fields;
-    private Map<String, FieldDescriptor> threadLocalFields;
-    private Map<String, FieldDescriptor> exportFields;
+    private final List<FieldDescriptor> fields;
+    private final Map<String, FieldDescriptor> threadLocalFields;
+    private final Map<String, FieldDescriptor> exportFields;
+    private final Map<String, FieldDescriptor> injectedFields;
 
     // flag to tell whether we have seen <clinit> or not
     private boolean classInitializerFound;
@@ -283,8 +290,10 @@ public class Preprocessor extends ClassVisitor {
         fields = new ArrayList<FieldDescriptor>();
         threadLocalFields = new HashMap<String, FieldDescriptor>();
         exportFields = new HashMap<String, FieldDescriptor>();
+        injectedFields = new HashMap<String, FieldDescriptor>();
     }
 
+    @Override
     public void visit(int version,
                   int access,
                   String name,
@@ -299,11 +308,13 @@ public class Preprocessor extends ClassVisitor {
                     signature, superName, interfaces);
     }
 
+    @Override
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
         final AnnotationVisitor zupr = super.visitAnnotation(desc, visible);
         if ("Lcom/sun/btrace/annotations/BTrace;".equals(desc)) {
             return new AnnotationVisitor(Opcodes.ASM4) {
 
+                @Override
                 public void visit(String string, Object o) {
                     if ("name".equals(string)) {
                         externalClassName = (String)o;
@@ -311,20 +322,24 @@ public class Preprocessor extends ClassVisitor {
                     zupr.visit(string, o);
                 }
 
+                @Override
                 public void visitEnum(String string, String string1, String string2) {
                     zupr.visitEnum(string, string1, string2);
                 }
 
+                @Override
                 public AnnotationVisitor visitAnnotation(String string, String string1) {
                     // do nothing
                     return zupr.visitAnnotation(string, string1);
                 }
 
+                @Override
                 public AnnotationVisitor visitArray(String string) {
                     // do nothing
                     return zupr.visitArray(string);
                 }
 
+                @Override
                 public void visitEnd() {
                     zupr.visitEnd();
                 }
@@ -357,6 +372,7 @@ public class Preprocessor extends ClassVisitor {
         boolean isThreadLocal;
         boolean isExport;
         boolean isProperty;
+        boolean isInjected;
         String propertyName;
         String propertyDescription;
         int var = -1;
@@ -365,7 +381,7 @@ public class Preprocessor extends ClassVisitor {
         FieldDescriptor(int acc, String n, String d,
                         String sig, Object val, List<Attribute> attrs,
                         boolean tls, boolean isExp, boolean isProp,
-                        String propName, String propDescription) {
+                        boolean isInj, String propName, String propDescription) {
             access = acc;
             name = n;
             desc = d;
@@ -375,11 +391,13 @@ public class Preprocessor extends ClassVisitor {
             isThreadLocal = tls;
             isExport = isExp;
             isProperty = isProp;
+            isInjected = isInj;
             propertyName = propName;
             propertyDescription = propDescription;
         }
     }
 
+    @Override
     public FieldVisitor visitField(final int access, final String name,
             final String desc, final String signature, final Object value) {
         final List<Attribute> attrs = new ArrayList<Attribute>();
@@ -387,9 +405,11 @@ public class Preprocessor extends ClassVisitor {
             boolean isExport;
             boolean isThreadLocal;
             boolean isProperty;
+            boolean isInjected;
             String propName = "";
             String propDescription = "";
 
+            @Override
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 if (desc.equals(BTRACE_TLS_DESC)) {
                     isThreadLocal = true;
@@ -397,9 +417,11 @@ public class Preprocessor extends ClassVisitor {
                     isExport = true;
                 } else if (desc.equals(BTRACE_PROPERTY_DESC)) {
                     isProperty = true;
-                    return new AnnotationVisitor(Opcodes.ASM4) {
+                    return new AnnotationVisitor(Opcodes.ASM5) {
                         @Override
                         public void visit(String name, Object value) {
+                            super.visit(name, value);
+
                             if (name.equals(BTRACE_PROPERTY_NAME)) {
                                 propName = value.toString();
                             } else if (name.equals(BTRACE_PROPERTY_DESCRIPTION)) {
@@ -407,29 +429,63 @@ public class Preprocessor extends ClassVisitor {
                             }
                         }
                     };
+                } else if (desc.equals(INJECTED_DESC)) {
+                    isInjected = true;
+                    return new AnnotationVisitor(Opcodes.ASM5) {
+                        @Override
+                        public void visit(String name, Object value) {
+                            super.visit(name, value);
+                            if (name.equals("factoryMethod")) {
+                                propName = value.toString();
+                            }
+                        }
+
+                        @Override
+                        public void visitEnum(String name, String desc, String value) {
+                            super.visitEnum(name, desc, value);
+                            if (name.equals("value")) {
+                                ServiceType sk = ServiceType.valueOf((String)value);
+                                switch (sk) {
+                                    case SIMPLE: {
+                                        propDescription = Type.getInternalName(SimpleService.class);
+                                        break;
+                                    }
+                                    case RUNTIME: {
+                                        propDescription = Type.getInternalName(RuntimeService.class);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    };
                 }
-                return new AnnotationVisitor(Opcodes.ASM4){};
+                return new AnnotationVisitor(Opcodes.ASM5){};
             }
 
+            @Override
             public void visitAttribute(Attribute attr) {
                 attrs.add(attr);
             }
 
+            @Override
             public void visitEnd() {
                 FieldDescriptor fd = new FieldDescriptor(access, name, desc,
                                     signature, value, attrs,
                                     isThreadLocal, isExport, isProperty,
-                                    propName, propDescription);
+                                    isInjected, propName, propDescription);
                 fields.add(fd);
                 if (isThreadLocal) {
                     threadLocalFields.put(name, fd);
                 } else if (isExport) {
                     exportFields.put(name, fd);
+                } else if (isInjected) {
+                    injectedFields.put(name, fd);
                 }
             }
         };
     }
 
+    @Override
     public void visitEnd() {
         if (! classInitializerFound) {
             // add a dummy <clinit> method that just returns.
@@ -487,8 +543,9 @@ public class Preprocessor extends ClassVisitor {
                    BTRACE_RUNTIME_DESC, null, null);
     }
 
+    @Override
     public MethodVisitor visitMethod(int access, String name,
-            String desc, String signature, String[] exceptions) {
+            final String desc, String signature, String[] exceptions) {
         if (name.equals(CONSTRUCTOR)) {
             return super.visitMethod(access, name, desc, signature, exceptions);
         } else {
@@ -522,14 +579,18 @@ public class Preprocessor extends ClassVisitor {
             MethodVisitor adaptee = super.visitMethod(access, name, desc,
                                                     signature, exceptions);
 
+            final LocalVariableHelperImpl lvh = new LocalVariableHelperImpl(adaptee, access, desc);
+            final Assembler asm = new Assembler(lvh);
+
             // return new MethodInstrumentor(new LocalVariableHelperImpl(adaptee, access, desc), className, superName, access, name, desc) {
-            return new MethodVisitor(Opcodes.ASM4, new LocalVariableHelperImpl(adaptee, access, desc)) {
+            return new MethodVisitor(Opcodes.ASM4, lvh) {
                 private boolean isBTraceHandler = false;
                 private final Label start = new Label();
                 private final Label handler = new Label();
                 private int nextVar = 0;
-
-                private final Assembler asm = new Assembler(this);
+                private Type delayedClzLiteral = null;
+                private String lastStringLiteral = null;
+                private boolean ignoreNextCheckcast;
 
                 private void generateExportGet(String name, String desc) {
                     int typeCode = desc.charAt(0);
@@ -663,14 +724,11 @@ public class Preprocessor extends ClassVisitor {
 
                 @Override
                 public AnnotationVisitor visitAnnotation(String name, boolean bln) {
-                    if (name.startsWith("Lcom/sun/btrace/annotations/")) {
-                        isBTraceHandler = true;
-                    } else {
-                        isBTraceHandler = false;
-                    }
+                    isBTraceHandler = name.startsWith("Lcom/sun/btrace/annotations/");
                     return super.visitAnnotation(name, bln);
                 }
 
+                @Override
                 public void visitCode() {
                     if (isClassInitializer || isBTraceHandler) {
                         visitTryCatchBlock(start, handler, handler,
@@ -718,11 +776,12 @@ public class Preprocessor extends ClassVisitor {
                     super.visitCode();
                 }
 
+                @Override
                 public void visitFieldInsn(int opcode, String owner,
                                                String name, String desc) {
-                    String fieldName = name;
                     if (owner.equals(className)) {
-                        if (exportFields.get(name) != null) {
+                        FieldDescriptor fd = exportFields.get(name);
+                        if (fd != null) {
                             if (opcode == GETSTATIC) {
                                 generateExportGet(perfCounterName(name), desc);
                             } else {
@@ -731,11 +790,7 @@ public class Preprocessor extends ClassVisitor {
                             return;
                         }
 
-                        if (! name.equals(BTRACE_RUNTIME_FIELD_NAME)) {
-                            fieldName = BTRACE_FIELD_PREFIX + name;
-                        }
-
-                        FieldDescriptor fd = threadLocalFields.get(name);
+                        fd = threadLocalFields.get(name);
                         if (fd != null) {
                             if (opcode == GETSTATIC) {
                                 generateThreadLocalGet(fd);
@@ -743,15 +798,69 @@ public class Preprocessor extends ClassVisitor {
                                 generateThreadLocalPut(fd);
                             }
                             return;
+                        }
+                        fd = injectedFields.get(name);
+                        if (fd != null) {
+                            Type descType = Type.getType(desc);
+                            if (fd.initialized) {
+                                asm.loadLocal(descType, fd.var);
+                                return;
+                            } else {
+                                String internal = descType.getInternalName();
+                                if (fd.propertyName.isEmpty()) {
+                                    asm.newInstance(descType)
+                                       .dup();
+
+                                    if (fd.propertyDescription.equals(Type.getInternalName(RuntimeService.class))) {
+                                        asm.getStatic(className,
+                                                BTRACE_RUNTIME_FIELD_NAME,
+                                                BTRACE_RUNTIME_DESC)
+                                           .invokeSpecial(internal, CONSTRUCTOR, "(" + BTRACE_RUNTIME_DESC + ")V");
+                                    } else {
+                                        asm.invokeSpecial(internal, CONSTRUCTOR, "()V");
+                                    }
+                                } else {
+                                    if (fd.propertyDescription.equals(Type.getInternalName(RuntimeService.class))) {
+                                        asm.getStatic(className,
+                                                BTRACE_RUNTIME_FIELD_NAME,
+                                                BTRACE_RUNTIME_DESC)
+                                           .invokeStatic(internal, fd.propertyName, "(" + BTRACE_RUNTIME_DESC + ")" + descType.getDescriptor());
+                                    } else {
+                                        asm.invokeStatic(internal, fd.propertyName, "()" + descType.getDescriptor());
+                                    }
+                                }
+
+                                asm.dup();
+
+                                // need to use the local variable helper here
+                                // 'nextVar' is only usable for variables created
+                                // in the "visitCode" method; before any non-generated
+                                // variables could appear
+                                fd.var = lvh.storeNewLocal(descType);
+
+                                fd.initialized = true;
+                                return;
+                            }
                         } // else fall through
+
                     } // else fall through
-                    super.visitFieldInsn(opcode, owner, fieldName, desc);
+
+                    super.visitFieldInsn(
+                        opcode,
+                        owner,
+                        name.equals(BTRACE_RUNTIME_FIELD_NAME) ?
+                            name :
+                            BTRACE_FIELD_PREFIX + name,
+                        desc
+                    );
                 }
 
+                @Override
                 public void visitVarInsn(int opcode, int var) {
                     super.visitVarInsn(opcode, var + nextVar);
                 }
 
+                @Override
                 public void visitInsn(int opcode) {
                     if (opcode == RETURN) {
                         if (isClassInitializer) {
@@ -780,7 +889,65 @@ public class Preprocessor extends ClassVisitor {
                 }
 
                 @Override
+                public void visitTypeInsn(int opcode, String desc) {
+                    if (opcode != Opcodes.CHECKCAST || !ignoreNextCheckcast) {
+                        super.visitTypeInsn(opcode, desc);
+                    } else {
+                        ignoreNextCheckcast = false;
+                    }
+                }
+
+
+
+                @Override
+                public void visitLdcInsn(Object o) {
+                    // class literals allowed only for instantiating services
+                    if (o instanceof Type) {
+                        delayedClzLiteral = (Type)o;
+                    } else {
+                        if (o instanceof String && delayedClzLiteral != null) {
+                            lastStringLiteral = (String)o;
+                        } else {
+                            super.visitLdcInsn(o);
+                        }
+                    }
+                }
+
+                @Override
                 public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                    if (owner.equals(SERVICE)) {
+                        if (name.equals("simple")) {
+                            if (lastStringLiteral == null) {
+                                asm.newInstance(delayedClzLiteral)
+                                   .dup()
+                                   .invokeSpecial(
+                                        delayedClzLiteral.getInternalName(),
+                                        CONSTRUCTOR,
+                                        "()V"
+                                   );
+                            } else {
+                                asm.invokeStatic(
+                                        delayedClzLiteral.getInternalName(),
+                                        lastStringLiteral,
+                                        "()" + delayedClzLiteral.getDescriptor()
+                                );
+                            }
+                        } else if (name.equals("runtime")) {
+                            asm.newInstance(delayedClzLiteral)
+                               .dup()
+                               .getStatic(className,
+                                    BTRACE_RUNTIME_FIELD_NAME,
+                                    BTRACE_RUNTIME_DESC)
+                               .invokeSpecial(
+                                    delayedClzLiteral.getInternalName(),
+                                    CONSTRUCTOR,
+                                    "(" + BTRACE_RUNTIME_DESC + ")V"
+                               );
+                        }
+                        ignoreNextCheckcast = true;
+                        delayedClzLiteral = null;
+                        return;
+                    }
                     if (owner.equals(Type.getInternalName(StringBuilder.class))) {
                         // allow string concatenation via StringBuilder
                         if (name.equals("append")) {
@@ -809,15 +976,26 @@ public class Preprocessor extends ClassVisitor {
                     super.visitMethodInsn(opcode, owner, name, desc, itf);
                 }
 
+                @Override
                 public void visitMaxs(int maxStack, int maxLocals) {
                     visitLabel(handler);
                     if (isBTraceHandler) {
                         visitMethodInsn(INVOKESTATIC, BTRACE_RUNTIME,
                                         BTRACE_RUNTIME_HANDLE_EXCEPTION,
-                                        BTRACE_RUNTIME_HANDLE_EXCEPTION_DESC);
+                                        BTRACE_RUNTIME_HANDLE_EXCEPTION_DESC,
+                                        false);
                     }
                     super.visitInsn(RETURN);
                     super.visitMaxs(maxStack, maxLocals);
+                }
+
+                @Override
+                public void visitEnd() {
+                    // injected fields must be initialized in each handler method separately
+                    for(FieldDescriptor fd : injectedFields.values()) {
+                        fd.initialized = false;
+                    }
+                    super.visitEnd();
                 }
             };
         }

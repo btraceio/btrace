@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1103,5 +1103,147 @@ public class InstrumentorTest extends InstrumentorTestBase {
 
         checkTransformation("ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyEntry (Ljava/lang/Object;)V\n"
                 + "ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyReturn (Ljava/lang/Object;)V");
+    }
+
+    @Test
+    public void servicesTest() throws Exception {
+        // a sanity test for the runtime verifier accepting the services method calls
+        originalBC = loadTargetClass("OnMethodTest");
+        transform("ServicesTest");
+
+        checkTransformation(
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$ServicesTest$testSimpleService ()V\n" +
+            "LDC \"resources.OnMethodTest\"\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$ServicesTest$testFieldInjection (Ljava/lang/String;)V\n" +
+            "MAXSTACK = 1\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$ServicesTest$testRuntimeService (Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 5\n" +
+            "ALOAD 0\n" +
+            "LLOAD 1\n" +
+            "ALOAD 3\n" +
+            "ALOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$ServicesTest$testSingletonService (Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 5\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$ServicesTest$testRuntimeService(Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"args\")\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "NEW resources/services/DummyRuntimService\n" +
+            "DUP\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
+            "ASTORE 5\n" +
+            "ALOAD 5\n" +
+            "BIPUSH 10\n" +
+            "LDC \"hello\"\n" +
+            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 3\n" +
+            "MAXLOCALS = 6\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$ServicesTest$testSimpleService()V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"noargs\")\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "NEW resources/services/DummySimpleService\n" +
+            "DUP\n" +
+            "INVOKESPECIAL resources/services/DummySimpleService.<init> ()V\n" +
+            "ASTORE 0\n" +
+            "ALOAD 0\n" +
+            "LDC \"hello\"\n" +
+            "BIPUSH 10\n" +
+            "INVOKEVIRTUAL resources/services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 3\n" +
+            "MAXLOCALS = 1\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$ServicesTest$testSingletonService(Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"args$static\")\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "LDC \"getInstance\"\n" +
+            "NEW resources/services/DummySimpleService\n" +
+            "DUP\n" +
+            "INVOKESPECIAL resources/services/DummySimpleService.<init> ()V\n" +
+            "ASTORE 5\n" +
+            "ALOAD 5\n" +
+            "LDC \"hello\"\n" +
+            "BIPUSH 10\n" +
+            "INVOKEVIRTUAL resources/services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 6\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$ServicesTest$testFieldInjection(Ljava/lang/String;)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"noargs$static\")\n" +
+            "@Lcom/sun/btrace/annotations/ProbeClassName;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "NEW resources/services/DummyRuntimService\n" +
+            "DUP\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
+            "DUP\n" +
+            "ASTORE 1\n" +
+            "BIPUSH 10\n" +
+            "LDC \"hey\"\n" +
+            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "ALOAD 1\n" +
+            "BIPUSH 20\n" +
+            "LDC \"ho\"\n" +
+            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 3\n" +
+            "MAXLOCALS = 2"
+        );
+    }
+
+    @Test
+    public void unsafeTest() throws Exception {
+        originalBC = loadTargetClass("OnMethodTest");
+        System.err.println(asmify(originalBC));
+        transform("onmethod/ArgsUnsafe", true);
+        System.err.println("\n" + asmify(transformedBC));
     }
 }

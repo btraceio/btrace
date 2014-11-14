@@ -6,8 +6,8 @@
     <property name="maven-staging-repository-id" value="sonatype-nexus-staging" />
     <property name="maven-staging-repository-url" value="https://oss.sonatype.org/service/local/staging/deploy/maven2" />
 
-    <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/asm/signature/** **/asm/tree/** **/asm/util/** **/asm/xml/** **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* **/api/**/* **/spi/**/* **/instr/** **/META-INF/*"/>
-    <property name="boot.excludes" value="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/**/* **/asm/** **/api/**/* **/spi/**/*"/>
+    <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/asm/signature/** **/asm/tree/** **/asm/util/** **/asm/xml/** **/aggregation/* **/annotations/* **/compiler/* **/client/* **/comm/* com/sun/btrace/api/**/* com/sun/btrace/spi/**/* **/instr/** **/META-INF/*"/>
+    <property name="boot.excludes" value="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/**/* **/asm/** com/sun/btrace/api/**/* com/sun/btrace/spi/**/*"/>
     <property name="client.excludes" value="**/runtime/* **/agent/* **/util/TimeStamp* **/util/MethodId **/util/SamplingSupport **/util/templates/**/* **/instr/** **/META-INF/*"/>
 
     <target name="prepare" depends="load.properties">
@@ -294,7 +294,7 @@
         </copy>
     </target>
 
-    <target name="build-traces" depends="jar">
+    <target name="build-traces" depends="jar, compile-tests">
         <echo>executing ${bin.dir}/${btracec} -cp ${build.dir}/test -d ${tests.dir} ${traces.dir}/*.java</echo>
         <apply executable="${bin.dir}/${btracec}"  verbose="true" failonerror="true">
             <fileset dir="${traces.dir}" includes="**/*.java"/>
