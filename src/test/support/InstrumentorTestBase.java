@@ -216,8 +216,8 @@ abstract public class InstrumentorTestBase {
 
     protected Trace loadTrace(String name, boolean unsafe) throws IOException {
         byte[] btrace = loadFile("traces/" + name + ".class");
-        System.err.println("=== Loaded Trace: " + name + "\n");
-        System.err.println(asmify(btrace));
+//        System.err.println("=== Loaded Trace: " + name + "\n");
+//        System.err.println(asmify(btrace));
         ClassWriter writer = InstrumentUtils.newClassWriter();
         Verifier verifier = new Verifier(new Preprocessor(writer), unsafe);
         InstrumentUtils.accept(new ClassReader(btrace), verifier);
