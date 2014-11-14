@@ -90,18 +90,22 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     @Override
     public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
-        Element e = getElement(node);
-        if (e.getKind() == ElementKind.METHOD) {
-            ExecutableElement ee = (ExecutableElement)e;
-            TypeMirror owner = ee.getEnclosingElement().asType();
-            if (verifier.getTypeUtils().isSubtype(owner, serviceInjectorTm)) {
-                if (validateInjectionParams(node)) {
+
+        ExpressionTree xt = node.getMethodSelect();
+        if (xt.getKind() == Tree.Kind.MEMBER_SELECT) {
+            MemberSelectTree mst = (MemberSelectTree)xt;
+            xt = mst.getExpression();
+            if (xt.toString().endsWith("Service")) {
+                TypeMirror tm = getType(xt);
+                if (verifier.getTypeUtils().isSubtype(tm, serviceInjectorTm)) {
+                    if (validateInjectionParams(node)) {
+                        return super.visitMethodInvocation(node, v);
+                    } else {
+                        return reportError("service.injector.literals", node);
+                    }
+                } else if (verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
                     return super.visitMethodInvocation(node, v);
-                } else {
-                    return reportError("service.injector.literals", node);
                 }
-            } else if (verifier.getTypeUtils().isSubtype(owner, btraceServiceTm)) {
-                return super.visitMethodInvocation(node, v);
             }
         }
 
@@ -364,8 +368,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     @Override
     public Boolean visitMemberSelect(MemberSelectTree node, Void v) {
         if (node.getIdentifier().contentEquals("class")) {
-            TypeElement e = (TypeElement)getElement(node.getExpression());
-            if (!verifier.getTypeUtils().isSubtype(e.asType(), btraceServiceTm)) {
+            TypeMirror tm = getType(node.getExpression());
+            if (!verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
                 return reportError("no.class.literals", node);
             }
         }
@@ -614,6 +618,11 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     private Element getElement(Tree t) {
         TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), t);
         return verifier.getTreeUtils().getElement(tp);
+    }
+
+    private TypeMirror getType(Tree t) {
+        TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), t);
+        return verifier.getTreeUtils().getTypeMirror(tp);
     }
 
     private boolean validateInjectionParams(MethodInvocationTree node) {
