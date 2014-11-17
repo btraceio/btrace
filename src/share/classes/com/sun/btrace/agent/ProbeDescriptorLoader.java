@@ -88,7 +88,9 @@ final class ProbeDescriptorLoader {
             if (Main.isDebug()) Main.debugPrint("reading " + file);
             Unmarshaller u = jc.createUnmarshaller();
             u.setEventHandler(new DefaultValidationEventHandler());
-            return (ProbeDescriptor)u.unmarshal(file);
+            ProbeDescriptor probeDescriptor = (ProbeDescriptor)u.unmarshal(file);
+            probeDescriptor.setProbes(probeDescriptor.getProbes());
+            return probeDescriptor;
         } catch (JAXBException exp) {
             if (Main.isDebug()) Main.debugPrint(exp);
             return null;
