@@ -534,6 +534,15 @@ public final class Main {
                  omn.copyFrom(om);
                  omn.setTargetName(op.getTargetName());
                  omn.setTargetDescriptor(op.getTargetDescriptor());
+                 omn.setClassNameParameter(op.getClassNameParameter());
+                 omn.setMethodParameter(op.getMethodParameter());
+                 omn.setDurationParameter(op.getDurationParameter());
+                 om.setMethodFqn(op.isMethodFqn());
+                 om.setReturnParameter(op.getReturnParameter());
+                 om.setSelfParameter(op.getSelfParameter());
+                 om.setTargetInstanceParameter(op.getTargetInstanceParameter());
+                 om.setTargetMethodOrFieldFqn(op.isTargetMethodOrFieldFqn());
+                 om.setTargetMethodOrFieldParameter(op.getTargetMethodOrFieldParameter());
                  res.add(omn);
             }
         }

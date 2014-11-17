@@ -114,28 +114,6 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
     }
 
     @Override
-    public AnnotationVisitor visitParameterAnnotation(int parameter, final String desc, boolean visible) {
-        AnnotationVisitor av = super.visitParameterAnnotation(parameter, desc, visible);
-
-        if (cfg.getOnMethod() != null) {
-            if (desc.equals(BTRACE_RETURN_DESC) && cfg.getOnMethod().getReturnParameter() == -1) {
-                reportError("return.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
-            }
-            if (desc.equals(BTRACE_TARGETMETHOD_DESC) && cfg.getOnMethod().getTargetMethodOrFieldParameter() == -1) {
-                reportError("called-method.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
-            }
-            if (desc.equals(BTRACE_TARGETINSTANCE_DESC) && cfg.getOnMethod().getTargetInstanceParameter() == -1) {
-                reportError("called-instance.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
-            }
-            if (desc.equals(BTRACE_DURATION_DESC) && cfg.getOnMethod().getDurationParameter() == -1) {
-                reportError("duration.desc.invalid", methodName + methodDesc + "(" + parameter + ")");
-            }
-        }
-
-        return av;
-    }
-
-    @Override
     public void visitEnd() {
         if (asBTrace) { // only btrace handlers are enforced to be public
             if ((access & ACC_PUBLIC) == 0 && !methodName.equals(CLASS_INITIALIZER)) {
@@ -313,7 +291,7 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
     }
 
     private void reportError(String err, String msg) {
-        verifier.reportError(err, msg);
+        verifier.reportSafetyError(err, msg);
     }
 
     private static boolean isPrimitiveWrapper(String type) {

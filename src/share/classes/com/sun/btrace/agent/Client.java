@@ -39,6 +39,8 @@ import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Where;
 import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
@@ -47,6 +49,7 @@ import com.sun.btrace.runtime.ClassRenamer;
 import com.sun.btrace.runtime.ClinitInjector;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
+import com.sun.btrace.runtime.Location;
 import com.sun.btrace.runtime.MethodRemover;
 import com.sun.btrace.runtime.NullPerfReaderImpl;
 import com.sun.btrace.runtime.Preprocessor;
@@ -413,9 +416,46 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             onMethods.addAll(Main.mapOnProbes(onProbes));
         }
         for(OnMethod om : onMethods) {
+            verifySpecialParameters(om);
             if (om.getClazz().startsWith("+")) {
                 hasSubclassChecks = true;
                 break;
+            }
+        }
+    }
+
+    private void verifySpecialParameters(OnMethod om) {
+        Location loc = om.getLocation();
+        if (om.getReturnParameter() != -1) {
+            if (!(loc.getValue() == Kind.RETURN ||
+                (loc.getValue() == Kind.CALL && loc.getWhere() == Where.AFTER) ||
+                (loc.getValue() == Kind.ARRAY_GET && loc.getWhere() == Where.AFTER) ||
+                (loc.getValue() == Kind.FIELD_GET && loc.getWhere() == Where.AFTER) ||
+                (loc.getValue() == Kind.NEW && loc.getWhere() == Where.AFTER) ||
+                (loc.getValue() == Kind.NEWARRAY && loc.getWhere() == Where.AFTER))) {
+                Verifier.reportError("return.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getReturnParameter() + ")");;
+            }
+        }
+        if (om.getTargetMethodOrFieldParameter() != -1) {
+            if (!(loc.getValue() == Kind.CALL ||
+                loc.getValue() == Kind.FIELD_GET ||
+                loc.getValue() == Kind.FIELD_SET)) {
+                Verifier.reportError("called-method.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetMethodOrFieldParameter() + ")");
+            }
+        }
+        if (om.getTargetInstanceParameter() != -1) {
+            if (!(loc.getValue() == Kind.CALL ||
+                loc.getValue() == Kind.FIELD_GET ||
+                loc.getValue() == Kind.FIELD_SET)) {
+                Verifier.reportError("called-instance.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetInstanceParameter() + ")");
+            }
+        }
+        if (om.getDurationParameter() != -1) {
+            if (!(loc.getValue() == Kind.RETURN ||
+                loc.getValue() == Kind.ERROR) ||
+                (loc.getValue() == Kind.CALL &&
+                loc.getWhere() == Where.AFTER)) {
+                Verifier.reportError("duration.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getDurationParameter() + ")");
             }
         }
     }

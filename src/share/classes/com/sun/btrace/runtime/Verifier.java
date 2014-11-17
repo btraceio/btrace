@@ -105,7 +105,7 @@ public class Verifier extends ClassVisitor {
     @Override
     public void visitEnd() {
         if (cycleDetector.hasCycle()) {
-            reportError("execution.loop.danger");
+            Verifier.this.reportSafetyError("execution.loop.danger");
         }
         super.visitEnd();
     }
@@ -115,17 +115,17 @@ public class Verifier extends ClassVisitor {
             String signature, String superName, String[] interfaces) {
         if ((access & ACC_INTERFACE) != 0 ||
             (access & ACC_ENUM) != 0  ) {
-            reportError("btrace.program.should.be.class");
+            Verifier.this.reportSafetyError("btrace.program.should.be.class");
         }
         if ((access & ACC_PUBLIC) == 0) {
-            reportError("class.should.be.public", name);
+            reportSafetyError("class.should.be.public", name);
         }
 
         if (! superName.equals(JAVA_LANG_OBJECT)) {
-            reportError("object.superclass.required", superName);
+            reportSafetyError("object.superclass.required", superName);
         }
         if (interfaces != null && interfaces.length > 0) {
-            reportError("no.interface.implementation");
+            Verifier.this.reportSafetyError("no.interface.implementation");
         }
         className = name;
         super.visit(version, access, name, signature,
@@ -142,7 +142,7 @@ public class Verifier extends ClassVisitor {
                 public void visit(String name, Object value) {
                     if ("unsafe".equals(name) && Boolean.TRUE.equals(value)) {
                         if (!unsafeAllowed) {
-                            reportError("agent.unsafe.not.allowed");
+                            Verifier.this.reportSafetyError("agent.unsafe.not.allowed");
                         }
                         unsafeScript = true; // Found @BTrace(..., unsafe=true)
                     }
@@ -157,10 +157,10 @@ public class Verifier extends ClassVisitor {
     public FieldVisitor	visitField(int access, final String name,
             String desc, String signature, Object value) {
         if (! seenBTrace) {
-            reportError("not.a.btrace.program");
+            reportSafetyError("not.a.btrace.program");
         }
         if ((access & ACC_STATIC) == 0) {
-            reportError("agent.no.instance.variables", name);
+            reportSafetyError("agent.no.instance.variables", name);
         }
         FieldVisitor fv = new FieldVisitor(Opcodes.ASM5, super.visitField(access, name, desc, signature, value)) {
 
@@ -179,7 +179,7 @@ public class Verifier extends ClassVisitor {
     public void visitInnerClass(String name, String outerName,
             String innerName, int access) {
         if (className.equals(outerName)) {
-            reportError("no.nested.class");
+            reportSafetyError("no.nested.class");
         }
     }
 
@@ -188,16 +188,16 @@ public class Verifier extends ClassVisitor {
             final String methodDesc, String signature, String[] exceptions) {
 
         if (! seenBTrace) {
-            reportError("not.a.btrace.program");
+            reportSafetyError("not.a.btrace.program");
         }
 
         if ((access & ACC_SYNCHRONIZED) != 0) {
-            reportError("no.synchronized.methods", methodName + methodDesc);
+            reportSafetyError("no.synchronized.methods", methodName + methodDesc);
         }
 
         if (! methodName.equals(CONSTRUCTOR)) {
             if ((access & ACC_STATIC) == 0) {
-                reportError("no.instance.method", methodName + methodDesc);
+                reportSafetyError("no.instance.method", methodName + methodDesc);
             }
         }
 
@@ -216,15 +216,23 @@ public class Verifier extends ClassVisitor {
     @Override
     public void visitOuterClass(String owner, String name,
             String desc) {
-        reportError("no.outer.class");
+        reportSafetyError("no.outer.class");
     }
 
-    void reportError(String err) {
+    void reportSafetyError(String err) {
+        reportSafetyError(err, null);
+    }
+
+    void reportSafetyError(String err, String msg) {
+        if (isUnsafe()) return;
+        reportError(err, msg);
+    }
+
+    public static void reportError(String err) {
         reportError(err, null);
     }
 
-    void reportError(String err, String msg) {
-        if (isUnsafe()) return;
+    public static void reportError(String err, String msg) {
         String str = Messages.get(err);
         if (msg != null) {
             str += ": " + msg;

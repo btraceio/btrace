@@ -28,19 +28,20 @@ package com.sun.btrace.runtime;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import java.util.Collection;
+import java.util.HashSet;
 
 /**
  * This class is used to store data of the annotation
  * com.sun.btrace.annotations.OnProbe. We can not read the
  * OnMethod annotation using reflection API [because we strip
  * @OnProbe annotated methods before defineClass]. Instead,
- * we read OnProbe annotation while parsing the BTrace class and 
+ * we read OnProbe annotation while parsing the BTrace class and
  * store the data in an instance of this class. Please note that
  * the get/set methods have to be in sync with OnProbe annotation.
- * 
+ *
  * @author A. Sundararajan
  */
-public class OnProbe {
+public class OnProbe extends SpecialParameterHolder {
     private String namespace;
     private String name;
     // target method name on which this annotation is specified
@@ -56,7 +57,7 @@ public class OnProbe {
     public String getNamespace() {
         return namespace;
     }
-  
+
     public void setNamespace(String namespace) {
         this.namespace = namespace;
     }
@@ -93,5 +94,14 @@ public class OnProbe {
 
     public void setOnMethods(Collection<OnMethod> om) {
         onMethods = om;
+    }
+
+    public void copyFrom(OnProbe other) {
+        super.copyFrom(other);
+        namespace = other.namespace;
+        name = other.name;
+        targetName = other.targetName;
+        targetDescriptor = other.targetDescriptor;
+        onMethods = new HashSet<OnMethod>(other.onMethods);
     }
 }
