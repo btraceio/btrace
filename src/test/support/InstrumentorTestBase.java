@@ -65,6 +65,8 @@ abstract public class InstrumentorTestBase {
         }
     }
 
+    private static final boolean DEBUG = false;
+
     private static Unsafe unsafe;
 
     static {
@@ -78,6 +80,8 @@ abstract public class InstrumentorTestBase {
 
     protected byte[] originalBC;
     protected byte[] transformedBC;
+    protected byte[] originalTrace;
+    protected byte[] transformedTrace;
 
     private ClassLoader cl;
 
@@ -110,6 +114,8 @@ abstract public class InstrumentorTestBase {
     protected void cleanup() {
         originalBC = null;
         transformedBC = null;
+        originalTrace = null;
+        transformedTrace = null;
     }
 
     protected void load() {
@@ -129,7 +135,27 @@ abstract public class InstrumentorTestBase {
         }
 
         String diff = diff();
-        System.err.println(diff);
+        if (DEBUG) {
+            System.err.println(diff);
+        }
+        assertEquals(expected, diff.substring(0, diff.length() > expected.length() ? expected.length() : diff.length()));
+    }
+
+    protected void checkTrace(String expected) throws IOException {
+        org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(transformedTrace);
+
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        CheckClassAdapter.verify(cr, false, pw);
+        if (sw.toString().contains("AnalyzerException")) {
+            System.err.println(sw.toString());
+            fail();
+        }
+
+        String diff = diffTrace();
+        if (DEBUG) {
+            System.err.println(diff);
+        }
         assertEquals(expected, diff.substring(0, diff.length() > expected.length() ? expected.length() : diff.length()));
     }
 
@@ -165,6 +191,12 @@ abstract public class InstrumentorTestBase {
     private String diff() throws IOException {
         String origCode = asmify(originalBC);
         String transCode = asmify(transformedBC);
+        return diff(transCode, origCode);
+    }
+
+    private String diffTrace() throws IOException {
+        String origCode = asmify(originalTrace);
+        String transCode = asmify(transformedTrace);
         return diff(transCode, origCode);
     }
 
@@ -207,7 +239,7 @@ abstract public class InstrumentorTestBase {
             if      (i == M) j++; //sb.append("[").append(j).append("] ").append("> " + modArr[j++]).append('\n');
             else if (j == N) sb.append(orgArr[i++].trim()).append('\n');
         }
-        return sb.toString();
+        return sb.toString().trim();
     }
 
     protected Trace loadTrace(String name) throws IOException {
@@ -215,17 +247,22 @@ abstract public class InstrumentorTestBase {
     }
 
     protected Trace loadTrace(String name, boolean unsafe) throws IOException {
-        byte[] btrace = loadFile("traces/" + name + ".class");
-//        System.err.println("=== Loaded Trace: " + name + "\n");
-//        System.err.println(asmify(btrace));
+        originalTrace = loadFile("traces/" + name + ".class");
+        if (DEBUG) {
+            System.err.println("=== Loaded Trace: " + name + "\n");
+            System.err.println(asmify(originalTrace));
+        }
         ClassWriter writer = InstrumentUtils.newClassWriter();
         Verifier verifier = new Verifier(new Preprocessor(writer), unsafe);
-        InstrumentUtils.accept(new ClassReader(btrace), verifier);
-        return new Trace(writer.toByteArray(), verifier.getOnMethods(), verifier.getClassName());
+        InstrumentUtils.accept(new ClassReader(originalTrace), verifier);
+        Trace t =  new Trace(writer.toByteArray(), verifier.getOnMethods(), verifier.getClassName());
+        transformedTrace = t.content;
+        return t;
     }
 
     protected byte[] loadTargetClass(String name) throws IOException {
-        return loadFile("resources/" + name + ".class");
+        originalBC = loadFile("resources/" + name + ".class");
+        return originalBC;
     }
 
     private byte[] loadFile(String path) throws IOException {
