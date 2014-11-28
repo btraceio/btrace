@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,34 +24,41 @@
  */
 package resources;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
 /**
  *
  * @author Jaroslav Bachorik
  */
-public class Main extends TestApp {
-    public static void main(String[] args) throws Exception {
-        Main i = new Main();
-        i.start();
-    }
-
-    @Override
-    protected void startWork() {
-        while (!Thread.currentThread().isInterrupted()) {
-            callA();
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+abstract public class TestApp {
+    final public void start() throws Exception {
+        Thread t = new Thread(new Runnable() {
+            public void run() {
+                startWork();
             }
+        }, "Worker Thread");
+        System.out.println("ready:" + getPID());
+        System.out.flush();
+        t.setDaemon(true);
+        t.start();
+
+        String resp = new BufferedReader(new InputStreamReader(System.in)).readLine();
+        if (!"done".equals(resp)) {
+            System.out.flush();
+            t.interrupt();
+            t.join();
         }
     }
 
-    private void callA() {
-        callB(1, "Hello World");
+    private static long getPID() {
+        String processName
+                = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+        return Long.parseLong(processName.split("@")[0]);
     }
 
-    private void callB(int i, String s) {
-        System.out.println("[" + i + "] = " + s);
-        System.out.flush();
-    }
+    /**
+     * The work here should be done repeatedly until the thread gets interrupted
+     */
+    abstract protected void startWork();
 }

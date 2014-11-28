@@ -290,7 +290,10 @@
             <exclude name="traces/**"/>
         </javac>
         <copy todir="${tests.dir}/traces">
-            <fileset dir="${test.src.dir}/traces" includes="**/*.java"/>
+            <fileset dir="${test.src.dir}/traces">
+                <include name="**/*.java"/>
+                <include name="**/*.xml"/>
+            </fileset>
         </copy>
     </target>
 
