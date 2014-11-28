@@ -37,7 +37,7 @@ import org.junit.Test;
  * The test simulates a user submitting a BTrace script to the target application
  * and asserts that no exceptions are thrown, JVM keeps on running and
  * BTrace generates the anticipated output.
- * 
+ *
  * @author Jaroslav Bachorik
  */
 public class BTraceFunctionalTests extends RuntimeTest {
@@ -73,7 +73,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     public void testOnProbe() throws Exception {
         test(
             "resources.Main",
-            "traces/ProbeTest.java",
+            "traces/OnProbeTest.java",
             5,
             new ResultValidator() {
                 public void validate(String stdout, String stderr, int retcode) {
