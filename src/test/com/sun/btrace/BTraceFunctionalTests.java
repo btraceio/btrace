@@ -63,7 +63,6 @@ public class BTraceFunctionalTests extends RuntimeTest {
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertEquals("Unexpected return code", 0, retcode);
                 }
             }
         );
@@ -81,7 +80,6 @@ public class BTraceFunctionalTests extends RuntimeTest {
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
                     Assert.assertTrue(stdout.contains("[this, noargs]"));
                     Assert.assertTrue(stdout.contains("[this, args]"));
-                    Assert.assertEquals("Unexpected return code", 0, retcode);
                 }
             }
         );
@@ -99,7 +97,6 @@ public class BTraceFunctionalTests extends RuntimeTest {
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
                     Assert.assertTrue(stdout.contains("[this, noargs]"));
                     Assert.assertTrue(stdout.contains("[this, args]"));
-                    Assert.assertEquals("Unexpected return code", 0, retcode);
                 }
             }
         );
