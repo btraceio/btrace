@@ -26,14 +26,11 @@
 package com.sun.btrace.agent;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.HashMap;
 import javax.xml.bind.*;
 import javax.xml.bind.helpers.DefaultValidationEventHandler;
-import com.sun.btrace.runtime.OnMethod;
-import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.ProbeDescriptor;
 
 /**

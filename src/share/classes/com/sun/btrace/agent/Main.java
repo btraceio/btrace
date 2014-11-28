@@ -537,12 +537,12 @@ public final class Main {
                  omn.setClassNameParameter(op.getClassNameParameter());
                  omn.setMethodParameter(op.getMethodParameter());
                  omn.setDurationParameter(op.getDurationParameter());
-                 om.setMethodFqn(op.isMethodFqn());
-                 om.setReturnParameter(op.getReturnParameter());
-                 om.setSelfParameter(op.getSelfParameter());
-                 om.setTargetInstanceParameter(op.getTargetInstanceParameter());
-                 om.setTargetMethodOrFieldFqn(op.isTargetMethodOrFieldFqn());
-                 om.setTargetMethodOrFieldParameter(op.getTargetMethodOrFieldParameter());
+                 omn.setMethodFqn(op.isMethodFqn());
+                 omn.setReturnParameter(op.getReturnParameter());
+                 omn.setSelfParameter(op.getSelfParameter());
+                 omn.setTargetInstanceParameter(op.getTargetInstanceParameter());
+                 omn.setTargetMethodOrFieldFqn(op.isTargetMethodOrFieldFqn());
+                 omn.setTargetMethodOrFieldParameter(op.getTargetMethodOrFieldParameter());
                  res.add(omn);
             }
         }
