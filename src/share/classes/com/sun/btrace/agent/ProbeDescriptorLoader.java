@@ -26,14 +26,11 @@
 package com.sun.btrace.agent;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.HashMap;
 import javax.xml.bind.*;
 import javax.xml.bind.helpers.DefaultValidationEventHandler;
-import com.sun.btrace.runtime.OnMethod;
-import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.ProbeDescriptor;
 
 /**
@@ -59,7 +56,7 @@ final class ProbeDescriptorLoader {
         probeDescMap = Collections.synchronizedMap(
             new HashMap<String, ProbeDescriptor>());
     }
-    
+
     static synchronized ProbeDescriptor load(String namespace) {
         // check in the cache
         ProbeDescriptor res = probeDescMap.get(namespace);
@@ -79,7 +76,7 @@ final class ProbeDescriptorLoader {
             }
             return pd;
         }
-    }   
+    }
 
     // unmarshell BTrace probe descriptor from XML
     private static ProbeDescriptor load(File file) {
@@ -88,7 +85,9 @@ final class ProbeDescriptorLoader {
             if (Main.isDebug()) Main.debugPrint("reading " + file);
             Unmarshaller u = jc.createUnmarshaller();
             u.setEventHandler(new DefaultValidationEventHandler());
-            return (ProbeDescriptor)u.unmarshal(file);
+            ProbeDescriptor pd = (ProbeDescriptor)u.unmarshal(file);
+            pd.setProbes(pd.getProbes());
+            return pd;
         } catch (JAXBException exp) {
             if (Main.isDebug()) Main.debugPrint(exp);
             return null;

@@ -24,27 +24,34 @@
  */
 package resources;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-
 /**
  *
  * @author Jaroslav Bachorik
  */
-public class Main {
-
+public class Main extends TestApp {
     public static void main(String[] args) throws Exception {
-        System.out.println("ready:" + getPID());
-        System.out.flush();
-        String resp = new BufferedReader(new InputStreamReader(System.in)).readLine();
-        if (!"done".equals(resp)) {
-            System.exit(1);
+        Main i = new Main();
+        i.start();
+    }
+
+    @Override
+    protected void startWork() {
+        while (!Thread.currentThread().isInterrupted()) {
+            callA();
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
-    private static long getPID() {
-        String processName
-                = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
-        return Long.parseLong(processName.split("@")[0]);
+    private void callA() {
+        callB(1, "Hello World");
+    }
+
+    private void callB(int i, String s) {
+        System.out.println("[" + i + "] = " + s);
+        System.out.flush();
     }
 }

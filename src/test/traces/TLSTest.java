@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,30 +27,22 @@ package traces;
 
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
-import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.OnTimer;
+import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.TLS;
 import java.util.Deque;
 
 /**
+ * Sanity test to make sure the TLS annotations work as expected.
  *
  * @author Jaroslav Bachorik
  */
-@BTrace(unsafe=true)
-public class OSMBeanTest {
+@BTrace
+public class TLSTest {
     @TLS
     public static Deque<Long> entryTimes = BTraceUtils.Collections.newDeque();
 
-    @OnTimer(200)
-    public static void tester() {
-        try {
-            double la = Sys.VM.systemLoadAverage();
-            long t = Sys.VM.processCPUTime();
-            BTraceUtils.push(entryTimes, t);
-            println(la + " # " + t);
-        } catch (Throwable e) {
-            println("FAILED");
-            println(e.getMessage());
-        }
+    @OnMethod(clazz = "resources.OnMethodTest", method="args")
+    public static void testArgs(String a, long b, String[] c, int[] d) {
+        BTraceUtils.push(entryTimes, b);
     }
 }

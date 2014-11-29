@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,43 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package resources;
 
-package traces;
-
-import com.sun.btrace.BTraceUtils;
-import com.sun.btrace.annotations.BTrace;
-import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.OnTimer;
-import com.sun.btrace.annotations.TLS;
-import java.util.Deque;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
-@BTrace(unsafe=true)
-public class OSMBeanTest {
-    @TLS
-    public static Deque<Long> entryTimes = BTraceUtils.Collections.newDeque();
+abstract public class TestApp {
+    final public void start() throws Exception {
+        Thread t = new Thread(new Runnable() {
+            public void run() {
+                startWork();
+            }
+        }, "Worker Thread");
+        System.out.println("ready:" + getPID());
+        System.out.flush();
+        t.setDaemon(true);
+        t.start();
 
-    @OnTimer(200)
-    public static void tester() {
-        try {
-            double la = Sys.VM.systemLoadAverage();
-            long t = Sys.VM.processCPUTime();
-            BTraceUtils.push(entryTimes, t);
-            println(la + " # " + t);
-        } catch (Throwable e) {
-            println("FAILED");
-            println(e.getMessage());
+        String resp = new BufferedReader(new InputStreamReader(System.in)).readLine();
+        if (!"done".equals(resp)) {
+            System.out.flush();
+            t.interrupt();
+            t.join();
         }
     }
+
+    private static long getPID() {
+        String processName
+                = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+        return Long.parseLong(processName.split("@")[0]);
+    }
+
+    /**
+     * The work here should be done repeatedly until the thread gets interrupted
+     */
+    abstract protected void startWork();
 }

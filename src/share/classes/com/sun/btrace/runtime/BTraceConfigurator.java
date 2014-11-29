@@ -47,6 +47,7 @@ import java.util.List;
  */
 final public class BTraceConfigurator extends MethodVisitor {
     private OnMethod om = null;
+    private OnProbe op = null;
 
     private boolean sampled = false;
 
@@ -162,7 +163,7 @@ final public class BTraceConfigurator extends MethodVisitor {
                 }
             };
         } else if (desc.equals(ONPROBE_DESC)) {
-            final OnProbe op = new OnProbe();
+            op = new OnProbe();
             onProbes.add(op);
             op.setTargetName(methodName);
             op.setTargetDescriptor(methodDesc);
@@ -234,64 +235,52 @@ final public class BTraceConfigurator extends MethodVisitor {
         AnnotationVisitor av = super.visitParameterAnnotation(parameter, desc, visible);
 
         if (om != null) {
-            if (desc.equals(BTRACE_SELF_DESC)) {
-                om.setSelfParameter(parameter);
-            } else if (desc.equals(Verifier.BTRACE_PROBECLASSNAME_DESC)) {
-                om.setClassNameParameter(parameter);
-            } else if (desc.equals(Verifier.BTRACE_PROBEMETHODNAME_DESC)) {
-                om.setMethodParameter(parameter);
-                av = new AnnotationVisitor(Opcodes.ASM5, av) {
-                    @Override
-                    public void visit(String name, Object val) {
-                        if (name.equals("fqn")) {
-                            om.setMethodFqn((Boolean)val);
-                        }
-                        super.visit(name, val);
-                    }
-
-                };
-            } else if (desc.equals(BTRACE_RETURN_DESC)) {
-                if (loc.getValue() == Kind.RETURN ||
-                    (loc.getValue() == Kind.CALL && loc.getWhere() == Where.AFTER) ||
-                    (loc.getValue() == Kind.ARRAY_GET && loc.getWhere() == Where.AFTER) ||
-                    (loc.getValue() == Kind.FIELD_GET && loc.getWhere() == Where.AFTER) ||
-                    (loc.getValue() == Kind.NEW && loc.getWhere() == Where.AFTER) ||
-                    (loc.getValue() == Kind.NEWARRAY && loc.getWhere() == Where.AFTER)) {
-                    om.setReturnParameter(parameter);
-                }
-            } else if (desc.equals(BTRACE_TARGETMETHOD_DESC)) {
-                if (loc.getValue() == Kind.CALL ||
-                    loc.getValue() == Kind.FIELD_GET ||
-                    loc.getValue() == Kind.FIELD_SET) {
-                    om.setTargetMethodOrFieldParameter(parameter);
-
-                    av = new AnnotationVisitor(Opcodes.ASM5, av) {
-                        @Override
-                        public void visit(String name, Object val) {
-                            if (name.equals("fqn")) {
-                                om.setTargetMethodOrFieldFqn((Boolean)val);
-                            }
-                            super.visit(name, val);
-                        }
-
-                    };
-                }
-            } else if (desc.equals(BTRACE_TARGETINSTANCE_DESC)) {
-                if (loc.getValue() == Kind.CALL ||
-                    loc.getValue() == Kind.FIELD_GET ||
-                    loc.getValue() == Kind.FIELD_SET) {
-                    om.setTargetInstanceParameter(parameter);
-                }
-            } else if (desc.equals(BTRACE_DURATION_DESC)) {
-                if ((loc.getValue() == Kind.RETURN ||
-                    loc.getValue() == Kind.ERROR) ||
-                    (loc.getValue() == Kind.CALL &&
-                     loc.getWhere() == Where.AFTER)) {
-                    om.setDurationParameter(parameter);
-                }
-            }
+            av = setSpecialParameters(om, desc, parameter, av);
+        } else if (op != null) {
+            av = setSpecialParameters(op, desc, parameter, av);
         }
 
+        return av;
+    }
+
+    private AnnotationVisitor setSpecialParameters(final SpecialParameterHolder ph, final String desc, int parameter, AnnotationVisitor av) {
+        // for OnProbe the 'loc' variable will be null; we will need to verfiy the placement later on
+        if (desc.equals(BTRACE_SELF_DESC)) {
+            ph.setSelfParameter(parameter);
+        } else if (desc.equals(Verifier.BTRACE_PROBECLASSNAME_DESC)) {
+            ph.setClassNameParameter(parameter);
+        } else if (desc.equals(Verifier.BTRACE_PROBEMETHODNAME_DESC)) {
+            ph.setMethodParameter(parameter);
+            av = new AnnotationVisitor(Opcodes.ASM5, av) {
+                @Override
+                public void visit(String name, Object val) {
+                    if (name.equals("fqn")) {
+                        ph.setMethodFqn((Boolean)val);
+                    }
+                    super.visit(name, val);
+                }
+
+            };
+        } else if (desc.equals(BTRACE_RETURN_DESC)) {
+            ph.setReturnParameter(parameter);
+        } else if (desc.equals(BTRACE_TARGETMETHOD_DESC)) {
+            ph.setTargetMethodOrFieldParameter(parameter);
+
+            av = new AnnotationVisitor(Opcodes.ASM5, av) {
+                @Override
+                public void visit(String name, Object val) {
+                    if (name.equals("fqn")) {
+                        ph.setTargetMethodOrFieldFqn((Boolean)val);
+                    }
+                    super.visit(name, val);
+                }
+
+            };
+        } else if (desc.equals(BTRACE_TARGETINSTANCE_DESC)) {
+            ph.setTargetInstanceParameter(parameter);
+        } else if (desc.equals(BTRACE_DURATION_DESC)) {
+            ph.setDurationParameter(parameter);
+        }
         return av;
     }
 

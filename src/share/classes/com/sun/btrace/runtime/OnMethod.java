@@ -38,7 +38,7 @@ import com.sun.btrace.annotations.Sampled;
  *
  * @author A. Sundararajan
  */
-public class OnMethod {
+public class OnMethod extends SpecialParameterHolder {
     private String clazz;
     private String method = "";
     private String type = "";
@@ -48,22 +48,14 @@ public class OnMethod {
     // target method descriptor on which this annotation is specified
     private String targetDescriptor;
 
-    private int selfParameter = -1;
-    private int methodParameter = -1;
-    private int classNameParameter = -1;
-    private int returnParameter = -1;
-    private int targetMethodOrFieldParameter = -1;
-    private int targetInstanceParameter = -1;
-    private int durationParameter = -1;
     private int samplerMean = 0;
     private Sampled.Sampler samplerKind = Sampled.Sampler.None;
-    private boolean methodFqn = false;
-    private boolean targetMethodFqn = false;
 
     public OnMethod() {
     }
 
     public void copyFrom(OnMethod other) {
+        super.copyFrom(other);
         setClazz(other.getClazz());
         setMethod(other.getMethod());
         setType(other.getType());
@@ -116,78 +108,6 @@ public class OnMethod {
 
     public void setTargetDescriptor(String desc) {
         this.targetDescriptor = desc;
-    }
-
-    public int getSelfParameter() {
-        return selfParameter;
-    }
-
-    public void setSelfParameter(int selfParameter) {
-        this.selfParameter = selfParameter;
-    }
-
-    public int getClassNameParameter() {
-        return classNameParameter;
-    }
-
-    public void setClassNameParameter(int classNameParameter) {
-        this.classNameParameter = classNameParameter;
-    }
-
-    public int getMethodParameter() {
-        return methodParameter;
-    }
-
-    public void setMethodParameter(int methodParameter) {
-        this.methodParameter = methodParameter;
-    }
-
-    public boolean isMethodFqn() {
-        return methodFqn;
-    }
-
-    public void setMethodFqn(boolean val) {
-        methodFqn = val;
-    }
-
-    public boolean isTargetMethodOrFieldFqn() {
-        return targetMethodFqn;
-    }
-
-    public void setTargetMethodOrFieldFqn(boolean val) {
-        targetMethodFqn = val;
-    }
-
-    public int getReturnParameter() {
-        return returnParameter;
-    }
-
-    public void setReturnParameter(int returnParameter) {
-        this.returnParameter = returnParameter;
-    }
-
-    public int getTargetMethodOrFieldParameter() {
-        return targetMethodOrFieldParameter;
-    }
-
-    public void setTargetMethodOrFieldParameter(int calledMethodParameter) {
-        this.targetMethodOrFieldParameter = calledMethodParameter;
-    }
-
-    public int getTargetInstanceParameter() {
-        return targetInstanceParameter;
-    }
-
-    public void setTargetInstanceParameter(int calledInstanceParameter) {
-        this.targetInstanceParameter = calledInstanceParameter;
-    }
-
-    public int getDurationParameter() {
-        return durationParameter;
-    }
-
-    public void setDurationParameter(int durationParameter) {
-        this.durationParameter = durationParameter;
     }
 
     public void setSamplerKind(Sampled.Sampler kind) {
