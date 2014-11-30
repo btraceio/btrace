@@ -425,11 +425,9 @@ public class MethodInvocationProfilerTest {
             Thread.sleep(13);
         }
 
-        p.recordEntry("r1");
-        p.recordExit("r1", 10);
+        finished.set(true);
 
-        Snapshot s = p.snapshot();
-        assertArrayEquals(expected, s.total);
+        t.join();
     }
 
     @Test
