@@ -46,10 +46,18 @@ You may enhance the system environment variable __PATH__ with __$BTRACE_HOME/bin
 
 For the detailed user guide, please, check the [Wiki](https://github.com/jbachorik/btrace/wiki/Home).
 
+## Mailing lists
+
+These mailing lists are hosted at **http://librelist.com**
+
+* **btrace.users@librelist.com**
+* **btrace.dev@librelist.com**
+* **btrace.commits@librelist.com**
+
 ## CI
 
 A continuous integration is being run on [Travis CI](https://travis-ci.org/jbachorik/btrace)
 
 ## Contributing - !!! Important !!!
 
-Pull requests can be accepted only from the signers of [Oracle Contributor Agreement](http://www.oracle.com/technetwork/community/oca-486395.html) :(
+Pull requests can be accepted only from the signers of [Oracle Contributor Agreement](http://www.oracle.com/technetwork/community/oca-486395.html)
