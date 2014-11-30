@@ -56,7 +56,7 @@ public class MethodInvocationProfilerTest {
     public static void tearDownClass() throws Exception {
     }
 
-    private Profiler p;
+    private volatile Profiler p;
 
     @Before
     public void setUp() {
