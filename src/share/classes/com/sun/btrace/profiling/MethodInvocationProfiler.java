@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,16 +18,19 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.profiling;
 
 import com.sun.btrace.Profiler;
+import java.lang.ref.WeakReference;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Implementation of {@linkplain Profiler}
@@ -45,14 +48,14 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         private Record[] measured = new Record[0];
 
         private long carryOver = 0L;
-        private int defaultBufferSize;
+        private final int defaultBufferSize;
 
         public MethodInvocationRecorder(int expectedBlockCnt) {
             defaultBufferSize = expectedBlockCnt * 10;
             measuredSize = defaultBufferSize;
             measured = new Record[measuredSize];
         }
-        
+
         private synchronized void recordEntry(String blockName) {
             Record r = new Record(blockName);
             addMeasured(r);
@@ -186,34 +189,43 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
             }
             System.arraycopy(stackArr, 0, measured, lastIndex, stackPtr + 1); // add the not processed methods on the stack
             measuredPtr = lastIndex + stackPtr + 1; // move the pointer behind the methods on the stack
-            
+
             return lastIndex;
         }
     }
 
-    final private Map<Thread, MethodInvocationRecorder> recorders = new HashMap<Thread, MethodInvocationRecorder>(128);
+    final private Collection<WeakReference<MethodInvocationRecorder>> recorders = new ConcurrentLinkedQueue<WeakReference<MethodInvocationRecorder>>();
 
+    final private ThreadLocal<MethodInvocationRecorder> recorder = new ThreadLocal<MethodInvocationRecorder>(){
+        @Override
+        protected MethodInvocationRecorder initialValue() {
+            MethodInvocationRecorder mir = new MethodInvocationRecorder(expectedBlockCnt);
+            recorders.add(new WeakReference<MethodInvocationRecorder>(mir));
+            return mir;
+        }
+    };
 
     volatile private Snapshot lastValidSnapshot = null;
 
-    private int expectedBlockCnt;
+    private final int expectedBlockCnt;
 
     public MethodInvocationProfiler(int expectedMethodCnt) {
         this.expectedBlockCnt = expectedMethodCnt;
     }
 
     public void recordEntry(String blockName) {
-        getThreadSampler().recordEntry(blockName);
+        recorder.get().recordEntry(blockName);
     }
 
     public void recordExit(String blockName, long duration) {
-        getThreadSampler().recordExit(blockName, duration);
+        recorder.get().recordExit(blockName, duration);
     }
 
     public void reset() {
-        synchronized(recorders) {
-            for(MethodInvocationRecorder r : recorders.values()) {
-                r.reset();
+        for(WeakReference<MethodInvocationRecorder> mirRef : recorders) {
+            MethodInvocationRecorder mir = mirRef.get();
+            if (mir != null) {
+                mir.reset();
             }
         }
     }
@@ -221,76 +233,62 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
     private long lastTs = START_TIME;
 
     public Snapshot snapshot(boolean reset) {
-        synchronized(recorders) {
-            Map<String, Integer> idMap = new HashMap<String, Integer>();
+        Map<String, Integer> idMap = new HashMap<String, Integer>();
 
-            Record[] mergedRecords = null;
-            int mergedEntries = 0, mergedCapacity = 0;
-            for(Map.Entry<Thread, MethodInvocationRecorder> sEntry : recorders.entrySet()) {
-                final Record[] records = sEntry.getValue().getRecords(reset);
-                if (records == null || records.length == 0) continue; // just skip the empty data
+        Record[] mergedRecords = null;
+        int mergedEntries = 0, mergedCapacity = 0;
+        for(WeakReference<MethodInvocationRecorder> mirRef : recorders) {
+            MethodInvocationRecorder mir = mirRef.get();
+            if (mir == null) continue;
 
-                if (mergedRecords == null) {
-                    mergedRecords = records;
-                    mergedCapacity = mergedRecords.length;
-                    for(int i=0;i<records.length;i++) {
-                        if (records[i] != null) {
-                            mergedEntries = i + 1;
-                        }
-                        idMap.put(records[i].blockName, i);
-                    }
-                    continue;
-                }
+            final Record[] records = mir.getRecords(reset);
+            if (records == null || records.length == 0) continue; // just skip the empty data
 
+            if (mergedRecords == null) {
+                mergedRecords = records;
+                mergedCapacity = mergedRecords.length;
                 for(int i=0;i<records.length;i++) {
-                    Record r = records[i];
-                    Integer id = idMap.get(r.blockName);
-                    if (id == null) {
-                        id = mergedEntries++;
-                        if (mergedEntries > mergedCapacity) {
-                            mergedCapacity = (int)((mergedEntries + 1) * 1.25);
-                            Record[] newRecs = new Record[mergedCapacity];
-                            System.arraycopy(mergedRecords, 0, newRecs, 0, mergedEntries - 1);
-                            mergedRecords = newRecs;
-                        }
-                        idMap.put(r.blockName, id);
-                        mergedRecords[id] = r;
-                    } else {
-                        Record merged = mergedRecords[id];
-                        merged.invocations += r.invocations;
-                        merged.selfTime += r.selfTime;
-                        merged.wallTime += r.wallTime;
+                    if (records[i] != null) {
+                        mergedEntries = i + 1;
                     }
+                    idMap.put(records[i].blockName, i);
                 }
-            }
-            Record[] rslt = new Record[mergedEntries];
-            if (mergedRecords != null) {
-                System.arraycopy(mergedRecords, 0, rslt, 0, mergedEntries);
+                continue;
             }
 
-            long curTs = System.currentTimeMillis();
-            Snapshot snp = new Snapshot(rslt, lastTs, curTs);
-            lastTs = curTs;
-            lastValidSnapshot = snp;
-            return snp;
+            for (Record r : records) {
+                Integer id = idMap.get(r.blockName);
+                if (id == null) {
+                    id = mergedEntries++;
+                    if (mergedEntries > mergedCapacity) {
+                        mergedCapacity = (int)((mergedEntries + 1) * 1.25);
+                        Record[] newRecs = new Record[mergedCapacity];
+                        System.arraycopy(mergedRecords, 0, newRecs, 0, mergedEntries - 1);
+                        mergedRecords = newRecs;
+                    }
+                    idMap.put(r.blockName, id);
+                    mergedRecords[id] = r;
+                } else {
+                    Record merged = mergedRecords[id];
+                    merged.invocations += r.invocations;
+                    merged.selfTime += r.selfTime;
+                    merged.wallTime += r.wallTime;
+                }
+            }
         }
+        Record[] rslt = new Record[mergedEntries];
+        if (mergedRecords != null) {
+            System.arraycopy(mergedRecords, 0, rslt, 0, mergedEntries);
+        }
+
+        long curTs = System.currentTimeMillis();
+        Snapshot snp = new Snapshot(rslt, lastTs, curTs);
+        lastTs = curTs;
+        lastValidSnapshot = snp;
+        return snp;
     }
 
     public Snapshot getMBeanValue() {
         return lastValidSnapshot;
-    }
-    
-    private MethodInvocationRecorder getThreadSampler() {
-        Thread t = Thread.currentThread();
-        MethodInvocationRecorder s = recorders.get(t);
-        if (s == null) {
-            synchronized(recorders) {
-                if (!recorders.containsKey(t)) {
-                    s = new MethodInvocationRecorder(expectedBlockCnt);
-                    recorders.put(t, s);
-                }
-            }
-        }
-        return s;
     }
 }
