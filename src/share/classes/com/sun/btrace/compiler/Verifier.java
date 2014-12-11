@@ -101,6 +101,9 @@ public class Verifier extends AbstractProcessor
 
     public void finished(TaskEvent e) {
         if (e.getKind() != TaskEvent.Kind.ANALYZE) return;
+        if (processingEnv == null) {
+            throw new RuntimeException("Compilation errors in " + e.getSourceFile().getName() + "; can't run verifier reliably");
+        }
         TypeElement elem = e.getTypeElement();
         for(Tree t : e.getCompilationUnit().getTypeDecls()) {
             if (t.getKind() == Tree.Kind.CLASS) {
