@@ -66,10 +66,6 @@ public class Instrumentor extends ClassVisitor {
     private String className, superName;
     private Class clazz;
 
-    private boolean usesTimeStamp = false;
-    private boolean timeStampExisting = false;
-
-
     public Instrumentor(Class clazz,
             String btraceClassName, ClassReader btraceClass,
             List<OnMethod> onMethods, ClassVisitor cv) {
@@ -94,8 +90,6 @@ public class Instrumentor extends ClassVisitor {
 
     public void visit(int version, int access, String name,
         String signature, String superName, String[] interfaces) {
-        usesTimeStamp = false;
-        timeStampExisting = false;
         className = name;
         this.superName = superName;
         // we filter the probe methods applicable for this particular
