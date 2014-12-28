@@ -153,6 +153,8 @@ public final class Main {
             }
         }
 
+        startScripts();
+        
         String tmp = argMap.get("noServer");
         boolean noServer = tmp != null && !"false".equals(tmp);
         if (noServer) {
@@ -180,6 +182,37 @@ public final class Main {
         }
     }
 
+    private static void startScripts() {
+        String p = argMap.get("stdout");
+        boolean traceToStdOut = p != null && !"false".equals(p);
+        if (isDebug()) debugPrint("stdout is " + traceToStdOut);
+        
+        p = argMap.get("script");
+        if (p != null) {
+            StringTokenizer tokenizer = new StringTokenizer(p, ",");
+
+	    if (isDebug()) {
+                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + p);
+            }
+            while (tokenizer.hasMoreTokens()) {
+                loadBTraceScript(tokenizer.nextToken(), traceToStdOut);
+            }
+        }
+        p = argMap.get("scriptdir");
+        if (p != null) {
+            File scriptdir = new File(p);
+            if (scriptdir.isDirectory()) {
+                if (isDebug()) debugPrint("found scriptdir: " + scriptdir.getAbsolutePath());
+                File[] files = scriptdir.listFiles();
+                if (files != null) {
+                    for (File file : files) {
+                       loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
+                    }
+                }
+            }
+        }
+    }
+    
     private static void usage() {
         System.out.println(Messages.get("btrace.agent.usage"));
         System.exit(0);
@@ -255,40 +288,12 @@ public final class Main {
             if (isDebug()) debugPrint("dumpDir is " + dumpDir);
         }
 
-        p = argMap.get("stdout");
-        boolean traceToStdOut = p != null && !"false".equals(p);
-        if (isDebug()) debugPrint("stdout is " + traceToStdOut);
-
         probeDescPath = argMap.get("probeDescPath");
         if (probeDescPath == null) {
             probeDescPath = ".";
         }
         if (isDebug()) debugPrint("probe descriptor path is " + probeDescPath);
         ProbeDescriptorLoader.init(probeDescPath);
-        p = argMap.get("script");
-        if (p != null) {
-            StringTokenizer tokenizer = new StringTokenizer(p, ",");
-
-	    if (isDebug()) {
-                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + p);
-            }
-            while (tokenizer.hasMoreTokens()) {
-                loadBTraceScript(tokenizer.nextToken(), traceToStdOut);
-            }
-        }
-        p = argMap.get("scriptdir");
-        if (p != null) {
-            File scriptdir = new File(p);
-            if (scriptdir != null && scriptdir.isDirectory()) {
-                if (isDebug()) debugPrint("found scriptdir: " + scriptdir.getAbsolutePath());
-                File[] files = scriptdir.listFiles();
-                if (files != null) {
-                    for (File file : files) {
-                       loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
-                    }
-                }
-            }
-        }
     }
 
     // This is really a *private* interface to Glassfish monitoring.
