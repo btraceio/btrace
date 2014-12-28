@@ -50,20 +50,23 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         private long carryOver = 0L;
         private final int defaultBufferSize;
 
+        private final Map<String, Integer> indexMap = new HashMap<String, Integer>();
+        private int lastIndex = 0;
+
         public MethodInvocationRecorder(int expectedBlockCnt) {
             defaultBufferSize = expectedBlockCnt * 10;
             measuredSize = defaultBufferSize;
             measured = new Record[measuredSize];
         }
 
-        private synchronized void recordEntry(String blockName) {
+        private void recordEntry(String blockName) {
             Record r = new Record(blockName);
             addMeasured(r);
             push(r);
             carryOver = 0L; // clear the carryOver; not 2 subsequent calls to recordExit
         }
 
-        private synchronized void recordExit(String blockName, long duration) {
+        private void recordExit(String blockName, long duration) {
             Record r = pop();
             if (r == null) {
                 r = new Record(blockName);
@@ -91,27 +94,23 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
 
         private Record[] getRecords(boolean reset) {
             Record[] recs = null;
-            synchronized(this) {
-                // compact the collected data
-                int stopPtr = compactMeasured();
-                recs = new Record[stopPtr];
-                // copy the record array
-                System.arraycopy(measured, 0, recs, 0, stopPtr);
-                // call reset if requested
-                if (reset) reset();
-
-                // detach the real records so they don't change as the measuring goes on
-                for(int i=0;i<recs.length;i++) {
-                    recs[i] = recs[i].duplicate();
-                }
-                return recs;
+            // compact the collected data
+            int stopPtr = compactMeasured();
+            recs = new Record[stopPtr];
+            // copy and detach the record array
+            for(int i=0;i<recs.length;i++) {
+                recs[i] = measured[i].duplicate();
             }
+            // call reset if requested
+            if (reset) reset();
+
+            return recs;
         }
 
         private void push(Record r) {
             if (stackPtr > stackBndr) {
-                stackSize *= 1.5;
-                stackBndr *= 1.5;
+                stackSize = (stackSize * 3) >> 1;
+                stackBndr = (stackBndr * 3) >> 1;
                 Record[] newStack = new Record[stackSize];
                 System.arraycopy(stackArr, 0, newStack, 0, stackPtr + 1);
                 stackArr = newStack;
@@ -139,7 +138,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
             measured[measuredPtr++] = r;
         }
 
-        private synchronized void reset() {
+        private void reset() {
             Record[] newMeasured = new Record[defaultBufferSize + stackPtr + 1];
             if (stackPtr > -1) {
                 System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
@@ -150,9 +149,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         }
 
         private int compactMeasured() {
-            Map<String, Integer> indexMap = new HashMap<String, Integer>();
-            int lastIndex = 0;
-            for(int i=0;i<measuredPtr;i++) {
+            for(int i=lastIndex;i<measuredPtr;i++) {
                 Record m = measured[i];
                 if (!m.onStack) {
                     Integer newIndex = indexMap.get(m.blockName);
@@ -169,18 +166,21 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                         mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
                         mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
                         mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
-                        for(int j=0;j<stackPtr;j++) {
-                            if (stackArr[j] == m) { // if the old ref is kept on stack
-                                stackArr[j] = mr; // replace it with the compacted ref
-                            }
-                        }
+                        m.referring = mr;
                     }
                 }
             }
+            for(int j=0;j<stackPtr;j++) {
+                // if the old ref is kept on stack replace it with the compacted ref
+                Record mr = stackArr[j].referring;
+                if (mr != null) {
+                    stackArr[j] = mr;
+                }
+            }
             if ((lastIndex + stackPtr + 1) == measuredSize) {
-                int newMeasuredSize = (int)(measuredSize * 1.25) + (stackPtr + 1); // make room for the methods on the stack
+                int newMeasuredSize = ((int)(measuredSize * 5) >> 2) + (stackPtr + 1); // make room for the methods on the stack
                 if (newMeasuredSize == measuredSize) {
-                    newMeasuredSize = measuredSize * 2 + (stackPtr + 1); // make room for the methods on the stack
+                    newMeasuredSize = (measuredSize << 2) + (stackPtr + 1); // make room for the methods on the stack
                 }
                 Record[] newMeasured = new Record[newMeasuredSize];
                 System.arraycopy(measured, 0, newMeasured, 0, lastIndex); // copy the compacted values
@@ -261,7 +261,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                 if (id == null) {
                     id = mergedEntries++;
                     if (mergedEntries > mergedCapacity) {
-                        mergedCapacity = (int)((mergedEntries + 1) * 1.25);
+                        mergedCapacity = ((int)((mergedEntries + 1) * 5) >> 2);
                         Record[] newRecs = new Record[mergedCapacity];
                         System.arraycopy(mergedRecords, 0, newRecs, 0, mergedEntries - 1);
                         mergedRecords = newRecs;
