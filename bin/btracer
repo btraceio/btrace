@@ -8,8 +8,81 @@ if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ] ; then
   BTRACE_HOME=`cd "$BTRACE_HOME" && pwd`
 fi
 
+usage() {
+  echo "btracer <options> <compiled script> <java args>"
+  echo "Options:"
+  echo "    -v\t\tRun in verbose mode"
+  echo "    -u\t\tRun in unsafe mode"
+  echo "    -p <port>\tBTrace agent server port"
+  echo "    -o <file>\tThe path to a file the btrace agent will store its output"
+  echo "    -d <path>\tDump modified classes to the provided location"
+  echo "    -pd <path>\tSearch for the probe XML descriptors here"
+  echo "    --noserver\tDon't start the socket server"
+  echo "    --stdout\tRedirect the btrace output to stdout instead of writing it to an arbitrary file"
+  echo "    -bcp <cp>\tAppend to bootstrap class path"
+  echo "    -scp <cp>\tAppend to system class path"
+  echo "    -h\t\tThis message"
+  exit 0
+}
+
+if [ $# -eq 0 ]
+then
+  usage
+fi
+
+OPTIONS=
+
+while [ true ]
+do
+  case $1 in
+    -v)
+      OPTIONS="debug=true,$OPTIONS"
+      ;;
+    -u)
+      OPTIONS="unsafe=true,$OPTIONS"
+      ;;
+    -p)
+      OPTIONS="port=$2,$OPTIONS"
+      shift
+      ;;
+    -d)
+      OPTIONS="dumpClasses=true,dumpDir=$2,$OPTIONS"
+      shift
+      ;;
+    -o)
+      OPTIONS="scriptOutputFile=$2,$OPTIONS"
+      shift
+      ;;
+    -pd)
+      OPTIONS="probeDescPath=$2,$OPTIONS"
+      shift
+      ;;
+    -bcp)
+      OPTIONS="bootClassPath=$2,$OPTIONS"
+      shift
+      ;;
+    -scp)
+      OPTIONS="systemClassPath=$2,$OPTIONS"
+      shift
+      ;;
+    --noserver)
+      OPTIONS="noServer=true,$OPTIONS"
+      ;;
+    --stdout)
+      OPTIONS="stdout=true,$OPTIONS"
+      ;;
+    -h)
+      usage
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
+
 if [ -f "${BTRACE_HOME}/build/btrace-agent.jar" ] ; then
-    java -Xshare:off -javaagent:${BTRACE_HOME}/build/btrace-agent.jar=dumpClasses=false,debug=false,unsafe=false,probeDescPath=.,noServer=true,script=$1 $2 $3 $4 $5 $6 $7 $8 $9
+    java -Xshare:off -javaagent:${BTRACE_HOME}/build/btrace-agent.jar=$OPTIONS,script=$1 $2 $3 $4 $5 $6 $7 $8 $9
 else
     echo "Please set BTRACE_HOME before running this script"
 fi

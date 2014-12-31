@@ -47,12 +47,12 @@ import com.sun.btrace.util.Messages;
  */
 public final class Main {
     public static volatile boolean exiting;
-    public static final boolean DEBUG;
+    private static boolean DEBUG;
+    private static boolean UNSAFE;
+    private static  boolean DUMP_CLASSES;
+    private static String DUMP_DIR;
+    private static String PROBE_DESC_PATH;
     public static final boolean TRACK_RETRANSFORM;
-    public static final boolean UNSAFE;
-    public static final boolean DUMP_CLASSES;
-    public static final String DUMP_DIR;
-    public static final String PROBE_DESC_PATH;
     public static final int BTRACE_DEFAULT_PORT = 2020;
     
     private static final Console con;
@@ -89,6 +89,13 @@ public final class Main {
         boolean classpathDefined = false;
         boolean includePathDefined = false;
 
+        // scan for "-v" to set DEBUG mode before anything interesting happens
+        for(String arg : args) {
+            if (arg.equals("-v")) {
+                DEBUG = true;
+                break;
+            }
+        }
         for (;;) {
             if (args[count].charAt(0) == '-') {
                 if (args.length <= count+1) {
@@ -102,6 +109,16 @@ public final class Main {
                         usage();
                     }
                     portDefined = true;
+                } else if (args[count].equals("-u")) {
+                    UNSAFE = true;
+                    if (isDebug()) debugPrint("btrace unsafe mode is set");
+                } else if (args[count].equals("-d")) {
+                    DUMP_CLASSES = true;
+                    DUMP_DIR = args[++count];
+                    if (isDebug()) debugPrint("dumpDir is " + DUMP_DIR);
+                } else if (args[count].equals("-pd")) {
+                    PROBE_DESC_PATH = args[++count];
+                    if (isDebug()) debugPrint("probeDescDir is " + PROBE_DESC_PATH);
                 } else if ((args[count].equals("-cp") ||
                     args[count].equals("-classpath"))
                     && !classpathDefined) {
@@ -112,6 +129,8 @@ public final class Main {
                     includePath = args[++count];
                     if (isDebug()) debugPrint("accepting include path " + includePath);
                     includePathDefined = true;
+                } else if (args[count].equals("-v")) {
+                    // already processed
                 } else {
                     usage();
                 }
