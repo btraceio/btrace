@@ -9,7 +9,7 @@
     <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/asm/signature/** **/asm/tree/** **/asm/util/** **/asm/xml/** **/aggregation/* **/compiler/* **/client/* **/comm/* com/sun/btrace/api/**/* com/sun/btrace/spi/**/* **/instr/** **/META-INF/*"/>
     <property name="boot.excludes" value="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/**/* **/asm/** com/sun/btrace/api/**/* com/sun/btrace/spi/**/*"/>
     <property name="client.excludes" value="**/runtime/* **/agent/* **/util/TimeStamp* **/util/MethodId **/util/SamplingSupport **/util/templates/**/* **/instr/** **/META-INF/*"/>
-
+    
     <target name="prepare" depends="load.properties">
         <mkdir dir="${classes.dir}"/>
         <mkdir dir="${javadoc.dir}"/>
@@ -244,6 +244,9 @@
         </javac>
     </target>
     <target name="compile" depends="compile-src, compile-dtrace" description="Compiles the sources, resources and javadocs">
+        <tstamp>
+            <format property="build.date" pattern="YYYYMMdd"/>
+        </tstamp>
         <copy todir="${classes.dir}/com/sun/btrace/resources">
             <fileset dir="${share.src.dir}/com/sun/btrace/resources/"/>
         </copy>
@@ -253,6 +256,8 @@
         <copy todir="${classes.dir}/com/sun/btrace/annotations">
             <fileset file="${share.src.dir}/com/sun/btrace/annotations/jaxb.index"/>
         </copy>
+        <echo>${build.date}</echo>
+        <replace file="${classes.dir}/com/sun/btrace/resources/messages.properties" value="${release.version} (${build.date})" token="{btrace.version}"/>
     </target>
     <target name="javadoc" depends="jar,clean-docs" description="Generates javadocs">
         <javadoc destdir="${javadoc.dir}">
