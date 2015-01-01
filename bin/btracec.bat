@@ -9,6 +9,10 @@ set DEFAULT_BTRACE_HOME=
 if not exist "%BTRACE_HOME%\build\btrace-client.jar" goto noBTraceHome
 
 if "%JAVA_HOME%" == "" goto noJavaHome
+  if "%1" == "--version" (
+    %JAVA_HOME%\bin\java -jar %BTRACE_HOME%/build/btrace-client.jar com.sun.btrace.Main --version
+    goto end
+  )
   "%JAVA_HOME%/bin/java" -cp "%BTRACE_HOME%/build/btrace-client.jar;%JAVA_HOME%/lib/tools.jar" com.sun.btrace.compiler.Compiler %*
   goto end
 :noJavaHome

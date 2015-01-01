@@ -54,7 +54,7 @@ public final class Main {
     private static String PROBE_DESC_PATH;
     public static final boolean TRACK_RETRANSFORM;
     public static final int BTRACE_DEFAULT_PORT = 2020;
-    
+
     private static final Console con;
     private static final PrintWriter out;
     static {
@@ -74,7 +74,7 @@ public final class Main {
         con = System.console();
         out = (con != null)? con.writer() : new PrintWriter(System.out);
     }
-    
+
     public static void main(String[] args) {
         if (args.length < 2) {
             usage();
@@ -83,24 +83,28 @@ public final class Main {
         int port = BTRACE_DEFAULT_PORT;
         String classPath = ".";
         String includePath = null;
-        
+
         int count = 0;
         boolean portDefined = false;
         boolean classpathDefined = false;
         boolean includePathDefined = false;
 
         // scan for "-v" to set DEBUG mode before anything interesting happens
+        // when "--version" is specified just print the version and exit
         for(String arg : args) {
             if (arg.equals("-v")) {
                 DEBUG = true;
                 break;
+            } else if (arg.equals("--version")) {
+                System.out.println(Messages.get("btrace.version"));
+                return;
             }
         }
         for (;;) {
             if (args[count].charAt(0) == '-') {
                 if (args.length <= count+1) {
                     usage();
-                }  
+                }
                 if (args[count].equals("-p") && !portDefined) {
                     try {
                         port = Integer.parseInt(args[++count]);
@@ -163,13 +167,13 @@ public final class Main {
         }
 
         try {
-            Client client = new Client(port, PROBE_DESC_PATH, 
+            Client client = new Client(port, PROBE_DESC_PATH,
                 DEBUG, TRACK_RETRANSFORM, UNSAFE, DUMP_CLASSES, DUMP_DIR);
             if (! new File(fileName).exists()) {
                 errorExit("File not found: " + fileName, 1);
             }
             byte[] code = client.compile(fileName, classPath, includePath);
-            if (code == null) { 
+            if (code == null) {
                 errorExit("BTrace compilation failed", 1);
             }
             client.attach(pid);
@@ -225,8 +229,8 @@ public final class Main {
     }
 
     private static void registerSignalHandler(final Client client) {
-        if (isDebug()) debugPrint("registering signal handler for SIGINT");            
-        Signal.handle(new Signal("INT"), 
+        if (isDebug()) debugPrint("registering signal handler for SIGINT");
+        Signal.handle(new Signal("INT"),
             new SignalHandler() {
                 public void handle(Signal sig) {
                     try {
@@ -238,7 +242,7 @@ public final class Main {
                         if (option == null) {
                             return;
                         }
-                        if (option.equals("1")) {                            
+                        if (option.equals("1")) {
                             System.exit(0);
                         } else if (option.equals("2")) {
                             if (isDebug()) debugPrint("sending event command");
