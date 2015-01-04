@@ -31,6 +31,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Implementation of {@linkplain Profiler}
@@ -38,6 +40,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class MethodInvocationProfiler extends Profiler implements Profiler.MBeanValueProvider {
     private static class MethodInvocationRecorder {
+        private final ReadWriteLock measureLock = new ReentrantReadWriteLock();
         private int stackSize = 200;
         private int stackPtr = -1;
         private int stackBndr = 150;
@@ -51,7 +54,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         private final int defaultBufferSize;
 
         private final Map<String, Integer> indexMap = new HashMap<String, Integer>();
-        private int lastIndex = 0;
+        private volatile int lastIndex = 0;
 
         public MethodInvocationRecorder(int expectedBlockCnt) {
             defaultBufferSize = expectedBlockCnt * 10;
@@ -95,16 +98,21 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         private Record[] getRecords(boolean reset) {
             Record[] recs = null;
             // compact the collected data
-            int stopPtr = compactMeasured();
-            recs = new Record[stopPtr];
-            // copy and detach the record array
-            for(int i=0;i<recs.length;i++) {
-                recs[i] = measured[i].duplicate();
-            }
-            // call reset if requested
-            if (reset) reset();
+            compactMeasured();
+            try {
+                measureLock.readLock().lock();
+                recs = new Record[lastIndex];
+                // copy and detach the record array
+                for(int i=0;i<recs.length;i++) {
+                    recs[i] = measured[i].duplicate();
+                }
+                // call reset if requested
+                if (reset) reset();
 
-            return recs;
+                return recs;
+            } finally {
+                measureLock.readLock().unlock();
+            }
         }
 
         private void push(Record r) {
@@ -139,58 +147,69 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         }
 
         private void reset() {
-            Record[] newMeasured = new Record[defaultBufferSize + stackPtr + 1];
-            if (stackPtr > -1) {
-                System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
+            try {
+                measureLock.writeLock().lock();
+                Record[] newMeasured = new Record[defaultBufferSize + stackPtr + 1];
+                if (stackPtr > -1) {
+                    System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
+                }
+                measuredPtr = stackPtr + 1;
+                measured = newMeasured;
+                measuredSize = measured.length;
+            } finally {
+                measureLock.writeLock().unlock();
             }
-            measuredPtr = stackPtr + 1;
-            measured = newMeasured;
-            measuredSize = measured.length;
         }
 
-        private int compactMeasured() {
-            for(int i=lastIndex;i<measuredPtr;i++) {
-                Record m = measured[i];
-                if (!m.onStack) {
-                    Integer newIndex = indexMap.get(m.blockName);
-                    if (newIndex == null) {
-                        newIndex = lastIndex++;
-                        indexMap.put(m.blockName, newIndex);
-                        measured[newIndex] = m;
-                    } else {
-                        Record mr = measured[newIndex];
-                        mr.selfTime += m.selfTime;
-                        mr.wallTime += m.wallTime;
-                        mr.invocations++;
-                        mr.selfTimeMax = m.selfTime > mr.selfTimeMax ? m.selfTime : mr.selfTimeMax;
-                        mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
-                        mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
-                        mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
-                        m.referring = mr;
+        private void compactMeasured() {
+            try {
+                measureLock.writeLock().lock();
+                int lastMeasurePtr = lastIndex;
+                for(int i=lastIndex;i<measuredPtr;i++) {
+                    Record m = measured[i];
+                    if (!m.onStack) {
+                        Integer newIndex = indexMap.get(m.blockName);
+                        if (newIndex == null) {
+                            newIndex = lastMeasurePtr++;
+                            indexMap.put(m.blockName, newIndex);
+                            measured[newIndex] = m;
+                        } else {
+                            Record mr = measured[newIndex];
+                            mr.selfTime += m.selfTime;
+                            mr.wallTime += m.wallTime;
+                            mr.invocations++;
+                            mr.selfTimeMax = m.selfTime > mr.selfTimeMax ? m.selfTime : mr.selfTimeMax;
+                            mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
+                            mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
+                            mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
+                            m.referring = mr;
+                        }
                     }
                 }
-            }
-            for(int j=0;j<stackPtr;j++) {
-                // if the old ref is kept on stack replace it with the compacted ref
-                Record mr = stackArr[j].referring;
-                if (mr != null) {
-                    stackArr[j] = mr;
+                for(int j=0;j<stackPtr;j++) {
+                    // if the old ref is kept on stack replace it with the compacted ref
+                    Record mr = stackArr[j].referring;
+                    if (mr != null) {
+                        stackArr[j] = mr;
+                    }
                 }
-            }
-            if ((lastIndex + stackPtr + 1) == measuredSize) {
-                int newMeasuredSize = ((int)(measuredSize * 5) >> 2) + (stackPtr + 1); // make room for the methods on the stack
-                if (newMeasuredSize == measuredSize) {
-                    newMeasuredSize = (measuredSize << 2) + (stackPtr + 1); // make room for the methods on the stack
+                if ((lastMeasurePtr + stackPtr + 1) == measuredSize) {
+                    int newMeasuredSize = ((int)(measuredSize * 5) >> 2) + (stackPtr + 1); // make room for the methods on the stack
+                    if (newMeasuredSize == measuredSize) {
+                        newMeasuredSize = (measuredSize << 2) + (stackPtr + 1); // make room for the methods on the stack
+                    }
+                    Record[] newMeasured = new Record[newMeasuredSize];
+                    System.arraycopy(measured, 0, newMeasured, 0, lastMeasurePtr); // copy the compacted values
+                    measured = newMeasured;
+                    measuredSize = newMeasuredSize;
                 }
-                Record[] newMeasured = new Record[newMeasuredSize];
-                System.arraycopy(measured, 0, newMeasured, 0, lastIndex); // copy the compacted values
-                measured = newMeasured;
-                measuredSize = newMeasuredSize;
-            }
-            System.arraycopy(stackArr, 0, measured, lastIndex, stackPtr + 1); // add the not processed methods on the stack
-            measuredPtr = lastIndex + stackPtr + 1; // move the pointer behind the methods on the stack
+                System.arraycopy(stackArr, 0, measured, lastMeasurePtr, stackPtr + 1); // add the not processed methods on the stack
+                measuredPtr = lastMeasurePtr + stackPtr + 1; // move the pointer behind the methods on the stack
 
-            return lastIndex;
+                lastIndex = lastMeasurePtr;
+            } finally {
+                measureLock.writeLock().unlock();
+            }
         }
     }
 
