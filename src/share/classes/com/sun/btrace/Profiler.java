@@ -62,6 +62,7 @@ public abstract class Profiler {
         public long selfTime = 0, selfTimeMax = 0, selfTimeMin = Long.MAX_VALUE;
         public long invocations = 1;
         public boolean onStack = false;
+        public Record referring = null;
 
         public Record(String blockName) {
             this.blockName = blockName;

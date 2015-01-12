@@ -31,6 +31,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Implementation of {@linkplain Profiler}
@@ -38,6 +40,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class MethodInvocationProfiler extends Profiler implements Profiler.MBeanValueProvider {
     private static class MethodInvocationRecorder {
+        private final ReadWriteLock measureLock = new ReentrantReadWriteLock();
         private int stackSize = 200;
         private int stackPtr = -1;
         private int stackBndr = 150;
@@ -50,20 +53,23 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         private long carryOver = 0L;
         private final int defaultBufferSize;
 
+        private final Map<String, Integer> indexMap = new HashMap<String, Integer>();
+        private volatile int lastIndex = 0;
+
         public MethodInvocationRecorder(int expectedBlockCnt) {
             defaultBufferSize = expectedBlockCnt * 10;
             measuredSize = defaultBufferSize;
             measured = new Record[measuredSize];
         }
 
-        private synchronized void recordEntry(String blockName) {
+        private void recordEntry(String blockName) {
             Record r = new Record(blockName);
             addMeasured(r);
             push(r);
             carryOver = 0L; // clear the carryOver; not 2 subsequent calls to recordExit
         }
 
-        private synchronized void recordExit(String blockName, long duration) {
+        private void recordExit(String blockName, long duration) {
             Record r = pop();
             if (r == null) {
                 r = new Record(blockName);
@@ -91,27 +97,28 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
 
         private Record[] getRecords(boolean reset) {
             Record[] recs = null;
-            synchronized(this) {
-                // compact the collected data
-                int stopPtr = compactMeasured();
-                recs = new Record[stopPtr];
-                // copy the record array
-                System.arraycopy(measured, 0, recs, 0, stopPtr);
+            // compact the collected data
+            compactMeasured();
+            try {
+                measureLock.readLock().lock();
+                recs = new Record[lastIndex];
+                // copy and detach the record array
+                for(int i=0;i<recs.length;i++) {
+                    recs[i] = measured[i].duplicate();
+                }
                 // call reset if requested
                 if (reset) reset();
 
-                // detach the real records so they don't change as the measuring goes on
-                for(int i=0;i<recs.length;i++) {
-                    recs[i] = recs[i].duplicate();
-                }
                 return recs;
+            } finally {
+                measureLock.readLock().unlock();
             }
         }
 
         private void push(Record r) {
             if (stackPtr > stackBndr) {
-                stackSize *= 1.5;
-                stackBndr *= 1.5;
+                stackSize = (stackSize * 3) >> 1;
+                stackBndr = (stackBndr * 3) >> 1;
                 Record[] newStack = new Record[stackSize];
                 System.arraycopy(stackArr, 0, newStack, 0, stackPtr + 1);
                 stackArr = newStack;
@@ -139,58 +146,70 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
             measured[measuredPtr++] = r;
         }
 
-        private synchronized void reset() {
-            Record[] newMeasured = new Record[defaultBufferSize + stackPtr + 1];
-            if (stackPtr > -1) {
-                System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
+        private void reset() {
+            try {
+                measureLock.writeLock().lock();
+                Record[] newMeasured = new Record[defaultBufferSize + stackPtr + 1];
+                if (stackPtr > -1) {
+                    System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
+                }
+                measuredPtr = stackPtr + 1;
+                measured = newMeasured;
+                measuredSize = measured.length;
+            } finally {
+                measureLock.writeLock().unlock();
             }
-            measuredPtr = stackPtr + 1;
-            measured = newMeasured;
-            measuredSize = measured.length;
         }
 
-        private int compactMeasured() {
-            Map<String, Integer> indexMap = new HashMap<String, Integer>();
-            int lastIndex = 0;
-            for(int i=0;i<measuredPtr;i++) {
-                Record m = measured[i];
-                if (!m.onStack) {
-                    Integer newIndex = indexMap.get(m.blockName);
-                    if (newIndex == null) {
-                        newIndex = lastIndex++;
-                        indexMap.put(m.blockName, newIndex);
-                        measured[newIndex] = m;
-                    } else {
-                        Record mr = measured[newIndex];
-                        mr.selfTime += m.selfTime;
-                        mr.wallTime += m.wallTime;
-                        mr.invocations++;
-                        mr.selfTimeMax = m.selfTime > mr.selfTimeMax ? m.selfTime : mr.selfTimeMax;
-                        mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
-                        mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
-                        mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
-                        for(int j=0;j<stackPtr;j++) {
-                            if (stackArr[j] == m) { // if the old ref is kept on stack
-                                stackArr[j] = mr; // replace it with the compacted ref
-                            }
+        private void compactMeasured() {
+            try {
+                measureLock.writeLock().lock();
+                int lastMeasurePtr = lastIndex;
+                for(int i=lastIndex;i<measuredPtr;i++) {
+                    Record m = measured[i];
+                    if (!m.onStack) {
+                        Integer newIndex = indexMap.get(m.blockName);
+                        if (newIndex == null) {
+                            newIndex = lastMeasurePtr++;
+                            indexMap.put(m.blockName, newIndex);
+                            measured[newIndex] = m;
+                        } else {
+                            Record mr = measured[newIndex];
+                            mr.selfTime += m.selfTime;
+                            mr.wallTime += m.wallTime;
+                            mr.invocations++;
+                            mr.selfTimeMax = m.selfTime > mr.selfTimeMax ? m.selfTime : mr.selfTimeMax;
+                            mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
+                            mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
+                            mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
+                            m.referring = mr;
                         }
                     }
                 }
-            }
-            if ((lastIndex + stackPtr + 1) == measuredSize) {
-                int newMeasuredSize = (int)(measuredSize * 1.25) + (stackPtr + 1); // make room for the methods on the stack
-                if (newMeasuredSize == measuredSize) {
-                    newMeasuredSize = measuredSize * 2 + (stackPtr + 1); // make room for the methods on the stack
+                for(int j=0;j<stackPtr;j++) {
+                    // if the old ref is kept on stack replace it with the compacted ref
+                    Record mr = stackArr[j].referring;
+                    if (mr != null) {
+                        stackArr[j] = mr;
+                    }
                 }
-                Record[] newMeasured = new Record[newMeasuredSize];
-                System.arraycopy(measured, 0, newMeasured, 0, lastIndex); // copy the compacted values
-                measured = newMeasured;
-                measuredSize = newMeasuredSize;
-            }
-            System.arraycopy(stackArr, 0, measured, lastIndex, stackPtr + 1); // add the not processed methods on the stack
-            measuredPtr = lastIndex + stackPtr + 1; // move the pointer behind the methods on the stack
+                if ((lastMeasurePtr + stackPtr + 1) == measuredSize) {
+                    int newMeasuredSize = ((int)(measuredSize * 5) >> 2) + (stackPtr + 1); // make room for the methods on the stack
+                    if (newMeasuredSize == measuredSize) {
+                        newMeasuredSize = (measuredSize << 2) + (stackPtr + 1); // make room for the methods on the stack
+                    }
+                    Record[] newMeasured = new Record[newMeasuredSize];
+                    System.arraycopy(measured, 0, newMeasured, 0, lastMeasurePtr); // copy the compacted values
+                    measured = newMeasured;
+                    measuredSize = newMeasuredSize;
+                }
+                System.arraycopy(stackArr, 0, measured, lastMeasurePtr, stackPtr + 1); // add the not processed methods on the stack
+                measuredPtr = lastMeasurePtr + stackPtr + 1; // move the pointer behind the methods on the stack
 
-            return lastIndex;
+                lastIndex = lastMeasurePtr;
+            } finally {
+                measureLock.writeLock().unlock();
+            }
         }
     }
 
@@ -261,7 +280,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
                 if (id == null) {
                     id = mergedEntries++;
                     if (mergedEntries > mergedCapacity) {
-                        mergedCapacity = (int)((mergedEntries + 1) * 1.25);
+                        mergedCapacity = ((int)((mergedEntries + 1) * 5) >> 2);
                         Record[] newRecs = new Record[mergedCapacity];
                         System.arraycopy(mergedRecords, 0, newRecs, 0, mergedEntries - 1);
                         mergedRecords = newRecs;
