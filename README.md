@@ -1,4 +1,4 @@
-btrace
+btrace [![Build Status](https://travis-ci.org/jbachorik/btrace.svg?branch=master)](https://travis-ci.org/jbachorik/btrace)
 ======
 
 A safe, dynamic tracing tool for the Java platform
@@ -53,10 +53,6 @@ These mailing lists are hosted at **http://librelist.com**
 * **btrace.users@librelist.com**
 * **btrace.dev@librelist.com**
 * **btrace.commits@librelist.com**
-
-## CI
-
-A continuous integration is being run on [Travis CI](https://travis-ci.org/jbachorik/btrace)
 
 ## Contributing - !!! Important !!!
 
