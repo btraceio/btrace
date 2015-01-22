@@ -22,7 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package com.sun.btrace.profiling;
 
 import com.sun.btrace.Profiler;
@@ -32,6 +31,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -81,7 +81,7 @@ public class MethodInvocationProfilerTest {
     @Test
     public void testOneRecord() {
         System.out.println("testOneRecord()");
-        Record[] expected = new Record[] {new Record("r")};
+        Record[] expected = new Record[]{new Record("r")};
         expected[0].invocations = 1;
         expected[0].selfTime = 1000;
         expected[0].wallTime = 1000;
@@ -104,7 +104,7 @@ public class MethodInvocationProfilerTest {
         expected[1].selfTime = 200;
         expected[1].wallTime = 200;
 
-        for(int i=0;i<20;i++) {
+        for (int i = 0; i < 20; i++) {
             p.recordEntry("r1");
             p.recordExit("r1", 10);
             p.recordEntry("r2");
@@ -135,7 +135,7 @@ public class MethodInvocationProfilerTest {
         Thread t1 = new Thread(new Runnable() {
             public void run() {
                 ph.arriveAndAwaitAdvance();
-                for(int i=0;i<20;i++) {
+                for (int i = 0; i < 20; i++) {
                     p.recordEntry("r1");
                     p.recordExit("r1", 10);
                 }
@@ -145,7 +145,7 @@ public class MethodInvocationProfilerTest {
         Thread t2 = new Thread(new Runnable() {
             public void run() {
                 ph.arriveAndAwaitAdvance();
-                for(int i=0;i<20;i++) {
+                for (int i = 0; i < 20; i++) {
                     p.recordEntry("r2");
                     p.recordExit("r2", 10);
                 }
@@ -159,14 +159,14 @@ public class MethodInvocationProfilerTest {
         t2.join();
 
         Snapshot s = p.snapshot();
-        for(Record r : s.total) {
+        for (Record r : s.total) {
             if (!expected.remove(r)) {
                 fail("Unexpected record: " + r);
             }
         }
         if (!expected.isEmpty()) {
             System.err.println("The following records were not matched:");
-            for(Record r : expected) {
+            for (Record r : expected) {
                 System.err.println(r);
             }
             fail();
@@ -185,7 +185,7 @@ public class MethodInvocationProfilerTest {
         expected[1].selfTime = 2000;
         expected[1].wallTime = 2000;
 
-        for(int i=0;i<200;i++) {
+        for (int i = 0; i < 200; i++) {
             p.recordEntry("r1");
             p.recordExit("r1", 10);
             p.recordEntry("r2");
@@ -212,12 +212,11 @@ public class MethodInvocationProfilerTest {
         expected.add(r1);
         expected.add(r2);
 
-
         final Phaser ph = new Phaser(2);
         Thread t1 = new Thread(new Runnable() {
             public void run() {
                 ph.arriveAndAwaitAdvance();
-                for(int i=0;i<200;i++) {
+                for (int i = 0; i < 200; i++) {
                     p.recordEntry("r1");
                     p.recordExit("r1", 10);
                 }
@@ -227,7 +226,7 @@ public class MethodInvocationProfilerTest {
         Thread t2 = new Thread(new Runnable() {
             public void run() {
                 ph.arriveAndAwaitAdvance();
-                for(int i=0;i<200;i++) {
+                for (int i = 0; i < 200; i++) {
                     p.recordEntry("r2");
                     p.recordExit("r2", 10);
                 }
@@ -242,14 +241,14 @@ public class MethodInvocationProfilerTest {
 
         Snapshot s = p.snapshot();
 
-        for(Record r : s.total) {
+        for (Record r : s.total) {
             if (!expected.remove(r)) {
                 fail("Unexpected record: " + r);
             }
         }
         if (!expected.isEmpty()) {
             System.err.println("The following records were not matched:");
-            for(Record r : expected) {
+            for (Record r : expected) {
                 System.err.println(r);
             }
             fail();
@@ -268,7 +267,7 @@ public class MethodInvocationProfilerTest {
         expected[1].selfTime = 200;
         expected[1].wallTime = 200;
 
-        for(int i=0;i<20;i++) {
+        for (int i = 0; i < 20; i++) {
             p.recordEntry("r1");
             p.recordEntry("r2");
             p.recordExit("r2", 10);
@@ -290,7 +289,7 @@ public class MethodInvocationProfilerTest {
         expected[1].selfTime = 2000;
         expected[1].wallTime = 2000;
 
-        for(int i=0;i<200;i++) {
+        for (int i = 0; i < 200; i++) {
             p.recordEntry("r1");
             p.recordEntry("r2");
             p.recordExit("r2", 10);
@@ -303,7 +302,7 @@ public class MethodInvocationProfilerTest {
     @Test
     public void testSnapshotWithMethodsOnStackNoCompacting() {
         System.out.println("testSnapshotWithMethodsOnStackNoCompacting()");
-        Record[] expected = new Record[] {new Record("r3")};
+        Record[] expected = new Record[]{new Record("r3")};
 
         expected[0].invocations = 1;
         expected[0].selfTime = 10;
@@ -329,7 +328,7 @@ public class MethodInvocationProfilerTest {
         expected[1].selfTime = 130;
         expected[1].wallTime = 130;
 
-        for(int i=0;i<12;i++) {
+        for (int i = 0; i < 12; i++) {
             p.recordEntry("r1");
             p.recordEntry("r2");
             p.recordExit("r2", 10);
@@ -394,12 +393,11 @@ public class MethodInvocationProfilerTest {
     }
 
     @Test
-    public void testSnapshotResetMultiThread() throws Exception {
+    public void testSnapshotMultiThread() throws Exception {
         System.out.println("testSnapshotResetMultiThread()");
 
         // this is just a sanity test to make sure that invoking "reset()"
         // will not throw any exceptions
-
         Record[] expected = new Record[]{new Record("r1")};
         expected[0].invocations = 1;
         expected[0].selfTime = 10;
@@ -410,44 +408,24 @@ public class MethodInvocationProfilerTest {
         Thread t = new Thread(new Runnable() {
             public void run() {
                 try {
-                    while(!finished.get()) {
+                    while (!finished.get()) {
                         p.recordEntry("r1");
                         p.recordExit("r1", 10);
                         Thread.sleep(7);
                     }
-                } catch (InterruptedException e) {}
+                } catch (InterruptedException e) {
+                }
             }
         });
         t.start();
 
-        for(int i=0;i<50;i++) {
-            p.reset();
+        for (int i = 0; i < 50; i++) {
+            p.snapshot();
             Thread.sleep(13);
         }
 
         finished.set(true);
 
         t.join();
-    }
-
-    @Test
-    public void testSnapshotResetWithMethodsOnStack() {
-        System.out.println("testSnapshotResetWithMethodsOnStack()");
-
-        Record[] expected = new Record[]{new Record("r1")};
-        expected[0].invocations = 1;
-        expected[0].selfTime = 10;
-        expected[0].wallTime = 20;
-
-        p.recordEntry("r1");
-        p.recordEntry("r2");
-        p.recordExit("r2", 10);
-
-        p.reset();
-
-        p.recordExit("r1", 20);
-
-        Snapshot s = p.snapshot();
-        assertArrayEquals(expected, s.total);
     }
 }

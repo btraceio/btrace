@@ -19,3 +19,4 @@ TEST-*
 make/junit*
 benchmark/target
 junit*
+/btrace-statsd/target/
