@@ -76,10 +76,6 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-        if (args.length < 2) {
-            usage();
-        }
-
         int port = BTRACE_DEFAULT_PORT;
         String classPath = ".";
         String includePath = null;
@@ -100,6 +96,11 @@ public final class Main {
                 return;
             }
         }
+
+        if (args.length < 2) {
+            usage();
+        }
+
         for (;;) {
             if (args[count].charAt(0) == '-') {
                 if (args.length <= count+1) {
