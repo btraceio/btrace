@@ -1,0 +1,35 @@
+#! /bin/sh
+
+if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ] ; then
+  BTRACE_HOME=/usr/lib/btrace
+fi
+
+if [ -f "${BTRACE_HOME}/btrace-client.jar" ] ; then
+    if [ "${JAVA_HOME}" != "" ]; then
+        if [ "$1" = "--version" ]
+        then
+          ${JAVA_HOME}/bin/java -jar ${BTRACE_HOME}/btrace-client.jar com.sun.btrace.Main --version
+          exit 0
+        fi
+        case "`uname`" in
+          Darwin*)
+              if [ -f /System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar ]; then
+                TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
+              else
+                TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
+              fi
+          ;;
+          *)
+              TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
+          ;;
+       esac
+
+        ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/btrace-client.jar:${TOOLS_JAR} com.sun.btrace.compiler.Compiler $*
+    else
+        echo "Please set JAVA_HOME before running this script"
+        exit 1
+    fi
+else
+    echo "Please set BTRACE_HOME before running this script"
+    exit 1
+fi
