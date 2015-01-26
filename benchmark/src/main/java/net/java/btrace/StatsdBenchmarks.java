@@ -25,7 +25,10 @@
 package net.java.btrace;
 
 import com.sun.btrace.profiling.MethodInvocationProfiler;
+import com.timgroup.statsd.NonBlockingStatsDClient;
+import com.timgroup.statsd.StatsDClient;
 import java.util.concurrent.TimeUnit;
+import net.java.btrace.btrace.statsd.StatsdClient;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -50,83 +53,38 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @Fork(1)
 @BenchmarkMode(Mode.AverageTime)
-public class ProfilerBenchmarks {
-    private MethodInvocationProfiler mip1;
-    private MethodInvocationProfiler mip2;
+public class StatsdBenchmarks {
+    private StatsDClient c;
+    private StatsdClient c1;
 
     @Setup
     public void setup() {
-        mip1 = new MethodInvocationProfiler(1);
-        mip2 = new MethodInvocationProfiler(500);
+        c = new NonBlockingStatsDClient("my.prefix", "localhost", 8215);
+        c1 = new StatsdClient();
     }
 
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
     @Threads(1)
-    public void testOneMethodSingleThread() {
-        mip1.recordEntry("a");
-        mip1.recordExit("a", 1);
+    public void testGauge_1() {
+        c.gauge("g1", 10);
     }
 
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
     @Threads(1)
-    public void testTwoMethods01Thread() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
+    public void testGauge_2() {
+        c1.gauge("g1", 10);
     }
 
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(2)
-    public void testTwoMethods02Threads() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
 
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(4)
-    public void testTwoMethods04Threads() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
-
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(8)
-    public void testTwoMethods08Threads() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(16)
-    public void testTwoMethods16Threads() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
 
     public static void main(String[] args) throws Exception {
         Options opt = new OptionsBuilder()
-                .addProfiler(ProfilerFactory.getProfilerByName("gc"))
-                .include(".*" + ProfilerBenchmarks.class.getSimpleName() + ".*test.*")
+                .addProfiler(ProfilerFactory.getProfilerByName("stack"))
+                .include(".*" + StatsdBenchmarks.class.getSimpleName() + ".*test.*")
                 .build();
 
         new Runner(opt).run();

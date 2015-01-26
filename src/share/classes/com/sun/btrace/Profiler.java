@@ -35,15 +35,15 @@ import java.util.List;
  * for high-speed collection of the application execution call tree data.
  * <br/><br/>
  * <note>It is exposable as MBean via {@linkplain Property} annotation</note>
- * 
+ *
  * @since 1.2
- * 
+ *
  * @author Jaroslav Bachorik
  */
 public abstract class Profiler {
     /**
      * Record represents an atomic unit in the application execution call tree
-     * 
+     *
      * @since 1.2
      */
     final public static class Record {
@@ -57,7 +57,6 @@ public abstract class Profiler {
         };
 
         final public String blockName;
-        public long threadId = Thread.currentThread().getId();
         public long wallTime = 0, wallTimeMax = 0, wallTimeMin = Long.MAX_VALUE;
         public long selfTime = 0, selfTimeMax = 0, selfTimeMin = Long.MAX_VALUE;
         public long invocations = 1;
@@ -70,7 +69,6 @@ public abstract class Profiler {
 
         public Record duplicate() {
             Record r = new Record(blockName);
-            r.threadId = threadId;
             r.invocations = invocations;
             r.selfTime = selfTime;
             r.selfTimeMax = selfTimeMax;
@@ -133,7 +131,7 @@ public abstract class Profiler {
      * by the {@linkplain Profiler}
      * <br/><br/>
      * It is created by calling {@linkplain Profiler#snapshot()} method
-     * 
+     *
      * @since 1.2
      */
     final public static class Snapshot {
@@ -208,7 +206,7 @@ public abstract class Profiler {
      * @param duration Invocation duration in nanoseconds
      */
     public abstract void recordExit(String blockName, long duration);
-    
+
     /**
      * Creates an immutable snapshot of the collected profiling data
      * @return Returns the immutable {@linkplain Snapshot} instance
@@ -223,7 +221,7 @@ public abstract class Profiler {
      * @return Returns the immutable {@linkplain Snapshot} instance
      */
     public abstract Snapshot snapshot(boolean reset);
-    
+
     /**
      * Resets all the collected data
      */
