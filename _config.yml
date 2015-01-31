@@ -1,0 +1,31 @@
+name: BTrace::blog
+
+url: http://jbachorik.github.io
+baseurl: /btrace
+description: BTrace - a safe, dynamic tracing tool for the Java platform
+
+source: blog
+
+github: 'jbachorik/btrace'
+gaaccount: 'UA-55468921-2'
+
+disqus: 'yardus'
+comments: true
+
+permalink: /:year/:month/:title
+paginate: 3
+
+highlighter: pygments
+markdown: redcarpet
+redcarpet:
+  extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "tables", "with_toc_data"]
+
+exclude: ['README.md', 'LICENSE']
+
+#defaults:
+#  -
+#    scope:
+#      path: ""      # empty string for all files
+#      type: posts   # limit to posts
+#    values:
+#      is_post: true # automatically set is_post=true for all posts
