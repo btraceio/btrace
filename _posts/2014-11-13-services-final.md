@@ -2,7 +2,7 @@
 layout: post
 title: "BTrace Services (Final Proposal)"
 date: 2014-11-13 20:00:00 +0100
-comments: false
+comments: true
 ---
 
 In my previous [blog post](2014/09/extensible-services) I was sketching up a possible solution to **BTrace** extensibility.
