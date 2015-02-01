@@ -5,6 +5,11 @@ baseurl: /btrace
 description: BTrace - a safe, dynamic tracing tool for the Java platform
 
 source: blog
+destination: blog/_site
+plugins: blog/_plugins
+layouts: blog/_layouts
+datasource: blog/_data
+includes: blog/_includes
 
 github: 'jbachorik/btrace'
 gaaccount: 'UA-55468921-2'
