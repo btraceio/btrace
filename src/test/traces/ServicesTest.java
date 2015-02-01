@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,10 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.ServiceType;
 import com.sun.btrace.services.api.Service;
+import com.sun.btrace.services.impl.Statsd;
 import resources.services.DummySimpleService;
 
 /**
@@ -44,6 +46,9 @@ import resources.services.DummySimpleService;
 public class ServicesTest {
     @Injected(ServiceType.RUNTIME)
     private static DummyRuntimService printer;
+
+    @Injected(value = ServiceType.SIMPLE, factoryMethod = "getInstance")
+    private static Statsd sd;
 
     @OnMethod(clazz = "resources.OnMethodTest", method="args")
     public static void testRuntimeService(String a, long b, String[] c, int[] d) {
@@ -70,5 +75,10 @@ public class ServicesTest {
     public static void testFieldInjection(@ProbeClassName String pcn) {
         printer.doit(10, "hey");
         printer.doit(20, "ho");
+    }
+
+    @OnMethod(clazz = "resources.OnMethodTest", method="noargs$static")
+    public static void testFieldInjectionSingleton(@ProbeMethodName String pmn, @ProbeClassName String pcn) {
+        sd.count(pmn + "." + pcn, 1, "test=yes");
     }
 }

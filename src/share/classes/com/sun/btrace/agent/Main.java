@@ -154,7 +154,7 @@ public final class Main {
         }
 
         startScripts();
-        
+
         String tmp = argMap.get("noServer");
         boolean noServer = tmp != null && !"false".equals(tmp);
         if (noServer) {
@@ -186,7 +186,7 @@ public final class Main {
         String p = argMap.get("stdout");
         boolean traceToStdOut = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("stdout is " + traceToStdOut);
-        
+
         p = argMap.get("script");
         if (p != null) {
             StringTokenizer tokenizer = new StringTokenizer(p, ",");
@@ -212,7 +212,7 @@ public final class Main {
             }
         }
     }
-    
+
     private static void usage() {
         System.out.println(Messages.get("btrace.agent.usage"));
         System.exit(0);
@@ -286,6 +286,18 @@ public final class Main {
                 dumpDir = ".";
             }
             if (isDebug()) debugPrint("dumpDir is " + dumpDir);
+        }
+
+        String statsdDef = argMap.get("statsd");
+        if (statsdDef != null) {
+            String[] parts = statsdDef.split(":");
+            // TODO need a settings registry instead of system properties
+            if (parts.length == 2) {
+                System.setProperty("com.sun.btrace.statsd.host", parts[0]);
+                System.setProperty("com.sun.btrace.statsd.port", parts[1]);
+            } else if (parts.length == 1) {
+                System.setProperty("com.sun.btrace.statsd.host", parts[0]);
+            }
         }
 
         probeDescPath = argMap.get("probeDescPath");

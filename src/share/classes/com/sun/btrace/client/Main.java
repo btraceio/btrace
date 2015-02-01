@@ -84,6 +84,7 @@ public final class Main {
         boolean portDefined = false;
         boolean classpathDefined = false;
         boolean includePathDefined = false;
+        String statsdDef = "";
 
         // scan for "-v" to set DEBUG mode before anything interesting happens
         // when "--version" is specified just print the version and exit
@@ -134,6 +135,8 @@ public final class Main {
                     includePath = args[++count];
                     if (isDebug()) debugPrint("accepting include path " + includePath);
                     includePathDefined = true;
+                } else if (args[count].equals("-statsd")) {
+                    statsdDef = args[++count];
                 } else if (args[count].equals("-v")) {
                     // already processed
                 } else {
@@ -169,7 +172,7 @@ public final class Main {
 
         try {
             Client client = new Client(port, PROBE_DESC_PATH,
-                DEBUG, TRACK_RETRANSFORM, UNSAFE, DUMP_CLASSES, DUMP_DIR);
+                DEBUG, TRACK_RETRANSFORM, UNSAFE, DUMP_CLASSES, DUMP_DIR, statsdDef);
             if (! new File(fileName).exists()) {
                 errorExit("File not found: " + fileName, 1);
             }
