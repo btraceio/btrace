@@ -1,3 +1,0 @@
-[submodule "blog"]
-	path = blog
-	url = https://github.com/jbachorik/btrace-blog.git
