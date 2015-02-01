@@ -9,7 +9,7 @@ source: .
 github: 'jbachorik/btrace'
 gaaccount: 'UA-55468921-2'
 
-disqus: 'yardus'
+disqus: 'btrace'
 comments: true
 
 permalink: /:year/:month/:title
