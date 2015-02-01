@@ -1,0 +1,46 @@
+---
+layout: default
+---
+
+<div class="article">
+    <div class="well">
+        <h1>BTrace - a safe, dynamic tracing tool for the Java platform</h1>
+        <div style="font-size: larger">BTrace is a safe, dynamic tracing tool for the Java platform.</div>
+
+        BTrace can be used to dynamically trace a running Java program 
+        (similar to DTrace for OpenSolaris applications and OS). 
+        BTrace dynamically instruments the classes of the target 
+        application to inject tracing code ("bytecode tracing").
+        {% if site.github != '' %}
+            <a href="https://github.com/{{ site.github }}/wiki">[more]</a>
+        {% endif %}
+    </div>
+</div>
+
+{% for post in paginator.posts %}
+<div class="article">
+    <div class="well">
+        <h1><a href="{{ site.baseurl}}{{ post.url }}">{{ post.date | date: "%b %-d, %Y" }} - {{ post.title }}</a></h1>
+        {% if site.comments == true and post.comments == true and site.disqus != '' %}
+        <p class="author"><a href="{{ site.baseurl }}{{ post.url }}/#disqus_thread">Comments</a></p>
+        {% endif %}
+        <div class="content">
+            {{ post.content }}
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<div class="pagination">
+    {% if paginator.previous_page %}
+    {% if paginator.previous_page == 1 %}
+    <a class="btn btn-default" href="{{ site.baseurl}}/index.html" class="previous">Newer</a>
+    {% else %}
+    <a class="btn btn-default" href="{{ site.baseurl}}/page{{ paginator.previous_page }}" class="previous">Newer</a>
+    {% endif %}
+    {% endif %}
+    <span class="page_number ">Page: {{ paginator.page }} of {{ paginator.total_pages }}</span>
+    {% if paginator.next_page %}
+    <a class="btn btn-default" href="{{ site.baseurl}}/page{{ paginator.next_page }}" class="next">Older</a>
+    {% endif %}
+</div>

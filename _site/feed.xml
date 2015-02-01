@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>BTrace::blog</title>
+        <description>BTrace - a safe, dynamic tracing tool for the Java platform</description>
+        <link>/btracehttp://jbachorik.github.io</link>
+        <atom:link href="/btracehttp://jbachorik.github.io/feed.xml" rel="self" type="application/rss+xml" />
+        
+                <item>
+                        <title>BTrace Services (Final Proposal)</title>
+                        <description>&lt;p&gt;In my previous &lt;a href=&quot;2014/09/extensible-services&quot;&gt;blog post&lt;/a&gt; I was sketching up a possible solution to &lt;strong&gt;BTrace&lt;/strong&gt; extensibility.&lt;/p&gt;
+
+&lt;p&gt;A few experiments with AST and bytecode verifiers later I came up with a relatively easy way to provide the extensibility of the core &lt;strong&gt;BTrace&lt;/strong&gt; functionality by the means of external plugins. Very importantly, introducing external plugins doesn’t incur any additional overhead on top of the one caused by the extension functionality itself.&lt;/p&gt;
+
+&lt;h1 id=&quot;creating-a-new-service&quot;&gt;Creating a New Service&lt;/h1&gt;
+
+&lt;p&gt;Creating a new service is just a matter of extending one of the following two classes&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;com.sun.btrace.services.spi.SimpleService&lt;/li&gt;
+&lt;li&gt;com.sun.btrace.services.spi.RuntimeService&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;simpleservice&quot;&gt;SimpleService&lt;/h2&gt;
+
+&lt;p&gt;A stateless service which can even be a singleton. It has no access to the &lt;strong&gt;BTrace&lt;/strong&gt; runtime and can rely on the provided values.&lt;/p&gt;
+
+&lt;h2 id=&quot;runtimeservice&quot;&gt;RuntimeService&lt;/h2&gt;
+
+&lt;p&gt;For each &lt;strong&gt;BTraceRuntime&lt;/strong&gt; a new service instance will be created. The service can use &lt;strong&gt;BTrace&lt;/strong&gt; features exposed via &lt;strong&gt;BTraceRuntime&lt;/strong&gt; - eg. send messages over the wire channel.&lt;/p&gt;
+
+&lt;h2 id=&quot;using-services&quot;&gt;Using Services&lt;/h2&gt;
+
+&lt;p&gt;Services become available by adding the jars containing them to the bootclasspath. (eg. via &lt;a href=&quot;https://github.com/jbachorik/btrace/wiki#starting-application-with-btrace&quot;&gt;agent options&lt;/a&gt;)&lt;/p&gt;
+
+&lt;p&gt;The recommended way to use services in the script is to create fields of the appropriate service type and annotate them by the &lt;strong&gt;@Injected&lt;/strong&gt; annotation.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;nd&quot;&gt;@BTrace&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;MyTrace&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// a simple service instantiated via the default noarg constructor&lt;/span&gt;
+    &lt;span class=&quot;nd&quot;&gt;@Injected&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;MyService&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;svc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// a simple service instantiated via the given static method&lt;/span&gt;
+    &lt;span class=&quot;nd&quot;&gt;@Injected&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;factoryMethod&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;singleton&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;MyService&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;svc1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// a runtime-aware service instantiated via the default single arg (*BTraceRuntime*) constructor&lt;/span&gt;
+    &lt;span class=&quot;nd&quot;&gt;@Injected&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ServiceType&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;RUNTIME&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;RtService&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;svc2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;nd&quot;&gt;@OnMethod&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(....)&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;interceptMethod&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;svc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;svc1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...);&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;svc2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...);&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;There is an alternative approach valid only for locally accessible services.&lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;nd&quot;&gt;@OnMethod&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...)&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handler&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// a simple service instantiated via the default noarg constructor&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;MyService&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;svc&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Service&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;simple&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MyService&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// a simple service instantiated via the given static method&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;MyService&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;svc1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Service&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;simple&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;singleton&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;MyService&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// a runtime-aware service instantiated via the default single arg (*BTraceRuntime*) constructor&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;RtService&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;svc2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Service&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;runtime&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;RtService&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;classs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;svc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;svc1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;svc2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;process&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...);&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;These two approaches are functionally equivalent - it really depends on the script author which one she should choose.&lt;/p&gt;
+
+&lt;h1 id=&quot;planning&quot;&gt;Planning&lt;/h1&gt;
+
+&lt;p&gt;This functionality is planned for the upcoming version 1.3 of &lt;strong&gt;BTrace&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;Integration is tracked by this &lt;a href=&quot;https://github.com/jbachorik/btrace/pull/98&quot;&gt;pull request&lt;/a&gt;&lt;/p&gt;
+</description>
+                        <pubDate>Thu, 13 Nov 2014 20:00:00 +0100</pubDate>
+                        <link>http://jbachorik.github.io/btrace/2014/11/services-final</link>
+                        <guid isPermaLink="true">http://jbachorik.github.io/btrace/2014/11/services-final</guid>
+                </item>
+        
+                <item>
+                        <title>Extensible Services for BTrace</title>
+                        <description>&lt;h1 id=&quot;history&quot;&gt;History&lt;/h1&gt;
+
+&lt;p&gt;The ability to extend &lt;strong&gt;BTrace&lt;/strong&gt; with plugins to overcome the limits imposed by its safety guarantees while still not allowing to inject any arbitrary code was requested a long time ago and is tracked as &lt;a href=&quot;https://github.com/jbachorik/btrace/issues/29&quot;&gt;BTRACE-64&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&quot;solution,-round-1&quot;&gt;Solution, round 1&lt;/h1&gt;
+
+&lt;p&gt;The first attempt to address this problem brought many problems that were supposed to be solved by a more-or-less complete engine rewrite in &lt;strong&gt;BTrace 2.0&lt;/strong&gt;. In order to make the system really extensible the modularity was baked-in to all its parts - it was possible to even extend the internal communication protocol with custom messages. &lt;/p&gt;
+
+&lt;p&gt;All of this came at a price, though. It was paid by extra nano- and micro-seconds spent in the BTrace runtime jumping through all those indirection levels.&lt;/p&gt;
+
+&lt;p&gt;Despite the availability of the &lt;a href=&quot;https://kenai.com/projects/btrace/forums/forum/topics/523919-BTrace-2&quot;&gt;&lt;strong&gt;BTrace 2.0 Preview&lt;/strong&gt; builds&lt;/a&gt; for quite a long time there was almost no reaction from the community. This would indicate that the &lt;em&gt;“rewrite from scratch”&lt;/em&gt; approach is a deal-breaker for the majority of the users.&lt;/p&gt;
+
+&lt;h1 id=&quot;rewind,-round-2&quot;&gt;Rewind, Round 2&lt;/h1&gt;
+
+&lt;h2 id=&quot;sketchup&quot;&gt;Sketchup&lt;/h2&gt;
+
+&lt;p&gt;Instead of rewriting the engine from scratch it seems to be possible to go the way of gradual changes and improvements.&lt;/p&gt;
+
+&lt;p&gt;The main goal is to allow the users to write application specific extensions for &lt;strong&gt;BTrace&lt;/strong&gt; which can be easily used just by having them on the classpath.&lt;/p&gt;
+
+&lt;p&gt;Eg. the following invocation will allow to use any &lt;strong&gt;BTrace&lt;/strong&gt; extensions available in the &lt;em&gt;path_to_my_extension.jar&lt;/em&gt; archive. A class is considered to be an extension if it extends a &lt;strong&gt;BTrace&lt;/strong&gt; extension base class (eg. &lt;em&gt;com.sun.btrace.services.spi.SimpleService&lt;/em&gt;)&lt;/p&gt;
+
+&lt;h2 id=&quot;how-to-use&quot;&gt;How to Use&lt;/h2&gt;
+
+&lt;p&gt;The following command would instruct &lt;strong&gt;BTrace&lt;/strong&gt; to pickup the extensions jar.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;btrace -cp ...:&amp;lt;path_to_my_extension.jar&amp;gt; &amp;lt;pid&amp;gt; &amp;lt;tracing script&amp;gt;&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;In order to use an extension one would do &lt;/p&gt;
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;nd&quot;&gt;@OnMethod&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(....)&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handler&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(...)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;  
+  &lt;span class=&quot;c1&quot;&gt;// the following statement will inject the runtime  &lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// aware service &amp;quot;Printer&amp;quot;  &lt;/span&gt;
+  &lt;span class=&quot;nd&quot;&gt;@Injected&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Printer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Service&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;runtime&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Printer&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;    
+  &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;quot;hello&amp;quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;As one can see it is not that different to what one was used to do before. &lt;/p&gt;
+
+&lt;h2 id=&quot;why-all-this-fuzz&quot;&gt;Why All This Fuzz&lt;/h2&gt;
+
+&lt;h3 id=&quot;dsl(?)-mess-cleanup&quot;&gt;DSL(?) Mess Cleanup&lt;/h3&gt;
+
+&lt;p&gt;Let’s face it. &lt;strong&gt;BTraceUtils&lt;/strong&gt; is a dump right now. It contains any and all functions one might think as being useful when writing BTrace scripts. As the result it is rather difficult to locate the method one actually wants to use.&lt;/p&gt;
+
+&lt;p&gt;The extensions will allow for off-loading specific features of &lt;strong&gt;BTraceUtils&lt;/strong&gt; leaving there only methods comprising the actual &lt;strong&gt;DSL&lt;/strong&gt; (well, I might even rename the class to something more meaningful)&lt;/p&gt;
+
+&lt;h3 id=&quot;integration-with-external-systems&quot;&gt;Integration with External Systems&lt;/h3&gt;
+
+&lt;p&gt;Right now &lt;strong&gt;BTrace&lt;/strong&gt; is pretty limited in how it can export the collected data - it can either write it to file or stdout. While this is sufficient for one-off scripts it is not the first choice when one wants to include &lt;strong&gt;BTrace&lt;/strong&gt; in more complex systems (eg. acting as a data provider for &lt;a href=&quot;http://riemann.io/&quot;&gt;Riemann&lt;/a&gt;).&lt;/p&gt;
+
+&lt;h3 id=&quot;performance&quot;&gt;Performance&lt;/h3&gt;
+
+&lt;p&gt;This implementation, in addition to not causing any performance regression, can even provide slight improvements for the runtime aware services like &lt;strong&gt;Printer&lt;/strong&gt;. Each invocation of &lt;em&gt;print&lt;/em&gt;/&lt;em&gt;println&lt;/em&gt; will use the cached runtime as opposed to looking it up when using &lt;strong&gt;BTraceUtils&lt;/strong&gt; (not using services). &lt;/p&gt;
+</description>
+                        <pubDate>Wed, 10 Sep 2014 21:00:00 +0200</pubDate>
+                        <link>http://jbachorik.github.io/btrace/2014/09/extensible-services</link>
+                        <guid isPermaLink="true">http://jbachorik.github.io/btrace/2014/09/extensible-services</guid>
+                </item>
+        
+    </channel>
+</rss>
