@@ -224,7 +224,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                 return false;
             }
             btrace.setState(BTraceTask.State.COMPILED);
-            
+
             LOGGER.log(Level.FINEST, "Compiled the trace: {0} bytes", bytecode.length);
             commQueue.submit(new Runnable() {
 
@@ -232,8 +232,13 @@ public class BTraceEngineImpl extends BTraceEngine {
                     int  port = portLocator.getTaskPort(btrace);
                     LOGGER.log(Level.FINEST, "BTrace agent listening on port {0}", port);
                     BTraceSettings settings = settingsProvider.getSettings();
-                    final Client client = new Client(port, ".", settings.isDebugMode(), true, btrace.isUnsafe(), settings.isDumpClasses(), settings.getDumpClassPath());
-                    
+                    final Client client = new Client(
+                        port, ".", settings.isDebugMode(), true,
+                        btrace.isUnsafe(), settings.isDumpClasses(),
+                        settings.getDumpClassPath(),
+                        settings.getStatsd()
+                    );
+
                     try {
                         client.attach(String.valueOf(btrace.getPid()), compiler.getAgentJarPath(), compiler.getToolsJarPath(), null);
                         Thread.sleep(200); // give the server side time to initialize and open the port
