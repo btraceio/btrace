@@ -19,5 +19,6 @@ TEST-*
 make/junit*
 benchmark/target
 junit*
+_site
 /_site/benchmark/target/
 /_site/nbproject/private/

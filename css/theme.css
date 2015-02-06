@@ -42,14 +42,23 @@ body {
     margin: 0;
 }
 
+.article .well .post-content h1 {
+    margin-top: 1em;
+    color: #6871b3;
+    font-size: 1.6em;
+    margin-bottom: 0.1em;
+    border-bottom: 1px solid #dadada;
+}
+
 .well h1 {
     margin-top: -0.1em;
-    color: #7891b3;
+    color: #6871b3;
     font-size: 1.6em;
+    margin-bottom: 0.1em;
 }
 
 .well h2 {
-    margin-top: -0.1em;
+    margin-top: 0.1em;
     color: #7891b3;
     font-size: 1.4em;
 }
