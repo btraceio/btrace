@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ import java.util.Set;
  * currently on the stack and their origin. This way it is eg. possible
  * to allow invocation of virtual methods only on instances obtained only
  * through a certain factory method.
- * 
+ *
  * @author Jaroslav Bachorik
  */
 public class StackTrackingMethodVisitor extends MethodVisitor {
@@ -400,7 +400,12 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
 
     @Override
     public void visitLdcInsn(Object o) {
-        state.push(new ConstantItem(o));
+        ConstantItem ci = new ConstantItem(o);
+        state.push(ci);
+        if (o instanceof Long ||
+            o instanceof Double) {
+            state.push(ci);
+        }
         super.visitLdcInsn(o);
     }
 

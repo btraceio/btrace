@@ -239,6 +239,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             errorExit(th);
             return null;
         }
+        Main.dumpClass(className + "_orig", className + "_orig", btraceCode);
 
         this.filter = new ClassFilter(onMethods);
         if (debug) Main.debugPrint("created class filter");
@@ -246,7 +247,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         ClassWriter writer = InstrumentUtils.newClassWriter(btraceCode);
         ClassReader reader = new ClassReader(btraceCode);
         ClassVisitor visitor = new Preprocessor(writer);
-		Main.dumpClass(className + "_orig", className + "_orig", btraceCode);
         if (BTraceRuntime.classNameExists(className)) {
             className += "$" + getCount();
             if (debug) Main.debugPrint("class renamed to " + className);
@@ -404,7 +404,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
     private void verify(byte[] buf) {
         ClassReader reader = new ClassReader(buf);
-        Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM4) {}, Main.isUnsafe());
+        Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM5) {}, Main.isUnsafe());
         if (debug) Main.debugPrint("verifying BTrace class");
         InstrumentUtils.accept(reader, verifier);
         className = verifier.getClassName().replace('/', '.');

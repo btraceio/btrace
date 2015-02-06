@@ -113,6 +113,7 @@ public class Client {
     // which directory we dump the .class files?
     private final String dumpDir;
     private final String probeDescPath;
+    private final String statsdDef;
 
     // connection state to the traced JVM
     private volatile Socket sock;
@@ -120,17 +121,17 @@ public class Client {
     private volatile ObjectOutputStream oos;
 
     public Client(int port) {
-        this(port, ".", false, false, false, false, null);
+        this(port, ".", false, false, false, false, null, null);
     }
 
     public Client(int port, String probeDescPath) {
-        this(port, probeDescPath, false, false, false, false, null);
+        this(port, probeDescPath, false, false, false, false, null, null);
     }
 
     public Client(int port, String probeDescPath,
             boolean debug, boolean trackRetransforms,
             boolean unsafe, boolean dumpClasses,
-            String dumpDir) {
+            String dumpDir, String statsdDef) {
         this.port = port;
         this.probeDescPath = probeDescPath;
         this.debug = debug;
@@ -138,6 +139,7 @@ public class Client {
         this.dumpClasses = dumpClasses;
         this.dumpDir = dumpDir;
         this.trackRetransforms = trackRetransforms;
+        this.statsdDef = statsdDef;
     }
 
     public byte[] compile(String fileName, String classPath) {
@@ -273,6 +275,9 @@ public class Client {
                 debugPrint("loading " + agentPath);
             }
             String agentArgs = "port=" + port;
+            if (statsdDef != null) {
+                agentArgs += ",statsd=" + statsdDef;
+            }
             if (debug) {
                 agentArgs += ",debug=true";
             }

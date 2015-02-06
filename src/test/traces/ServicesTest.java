@@ -30,6 +30,7 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.ServiceType;
 import com.sun.btrace.services.api.Service;
 import resources.services.DummySimpleService;

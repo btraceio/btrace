@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,10 +35,6 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
-import static com.sun.btrace.runtime.Verifier.BTRACE_DURATION_DESC;
-import static com.sun.btrace.runtime.Verifier.BTRACE_RETURN_DESC;
-import static com.sun.btrace.runtime.Verifier.BTRACE_TARGETINSTANCE_DESC;
-import static com.sun.btrace.runtime.Verifier.BTRACE_TARGETMETHOD_DESC;
 import com.sun.btrace.services.api.Service;
 import java.util.List;
 
