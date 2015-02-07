@@ -44,7 +44,7 @@ _Fig.1 Adaptive Sampling_
 }
 ```
 
-_Fig.2 Standard Sampling
+_Fig.2_ Standard Sampling
 
 ``` java
 @BTrace public class AllMethodsSampled {
