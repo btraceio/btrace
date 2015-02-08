@@ -7,18 +7,19 @@ fi
 usage() {
   echo "btracer <options> <compiled script> <java args>"
   echo "Options:"
-  echo "    --version\tShow BTrace version"
-  echo "    -v\t\tRun in verbose mode"
-  echo "    -u\t\tRun in unsafe mode"
-  echo "    -p <port>\tBTrace agent server port"
-  echo "    -o <file>\tThe path to a file the btrace agent will store its output"
-  echo "    -d <path>\tDump modified classes to the provided location"
-  echo "    -pd <path>\tSearch for the probe XML descriptors here"
-  echo "    --noserver\tDon't start the socket server"
-  echo "    --stdout\tRedirect the btrace output to stdout instead of writing it to an arbitrary file"
-  echo "    -bcp <cp>\tAppend to bootstrap class path"
-  echo "    -scp <cp>\tAppend to system class path"
-  echo "    -h\t\tThis message"
+  echo "    --version\t\t\tShow BTrace version"
+  echo "    -v\t\t\t\tRun in verbose mode"
+  echo "    -u\t\t\t\tRun in unsafe mode"
+  echo "    -p <port>\t\t\tBTrace agent server port"
+  echo "    -statsd <host>[:<port>]\tUse this StatsD server"
+  echo "    -o <file>\t\t\tThe path to a file the btrace agent will store its output"
+  echo "    -d <path>\t\t\tDump modified classes to the provided location"
+  echo "    -pd <path>\t\t\tSearch for the probe XML descriptors here"
+  echo "    --noserver\t\t\tDon't start the socket server"
+  echo "    --stdout\t\t\tRedirect the btrace output to stdout instead of writing it to an arbitrary file"
+  echo "    -bcp <cp>\t\t\tAppend to bootstrap class path"
+  echo "    -scp <cp>\t\t\tAppend to system class path"
+  echo "    -h\t\t\t\tThis message"
   exit 0
 }
 
@@ -62,6 +63,9 @@ if [ "${JAVA_HOME}" != "" ]; then
         -scp)
           OPTIONS="systemClassPath=$2,$OPTIONS"
           shift
+          ;;
+        -statsd)
+          OPTIONS="statsd=$2,$OPTIONS"
           ;;
         --noserver)
           OPTIONS="noServer=true,$OPTIONS"
