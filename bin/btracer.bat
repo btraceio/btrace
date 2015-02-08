@@ -69,6 +69,10 @@ set inloop=1
     set OPTIONS="stdout=true,%OPTIONS"
     goto next
   )
+  if "%1"=="-statsd" (
+    set OPTIONS="statsd=%2,%OPTIONS"
+    goto next
+  )
   if "%1"=="-h" (
     call :usage
     goto end
@@ -94,16 +98,17 @@ goto end
 :usage
   echo btracer ^<options^> ^<compiled script^> ^<java args^>
   echo Options:
-  echo     -v		Run in verbose mode
-  echo     -u		Run in unsafe mode
-  echo     -p ^<port^>	BTrace agent server port
-  echo     -o ^<file^>	The path to a file the btrace agent will store its output
-  echo     -d ^<path^>	Dump modified classes to the provided location
-  echo     -pd ^<path^>	Search for the probe XML descriptors here
-  echo     --noserver	Don't start the socket server
-  echo     --stdout	Redirect the btrace output to stdout instead of writing it to an arbitrary file
-  echo     -bcp ^<cp^>	Append to bootstrap class path
-  echo     -scp ^<cp^>	Append to system class path
-  echo     -h		This message
+  echo     -v		          Run in verbose mode
+  echo     -u		          Run in unsafe mode
+  echo     -p ^<port^>	            BTrace agent server port
+  echo     -statsd ^<host[:port]^>  Use this StatsD server
+  echo     -o ^<file^>	            The path to a file the btrace agent will store its output
+  echo     -d ^<path^>	            Dump modified classes to the provided location
+  echo     -pd ^<path^>	            Search for the probe XML descriptors here
+  echo     --noserver	          Don't start the socket server
+  echo     --stdout	          Redirect the btrace output to stdout instead of writing it to an arbitrary file
+  echo     -bcp ^<cp^>	            Append to bootstrap class path
+  echo     -scp ^<cp^>	            Append to system class path
+  echo     -h		          This message
 
 :end
