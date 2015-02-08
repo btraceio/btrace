@@ -57,3 +57,28 @@ These mailing lists are hosted at **http://librelist.com**
 ## Contributing - !!! Important !!!
 
 Pull requests can be accepted only from the signers of [Oracle Contributor Agreement](http://www.oracle.com/technetwork/community/oca-486395.html)
+
+## Development snapshots
+
+There are development snapshots published on [bintray](http://bintray.com)
+
+### Binaries
+
+* [btrace-bin.zip](http://dl.bintray.com/jbachorik/snapshots/btrace/1.3/btrace-bin.zip)
+* [btrace-bin.tar.gz](http://dl.bintray.com/jbachorik/snapshots/btrace/1.3/btrace-bin.tar.gz)
+ 
+### Ubuntu Repository
+
+Using the command line, add the following to your /etc/apt/sources.list system config file: 
+
+```
+echo "deb http://dl.bintray.com/jbachorik/deb trusty tools" | sudo tee -a /etc/apt/sources.list 
+echo "deb-src http://dl.bintray.com/jbachorik/deb trusty tools" | sudo tee -a /etc/apt/sources.list
+```
+
+Or, add the repository URLs using the "Software Sources" admin UI:
+
+```
+deb http://dl.bintray.com/jbachorik/deb trusty tools
+deb-src http://dl.bintray.com/jbachorik/deb trusty tools
+```
