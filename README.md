@@ -62,8 +62,6 @@ Pull requests can be accepted only from the signers of [Oracle Contributor Agree
 
 There are development snapshots published on [bintray](http://bintray.com)
 
-### Binaries
-
 * [btrace-bin.zip](http://dl.bintray.com/jbachorik/snapshots/btrace/1.3/btrace-bin.zip)
 * [btrace-bin.tar.gz](http://dl.bintray.com/jbachorik/snapshots/btrace/1.3/btrace-bin.tar.gz)
 * [btrace.deb](https://bintray.com/artifact/download/jbachorik/deb/pool/main/b/btrace/btrace.deb)
