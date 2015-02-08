@@ -25,6 +25,9 @@
 package com.sun.btrace.profiling;
 
 import com.sun.btrace.Profiler;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
@@ -147,7 +150,7 @@ public class MethodInvocationRecorderTest {
         p.arriveAndAwaitAdvance();
 
         Profiler.Record[] result = mir.getRecords(false);
-        assertArrayEquals(expected, result);
+        assertArrayRecordsEqual(expected, result);
     }
 
     /**
@@ -158,4 +161,12 @@ public class MethodInvocationRecorderTest {
         System.out.println("reset");
     }
 
+    private void assertArrayRecordsEqual(Profiler.Record[] expected, Profiler.Record[] obtained) {
+        Set<Profiler.Record> expSet = new HashSet<Profiler.Record>(Arrays.asList(expected));
+        Set<Profiler.Record> obtSet = new HashSet<Profiler.Record>(Arrays.asList(obtained));
+
+        if (!expSet.containsAll(obtSet) || !obtSet.containsAll(expSet)) {
+            assertArrayEquals(expected, obtained);
+        }
+    }
 }
