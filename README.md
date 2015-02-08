@@ -66,19 +66,5 @@ There are development snapshots published on [bintray](http://bintray.com)
 
 * [btrace-bin.zip](http://dl.bintray.com/jbachorik/snapshots/btrace/1.3/btrace-bin.zip)
 * [btrace-bin.tar.gz](http://dl.bintray.com/jbachorik/snapshots/btrace/1.3/btrace-bin.tar.gz)
+* [btrace.deb](https://bintray.com/artifact/download/jbachorik/deb/pool/main/b/btrace/btrace.deb)
  
-### Ubuntu Repository
-
-Using the command line, add the following to your /etc/apt/sources.list system config file: 
-
-```
-echo "deb http://dl.bintray.com/jbachorik/deb trusty tools" | sudo tee -a /etc/apt/sources.list 
-echo "deb-src http://dl.bintray.com/jbachorik/deb trusty tools" | sudo tee -a /etc/apt/sources.list
-```
-
-Or, add the repository URLs using the "Software Sources" admin UI:
-
-```
-deb http://dl.bintray.com/jbachorik/deb trusty tools
-deb-src http://dl.bintray.com/jbachorik/deb trusty tools
-```
