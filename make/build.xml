@@ -416,6 +416,7 @@
        <copy todir="${dist.dir}/debian/btrace/usr/lib/btrace" overwrite="true">
            <fileset file="${build.dir}/btrace-*.jar"/>
        </copy>
+       <exec failonerror="false" osfamily="unix" dir="${dist.dir}/debian" executable="dh_fixperms"/>
        <exec failonerror="false" osfamily="unix" dir="${dist.dir}/debian" executable="dpkg">
            <arg value="--build"/>
            <arg value="btrace"/>
