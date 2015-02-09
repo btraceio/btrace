@@ -1,0 +1,9 @@
+chown root /usr/bin/btrace
+chown root /usr/bin/btracec
+chown root /usr/bin/btracer
+
+chmod a+x /usr/bin/btrace
+chmod a+x /usr/bin/btracec
+chmod a+x /usr/bin/btracer
+
+chown -R root /usr/lib/btrace

@@ -413,6 +413,7 @@
                <filter token="VERSION" value="${release.version}-${build.date}"/>
            </filterset>
        </copy>
+       <chmod file="${dist.dir}/debian/btrace/DEBIAN/postinst" perm="0555"/>
        <copy todir="${dist.dir}/debian/btrace/usr/lib/btrace" overwrite="true">
            <fileset file="${build.dir}/btrace-*.jar"/>
        </copy>
