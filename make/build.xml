@@ -374,7 +374,7 @@
         <property file="private.properties"/>
     </target>
     <target name="dist" depends="jar, test-dist">
-        <delete dir="vi${dist.dir}"/>
+        <delete dir="${dist.dir}"/>
         <mkdir dir="${dist.dir}"/>
         <mkdir dir="${dist.dir}/build"/>
         <mkdir dir="${dist.dir}/bin"/>
@@ -403,6 +403,26 @@
              compression="gzip" excludes="*.zip,*.gz"/>
         <zip basedir="${dist.dir}" destfile="${dist.dir}/btrace-bin.zip"
              excludes="*.zip,*.gz"/>
+        <antcall target="dist-debian"/>
+    </target>
+    <target name="dist-debian" depends="jar">
+        <mkdir dir="${dist.dir}/debian"/>
+        <copy todir="${dist.dir}/debian" overwrite="true">
+            <fileset dir="${project.dir}/packaging/debian" includes="**/*"/>
+            <filterset>
+               <filter token="VERSION" value="${release.version}-${build.date}"/>
+           </filterset>
+       </copy>
+       <chmod file="${dist.dir}/debian/btrace/DEBIAN/postinst" perm="0555"/>
+       <copy todir="${dist.dir}/debian/btrace/usr/lib/btrace" overwrite="true">
+           <fileset file="${build.dir}/btrace-*.jar"/>
+       </copy>
+       <exec failonerror="false" osfamily="unix" dir="${dist.dir}/debian" executable="dpkg">
+           <arg value="--build"/>
+           <arg value="btrace"/>
+       </exec>
+       <move file="${dist.dir}/debian/btrace.deb" todir="${dist.dir}"/>
+       <delete dir="${dist.dir}/debian"/>
     </target>
     <target name="test" depends="check-junit, compile, compile-tests">
         <junit fork="yes" printsummary="withOutAndErr" showoutput="true" errorProperty="test.failed" failureProperty="test.failed" filtertrace="false">
