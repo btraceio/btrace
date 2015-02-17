@@ -1,6 +1,7 @@
 language: java
 
 jdk:
+  - openjdk6
   - openjdk7
 script:
   ant -f make/build.xml jar prepare-tests dist
