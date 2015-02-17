@@ -1,6 +1,8 @@
 btrace [![Build Status](https://travis-ci.org/jbachorik/btrace.svg?branch=master)](https://travis-ci.org/jbachorik/btrace)
 ======
 
+[![Join the chat at https://gitter.im/jbachorik/btrace](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jbachorik/btrace?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
