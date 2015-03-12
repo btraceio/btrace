@@ -51,22 +51,28 @@ import java.util.Set;
  */
 public class StackTrackingMethodVisitor extends MethodVisitor {
     abstract public static class StackItem {
+        public static enum Kind {
+            VARIABLE, CONSTANT, INSTANCE, RESULT
+        }
+
         private Set<StackItem> parents = new HashSet<StackItem>();
 
         public StackItem(StackItem ... parents) {
             this.parents.addAll(Arrays.asList(parents));
         }
 
-        public Set<StackItem> getParents() {
+        final public Set<StackItem> getParents() {
             return parents;
         }
 
-        public void merge(StackItem sl) {
+        final public void merge(StackItem sl) {
             parents.addAll(sl.getParents());
         }
+
+        abstract public Kind getKind();
     }
 
-    public static class VariableItem extends StackItem {
+    final public static class VariableItem extends StackItem {
         private final int var;
 
         public VariableItem(int var, StackItem... parents) {
@@ -76,6 +82,11 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
 
         public int getVar() {
             return var;
+        }
+
+        @Override
+        public Kind getKind() {
+            return Kind.VARIABLE;
         }
 
         @Override
@@ -114,6 +125,11 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         }
 
         @Override
+        public Kind getKind() {
+            return Kind.CONSTANT;
+        }
+
+        @Override
         public int hashCode() {
             int hash = 7;
             hash = 59 * hash + (this.val != null ? this.val.hashCode() : 0);
@@ -149,6 +165,11 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         }
 
         @Override
+        public Kind getKind() {
+            return Kind.INSTANCE;
+        }
+
+        @Override
         public int hashCode() {
             int hash = 7;
             hash = 41 * hash + (this.t != null ? this.t.hashCode() : 0);
@@ -172,13 +193,19 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
     }
 
     public static class ResultItem extends StackItem {
-        private final String owner, name, desc;
+        public static enum Origin {
+            FIELD, METHOD
+        }
 
-        public ResultItem(String owner, String name, String desc, StackItem ... parents) {
+        private final String owner, name, desc;
+        private final Origin origin;
+
+        public ResultItem(String owner, String name, String desc, Origin origin, StackItem ... parents) {
             super(parents);
             this.owner = owner;
             this.name = name;
             this.desc = desc;
+            this.origin = origin;
         }
 
         public String getOwner() {
@@ -191,6 +218,19 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
 
         public String getDesc() {
             return desc;
+        }
+
+        public Type getType() {
+            return Type.getReturnType(desc);
+        }
+
+        public Origin getOrigin() {
+            return origin;
+        }
+
+        @Override
+        public Kind getKind() {
+            return Kind.RESULT;
         }
 
         @Override
@@ -226,15 +266,17 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
 
     private final class FrameState {
         private Deque<StackItem> stack;
-        private Map<Integer, StackItem> vars;
+        final private Map<Integer, StackItem> vars;
+        final private Map<Integer, StackItem> args;
 
-        public FrameState() {
-            this(new LinkedList<StackItem>(), new HashMap<Integer, StackItem>());
+        public FrameState(Map<Integer, StackItem> args) {
+            this(new LinkedList<StackItem>(), new HashMap<Integer, StackItem>(), args);
         }
 
-        private FrameState(Deque<StackItem> s, Map<Integer, StackItem> v) {
+        private FrameState(Deque<StackItem> s, Map<Integer, StackItem> v, Map<Integer, StackItem> args) {
             this.stack = new LinkedList<StackItem>(s);
             this.vars = new HashMap<Integer, StackItem>(v);
+            this.args = new HashMap<Integer, StackItem>(args);
         }
 
         public StackItem peek() {
@@ -254,11 +296,15 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         }
 
         public StackItem load(int index) {
-            return vars.get(index);
+            StackItem si = vars.get(index);
+            if (si == null) {
+                si = args.get(index);
+            }
+            return si;
         }
 
         public FrameState duplicate() {
-            return new FrameState(stack, vars);
+            return new FrameState(stack, vars, args);
         }
 
         public boolean isEmpty() {
@@ -276,8 +322,20 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
 
         private FrameState fState;
 
-        public State() {
-            this.fState = new FrameState();
+        public State(InstanceItem receiver, Type[] args) {
+            Map<Integer, StackItem> argMap = new HashMap<Integer, StackItem>();
+            int index = 0;
+            if (receiver != null) {
+                argMap.put(index++, receiver);
+            }
+            for(Type t : args) {
+                argMap.put(index++, new InstanceItem(t));
+                if (t == Type.LONG_TYPE || t == Type.DOUBLE_TYPE) {
+                    index++;
+                }
+            }
+
+            this.fState = new FrameState(argMap);
         }
 
         public void branch(Label l) {
@@ -359,7 +417,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         }
     }
 
-    private final State state = new State();
+    private final State state;
     private final Map<Label, Collection<Label>> tryCatchStart = new HashMap<Label, Collection<Label>>();
     private final Map<Label, Collection<Label>> tryCatchEnd = new HashMap<Label, Collection<Label>>();
     private final Set<Label> effectiveHandlers = new HashSet<Label>();
@@ -369,16 +427,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
     public StackTrackingMethodVisitor(MethodVisitor mv, String className, String desc, boolean isStatic) {
         super(Opcodes.ASM5, mv);
         Type[] args = Type.getArgumentTypes(desc);
-        int index = 0;
-        if (!isStatic) {
-            state.fState.vars.put(index++, new InstanceItem(Type.getType(className)));
-        }
-        for(Type t : args) {
-            state.fState.vars.put(index++, new InstanceItem(t));
-            if (t == Type.LONG_TYPE || t == Type.DOUBLE_TYPE) {
-                index++;
-            }
-        }
+        state = new State(isStatic ? null : new InstanceItem(Type.getType(className)), args);
     }
 
     @Override
@@ -422,6 +471,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
             case Opcodes.IFNONNULL:
             case Opcodes.IFNULL: {
                 state.pop();
+                state.branch(label);
                 break;
             }
             case Opcodes.IF_ACMPEQ:
@@ -434,15 +484,16 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
             case Opcodes.IF_ICMPNE: {
                 state.pop();
                 state.pop();
+                state.branch(label);
                 break;
             }
             case Opcodes.GOTO:
             case Opcodes.JSR: {
+                state.branch(label);
+                state.reset();
                 break;
             }
         }
-
-        state.branch(label);
     }
 
     @Override
@@ -486,7 +537,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         }
 
         if (ret != Type.VOID_TYPE) {
-            StackItem sl = new ResultItem(owner, name, desc, poppedArgs.toArray(new StackItem[poppedArgs.size()]));
+            StackItem sl = new ResultItem(owner, name, desc, ResultItem.Origin.METHOD, poppedArgs.toArray(new StackItem[poppedArgs.size()]));
             switch (ret.getSort()) {
                 case Type.LONG:
                 case Type.DOUBLE: {
@@ -538,7 +589,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
             parents.add(state.pop()); // pop 'this'
         }
         if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
-            StackItem sl = new ResultItem(owner, name, desc, parents.toArray(new StackItem[parents.size()]));
+            StackItem sl = new ResultItem(owner, name, desc, ResultItem.Origin.FIELD, parents.toArray(new StackItem[parents.size()]));
             switch (t.getSort()) {
                 case Type.LONG:
                 case Type.DOUBLE: {
@@ -703,10 +754,17 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
                 break;
             }
             case Opcodes.AALOAD: {
-                InstanceItem index = (InstanceItem)state.pop();
+                StackItem index = state.pop();
                 StackItem ref = state.pop();
 
-                state.push(new InstanceItem(index.getType(), index, ref));
+                Type t = null;
+                if (ref.getKind() == StackItem.Kind.INSTANCE) {
+                    t = ((InstanceItem)ref).getType();
+                } else if (ref.getKind() == StackItem.Kind.RESULT) {
+                    t = ((ResultItem)ref).getType();
+                }
+
+                state.push(new InstanceItem(t, ref, index));
                 break;
             }
             case Opcodes.IALOAD: {
