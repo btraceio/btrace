@@ -1,0 +1,248 @@
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+
+group 'com.sun.tools.btrace'
+version = '1.3-SNAPSHOT'
+
+sourceCompatibility = 7
+targetCompatibility = 7
+
+allprojects {
+  tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+  }
+
+  repositories {
+    mavenLocal()
+    mavenCentral()
+  }
+}
+
+
+def env = System.getenv()
+def javaHome = env['JAVA_HOME']
+
+def props = System.getProperties()
+def osFamily = props['os.family']
+
+def asmVersion = '5.0.2'
+def junitVersion = '4.6'
+
+def agentExcludes = ['**/dtrace/*', '**/btrace/*.class', '**/asm/signature/**', '**/asm/tree/**', '**/asm/util/**', '**/asm/xml/**', '**/aggregation/*', '**/compiler/*', '**/client/*', '**/comm/*', 'com/sun/btrace/api/**/*', 'com/sun/btrace/spi/**/*', '**/instr/** **/META-INF/*']
+def bootExcludes = ['**/dtrace/*', '**/agent/*', '**/compiler/*', '**/client/*', '**/resources/*', '**/runtime/*', '**/util/**/*', '**/asm/**', 'com/sun/btrace/api/**/*', 'com/sun/btrace/spi/**/*']
+def clientExcludes = ['**/runtime/*', '**/agent/*', '**/util/TimeStamp*', '**/util/MethodId', '**/util/SamplingSupport', '**/util/templates/**/*', '**/instr/** **/META-INF/*']
+def excludes = ['agent': agentExcludes, 'boot': bootExcludes, 'client': clientExcludes]
+
+sourceSets {
+  main {
+    java {
+      srcDir 'src/share/classes'
+      def dtrace = file('/usr/share/lib/java/dtrace.jar')
+      if (dtrace.exists()) {
+        def dtraceJar = zipTree('/usr/share/lib/java/dtrace.jar')
+        if (!dtraceJar.matching { include '**/org/opensolaris/os/dtrace/Consumer.class' }.isEmpty()) {
+          srcDir 'src/solaris'
+        }
+      }
+    }
+
+    resources {
+      srcDir 'src/share/classes'
+    }
+  }
+
+  test {
+    java {
+      srcDir 'src/test'
+    }
+
+    resources {
+      srcDir 'src/test/resources'
+    }
+  }
+}
+
+
+
+processResources {
+  from 'src/share/classes'
+  destinationDir compileJava.destinationDir
+
+  include '**/com/sun/btrace/resources/**'
+  include '**/com/sun/btrace/runtime/jaxb.index'
+  include '**/com/sun/btrace/annotations/jaxb.index'
+
+  def buildDate = (new Date()).format('YYYYMMdd')
+  filter{ it.replaceAll('\\{btrace.version\\}', "$version ($buildDate)") }
+
+  includeEmptyDirs = false
+}
+
+
+compileTestJava {
+  exclude 'traces'
+}
+
+
+processTestResources {
+  from 'src/test'
+  destinationDir compileTestJava.destinationDir
+  include 'traces/**/*.java'
+  include 'traces/**/*.xml'
+}
+
+
+task unjar(type: Copy) {
+  group 'Build'
+  description 'Explode the pre-built asm jar.'
+
+  from(zipTree("lib/btrace-asm-${asmVersion}.jar"))
+  into compileJava.destinationDir
+}
+
+
+['agent', 'boot', 'client'].each { name ->
+  tasks.create(name: "${name}Jar", type: Jar) {
+    group 'Build'
+    description "Build the btrace-${name} jar."
+    inputs.files unjar.outputs
+
+    appendix name
+    from sourceSets.main.output
+    exclude excludes["${name}"]
+    destinationDir buildDir
+    // unfortunately there's a hard-coded reference to "btrace-${name}.jar" in the code - so we have to strip the version
+    archiveName "$baseName-$appendix.$extension"
+
+    if (['agent', 'client'].contains(name)) {
+      manifest {
+        // alternatively we could "inline" the ${name}-manfifest's content
+        from file("src/share/classes/META-INF/${name}-manifest.mf")
+      }
+    }
+  }
+
+
+  tasks.create(name: "${name}SourcesJar", type: Jar) {
+    group 'Documentation'
+    description "Build the btrace-${name} sources jar."
+
+    appendix "${name}"
+    classifier 'sources'
+    from sourceSets.main.allSource
+    exclude excludes["${name}"]
+  }
+
+
+  tasks.create(name: "${name}Javadoc", type: Javadoc) {
+    group 'Documentation'
+    description "Generates Javadoc API documentation for the btrace-${name}."
+
+    title = "btrace-${name}"
+    source = sourceSets.main.allJava
+    destinationDir = reporting.file(name)
+    exclude excludes["${name}"]
+    failOnError false
+  }
+
+
+  tasks.create(name: "${name}JavadocJar", type: Jar) {
+    group 'Documentation'
+    description "Build the btrace-${name} javadoc jar."
+
+    appendix name
+    classifier 'javadoc'
+    from tasks["${name}Javadoc"].getOutputs()
+  }
+}
+
+
+task buildTraces(type: Exec) {
+  group 'Build'
+  inputs.files clientJar.outputs
+  inputs.files testClasses.outputs
+  inputs.dir "src/test/traces"
+  outputs.dir "${buildDir}/classes/test/traces"
+
+  workingDir "$projectDir"
+  environment('BTRACE_HOME', "$projectDir")
+  def btracec = (osFamily == 'windows') ? 'btracec.bat' : 'btracec'
+  executable "bin/${btracec}"
+  args "-cp ${buildDir}/classes/test"
+  args "-d ${buildDir}/classes/test"
+  args fileTree(dir: "src/test/traces", include: '**/*.java')
+
+  // It would be better gradle style to do the copying in another task . . .
+  // Do we really need this?
+  doLast {
+    copy {
+      from 'src/test/traces'
+      into "${buildDir}/classes/test/traces"
+      include '**/*.java'
+    }
+  }
+}
+
+
+test {
+  inputs.files buildTraces.outputs
+}
+
+
+dependencies {
+  compile files("lib/btrace-asm-${asmVersion}.jar",
+                "${javaHome}/lib/tools.jar",  // ATTENTION: build.xml uses "${javaHome}/../lib/tools.jar"
+                "/usr/share/lib/java/dtrace.jar")
+
+  testCompile files("test-lib/asm-all-${asmVersion}.jar",
+                    "test-lib/junit-${junitVersion}.jar")
+
+  testRuntime files("%buildDir/btrace-agent.jar") {
+    builtBy 'agentJar'
+  }
+  testRuntime files("%buildDir/btrace-boot.jar") {
+    builtBy 'bootJar'
+  }
+  testRuntime files("$buildDir/btrace-client.jar") {
+    builtBy 'clientJar'
+  }
+}
+
+
+publishing {
+  publications {
+    agent(MavenPublication) {
+      artifactId 'btrace-agent'
+      artifact agentJar
+      artifact agentSourcesJar
+      artifact agentJavadocJar
+    }
+
+    client(MavenPublication) {
+      artifactId 'btrace-client'
+      artifact clientJar
+      artifact clientSourcesJar
+      artifact clientJavadocJar
+    }
+
+    boot(MavenPublication) {
+      artifactId 'btrace-boot'
+      artifact bootJar
+      artifact bootSourcesJar
+      artifact bootJavadocJar
+    }
+  }
+
+  /* ---- configure the repository URL . . .
+  repositories {
+    maven {
+      if (version endsWith('-SNAPSHOT') {
+        url 'https://oss.sonatype.org/content/repositories/snapshots'
+      } else {
+        // signing is missing!
+        url 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+      }
+    }
+  }
+  */
+}

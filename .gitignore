@@ -20,3 +20,7 @@ make/junit*
 benchmark/target
 junit*
 /btrace-statsd/target/
+btrace.iml
+.gradle
+.idea
+main.iml
