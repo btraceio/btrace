@@ -270,7 +270,11 @@ abstract public class InstrumentorTestBase {
         try {
             return loadFile(is);
         } finally {
-            is.close();
+            if (is == null) {
+                System.err.println("Unable to load file: " + path);
+            } else {
+                is.close();
+            }
         }
     }
 
