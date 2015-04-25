@@ -184,6 +184,61 @@ task buildTraces(type: Exec) {
 }
 
 
+def distContent = copySpec {
+  into('bin') {
+    from 'bin'
+  }
+
+  into('build') {
+    from "$buildDir"
+    include '*.jar'
+  }
+
+  into ('docs') {
+    from 'docs'
+    include 'javadoc/**'
+    include 'usersguide.html'
+  }
+
+  into ('samples') {
+    from 'samples'
+  }
+
+  into('.') {
+    from '.'
+    include '*.md'
+    include '*.txt'
+    include 'COPYRIGHT'
+    include 'LICENSE'
+  }
+}
+
+task createZipDist(type: Zip) {
+  group 'Build'
+  description 'Build the distribution zip-file.'
+
+  inputs.files agentJar.outputs
+  inputs.files bootJar.outputs
+  inputs.files clientJar.outputs
+
+  with distContent
+}
+assemble.dependsOn createZipDist
+
+task createTgzDist(type: Tar) {
+  group 'Build'
+  description 'Build the distribution tgz-file.'
+
+  inputs.files agentJar.outputs
+  inputs.files bootJar.outputs
+  inputs.files clientJar.outputs
+  compression = Compression.GZIP
+
+  with distContent
+}
+assemble.dependsOn createTgzDist
+
+
 test {
   inputs.files buildTraces.outputs
 }
