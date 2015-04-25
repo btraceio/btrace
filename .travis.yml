@@ -3,8 +3,6 @@ language: java
 jdk:
   - oraclejdk8
   - openjdk7
-#script:
-#  ant -f make/build.xml dist
 
 notifications:
   webhooks:
@@ -14,16 +12,15 @@ notifications:
     on_failure: always  # options: [always|never|change] default: always
     on_start: never     # default: [always|never|change] default: always
 
-#before_deploy: "mkdir ./artifacts && mv ./dist/btrace-bin.* ./artifacts"
-#deploy:
-#  provider: s3
-#  access_key_id: AKIAJAUNGLUDSLINNSPQ
-#  secret_access_key:
-#    secure: Is+1eHphxpuYHqboWO5NL75gHsjUNkPRHlfE1ICX4VRpCur2shM8KW8e1ivfddDwMzjoHs2MKDSGGaQuIqwSFCuToB7+DuQkincLoINKt7/Hbfen/1i/IRjtr30aqNi0guan5tSSPGRJFY4qkLH6VATLDrhj8pZZ5J3wHZ8q7T0=
-#  bucket: io.btrace.artifacts
-#  skip_cleanup: true
-#  upload-dir: snapshots
-#  local-dir: artifacts
-#  acl: public_read
-#  on:
-#    branch: master
+deploy:
+  provider: s3
+  access_key_id: AKIAJAUNGLUDSLINNSPQ
+  secret_access_key:
+    secure: Is+1eHphxpuYHqboWO5NL75gHsjUNkPRHlfE1ICX4VRpCur2shM8KW8e1ivfddDwMzjoHs2MKDSGGaQuIqwSFCuToB7+DuQkincLoINKt7/Hbfen/1i/IRjtr30aqNi0guan5tSSPGRJFY4qkLH6VATLDrhj8pZZ5J3wHZ8q7T0=
+  bucket: io.btrace.artifacts
+  skip_cleanup: true
+  upload-dir: snapshots
+  local-dir: build/distributions
+  acl: public_read
+  on:
+    branch: master

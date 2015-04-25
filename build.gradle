@@ -213,30 +213,30 @@ def distContent = copySpec {
   }
 }
 
-task createZipDist(type: Zip) {
+task createBinDistZip(type: Zip) {
   group 'Build'
-  description 'Build the distribution zip-file.'
-
+  description 'Build the binary distribution zip-file.'
   inputs.files agentJar.outputs
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
 
+  appendix = 'bin'
   with distContent
 }
-assemble.dependsOn createZipDist
+assemble.dependsOn createBinDistZip
 
-task createTgzDist(type: Tar) {
+task createBinDistTgz(type: Tar) {
   group 'Build'
-  description 'Build the distribution tgz-file.'
-
+  description 'Build the binary distribution tgz-file.'
   inputs.files agentJar.outputs
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
   compression = Compression.GZIP
 
+  appendix = 'bin'
   with distContent
 }
-assemble.dependsOn createTgzDist
+assemble.dependsOn createBinDistTgz
 
 
 test {
