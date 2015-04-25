@@ -25,10 +25,8 @@
 package net.java.btrace;
 
 import com.sun.btrace.profiling.MethodInvocationProfiler;
-import com.timgroup.statsd.NonBlockingStatsDClient;
-import com.timgroup.statsd.StatsDClient;
+import com.sun.btrace.services.impl.Statsd;
 import java.util.concurrent.TimeUnit;
-import net.java.btrace.btrace.statsd.StatsdClient;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -54,13 +52,11 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Fork(1)
 @BenchmarkMode(Mode.AverageTime)
 public class StatsdBenchmarks {
-    private StatsDClient c;
-    private StatsdClient c1;
+    private Statsd c;
 
     @Setup
     public void setup() {
-        c = new NonBlockingStatsDClient("my.prefix", "localhost", 8215);
-        c1 = new StatsdClient();
+        c = Statsd.getInstance();
     }
 
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
@@ -70,16 +66,6 @@ public class StatsdBenchmarks {
     public void testGauge_1() {
         c.gauge("g1", 10);
     }
-
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(1)
-    public void testGauge_2() {
-        c1.gauge("g1", 10);
-    }
-
-
 
     public static void main(String[] args) throws Exception {
         Options opt = new OptionsBuilder()

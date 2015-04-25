@@ -61,7 +61,6 @@ final public class Statsd extends SimpleService {
     }
 
     private final static class Singleton {
-
         private final static Statsd INSTANCE = new Statsd();
     }
 
@@ -103,16 +102,13 @@ final public class Statsd extends SimpleService {
 
                     while (true) {
                         String m = q.take();
-                        System.err.println(m);
                         dp.setData(m.getBytes());
                         ds.send(dp);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-                    return;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    return;
                 }
             }
         });
