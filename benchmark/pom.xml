@@ -69,16 +69,6 @@ questions.
             <groupId>sun.jdk</groupId>
             <artifactId>tools</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.timgroup</groupId>
-            <artifactId>java-statsd-client</artifactId>
-            <version>3.0.2</version>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>btrace-statsd</artifactId>
-            <version>${project.version}</version>
-        </dependency>
     </dependencies>
 
     <properties>

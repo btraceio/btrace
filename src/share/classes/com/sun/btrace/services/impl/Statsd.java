@@ -38,7 +38,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * A simple way to submit <a href="https://github.com/etsy/statsd/">statsd</a> metrics
+ * A simple way to submit <a href="https://github.com/etsy/statsd/">statsd</a> metrics.
+ * <p>
+ * Use the following code to obtain an instance:
+ * <pre>
+ * <code>
+ * {@literal @}Injected(factoryMethod = "getInstance")
+ *   private static Statsd s;
+ * </code>
+ * </pre>
  * @author Jaroslav Bachorik
  */
 final public class Statsd extends SimpleService {
@@ -53,7 +61,6 @@ final public class Statsd extends SimpleService {
     }
 
     private final static class Singleton {
-
         private final static Statsd INSTANCE = new Statsd();
     }
 
@@ -95,16 +102,13 @@ final public class Statsd extends SimpleService {
 
                     while (true) {
                         String m = q.take();
-                        System.err.println(m);
                         dp.setData(m.getBytes());
                         ds.send(dp);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-                    return;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    return;
                 }
             }
         });
