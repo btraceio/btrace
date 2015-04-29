@@ -1,2 +1,5 @@
 rootProject.name = 'btrace'
-include 'benchmark'
+def withBenchmark = (System.properties['withBenchmark'] != null)
+if (withBenchmark) {
+  include 'benchmark'
+}
