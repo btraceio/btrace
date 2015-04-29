@@ -18,9 +18,10 @@ nbproject/private
 TEST-*
 make/junit*
 benchmark/target
+benchmark/build
+benchmark/*.iml
 junit*
 /btrace-statsd/target/
-btrace.iml
+*.iml
 .gradle
 .idea
-main.iml

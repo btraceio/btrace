@@ -1,0 +1,59 @@
+plugins {
+  id 'application'
+}
+
+// is the inconsistency (with btrace) intended?
+description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
+
+
+sourceCompatibility = 8
+targetCompatibility = 8
+mainClassName = 'org.openjdk.jmh.Main'
+
+def env = System.getenv()
+def javaHome = env['JAVA_HOME']
+
+
+ext {
+  versions = [
+    jmh: '0.9.2',
+    statsd: '3.0.2'
+  ]
+
+  libs = [
+    jmh: ["org.openjdk.jmh:jmh-core:${versions.jmh}",
+          "org.openjdk.jmh:jmh-generator-annprocess:${versions.jmh}"],
+    statsd: "com.timgroup:java-statsd-client:${versions.statsd}"
+  ]
+}
+
+
+task btracec(type: JavaExec) {
+  group 'Build'
+  inputs.files 'src/main/resources/scripts'
+  outputs.dir "${buildDir}/classes/main"
+
+  workingDir "$projectDir"
+  environment('BTRACE_HOME', "$projectDir")
+  executable "${javaHome}/bin/java"
+  classpath configurations.compile
+  main 'com.sun.btrace.compiler.Compiler'
+  args '-d'
+  args "${buildDir}/classes/main"
+  args fileTree(dir: "src/main/resources/scripts", include: 'TraceScript.java')
+}
+compileJava.dependsOn btracec
+
+
+distTar {
+  compression Compression.GZIP
+}
+
+
+dependencies {
+  compile project(':'),
+          files("${buildDir}/classes/main"),
+          libs.jmh,
+          libs.statsd,
+          files("${javaHome}/lib/tools.jar")
+}
