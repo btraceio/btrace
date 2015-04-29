@@ -1,8 +1,12 @@
-apply plugin: 'java'
-apply plugin: 'maven-publish'
+plugins {
+  id 'java'
+  id 'maven-publish'
+  id "nebula.os-package" version "2.2.2"
+}
 
 group 'com.sun.tools.btrace'
 version = '1.3-SNAPSHOT'
+description = 'BTrace - a safe, dynamic tracing tool for the Java platform'
 
 sourceCompatibility = 7
 targetCompatibility = 7
@@ -237,6 +241,35 @@ task createBinDistTgz(type: Tar) {
   with distContent
 }
 assemble.dependsOn createBinDistTgz
+
+
+ospackage {
+  maintainer = 'Jaroslav Bachorik'
+
+  postInstall file('packaging/debian/btrace/DEBIAN/postinst')
+
+  requires 'openjdk-7-jdk'
+
+  from(buildDir) {
+    into '/usr/lib/btrace'
+    include 'btrace-*.jar'
+  }
+
+  from('packaging/debian/btrace/usr/bin') {
+    into '/usr/bin'
+  }
+}
+
+buildDeb {
+  inputs.files agentJar.outputs
+  inputs.files bootJar.outputs
+  inputs.files clientJar.outputs
+
+  doLast {
+    logger.lifecycle('Attention: The created .deb-package is untested! Use with care!')
+  }
+}
+assemble.dependsOn buildDeb
 
 
 test {
