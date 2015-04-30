@@ -246,6 +246,11 @@ assemble.dependsOn createBinDistTgz
 ospackage {
   maintainer = 'Jaroslav Bachorik'
 
+  if (project.version.endsWith('-SNAPSHOT')) {
+    version = project.version - '-SNAPSHOT'
+    release = (new Date()).format('YYYYMMdd.HHmmss')
+  }
+
   postInstall file('packaging/debian/btrace/DEBIAN/postinst')
 
   requires 'openjdk-7-jdk'
@@ -264,12 +269,15 @@ buildDeb {
   inputs.files agentJar.outputs
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
-
-  doLast {
-    logger.lifecycle('Attention: The created .deb-package is untested! Use with care!')
-  }
 }
 assemble.dependsOn buildDeb
+
+buildRpm {
+  inputs.files agentJar.outputs
+  inputs.files bootJar.outputs
+  inputs.files clientJar.outputs
+}
+assemble.dependsOn buildRpm
 
 
 test {
