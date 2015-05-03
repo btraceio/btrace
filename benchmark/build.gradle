@@ -1,14 +1,12 @@
 plugins {
-  id 'application'
+  id 'java'
 }
 
-// is the inconsistency (with btrace) intended?
 description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
 
 
 sourceCompatibility = 8
 targetCompatibility = 8
-mainClassName = 'org.openjdk.jmh.Main'
 
 def env = System.getenv()
 def javaHome = env['JAVA_HOME']
@@ -16,7 +14,7 @@ def javaHome = env['JAVA_HOME']
 
 ext {
   versions = [
-    jmh: '0.9.2',
+    jmh: '1.9.1',
     statsd: '3.0.2'
   ]
 
@@ -33,9 +31,7 @@ task btracec(type: JavaExec) {
   inputs.files 'src/main/resources/scripts'
   outputs.dir "${buildDir}/classes/main"
 
-  workingDir "$projectDir"
   environment('BTRACE_HOME', "$projectDir")
-  executable "${javaHome}/bin/java"
   classpath configurations.compile
   main 'com.sun.btrace.compiler.Compiler'
   args '-d'
@@ -45,13 +41,26 @@ task btracec(type: JavaExec) {
 compileJava.dependsOn btracec
 
 
-distTar {
-  compression Compression.GZIP
+['BTraceBench', 'ProfilerBenchmarks', 'StatsdBenchmarks', 'StringOpBenchmarks'].forEach { className ->
+  def taskName = "benchmark${className}"
+  task "$taskName"(type: JavaExec) {
+    group 'Verification'
+    description "Run benchmark for class ${className}."
+
+    inputs.files project.classes.outputs
+    inputs.files project.btracec.outputs
+
+    classpath project.configurations.runtime
+    main "net.java.btrace.${className}"
+  }
+  check.dependsOn("$taskName")
 }
 
 
 dependencies {
   compile project(':'),
+          files( rootProject.tasks.agentJar.outputs ),
+          files( rootProject.tasks.bootJar.outputs ),
           files("${buildDir}/classes/main"),
           libs.jmh,
           libs.statsd,
