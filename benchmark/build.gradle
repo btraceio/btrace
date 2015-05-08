@@ -14,14 +14,12 @@ def javaHome = env['JAVA_HOME']
 
 ext {
   versions = [
-    jmh: '1.9.1',
-    statsd: '3.0.2'
+    jmh: '1.9.1'
   ]
 
   libs = [
     jmh: ["org.openjdk.jmh:jmh-core:${versions.jmh}",
-          "org.openjdk.jmh:jmh-generator-annprocess:${versions.jmh}"],
-    statsd: "com.timgroup:java-statsd-client:${versions.statsd}"
+          "org.openjdk.jmh:jmh-generator-annprocess:${versions.jmh}"]
   ]
 }
 
@@ -42,8 +40,7 @@ compileJava.dependsOn btracec
 
 
 ['BTraceBench', 'ProfilerBenchmarks', 'StatsdBenchmarks', 'StringOpBenchmarks'].forEach { className ->
-  def taskName = "benchmark${className}"
-  task "$taskName"(type: JavaExec) {
+  task(type: JavaExec, className) {
     group 'Verification'
     description "Run benchmark for class ${className}."
 
@@ -53,7 +50,7 @@ compileJava.dependsOn btracec
     classpath project.configurations.runtime
     main "net.java.btrace.${className}"
   }
-  check.dependsOn("$taskName")
+  check.dependsOn(className)
 }
 
 
@@ -63,6 +60,5 @@ dependencies {
           files( rootProject.tasks.bootJar.outputs ),
           files("${buildDir}/classes/main"),
           libs.jmh,
-          libs.statsd,
           files("${javaHome}/lib/tools.jar")
 }

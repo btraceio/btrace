@@ -1,5 +1,5 @@
 rootProject.name = 'btrace'
-def withBenchmark = (System.properties['withBenchmark'] != null)
-if (withBenchmark) {
+def excludeBenchmark = (System.properties['excludeBenchmark'] != null)
+if (!excludeBenchmark) {
   include 'benchmark'
 }

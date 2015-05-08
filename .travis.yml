@@ -12,6 +12,9 @@ notifications:
     on_failure: always  # options: [always|never|change] default: always
     on_start: never     # default: [always|never|change] default: always
 
+before_script: ./gradlew assemble -DexcludeBenchmark
+script: ./gradlew check -DexcludeBenchmark
+
 deploy:
   provider: s3
   access_key_id: AKIAJAUNGLUDSLINNSPQ
