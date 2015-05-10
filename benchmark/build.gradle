@@ -50,7 +50,6 @@ compileJava.dependsOn btracec
     classpath project.configurations.runtime
     main "net.java.btrace.${className}"
   }
-  check.dependsOn(className)
 }
 
 

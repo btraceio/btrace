@@ -175,16 +175,6 @@ task buildTraces(type: Exec) {
   args "-cp ${buildDir}/classes/test"
   args "-d ${buildDir}/classes/test"
   args fileTree(dir: "src/test/traces", include: '**/*.java')
-
-  // It would be better gradle style to do the copying in another task . . .
-  // Do we really need this?
-  doLast {
-    copy {
-      from 'src/test/traces'
-      into "${buildDir}/classes/test/traces"
-      include '**/*.java'
-    }
-  }
 }
 
 
