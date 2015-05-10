@@ -29,10 +29,13 @@ import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.instr.MethodTracker;
+
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -41,9 +44,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -286,32 +293,31 @@ public class BTraceBench {
     }
 
     private static BTraceConfig getConfig() throws IOException {
-        URL jarLoc = BTraceBench.class.getResource("/" + com.sun.btrace.agent.Main.class.getName().replace('.', '/') + ".class");
-        URL traceLoc = BTraceBench.class.getResource("/" + TraceScript.class.getName().replace('.', '/') + ".class");
-
-        String agentJar = jarLoc.toString().substring(9);
-        agentJar = agentJar.substring(0, agentJar.indexOf(".jar") + 4);
-
         FileSystem fs = FileSystems.getDefault();
 
-        Path jarRoot = fs.getPath(agentJar).resolve("../../..").normalize();
-
-        Path bootJar = Files.find(
-            jarRoot,
-            5,
-            (p, attrs) -> {
-                String fName = p.getFileName().toString();
-                return fName.startsWith("btrace-boot")
-                && fName.endsWith(".jar");
-            }).findFirst().get();
+        Path agentPath = null;
+        Path bootPath = null;
+        ClassLoader cl = ClassLoader.getSystemClassLoader();
+        URL[] urls = ((URLClassLoader)cl).getURLs();
+        for (URL url: urls) {
+            final String path = url.getPath();
+            if (path.endsWith("btrace-agent.jar")) {
+                agentPath = fs.getPath(path);
+            } else if (path.endsWith("btrace-boot.jar")) {
+                bootPath = fs.getPath(path);
+            }
+        }
+        if (agentPath == null) { throw new IllegalArgumentException("btrace-agent.jar not found"); }
+        if (bootPath == null) { throw new IllegalArgumentException("btrace-boot.jar not found"); }
 
         Path tmpDir = Files.createTempDirectory("btrace-bench-");
 
-        Path agentPath = Files.copy(fs.getPath(agentJar), tmpDir.resolve("btrace-agent.jar"), StandardCopyOption.REPLACE_EXISTING);
-        Files.copy(bootJar, tmpDir.resolve("btrace-boot.jar"), StandardCopyOption.REPLACE_EXISTING);
+        Path targetPath = Files.copy(agentPath, tmpDir.resolve("btrace-agent.jar"), StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(bootPath, tmpDir.resolve("btrace-boot.jar"), StandardCopyOption.REPLACE_EXISTING);
 
-        String trace = traceLoc.toString().substring(5);
+        URL traceLoc = BTraceBench.class.getResource("/" + TraceScript.class.getName().replace('.', '/') + ".class");
+        String trace = traceLoc.getPath();
 
-        return new BTraceConfig(tmpDir, agentPath.toString(), trace);
+        return new BTraceConfig(tmpDir, targetPath.toString(), trace);
     }
 }

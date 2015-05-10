@@ -67,6 +67,7 @@ final class ProbeDescriptorLoader {
             // load probe descriptor for the given namespace
             File file = findFile(namespace);
             if (file == null) {
+                if (Main.isDebug()) Main.debugPrint("didn't find probe descriptor file " + namespace);
                 return null;
             }
             ProbeDescriptor pd = load(file);
@@ -98,6 +99,7 @@ final class ProbeDescriptorLoader {
     private static File findFile(String namespace) {
         for (String dir : probeDescDirs) {
             File f = new File(dir, namespace + ".xml");
+            if (Main.isDebug()) Main.debugPrint("looking for probe descriptor file " + f.getPath());
             if (f.exists() && f.isFile()) {
                 if (Main.isDebug()) Main.debugPrint("probe descriptor for " + namespace + " is " + f);
                 return f;
