@@ -14,6 +14,7 @@ notifications:
 
 install: ./gradlew assemble -DexcludeBenchmark
 script: ./gradlew check -DexcludeBenchmark
+after_success: ./gradlew buildDistributions -DexcludeBenchmark
 
 deploy:
   provider: s3

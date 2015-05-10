@@ -217,7 +217,6 @@ task createBinDistZip(type: Zip) {
   appendix = 'bin'
   with distContent
 }
-assemble.dependsOn createBinDistZip
 
 task createBinDistTgz(type: Tar) {
   group 'Build'
@@ -230,7 +229,6 @@ task createBinDistTgz(type: Tar) {
   appendix = 'bin'
   with distContent
 }
-assemble.dependsOn createBinDistTgz
 
 
 ospackage {
@@ -260,15 +258,17 @@ buildDeb {
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
 }
-assemble.dependsOn buildDeb
 
 buildRpm {
   inputs.files agentJar.outputs
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
 }
-assemble.dependsOn buildRpm
 
+task buildDistributions {
+  dependsOn createBinDistZip, createBinDistTgz
+  dependsOn buildDeb, buildRpm
+}
 
 test {
   inputs.files buildTraces.outputs
