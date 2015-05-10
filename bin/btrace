@@ -23,6 +23,11 @@ if [ -f "${BTRACE_HOME}/build/btrace-client.jar" ] ; then
               if [ ! -f ${TOOLS_JAR} ] ; then
                   TOOLS_JAR="${JAVA_HOME}/../Classes/classes.jar"
               fi
+              
+              #JDK 1.7+
+              if [ ! -f ${TOOLS_JAR} ] ; then
+                  TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
+              fi
 
               # If we still can't find, tell the user to set JAVA_VERSION.
               # This way, we can avoid zip file errors from the agent side
