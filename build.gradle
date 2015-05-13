@@ -28,6 +28,7 @@ def javaHome = env['JAVA_HOME']
 
 def props = System.getProperties()
 def osFamily = props['os.family']
+def osName = props['os.name']
 
 def asmVersion = '5.0.2'
 def junitVersion = '4.6'
@@ -65,8 +66,6 @@ sourceSets {
     }
   }
 }
-
-
 
 processResources {
   from 'src/share/classes'
@@ -186,6 +185,7 @@ def distContent = copySpec {
   into('build') {
     from "$buildDir"
     include '*.jar'
+    include 'i386/*.so'
   }
 
   into ('docs') {
@@ -207,6 +207,17 @@ def distContent = copySpec {
   }
 }
 
+task buildDTrace(type:Exec) {
+  group 'Build'
+  enabled = (osName == 'SunOS')
+
+  workingDir 'make'
+
+  commandLine 'make'
+
+  dependsOn 'bootJar'
+}
+
 task createBinDistZip(type: Zip) {
   group 'Build'
   description 'Build the binary distribution zip-file.'
@@ -216,6 +227,8 @@ task createBinDistZip(type: Zip) {
 
   appendix = 'bin'
   with distContent
+
+  dependsOn 'buildDTrace'
 }
 
 task createBinDistTgz(type: Tar) {
@@ -228,6 +241,8 @@ task createBinDistTgz(type: Tar) {
 
   appendix = 'bin'
   with distContent
+
+  dependsOn 'buildDTrace'
 }
 
 
@@ -273,7 +288,6 @@ task buildDistributions {
 test {
   inputs.files buildTraces.outputs
 }
-
 
 dependencies {
   compile files("lib/btrace-asm-${asmVersion}.jar",
