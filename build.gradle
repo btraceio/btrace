@@ -177,6 +177,20 @@ task buildTraces(type: Exec) {
 }
 
 
+task buildDTrace(type:Exec) {
+  group 'Build'
+  description 'Build the native library for DTrace integration'
+  onlyIf {osName == 'SunOS'}
+  inputs.dir 'src/solaris/native'
+  inputs.files bootJar.outputs
+  outputs.dir "${buildDir}/i386"
+
+  workingDir 'make'
+
+  commandLine 'make'
+}
+
+
 def distContent = copySpec {
   into('bin') {
     from 'bin'
@@ -207,16 +221,6 @@ def distContent = copySpec {
   }
 }
 
-task buildDTrace(type:Exec) {
-  group 'Build'
-  enabled = (osName == 'SunOS')
-
-  workingDir 'make'
-
-  commandLine 'make'
-
-  dependsOn 'bootJar'
-}
 
 task createBinDistZip(type: Zip) {
   group 'Build'
@@ -224,12 +228,12 @@ task createBinDistZip(type: Zip) {
   inputs.files agentJar.outputs
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
+  inputs.files buildDTrace.outputs
 
   appendix = 'bin'
   with distContent
-
-  dependsOn 'buildDTrace'
 }
+
 
 task createBinDistTgz(type: Tar) {
   group 'Build'
@@ -237,12 +241,12 @@ task createBinDistTgz(type: Tar) {
   inputs.files agentJar.outputs
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
+  inputs.files buildDTrace.outputs
+
   compression = Compression.GZIP
 
   appendix = 'bin'
   with distContent
-
-  dependsOn 'buildDTrace'
 }
 
 
