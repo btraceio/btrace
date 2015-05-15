@@ -49,6 +49,7 @@ import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.comm.WireIO;
 import com.sun.btrace.org.objectweb.asm.*;
 import com.sun.tools.attach.VirtualMachine;
+import java.net.ConnectException;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -338,7 +339,17 @@ public class Client {
             if (debug) {
                 debugPrint("opening socket to " + port);
             }
-            sock = new Socket("localhost", port);
+            long timeout = System.currentTimeMillis() + 5000;
+            while (sock == null && System.currentTimeMillis() <= timeout) {
+                try {
+                    sock = new Socket("localhost", port);
+                } catch (ConnectException e) {
+                    if (debug) {
+                        debugPrint("server not yet available; retrying ...");
+                    }
+                    Thread.sleep(20);
+                }
+            }
             oos = new ObjectOutputStream(sock.getOutputStream());
             if (debug) {
                 debugPrint("sending instrument command");
@@ -351,6 +362,8 @@ public class Client {
             commandLoop(listener);
         } catch (UnknownHostException uhe) {
             throw new IOException(uhe);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

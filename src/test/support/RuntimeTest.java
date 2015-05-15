@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import java.util.StringTokenizer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Assert;
 
 /**
@@ -83,7 +84,7 @@ abstract public class RuntimeTest {
             System.err.println(toolsjar);
         }
         btraceExtPath = btraceExtPath + File.pathSeparator + toolsjar;
-        java = System.getProperty("java.home");
+        java = System.getProperty("java.home").replace("/jre", "");
     }
 
     /**
@@ -127,11 +128,18 @@ abstract public class RuntimeTest {
 
         final BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
+        final CountDownLatch testAppLatch = new CountDownLatch(1);
+        final AtomicReference<String> pidStringRef = new AtomicReference<>();
+        
         Thread outT = new Thread(new Runnable() {
             public void run() {
                 try {
                     String l;
                     while ((l = stdoutReader.readLine()) != null) {
+                        if (l.startsWith("ready:")) {
+                            pidStringRef.set(l.split("\\:")[1]);
+                            testAppLatch.countDown();
+                        }
                         if (debugTestApp) {
                             System.out.println("[traced app] " + l);
                         }
@@ -153,6 +161,7 @@ abstract public class RuntimeTest {
                 try {
                     String l = null;
                     while ((l = stderrReader.readLine()) != null) {
+                        testAppLatch.countDown();
                         if (debugTestApp) {
                             System.err.println("[traced app] " + l);
                         }
@@ -164,12 +173,13 @@ abstract public class RuntimeTest {
         }, "STDERR Reader");
         errT.setDaemon(true);
 
-        String l = stdoutReader.readLine();
-        if (l.startsWith("ready:")) {
-            String pid = l.split("\\:")[1];
+        outT.start();
+        errT.start();
+        
+        testAppLatch.await();
+        String pid = pidStringRef.get();
+        if (pid != null) {
             System.out.println("Target process ready: " + pid);
-            outT.start();
-            errT.start();
 
             Process client = attach(pid, testScript, checkLines, stdout, stderr);
 
