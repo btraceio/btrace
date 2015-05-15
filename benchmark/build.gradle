@@ -39,7 +39,7 @@ task btracec(type: JavaExec) {
 compileJava.dependsOn btracec
 
 
-['BTraceBench', 'ProfilerBenchmarks', 'StatsdBenchmarks', 'StringOpBenchmarks'].forEach { className ->
+['BTraceBench', 'ProfilerBenchmarks', 'StatsdBenchmarks', 'StringOpBenchmarks'].each { className ->
   task(type: JavaExec, className) {
     group 'Verification'
     description "Run benchmark for class ${className}."
