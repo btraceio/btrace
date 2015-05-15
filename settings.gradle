@@ -1,4 +1,6 @@
-rootProject.name = 'BTrace'
+// the project name must stay 'btrace' because of hard dependencies on this name
+// in 'btrace*' commands
+rootProject.name = 'btrace'
 def excludeBenchmark = (System.properties['excludeBenchmark'] != null)
 if (!excludeBenchmark) {
   include 'benchmark'
