@@ -294,6 +294,7 @@ test {
 
 dependencies {
   compile files("lib/btrace-asm-${asmVersion}.jar",
+                "${javaHome}/lib/tools.jar",  // ATTENTION: build.xml uses "${javaHome}/../lib/tools.jar"
                 files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs()),
                 "/usr/share/lib/java/dtrace.jar")
 
