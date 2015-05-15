@@ -1,4 +1,4 @@
-rootProject.name = 'btrace'
+rootProject.name = 'BTrace'
 def excludeBenchmark = (System.properties['excludeBenchmark'] != null)
 if (!excludeBenchmark) {
   include 'benchmark'
