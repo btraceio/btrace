@@ -64,9 +64,12 @@ if [ "${JAVA_HOME}" != "" ]; then
           OPTIONS="systemClassPath=$2,$OPTIONS"
           shift
           ;;
+<<<<<<< HEAD
         -statsd)
           OPTIONS="statsd=$2,$OPTIONS"
           ;;
+=======
+>>>>>>> Adding suport for deb packaging
         --noserver)
           OPTIONS="noServer=true,$OPTIONS"
           ;;
