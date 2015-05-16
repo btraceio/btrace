@@ -1,3 +1,5 @@
+import javax.tools.ToolProvider
+
 plugins {
   id 'java'
   id 'maven-publish'
@@ -28,6 +30,7 @@ def javaHome = env['JAVA_HOME']
 
 def props = System.getProperties()
 def osFamily = props['os.family']
+def osName = props['os.name']
 
 def asmVersion = '5.0.2'
 def junitVersion = '4.6'
@@ -65,8 +68,6 @@ sourceSets {
     }
   }
 }
-
-
 
 processResources {
   from 'src/share/classes'
@@ -178,6 +179,20 @@ task buildTraces(type: Exec) {
 }
 
 
+task buildDTrace(type:Exec) {
+  group 'Build'
+  description 'Build the native library for DTrace integration'
+  onlyIf {osName == 'SunOS'}
+  inputs.dir 'src/solaris/native'
+  inputs.files bootJar.outputs
+  outputs.dir "${buildDir}/i386"
+
+  workingDir 'make'
+
+  commandLine 'make'
+}
+
+
 def distContent = copySpec {
   into('bin') {
     from 'bin'
@@ -186,6 +201,7 @@ def distContent = copySpec {
   into('build') {
     from "$buildDir"
     include '*.jar'
+    include 'i386/*.so'
   }
 
   into ('docs') {
@@ -207,16 +223,19 @@ def distContent = copySpec {
   }
 }
 
+
 task createBinDistZip(type: Zip) {
   group 'Build'
   description 'Build the binary distribution zip-file.'
   inputs.files agentJar.outputs
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
+  inputs.files buildDTrace.outputs
 
   appendix = 'bin'
   with distContent
 }
+
 
 task createBinDistTgz(type: Tar) {
   group 'Build'
@@ -224,6 +243,8 @@ task createBinDistTgz(type: Tar) {
   inputs.files agentJar.outputs
   inputs.files bootJar.outputs
   inputs.files clientJar.outputs
+  inputs.files buildDTrace.outputs
+
   compression = Compression.GZIP
 
   appendix = 'bin'
@@ -272,12 +293,13 @@ task buildDistributions {
 
 test {
   inputs.files buildTraces.outputs
+  inputs.files buildDTrace.outputs
 }
-
 
 dependencies {
   compile files("lib/btrace-asm-${asmVersion}.jar",
                 "${javaHome}/lib/tools.jar",  // ATTENTION: build.xml uses "${javaHome}/../lib/tools.jar"
+                files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs()),
                 "/usr/share/lib/java/dtrace.jar")
 
   testCompile files("test-lib/asm-all-${asmVersion}.jar",

@@ -2379,8 +2379,16 @@ public final class BTraceRuntime  {
                     return;
                 }
                 String path = loader.getResource("com/sun/btrace").toString();
-                path = path.substring(0, path.indexOf("!"));
-                path = path.substring("jar:".length(), path.lastIndexOf('/'));
+                int archSeparator = path.indexOf("!");
+                if (archSeparator != -1) {
+                    path = path.substring(0, archSeparator);
+                    path = path.substring("jar:".length(), path.lastIndexOf('/'));
+                } else {
+                    int buildSeparator = path.indexOf("/classes/");
+                    if (buildSeparator != -1) {
+                        path = path.substring(0, buildSeparator);
+                    }
+                }
                 String cpu = System.getProperty("os.arch");
                 if (cpu.equals("x86")) {
                     cpu = "i386";
