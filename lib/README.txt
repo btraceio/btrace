@@ -1,4 +1,4 @@
-This directory contains btrace-asm-5.0.2.jar. This file was
+This directory contains btrace-asm-5.0.4.jar. This file was
 generated from "asm-5.0.2.jar" using the "JarJar" tool (please
 see http://code.google.com/p/jarjar/) using the following rule:
 
