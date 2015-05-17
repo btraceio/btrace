@@ -82,3 +82,7 @@ Or, add the repository URLs using the "Software Sources" admin UI:
 ```
 deb http://dl.bintray.com/jbachorik/deb trusty universe
 ```
+
+### RMP Repository
+
+Grab the _*.repo_ file `wget https://bintray.com/jbachorik/rpm/rpm -O bintray-jbachorik-rpm.repo` and use it.
