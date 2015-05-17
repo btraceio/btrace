@@ -11,8 +11,8 @@
         <version>7</version>
     </parent>
     <scm>
-        <connection>scm:hg:https://hg.kenai.com/hg/btrace~hg</connection>
-        <developerConnection>scm:hg:https://hg.kenai.com/hg/btrace~hg</developerConnection>
-        <url>https://hg.kenai.com/hg/btrace~hg</url>
+        <connection>scm:git:https://github.com/jbachorik/btrace.git</connection>
+        <developerConnection>scm:git:https://github.com/jbachorik/btrace.git</developerConnection>
+        <url>https://github.com/jbachorik/btrace</url>
     </scm>
 </project>

@@ -17,6 +17,7 @@ docs
 nbproject/private
 TEST-*
 make/junit*
+make/private.properties
 benchmark/target
 benchmark/build
 benchmark/*.iml
