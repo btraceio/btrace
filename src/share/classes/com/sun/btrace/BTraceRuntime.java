@@ -50,6 +50,8 @@ import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnTimer;
 import com.sun.btrace.annotations.OnEvent;
 import com.sun.btrace.annotations.OnLowMemory;
+import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Self;
 import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.EventCommand;
@@ -60,6 +62,8 @@ import com.sun.btrace.comm.NumberMapDataCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
 import com.sun.btrace.profiling.MethodInvocationProfiler;
+import com.sun.btrace.runtime.Constants;
+import com.sun.btrace.runtime.Instrumentor;
 
 import java.lang.management.GarbageCollectorMXBean;
 
@@ -106,6 +110,7 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
+import java.util.HashSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -180,11 +185,11 @@ public final class BTraceRuntime  {
         try {
             Reflection.class.getMethod("getCallerClass");
             isNewerThan8 = true;
-        } catch (NoSuchMethodException ex) {
-            // ignore
-        } catch (SecurityException ex) {
+        } catch (NoSuchMethodException | SecurityException ex) {
             // ignore
         }
+        // ignore
+
 
         dummy = new BTraceRuntime();
         LINE_SEPARATOR = System.getProperty("line.separator");
@@ -198,8 +203,10 @@ public final class BTraceRuntime  {
     };
 
     // BTraceRuntime against BTrace class name
-    private static Map<String, BTraceRuntime> runtimes =
-        new ConcurrentHashMap<String, BTraceRuntime>();
+    private static Map<String, BTraceRuntime> runtimes = new ConcurrentHashMap<>();
+
+    // a set of all the client names connected so far
+    private static Set<String> clients = new HashSet<>();
 
     // jvmstat related stuff
     // to read and write perf counters
@@ -207,8 +214,7 @@ public final class BTraceRuntime  {
     // interface to read perf counters of this process
     private static volatile PerfReader perfReader;
     // performance counters created by this client
-    private static Map<String, ByteBuffer> counters =
-        new HashMap<String, ByteBuffer>();
+    private static Map<String, ByteBuffer> counters = new HashMap<>();
 
     // Few MBeans used to implement certain built-in functions
     private static volatile HotSpotDiagnosticMXBean hotspotMBean;
@@ -225,7 +231,7 @@ public final class BTraceRuntime  {
     // Per-client state starts here.
 
     // current thread's exception
-    private ThreadLocal<Throwable> currentException = new ThreadLocal<Throwable>();
+    private ThreadLocal<Throwable> currentException = new ThreadLocal<>();
 
     // "command line" args supplied by client
     private String[] args;
@@ -278,8 +284,8 @@ public final class BTraceRuntime  {
         private ThreadLocal<Integer> currentSpeculationId;
 
         SpeculativeQueueManager() {
-            speculativeQueues = new ConcurrentHashMap<Integer, BlockingQueue<Command>>();
-            currentSpeculationId = new ThreadLocal<Integer>();
+            speculativeQueues = new ConcurrentHashMap<>();
+            currentSpeculationId = new ThreadLocal<>();
         }
 
         void clear() {
@@ -365,13 +371,15 @@ public final class BTraceRuntime  {
                          final CommandListener cmdListener,
                          Instrumentation inst) {
         this.args = args;
-        this.queue = new ArrayBlockingQueue<Command>(CMD_QUEUE_LIMIT);
+        this.queue = new ArrayBlockingQueue<>(CMD_QUEUE_LIMIT);
         this.specQueueManager = new SpeculativeQueueManager();
         this.cmdListener = cmdListener;
         this.className = className;
         this.instrumentation = inst;
         runtimes.put(className, this);
+        clients.add(className);
         this.cmdThread = new Thread(new Runnable() {
+            @Override
             public void run() {
                 try {
                     BTraceRuntime.enter();
@@ -382,8 +390,7 @@ public final class BTraceRuntime  {
                             return;
                         }
                     }
-                } catch (InterruptedException ignored) {
-                } catch (IOException ignored) {
+                } catch (InterruptedException | IOException ignored) {
                 } finally {
                     runtimes.remove(className);
                     queue.clear();
@@ -404,13 +411,13 @@ public final class BTraceRuntime  {
     }
 
     public static boolean classNameExists(String name) {
-        return runtimes.containsKey(name);
+        return clients.contains(name);
     }
 
     @CallerSensitive
     public static void init(PerfReader perfRead, RunnableGenerator runGen) {
         initUnsafe();
-        
+
         Class caller = isNewerThan8 ? Reflection.getCallerClass() : Reflection.getCallerClass(2);
         if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
             throw new SecurityException("unsafe init");
@@ -784,7 +791,7 @@ public final class BTraceRuntime  {
     }
 
     static <V> Deque<V> newDeque() {
-        return new BTraceDeque<V>(new ArrayDeque<V>());
+        return new BTraceDeque<>(new ArrayDeque<V>());
     }
 
     static Appendable newStringBuilder(boolean threadSafe) {
@@ -832,7 +839,7 @@ public final class BTraceRuntime  {
     	}
     }
 
-    static <K, V> V get(Map<K, V> map, Object key) {
+    static <K, V> V get(Map<K, V> map, K key) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
             return map.get(key);
@@ -841,7 +848,7 @@ public final class BTraceRuntime  {
         }
     }
 
-    static <K, V> boolean containsKey(Map<K, V> map, Object key) {
+    static <K, V> boolean containsKey(Map<K, V> map, K key) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
             return map.containsKey(key);
@@ -850,7 +857,7 @@ public final class BTraceRuntime  {
         }
     }
 
-    static <K, V> boolean containsValue(Map<K, V> map, Object value) {
+    static <K, V> boolean containsValue(Map<K, V> map, V value) {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
             return map.containsValue(value);
@@ -867,7 +874,7 @@ public final class BTraceRuntime  {
         }
     }
 
-    static <K, V> V remove(Map<K, V> map, Object key) {
+    static <K, V> V remove(Map<K, V> map, K key) {
         if (map instanceof BTraceMap) {
             return map.remove(key);
         } else {
@@ -914,7 +921,7 @@ public final class BTraceRuntime  {
         if (map instanceof BTraceMap ||
             map.getClass().getClassLoader() == null) {
             synchronized(map) {
-                Map<String, String> m = new HashMap<String, String>();
+                Map<String, String> m = new HashMap<>();
                 Set<Map.Entry<Object, Object>> entries = map.entrySet();
                 for (Map.Entry<Object, Object> e : entries) {
                    m.put(BTraceUtils.Strings.str(e.getKey()), BTraceUtils.Strings.str(e.getValue()));
@@ -1400,6 +1407,7 @@ public final class BTraceRuntime  {
     static Properties properties() {
         return AccessController.doPrivileged(
             new PrivilegedAction<Properties>() {
+                @Override
                 public Properties run() {
                     return System.getProperties();
                 }
@@ -1410,6 +1418,7 @@ public final class BTraceRuntime  {
     static String getenv(final String name) {
         return AccessController.doPrivileged(
             new PrivilegedAction<String>() {
+                @Override
                 public String run() {
                     return System.getenv(name);
                 }
@@ -1420,6 +1429,7 @@ public final class BTraceRuntime  {
     static Map<String, String> getenv() {
         return AccessController.doPrivileged(
             new PrivilegedAction<Map<String, String>>() {
+                @Override
                 public Map<String, String> run() {
                     return System.getenv();
                 }
@@ -1536,10 +1546,10 @@ public final class BTraceRuntime  {
     	for (int i = 0; i < memPoolList.size(); i++) {
             MemoryPoolMXBean memPool = memPoolList.get(i);
             poolOutput[i][0] = memPool.getName();
-            poolOutput[i][1] = new Long(memPool.getUsage().getMax());
-            poolOutput[i][2] = new Long(memPool.getUsage().getUsed());
-            poolOutput[i][3] = new Long(memPool.getUsage().getCommitted());
-            poolOutput[i][4] = new Long(memPool.getUsage().getInit());
+            poolOutput[i][1] = memPool.getUsage().getMax();
+            poolOutput[i][2] = memPool.getUsage().getUsed();
+            poolOutput[i][3] = memPool.getUsage().getCommitted();
+            poolOutput[i][4] = memPool.getUsage().getInit();
 
     	}
     	for (Object[] memPoolOutput : poolOutput) {
@@ -1567,9 +1577,9 @@ public final class BTraceRuntime  {
         try {
             BufferedOutputStream bos = new BufferedOutputStream(
                 new FileOutputStream(resolveFileName(fileName)));
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(obj);
-            oos.close();
+            try (ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+                oos.writeObject(obj);
+            }
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception exp) {
@@ -1589,10 +1599,10 @@ public final class BTraceRuntime  {
 
     static void writeXML(Object obj, String fileName) {
         try {
-            BufferedWriter bw = new BufferedWriter(
-                new FileWriter(resolveFileName(fileName)));
-            XMLSerializer.write(obj, bw);
-            bw.close();
+            try (BufferedWriter bw = new BufferedWriter(
+                    new FileWriter(resolveFileName(fileName)))) {
+                XMLSerializer.write(obj, bw);
+            }
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception exp) {
@@ -1616,9 +1626,7 @@ public final class BTraceRuntime  {
                 File file = new File(home, "btrace.dotwriter.properties");
                 if (file.exists() && file.isFile()) {
                     is = new BufferedInputStream(new FileInputStream(file));
-                    if (is != null) {
-                        dotWriterProps.load(is);
-                    }
+                    dotWriterProps.load(is);
                 }
             } catch (Exception exp) {
                 exp.printStackTrace();
@@ -1643,11 +1651,9 @@ public final class BTraceRuntime  {
                 ThreadInfo[] infos = threadMBean.getThreadInfo(tids, true, true);
                 StringBuilder sb = new StringBuilder();
                 for (ThreadInfo ti : infos) {
-                    sb.append("\"" + ti.getThreadName() + "\"" +
-                              " Id=" + ti.getThreadId() +
-                              " in " + ti.getThreadState());
+                    sb.append("\"").append(ti.getThreadName()).append("\"" + " Id=").append(ti.getThreadId()).append(" in ").append(ti.getThreadState());
                     if (ti.getLockName() != null) {
-                        sb.append(" on lock=" + ti.getLockName());
+                        sb.append(" on lock=").append(ti.getLockName());
                     }
                     if (ti.isSuspended()) {
                         sb.append(" (suspended)");
@@ -1656,9 +1662,7 @@ public final class BTraceRuntime  {
                         sb.append(" (running in native)");
                     }
                     if (ti.getLockOwnerName() != null) {
-                        sb.append(INDENT + " owned by " +
-                                  ti.getLockOwnerName() +
-                                  " Id=" + ti.getLockOwnerId());
+                        sb.append(INDENT).append(" owned by ").append(ti.getLockOwnerName()).append(" Id=").append(ti.getLockOwnerId());
                         sb.append(LINE_SEPARATOR);
                     }
 
@@ -1668,11 +1672,11 @@ public final class BTraceRuntime  {
                         MonitorInfo[] monitors = ti.getLockedMonitors();
                         for (int i = 0; i < stacktrace.length; i++) {
                             StackTraceElement ste = stacktrace[i];
-                            sb.append(INDENT + "at " + ste.toString());
+                            sb.append(INDENT).append("at ").append(ste.toString());
                             sb.append(LINE_SEPARATOR);
                             for (MonitorInfo mi : monitors) {
                                 if (mi.getLockedStackDepth() == i) {
-                                    sb.append(INDENT + "  - locked " + mi);
+                                    sb.append(INDENT).append("  - locked ").append(mi);
                                     sb.append(LINE_SEPARATOR);
                                 }
                             }
@@ -1681,10 +1685,10 @@ public final class BTraceRuntime  {
                     }
 
                     LockInfo[] locks = ti.getLockedSynchronizers();
-                    sb.append(INDENT + "Locked synchronizers: count = " + locks.length);
+                    sb.append(INDENT).append("Locked synchronizers: count = ").append(locks.length);
                     sb.append(LINE_SEPARATOR);
                     for (LockInfo li : locks) {
-                        sb.append(INDENT + "  - " + li);
+                        sb.append(INDENT).append("  - ").append(li);
                         sb.append(LINE_SEPARATOR);
                     }
                     sb.append(LINE_SEPARATOR);
@@ -1757,7 +1761,7 @@ public final class BTraceRuntime  {
     	if (aggregationArray.length > 1 && aggregationArray[0].getKeyData().size() > 1) {
     		int aggregationDataSize = aggregationArray[0].getKeyData().get(0).getElements().length + aggregationArray.length;
 
-    		List<Object[]> aggregationData = new ArrayList<Object[]>();
+    		List<Object[]> aggregationData = new ArrayList<>();
 
     		//Iterate through all keys in the first Aggregation and build up an array of aggregationData
     		for (AggregationKey aggKey : aggregationArray[0].getKeyData()) {
@@ -1890,6 +1894,7 @@ public final class BTraceRuntime  {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<HotSpotDiagnosticMXBean>() {
+                    @Override
                     public HotSpotDiagnosticMXBean run() throws Exception {
                         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
                         Set<ObjectName> s = server.queryNames(new ObjectName(HOTSPOT_BEAN_NAME), null);
@@ -1923,6 +1928,7 @@ public final class BTraceRuntime  {
     private void initMemoryListener() {
         initThreadPool();
         memoryListener = new NotificationListener() {
+                @Override
                 public void handleNotification(Notification notif, Object handback)  {
                     String notifType = notif.getType();
                     if (notifType.equals(MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED)) {
@@ -1932,6 +1938,7 @@ public final class BTraceRuntime  {
                         final Method handler = lowMemHandlers.get(name);
                         if (handler != null) {
                             threadPool.submit(new Runnable() {
+                                @Override
                                 public void run() {
                                     try {
                                         if (handler.getParameterTypes().length == 1) {
@@ -1952,6 +1959,7 @@ public final class BTraceRuntime  {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<MemoryMXBean>() {
+                    @Override
                     public MemoryMXBean run() throws Exception {
                         return ManagementFactory.getMemoryMXBean();
                    }
@@ -1998,6 +2006,7 @@ public final class BTraceRuntime  {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<ThreadMXBean>() {
+                    @Override
                     public ThreadMXBean run() throws Exception {
                         return ManagementFactory.getThreadMXBean();
                     }
@@ -2011,6 +2020,7 @@ public final class BTraceRuntime  {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<List<MemoryPoolMXBean>>() {
+                    @Override
                     public List<MemoryPoolMXBean> run() throws Exception {
                         return ManagementFactory.getMemoryPoolMXBeans();
                     }
@@ -2024,6 +2034,7 @@ public final class BTraceRuntime  {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<List<GarbageCollectorMXBean>>() {
+                    @Override
                     public List<GarbageCollectorMXBean> run() throws Exception {
                         return ManagementFactory.getGarbageCollectorMXBeans();
                    }
@@ -2057,6 +2068,7 @@ public final class BTraceRuntime  {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<OperatingSystemMXBean>() {
+                    @Override
                     public OperatingSystemMXBean run() throws Exception {
                         return ManagementFactory.getOperatingSystemMXBean();
                     }
@@ -2149,6 +2161,7 @@ public final class BTraceRuntime  {
                 long period = tp.value();
                 final Runnable r = runnables[index];
                 timer.schedule(new TimerTask() {
+                    @Override
                     public void run() { r.run(); }
                 }, period, period);
             }
@@ -2167,6 +2180,7 @@ public final class BTraceRuntime  {
     private void generateRunnables(RunnableGenerator gen, Runnable[] runnables) {
         final MemoryClassLoader loader = AccessController.doPrivileged(
             new PrivilegedAction<MemoryClassLoader>() {
+                @Override
                 public MemoryClassLoader run() {
                     return new MemoryClassLoader(clazz.getClassLoader());
                 }
@@ -2179,6 +2193,7 @@ public final class BTraceRuntime  {
                 final byte[] buf = gen.generate(m, className);
                 Class cls = AccessController.doPrivileged(
                     new PrivilegedExceptionAction<Class>() {
+                        @Override
                         public Class run() throws Exception {
                              return loader.loadClass(className.replace('/', '.'), buf);
                         }
@@ -2196,6 +2211,7 @@ public final class BTraceRuntime  {
         for (int index = 0; index < timerHandlers.length; index++) {
             final Method m = timerHandlers[index];
             runnables[index] = new Runnable() {
+                @Override
                 public void run() {
                     try {
                         m.invoke(null, (Object[])null);
@@ -2272,9 +2288,9 @@ public final class BTraceRuntime  {
         }
 
         this.clazz = cl;
-        List<Method> timersList = new ArrayList<Method>();
-        this.eventHandlers = new HashMap<String, Method>();
-        this.lowMemHandlers = new HashMap<String, Method>();
+        List<Method> timersList = new ArrayList<>();
+        this.eventHandlers = new HashMap<>();
+        this.lowMemHandlers = new HashMap<>();
 
         Method[] methods = clazz.getMethods();
         for (Method m : methods) {
@@ -2359,6 +2375,7 @@ public final class BTraceRuntime  {
 
     private static void loadLibrary(final ClassLoader cl) {
         AccessController.doPrivileged(new PrivilegedAction() {
+            @Override
             public Object run() {
                 loadBTraceLibrary(cl);
                 return null;

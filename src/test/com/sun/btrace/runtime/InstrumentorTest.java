@@ -1151,6 +1151,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "RETURN\n" +
             "L1\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "MAXSTACK = 3\n" +
             "MAXLOCALS = 6\n" +
@@ -1176,6 +1177,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "RETURN\n" +
             "L1\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "MAXSTACK = 3\n" +
             "MAXLOCALS = 1\n" +
@@ -1189,10 +1191,10 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "LDC \"getInstance\"\n" +
             "NEW resources/services/DummySimpleService\n" +
             "DUP\n" +
-            "INVOKESPECIAL resources/services/DummySimpleService.<init> ()V\n" +
+            "LDC \"getInstance\"\n" +
+            "INVOKESPECIAL resources/services/DummySimpleService.<init> (Ljava/lang/String;)V\n" +
             "ASTORE 5\n" +
             "ALOAD 5\n" +
             "LDC \"hello\"\n" +
@@ -1202,8 +1204,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "RETURN\n" +
             "L1\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
-            "MAXSTACK = 4\n" +
+            "MAXSTACK = 3\n" +
             "MAXLOCALS = 6\n" +
             "\n" +
             "// access flags 0xA\n" +
@@ -1218,9 +1221,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "L0\n" +
             "NEW resources/services/DummyRuntimService\n" +
             "DUP\n" +
+            "DUP\n" +
             "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
             "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
-            "DUP\n" +
             "ASTORE 1\n" +
             "BIPUSH 10\n" +
             "LDC \"hey\"\n" +
@@ -1233,8 +1236,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "RETURN\n" +
             "L1\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
-            "MAXSTACK = 3\n" +
+            "MAXSTACK = 4\n" +
             "MAXLOCALS = 2"
         );
     }
@@ -1252,67 +1256,78 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("TLSTest");
 
-        checkTrace("public static Ljava/lang/ThreadLocal; $entryTimes\n" +
+        checkTrace(
             "public static Lcom/sun/btrace/BTraceRuntime; runtime\n" +
+            "// signature Ljava/lang/ThreadLocal<Ljava/util/Deque;>;\n" +
+            "// declaration: java.lang.ThreadLocal<java.util.Deque>\n" +
+            "public static Ljava/lang/ThreadLocal; entryTimes\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
             "GETSTATIC traces/TLSTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "GETSTATIC traces/TLSTest.$entryTimes : Ljava/lang/ThreadLocal;\n" +
+            "GETSTATIC traces/TLSTest.entryTimes : Ljava/lang/ThreadLocal;\n" +
             "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
             "CHECKCAST java/util/Deque\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "L1\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "L0\n" +
             "LDC Ltraces/TLSTest;.class\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.forClass (Ljava/lang/Class;)Lcom/sun/btrace/BTraceRuntime;\n" +
             "PUTSTATIC traces/TLSTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newThreadLocal (Ljava/lang/Object;)Ljava/lang/ThreadLocal;\n" +
+            "PUTSTATIC traces/TLSTest.entryTimes : Ljava/lang/ThreadLocal;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.start ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V"
+        );
+
+        checkTransformation(
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$TLSTest$testArgs (Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 5\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$TLSTest$testArgs(Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"args\")\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
             "GETSTATIC traces/TLSTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "ASTORE 0\n" +
-            "ALOAD 0\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newThreadLocal (Ljava/lang/Object;)Ljava/lang/ThreadLocal;\n" +
-            "PUTSTATIC traces/TLSTest.$entryTimes : Ljava/lang/ThreadLocal;\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.start ()V\n" +
+            "GETSTATIC traces/TLSTest.entryTimes : Ljava/lang/ThreadLocal;\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
+            "CHECKCAST java/util/Deque\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.push (Ljava/util/Deque;Ljava/lang/Object;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
-            "MAXLOCALS = 1");
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 3\n" +
+            "MAXLOCALS = 5"
+        );
+    }
 
-        checkTransformation("ALOAD 1\n" +
-        "LLOAD 2\n" +
-        "ALOAD 4\n" +
-        "ALOAD 5\n" +
-        "INVOKESTATIC resources/OnMethodTest.$btrace$traces$TLSTest$testArgs (Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
-        "MAXSTACK = 5\n" +
-        "\n" +
-        "// access flags 0xA\n" +
-        "private static $btrace$traces$TLSTest$testArgs(Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
-        "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"args\")\n" +
-        "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-        "GETSTATIC traces/TLSTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-        "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
-        "IFNE L0\n" +
-        "RETURN\n" +
-        "L0\n" +
-        "GETSTATIC traces/TLSTest.$entryTimes : Ljava/lang/ThreadLocal;\n" +
-        "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
-        "CHECKCAST java/util/Deque\n" +
-        "LLOAD 1\n" +
-        "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
-        "INVOKESTATIC com/sun/btrace/BTraceUtils.push (Ljava/util/Deque;Ljava/lang/Object;)V\n" +
-        "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-        "RETURN\n" +
-        "L1\n" +
-        "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-        "RETURN\n" +
-        "MAXSTACK = 3\n" +
-        "MAXLOCALS = 5");
+    @Test
+    public void onprobeTest() throws Exception {
+        loadTargetClass("OnMethodTest");
+        System.err.println(asmify(originalBC));
+        transform("OnProbeTest", false);
+        System.err.println("\n" + asmify(transformedBC));
     }
 }

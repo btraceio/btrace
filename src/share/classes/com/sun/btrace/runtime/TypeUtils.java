@@ -48,6 +48,17 @@ class TypeUtils {
     public static final Type anyTypeArray =
         Type.getType(AnyType[].class);
 
+    public static boolean isPrimitive(Type t) {
+        return t == Type.BOOLEAN_TYPE ||
+               t == Type.BYTE_TYPE ||
+               t == Type.CHAR_TYPE ||
+               t == Type.DOUBLE_TYPE ||
+               t == Type.FLOAT_TYPE ||
+               t == Type.INT_TYPE ||
+               t == Type.LONG_TYPE ||
+               t == Type.SHORT_TYPE;
+    }
+
     public static boolean isAnyType(Type t) {
         return t.equals(anyType);
     }

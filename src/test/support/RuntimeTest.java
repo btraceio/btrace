@@ -114,6 +114,9 @@ abstract public class RuntimeTest {
     public void test(String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
         ProcessBuilder pb = new ProcessBuilder(
             java + "/bin/java",
+            "-Dcom.sun.btrace.debug=true",
+            "-Dcom.sun.btrace.dumpClases=true",
+            "-Dcom.sun.btrace.dumpDir=/tmp",
             "-cp",
             cp,
             testApp
@@ -130,7 +133,7 @@ abstract public class RuntimeTest {
 
         final CountDownLatch testAppLatch = new CountDownLatch(1);
         final AtomicReference<String> pidStringRef = new AtomicReference<>();
-        
+
         Thread outT = new Thread(new Runnable() {
             public void run() {
                 try {
@@ -175,7 +178,7 @@ abstract public class RuntimeTest {
 
         outT.start();
         errT.start();
-        
+
         testAppLatch.await();
         String pid = pidStringRef.get();
         if (pid != null) {
