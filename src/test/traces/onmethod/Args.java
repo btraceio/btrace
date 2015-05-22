@@ -29,6 +29,7 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.TLS;
 
 /**
  *
@@ -36,9 +37,20 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class Args {
+    @TLS
+    private static int cntr = 15;
+
+    @com.sun.btrace.annotations.Export
+    private static long exported = 1;
+
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
     public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
         println("this = " + self);
         println("args");
+        println(str(cntr));
+        cntr++;
+
+        println(str(exported));
+        exported++;
     }
 }

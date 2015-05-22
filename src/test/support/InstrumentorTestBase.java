@@ -65,7 +65,7 @@ abstract public class InstrumentorTestBase {
         }
     }
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     private static Unsafe unsafe;
 
@@ -257,6 +257,13 @@ abstract public class InstrumentorTestBase {
         InstrumentUtils.accept(new ClassReader(originalTrace), verifier);
         Trace t =  new Trace(writer.toByteArray(), verifier.getOnMethods(), verifier.getClassName());
         transformedTrace = t.content;
+        if (DEBUG) {
+//            writer = InstrumentUtils.newClassWriter();
+//            InstrumentUtils.accept(new ClassReader(originalTrace), new Preprocessor1(writer));
+            System.err.println("=== Preprocessed Trace ===");
+//            System.err.println(asmify(writer.toByteArray()));
+            System.err.println(asmify(transformedTrace));
+        }
         return t;
     }
 

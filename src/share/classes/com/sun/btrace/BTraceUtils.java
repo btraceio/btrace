@@ -62,7 +62,7 @@ public class BTraceUtils {
     static {
         BTraceRuntime.initUnsafe();
     }
-    
+
     // standard stack depth decrement for Reflection.getCallerClass() calls
     private static final int STACK_DEC = 2;
 
@@ -2166,16 +2166,16 @@ public class BTraceUtils {
     }
 
     // get a particular item from a Map
-    public static <K, V> V get(Map<K, V> map, Object key) {
+    public static <K, V> V get(Map<K, V> map, K key) {
         return Collections.get(map, key);
     }
 
     // check whether an item exists
-    public static <K, V> boolean containsKey(Map<K, V> map, Object key) {
+    public static <K, V> boolean containsKey(Map<K, V> map, K key) {
         return Collections.containsKey(map, key);
     }
 
-    public static <K, V> boolean containsValue(Map<K, V> map, Object value) {
+    public static <K, V> boolean containsValue(Map<K, V> map, V value) {
         return Collections.containsValue(map, value);
     }
 
@@ -2185,7 +2185,7 @@ public class BTraceUtils {
     }
 
     // remove a particular item from a Map
-    public static <K, V> V remove(Map<K, V> map, Object key) {
+    public static <K, V> V remove(Map<K, V> map, K key) {
         return Collections.remove(map, key);
     }
 
@@ -4541,17 +4541,17 @@ public class BTraceUtils {
         }
 
         // get a particular item from a Map
-        public static <K, V> V get(Map<K, V> map, Object key) {
+        public static <K, V> V get(Map<K, V> map, K key) {
             return BTraceRuntime.get(map, key);
         }
 
         // check whether an item exists
-        public static <K, V> boolean containsKey(Map<K, V> map, Object key) {
+        public static <K, V> boolean containsKey(Map<K, V> map, K key) {
             return BTraceRuntime.containsKey(map, key);
         }
 
-        public static <K, V> boolean containsValue(Map<K, V> map, Object value) {
-            return BTraceRuntime.containsKey(map, value);
+        public static <K, V> boolean containsValue(Map<K, V> map, V value) {
+            return BTraceRuntime.containsValue(map, value);
         }
 
         // put a particular item into a Map
@@ -4560,7 +4560,7 @@ public class BTraceUtils {
         }
 
         // remove a particular item from a Map
-        public static <K, V> V remove(Map<K, V> map, Object key) {
+        public static <K, V> V remove(Map<K, V> map, K key) {
             return BTraceRuntime.remove(map, key);
         }
 
