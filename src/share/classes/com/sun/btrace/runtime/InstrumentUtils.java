@@ -36,16 +36,12 @@ import static com.sun.btrace.runtime.Constants.JAVA_LANG_OBJECT;
  */
 public class InstrumentUtils {
     private static class BTraceClassWriter extends ClassWriter {
-        public BTraceClassWriter(int flags) {
-            super(flags);
-        }
-
-        public BTraceClassWriter(ClassReader reader, int flags) {
-            super(reader, flags);
-        }
-
-        private static final class DummyClassLoader extends ClassLoader {
-            public DummyClassLoader(ClassLoader parent) {
+        /**
+         * This delegating classloader allows to check whether a particular
+         * class has already been loaded by any classloader in the hierarchy
+         */
+        private static final class CheckingClassLoader extends ClassLoader {
+            public CheckingClassLoader(ClassLoader parent) {
                 super(parent);
             }
 
@@ -60,22 +56,36 @@ public class InstrumentUtils {
             }
         }
 
+        private static final CheckingClassLoader CHECKING_CL =
+                new CheckingClassLoader(ClassWriter.class.getClassLoader());
+
+        public BTraceClassWriter(int flags) {
+            super(flags);
+        }
+
+        public BTraceClassWriter(ClassReader reader, int flags) {
+            super(reader, flags);
+        }
+
         protected String getCommonSuperClass(String type1, String type2) {
             // FIXME: getCommonSuperClass is called by ClassWriter to merge two types
             // - persumably to compute stack frame attribute. We get LinkageError
             // when one of the types is the one being written/prepared by this ClassWriter
             // itself! So, I catch LinkageError and return "java/lang/Object" in such cases.
             // Revisit this for a possible better solution.
-            DummyClassLoader classLoader = new DummyClassLoader(getClass().getClassLoader());
             try {
-                type1 = classLoader.isClassLoaded(type1.replace('/', '.')) ? type1 : "java/lang/Object";
-                type2 = classLoader.isClassLoaded(type2.replace('/', '.')) ? type2 : "java/lang/Object";
+                type1 = getResolvedType(type1);
+                type2 = getResolvedType(type2);
                 return super.getCommonSuperClass(type1, type2);
             } catch (LinkageError le) {
                 return JAVA_LANG_OBJECT;
             } catch (RuntimeException re) {
                 return JAVA_LANG_OBJECT;
             }
+        }
+
+        private static String getResolvedType(String type) {
+            return CHECKING_CL.isClassLoaded(type.replace('/', '.')) ? type : "java/lang/Object";
         }
     }
     public static String arrayDescriptorFor(int typeCode) {
