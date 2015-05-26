@@ -35,7 +35,7 @@ def osName = props['os.name']
 def asmVersion = '5.0.4'
 def junitVersion = '4.6'
 
-def agentExcludes = ['**/dtrace/*', '**/btrace/*.class', '**/asm/signature/**', '**/asm/tree/**', '**/asm/util/**', '**/asm/xml/**', '**/aggregation/*', '**/compiler/*', '**/client/*', '**/comm/*', 'com/sun/btrace/api/**/*', 'com/sun/btrace/spi/**/*', '**/instr/** **/META-INF/*']
+def agentExcludes = ['**/dtrace/*', '**/btrace/*.class', '**/asm/signature/**', '**/asm/util/**', '**/asm/xml/**', '**/aggregation/*', '**/compiler/*', '**/client/*', '**/comm/*', 'com/sun/btrace/api/**/*', 'com/sun/btrace/spi/**/*', '**/instr/** **/META-INF/*']
 def bootExcludes = ['**/dtrace/*', '**/agent/*', '**/compiler/*', '**/client/*', '**/resources/*', '**/runtime/*', '**/util/**/*', '**/asm/**', 'com/sun/btrace/api/**/*', 'com/sun/btrace/spi/**/*']
 def clientExcludes = ['**/runtime/*', '**/agent/*', '**/util/TimeStamp*', '**/util/MethodId', '**/util/SamplingSupport', '**/util/templates/**/*', '**/instr/** **/META-INF/*']
 def excludes = ['agent': agentExcludes, 'boot': bootExcludes, 'client': clientExcludes]
