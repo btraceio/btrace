@@ -4,6 +4,7 @@ plugins {
   id 'java'
   id 'maven-publish'
   id "nebula.os-package" version "2.2.2"
+  id "com.jfrog.bintray" version "1.2"
 }
 
 group 'com.sun.tools.btrace'
@@ -24,6 +25,43 @@ allprojects {
   }
 }
 
+// Support for releasing to BinTray; see https://github.com/bintray/gradle-bintray-plugin
+// Add 'gradle.properties' file containing the following properties:
+// * bintray.user
+// * bintray.key
+// * release.tag
+// * gpg.passphrase
+bintray {
+  user = project.hasProperty("bintray.user") ? project.property("bintray.user") : ""
+  key = project.hasProperty("bintray.key") ? project.property("bintray.key") : ""
+
+  publications = ['agent', 'client', 'boot']
+
+  dryRun = true
+  publish = false
+
+  pkg {
+    repo = 'maven'
+    name = 'btrace'
+    desc = 'BTrace'
+    websiteUrl = 'https://github.com/jbachorik/btrace'
+    issueTrackerUrl = 'https://github.com/jbachorik/btrace/issues'
+    vcsUrl = 'https://github.com/jbachorik/btrace.git'
+    licenses = ['GPL-2.0+CE']
+    labels = []
+    publicDownloadNumbers = true
+    version {
+      name = '1.3.0' //Bintray logical version name
+      released  = new java.util.Date()
+      vcsTag = project.property('release.tag')
+      //Optional configuration for GPG signing
+      gpg {
+        sign = project.hasProperty("gpg.passphrase") //Determines whether to GPG sign the files. The default is false
+        passphrase = sign ? project.property("gpg.passphrase") : "" //Optional. The passphrase for GPG signing'
+      }
+    }
+  }
+}
 
 def env = System.getenv()
 def javaHome = env['JAVA_HOME']

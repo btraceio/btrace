@@ -26,3 +26,4 @@ junit*
 *.iml
 .gradle
 .idea
+gradle.properties
