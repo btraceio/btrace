@@ -1,1 +1,5 @@
 rule org.objectweb.asm.** com.sun.btrace.@0
+zap org.objectweb.asm.commons.**
+zap org.objectweb.asm.xml.**
+zap org.objectweb.asm.util.**
+zap org.objectweb.asm.tree.analysis.**
