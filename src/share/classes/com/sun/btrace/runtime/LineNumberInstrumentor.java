@@ -78,7 +78,7 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
         FileOutputStream fos = new FileOutputStream(args[0] + ".class");
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
-            new ClassVisitor(Opcodes.ASM4, writer) {
+            new ClassVisitor(Opcodes.ASM5, writer) {
                  public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc,

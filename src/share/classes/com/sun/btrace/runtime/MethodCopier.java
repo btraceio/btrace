@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.org.objectweb.asm.*;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -37,18 +38,18 @@ import static com.sun.btrace.runtime.Constants.CLASS_INITIALIZER;
 
 /**
  * This class copies a set of methods from one class
- * to another class. While copying methods can be 
+ * to another class. While copying methods can be
  * renamed as well as access bits can be changed.
  * No validation (like target already has such method)
  * is done.
- * 
+ *
  * @author A. Sundararajan
  */
 public class MethodCopier extends ClassVisitor {
-    private ClassReader fromClass;
-    private Iterable<MethodInfo> methods;
+    private final ClassReader fromClass;
+    private final Iterable<MethodInfo> methods;
 
-    public static class MethodInfo { 
+    public static class MethodInfo {
         String name;
         String desc;
         String newName;
@@ -64,8 +65,8 @@ public class MethodCopier extends ClassVisitor {
     }
  
     public MethodCopier(ClassReader fromClass, ClassVisitor toClass, 
-                       Iterable<MethodInfo> methods) {  
-        super(Opcodes.ASM4, toClass);
+                       Iterable<MethodInfo> methods) {
+        super(Opcodes.ASM5, toClass);
         this.fromClass = fromClass;
         this.methods = methods;
     }
@@ -88,33 +89,41 @@ public class MethodCopier extends ClassVisitor {
         }
         return null;
     }
-                
+
+    @Override
     public void visitEnd() {
         fromClass.accept(new ClassVisitor(Opcodes.ASM4) {
-            public void visit(int version, int access, String name, 
+            @Override
+            public void visit(int version, int access, String name,
                 String signature, String superName, String[] interfaces) {
             }
 
+            @Override
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 return new AnnotationVisitor(Opcodes.ASM4) {};
             }
 
+            @Override
             public void visitAttribute(Attribute attr) {
             }
 
+            @Override
             public void visitEnd() {
             }
 
-            public FieldVisitor visitField(int access, String name, 
+            @Override
+            public FieldVisitor visitField(int access, String name,
                 String desc, String signature, Object value) {
                 return null;
             }
 
-            public void visitInnerClass(String name, String outerName, 
+            @Override
+            public void visitInnerClass(String name, String outerName,
                 String innerName, int access) {
             }
 
-            public MethodVisitor visitMethod(int access, String name, String desc, 
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String desc,
                 String signature, String[] exceptions) {
                 MethodInfo mi = getMethodInfo(name, desc);
                 if (mi != null) {
@@ -125,10 +134,12 @@ public class MethodCopier extends ClassVisitor {
                 }
             }
 
-            public void visitOuterClass(String owner, 
+            @Override
+            public void visitOuterClass(String owner,
                 String name, String desc) {
             }
 
+            @Override
             public void visitSource(String source, String debug) {
             }
         }, 0);
@@ -143,14 +154,14 @@ public class MethodCopier extends ClassVisitor {
 
         Class clazz = Class.forName(args[0]);
         Method[] methods = clazz.getDeclaredMethods();
-        List<MethodInfo> miList = new ArrayList<MethodInfo>();
+        List<MethodInfo> miList = new ArrayList<>();
         for (Method m : methods) {
             // skip the class initializer method
             if (! m.getName().equals(CLASS_INITIALIZER)) {
                 MethodInfo mi = new MethodInfo(m.getName(),
                              Type.getMethodDescriptor(m),
                              m.getName(), m.getModifiers());
-                miList.add(mi); 
+                miList.add(mi);
             }
         }
         args[0] = args[0].replace('.', '/');

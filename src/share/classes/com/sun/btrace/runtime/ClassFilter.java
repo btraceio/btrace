@@ -118,16 +118,16 @@ public class ClassFilter {
         }
 
         for (String name : annotationClasses) {
-            for (int i = 0; i < annoTypes.length; i++) {
-                if (name.equals(annoTypes[i])) {
+            for (String annoType : annoTypes) {
+                if (name.equals(annoType)) {
                     return true;
                 }
             }
         }
 
         for (Pattern pat : annotationClassPatterns) {
-            for (int i = 0; i < annoTypes.length; i++) {
-                if (pat.matcher(annoTypes[i]).matches()) {
+            for (String annoType : annoTypes) {
+                if (pat.matcher(annoType).matches()) {
                     return true;
                 }
             }
@@ -170,16 +170,17 @@ public class ClassFilter {
 
         private boolean isInterface;
         private boolean isCandidate;
-        private AnnotationVisitor nullAnnotationVisitor = new AnnotationVisitor(Opcodes.ASM4) {};
+        private final AnnotationVisitor nullAnnotationVisitor = new AnnotationVisitor(Opcodes.ASM5) {};
 
         public CheckingVisitor() {
-            super(Opcodes.ASM4);
+            super(Opcodes.ASM5);
         }
 
         boolean isCandidate() {
             return isCandidate;
         }
 
+        @Override
         public void visit(int version, int access, String name,
                 String signature, String superName, String[] interfaces) {
             if ((access & ACC_INTERFACE) != 0) {
@@ -216,6 +217,7 @@ public class ClassFilter {
             }
         }
 
+        @Override
         public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
             if (isInterface) {
                 return nullAnnotationVisitor;
@@ -247,40 +249,47 @@ public class ClassFilter {
             return nullAnnotationVisitor;
         }
 
+        @Override
         public void visitAttribute(Attribute attr) {
         }
 
+        @Override
         public void visitEnd() {
         }
 
+        @Override
         public FieldVisitor visitField(int access, String name,
                 String desc, String signature, Object value) {
             return null;
         }
 
+        @Override
         public void visitInnerClass(String name, String outerName,
                 String innerName, int access) {
         }
 
+        @Override
         public MethodVisitor visitMethod(int access, String name, String desc,
                 String signature, String[] exceptions) {
             return null;
         }
 
+        @Override
         public void visitOuterClass(String owner, String name, String desc) {
         }
 
+        @Override
         public void visitSource(String source, String debug) {
         }
     }
 
     private void init(List<OnMethod> onMethods) {
-        List<String> strSrcList = new ArrayList<String>();
-        List<Pattern> patSrcList = new ArrayList<Pattern>();
-        List<String> superTypesList = new ArrayList<String>();
-        List<String> superTypesInternalList = new ArrayList<String>();
-        List<String> strAnoList = new ArrayList<String>();
-        List<Pattern> patAnoList = new ArrayList<Pattern>();
+        List<String> strSrcList = new ArrayList<>();
+        List<Pattern> patSrcList = new ArrayList<>();
+        List<String> superTypesList = new ArrayList<>();
+        List<String> superTypesInternalList = new ArrayList<>();
+        List<String> strAnoList = new ArrayList<>();
+        List<Pattern> patAnoList = new ArrayList<>();
 
         for (OnMethod om : onMethods) {
             String className = om.getClazz();

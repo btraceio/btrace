@@ -35,6 +35,49 @@ import static com.sun.btrace.runtime.Constants.JAVA_LANG_OBJECT;
  * @author A. Sundararajan
  */
 public class InstrumentUtils {
+    private static class BTraceClassWriter extends ClassWriter {
+        public BTraceClassWriter(int flags) {
+            super(flags);
+        }
+
+        public BTraceClassWriter(ClassReader reader, int flags) {
+            super(reader, flags);
+        }
+
+        private static final class DummyClassLoader extends ClassLoader {
+            public DummyClassLoader(ClassLoader parent) {
+                super(parent);
+            }
+
+            public boolean isClassLoaded(String name) {
+                Class<?> clz = null;
+                try {
+                    clz = findClass(name);
+                } catch (ClassNotFoundException e) {
+                    clz = null;
+                }
+                return clz != null;
+            }
+        }
+
+        protected String getCommonSuperClass(String type1, String type2) {
+            // FIXME: getCommonSuperClass is called by ClassWriter to merge two types
+            // - persumably to compute stack frame attribute. We get LinkageError
+            // when one of the types is the one being written/prepared by this ClassWriter
+            // itself! So, I catch LinkageError and return "java/lang/Object" in such cases.
+            // Revisit this for a possible better solution.
+            DummyClassLoader classLoader = new DummyClassLoader(getClass().getClassLoader());
+            try {
+                type1 = classLoader.isClassLoaded(type1.replace('/', '.')) ? type1 : "java/lang/Object";
+                type2 = classLoader.isClassLoaded(type2.replace('/', '.')) ? type2 : "java/lang/Object";
+                return super.getCommonSuperClass(type1, type2);
+            } catch (LinkageError le) {
+                return JAVA_LANG_OBJECT;
+            } catch (RuntimeException re) {
+                return JAVA_LANG_OBJECT;
+            }
+        }
+    }
     public static String arrayDescriptorFor(int typeCode) {
         switch (typeCode) {
             case T_BOOLEAN:
@@ -65,61 +108,32 @@ public class InstrumentUtils {
     public static void accept(ClassReader reader, ClassVisitor visitor, int flags) {
         reader.accept(visitor, flags);
     }
-    
+
     private static boolean isJDK16OrAbove(byte[] code) {
         // skip 0xCAFEBABE magic and minor version
         final int majorOffset = 4 + 2;
-        int major = (((code[majorOffset] << 8) & 0xFF00) | 
+        int major = (((code[majorOffset] << 8) & 0xFF00) |
                 ((code[majorOffset + 1]) & 0xFF));
         return major >= 50;
     }
-    
+
     public static ClassWriter newClassWriter() {
-        return newClassWriter(null, 
-                ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        return newClassWriter(null, ClassWriter.COMPUTE_FRAMES);
     }
 
     public static ClassWriter newClassWriter(byte[] code) {
         int flags = ClassWriter.COMPUTE_MAXS;
         if (isJDK16OrAbove(code)) {
-            flags |= ClassWriter.COMPUTE_FRAMES;
+            flags = ClassWriter.COMPUTE_FRAMES;
         }
         return newClassWriter(null, flags);
     }
-    
-    public static ClassWriter newClassWriter(ClassReader reader, int flags) {
-        // FIXME: getCommonSuperClass is called by ClassWriter to merge two types
-        // - persumably to compute stack frame attribute. We get LinkageError
-        // when one of the types is the one being written/prepared by this ClassWriter
-        // itself! So, I catch LinkageError and return "java/lang/Object" in such cases.
-        // Revisit this for a possible better solution.
 
+    public static ClassWriter newClassWriter(ClassReader reader, int flags) {
         ClassWriter cw = null;
-        if (reader != null) {
-            cw = new ClassWriter(reader, flags) {
-                protected String getCommonSuperClass(String type1, String type2) {
-                    try {
-                        return super.getCommonSuperClass(type1, type2);                   
-                    } catch (LinkageError le) {
-                        return JAVA_LANG_OBJECT;
-                    } catch (RuntimeException re) {
-                        return JAVA_LANG_OBJECT;
-                    }
-                }
-            };
-        } else {
-            cw = new ClassWriter(flags) {
-                protected String getCommonSuperClass(String type1, String type2) {
-                    try {
-                        return super.getCommonSuperClass(type1, type2);
-                    } catch (LinkageError le) {
-                        return JAVA_LANG_OBJECT;
-                    } catch (RuntimeException re) {
-                        return JAVA_LANG_OBJECT;
-                    }
-                }
-            };
-        }
+        cw = reader != null ? new BTraceClassWriter(reader, flags) :
+                              new BTraceClassWriter(flags);
+
         return cw;
     }
-} 
+}

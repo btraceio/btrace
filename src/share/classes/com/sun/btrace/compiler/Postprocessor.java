@@ -50,7 +50,7 @@ public class Postprocessor extends ClassVisitor {
     private String className = "";
 
     public Postprocessor(ClassVisitor cv) {
-        super(Opcodes.ASM4, cv);
+        super(Opcodes.ASM5, cv);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class Postprocessor extends ClassVisitor {
         if (!shortSyntax) return super.visitField(access, name, desc, signature, value);
 
         final List<Attribute> attrs = new ArrayList<Attribute>();
-        return new FieldVisitor(Opcodes.ASM4) {
+        return new FieldVisitor(Opcodes.ASM5) {
 
             public void visitAttribute(Attribute atrbt) {
                 super.visitAttribute(atrbt);
@@ -145,7 +145,7 @@ public class Postprocessor extends ClassVisitor {
         private boolean copyEnabled = false;
 
         public MethodConvertor(int localVarOffset, boolean isConstructor, MethodVisitor mv) {
-            super(Opcodes.ASM4, mv);
+            super(Opcodes.ASM5, mv);
             this.localVarOffset = localVarOffset;
             this.isConstructor = isConstructor;
             this.copyEnabled = !isConstructor; // copy is enabled by default for all methods except constructor
@@ -597,12 +597,12 @@ public class Postprocessor extends ClassVisitor {
 
         @Override
         public AnnotationVisitor visitAnnotation(String string, boolean bln) {
-            return copyEnabled ? super.visitAnnotation(string, bln) : new AnnotationVisitor(Opcodes.ASM4){};
+            return copyEnabled ? super.visitAnnotation(string, bln) : new AnnotationVisitor(Opcodes.ASM5){};
         }
 
         @Override
         public AnnotationVisitor visitAnnotationDefault() {
-            return copyEnabled ? super.visitAnnotationDefault() : new AnnotationVisitor(Opcodes.ASM4){};
+            return copyEnabled ? super.visitAnnotationDefault() : new AnnotationVisitor(Opcodes.ASM5){};
         }
 
         @Override
@@ -625,7 +625,7 @@ public class Postprocessor extends ClassVisitor {
 
         @Override
         public AnnotationVisitor visitParameterAnnotation(int i, String string, boolean bln) {
-            return copyEnabled ? super.visitParameterAnnotation(i, string, bln) : new AnnotationVisitor(Opcodes.ASM4){};
+            return copyEnabled ? super.visitParameterAnnotation(i, string, bln) : new AnnotationVisitor(Opcodes.ASM5){};
         }
 
         @Override

@@ -81,7 +81,7 @@ public class ClinitInstrumentorTest extends InstrumentorTestBase {
         ClassReader cr1 = new ClassReader(transformedBC);
         ClassWriter cw1 = InstrumentUtils.newClassWriter();
 
-        InstrumentUtils.accept(reader, new ClassVisitor(Opcodes.ASM4, cw1) {
+        InstrumentUtils.accept(reader, new ClassVisitor(Opcodes.ASM5, cw1) {
 
             @Override
             public MethodVisitor visitMethod(int i, String string, String string1, String string2, String[] strings) {

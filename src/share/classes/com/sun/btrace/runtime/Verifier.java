@@ -79,7 +79,7 @@ public class Verifier extends ClassVisitor {
     protected final Set<String> injectedFields = new HashSet<String>();
 
     public Verifier(ClassVisitor cv, boolean unsafe) {
-        super(Opcodes.ASM4, cv);
+        super(Opcodes.ASM5, cv);
         this.unsafeAllowed = unsafe;
         onMethods = new ArrayList<OnMethod>();
         onProbes = new ArrayList<OnProbe>();
@@ -137,7 +137,7 @@ public class Verifier extends ClassVisitor {
         AnnotationVisitor delegate = super.visitAnnotation(desc, visible);
         if (desc.equals(BTRACE_DESC)) {
             seenBTrace = true;
-            return new AnnotationVisitor(Opcodes.ASM4, delegate) {
+            return new AnnotationVisitor(Opcodes.ASM5, delegate) {
                 @Override
                 public void visit(String name, Object value) {
                     if ("unsafe".equals(name) && Boolean.TRUE.equals(value)) {
@@ -262,7 +262,7 @@ public class Verifier extends ClassVisitor {
         }
         FileInputStream fis = new FileInputStream(file);
         ClassReader reader = new ClassReader(new BufferedInputStream(fis));
-        Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM4) {});
+        Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM5) {});
         reader.accept(verifier, 0);
     }
 }

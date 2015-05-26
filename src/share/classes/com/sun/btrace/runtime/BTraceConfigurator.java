@@ -101,17 +101,21 @@ final public class BTraceConfigurator extends MethodVisitor {
             onMethods.add(om);
             om.setTargetName(methodName);
             om.setTargetDescriptor(methodDesc);
-            return new AnnotationVisitor(Opcodes.ASM4, av) {
+            return new AnnotationVisitor(Opcodes.ASM5, av) {
                 @Override
                 public void visit(String name, Object value) {
                     super.visit(name, value);
 
-                    if (name.equals("clazz")) {
-                        om.setClazz((String)value);
-                    } else if (name.equals("method")) {
-                        om.setMethod((String)value);
-                    } else if (name.equals("type")) {
-                        om.setType((String)value);
+                    switch (name) {
+                        case "clazz":
+                            om.setClazz((String)value);
+                            break;
+                        case "method":
+                            om.setMethod((String)value);
+                            break;
+                        case "type":
+                            om.setType((String)value);
+                            break;
                     }
                 }
 
@@ -121,7 +125,7 @@ final public class BTraceConfigurator extends MethodVisitor {
                     AnnotationVisitor av1 = super.visitAnnotation(name, desc);
                     if (desc.equals(LOCATION_DESC)) {
                         loc = new Location();
-                        return new AnnotationVisitor(Opcodes.ASM4, av1) {
+                        return new AnnotationVisitor(Opcodes.ASM5, av1) {
                             @Override
                             public void visitEnum(String name, String desc, String value) {
                                 super.visitEnum(name, desc, value);
@@ -137,16 +141,22 @@ final public class BTraceConfigurator extends MethodVisitor {
                             public void	visit(String name, Object value) {
                                 super.visit(name, value);
 
-                                if (name.equals("clazz")) {
-                                    loc.setClazz((String)value);
-                                } else if (name.equals("method")) {
-                                    loc.setMethod((String)value);
-                                } else if (name.equals("type")) {
-                                    loc.setType((String)value);
-                                } else if (name.equals("field")) {
-                                    loc.setField((String)value);
-                                } else if (name.equals("line")) {
-                                    loc.setLine(((Number)value).intValue());
+                                switch (name) {
+                                    case "clazz":
+                                        loc.setClazz((String)value);
+                                        break;
+                                    case "method":
+                                        loc.setMethod((String)value);
+                                        break;
+                                    case "type":
+                                        loc.setType((String)value);
+                                        break;
+                                    case "field":
+                                        loc.setField((String)value);
+                                        break;
+                                    case "line":
+                                        loc.setLine(((Number)value).intValue());
+                                        break;
                                 }
                             }
 
@@ -167,22 +177,25 @@ final public class BTraceConfigurator extends MethodVisitor {
             onProbes.add(op);
             op.setTargetName(methodName);
             op.setTargetDescriptor(methodDesc);
-            return new AnnotationVisitor(Opcodes.ASM4, av) {
+            return new AnnotationVisitor(Opcodes.ASM5, av) {
                 @Override
                 public void visit(String name, Object value) {
                     super.visit(name, value);
 
-                    if (name.equals("namespace")) {
-                        op.setNamespace((String)value);
-                    } else if (name.equals("name")) {
-                        op.setName((String)value);
+                    switch (name) {
+                        case "namespace":
+                            op.setNamespace((String)value);
+                            break;
+                        case "name":
+                            op.setName((String)value);
+                            break;
                     }
                 }
             };
         } else if (desc.equals(SAMPLER_DESC)) {
             if (om != null) {
                 om.setSamplerKind(Sampled.Sampler.Adaptive);
-                return new AnnotationVisitor(Opcodes.ASM4, av) {
+                return new AnnotationVisitor(Opcodes.ASM5, av) {
                     private boolean meanSet = false;
                     @Override
                     public void visit(String name, Object value) {
