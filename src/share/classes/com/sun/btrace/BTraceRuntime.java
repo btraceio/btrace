@@ -63,7 +63,6 @@ import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
 import com.sun.btrace.profiling.MethodInvocationProfiler;
 import com.sun.btrace.runtime.Constants;
-import com.sun.btrace.runtime.Instrumentor;
 
 import java.lang.management.GarbageCollectorMXBean;
 
@@ -556,6 +555,10 @@ public final class BTraceRuntime  {
      * for each @Export variable.
      */
     public static void newPerfCounter(String name, String desc, Object value) {
+        newPerfCounter(value, name, desc);
+    }
+
+    public static void newPerfCounter(Object value, String name, String desc) {
         Perf perf = getPerf();
         char tc = desc.charAt(0);
         switch (tc) {
