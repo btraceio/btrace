@@ -8,7 +8,7 @@ plugins {
 }
 
 group 'com.sun.tools.btrace'
-version = '1.3'
+version = '1.3.0.1'
 description = 'BTrace - a safe, dynamic tracing tool for the Java platform'
 
 sourceCompatibility = 7
@@ -51,9 +51,9 @@ bintray {
     labels = []
     publicDownloadNumbers = true
     version {
-      name = '1.3.0' //Bintray logical version name
+      name = '1.3.0.1' //Bintray logical version name
       released  = new java.util.Date()
-      vcsTag = project.property('release.tag')
+      vcsTag = project.hasProperty('release.tag') ? project.property('release.tag') : 'dev'
       //Optional configuration for GPG signing
       gpg {
         sign = project.hasProperty("gpg.passphrase") //Determines whether to GPG sign the files. The default is false
