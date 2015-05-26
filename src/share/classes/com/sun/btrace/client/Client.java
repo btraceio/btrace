@@ -532,12 +532,12 @@ public class Client {
     private Object getDTraceSource(final String fileName, byte[] code) {
         ClassReader reader = new ClassReader(code);
         final Object[] result = new Object[1];
-        reader.accept(new ClassVisitor(Opcodes.ASM4) {
+        reader.accept(new ClassVisitor(Opcodes.ASM5) {
 
             @Override
             public AnnotationVisitor visitAnnotation(String desc, boolean vis) {
                 if (desc.equals(DTRACE_DESC)) {
-                    return new AnnotationVisitor(Opcodes.ASM4) {
+                    return new AnnotationVisitor(Opcodes.ASM5) {
 
                         @Override
                         public void visit(String name, Object value) {
@@ -547,7 +547,7 @@ public class Client {
                         }
                     };
                 } else if (desc.equals(DTRACE_REF_DESC)) {
-                    return new AnnotationVisitor(Opcodes.ASM4) {
+                    return new AnnotationVisitor(Opcodes.ASM5) {
 
                         @Override
                         public void visit(String name, Object value) {

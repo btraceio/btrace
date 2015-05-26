@@ -52,7 +52,7 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
     public TemplateExpanderVisitor(LocalVariableHelper lvs,
                              String className, String methodName,
                              String desc) {
-        super(Opcodes.ASM4, (MethodVisitor)lvs);
+        super(Opcodes.ASM5, (MethodVisitor)lvs);
         this.lvs = lvs;
 
         this.expanders.add(new MethodTrackingExpander(MethodID.getMethodId(className, methodName, desc)));

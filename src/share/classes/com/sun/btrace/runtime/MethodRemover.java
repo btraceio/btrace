@@ -42,7 +42,7 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
  */
 public class MethodRemover extends ClassVisitor {
     public MethodRemover(ClassVisitor visitor) {
-        super(Opcodes.ASM4, visitor);
+        super(Opcodes.ASM5, visitor);
     }
 
     private MethodVisitor addMethod(int access, String name,
@@ -58,7 +58,7 @@ public class MethodRemover extends ClassVisitor {
             return super.visitMethod(access, name,
                               desc, signature, exceptions);
         } else {
-            return new MethodVisitor(Opcodes.ASM4) {
+            return new MethodVisitor(Opcodes.ASM5) {
                 private boolean include = true;
                 private MethodVisitor adaptee = null;
 
@@ -74,15 +74,15 @@ public class MethodRemover extends ClassVisitor {
                     if (include) {
                         if (ONMETHOD_DESC.equals(annoDesc)) {
                             include = false;
-                            return new AnnotationVisitor(Opcodes.ASM4) {};
+                            return new AnnotationVisitor(Opcodes.ASM5) {};
                         } else if (ONPROBE_DESC.equals(annoDesc)) {
                             include = false;
-                            return new AnnotationVisitor(Opcodes.ASM4) {};
+                            return new AnnotationVisitor(Opcodes.ASM5) {};
                         } else {
                             return getAdaptee().visitAnnotation(annoDesc, visible);
                         }
                     } else {
-                        return new AnnotationVisitor(Opcodes.ASM4) {};
+                        return new AnnotationVisitor(Opcodes.ASM5) {};
                     }
                 }
 

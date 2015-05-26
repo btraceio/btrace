@@ -115,7 +115,7 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
         FileOutputStream fos = new FileOutputStream(args[0] + ".class");
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
-            new ClassVisitor(Opcodes.ASM4, writer) {
+            new ClassVisitor(Opcodes.ASM5, writer) {
                  private String className;
                  public void visit(int version, int access, String name,
                      String signature, String superName, String[] interfaces) {

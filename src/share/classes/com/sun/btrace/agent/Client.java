@@ -108,7 +108,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             if (!skipRetransforms) {
                 if (debug) Main.debugPrint("injecting <clinit> for " + cname); // NOI18N
                 ClassReader cr = new ClassReader(classfileBuffer);
-                ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
+                ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
                 ClinitInjector injector = new ClinitInjector(cw, className, cname);
                 InstrumentUtils.accept(cr, injector);
                 if (injector.isTransformed()) {
@@ -159,23 +159,23 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 return null;
             }
 
-                if (classBeingRedefined != null) {
-                    // class already defined; retransforming
-                    if (!skipRetransforms && filter.isCandidate(classBeingRedefined)) {
+            if (classBeingRedefined != null) {
+                // class already defined; retransforming
+                if (!skipRetransforms && filter.isCandidate(classBeingRedefined)) {
+                    return doTransform(classBeingRedefined, cname, classfileBuffer);
+                } else {
+                    if (debug) Main.debugPrint("client " + className + ": skipping transform for " + cname); // NOi18N
+                }
+            } else {
+                // class not yet defined
+                if (!hasSubclassChecks) {
+                    if (filter.isCandidate(classfileBuffer)) {
                         return doTransform(classBeingRedefined, cname, classfileBuffer);
                     } else {
-                        if (debug) Main.debugPrint("client " + className + ": skipping transform for " + cname); // NOi18N
-                    }
-                } else {
-                    // class not yet defined
-                    if (!hasSubclassChecks) {
-                        if (filter.isCandidate(classfileBuffer)) {
-                            return doTransform(classBeingRedefined, cname, classfileBuffer);
-                        } else {
-                            if (debug) Main.debugPrint("client " + className + ": skipping transform for " + cname); // NOI18N
-                        }
+                        if (debug) Main.debugPrint("client " + className + ": skipping transform for " + cname); // NOI18N
                     }
                 }
+            }
 
             return null; // ignore
         } catch (Exception e) {

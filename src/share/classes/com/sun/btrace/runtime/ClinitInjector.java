@@ -45,7 +45,7 @@ public class ClinitInjector extends ClassVisitor {
     private final String cname;
 
     public ClinitInjector(ClassVisitor cv, String runtime, String cname) {
-        super(Opcodes.ASM4, cv);
+        super(Opcodes.ASM5, cv);
         this.runtime = runtime;
         this.cname = cname;
     }
@@ -70,7 +70,7 @@ public class ClinitInjector extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         MethodVisitor visitor = super.visitMethod(access, name, desc, signature, exceptions);
         if (transformed && CLINIT.equals(name)) {
-            visitor = new MethodVisitor(Opcodes.ASM4, visitor) {
+            visitor = new MethodVisitor(Opcodes.ASM5, visitor) {
                 private boolean exitFound = false;
                 private int requiredStack = 0;
                 @Override
