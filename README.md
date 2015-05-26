@@ -24,13 +24,6 @@ You will need the following applications installed
 
 ### Build
 
-#### Ant
-```sh
-cd <btrace>/make
-ant dist
-```
-The binary dist packages can be found in `<btrace>/dist` as the *.tar.gz and *.zip files
-
 #### Gradle
 ```sh
 cd <btrace>
@@ -38,6 +31,13 @@ cd <btrace>
 ./gradlew buildDistributions
 ```
 The binary dist packages can be found in `<btrace>/build/distributions` as the *.tar.gz, *.zip, *.rpm and *.deb files.
+
+#### Ant (legacy build)
+```sh
+cd <btrace>/make
+ant dist
+```
+The binary dist packages can be found in `<btrace>/dist` as the *.tar.gz and *.zip files
 
 
 ## Using BTrace
@@ -83,6 +83,6 @@ Or, add the repository URLs using the "Software Sources" admin UI:
 deb http://dl.bintray.com/jbachorik/deb trusty universe
 ```
 
-### RMP Repository
+### RPM Repository
 
 Grab the _*.repo_ file `wget https://bintray.com/jbachorik/rpm/rpm -O bintray-jbachorik-rpm.repo` and use it.
