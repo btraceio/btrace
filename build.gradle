@@ -1,10 +1,10 @@
 import javax.tools.ToolProvider
 
 plugins {
-  id 'java'
-  id 'maven-publish'
-  id "nebula.os-package" version "2.2.2"
-  id "com.jfrog.bintray" version "1.2"
+    id 'java'
+    id 'maven-publish'
+    id "nebula.os-package" version "2.2.2"
+    id "com.jfrog.bintray" version "1.2"
 }
 
 group 'com.sun.tools.btrace'
@@ -15,14 +15,14 @@ sourceCompatibility = 7
 targetCompatibility = 7
 
 allprojects {
-  tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
-  }
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
 
-  repositories {
-    mavenLocal()
-    mavenCentral()
-  }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 
 // Support for releasing to BinTray; see https://github.com/bintray/gradle-bintray-plugin
@@ -32,35 +32,58 @@ allprojects {
 // * release.tag
 // * gpg.passphrase
 bintray {
-  user = project.hasProperty("bintray.user") ? project.property("bintray.user") : ""
-  key = project.hasProperty("bintray.key") ? project.property("bintray.key") : ""
+    user = project.hasProperty("bintray.user") ? project.property("bintray.user") : ""
+    key = project.hasProperty("bintray.key") ? project.property("bintray.key") : ""
 
-  publications = ['agent', 'client', 'boot']
+    publications = ['agent', 'client', 'boot']
 
-  dryRun = true
-  publish = false
+    dryRun = true
+    publish = false
 
-  pkg {
-    repo = 'maven'
-    name = 'btrace'
-    desc = 'BTrace'
-    websiteUrl = 'https://github.com/jbachorik/btrace'
-    issueTrackerUrl = 'https://github.com/jbachorik/btrace/issues'
-    vcsUrl = 'https://github.com/jbachorik/btrace.git'
-    licenses = ['GPL-2.0+CE']
-    labels = []
-    publicDownloadNumbers = true
-    version {
-      name = '1.3.0.1' //Bintray logical version name
-      released  = new java.util.Date()
-      vcsTag = project.hasProperty('release.tag') ? project.property('release.tag') : 'dev'
-      //Optional configuration for GPG signing
-      gpg {
-        sign = project.hasProperty("gpg.passphrase") //Determines whether to GPG sign the files. The default is false
-        passphrase = sign ? project.property("gpg.passphrase") : "" //Optional. The passphrase for GPG signing'
-      }
+    pkg {
+        repo = 'maven'
+        name = 'btrace'
+        desc = 'BTrace'
+        websiteUrl = 'https://github.com/jbachorik/btrace'
+        issueTrackerUrl = 'https://github.com/jbachorik/btrace/issues'
+        vcsUrl = 'https://github.com/jbachorik/btrace.git'
+        licenses = ['GPL-2.0+CE']
+        labels = []
+        publicDownloadNumbers = true
+        version {
+            name = '1.3.0.1' //Bintray logical version name
+            released  = new java.util.Date()
+            vcsTag = project.hasProperty('release.tag') ? project.property('release.tag') : 'dev'
+            //Optional configuration for GPG signing
+            gpg {
+                sign = project.hasProperty("gpg.passphrase") //Determines whether to GPG sign the files. The default is false
+                passphrase = sign ? project.property("gpg.passphrase") : "" //Optional. The passphrase for GPG signing'
+            }
+        }
     }
-  }
+}
+
+def pomDetails = {
+    resolveStrategy = Closure.DELEGATE_FIRST
+    url 'https://github.com/jbachorik/btrace'
+    scm {
+        url 'https://github.com/jbachorik/btrace'
+        connection 'scm:git:https://github.com/jbachorik/btrace.git'
+        developerConnection 'scm:git:https://github.com/jbachorik/btrace.git'
+    }
+    licenses {
+        license {
+            name 'GNU General Public License, version 2, with the Classpath Exception'
+            url 'http://openjdk.java.net/legal/gplv2+ce.html'
+        }
+    }
+    developers {
+        developer {
+            id 'yardus'
+            name 'Jaroslav Bachorik'
+            email 'j.bachorik@gmail.com'
+        }
+    }
 }
 
 def env = System.getenv()
@@ -79,316 +102,337 @@ def clientExcludes = ['**/runtime/*', '**/agent/*', '**/util/TimeStamp*', '**/ut
 def excludes = ['agent': agentExcludes, 'boot': bootExcludes, 'client': clientExcludes]
 
 sourceSets {
-  main {
-    java {
-      srcDir 'src/share/classes'
-      def dtrace = file('/usr/share/lib/java/dtrace.jar')
-      if (dtrace.exists()) {
-        def dtraceJar = zipTree('/usr/share/lib/java/dtrace.jar')
-        if (!dtraceJar.matching { include '**/org/opensolaris/os/dtrace/Consumer.class' }.isEmpty()) {
-          srcDir 'src/solaris'
+    main {
+        java {
+            srcDir 'src/share/classes'
+            def dtrace = file('/usr/share/lib/java/dtrace.jar')
+            if (dtrace.exists()) {
+                def dtraceJar = zipTree('/usr/share/lib/java/dtrace.jar')
+                if (!dtraceJar.matching { include '**/org/opensolaris/os/dtrace/Consumer.class' }.isEmpty()) {
+                    srcDir 'src/solaris'
+                }
+            }
         }
-      }
+
+        resources {
+            srcDir 'src/share/classes'
+        }
     }
 
-    resources {
-      srcDir 'src/share/classes'
-    }
-  }
+    test {
+        java {
+            srcDir 'src/test'
+        }
 
-  test {
-    java {
-      srcDir 'src/test'
+        resources {
+            srcDir 'src/test/resources'
+        }
     }
-
-    resources {
-      srcDir 'src/test/resources'
-    }
-  }
 }
 
 processResources {
-  from 'src/share/classes'
-  destinationDir compileJava.destinationDir
+    from 'src/share/classes'
+    destinationDir compileJava.destinationDir
 
-  include '**/com/sun/btrace/resources/**'
-  include '**/com/sun/btrace/runtime/jaxb.index'
-  include '**/com/sun/btrace/annotations/jaxb.index'
+    include '**/com/sun/btrace/resources/**'
+    include '**/com/sun/btrace/runtime/jaxb.index'
+    include '**/com/sun/btrace/annotations/jaxb.index'
 
-  def buildDate = (new Date()).format('YYYYMMdd')
-  filter{ it.replaceAll('\\{btrace.version\\}', "$version ($buildDate)") }
+    def buildDate = (new Date()).format('YYYYMMdd')
+    filter{ it.replaceAll('\\{btrace.version\\}', "$version ($buildDate)") }
 
-  includeEmptyDirs = false
+    includeEmptyDirs = false
 }
 
 
 compileTestJava {
-  exclude 'traces'
+    exclude 'traces'
 }
 
 
 processTestResources {
-  from 'src/test'
-  destinationDir compileTestJava.destinationDir
-  include 'traces/**/*.java'
-  include 'traces/**/*.xml'
+    from 'src/test'
+    destinationDir compileTestJava.destinationDir
+    include 'traces/**/*.java'
+    include 'traces/**/*.xml'
 }
 
 
 task unjar(type: Copy) {
-  group 'Build'
-  description 'Explode the pre-built asm jar.'
+    group 'Build'
+    description 'Explode the pre-built asm jar.'
 
-  from(zipTree("lib/btrace-asm-${asmVersion}.jar"))
-  into compileJava.destinationDir
+    from(zipTree("lib/btrace-asm-${asmVersion}.jar"))
+    into compileJava.destinationDir
 }
 
 
 ['agent', 'boot', 'client'].each { name ->
-  tasks.create(name: "${name}Jar", type: Jar) {
-    group 'Build'
-    description "Build the btrace-${name} jar."
-    inputs.files unjar.outputs
+    tasks.create(name: "${name}Jar", type: Jar) {
+        group 'Build'
+        description "Build the btrace-${name} jar."
+        inputs.files unjar.outputs
 
-    appendix name
-    from sourceSets.main.output
-    exclude excludes["${name}"]
-    destinationDir buildDir
-    // unfortunately there's a hard-coded reference to "btrace-${name}.jar" in the code - so we have to strip the version
-    archiveName "$baseName-$appendix.$extension"
+        appendix name
+        from sourceSets.main.output
+        exclude excludes["${name}"]
+        destinationDir buildDir
+        // unfortunately there's a hard-coded reference to "btrace-${name}.jar" in the code - so we have to strip the version
+        archiveName "$baseName-$appendix.$extension"
 
-    if (['agent', 'client'].contains(name)) {
-      manifest {
-        // alternatively we could "inline" the ${name}-manfifest's content
-        from file("src/share/classes/META-INF/${name}-manifest.mf")
-      }
+        if (['agent', 'client'].contains(name)) {
+            manifest {
+                // alternatively we could "inline" the ${name}-manfifest's content
+                from file("src/share/classes/META-INF/${name}-manifest.mf")
+            }
+        }
     }
-  }
 
 
-  tasks.create(name: "${name}SourcesJar", type: Jar) {
-    group 'Documentation'
-    description "Build the btrace-${name} sources jar."
+    tasks.create(name: "${name}SourcesJar", type: Jar) {
+        group 'Documentation'
+        description "Build the btrace-${name} sources jar."
 
-    appendix "${name}"
-    classifier 'sources'
-    from sourceSets.main.allSource
-    exclude excludes["${name}"]
-  }
-
-
-  tasks.create(name: "${name}Javadoc", type: Javadoc) {
-    group 'Documentation'
-    description "Generates Javadoc API documentation for the btrace-${name}."
-
-    title = "btrace-${name}"
-    source = sourceSets.main.allJava
-    destinationDir = reporting.file(name)
-    exclude excludes["${name}"]
-    failOnError false
-  }
+        appendix "${name}"
+        classifier 'sources'
+        from sourceSets.main.allSource
+        exclude excludes["${name}"]
+    }
 
 
-  tasks.create(name: "${name}JavadocJar", type: Jar) {
-    group 'Documentation'
-    description "Build the btrace-${name} javadoc jar."
+    tasks.create(name: "${name}Javadoc", type: Javadoc) {
+        group 'Documentation'
+        description "Generates Javadoc API documentation for the btrace-${name}."
 
-    appendix name
-    classifier 'javadoc'
-    from tasks["${name}Javadoc"].getOutputs()
-  }
+        title = "btrace-${name}"
+        source = sourceSets.main.allJava
+        destinationDir = reporting.file(name)
+        exclude excludes["${name}"]
+        failOnError false
+    }
+
+
+    tasks.create(name: "${name}JavadocJar", type: Jar) {
+        group 'Documentation'
+        description "Build the btrace-${name} javadoc jar."
+
+        appendix name
+        classifier 'javadoc'
+        from tasks["${name}Javadoc"].getOutputs()
+    }
 }
 
 
 task buildTraces(type: Exec) {
-  group 'Build'
-  inputs.files clientJar.outputs
-  inputs.files testClasses.outputs
-  inputs.dir "src/test/traces"
-  outputs.dir "${buildDir}/classes/test/traces"
+    group 'Build'
+    inputs.files clientJar.outputs
+    inputs.files testClasses.outputs
+    inputs.dir "src/test/traces"
+    outputs.dir "${buildDir}/classes/test/traces"
 
-  workingDir "$projectDir"
-  environment('BTRACE_HOME', "$projectDir")
-  def btracec = (osFamily == 'windows') ? 'btracec.bat' : 'btracec'
-  executable "bin/${btracec}"
-  args "-cp ${buildDir}/classes/test"
-  args "-d ${buildDir}/classes/test"
-  args fileTree(dir: "src/test/traces", include: '**/*.java')
+    workingDir "$projectDir"
+    environment('BTRACE_HOME', "$projectDir")
+    def btracec = (osFamily == 'windows') ? 'btracec.bat' : 'btracec'
+    executable "bin/${btracec}"
+    args "-cp ${buildDir}/classes/test"
+    args "-d ${buildDir}/classes/test"
+    args fileTree(dir: "src/test/traces", include: '**/*.java')
 }
 
 
 task buildDTrace(type:Exec) {
-  group 'Build'
-  description 'Build the native library for DTrace integration'
-  onlyIf {osName == 'SunOS'}
-  inputs.dir 'src/solaris/native'
-  inputs.files bootJar.outputs
-  outputs.dir "${buildDir}/i386"
+    group 'Build'
+    description 'Build the native library for DTrace integration'
+    onlyIf {osName == 'SunOS'}
+    inputs.dir 'src/solaris/native'
+    inputs.files bootJar.outputs
+    outputs.dir "${buildDir}/i386"
 
-  workingDir 'make'
+    workingDir 'make'
 
-  commandLine 'make'
+    commandLine 'make'
 }
 
 
 def distContent = copySpec {
-  into('bin') {
-    from 'bin'
-  }
+    into('bin') {
+        from 'bin'
+    }
 
-  into('build') {
-    from "$buildDir"
-    include '*.jar'
-    include 'i386/*.so'
-  }
+    into('build') {
+        from "$buildDir"
+        include '*.jar'
+        include 'i386/*.so'
+    }
 
-  into ('docs') {
-    from 'docs'
-    include 'javadoc/**'
-    include 'usersguide.html'
-  }
+    into ('docs') {
+        from 'docs'
+        include 'javadoc/**'
+        include 'usersguide.html'
+    }
 
-  into ('samples') {
-    from 'samples'
-  }
+    into ('samples') {
+        from 'samples'
+    }
 
-  into('.') {
-    from '.'
-    include '*.md'
-    include '*.txt'
-    include 'COPYRIGHT'
-    include 'LICENSE'
-  }
+    into('.') {
+        from '.'
+        include '*.md'
+        include '*.txt'
+        include 'COPYRIGHT'
+        include 'LICENSE'
+    }
 }
 
 
 task createBinDistZip(type: Zip) {
-  group 'Build'
-  description 'Build the binary distribution zip-file.'
-  inputs.files agentJar.outputs
-  inputs.files bootJar.outputs
-  inputs.files clientJar.outputs
-  inputs.files buildDTrace.outputs
+    group 'Build'
+    description 'Build the binary distribution zip-file.'
+    inputs.files agentJar.outputs
+    inputs.files bootJar.outputs
+    inputs.files clientJar.outputs
+    inputs.files buildDTrace.outputs
 
-  appendix = 'bin'
-  with distContent
+    appendix = 'bin'
+    with distContent
 }
 
 
 task createBinDistTgz(type: Tar) {
-  group 'Build'
-  description 'Build the binary distribution tgz-file.'
-  inputs.files agentJar.outputs
-  inputs.files bootJar.outputs
-  inputs.files clientJar.outputs
-  inputs.files buildDTrace.outputs
+    group 'Build'
+    description 'Build the binary distribution tgz-file.'
+    inputs.files agentJar.outputs
+    inputs.files bootJar.outputs
+    inputs.files clientJar.outputs
+    inputs.files buildDTrace.outputs
 
-  compression = Compression.GZIP
+    compression = Compression.GZIP
 
-  appendix = 'bin'
-  with distContent
+    appendix = 'bin'
+    with distContent
 }
 
 
 ospackage {
-  maintainer = 'Jaroslav Bachorik'
+    maintainer = 'Jaroslav Bachorik'
 
-  if (project.version.endsWith('-SNAPSHOT')) {
-    version = project.version - '-SNAPSHOT'
-    release = (new Date()).format('YYYYMMdd.HHmmss')
-  }
+    if (project.version.endsWith('-SNAPSHOT')) {
+        version = project.version - '-SNAPSHOT'
+        release = (new Date()).format('YYYYMMdd.HHmmss')
+    }
 
-  postInstall file('packaging/debian/btrace/DEBIAN/postinst')
+    postInstall file('packaging/debian/btrace/DEBIAN/postinst')
 
-  requires 'openjdk-7-jdk'
+    requires 'openjdk-7-jdk'
 
-  from(buildDir) {
-    into '/usr/lib/btrace'
-    include 'btrace-*.jar'
-  }
+    from(buildDir) {
+        into '/usr/lib/btrace'
+        include 'btrace-*.jar'
+    }
 
-  from('packaging/debian/btrace/usr/bin') {
-    into '/usr/bin'
-  }
+    from('packaging/debian/btrace/usr/bin') {
+        into '/usr/bin'
+    }
 }
 
 buildDeb {
-  inputs.files agentJar.outputs
-  inputs.files bootJar.outputs
-  inputs.files clientJar.outputs
+    inputs.files agentJar.outputs
+    inputs.files bootJar.outputs
+    inputs.files clientJar.outputs
 }
 
 buildRpm {
-  inputs.files agentJar.outputs
-  inputs.files bootJar.outputs
-  inputs.files clientJar.outputs
+    inputs.files agentJar.outputs
+    inputs.files bootJar.outputs
+    inputs.files clientJar.outputs
 }
 
 task buildDistributions {
-  dependsOn createBinDistZip, createBinDistTgz
-  dependsOn buildDeb, buildRpm
+    dependsOn createBinDistZip, createBinDistTgz
+    dependsOn buildDeb, buildRpm
 }
 
 test {
-  inputs.files buildTraces.outputs
-  inputs.files buildDTrace.outputs
+    inputs.files buildTraces.outputs
+    inputs.files buildDTrace.outputs
 }
 
 dependencies {
-  compile files("lib/btrace-asm-${asmVersion}.jar",
+    compile files("lib/btrace-asm-${asmVersion}.jar",
                 "${javaHome}/lib/tools.jar",  // ATTENTION: build.xml uses "${javaHome}/../lib/tools.jar"
-                files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs()),
+        files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs()),
                 "/usr/share/lib/java/dtrace.jar")
 
-  testCompile files("test-lib/asm-all-${asmVersion}.jar",
+    testCompile files("test-lib/asm-all-${asmVersion}.jar",
                     "test-lib/junit-${junitVersion}.jar")
 
-  testRuntime files("%buildDir/btrace-agent.jar") {
-    builtBy 'agentJar'
-  }
-  testRuntime files("%buildDir/btrace-boot.jar") {
-    builtBy 'bootJar'
-  }
-  testRuntime files("$buildDir/btrace-client.jar") {
-    builtBy 'clientJar'
-  }
+    testRuntime files("%buildDir/btrace-agent.jar") {
+        builtBy 'agentJar'
+    }
+    testRuntime files("%buildDir/btrace-boot.jar") {
+        builtBy 'bootJar'
+    }
+    testRuntime files("$buildDir/btrace-client.jar") {
+        builtBy 'clientJar'
+    }
 }
 
 
 publishing {
-  publications {
-    agent(MavenPublication) {
-      artifactId 'btrace-agent'
-      artifact agentJar
-      artifact agentSourcesJar
-      artifact agentJavadocJar
+    publications {
+        agent(MavenPublication) {
+            artifactId 'btrace-agent'
+            artifact agentJar
+            artifact agentSourcesJar {
+                classifier "source"
+            }
+            artifact agentJavadocJar {
+                classifier "javadoc"
+            }
+            pom.withXml {
+                asNode().children().last() + pomDetails
+            }
+        }
+
+        client(MavenPublication) {
+            artifactId 'btrace-client'
+            artifact clientJar
+            artifact clientSourcesJar {
+                classifier "sources"
+            }
+            artifact clientJavadocJar {
+                classifier "javadoc"
+            }
+            pom.withXml {
+                asNode().children().last() + pomDetails
+            }
+        }
+
+        boot(MavenPublication) {
+            artifactId 'btrace-boot'
+            artifact bootJar
+            artifact bootSourcesJar {
+                classifier "sources"
+            }
+            artifact bootJavadocJar {
+                classifier "javadoc"
+            }
+            pom.withXml {
+                asNode().children().last() + pomDetails
+            }
+        }
     }
 
-    client(MavenPublication) {
-      artifactId 'btrace-client'
-      artifact clientJar
-      artifact clientSourcesJar
-      artifact clientJavadocJar
-    }
-
-    boot(MavenPublication) {
-      artifactId 'btrace-boot'
-      artifact bootJar
-      artifact bootSourcesJar
-      artifact bootJavadocJar
-    }
-  }
-
-  /* ---- configure the repository URL . . .
-  repositories {
+    /* ---- configure the repository URL . . .
+    repositories {
     maven {
-      if (version endsWith('-SNAPSHOT') {
-        url 'https://oss.sonatype.org/content/repositories/snapshots'
-      } else {
-        // signing is missing!
-        url 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
-      }
+    if (version endsWith('-SNAPSHOT') {
+    url 'https://oss.sonatype.org/content/repositories/snapshots'
+    } else {
+    // signing is missing!
+    url 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
     }
-  }
-  */
+    }
+    }
+     */
 }
