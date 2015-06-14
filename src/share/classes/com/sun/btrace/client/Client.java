@@ -447,7 +447,7 @@ public class Client {
         // than a JRE there will be a tools.jar in $JDK_HOME/lib directory.
         if(System.getProperty("os.name").startsWith("Mac")) {
             String java_mac_home = javaHome.substring(0,javaHome.indexOf("/Home"));
-            return java_mac_home + "/Classes/classes.jar";
+            return java_mac_home + "/Home/lib/tools.jar";
         } else {
             return javaHome + "/../lib/tools.jar";
         }
