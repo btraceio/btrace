@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
+import java.util.LinkedList;
 
 /**
  * This instruments a probed class with BTrace probe
@@ -165,29 +166,31 @@ public class Instrumentor extends ClassVisitor {
     }
 
     @Override
-    public MethodVisitor visitMethod(final int access, final String name,
+    public MethodVisitor visitMethod(int access, final String name,
         final String desc, String signature, String[] exceptions) {
-        MethodVisitor methodVisitor = super.visitMethod(access, name, desc,
-                signature, exceptions);
 
-        LocalVariableHelperImpl lvs = new LocalVariableHelperImpl(methodVisitor, access, desc);
-
-        TemplateExpanderVisitor tse = new TemplateExpanderVisitor(
-            lvs, className, name, desc
-        );
-
-        if (applicableOnMethods.isEmpty() ||
-            (access & ACC_ABSTRACT) != 0    ||
-            (access & ACC_NATIVE) != 0      ||
-            name.startsWith(BTRACE_METHOD_PREFIX)) {
-            return tse;
+        if (name.startsWith(Constants.BTRACE_NATIVE_PREFIX)) {
+            // don't process the already prefixed native methods
+            return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
-        LocalVariableHelper visitor = tse;
+        List<OnMethod> appliedOnMethods = new LinkedList<>();
+
+        if (applicableOnMethods.isEmpty() ||
+            (access & ACC_ABSTRACT) != 0) {
+            return new TemplateExpanderVisitor(
+                new LocalVariableHelperImpl(
+                    super.visitMethod(access, name, desc, signature, exceptions),
+                    access,
+                    desc
+                ),
+                className, name, desc
+            );
+        }
 
         for (OnMethod om : applicableOnMethods) {
             if (om.getLocation().getValue() == Kind.LINE) {
-                visitor = instrumentorFor(om, visitor, access, name, desc);
+                appliedOnMethods.add(om);
             } else {
                 String methodName = om.getMethod();
                 if (methodName.equals("")) {
@@ -195,14 +198,14 @@ public class Instrumentor extends ClassVisitor {
                 }
                 if (methodName.equals(name) &&
                     typeMatches(om.getType(), desc)) {
-                    visitor = instrumentorFor(om, visitor, access, name, desc);
+                    appliedOnMethods.add(om);
                 } else if (methodName.charAt(0) == '/' &&
                            REGEX_SPECIFIER.matcher(methodName).matches()) {
                     methodName = methodName.substring(1, methodName.length() - 1);
                     try {
                         if (name.matches(methodName) &&
                             typeMatches(om.getType(), desc)) {
-                            visitor = instrumentorFor(om, visitor, access, name, desc);
+                            appliedOnMethods.add(om);
                         }
                     } catch (PatternSyntaxException pse) {
                         reportPatternSyntaxException(name);
@@ -211,6 +214,72 @@ public class Instrumentor extends ClassVisitor {
             }
         }
 
+        if (appliedOnMethods.isEmpty()) {
+            return new TemplateExpanderVisitor(
+                new LocalVariableHelperImpl(
+                    super.visitMethod(access, name, desc, signature, exceptions),
+                    access,
+                    desc
+                ),
+                className, name, desc
+            );
+        }
+
+        MethodVisitor methodVisitor;
+
+        if ((access & ACC_NATIVE) != 0) {
+            // the instrumented method will become non-native and delegate to the original native one
+            // the native method will be generated with an appropriate prefix
+            String nativeMethod = Constants.BTRACE_NATIVE_PREFIX + name;
+            Type retType = Type.getReturnType(desc);
+            // generate the non-native wrapper method
+            MethodVisitor newMv = visitMethod(access & (~ACC_NATIVE), name, desc, signature, exceptions);
+            newMv.visitCode();
+            int argIdx = 0;
+            boolean isStatic = (access & ACC_STATIC) != 0;
+            // forward to the prefixed native method
+            if (!isStatic) {
+                newMv.visitIntInsn(Opcodes.ALOAD, 0); // load 'this'
+                argIdx++;
+            }
+            Type[] args = Type.getArgumentTypes(desc);
+            for(Type aType : args) {
+                newMv.visitVarInsn(aType.getOpcode(Opcodes.ILOAD), argIdx);
+                argIdx += aType.getSize();
+            }
+            newMv.visitMethodInsn(
+                isStatic ? Opcodes.INVOKESTATIC : Opcodes.INVOKESPECIAL,
+                className,
+                nativeMethod,
+                desc, false
+            );
+
+            newMv.visitInsn(retType.getOpcode(Opcodes.IRETURN));
+            newMv.visitMaxs(0, 0);
+            newMv.visitEnd();
+            // and now proceed to generate the prefixed native method
+            return super.visitMethod(access, nativeMethod, desc, signature, exceptions);
+        } else {
+            methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
+        }
+
+        LocalVariableHelperImpl lvs = new LocalVariableHelperImpl(methodVisitor, access, desc);
+
+        TemplateExpanderVisitor tse = new TemplateExpanderVisitor(
+            lvs, className, name, desc
+        );
+
+        if (name.startsWith(BTRACE_METHOD_PREFIX)) {
+            return tse;
+        }
+
+        LocalVariableHelper visitor = tse;
+
+        for (OnMethod om : appliedOnMethods) {
+            visitor = instrumentorFor(om, visitor, access, name, desc);
+        }
+
+        final int mAccess = access;
         return new MethodVisitor(Opcodes.ASM5, (MethodVisitor)visitor) {
             @Override
             public AnnotationVisitor visitAnnotation(String annoDesc,
@@ -228,13 +297,13 @@ public class Instrumentor extends ClassVisitor {
                             annoName = annoName.substring(1, annoName.length() - 1);
                             try {
                                 if (extAnnoName.matches(annoName)) {
-                                    visitor = instrumentorFor(om, visitor, access, name, desc);
+                                    visitor = instrumentorFor(om, visitor, mAccess, name, desc);
                                 }
                             } catch (PatternSyntaxException pse) {
                                 reportPatternSyntaxException(extAnnoName);
                             }
                         } else if (annoName.equals(extAnnoName)) {
-                            visitor = instrumentorFor(om, visitor, access, name, desc);
+                            visitor = instrumentorFor(om, visitor, mAccess, name, desc);
                         }
                     }
                 }
@@ -1413,10 +1482,9 @@ public class Instrumentor extends ClassVisitor {
         return mv;
     }
 
-    @Override
     public void visitEnd() {
         int size = applicableOnMethods.size();
-        List<MethodCopier.MethodInfo> mi = new ArrayList<>(size);
+        List<MethodCopier.MethodInfo> mi = new ArrayList<MethodCopier.MethodInfo>(size);
         for (OnMethod om : calledOnMethods) {
             mi.add(new MethodCopier.MethodInfo(om.getTargetName(),
                      om.getTargetDescriptor(),
@@ -1468,8 +1536,7 @@ public class Instrumentor extends ClassVisitor {
     }
 
     private String getActionMethodName(String name) {
-        return Constants.BTRACE_METHOD_PREFIX +
-               btraceClassName.replace('/', '$') + "$" + name;
+        return InstrumentUtils.getActionPrefix(btraceClassName) + name;
     }
 
     private void invokeBTraceAction(Assembler asm, OnMethod om) {
