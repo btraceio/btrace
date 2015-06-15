@@ -131,7 +131,7 @@ public class ClinitInjector extends ClassVisitor {
         // the name of the currently processed class
         mv.visitLdcInsn(clazz); // NOI18N
         // invocatio nof BTraceRuntime.retransform() method
-        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/sun/btrace/BTraceRuntime", "retransform", "(Ljava/lang/String;Ljava/lang/Class;)V"); // NOI18N
+        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/sun/btrace/BTraceRuntime", "retransform", "(Ljava/lang/String;Ljava/lang/Class;)V", false); // NOI18N
 
         return clazz.getSize() + Type.getType(String.class).getSize();
     }

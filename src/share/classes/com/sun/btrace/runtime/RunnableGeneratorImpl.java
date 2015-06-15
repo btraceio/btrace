@@ -34,7 +34,7 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
- * This class generates a java.lang.Runnable implementation 
+ * This class generates a java.lang.Runnable implementation
  * that calls the given public static Method object that
  * accepts no arguments.
  *
@@ -45,6 +45,7 @@ public class RunnableGeneratorImpl implements RunnableGenerator {
      * Generate class bytes for java.lang.Runnable
      * implementation and return the same.
      */
+    @Override
     public byte[] generate(Method method, String className) {
         int modifiers = method.getModifiers();
         // make sure that the method is public static
@@ -62,7 +63,7 @@ public class RunnableGeneratorImpl implements RunnableGenerator {
         }
 
         ClassWriter cw = InstrumentUtils.newClassWriter();
-        cw.visit(V1_1, ACC_PUBLIC, className, null, "java/lang/Object", 
+        cw.visit(V1_1, ACC_PUBLIC, className, null, "java/lang/Object",
                  new String[] { "java/lang/Runnable" });
         // creates a MethodWriter for the (implicit) constructor
         MethodVisitor mw = cw.visitMethod(ACC_PUBLIC,
@@ -73,8 +74,8 @@ public class RunnableGeneratorImpl implements RunnableGenerator {
         // pushes the 'this' variable
         mw.visitVarInsn(ALOAD, 0);
         // invokes the super class constructor
-        mw.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V");
-        mw.visitInsn(RETURN);     
+        mw.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        mw.visitInsn(RETURN);
         mw.visitMaxs(1, 1);
         mw.visitEnd();
 
@@ -84,14 +85,15 @@ public class RunnableGeneratorImpl implements RunnableGenerator {
                 "()V",
                 null,
                 null);
-        // invokes the given method 
+        // invokes the given method
         mw.visitMethodInsn(INVOKESTATIC,
                 Type.getInternalName(method.getDeclaringClass()),
                 method.getName(),
-                Type.getMethodDescriptor(method));
-        mw.visitInsn(RETURN);        
+                Type.getMethodDescriptor(method),
+                false);
+        mw.visitInsn(RETURN);
         mw.visitMaxs(1, 1);
-        mw.visitEnd();        
+        mw.visitEnd();
         return cw.toByteArray();
     }
 
@@ -114,12 +116,13 @@ public class RunnableGeneratorImpl implements RunnableGenerator {
                     final String className = "Runnable$" + index;
                     final byte[] bytes = gen.generate(method, className);
                     ClassLoader loader = new ClassLoader() {
-                        public Class findClass(String name) 
+                        @Override
+                        public Class findClass(String name)
                             throws ClassNotFoundException {
                             if (name.equals(className)) {
                                 return defineClass(className, bytes, 0, bytes.length);
                             }
-                            throw new ClassNotFoundException(name);       
+                            throw new ClassNotFoundException(name);
                         }
                     };
                     Runnable r = (Runnable) loader.loadClass(className).newInstance();

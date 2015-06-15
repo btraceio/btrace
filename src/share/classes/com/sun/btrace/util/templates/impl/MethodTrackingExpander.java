@@ -107,6 +107,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
         this.methodId = methodId;
     }
 
+    @Override
     protected void recordTemplate(Template t) {
         if (ENTRY.equals(t)) {
             Map<String, String> m = t.getTagMap();
@@ -141,6 +142,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
         }
     }
 
+    @Override
     protected Result expandTemplate(TemplateExpanderVisitor v, Template t) {
         int localMethodId = methodId;
         String sMethodId = t.getTagMap().get($METHODID);
@@ -230,6 +232,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
         return false;
     }
 
+    @Override
     public void resetState() {
         durationComputed = false;
     }
@@ -242,6 +245,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
             this.mid = mid;
         }
 
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (durationVar == Integer.MIN_VALUE) {
                 e.visitLdcInsn(0L);
@@ -282,6 +286,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
             this.mid = mid;
         }
 
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (sHitVar == Integer.MIN_VALUE) {
                 e.visitLdcInsn(mid);
@@ -307,6 +312,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     }
 
     private class TimingEntry implements Consumer<TemplateExpanderVisitor> {
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (entryTsVar == Integer.MIN_VALUE) {
                 e.visitLdcInsn(0L);
@@ -322,6 +328,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     }
 
     private class SamplerTest implements Consumer<TemplateExpanderVisitor> {
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (sHitVar != Integer.MIN_VALUE) {
                 elseLabel = new Label();
@@ -339,6 +346,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
             this.mid = mid;
         }
 
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (!durationComputed) {
                 if (entryTsVar != Integer.MIN_VALUE) {
@@ -359,6 +367,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     }
 
     private class TimingTest implements Consumer<TemplateExpanderVisitor> {
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (!durationComputed) {
                 if (entryTsVar != Integer.MIN_VALUE) {
@@ -378,6 +387,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     }
 
     private class Else implements Consumer<TemplateExpanderVisitor> {
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (elseLabel != null) {
                 e.visitLabel(elseLabel);
@@ -393,6 +403,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
             this.mid = mid;
         }
 
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (samplerKind == Sampled.Sampler.Adaptive) {
                 Label l = new Label();
@@ -409,6 +420,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     }
 
     private class Duration implements Consumer<TemplateExpanderVisitor> {
+        @Override
         public void consume(TemplateExpanderVisitor e) {
             if (!durationComputed) {
                 e.visitLdcInsn(0L);

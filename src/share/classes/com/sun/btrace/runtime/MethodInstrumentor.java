@@ -137,6 +137,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             this.ptr = ptr;
         }
 
+        @Override
         public void doProvide() {
             asm.loadLocal(type, ptr);
         }
@@ -156,6 +157,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             this.constant = constant;
         }
 
+        @Override
         public void doProvide() {
             asm.ldc(constant);
         }
@@ -180,6 +182,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         }
 
 
+        @Override
         public void doProvide() {
             asm.push(myArgTypes.length);
             asm.newArray(TypeUtils.objectType);
@@ -216,7 +219,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         LocalVariableHelper lvt, String parentClz,
         String superClz, int access, String name, String desc
     ) {
-        super(ASM4, (MethodVisitor)lvt);
+        super(ASM5, (MethodVisitor)lvt);
         this.parentClz = parentClz;
         this.superClz = superClz;
         this.access = access;
@@ -224,7 +227,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         this.desc = desc;
         this.returnType = Type.getReturnType(desc);
         this.argumentTypes = Type.getArgumentTypes(desc);
-        extraTypes = new HashMap<Integer, Type>();
+        extraTypes = new HashMap<>();
         this.lvt = lvt;
         if (lvt instanceof MethodInstrumentor) {
             ((MethodInstrumentor)lvt).parent = this;
@@ -232,6 +235,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         this.asm = new Assembler(this);
     }
 
+    @Override
     final public void visitCode() {
         if (!isConstructor()) {
             prologueVisited = true;
@@ -240,11 +244,13 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         super.visitCode();
     }
 
+    @Override
     public void visitMethodInsn(int opcode,
                      String owner,
                      String name,
-                     String desc) {
-        super.visitMethodInsn(opcode, owner, name, desc);
+                     String desc,
+                     boolean iface) {
+        super.visitMethodInsn(opcode, owner, name, desc, iface);
         if (isConstructor() && !prologueVisited) {
             if (name.equals(CONSTRUCTOR) && (owner.equals(getParentClz()) || (getSuperClz() != null && owner.equals(getSuperClz())))) {
                 // super or this class constructor call.
@@ -255,6 +261,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         }
     }
 
+    @Override
     public void visitInsn(int opcode) {
         switch (opcode) {
             case IRETURN:
@@ -286,6 +293,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         return (fqn ? parentClz + "." : "") + name + (fqn ? desc : "");
     }
 
+    @Override
     public int storeNewLocal(Type type) {
         return lvt.storeNewLocal(type);
     }
@@ -314,6 +322,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
 
     protected void loadArguments(ArgumentProvider ... argumentProviders) {
         Arrays.sort(argumentProviders, new Comparator<ArgumentProvider>() {
+            @Override
             public int compare(ArgumentProvider o1, ArgumentProvider o2) {
                 if (o1 == null && o2 == null) {
                     return 0;

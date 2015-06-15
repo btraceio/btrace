@@ -45,7 +45,7 @@ import java.util.List;
  * @author Jaroslav Bachorik
  */
 public class Postprocessor extends ClassVisitor {
-    private final List<FieldDescriptor> fields = new ArrayList<FieldDescriptor>();
+    private final List<FieldDescriptor> fields = new ArrayList<>();
     private boolean shortSyntax = false;
     private String className = "";
 
@@ -91,14 +91,16 @@ public class Postprocessor extends ClassVisitor {
     public FieldVisitor visitField(final int access, final String name, final String desc, final String signature, final Object value) {
         if (!shortSyntax) return super.visitField(access, name, desc, signature, value);
 
-        final List<Attribute> attrs = new ArrayList<Attribute>();
+        final List<Attribute> attrs = new ArrayList<>();
         return new FieldVisitor(Opcodes.ASM5) {
 
+            @Override
             public void visitAttribute(Attribute atrbt) {
                 super.visitAttribute(atrbt);
                 attrs.add(atrbt);
             }
 
+            @Override
             public void visitEnd() {
                 FieldDescriptor fd = new FieldDescriptor(access, name, desc,
                     signature, value, attrs);
@@ -139,9 +141,9 @@ public class Postprocessor extends ClassVisitor {
     }
 
     private class MethodConvertor extends MethodVisitor {
-        private Deque<Boolean> simulatedStack = new ArrayDeque<Boolean>();
+        private final Deque<Boolean> simulatedStack = new ArrayDeque<>();
         private int localVarOffset = 0;
-        private boolean isConstructor;
+        private final boolean isConstructor;
         private boolean copyEnabled = false;
 
         public MethodConvertor(int localVarOffset, boolean isConstructor, MethodVisitor mv) {
@@ -569,7 +571,7 @@ public class Postprocessor extends ClassVisitor {
         }
 
         @Override
-        public void visitMethodInsn(int opcode, String clazz, String method, String desc) {
+        public void visitMethodInsn(int opcode, String clazz, String method, String desc, boolean iface) {
             int origOpcode = opcode;
             Type[] args = Type.getArgumentTypes(desc);
             for(Type t : args) {
@@ -591,7 +593,7 @@ public class Postprocessor extends ClassVisitor {
                     copyEnabled = true;
                 }
             } else {
-                super.visitMethodInsn(opcode, clazz, method, desc);
+                super.visitMethodInsn(opcode, clazz, method, desc, iface);
             }
         }
 

@@ -63,8 +63,8 @@ public class MethodCopier extends ClassVisitor {
             this.newAccess = newAccess;
         }
     }
- 
-    public MethodCopier(ClassReader fromClass, ClassVisitor toClass, 
+
+    public MethodCopier(ClassReader fromClass, ClassVisitor toClass,
                        Iterable<MethodInfo> methods) {
         super(Opcodes.ASM5, toClass);
         this.fromClass = fromClass;
@@ -73,7 +73,7 @@ public class MethodCopier extends ClassVisitor {
 
     protected MethodVisitor addMethod(int access, String name, String desc,
                         String signature, String[] exceptions) {
-        return super.visitMethod(access, name, desc, 
+        return super.visitMethod(access, name, desc,
                 signature, exceptions);
     }
 
@@ -92,7 +92,7 @@ public class MethodCopier extends ClassVisitor {
 
     @Override
     public void visitEnd() {
-        fromClass.accept(new ClassVisitor(Opcodes.ASM4) {
+        fromClass.accept(new ClassVisitor(Opcodes.ASM5) {
             @Override
             public void visit(int version, int access, String name,
                 String signature, String superName, String[] interfaces) {
@@ -100,7 +100,7 @@ public class MethodCopier extends ClassVisitor {
 
             @Override
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                return new AnnotationVisitor(Opcodes.ASM4) {};
+                return new AnnotationVisitor(Opcodes.ASM5) {};
             }
 
             @Override
