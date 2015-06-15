@@ -33,7 +33,7 @@ import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
  * Convenient fluent wrapper over the ASM method visitor
- * 
+ *
  * @author Jaroslav Bachorik
  */
 final public class Assembler {
@@ -401,7 +401,8 @@ final public class Assembler {
         mv.visitMethodInsn(INVOKEVIRTUAL,
                     "java/io/PrintStream",
                     "println",
-                    "(Ljava/lang/Object;)V");
+                    "(Ljava/lang/Object;)V",
+                    false);
         return this;
     }
 

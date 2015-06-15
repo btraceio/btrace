@@ -48,6 +48,7 @@ public class ThrowInstrumentor extends MethodInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitInsn(int opcode) {
         if (opcode == ATHROW) {
             onThrow();
@@ -60,7 +61,8 @@ public class ThrowInstrumentor extends MethodInstrumentor {
         visitMethodInsn(INVOKEVIRTUAL,
                     "java/lang/Throwable",
                     "printStackTrace",
-                    "()V");
+                    "()V",
+                    false);
     }
 
     public static void main(final String[] args) throws Exception {

@@ -96,7 +96,6 @@ final public class BTraceConfigurator extends MethodVisitor {
             graph.addStarting(new CycleDetector.Node(methodName + methodDesc));
         }
 
-        System.err.println("*** checking annotation on " + methodName + " - @" + desc);
         if (desc.equals(ONMETHOD_DESC)) {
             om = new OnMethod();
             onMethods.add(om);

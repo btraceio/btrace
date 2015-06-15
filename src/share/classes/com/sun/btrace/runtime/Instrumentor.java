@@ -69,13 +69,13 @@ public class Instrumentor extends ClassVisitor {
     public Instrumentor(Class clazz,
             String btraceClassName, ClassReader btraceClass,
             List<OnMethod> onMethods, ClassVisitor cv) {
-        super(ASM4, cv);
+        super(ASM5, cv);
         this.clazz = clazz;
         this.btraceClassName = btraceClassName.replace('.', '/');
         this.btraceClass = btraceClass;
         this.onMethods = onMethods;
-        this.applicableOnMethods = new ArrayList<OnMethod>();
-        this.calledOnMethods = new HashSet<OnMethod>();
+        this.applicableOnMethods = new ArrayList<>();
+        this.calledOnMethods = new HashSet<>();
     }
 
     public Instrumentor(Class clazz,
@@ -88,6 +88,7 @@ public class Instrumentor extends ClassVisitor {
         return !calledOnMethods.isEmpty();
     }
 
+    @Override
     public void visit(int version, int access, String name,
         String signature, String superName, String[] interfaces) {
         className = name;
@@ -135,6 +136,7 @@ public class Instrumentor extends ClassVisitor {
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
+    @Override
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
         AnnotationVisitor av = super.visitAnnotation(desc, visible);
         String extName = Type.getType(desc).getClassName();
@@ -162,6 +164,7 @@ public class Instrumentor extends ClassVisitor {
         return av;
     }
 
+    @Override
     public MethodVisitor visitMethod(final int access, final String name,
         final String desc, String signature, String[] exceptions) {
         MethodVisitor methodVisitor = super.visitMethod(access, name, desc,
@@ -209,6 +212,7 @@ public class Instrumentor extends ClassVisitor {
         }
 
         return new MethodVisitor(Opcodes.ASM5, (MethodVisitor)visitor) {
+            @Override
             public AnnotationVisitor visitAnnotation(String annoDesc,
                                   boolean visible) {
                 LocalVariableHelper visitor = (LocalVariableHelper)mv;
@@ -399,7 +403,7 @@ public class Instrumentor extends ClassVisitor {
                                     };
                                 }
                             } else {
-                                actionArgs[i] = localVarArg(index, actionArgTypes[index], backupArgsIndices[i+1]);;
+                                actionArgs[i] = localVarArg(index, actionArgTypes[index], backupArgsIndices[i+1]);
                             }
                         }
                         actionArgs[actionArgTypes.length] = localVarArg(om.getReturnParameter(), returnType, returnVarIndex);
@@ -409,6 +413,7 @@ public class Instrumentor extends ClassVisitor {
                         actionArgs[actionArgTypes.length + 4] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
                         actionArgs[actionArgTypes.length + 5] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                         actionArgs[actionArgTypes.length + 6] = new ArgumentProvider(asm, om.getDurationParameter()) {
+                            @Override
                             public void doProvide() {
                                 MethodTrackingExpander.DURATION.insert(mv);
                             }
@@ -746,6 +751,7 @@ public class Instrumentor extends ClassVisitor {
                             actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
                             actionArgs[3] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[4] = new ArgumentProvider(asm, om.getDurationParameter()) {
+                                @Override
                                 public void doProvide() {
                                     MethodTrackingExpander.DURATION.insert(mv);
                                 }
@@ -804,8 +810,8 @@ public class Instrumentor extends ClassVisitor {
                 return new FieldAccessInstrumentor(mv, className, superName, access, name, desc) {
 
                     int calledInstanceIndex = -1;
-                    private String targetClassName = loc.getClazz();
-                    private String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
+                    private final String targetClassName = loc.getClazz();
+                    private final String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
 
                     @Override
                     protected void onBeforeGetField(int opcode, String owner,
@@ -879,8 +885,8 @@ public class Instrumentor extends ClassVisitor {
             case FIELD_SET:
                 // <editor-fold defaultstate="collapsed" desc="Field Set Instrumentor">
                 return new FieldAccessInstrumentor(mv, className, superName, access, name, desc) {
-                    private String targetClassName = loc.getClazz();
-                    private String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
+                    private final String targetClassName = loc.getClazz();
+                    private final String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
                     private int calledInstanceIndex = -1;
                     private int fldValueIndex = -1;
 
@@ -1017,7 +1023,7 @@ public class Instrumentor extends ClassVisitor {
                 // <editor-fold defaultstate="collapsed" desc="Line Instrumentor">
                 return new LineNumberInstrumentor(mv, className, superName, access, name, desc) {
 
-                    private int onLine = loc.getLine();
+                    private final int onLine = loc.getLine();
 
                     private void callOnLine(int line) {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
@@ -1210,6 +1216,7 @@ public class Instrumentor extends ClassVisitor {
                             actionArgs[actionArgTypes.length + 2] = localVarArg(om.getReturnParameter(), getReturnType(), retValIndex);
                             actionArgs[actionArgTypes.length + 3] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(asm, om.getDurationParameter()) {
+                                @Override
                                 public void doProvide() {
                                     MethodTrackingExpander.DURATION.insert(mv);
                                 }
@@ -1406,9 +1413,10 @@ public class Instrumentor extends ClassVisitor {
         return mv;
     }
 
+    @Override
     public void visitEnd() {
         int size = applicableOnMethods.size();
-        List<MethodCopier.MethodInfo> mi = new ArrayList<MethodCopier.MethodInfo>(size);
+        List<MethodCopier.MethodInfo> mi = new ArrayList<>(size);
         for (OnMethod om : calledOnMethods) {
             mi.add(new MethodCopier.MethodInfo(om.getTargetName(),
                      om.getTargetDescriptor(),

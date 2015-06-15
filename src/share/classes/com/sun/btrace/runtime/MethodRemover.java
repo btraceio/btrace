@@ -51,6 +51,7 @@ public class MethodRemover extends ClassVisitor {
                               desc, signature, exceptions);
     }
 
+    @Override
     public MethodVisitor visitMethod(final int access, final String name,
             final String desc, final String signature, final String[] exceptions) {
         if (name.equals(CONSTRUCTOR) ||
@@ -69,6 +70,7 @@ public class MethodRemover extends ClassVisitor {
                     return adaptee;
                 }
 
+                @Override
                 public AnnotationVisitor visitAnnotation(String annoDesc,
                                   boolean visible) {
                     if (include) {
@@ -86,18 +88,21 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
+                @Override
                 public void visitAttribute(Attribute attr) {
                     if (include) {
                         getAdaptee().visitAttribute(attr);
                     }
                 }
 
+                @Override
                 public void visitCode() {
                     if (include) {
                         getAdaptee().visitCode();
                     }
                 }
 
+                @Override
                 public void visitFrame(int type, int nLocal,
                     Object[] local, int nStack, Object[] stack) {
                     if (include) {
@@ -105,30 +110,35 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
+                @Override
                 public void visitInsn(int opcode) {
                     if (include) {
                         getAdaptee().visitInsn(opcode);
                     }
                 }
 
+                @Override
                 public void visitIntInsn(int opcode, int operand) {
                     if (include) {
                         getAdaptee().visitIntInsn(opcode, operand);
                     }
                 }
 
+                @Override
                 public void visitVarInsn(int opcode, int var) {
                     if (include) {
                         getAdaptee().visitVarInsn(opcode, var);
                     }
                 }
 
+                @Override
                 public void visitTypeInsn(int opcode, String desc) {
                     if (include) {
                         getAdaptee().visitTypeInsn(opcode, desc);
                     }
                 }
 
+                @Override
                 public void visitFieldInsn(int opcode, String owner,
                     String name, String desc) {
                     if (include) {
@@ -136,37 +146,43 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
+                @Override
                 public void visitMethodInsn(int opcode, String owner,
-                    String name, String desc) {
+                    String name, String desc, boolean iface) {
                     if (include) {
-                        getAdaptee().visitMethodInsn(opcode, owner, name, desc);
+                        getAdaptee().visitMethodInsn(opcode, owner, name, desc, iface);
                     }
                 }
 
+                @Override
                 public void visitJumpInsn(int opcode, Label label) {
                     if (include) {
                         getAdaptee().visitJumpInsn(opcode, label);
                     }
                 }
 
+                @Override
                 public void visitLabel(Label label) {
                     if (include) {
                         getAdaptee().visitLabel(label);
                     }
                 }
 
+                @Override
                 public void visitLdcInsn(Object cst) {
                     if (include) {
                         getAdaptee().visitLdcInsn(cst);
                     }
                 }
 
+                @Override
                 public void visitIincInsn(int var, int increment) {
                     if (include) {
                         getAdaptee().visitIincInsn(var, increment);
                     }
                 }
 
+                @Override
                 public void visitTableSwitchInsn(int min, int max,
                     Label dflt, Label[] labels) {
                     if (include) {
@@ -174,6 +190,7 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
+                @Override
                 public void visitLookupSwitchInsn(Label dflt, int[] keys,
                     Label[] labels) {
                     if (include) {
@@ -181,12 +198,14 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
+                @Override
                 public void visitMultiANewArrayInsn(String desc, int dims) {
                     if (include) {
                         getAdaptee().visitMultiANewArrayInsn(desc, dims);
                     }
                 }
 
+                @Override
                 public void visitTryCatchBlock(Label start, Label end,
                     Label handler, String type) {
                     if (include) {
@@ -194,6 +213,7 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
+                @Override
                 public void visitLocalVariable(String name, String desc,
                     String signature, Label start, Label end, int index) {
                     if (include) {
@@ -202,18 +222,21 @@ public class MethodRemover extends ClassVisitor {
                     }
                 }
 
+                @Override
                 public void visitLineNumber(int line, Label start) {
                     if (include) {
                         getAdaptee().visitLineNumber(line, start);
                     }
                 }
 
+                @Override
                 public void visitMaxs(int maxStack, int maxLocals) {
                     if (include) {
                         getAdaptee().visitMaxs(maxStack, maxLocals);
                     }
                 }
 
+                @Override
                 public void visitEnd() {
                     if (include) {
                         getAdaptee().visitEnd();

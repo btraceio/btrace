@@ -274,9 +274,9 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         }
 
         private FrameState(Deque<StackItem> s, Map<Integer, StackItem> v, Map<Integer, StackItem> args) {
-            this.stack = new LinkedList<StackItem>(s);
-            this.vars = new HashMap<Integer, StackItem>(v);
-            this.args = new HashMap<Integer, StackItem>(args);
+            this.stack = new LinkedList<>(s);
+            this.vars = new HashMap<>(v);
+            this.args = new HashMap<>(args);
         }
 
         public StackItem peek() {
@@ -318,12 +318,12 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
     }
 
     private final class State {
-        private final Map<Label, Set<FrameState>> stateMap = new HashMap<Label, Set<FrameState>>();
+        private final Map<Label, Set<FrameState>> stateMap = new HashMap<>();
 
         private FrameState fState;
 
         public State(InstanceItem receiver, Type[] args) {
-            Map<Integer, StackItem> argMap = new HashMap<Integer, StackItem>();
+            Map<Integer, StackItem> argMap = new HashMap<>();
             int index = 0;
             if (receiver != null) {
                 argMap.put(index++, receiver);
@@ -343,7 +343,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
 
             Set<FrameState> states = stateMap.get(l);
             if (states == null) {
-                states = new HashSet<FrameState>();
+                states = new HashSet<>();
                 stateMap.put(l, states);
             }
             states.add(fState.duplicate());
@@ -354,7 +354,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
 
             Set<FrameState> states = stateMap.get(l);
             if (states == null) {
-                states = new HashSet<FrameState>();
+                states = new HashSet<>();
                 stateMap.put(l, states);
             }
             FrameState duplicated = fState.duplicate();
@@ -418,11 +418,11 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
     }
 
     private final State state;
-    private final Map<Label, Collection<Label>> tryCatchStart = new HashMap<Label, Collection<Label>>();
-    private final Map<Label, Collection<Label>> tryCatchEnd = new HashMap<Label, Collection<Label>>();
-    private final Set<Label> effectiveHandlers = new HashSet<Label>();
-    private final Collection<Label> handlers = new ArrayList<Label>();
-    private final Set<Label> visitedLabels = new HashSet<Label>();
+    private final Map<Label, Collection<Label>> tryCatchStart = new HashMap<>();
+    private final Map<Label, Collection<Label>> tryCatchEnd = new HashMap<>();
+    private final Set<Label> effectiveHandlers = new HashSet<>();
+    private final Collection<Label> handlers = new ArrayList<>();
+    private final Set<Label> visitedLabels = new HashSet<>();
 
     public StackTrackingMethodVisitor(MethodVisitor mv, String className, String desc, boolean isStatic) {
         super(Opcodes.ASM5, mv);
@@ -505,7 +505,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itfc) {
         super.visitMethodInsn(opcode, owner, name, desc, itfc);
 
-        List<StackItem> poppedArgs = new ArrayList<StackItem>();
+        List<StackItem> poppedArgs = new ArrayList<>();
         Type[] args = Type.getArgumentTypes(desc);
         Type ret = Type.getReturnType(desc);
 
@@ -564,7 +564,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         Type t = Type.getType(desc);
         super.visitFieldInsn(opcode, owner, name, desc);
 
-        List<StackItem> parents = new ArrayList<StackItem>();
+        List<StackItem> parents = new ArrayList<>();
         if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
             switch (t.getSort()) {
                 case Type.LONG:
@@ -985,7 +985,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
                 break;
             }
             case Opcodes.I2B: {
-                Set<StackItem> parents = new HashSet<StackItem>();
+                Set<StackItem> parents = new HashSet<>();
                 StackItem x = state.pop();
                 parents.addAll(x.getParents());
                 StackItem rslt = new InstanceItem(Type.BYTE_TYPE, parents.toArray(new StackItem[parents.size()]));
@@ -1123,7 +1123,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
                 break;
             }
             case Opcodes.ARRAYLENGTH: {
-                Set<StackItem> parents = new HashSet<StackItem>();
+                Set<StackItem> parents = new HashSet<>();
                 parents.addAll(state.pop().getParents());
                 state.push(new InstanceItem(Type.INT_TYPE, parents.toArray(new StackItem[parents.size()])));
                 break;
@@ -1148,7 +1148,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         super.visitTryCatchBlock(start, end, handler, type);
         Collection<Label> labels = tryCatchStart.get(start);
         if (labels == null) {
-            labels = new ArrayList<Label>();
+            labels = new ArrayList<>();
             tryCatchStart.put(start, labels);
         }
         labels.add(handler);
@@ -1162,7 +1162,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
     private void addToMappedCollection(Map<Label, Collection<Label>> map, Label l, Label handler) {
         Collection<Label> labels = map.get(l);
         if (labels == null) {
-            labels = new ArrayList<Label>();
+            labels = new ArrayList<>();
             map.put(l, labels);
         }
         labels.add(handler);
@@ -1192,7 +1192,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
         Type[] argTypes = Type.getArgumentTypes(desc);
         int idx = argTypes.length - 1;
 
-        List<StackItem> items = new ArrayList<StackItem>();
+        List<StackItem> items = new ArrayList<>();
         Iterator<StackItem> it = state.fState.stack.iterator();
         while (it.hasNext() && idx >= 0) {
             Type t = argTypes[idx];

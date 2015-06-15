@@ -1280,6 +1280,12 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC Ltraces/TLSTest;.class\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.forClass (Ljava/lang/Class;)Lcom/sun/btrace/BTraceRuntime;\n" +
             "PUTSTATIC traces/TLSTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "GETSTATIC traces/TLSTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L2\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L2\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.newThreadLocal (Ljava/lang/Object;)Ljava/lang/ThreadLocal;\n" +
             "PUTSTATIC traces/TLSTest.entryTimes : Ljava/lang/ThreadLocal;\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.start ()V\n" +
@@ -1329,5 +1335,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         System.err.println(asmify(originalBC));
         transform("OnProbeTest", false);
         System.err.println("\n" + asmify(transformedBC));
+    }
+
+    @Test
+    public void onTimerTest() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("OnTimerTest", false);
     }
 }

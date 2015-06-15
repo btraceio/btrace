@@ -52,17 +52,18 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitMethodInsn(int opcode, String owner,
-        String name, String desc) {
+        String name, String desc, boolean iface) {
         if (name.startsWith("$btrace")) {
-            super.visitMethodInsn(opcode, owner, name, desc);
+            super.visitMethodInsn(opcode, owner, name, desc, iface);
             return;
         }
 
         callId++;
 
         onBeforeCallMethod(opcode, owner, name, desc);
-        super.visitMethodInsn(opcode, owner, name, desc);
+        super.visitMethodInsn(opcode, owner, name, desc, iface);
         onAfterCallMethod(opcode, owner, name, desc);
     }
 
@@ -93,6 +94,7 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader,
             new ClassVisitor(Opcodes.ASM5, writer) {
+                 @Override
                  public MethodVisitor visitMethod(int access, String name, String desc,
                      String signature, String[] exceptions) {
                      MethodVisitor mv = super.visitMethod(access, name, desc,
