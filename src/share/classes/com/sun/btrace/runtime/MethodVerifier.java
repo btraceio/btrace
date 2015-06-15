@@ -51,8 +51,8 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
     final private static Set<String> unboxMethods;
 
     static {
-        primitiveWrapperTypes = new HashSet<String>();
-        unboxMethods = new HashSet<String>();
+        primitiveWrapperTypes = new HashSet<>();
+        unboxMethods = new HashSet<>();
 
         primitiveWrapperTypes.add("java/lang/Boolean");
         primitiveWrapperTypes.add("java/lang/Byte");
@@ -94,7 +94,7 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
         this.methodName = methodName;
         this.methodDesc = desc;
         this.access = access;
-        labels = new HashMap<Label, Label>();
+        labels = new HashMap<>();
     }
 
     @Override

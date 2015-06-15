@@ -94,7 +94,7 @@ public class LocalVariableHelperImpl extends MethodVisitor implements LocalVaria
      *             If a subclass calls this constructor.
      */
     public LocalVariableHelperImpl(final MethodVisitor mv, final int access, final String desc) {
-        this(Opcodes.ASM5, access, desc, mv);
+        this(access, desc, mv);
         if (getClass() != LocalVariableHelperImpl.class) {
             throw new IllegalStateException();
         }
@@ -102,10 +102,6 @@ public class LocalVariableHelperImpl extends MethodVisitor implements LocalVaria
 
     /**
      * Creates a new {@link LocalVariablesSorter}.
-     *
-     * @param api
-     *            the ASM API version implemented by this visitor. Must be one
-     *            of {@link Opcodes#ASM4} or {@link Opcodes#ASM5}.
      * @param access
      *            access flags of the adapted method.
      * @param desc
@@ -113,9 +109,9 @@ public class LocalVariableHelperImpl extends MethodVisitor implements LocalVaria
      * @param mv
      *            the method visitor to which this adapter delegates calls.
      */
-    protected LocalVariableHelperImpl(final int api, final int access,
+    protected LocalVariableHelperImpl(final int access,
             final String desc, final MethodVisitor mv) {
-        super(api, mv);
+        super(Opcodes.ASM5, mv);
         Type[] args = Type.getArgumentTypes(desc);
         nextLocal = (Opcodes.ACC_STATIC & access) == 0 ? 1 : 0;
         for (int i = 0; i < args.length; i++) {
@@ -267,6 +263,7 @@ public class LocalVariableHelperImpl extends MethodVisitor implements LocalVaria
      * @return the identifier of the newly created local variable.
      *         it is a negative number -> Math.abs(ident) = the real var index
      */
+        @Override
     public int storeNewLocal(final Type type) {
         Object t;
         switch (type.getSort()) {

@@ -47,7 +47,7 @@ import java.util.Collection;
 public class TemplateExpanderVisitor extends MethodVisitor implements LocalVariableHelper {
     final private LocalVariableHelper lvs;
 
-    final private Collection<TemplateExpander> expanders = new ArrayList<TemplateExpander>();
+    final private Collection<TemplateExpander> expanders = new ArrayList<>();
 
     public TemplateExpanderVisitor(LocalVariableHelper lvs,
                              String className, String methodName,
@@ -58,6 +58,7 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
         this.expanders.add(new MethodTrackingExpander(MethodID.getMethodId(className, methodName, desc)));
     }
 
+    @Override
     public int storeNewLocal(Type type) {
         expandTemplate(null);
         return lvs.storeNewLocal(type);
@@ -66,15 +67,6 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
     @Override
     public void visitCode() {
         super.visitCode();
-    }
-
-    @Override
-    public void visitMethodInsn(int opcode, String owner, String name, String desc) {
-        Template t = BTraceTemplates.getTemplate(owner, name, desc);
-
-        if (expandTemplate(t) == TemplateExpander.Result.IGNORED) {
-            super.visitMethodInsn(opcode, owner, name, desc);
-        }
     }
 
     @Override

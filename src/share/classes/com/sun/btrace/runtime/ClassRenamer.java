@@ -48,29 +48,31 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
  */
 public class ClassRenamer extends ClassVisitor {
     private String oldName;
-    private String newName;
+    private final String newName;
     private String oldNameDesc;
-    private String newNameDesc;
+    private final String newNameDesc;
 
-    public ClassRenamer(String newName, ClassVisitor visitor) {  
-        super(ASM4, visitor);
+    public ClassRenamer(String newName, ClassVisitor visitor) {
+        super(ASM5, visitor);
         newName = newName.replace('.', '/');
         this.newName = newName;
         this.newNameDesc = "L" + newName + ";";
     }
 
-    public void visit(int version, int access, String name, 
+    @Override
+    public void visit(int version, int access, String name,
         String signature, String superName, String[] interfaces) {
         oldName = name;
         oldNameDesc = "L" + oldName + ";";
         if (signature != null) {
             signature = signature.replace(oldNameDesc, newNameDesc);
         }
-        super.visit(version, access, newName, 
+        super.visit(version, access, newName,
                     signature, superName, interfaces);
     }
 
-    public FieldVisitor visitField(int access, String name, 
+    @Override
+    public FieldVisitor visitField(int access, String name,
         String desc, String signature, Object value) {
         desc = desc.replace(oldNameDesc, newNameDesc);
         if (signature != null) {
@@ -79,15 +81,17 @@ public class ClassRenamer extends ClassVisitor {
         return super.visitField(access, name, desc, signature, value);
     }
 
-    public MethodVisitor visitMethod(int access, String name, 
+    @Override
+    public MethodVisitor visitMethod(int access, String name,
             String desc, String signature, String[] exceptions) {
         if (signature != null) {
             signature = signature.replace(oldNameDesc, newNameDesc);
         }
         desc = desc.replace(oldNameDesc, newNameDesc);
-        MethodVisitor adaptee = super.visitMethod(access, name, 
+        MethodVisitor adaptee = super.visitMethod(access, name,
                                    desc, signature, exceptions);
-        return new MethodVisitor(ASM4, adaptee) {
+        return new MethodVisitor(ASM5, adaptee) {
+            @Override
             public void visitFieldInsn(int opcode,
                           String owner,
                           String name,
@@ -99,15 +103,17 @@ public class ClassRenamer extends ClassVisitor {
                 super.visitFieldInsn(opcode, owner, name, desc);
             }
 
+            @Override
             public void visitMethodInsn(int opcode, String owner,
-                String name, String desc) {
+                String name, String desc, boolean iface) {
                 if (owner.equals(oldName)) {
                     owner = newName;
                 }
                 desc = desc.replace(oldNameDesc, newNameDesc);
-                super.visitMethodInsn(opcode, owner, name, desc);
+                super.visitMethodInsn(opcode, owner, name, desc, iface);
             }
 
+            @Override
             public void visitLdcInsn(Object cst) {
                 if (cst instanceof Type) {
                     String name = ((Type)cst).getInternalName();
@@ -118,6 +124,7 @@ public class ClassRenamer extends ClassVisitor {
                 super.visitLdcInsn(cst);
             }
 
+            @Override
             public void visitTypeInsn(int opcode, String desc) {
                 if (desc.equals(oldName)) {
                     desc = newName;
@@ -129,11 +136,13 @@ public class ClassRenamer extends ClassVisitor {
                 super.visitTypeInsn(opcode, desc);
             }
 
+            @Override
             public void visitMultiANewArrayInsn(String desc, int dims) {
                 desc = desc.replace(oldNameDesc, newNameDesc);
                 super.visitMultiANewArrayInsn(desc, dims);
             }
 
+            @Override
             public void visitLocalVariable(String name,
                         String desc,  String signature,
                         Label start, Label end, int index) {
@@ -161,5 +170,5 @@ public class ClassRenamer extends ClassVisitor {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         InstrumentUtils.accept(reader, new ClassRenamer(args[1], writer));
         fos.write(writer.toByteArray());
-    } 
+    }
 }
