@@ -1341,5 +1341,36 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void onTimerTest() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("OnTimerTest", false);
+
+        checkTrace(
+            "public static Lcom/sun/btrace/BTraceRuntime; runtime\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/OnTimerTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "L0\n" +
+            "LDC Ltraces/OnTimerTest;.class\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.forClass (Ljava/lang/Class;)Lcom/sun/btrace/BTraceRuntime;\n" +
+            "PUTSTATIC traces/OnTimerTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "GETSTATIC traces/OnTimerTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L2\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L2\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.start ()V\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN"
+        );
     }
 }
