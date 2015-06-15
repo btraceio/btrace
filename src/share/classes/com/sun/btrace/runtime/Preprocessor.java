@@ -502,6 +502,18 @@ public class Preprocessor extends ClassVisitor {
             false)
         );
         l.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, rtField.name, rtField.desc));
+
+        LabelNode start = new LabelNode();
+        l.add(getRuntime());
+        l.add(new MethodInsnNode(
+            Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
+            "enter", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, BTRACE_RUNTIME_TYPE),
+            false
+        ));
+        l.add(new JumpInsnNode(Opcodes.IFNE, start));
+        l.add(getReturnSequence(clinit, true));
+        l.add(start);
+
         clinit.instructions.insert(l);
 
         startRuntime(clinit);
@@ -510,6 +522,14 @@ public class Preprocessor extends ClassVisitor {
     private void startRuntime(MethodNode clinit1) {
         for (AbstractInsnNode n = clinit1.instructions.getFirst(); n != null; n = n.getNext()) {
             if (n.getOpcode() == Opcodes.RETURN) {
+                AbstractInsnNode prev = n.getPrevious();
+                if (prev != null && prev.getType() == AbstractInsnNode.METHOD_INSN) {
+                    MethodInsnNode min = (MethodInsnNode)prev;
+                    if (min.name.equals("leave")) {
+                        // don't start the runtime if we are bailing out (BTraceRuntime.leave())
+                        continue;
+                    }
+                }
                 clinit1.instructions.insertBefore(n, new MethodInsnNode(
                     Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
                     "start", "()V", false
