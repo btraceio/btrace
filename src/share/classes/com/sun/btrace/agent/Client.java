@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008-2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
 import com.sun.btrace.runtime.ClinitInjector;
+import com.sun.btrace.runtime.Constants;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Location;
@@ -138,6 +139,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         this.inst = inst;
     }
 
+    @Override
     public byte[] transform(
                 ClassLoader loader,
                 String cname,
@@ -194,6 +196,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     void registerTransformer() {
         inst.addTransformer(clInitTransformer, false);
         inst.addTransformer(this, true);
+        inst.setNativeMethodPrefix(this, Constants.BTRACE_NATIVE_PREFIX);
     }
 
     void unregisterTransformer() {
@@ -239,6 +242,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             errorExit(th);
             return null;
         }
+
         Main.dumpClass(className + "_orig", className + "_orig", btraceCode);
 
         this.filter = new ClassFilter(onMethods);

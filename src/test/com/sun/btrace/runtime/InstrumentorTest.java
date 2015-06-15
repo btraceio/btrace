@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1514,6 +1514,96 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN"
+        );
+    }
+
+    @Test
+    public void nativeWithReturnTracingTest() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/NativeWithReturn", false);
+
+        checkTransformation(
+            "// access flags 0x1\n" +
+            "public nativeWithReturn(ILjava/lang/String;[J[Ljava/lang/Object;)J\n" +
+            "ALOAD 0\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NativeWithReturn$nMethod (Ljava/lang/Object;)V\n" +
+            "ALOAD 0\n" +
+            "ILOAD 1\n" +
+            "ALOAD 2\n" +
+            "ALOAD 3\n" +
+            "ALOAD 4\n" +
+            "INVOKESPECIAL resources/OnMethodTest.$btrace$native$nativeWithReturn (ILjava/lang/String;[J[Ljava/lang/Object;)J\n" +
+            "LRETURN\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 5\n" +
+            "\n" +
+            "public native $btrace$native$nativeWithReturn(ILjava/lang/String;[J[Ljava/lang/Object;)J\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$NativeWithReturn$nMethod(Ljava/lang/Object;)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"nativeWithReturn\")\n" +
+            "@Lcom/sun/btrace/annotations/Self;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/NativeWithReturn.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 1\n" +
+            "MAXLOCALS = 1"
+        );
+    }
+
+    @Test
+    public void nativeWithoutReturnTracingTest() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/NativeWithoutReturn", false);
+
+        checkTransformation(
+            "// access flags 0x1\n" +
+            "public nativeWithoutReturn(ILjava/lang/String;[J[Ljava/lang/Object;)V\n" +
+            "ALOAD 0\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NativeWithoutReturn$nMethod (Ljava/lang/Object;)V\n" +
+            "ALOAD 0\n" +
+            "ILOAD 1\n" +
+            "ALOAD 2\n" +
+            "ALOAD 3\n" +
+            "ALOAD 4\n" +
+            "INVOKESPECIAL resources/OnMethodTest.$btrace$native$nativeWithoutReturn (ILjava/lang/String;[J[Ljava/lang/Object;)V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 5\n" +
+            "\n" +
+            "public native $btrace$native$nativeWithoutReturn(ILjava/lang/String;[J[Ljava/lang/Object;)V\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$NativeWithoutReturn$nMethod(Ljava/lang/Object;)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"nativeWithoutReturn\")\n" +
+            "@Lcom/sun/btrace/annotations/Self;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/NativeWithoutReturn.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 1\n" +
+            "MAXLOCALS = 1"
         );
     }
 }
