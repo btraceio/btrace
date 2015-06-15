@@ -120,7 +120,9 @@ abstract public class InstrumentorTestBase {
 
     protected void load() {
         String clzName = new ClassReader(transformedBC).getClassName().replace('.', '/');
+        String traceName = new ClassReader(transformedTrace).getClassName().replace('.', '/');
         unsafe.defineClass(clzName, transformedBC, 0, transformedBC.length, cl, null);
+        unsafe.defineClass(traceName, transformedTrace, 0, transformedTrace.length, cl, null);
     }
 
     protected void checkTransformation(String expected) throws IOException {
