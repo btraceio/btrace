@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 package com.sun.btrace;
 
@@ -28,7 +28,7 @@ package com.sun.btrace;
  * This class is a simple implementation of DynamicMBean that exposes
  * a BTrace class as a MBean. The static fields annotated with @Property
  * are exposed as MBean attributes.
- * 
+ *
  * @author A. Sundararajan
  */
 import com.sun.btrace.annotations.BTrace;
@@ -70,17 +70,17 @@ import javax.management.openmbean.OpenType;
 import javax.management.openmbean.SimpleType;
 
 /**
- * This is a simple DynamicMBean implementation that exposes the static 
+ * This is a simple DynamicMBean implementation that exposes the static
  * fields of BTrace class as attributes. The fields exposed should be
  * annotated as {@linkplain Property}.
- * 
+ *
  * @author A. Sundararajan
  */
 public class BTraceMBean implements DynamicMBean {
 
-    private Class clazz;
-    private Map<String, Field> attributes;
-    private String beanName;
+    private final Class clazz;
+    private final Map<String, Field> attributes;
+    private final String beanName;
     private MBeanInfo cachedBeanInfo;
 
     public BTraceMBean(Class clazz) {
@@ -89,6 +89,7 @@ public class BTraceMBean implements DynamicMBean {
         this.beanName = getBeanName(clazz);
     }
 
+    @Override
     public synchronized Object getAttribute(String name)
             throws AttributeNotFoundException {
         Field field = attributes.get(name);
@@ -98,11 +99,13 @@ public class BTraceMBean implements DynamicMBean {
         return getFieldValue(field);
     }
 
+    @Override
     public synchronized void setAttribute(Attribute attribute)
             throws InvalidAttributeValueException, MBeanException, AttributeNotFoundException {
         throw new MBeanException(new RuntimeException("BTrace attributes are read-only"));
     }
 
+    @Override
     public synchronized AttributeList getAttributes(String[] names) {
         AttributeList list = new AttributeList();
         for (String name : names) {
@@ -118,21 +121,24 @@ public class BTraceMBean implements DynamicMBean {
         return list;
     }
 
+    @Override
     public synchronized AttributeList setAttributes(AttributeList list) {
         // we don't support attribute sets -- return an empty list.
         return new AttributeList();
     }
 
+    @Override
     public Object invoke(String name, Object[] args, String[] sig)
             throws MBeanException, ReflectionException {
         throw new ReflectionException(new NoSuchMethodException(name));
     }
 
+    @Override
     public synchronized MBeanInfo getMBeanInfo() {
         if (cachedBeanInfo != null) {
             return cachedBeanInfo;
         }
-        SortedSet<String> names = new TreeSet<String>();
+        SortedSet<String> names = new TreeSet<>();
         for (String name : attributes.keySet()) {
             names.add((String) name);
         }
@@ -234,7 +240,7 @@ public class BTraceMBean implements DynamicMBean {
 
     private static Map<String, Field> getJMXAttributes(Class clazz) {
         try {
-            Map<String, Field> fields = new HashMap<String, Field>();
+            Map<String, Field> fields = new HashMap<>();
             for (Field field : clazz.getDeclaredFields()) {
                 if (Modifier.isStatic(field.getModifiers()) &&
                         field.isAnnotationPresent(Property.class)) {
@@ -245,7 +251,9 @@ public class BTraceMBean implements DynamicMBean {
                         if (attrName.isEmpty()) {
                             attrName = field.getName();
                             // remove BTRACE_FIELD_PREFIX ("$") from field name
-                            attrName = attrName.substring(1);
+                            if (attrName.startsWith("$")) {
+                                attrName = attrName.substring(1);
+                            }
                         }
                         fields.put(attrName, field);
                     }
@@ -261,7 +269,7 @@ public class BTraceMBean implements DynamicMBean {
 
     private static class OpenTypeUtils {
 
-        private static Map<Class, OpenType> classToOpenTypes = new HashMap<Class, OpenType>();
+        private static final Map<Class, OpenType> classToOpenTypes = new HashMap<>();
 
         static {
             classToOpenTypes.put(Byte.TYPE, SimpleType.BYTE);
@@ -393,9 +401,9 @@ public class BTraceMBean implements DynamicMBean {
         private static Object convertToOpenTypeValue(OpenType ot, Object value) {
             if (ot instanceof SimpleType) {
                 if (value instanceof AtomicInteger) {
-                    return Integer.valueOf(((AtomicInteger) value).get());
+                    return ((AtomicInteger) value).get();
                 } else if (value instanceof AtomicLong) {
-                    return Long.valueOf(((AtomicLong) value).get());
+                    return ((AtomicLong) value).get();
                 } else {
                     return value;
                 }
@@ -503,7 +511,7 @@ public class BTraceMBean implements DynamicMBean {
                     OpenType valueType = ct.getType("value");
                     int index = 0;
                     for (Map.Entry<Object, Object> entry : map.entrySet()) {
-                        Map<String, Object> row = new HashMap<String, Object>();
+                        Map<String, Object> row = new HashMap<>();
                         row.put("key", convertToOpenTypeValue(keyType, entry.getKey()));
                         row.put("value", convertToOpenTypeValue(valueType, entry.getValue()));
                         try {

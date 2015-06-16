@@ -284,82 +284,35 @@ public class Preprocessor extends ClassVisitor {
     private void initTLS(FieldNode fn, Type t) {
         tlsFldNames.add(fn.name);
 
-        Object initVal = fn.value;
-        InsnList l = clinit.instructions;
-        MethodInsnNode initializer = new MethodInsnNode(
-            Opcodes.INVOKESTATIC,
-            BTRACE_RUNTIME_TYPE.getInternalName(),
-            "newThreadLocal",
-            Type.getMethodDescriptor(THREAD_LOCAL_TYPE, Type.getType(Object.class)),
-            false
+        initAnnotatedField(fn, t, tlsInitSequence(t, fn.name, fn.desc));
+    }
+
+    private InsnList tlsInitSequence(Type t, String name, String desc) {
+        InsnList initList = new InsnList();
+        initList.add(
+            new MethodInsnNode(
+                Opcodes.INVOKESTATIC,
+                BTRACE_RUNTIME_TYPE.getInternalName(),
+                "newThreadLocal",
+                Type.getMethodDescriptor(THREAD_LOCAL_TYPE, Type.getType(Object.class)),
+                false
+            )
         );
-
-        if (initVal != null) {
-            l.add(new LdcInsnNode(initVal));
-        } else {
-            // find first fld store; this is the initialization place
-            AbstractInsnNode initNode = findNodeInitialization(fn);
-
-            FieldInsnNode putInsn = new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, fn.name, fn.desc);
-
-            if (initNode != null) {
-                MethodInsnNode boxNode = null;
-                if (TypeUtils.isPrimitive(t)) {
-                    boxNode = boxNode(t);
-                    l.insert(initNode, boxNode);
-                }
-
-                l.insert(
-                    boxNode != null ? boxNode : initNode,
-                    initializer
-                );
-                l.remove(initNode);
-            } else {
-                // no initialization done; use primitive defaults or NULL
-                switch (t.getSort()) {
-                    case Type.INT:
-                    case Type.SHORT:
-                    case Type.BOOLEAN:
-                    case Type.BYTE:
-                    case Type.CHAR: {
-                        l.add(new InsnNode(Opcodes.ICONST_0));
-                        break;
-                    }
-                    case Type.LONG: {
-                        l.add(new InsnNode(Opcodes.LCONST_0));
-                        break;
-                    }
-                    case Type.FLOAT: {
-                        l.add(new InsnNode(Opcodes.FCONST_0));
-                        break;
-                    }
-                    case Type.DOUBLE: {
-                        l.add(new InsnNode(Opcodes.DCONST_0));
-                        break;
-                    }
-                    default: {
-                        l.add(new InsnNode(Opcodes.ACONST_NULL));
-                    }
-                }
-                if (TypeUtils.isPrimitive(t)) {
-                    l.add(boxNode(t));
-                }
-                l.add(initializer);
-            }
-            l.insert(initializer, putInsn);
-        }
+        initList.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, name, desc));
+        return initList;
     }
 
     private void initExport(FieldNode fn, Type t) {
         exportFldNames.add(fn.name);
+        initAnnotatedField(fn, t, exportInitSequence(t, fn.name, fn.desc));
+    }
 
-        Object initVal = fn.value;
-        InsnList l = new InsnList();
+    private InsnList exportInitSequence(Type t, String name, String desc) {
         InsnList init = new InsnList();
 
-        init.add(new LdcInsnNode(perfCounterName(fn.name)));
-        init.add(new LdcInsnNode(fn.desc));
-        init.add(new  MethodInsnNode(
+        init.add(new LdcInsnNode(perfCounterName(name)));
+        init.add(new LdcInsnNode(desc));
+        init.add(new MethodInsnNode(
                 Opcodes.INVOKESTATIC,
                 BTRACE_RUNTIME_TYPE.getInternalName(),
                 "newPerfCounter",
@@ -373,56 +326,72 @@ public class Preprocessor extends ClassVisitor {
             )
         );
 
+        return init;
+    }
+
+    private void initAnnotatedField(FieldNode fn, Type t, InsnList initList) {
+        Object initVal = fn.value;
+        fn.value = null;
+        fn.access |= Opcodes.ACC_FINAL;
+        
+        InsnList l = clinit.instructions;
+
+        MethodInsnNode boxNode;
+        if (TypeUtils.isPrimitive(t)) {
+            boxNode = boxNode(t);
+            initList.insert(boxNode);
+        }
+
         if (initVal != null) {
-            l.add(new LdcInsnNode(initVal));
+            initList.insert(new LdcInsnNode(initVal));
         } else {
             // find first fld store; this is the initialization place
             AbstractInsnNode initNode = findNodeInitialization(fn);
 
             if (initNode != null) {
-                MethodInsnNode boxNode = null;
-                if (TypeUtils.isPrimitive(t)) {
-                    boxNode = boxNode(t);
-                    l.insert(initNode, boxNode);
-                }
-
-                l.insert(
-                    boxNode != null ? boxNode : initNode,
-                    init
-                );
+                // found the initialization place;
+                // just replace the FLD_STORE with the TLS init sequence
+                l.insert(initNode, initList);
                 l.remove(initNode);
+                return;
             } else {
                 // no initialization done; use primitive defaults or NULL
-                switch (t.getSort()) {
-                    case Type.INT:
-                    case Type.SHORT:
-                    case Type.BOOLEAN:
-                    case Type.BYTE:
-                    case Type.CHAR: {
-                        l.add(new InsnNode(Opcodes.ICONST_0));
-                        break;
-                    }
-                    case Type.LONG: {
-                        l.add(new InsnNode(Opcodes.LCONST_0));
-                        break;
-                    }
-                    case Type.FLOAT: {
-                        l.add(new InsnNode(Opcodes.FCONST_0));
-                        break;
-                    }
-                    case Type.DOUBLE: {
-                        l.add(new InsnNode(Opcodes.DCONST_0));
-                        break;
-                    }
-                    default: {
-                        l.add(new InsnNode(Opcodes.ACONST_NULL));
-                    }
-                }
-                if (TypeUtils.isPrimitive(t)) {
-                    l.add(boxNode(t));
-                }
-                l.add(init);
+                addDefaultVal(t, initList);
             }
+        }
+        MethodInsnNode rtStart = findBTraceRuntimeStart();
+        if (rtStart != null) {
+            l.insertBefore(rtStart, initList);
+        } else {
+            l.add(initList);
+        }
+    }
+
+    private void addDefaultVal(Type t, InsnList l) {
+        switch (t.getSort()) {
+           case Type.INT:
+           case Type.SHORT:
+           case Type.BOOLEAN:
+           case Type.BYTE:
+           case Type.CHAR: {
+               l.insert(new InsnNode(Opcodes.ICONST_0));
+               break;
+           }
+           case Type.LONG: {
+               l.insert(new InsnNode(Opcodes.LCONST_0));
+               break;
+           }
+           case Type.FLOAT: {
+               l.insert(new InsnNode(Opcodes.FCONST_0));
+               break;
+           }
+           case Type.DOUBLE: {
+               l.insert(new InsnNode(Opcodes.DCONST_0));
+               break;
+           }
+           default: {
+               l.insert(new InsnNode(Opcodes.ACONST_NULL));
+           }
         }
     }
 
@@ -664,6 +633,20 @@ public class Preprocessor extends ClassVisitor {
                 if (fldInsnNode.getOpcode() == Opcodes.PUTSTATIC &&
                     fldInsnNode.name.equals(fn.name)) {
                     return fldInsnNode;
+                }
+            }
+        }
+        return null;
+    }
+
+    private MethodInsnNode findBTraceRuntimeStart() {
+        for (AbstractInsnNode n = clinit.instructions.getFirst(); n != null; n = n.getNext()) {
+            if (n.getType() == AbstractInsnNode.METHOD_INSN) {
+                MethodInsnNode min = (MethodInsnNode)n;
+                if (min.getOpcode() == Opcodes.INVOKESTATIC &&
+                    min.owner.equals(BTRACE_RUNTIME_TYPE.getInternalName()) &&
+                    min.name.equals("start")) {
+                    return min;
                 }
             }
         }
