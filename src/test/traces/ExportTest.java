@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,30 +27,30 @@ package traces;
 
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Export;
 import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.TLS;
 import java.util.Deque;
 
 /**
- * Sanity test to make sure the @TLS annotations work as expected.
+ * Sanity test to make sure the @Export annotations work as expected.
  *
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class TLSTest {
-    @TLS
+public class ExportTest {
+    @Export
     public static Deque<Long> entryTimes = BTraceUtils.Collections.newDeque();
 
-    @TLS
+    @Export
     public static String name;
 
-    @TLS
+    @Export
     public static int x = 10;
 
-    @TLS
+    @Export
     public static double y;
 
-    @TLS
+    @Export
     public static final long z = 10L;
 
     @OnMethod(clazz = "resources.OnMethodTest", method="args")

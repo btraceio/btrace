@@ -1258,9 +1258,25 @@ public class InstrumentorTest extends InstrumentorTestBase {
 
         checkTrace(
             "public static Lcom/sun/btrace/BTraceRuntime; runtime\n" +
+            "// access flags 0x19\n" +
             "// signature Ljava/lang/ThreadLocal<Ljava/util/Deque;>;\n" +
             "// declaration: java.lang.ThreadLocal<java.util.Deque>\n" +
-            "public static Ljava/lang/ThreadLocal; entryTimes\n" +
+            "public final static Ljava/lang/ThreadLocal; entryTimes\n" +
+            "// access flags 0x19\n" +
+            "// signature Ljava/lang/ThreadLocal<Ljava/lang/String;>;\n" +
+            "// declaration: java.lang.ThreadLocal<java.lang.String>\n" +
+            "public final static Ljava/lang/ThreadLocal; name\n" +
+            "// access flags 0x19\n" +
+            "// signature Ljava/lang/ThreadLocal<Ljava/lang/Integer;>;\n" +
+            "// declaration: java.lang.ThreadLocal<java.lang.Integer>\n" +
+            "public final static Ljava/lang/ThreadLocal; x\n" +
+            "// access flags 0x19\n" +
+            "// signature Ljava/lang/ThreadLocal<Ljava/lang/Double;>;\n" +
+            "// declaration: java.lang.ThreadLocal<java.lang.Double>\n" +
+            "public final static Ljava/lang/ThreadLocal; y\n" +
+            "// signature Ljava/lang/ThreadLocal<Ljava/lang/Long;>;\n" +
+            "// declaration: java.lang.ThreadLocal<java.lang.Long>\n" +
+            "public final static Ljava/lang/ThreadLocal; z\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
             "GETSTATIC traces/TLSTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
@@ -1270,11 +1286,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "GETSTATIC traces/TLSTest.entryTimes : Ljava/lang/ThreadLocal;\n" +
             "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
             "CHECKCAST java/util/Deque\n" +
+            "GETSTATIC traces/TLSTest.name : Ljava/lang/ThreadLocal;\n" +
+            "SWAP\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.set (Ljava/lang/Object;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
             "L1\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
             "L0\n" +
             "LDC Ltraces/TLSTest;.class\n" +
@@ -1288,11 +1307,26 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "L2\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.newThreadLocal (Ljava/lang/Object;)Ljava/lang/ThreadLocal;\n" +
             "PUTSTATIC traces/TLSTest.entryTimes : Ljava/lang/ThreadLocal;\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newThreadLocal (Ljava/lang/Object;)Ljava/lang/ThreadLocal;\n" +
+            "PUTSTATIC traces/TLSTest.x : Ljava/lang/ThreadLocal;\n" +
+            "ACONST_NULL\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newThreadLocal (Ljava/lang/Object;)Ljava/lang/ThreadLocal;\n" +
+            "PUTSTATIC traces/TLSTest.name : Ljava/lang/ThreadLocal;\n" +
+            "DCONST_0\n" +
+            "INVOKESTATIC java/lang/Double.valueOf (D)Ljava/lang/Double;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newThreadLocal (Ljava/lang/Object;)Ljava/lang/ThreadLocal;\n" +
+            "PUTSTATIC traces/TLSTest.y : Ljava/lang/ThreadLocal;\n" +
+            "LDC 10\n" +
+            "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newThreadLocal (Ljava/lang/Object;)Ljava/lang/ThreadLocal;\n" +
+            "PUTSTATIC traces/TLSTest.z : Ljava/lang/ThreadLocal;\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.start ()V\n" +
             "RETURN\n" +
             "L1\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V"
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "MAXSTACK = 2"
         );
 
         checkTransformation(
@@ -1318,6 +1352,115 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 1\n" +
             "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
             "INVOKESTATIC com/sun/btrace/BTraceUtils.push (Ljava/util/Deque;Ljava/lang/Object;)V\n" +
+            "ALOAD 0\n" +
+            "GETSTATIC traces/TLSTest.name : Ljava/lang/ThreadLocal;\n" +
+            "SWAP\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.set (Ljava/lang/Object;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 3\n" +
+            "MAXLOCALS = 5"
+        );
+    }
+
+    @Test
+    public void exportTest() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("ExportTest");
+
+        checkTrace(
+            "public static Lcom/sun/btrace/BTraceRuntime; runtime\n" +
+            "// access flags 0x19\n" +
+            "public final static Ljava/util/Deque; entryTimes\n" +
+            "// access flags 0x19\n" +
+            "public final static Ljava/lang/String; name\n" +
+            "// access flags 0x19\n" +
+            "public final static I x\n" +
+            "// access flags 0x19\n" +
+            "public final static D y\n" +
+            "public final static J z\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ExportTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"btrace.traces/ExportTest.name\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.putPerfString (Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "L0\n" +
+            "LDC Ltraces/ExportTest;.class\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.forClass (Ljava/lang/Class;)Lcom/sun/btrace/BTraceRuntime;\n" +
+            "PUTSTATIC traces/ExportTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "GETSTATIC traces/ExportTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L2\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L2\n" +
+            "LDC \"btrace.traces/ExportTest.entryTimes\"\n" +
+            "LDC \"Ljava/util/Deque;\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newPerfCounter (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "LDC \"btrace.traces/ExportTest.x\"\n" +
+            "LDC \"I\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newPerfCounter (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "ACONST_NULL\n" +
+            "LDC \"btrace.traces/ExportTest.name\"\n" +
+            "LDC \"Ljava/lang/String;\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newPerfCounter (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "DCONST_0\n" +
+            "INVOKESTATIC java/lang/Double.valueOf (D)Ljava/lang/Double;\n" +
+            "LDC \"btrace.traces/ExportTest.y\"\n" +
+            "LDC \"D\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newPerfCounter (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "LDC 10\n" +
+            "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
+            "LDC \"btrace.traces/ExportTest.z\"\n" +
+            "LDC \"J\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.newPerfCounter (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.start ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "MAXSTACK = 3"
+        );
+
+        checkTransformation(
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$ExportTest$testArgs (Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 5\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$ExportTest$testArgs(Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"args\")\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ExportTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "ACONST_NULL\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.push (Ljava/util/Deque;Ljava/lang/Object;)V\n" +
+            "ALOAD 0\n" +
+            "LDC \"btrace.traces/ExportTest.name\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.putPerfString (Ljava/lang/String;Ljava/lang/String;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
