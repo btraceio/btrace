@@ -85,17 +85,16 @@ abstract public class RuntimeTest {
         }
         btraceExtPath = btraceExtPath + File.pathSeparator + toolsjar;
         java = System.getProperty("java.home").replace("/jre", "");
-        System.err.println("*** JAVA = " + java);
     }
 
     /**
      * Display the otput from the test application
      */
-    protected boolean debugTestApp = true;
+    protected boolean debugTestApp = false;
     /**
      * Run BTrace in debug mode
      */
-    protected boolean debugBTrace = true;
+    protected boolean debugBTrace = false;
     /**
      * Run BTrace in unsafe mode
      */
@@ -106,8 +105,8 @@ abstract public class RuntimeTest {
     protected long timeout = 10000L;
 
     protected void reset() {
-        debugTestApp = true;
-        debugBTrace = true;
+        debugTestApp = false;
+        debugBTrace = false;
         isUnsafe = false;
         timeout = 10000L;
     }
