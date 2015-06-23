@@ -636,7 +636,9 @@ public class Instrumentor extends ClassVisitor {
                                     // will also retrieve the call args and the return value from the backup variables
                                     injectBtrace(vr, method, calledMethodArgs, returnType);
                                     if (withReturn) {
-                                        asm.loadLocal(returnType, returnVarIndex); // restore the return value
+                                        if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
+                                            asm.loadLocal(returnType, returnVarIndex); // restore the return value
+                                        }
                                     }
                                     MethodTrackingExpander.ELSE.insert(mv);
                                     if (this.parent == null) {
@@ -1263,7 +1265,9 @@ public class Instrumentor extends ClassVisitor {
 
                         try {
                             if (om.getReturnParameter() != -1) {
-                                asm.dupReturnValue(retOpCode);
+                                if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
+                                    asm.dupReturnValue(retOpCode);
+                                }
                                 retValIndex = storeNewLocal(getReturnType());
                             }
 

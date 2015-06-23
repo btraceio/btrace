@@ -435,6 +435,92 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void methodEntryArgsReturnAugmented() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsReturnAugmented", true);
+        checkTransformation("LSTORE 6\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "LLOAD 6\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsReturnAugmented$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[IJ)J\n" +
+            "MAXSTACK = 8\n" +
+            "MAXLOCALS = 8\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$ArgsReturnAugmented$args(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[IJ)J\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"args\", location=@Lcom/sun/btrace/annotations/Location;(value=Lcom/sun/btrace/annotations/Kind;.RETURN))\n" +
+            "@Lcom/sun/btrace/annotations/Self;() // parameter 0\n" +
+            "@Lcom/sun/btrace/annotations/Return;() // parameter 5\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/ArgsReturnAugmented.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "LLOAD 6\n" +
+            "LRETURN\n" +
+            "L0\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "LCONST_1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "LRETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "LLOAD 6\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "LRETURN\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 8"
+        );
+    }
+
+    @Test
+    public void methodEntryArgsReturnAugmented1() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsReturnAugmented1", true);
+        checkTransformation("LSTORE 6\n" +
+            "ALOAD 0\n" +
+            "LLOAD 6\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsReturnAugmented1$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)J\n" +
+            "MAXSTACK = 8\n" +
+            "MAXLOCALS = 8\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$ArgsReturnAugmented1$args(Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)J\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"args\", location=@Lcom/sun/btrace/annotations/Location;(value=Lcom/sun/btrace/annotations/Kind;.RETURN))\n" +
+            "@Lcom/sun/btrace/annotations/Self;() // parameter 0\n" +
+            "@Lcom/sun/btrace/annotations/Return;() // parameter 1\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/ArgsReturnAugmented1.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "LLOAD 1\n" +
+            "LRETURN\n" +
+            "L0\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "LLOAD 1\n" +
+            "LCONST_1\n" +
+            "LADD\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "LRETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "LRETURN\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 8"
+        );
+    }
+
+    @Test
     public void methodEntryArgsReturnSampled() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsReturnSampled");
@@ -909,6 +995,96 @@ public class InstrumentorTest extends InstrumentorTestBase {
                 + "LSTORE 8\nLLOAD 8\nALOAD 6\nLLOAD 4\n"
                 + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallReturn$args (JLjava/lang/String;J)V\n"
                 + "LLOAD 8");
+    }
+
+    @Test
+    public void methodCallReturnAugmented() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/MethodCallReturnAugmented", true);
+
+        checkTransformation("LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "LSTORE 8\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "LLOAD 8\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallReturnAugmented$args (Ljava/lang/String;JJ)J\n" +
+            "MAXLOCALS = 10\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$MethodCallReturnAugmented$args(Ljava/lang/String;JJ)J\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"callTopLevel\", location=@Lcom/sun/btrace/annotations/Location;(value=Lcom/sun/btrace/annotations/Kind;.CALL, clazz=\"/.*\\\\.OnMethodTest/\", method=\"callTarget\", where=Lcom/sun/btrace/annotations/Where;.AFTER))\n" +
+            "@Lcom/sun/btrace/annotations/Return;() // parameter 2\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/MethodCallReturnAugmented.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "LLOAD 3\n" +
+            "LRETURN\n" +
+            "L0\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "LCONST_1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "LRETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "LLOAD 3\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "LRETURN\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 5"
+        );
+    }
+
+    @Test
+    public void methodCallReturnAugmented1() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/MethodCallReturnAugmented1", true);
+
+        checkTransformation("LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "LSTORE 8\n" +
+            "LLOAD 8\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallReturnAugmented1$args (JLjava/lang/String;J)J\n" +
+            "MAXLOCALS = 10\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$MethodCallReturnAugmented1$args(JLjava/lang/String;J)J\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"callTopLevel\", location=@Lcom/sun/btrace/annotations/Location;(value=Lcom/sun/btrace/annotations/Kind;.CALL, clazz=\"/.*\\\\.OnMethodTest/\", method=\"callTarget\", where=Lcom/sun/btrace/annotations/Where;.AFTER))\n" +
+            "@Lcom/sun/btrace/annotations/Return;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/MethodCallReturnAugmented1.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "LLOAD 0\n" +
+            "LRETURN\n" +
+            "L0\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "LLOAD 0\n" +
+            "LCONST_1\n" +
+            "LADD\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "LRETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "LLOAD 0\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "LRETURN\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 5"
+        );
     }
 
     @Test

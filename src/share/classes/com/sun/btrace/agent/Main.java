@@ -41,7 +41,6 @@ import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.comm.ErrorCommand;
-import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.OnMethod;
@@ -90,6 +89,7 @@ public final class Main {
     private static void registerExitHook(final Client c) {
         Runtime.getRuntime().addShutdownHook(new Thread(
             new Runnable() {
+                @Override
                 public void run() {
                     BTraceRuntime rt = c.getRuntime();
                     if (rt != null) rt.handleExit(0);
@@ -162,6 +162,7 @@ public final class Main {
             return;
         }
         Thread agentThread = new Thread(new Runnable() {
+            @Override
             public void run() {
                 BTraceRuntime.enter();
                 try {
@@ -224,7 +225,7 @@ public final class Main {
             args = "";
         }
         String[] pairs = args.split(",");
-        argMap = new HashMap<String, String>();
+        argMap = new HashMap<>();
         for (String s : pairs) {
             int i = s.indexOf('=');
             String key, value = "";
@@ -347,14 +348,15 @@ public final class Main {
             if (traceToStdOut) {
                 traceWriter = new PrintWriter(System.out);
             } else {
-                String agentName = System.getProperty("btrace.agent", null);
+                String agentName = System.getProperty("btrace.agent", "default");
             	String currentBtraceScriptOutput = scriptOutputFile;
 
                 if (currentBtraceScriptOutput == null || currentBtraceScriptOutput.length() == 0) {
-                    currentBtraceScriptOutput = filename + (agentName != null ? "." + agentName  : "") + ".btrace";
+                    currentBtraceScriptOutput = filename + (agentName != null ? "." + agentName  : "") + ".${ts}.btrace";
                     if (isDebug()) debugPrint("scriptOutputFile not specified. defaulting to " + currentBtraceScriptOutput);
                 }
-                if (fileRollMilliseconds != null && fileRollMilliseconds.longValue() > 0) {
+                currentBtraceScriptOutput = templateFileName(currentBtraceScriptOutput);
+                if (fileRollMilliseconds != null && fileRollMilliseconds > 0) {
                     traceWriter = new PrintWriter(new BufferedWriter(TraceOutputWriter.rollingFileWriter(new File(currentBtraceScriptOutput), 100, fileRollMilliseconds, TimeUnit.MILLISECONDS)));
                 } else {
                     traceWriter = new PrintWriter(new BufferedWriter(TraceOutputWriter.fileWriter(new File(currentBtraceScriptOutput))));
@@ -364,11 +366,16 @@ public final class Main {
             Client client = new FileClient(inst, traceScript, traceWriter);
 
             handleNewClient(client);
-        } catch (RuntimeException re) {
+        } catch (RuntimeException | IOException re) {
             if (isDebug()) debugPrint(re);
-        } catch (IOException ioexp) {
-            if (isDebug()) debugPrint(ioexp);
         }
+    }
+
+    private static String templateFileName(String fName) {
+        if (fName != null) {
+            fName = fName.replace("${ts}", String.valueOf(System.currentTimeMillis()));
+        }
+        return fName;
     }
 
     public static final int BTRACE_DEFAULT_PORT = 2020;
@@ -405,10 +412,8 @@ public final class Main {
                 Client client = new RemoteClient(inst, sock);
                 registerExitHook(client);
                 handleNewClient(client);
-            } catch (RuntimeException re) {
+            } catch (RuntimeException | IOException re) {
                 if (isDebug()) debugPrint(re);
-            } catch (IOException ioexp) {
-                if (isDebug()) debugPrint(ioexp);
             }
         }
     }
@@ -416,13 +421,9 @@ public final class Main {
     private static void handleNewClient(byte[] code, PrintWriter traceWriter) {
         try {
             handleNewClient(new FileClient(inst, code, traceWriter));
-        } catch (RuntimeException re) {
+        } catch (RuntimeException | IOException re) {
             if (isDebug()) {
                 debugPrint(re);
-            }
-        } catch (IOException ioexp) {
-            if (isDebug()) {
-                debugPrint(ioexp);
             }
         }
     }
@@ -430,13 +431,14 @@ public final class Main {
     private static void handleNewClient(final Client client) {
         serializedExecutor.submit(new Runnable() {
 
+            @Override
             public void run() {
                 try {
                     if (isDebug()) debugPrint("new Client created " + client);
                     if (client.shouldAddTransformer()) {
                         client.registerTransformer();
                         Class[] classes = inst.getAllLoadedClasses();
-                        ArrayList<Class> list = new ArrayList<Class>();
+                        ArrayList<Class> list = new ArrayList<>();
                         if (isDebug()) debugPrint("filtering loaded classes");
                         for (Class c : classes) {
                             if (inst.isModifiableClass(c) &&
@@ -506,11 +508,8 @@ public final class Main {
                 file += ".class";
                 new File(dir).mkdirs();
                 File out = new File(dir, file);
-                FileOutputStream fos = new FileOutputStream(out);
-                try {
+                try (FileOutputStream fos = new FileOutputStream(out)) {
                     fos.write(code);
-                } finally {
-                    fos.close();
                 }
             } catch (Exception exp) {
                 exp.printStackTrace();
@@ -523,7 +522,7 @@ public final class Main {
      * probe descriptor XML files.
      */
     static List<OnMethod> mapOnProbes(List<OnProbe> onProbes) {
-        List<OnMethod> res = new ArrayList<OnMethod>();
+        List<OnMethod> res = new ArrayList<>();
         for (OnProbe op : onProbes) {
             String ns = op.getNamespace();
             if (isDebug()) debugPrint("about to load probe descriptor for " + ns);
