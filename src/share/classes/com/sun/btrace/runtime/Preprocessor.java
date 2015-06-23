@@ -29,6 +29,7 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.annotations.Export;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.OnError;
+import com.sun.btrace.annotations.OnEvent;
 import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnTimer;
 import com.sun.btrace.annotations.Return;
@@ -140,6 +141,7 @@ public class Preprocessor extends ClassVisitor {
 
         guardedAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnMethod.class));
         guardedAnnots.add(Type.getDescriptor(OnTimer.class));
+        guardedAnnots.add(Type.getDescriptor(OnEvent.class));
         guardedAnnots.add(Type.getDescriptor(OnError.class));
         guardedAnnots.add(Type.getDescriptor(OnExit.class));
         guardedAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnProbe.class));
@@ -333,7 +335,7 @@ public class Preprocessor extends ClassVisitor {
         Object initVal = fn.value;
         fn.value = null;
         fn.access |= Opcodes.ACC_FINAL;
-        
+
         InsnList l = clinit.instructions;
 
         MethodInsnNode boxNode;
