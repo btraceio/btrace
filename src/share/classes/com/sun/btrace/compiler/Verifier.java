@@ -67,7 +67,7 @@ import com.sun.tools.javac.util.Context;
  * @author A. Sundararajan
  */
 @SupportedAnnotationTypes("*")
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
+@SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class Verifier extends AbstractProcessor
                             implements TaskListener {
     private final List<String> classNames =

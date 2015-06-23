@@ -36,6 +36,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,9 +67,9 @@ public class Compiler {
 
     public Compiler(String includePath) {
         if (includePath != null) {
-            includeDirs = new ArrayList<String>();
+            includeDirs = new ArrayList<>();
             String[] paths = includePath.split(File.pathSeparator);
-            for (String p : paths) includeDirs.add(p);
+            includeDirs.addAll(Arrays.asList(paths));
         }
         this.compiler = ToolProvider.getSystemJavaCompiler();
         this.stdManager = compiler.getStandardFileManager(null, null, null);
@@ -167,9 +168,9 @@ public class Compiler {
                 }
                 file += ".class";
                 File out = new File(dir, file);
-                FileOutputStream fos = new FileOutputStream(out);
-                fos.write(c.getValue());
-                fos.close();
+                try (FileOutputStream fos = new FileOutputStream(out)) {
+                    fos.write(c.getValue());
+                }
             }
         }
     }
@@ -180,8 +181,8 @@ public class Compiler {
         MemoryJavaFileManager manager = new MemoryJavaFileManager(stdManager, includeDirs);
 
         // prepare the compilation unit
-        List<JavaFileObject> compUnits = new ArrayList<JavaFileObject>(1);
-        compUnits.add(manager.makeStringSource(fileName, source, includeDirs));
+        List<JavaFileObject> compUnits = new ArrayList<>(1);
+        compUnits.add(MemoryJavaFileManager.makeStringSource(fileName, source, includeDirs));
         return compile(manager, compUnits, err, sourcePath, classPath);
     }
 
@@ -196,7 +197,7 @@ public class Compiler {
             Writer err, String sourcePath, String classPath) {
         Iterable<? extends JavaFileObject> compUnits =
                 stdManager.getJavaFileObjects(files);
-        List<JavaFileObject> preprocessedCompUnits = new ArrayList<JavaFileObject>();
+        List<JavaFileObject> preprocessedCompUnits = new ArrayList<>();
         try {
             for (JavaFileObject jfo : compUnits) {
                 preprocessedCompUnits.add(MemoryJavaFileManager.preprocessedFileObject(jfo, includeDirs));
@@ -220,17 +221,17 @@ public class Compiler {
             Writer err, String sourcePath, String classPath) {
         // to collect errors, warnings etc.
         DiagnosticCollector<JavaFileObject> diagnostics =
-                new DiagnosticCollector<JavaFileObject>();
+                new DiagnosticCollector<>();
 
         // javac options
-        List<String> options = new ArrayList<String>();
+        List<String> options = new ArrayList<>();
         options.add("-Xlint:all");
         options.add("-g:lines");
         options.add("-deprecation");
         options.add("-source");
-        options.add("1.6");
+        options.add("1.7");
         options.add("-target");
-        options.add("1.6");
+        options.add("1.7");
         if (sourcePath != null) {
             options.add("-sourcepath");
             options.add(sourcePath);
@@ -249,7 +250,7 @@ public class Compiler {
         task.setTaskListener(btraceVerifier);
 
         // we add BTrace Verifier as a (JSR 269) Processor
-        List<Processor> processors = new ArrayList<Processor>(1);
+        List<Processor> processors = new ArrayList<>(1);
         processors.add(btraceVerifier);
         task.setProcessors(processors);
 
@@ -273,7 +274,7 @@ public class Compiler {
         try {
             Map<String, byte[]> classBytes = manager.getClassBytes();
             List<String> classNames = btraceVerifier.getClassNames();
-            Map<String, byte[]> result = new HashMap<String, byte[]>();
+            Map<String, byte[]> result = new HashMap<>();
             for (String name : classNames) {
                 if (classBytes.containsKey(name)) {
                     dump(name + "_before", classBytes.get(name));

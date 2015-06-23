@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -567,7 +567,9 @@ public class Instrumentor extends ClassVisitor {
                                     // will also retrieve the call args and the return value from the backup variables
                                     injectBtrace(vr, method, calledMethodArgs, returnType);
                                     if (withReturn) {
-                                        asm.loadLocal(returnType, returnVarIndex); // restore the return value
+                                        if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
+                                            asm.loadLocal(returnType, returnVarIndex); // restore the return value
+                                        }
                                     }
                                     MethodTrackingExpander.ELSE.insert(mv);
                                     if (this.parent == null) {
@@ -1194,7 +1196,9 @@ public class Instrumentor extends ClassVisitor {
 
                         try {
                             if (om.getReturnParameter() != -1) {
-                                asm.dupReturnValue(retOpCode);
+                                if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
+                                    asm.dupReturnValue(retOpCode);
+                                }
                                 retValIndex = storeNewLocal(getReturnType());
                             }
 
