@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,26 +22,14 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.btrace.runtime;
 
-package traces.onmethod;
-
-import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.Kind;
-import com.sun.btrace.annotations.Location;
-import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.Return;
-import com.sun.btrace.annotations.Where;
-import static com.sun.btrace.BTraceUtils.*;
+import java.util.List;
 
 /**
- *
+ * A temporary solution for Preprocessor/Verifier onmethods list sharing
  * @author Jaroslav Bachorik
  */
-@BTrace
-public class MethodCallReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER))
-    public static void args(@Return long retVal, String a, long b) {
-        println("args");
-    }
+interface OnMethodsAcceptor {
+    void accept(List<OnMethod> onMethods);
 }

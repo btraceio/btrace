@@ -58,10 +58,13 @@ import com.sun.btrace.org.objectweb.asm.tree.TryCatchBlockNode;
 import com.sun.btrace.org.objectweb.asm.tree.TypeInsnNode;
 import com.sun.btrace.org.objectweb.asm.tree.VarInsnNode;
 import com.sun.btrace.services.api.Service;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -94,7 +97,7 @@ import java.util.Set;
  * @author A. Sundararajan
  * @author J. Bachorik (Tree API rewrite)
  */
-public class Preprocessor extends ClassVisitor {
+public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     private static class LocalVarGenerator {
         private int offset = 0;
 
@@ -156,9 +159,16 @@ public class Preprocessor extends ClassVisitor {
     private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
     private final Map<String, Integer> serviceLocals = new HashMap<>();
 
+    private List<OnMethod> onMethods = new ArrayList<>();
+
     public Preprocessor(ClassVisitor cv) {
         super(Opcodes.ASM5, cv);
         cn = new ClassNode(Opcodes.ASM5);
+    }
+
+    @Override
+    public void accept(List<OnMethod> onMethods) {
+        this.onMethods = onMethods;
     }
 
     @Override
@@ -225,6 +235,7 @@ public class Preprocessor extends ClassVisitor {
     private void preprocessMethod(MethodNode mn) {
         // !!! The order of execution is important here !!!
         LocalVarGenerator lvg = new LocalVarGenerator(mn);
+        checkAugmentedReturn(mn, lvg);
         scanMethodInstructions(mn, lvg);
         addBTraceErrorHandler(mn, lvg);
         addBTraceRuntimeEnter(mn, lvg);
@@ -394,6 +405,36 @@ public class Preprocessor extends ClassVisitor {
            default: {
                l.insert(new InsnNode(Opcodes.ACONST_NULL));
            }
+        }
+    }
+
+    private void checkAugmentedReturn(MethodNode mn, LocalVarGenerator lvg) {
+        Type retType = Type.getReturnType(mn.desc);
+        if (retType.getSort() != Type.VOID) {
+            if (getReturnMethodParameter(mn) == Integer.MIN_VALUE) {
+                // insert the method return parameter
+                String oldDesc = mn.desc;
+                Type[] args = Type.getArgumentTypes(mn.desc);
+                args = Arrays.copyOf(args, args.length + 1);
+                args[args.length - 1] = retType;
+
+                List<AnnotationNode> annots = new LinkedList<>();
+                AnnotationNode an = new AnnotationNode(Type.getDescriptor(Return.class));
+                annots.add(an);
+                mn.visibleParameterAnnotations = mn.visibleParameterAnnotations != null ?
+                                                    Arrays.copyOf(mn.visibleParameterAnnotations, args.length) :
+                                                    new List[args.length];
+                mn.visibleParameterAnnotations[args.length - 1] = annots;
+                mn.desc = Type.getMethodDescriptor(retType, args);
+
+                for(OnMethod om : onMethods) {
+                    if (om.getTargetName().equals(mn.name) && om.getTargetDescriptor().equals(oldDesc)) {
+                        om.setReturnParameter(getReturnMethodParameter(mn));
+                        om.setTargetDescriptor(mn.desc);
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -1075,5 +1116,25 @@ public class Preprocessor extends ClassVisitor {
             );
         }
         return null;
+    }
+
+    private int getReturnMethodParameter(MethodNode mn) {
+        if (mn.visibleParameterAnnotations != null) {
+            int idx = 0;
+            Type[] args = Type.getArgumentTypes(mn.desc);
+            for(int i=0;i<mn.visibleParameterAnnotations.length;i++) {
+                List paList = (List)mn.visibleParameterAnnotations[i];
+                if (paList != null) {
+                    for(Object anObj : paList) {
+                        AnnotationNode an = (AnnotationNode)anObj;
+                        if (an.desc.equals(Type.getDescriptor(Return.class))) {
+                            return i;
+                        }
+                    }
+                }
+                idx += args[i].getSize();
+            }
+        }
+        return Integer.MIN_VALUE;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,15 +76,20 @@ public class Verifier extends ClassVisitor {
     private boolean unsafeScript, unsafeAllowed;
     private CycleDetector cycleDetector;
 
-    protected final Set<String> injectedFields = new HashSet<String>();
+    protected final Set<String> injectedFields = new HashSet<>();
 
     public Verifier(ClassVisitor cv, boolean unsafe) {
         super(Opcodes.ASM5, cv);
         this.unsafeAllowed = unsafe;
-        onMethods = new ArrayList<OnMethod>();
-        onProbes = new ArrayList<OnProbe>();
+        this.onMethods = new ArrayList<>();
+        onProbes = new ArrayList<>();
         cycleDetector = new CycleDetector();
+
+        if (cv instanceof OnMethodsAcceptor) {
+            ((OnMethodsAcceptor)cv).accept(onMethods);
+        }
     }
+
 
     public Verifier(ClassVisitor cv) {
         this(cv, false);
