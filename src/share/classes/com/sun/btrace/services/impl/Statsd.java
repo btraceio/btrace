@@ -64,8 +64,9 @@ final public class Statsd extends SimpleService {
         private final static Statsd INSTANCE = new Statsd();
     }
 
-    private final BlockingQueue<String> q = new ArrayBlockingQueue<String>(120000);
+    private final BlockingQueue<String> q = new ArrayBlockingQueue<>(120000);
     private final ExecutorService e = Executors.newSingleThreadExecutor(new ThreadFactory() {
+        @Override
         public Thread newThread(Runnable r) {
             Thread t = new Thread(r, "BTrace Statsd Submitter");
             t.setDaemon(true);
@@ -79,6 +80,7 @@ final public class Statsd extends SimpleService {
 
     private Statsd() {
         e.submit(new Runnable() {
+            @Override
             public void run() {
                 DatagramSocket ds = null;
                 try {
@@ -105,9 +107,7 @@ final public class Statsd extends SimpleService {
                         dp.setData(m.getBytes());
                         ds.send(dp);
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
+                } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
                 }
             }
@@ -501,8 +501,10 @@ final public class Statsd extends SimpleService {
         sb.append(title.length()).append(',')
           .append(text.length()).append('}');
 
-        if (timestamp > 0) {
-            sb.append("|d:").append(timestamp);
+        sb.append(':').append(title).append('|').append(text);
+
+        if (timestamp >= 0) {
+            sb.append("|d:").append(timestamp == 0 ? System.currentTimeMillis() : timestamp);
         }
         if (host != null) {
             sb.append("|h:").append(host);
