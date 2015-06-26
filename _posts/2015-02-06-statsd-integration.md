@@ -47,7 +47,7 @@ This client also supports the extensions from [DogStatsD](http://docs.datadoghq.
 ``` java
 @BTrace class StatsdExample {
   // declare the variable to be injected by Statsd service
-  @Injected private static Statsd sd;
+  @Injected(factoryMethod = "getInstance") private static Statsd sd;
 
   @OnMethod(...)
   public static void m(...) {
