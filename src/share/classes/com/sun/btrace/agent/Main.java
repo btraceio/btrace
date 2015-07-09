@@ -114,13 +114,6 @@ public final class Main {
             Main.inst = inst;
         }
 
-        Class[] classes = inst.getAllLoadedClasses();
-        ArrayList<Class> list = new ArrayList<>();
-        for (Class c : classes) {
-            System.out.println("*** " + c.getName());
-        }
-
-
         if (isDebug()) debugPrint("parsing command line arguments");
         parseArgs(args);
         if (isDebug()) debugPrint("parsed command line arguments");
@@ -445,21 +438,14 @@ public final class Main {
 
             @Override
             public void run() {
-                for (Class c : inst.getAllLoadedClasses()) {
-                    if (c != null) {
-                        System.out.println("[1] " + c.getName());
-                    }
-                }
                 try {
                     if (isDebug()) debugPrint("new Client created " + client);
                     if (client.shouldAddTransformer()) {
-                        System.out.println("*** adding transfofmer");
                         client.registerTransformer();
                         ArrayList<Class> list = new ArrayList<>();
                         if (isDebug()) debugPrint("filtering loaded classes");
                         for (Class c : inst.getAllLoadedClasses()) {
                             if (c != null) {
-                                System.out.println("[2] " + c.getName());
                                 if (inst.isModifiableClass(c) &&
                                     client.isCandidate(c)) {
                                     if (isDebug()) debugPrint("candidate " + c + " added");
