@@ -50,8 +50,10 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -111,7 +113,6 @@ public final class Main {
         } else {
             Main.inst = inst;
         }
-
 
         if (isDebug()) debugPrint("parsing command line arguments");
         parseArgs(args);
@@ -365,9 +366,11 @@ public final class Main {
 
             Client client = new FileClient(inst, traceScript, traceWriter);
 
-            handleNewClient(client);
-        } catch (RuntimeException | IOException re) {
+            handleNewClient(client).get();
+        } catch (RuntimeException | IOException | ExecutionException re) {
             if (isDebug()) debugPrint(re);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -411,9 +414,11 @@ public final class Main {
                 if (isDebug()) debugPrint("client accepted " + sock);
                 Client client = new RemoteClient(inst, sock);
                 registerExitHook(client);
-                handleNewClient(client);
-            } catch (RuntimeException | IOException re) {
+                handleNewClient(client).get();
+            } catch (RuntimeException | IOException | ExecutionException re) {
                 if (isDebug()) debugPrint(re);
+            } catch (InterruptedException e) {
+                return;
             }
         }
     }
@@ -428,8 +433,8 @@ public final class Main {
         }
     }
 
-    private static void handleNewClient(final Client client) {
-        serializedExecutor.submit(new Runnable() {
+    private static Future<?> handleNewClient(final Client client) {
+        return serializedExecutor.submit(new Runnable() {
 
             @Override
             public void run() {
@@ -437,21 +442,22 @@ public final class Main {
                     if (isDebug()) debugPrint("new Client created " + client);
                     if (client.shouldAddTransformer()) {
                         client.registerTransformer();
-                        Class[] classes = inst.getAllLoadedClasses();
                         ArrayList<Class> list = new ArrayList<>();
                         if (isDebug()) debugPrint("filtering loaded classes");
-                        for (Class c : classes) {
-                            if (inst.isModifiableClass(c) &&
-                                client.isCandidate(c)) {
-                                if (isDebug()) debugPrint("candidate " + c + " added");
-                                list.add(c);
+                        for (Class c : inst.getAllLoadedClasses()) {
+                            if (c != null) {
+                                if (inst.isModifiableClass(c) &&
+                                    client.isCandidate(c)) {
+                                    if (isDebug()) debugPrint("candidate " + c + " added");
+                                    list.add(c);
+                                }
                             }
                         }
                         list.trimToSize();
                         int size = list.size();
                         if (isDebug()) debugPrint("added as ClassFileTransformer");
                         if (size > 0) {
-                            classes = new Class[size];
+                            Class[] classes = new Class[size];
                             list.toArray(classes);
                             client.startRetransformClasses(size);
                             if (isDebug()) {
