@@ -202,6 +202,7 @@ public final class Main {
                     out.flush();
                 } else if (type == Command.EXIT) {
                     exiting = true;
+                    out.flush();
                     ExitCommand ecmd = (ExitCommand)cmd;
                     System.exit(ecmd.getExitCode());
                 } else if (type == Command.ERROR) {

@@ -48,9 +48,6 @@ public abstract class Constants {
     public static final String BTRACE_METHOD_PREFIX =
         "$btrace$";
 
-    public static final String BTRACE_NATIVE_PREFIX =
-        "$btrace$native$";
-
     public static final String JAVA_LANG_OBJECT =
         Type.getInternalName(Object.class);
     public static final String JAVA_LANG_THROWABLE =
