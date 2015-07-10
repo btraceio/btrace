@@ -473,12 +473,14 @@ public class Client {
                 }
                 listener.onCommand(cmd);
                 if (cmd.getType() == Command.EXIT) {
+                    debugPrint("received EXIT cmd");
                     return;
                 }
             } catch (IOException e) {
                 if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
                 throw e;
             } catch (NullPointerException e) {
+                e.printStackTrace();
                 if (exited.compareAndSet(false, true))listener.onCommand(new ExitCommand(-1));
             }
         }

@@ -196,7 +196,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     void registerTransformer() {
         inst.addTransformer(clInitTransformer, false);
         inst.addTransformer(this, true);
-        inst.setNativeMethodPrefix(this, Constants.BTRACE_NATIVE_PREFIX);
     }
 
     void unregisterTransformer() {

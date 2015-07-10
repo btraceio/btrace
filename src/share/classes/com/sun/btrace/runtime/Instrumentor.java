@@ -169,11 +169,6 @@ public class Instrumentor extends ClassVisitor {
     public MethodVisitor visitMethod(int access, final String name,
         final String desc, String signature, String[] exceptions) {
 
-        if (name.startsWith(Constants.BTRACE_NATIVE_PREFIX)) {
-            // don't process the already prefixed native methods
-            return super.visitMethod(access, name, desc, signature, exceptions);
-        }
-
         List<OnMethod> appliedOnMethods = new LinkedList<>();
 
         if (applicableOnMethods.isEmpty() ||
@@ -227,41 +222,7 @@ public class Instrumentor extends ClassVisitor {
 
         MethodVisitor methodVisitor;
 
-        if ((access & ACC_NATIVE) != 0) {
-            // the instrumented method will become non-native and delegate to the original native one
-            // the native method will be generated with an appropriate prefix
-            String nativeMethod = Constants.BTRACE_NATIVE_PREFIX + name;
-            Type retType = Type.getReturnType(desc);
-            // generate the non-native wrapper method
-            MethodVisitor newMv = visitMethod(access & (~ACC_NATIVE), name, desc, signature, exceptions);
-            newMv.visitCode();
-            int argIdx = 0;
-            boolean isStatic = (access & ACC_STATIC) != 0;
-            // forward to the prefixed native method
-            if (!isStatic) {
-                newMv.visitIntInsn(Opcodes.ALOAD, 0); // load 'this'
-                argIdx++;
-            }
-            Type[] args = Type.getArgumentTypes(desc);
-            for(Type aType : args) {
-                newMv.visitVarInsn(aType.getOpcode(Opcodes.ILOAD), argIdx);
-                argIdx += aType.getSize();
-            }
-            newMv.visitMethodInsn(
-                isStatic ? Opcodes.INVOKESTATIC : Opcodes.INVOKESPECIAL,
-                className,
-                nativeMethod,
-                desc, false
-            );
-
-            newMv.visitInsn(retType.getOpcode(Opcodes.IRETURN));
-            newMv.visitMaxs(0, 0);
-            newMv.visitEnd();
-            // and now proceed to generate the prefixed native method
-            return super.visitMethod(access, nativeMethod, desc, signature, exceptions);
-        } else {
-            methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
-        }
+        methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
 
         LocalVariableHelperImpl lvs = new LocalVariableHelperImpl(methodVisitor, access, desc);
 
