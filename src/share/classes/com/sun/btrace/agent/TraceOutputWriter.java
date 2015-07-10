@@ -43,7 +43,10 @@ abstract public class TraceOutputWriter extends Writer {
         final private FileWriter delegate;
 
         public SimpleFileOutput(File output) throws IOException {
-            output.getParentFile().mkdirs();
+            File parent = output.getParentFile();
+            if (parent != null) {
+                output.getParentFile().mkdirs();
+            }
             delegate = new FileWriter(output);
         }
         @Override
@@ -73,7 +76,7 @@ abstract public class TraceOutputWriter extends Writer {
         public RollingFileWriter(File output) throws IOException {
             this(output, 5);
         }
-        
+
         public RollingFileWriter(File output, int maxRolls) throws IOException {
             output.getParentFile().mkdirs();
             currentFileWriter = new FileWriter(output);
@@ -93,14 +96,14 @@ abstract public class TraceOutputWriter extends Writer {
         }
 
         @Override
-        final public void flush() throws IOException {        	
+        final public void flush() throws IOException {
         	try {
                 writerLock.readLock().lock();
                 currentFileWriter.flush();
             } finally {
                 writerLock.readLock().unlock();
             }
-            
+
             if (needsRoll()) {
                 nextWriter();
             }
@@ -131,7 +134,7 @@ abstract public class TraceOutputWriter extends Writer {
         	currentFileWriter.close();
         	File scriptOutputFile_renameFrom = new File(path + File.separator + baseName);
         	File scriptOutputFile_renameTo = new File(path + File.separator + baseName + "." + (counter++));
-        	
+
             if (scriptOutputFile_renameTo.exists()) {
             	scriptOutputFile_renameTo.delete();
             }
@@ -226,7 +229,7 @@ abstract public class TraceOutputWriter extends Writer {
 
     private static void ensurePathExists(File f) {
         if (f == null || f.exists()) return;
-        
+
         ensurePathExists(f.getParentFile());
         System.err.println("continuing");
 
