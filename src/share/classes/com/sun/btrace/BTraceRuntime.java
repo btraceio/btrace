@@ -479,6 +479,11 @@ public final class BTraceRuntime  {
 
     public void handleExit(int exitCode) {
         exitImpl(exitCode);
+        try {
+            cmdThread.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     public void handleEvent(EventCommand ecmd) {
