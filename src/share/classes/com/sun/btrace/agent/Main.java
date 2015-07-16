@@ -88,17 +88,6 @@ public final class Main {
 
     private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(daemonizedThreadFactory);
 
-    private static void registerExitHook(final Client c) {
-        Runtime.getRuntime().addShutdownHook(new Thread(
-            new Runnable() {
-                @Override
-                public void run() {
-                    BTraceRuntime rt = c.getRuntime();
-                    if (rt != null) rt.handleExit(0);
-                }
-            }));
-    }
-
     public static void premain(String args, Instrumentation inst) {
         main(args, inst);
     }
@@ -425,7 +414,6 @@ public final class Main {
                 Socket sock = ss.accept();
                 if (isDebug()) debugPrint("client accepted " + sock);
                 Client client = new RemoteClient(inst, sock);
-                registerExitHook(client);
                 handleNewClient(client).get();
             } catch (RuntimeException | IOException | ExecutionException re) {
                 if (isDebug()) debugPrint(re);
