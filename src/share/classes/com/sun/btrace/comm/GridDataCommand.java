@@ -131,6 +131,7 @@ public class GridDataCommand extends DataCommand {
                 out.println(line);
             }
         }
+        out.flush();
     }
 
     private static final HashMap<Class< ? >, String> typeFormats = new HashMap<Class< ? >, String>();
