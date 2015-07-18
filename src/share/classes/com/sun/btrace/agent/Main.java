@@ -127,7 +127,13 @@ public final class Main {
             try {
                 while (tokenizer.hasMoreTokens()) {
                     String path = tokenizer.nextToken();
-                    inst.appendToBootstrapClassLoaderSearch(new JarFile(new File(path)));
+                    File f = new File(path);
+                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+                        inst.appendToBootstrapClassLoaderSearch(new JarFile(f));
+                    } else {
+                        debugPrint("ignoring boot classpath element '" + path +
+                                   "' - only jar files allowed");
+                    }
                 }
             } catch (IOException ex) {
                 debugPrint("adding to boot classpath failed!");
@@ -145,7 +151,13 @@ public final class Main {
             try {
                 while (tokenizer.hasMoreTokens()) {
                     String path = tokenizer.nextToken();
-                    inst.appendToSystemClassLoaderSearch(new JarFile(new File(path)));
+                    File f = new File(path);
+                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+                        inst.appendToSystemClassLoaderSearch(new JarFile(f));
+                    } else {
+                        debugPrint("ignoring system classpath element '" + path +
+                                   "' - only jar files allowed");
+                    }
                 }
             } catch (IOException ex) {
                 debugPrint("adding to boot classpath failed!");
