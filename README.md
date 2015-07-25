@@ -4,7 +4,7 @@ btrace [![Build Status](https://travis-ci.org/jbachorik/btrace.svg?branch=releas
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
-1.3
+1.3.2
 
 ## Quick Summary
 BTrace is a safe, dynamic tracing tool for the Java platform. 
@@ -42,7 +42,7 @@ The binary dist packages can be found in `<btrace>/dist` as the *.tar.gz and *.z
 
 ## Using BTrace
 ### Installation
-Download a distribution file from the [release page](https://github.com/jbachorik/btrace/releases/tag/v1.3). Explode the binary distribution file (either *.tar.gz or *.zip) to a directory of your choice.
+Download a distribution file from the [release page](https://github.com/jbachorik/btrace/releases/tag/v1.3.2). Explode the binary distribution file (either *.tar.gz or *.zip) to a directory of your choice.
 
 You may set the system environment variable __BTRACE_HOME__ to point to the directory containing the exploded distribution.
 
