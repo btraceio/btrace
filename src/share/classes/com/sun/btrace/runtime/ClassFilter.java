@@ -43,7 +43,7 @@ import java.util.regex.PatternSyntaxException;
 
 /**
  * This class checks whether a given target class
- * matches atleast one probe specified in a BTrace
+ * matches at least one probe specified in a BTrace
  * class.
  *
  * @author A. Sundararajan
@@ -83,12 +83,12 @@ public class ClassFilter {
             if (target.getAnnotation(BTrace.class) != null) {
                 return false;
             }
-        } catch (NullPointerException e) {
+        } catch (Throwable t) {
+            System.err.println("btrace WARNING: " + target.getName() + " matching failed due to exception:\n" + t.getMessage());
             // thrown from java.lang.Class.initAnnotationsIfNecessary()
             // seems to be a case when trying to access non-existing annotations
             // on a superclass
             // * messed up situation - ignore the class *
-
             return false;
         }
 
@@ -148,7 +148,7 @@ public class ClassFilter {
 
     /*
      * return whether given Class is subtype of given type name
-     * Note that we can not use Class.iaAssignableFrom because the other
+     * Note that we can not use Class.isAssignableFrom because the other
      * type is specified by just name and not by Class object.
      */
     public static boolean isSubTypeOf(Class clazz, String typeName) {
