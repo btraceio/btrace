@@ -191,6 +191,13 @@ public class BTraceBench {
         counter++;
     }
 
+    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
+    public void testInstrumentedMethodPrintln24() {
+        counter++;
+    }
+
     @Warmup(iterations = 5, time = 100, timeUnit = TimeUnit.MILLISECONDS)
     @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
@@ -280,10 +287,10 @@ public class BTraceBench {
         BTraceConfig bc = getConfig();
         try {
             Options opt = new OptionsBuilder()
-                    .addProfiler(ProfilerFactory.getProfilerByName("gc"))
+                    .addProfiler(ProfilerFactory.getProfilerByName("stack"))
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*Println.*")
                     .build();
 
             new Runner(opt).run();

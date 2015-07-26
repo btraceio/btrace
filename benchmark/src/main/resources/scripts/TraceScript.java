@@ -10,6 +10,7 @@ import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.OnError;
 import com.sun.btrace.annotations.Sampled;
 
 
@@ -63,6 +64,35 @@ public class TraceScript {
     @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethodPrintln3")
     public static void onMethodEntryPrintln3(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
         println(pcn);
+        println(pmn);
+        println(pmn);
+    }
+
+    @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethodPrintln24")
+    public static void onMethodEntryPrintln24(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
         println(pmn);
     }
 }
