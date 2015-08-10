@@ -35,6 +35,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -218,7 +221,7 @@ public class Compiler {
 
     private Map<String, byte[]> compile(MemoryJavaFileManager manager,
             Iterable<? extends JavaFileObject> compUnits,
-            Writer err, String sourcePath, String classPath) {
+            Writer err, String sourcePath, final String classPath) {
         // to collect errors, warnings etc.
         DiagnosticCollector<JavaFileObject> diagnostics =
                 new DiagnosticCollector<>();
@@ -254,12 +257,9 @@ public class Compiler {
         processors.add(btraceVerifier);
         task.setProcessors(processors);
 
-        PrintWriter perr;
-        if (err instanceof PrintWriter) {
-            perr = (PrintWriter) err;
-        } else {
-            perr = new PrintWriter(err);
-        }
+        final PrintWriter perr = (err instanceof PrintWriter) ?
+                                    (PrintWriter) err :
+                                    new PrintWriter(err);
 
         // print dignostics messages in case of failures.
         if (task.call() == false || containsErrors(diagnostics)) {
@@ -279,7 +279,7 @@ public class Compiler {
                 if (classBytes.containsKey(name)) {
                     dump(name + "_before", classBytes.get(name));
                     ClassReader cr = new ClassReader(classBytes.get(name));
-                    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+                    ClassWriter cw = new CompilerClassWriter(classPath, perr);
                     cr.accept(new Postprocessor(cw), ClassReader.EXPAND_FRAMES + ClassReader.SKIP_DEBUG);
                     result.put(name, cw.toByteArray());
                     dump(name + "_after", cw.toByteArray());
