@@ -1,5 +1,8 @@
 sudo: false
-
+cache:
+  directories: 
+  - $HOME/.gradle
+  
 language: java
 
 jdk:
