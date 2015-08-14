@@ -51,6 +51,8 @@ public class OnMethod extends SpecialParameterHolder {
     private int samplerMean = 0;
     private Sampled.Sampler samplerKind = Sampled.Sampler.None;
 
+    private int level = 0;
+
     public OnMethod() {
     }
 
@@ -60,6 +62,7 @@ public class OnMethod extends SpecialParameterHolder {
         setMethod(other.getMethod());
         setType(other.getType());
         setLocation(other.getLocation());
+        setLevel(other.getLevel());
     }
 
     public String getClazz() {
@@ -124,5 +127,13 @@ public class OnMethod extends SpecialParameterHolder {
 
     public int getSamplerMean() {
         return samplerMean;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
     }
 }

@@ -105,6 +105,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
     @Test
     public void testOnMethod() throws Exception {
+        debugBTrace = true;
+        debugTestApp = true;
         test(
             "resources.Main",
             "traces/OnMethodTest.java",

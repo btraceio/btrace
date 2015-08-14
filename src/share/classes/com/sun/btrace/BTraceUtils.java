@@ -2253,6 +2253,14 @@ public class BTraceUtils {
     	return Collections.removeFirst(queue);
     }
 
+    public static void setInstrLevel(int level) {
+        BTraceRuntime.setInstrLevel(level);
+    }
+
+    public static int getInstrLevel() {
+        return BTraceRuntime.getInstrLevel();
+    }
+
     /**
      * Returns n'th command line argument. <code>null</code> if not available.
      *

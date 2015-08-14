@@ -287,10 +287,10 @@ public class BTraceBench {
         BTraceConfig bc = getConfig();
         try {
             Options opt = new OptionsBuilder()
-                    .addProfiler(ProfilerFactory.getProfilerByName("stack"))
+                    .addProfiler(ProfilerFactory.getProfilerByName("perfasm"))
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*Println.*")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*testInstrumentedMethod")
                     .build();
 
             new Runner(opt).run();
@@ -308,9 +308,9 @@ public class BTraceBench {
         URL[] urls = ((URLClassLoader)cl).getURLs();
         for (URL url: urls) {
             final String path = url.getPath();
-            if (path.endsWith("btrace-agent.jar")) {
+            if (path.contains("btrace-agent")) {
                 agentPath = fs.getPath(path);
-            } else if (path.endsWith("btrace-boot.jar")) {
+            } else if (path.contains("btrace-boot")) {
                 bootPath = fs.getPath(path);
             }
         }

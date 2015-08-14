@@ -31,9 +31,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * This annotation specifies a BTrace probe point by specifying 
- * a java class (or classes), a method (or methods in it) and 
- * a specific location within it. A BTrace trace action method 
+ * This annotation specifies a BTrace probe point by specifying
+ * a java class (or classes), a method (or methods in it) and
+ * a specific location within it. A BTrace trace action method
  * annotated by this annotation is called when matching the traced
  * program reaches the specified location.
  *
@@ -46,7 +46,7 @@ public @interface OnMethod {
      * The probed (or traced) class name. This is either
      * fully qualified name of the class or regular expression
      * within two forward slash characters [like /java\\.awt\\..+/]
-     * or @annotation_of_the_class. i.e., specify a class indirectly 
+     * or @annotation_of_the_class. i.e., specify a class indirectly
      * as a class annotated by specified annotation.
      */
     String clazz();
@@ -54,8 +54,8 @@ public @interface OnMethod {
     /**
      * The probed (or traced) method name. This is either
      * the name of the method or regular expression
-     * within two forward slash characters [like /read.+/]	
-     * or @annotation_of_the_method. i.e., specify a method indirectly 
+     * within two forward slash characters [like /read.+/]
+     * or @annotation_of_the_method. i.e., specify a method indirectly
      * as a method annotated by specified annotation.
      */
     String method() default "";
@@ -77,5 +77,15 @@ public @interface OnMethod {
      */
     Location location() default @Location();
 
-    boolean follow() default false;
+    /**
+     * The intrusiveness level of this probe.
+     * <p>
+     * It is possible to define the intrusiveness level for each probe
+     * and then by dynamically modifying per-script settings enable just the
+     * probes with the intrusiveness level smaller or equal to the required
+     * number.
+     * </p>
+     * @return The intrusiveness level (default 0)
+     */
+    int level() default 0;
 }

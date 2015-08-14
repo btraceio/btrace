@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
@@ -65,7 +66,50 @@ final public class Assembler {
         return this;
     }
 
+    public Assembler jump(int opcode, Label l) {
+        mv.visitJumpInsn(opcode, l);
+        return this;
+    }
+
     public Assembler ldc(Object o) {
+        if (o instanceof Integer) {
+            int i = (int)o;
+            if (i >= -1 && i <= 5) {
+                int opcode = -1;
+                switch(i) {
+                    case 0: {
+                        opcode = ICONST_0;
+                        break;
+                    }
+                    case 1: {
+                        opcode = ICONST_1;
+                        break;
+                    }
+                    case 2: {
+                        opcode = ICONST_2;
+                        break;
+                    }
+                    case 3: {
+                        opcode = ICONST_3;
+                        break;
+                    }
+                    case 4: {
+                        opcode = ICONST_4;
+                        break;
+                    }
+                    case 5: {
+                        opcode = ICONST_5;
+                        break;
+                    }
+                    case -1: {
+                        opcode = ICONST_M1;
+                        break;
+                    }
+                }
+                mv.visitInsn(opcode);
+                return this;
+            }
+        }
         mv.visitLdcInsn(o);
         return this;
     }
@@ -434,5 +478,11 @@ final public class Assembler {
     public Assembler putStatic(String owner, String name, String desc) {
         mv.visitFieldInsn(PUTSTATIC, owner, name, desc);
         return this;
+    }
+
+    public Assembler addLevelCheck(String clsName, int level, Label jmp) {
+        return getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor())
+                .ldc(level)
+                .jump(Opcodes.IF_ICMPLT, jmp);
     }
 }

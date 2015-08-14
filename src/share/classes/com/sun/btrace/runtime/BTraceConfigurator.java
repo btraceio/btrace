@@ -116,6 +116,11 @@ final public class BTraceConfigurator extends MethodVisitor {
                         case "type":
                             om.setType((String)value);
                             break;
+                        case "level":
+                            om.setLevel((int)value);
+                            break;
+                        default:
+                            System.err.println("btrace WARNING: Unsupported @OnMethod attribute: " + name);
                     }
                 }
 

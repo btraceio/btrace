@@ -29,6 +29,7 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.annotations.Export;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.OnError;
+import com.sun.btrace.annotations.OnEvent;
 import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnTimer;
 import com.sun.btrace.annotations.Return;
@@ -143,6 +144,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
 
         guardedAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnMethod.class));
         guardedAnnots.add(Type.getDescriptor(OnTimer.class));
+        guardedAnnots.add(Type.getDescriptor(OnEvent.class));
         guardedAnnots.add(Type.getDescriptor(OnError.class));
         guardedAnnots.add(Type.getDescriptor(OnExit.class));
         guardedAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnProbe.class));
@@ -222,12 +224,29 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     }
 
     private void preprocess() {
+        addLevelField();
         processClinit();
         processFields();
 
         for(MethodNode mn : getMethods()) {
             preprocessMethod(mn);
         }
+    }
+
+    private void addLevelField() {
+        if (cn.fields == null) {
+            cn.fields = new LinkedList();
+        }
+        cn.fields.add(
+            new FieldNode(
+                Opcodes.ASM5,
+                Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_VOLATILE,
+                "$btrace$$level",
+                Type.INT_TYPE.getDescriptor(),
+                null,
+                0
+            )
+        );
     }
 
     private void preprocessMethod(MethodNode mn) {
