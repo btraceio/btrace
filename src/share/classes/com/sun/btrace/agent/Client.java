@@ -454,10 +454,10 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             }
         }
         if (om.getDurationParameter() != -1) {
-            if (!(loc.getValue() == Kind.RETURN ||
+            if (!((loc.getValue() == Kind.RETURN ||
                 loc.getValue() == Kind.ERROR) ||
                 (loc.getValue() == Kind.CALL &&
-                loc.getWhere() == Where.AFTER)) {
+                loc.getWhere() == Where.AFTER))) {
                 Verifier.reportError("duration.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getDurationParameter() + ")");
             }
         }
