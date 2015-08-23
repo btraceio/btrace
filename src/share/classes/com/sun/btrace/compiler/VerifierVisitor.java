@@ -287,7 +287,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                     }
                 }
                 if (isErrorHandler(node)) {
-                    if (node.getParameters().size() != 1 || ! "java.lang.Throwable".equals(node.getParameters().get(0).getType().toString())) {
+                    Element thrElement = getElement(node.getParameters().get(0).getType());
+                    if (node.getParameters().size() != 1 || ! "java.lang.Throwable".equals(thrElement.toString())) {
                         reportError("onerror.invalid", node);
                         return false;
                     }
