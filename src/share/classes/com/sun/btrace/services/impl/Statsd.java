@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.services.impl;
 
+import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.services.spi.SimpleService;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -83,6 +84,7 @@ final public class Statsd extends SimpleService {
             @Override
             public void run() {
                 DatagramSocket ds = null;
+                boolean entered = BTraceRuntime.enter();
                 try {
                     ds = new DatagramSocket();
                     DatagramPacket dp = new DatagramPacket(new byte[0], 0);
@@ -109,6 +111,10 @@ final public class Statsd extends SimpleService {
                     }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
+                } finally {
+                    if (entered) {
+                        BTraceRuntime.leave();
+                    }
                 }
             }
         });
