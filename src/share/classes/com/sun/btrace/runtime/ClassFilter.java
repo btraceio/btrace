@@ -39,6 +39,7 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
+import java.lang.ref.Reference;
 import java.util.regex.PatternSyntaxException;
 
 /**
@@ -49,6 +50,7 @@ import java.util.regex.PatternSyntaxException;
  * @author A. Sundararajan
  */
 public class ClassFilter {
+    private static final Class<?> referenceClz = Reference.class;
 
     private String[] sourceClasses;
     private Pattern[] sourceClassPatterns;
@@ -74,6 +76,18 @@ public class ClassFilter {
 
     public boolean isCandidate(Class target) {
         if (target.isInterface() || target.isPrimitive() || target.isArray()) {
+            return false;
+        }
+
+        if (referenceClz.equals(target)) {
+            // instrumenting the <b>java.lang.ref.Reference</b> class will lead
+            // to StackOverflowError in <b>java.lang.ThreadLocal.get()</b>
+            return false;
+        }
+
+        if (target.getName().startsWith("sun.instrument.") ||
+            target.getName().startsWith("java.lang.instrument.")) {
+            // do not instrument the instrumentation related classes
             return false;
         }
 
@@ -188,6 +202,19 @@ public class ClassFilter {
                 return;
             }
             name = name.replace('/', '.');
+
+            if (referenceClz.getName().equals(name)) {
+                // instrumenting the <b>java.lang.ref.Reference</b> class will lead
+                // to StackOverflowError in <b>java.lang.ThreadLocal.get()</b>
+                return;
+            }
+
+            if (name.startsWith("sun.instrument.") ||
+                name.startsWith("java.lang.instrument.")) {
+                // do not instrument the instrumentation related classes
+                return;
+            }
+
             for (String className : sourceClasses) {
                 if (className.equals(name)) {
                     isCandidate = true;

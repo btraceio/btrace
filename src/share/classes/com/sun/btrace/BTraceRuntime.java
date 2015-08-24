@@ -1938,25 +1938,38 @@ public final class BTraceRuntime  {
         memoryListener = new NotificationListener() {
                 @Override
                 public void handleNotification(Notification notif, Object handback)  {
-                    String notifType = notif.getType();
-                    if (notifType.equals(MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED)) {
-                        CompositeData cd = (CompositeData) notif.getUserData();
-                        final MemoryNotificationInfo info = MemoryNotificationInfo.from(cd);
-                        String name = info.getPoolName();
-                        final Method handler = lowMemHandlers.get(name);
-                        if (handler != null) {
-                            threadPool.submit(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        if (handler.getParameterTypes().length == 1) {
-                                            handler.invoke(null, info.getUsage());
-                                        } else {
-                                            handler.invoke(null, (Object[])null);
+                    boolean entered = BTraceRuntime.enter();
+                    try {
+                        String notifType = notif.getType();
+                        if (notifType.equals(MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED)) {
+                            CompositeData cd = (CompositeData) notif.getUserData();
+                            final MemoryNotificationInfo info = MemoryNotificationInfo.from(cd);
+                            String name = info.getPoolName();
+                            final Method handler = lowMemHandlers.get(name);
+                            if (handler != null) {
+                                threadPool.submit(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        boolean entered = BTraceRuntime.enter();
+                                        try {
+                                            if (handler.getParameterTypes().length == 1) {
+                                                handler.invoke(null, info.getUsage());
+                                            } else {
+                                                handler.invoke(null, (Object[])null);
+                                            }
+                                        } catch (Throwable th) {
+                                        } finally {
+                                            if (entered) {
+                                                BTraceRuntime.leave();
+                                            }
                                         }
-                                    } catch (Throwable th) { }
-                                }
-                            });
+                                    }
+                                });
+                            }
+                        }
+                    } finally {
+                        if (entered) {
+                            BTraceRuntime.leave();
                         }
                     }
                 }

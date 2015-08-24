@@ -94,7 +94,14 @@ public final class Main {
                 @Override
                 public void run() {
                     BTraceRuntime rt = c.getRuntime();
-                    if (rt != null) rt.handleExit(0);
+                    boolean entered = BTraceRuntime.enter(rt);
+                    try {
+                        if (rt != null) rt.handleExit(0);
+                    } finally {
+                        if (entered) {
+                            BTraceRuntime.leave();
+                        }
+                    }
                 }
             }));
     }
@@ -450,6 +457,7 @@ public final class Main {
 
             @Override
             public void run() {
+                boolean entered = BTraceRuntime.enter();
                 try {
                     if (isDebug()) debugPrint("new Client created " + client);
                     if (client.shouldAddTransformer()) {
@@ -492,6 +500,10 @@ public final class Main {
                         debugPrint(uce);
                     }
                     client.getRuntime().send(new ErrorCommand(uce));
+                } finally {
+                    if (entered) {
+                        BTraceRuntime.leave();
+                    }
                 }
             }
         });
