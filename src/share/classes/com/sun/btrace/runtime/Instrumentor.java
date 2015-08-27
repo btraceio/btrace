@@ -189,8 +189,12 @@ public class Instrumentor extends ClassVisitor {
             } else {
                 String methodName = om.getMethod();
                 if (methodName.equals("")) {
-                    methodName = om.getTargetName();
+                    methodName = "/.*/"; // match all the methods
                 }
+                if (methodName.equals("#")) {
+                    methodName = om.getTargetName(); // match just the same-named method
+                }
+
                 if (methodName.equals(name) &&
                     typeMatches(om.getType(), desc)) {
                     appliedOnMethods.add(om);
