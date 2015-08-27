@@ -34,7 +34,10 @@ import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.templates.TemplateExpanderVisitor;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.concurrent.atomic.AtomicLong;
+import org.junit.Before;
 import org.junit.Test;
 import sun.misc.Unsafe;
 import support.InstrumentorTestBase;
@@ -44,6 +47,12 @@ import support.InstrumentorTestBase;
  * @author Jaroslav Bachorik
  */
 public class ClinitInstrumentorTest extends InstrumentorTestBase {
+    private ClassLoader dummyCl = null;
+    @Before
+    public void setup() {
+        dummyCl = new URLClassLoader(new URL[0]);
+    }
+
     /**
      * Tests the correctness of the "clinit" code injected
      * in order to allow proper matching for subclasses/implementations
@@ -58,7 +67,7 @@ public class ClinitInstrumentorTest extends InstrumentorTestBase {
         f.setAccessible(true);
         Unsafe u = (Unsafe)f.get(null);
 
-        Class clz = u.defineClass("resources.DerivedClass", transformedBC, 0, transformedBC.length, ClassLoader.getSystemClassLoader(), null);
+        Class clz = u.defineClass("resources.DerivedClass", transformedBC, 0, transformedBC.length, dummyCl, null);
 
         // check transformation
         checkTransformation("LDC \"btrace\"\nLDC Ltraces/onmethod/MatchDerived;.class\n" +
