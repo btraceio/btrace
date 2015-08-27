@@ -127,7 +127,7 @@ class TypeUtils {
             }
 
             try {
-                clzRight = cl.loadClass(left.getClassName());
+                clzRight = cl.loadClass(right.getClassName());
             } catch (Throwable e) {
                 clzRight = Object.class;
             }
