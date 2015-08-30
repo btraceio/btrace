@@ -61,6 +61,7 @@ import com.sun.btrace.services.api.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -98,6 +99,25 @@ import java.util.Set;
  * @author J. Bachorik (Tree API rewrite)
  */
 public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
+    private static enum MethodClassifier {
+        /**
+         * No BTrace specific classifier available
+         */
+        NONE,
+        /**
+         * An annotated method that will need access to the current
+         * {@linkplain BTraceRuntime} instance.
+         */
+        RT_AWARE,
+        /**
+         * An annotated method that will use the result of
+         * {@linkplain BTraceRuntime#enter(com.sun.btrace.BTraceRuntime)} to skip
+         * the execution if already inside a handler. This implies the method is also
+         * {@linkplain MethodClassifier#RT_AWARE}.
+         */
+        GUARDED
+    }
+
     private static class LocalVarGenerator {
         private int offset = 0;
 
@@ -131,6 +151,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
 
     private final static Map<String, Type> boxTypeMap = new HashMap<>();
     private final static Set<String> guardedAnnots = new HashSet<>();
+    private final static Set<String> rtAwareAnnots = new HashSet<>();
 
     static {
         boxTypeMap.put("I", Type.getType(Integer.class));
@@ -142,12 +163,15 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         boxTypeMap.put("Z", Type.getType(Boolean.class));
         boxTypeMap.put("C", Type.getType(Character.class));
 
-        guardedAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnMethod.class));
-        guardedAnnots.add(Type.getDescriptor(OnTimer.class));
-        guardedAnnots.add(Type.getDescriptor(OnEvent.class));
-        guardedAnnots.add(Type.getDescriptor(OnError.class));
-        guardedAnnots.add(Type.getDescriptor(OnExit.class));
-        guardedAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnProbe.class));
+        rtAwareAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnMethod.class));
+        rtAwareAnnots.add(Type.getDescriptor(OnTimer.class));
+        rtAwareAnnots.add(Type.getDescriptor(OnError.class));
+        rtAwareAnnots.add(Type.getDescriptor(OnEvent.class));
+        rtAwareAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnProbe.class));
+        guardedAnnots.addAll(rtAwareAnnots);
+
+        // @OnExit is rtAware but not guarded
+        rtAwareAnnots.add(Type.getDescriptor(OnExit.class));
     }
 
     private final ClassNode cn;
@@ -448,7 +472,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
                                 exportFldNames.isEmpty() &&
                                 injectedFlds.isEmpty());
 
-        boolean isGuarded = isGuarded(mn);
+        MethodClassifier clsf = getClassifier(mn);
 
         int retopcode = Type.getReturnType(mn.desc).getOpcode(Opcodes.IRETURN);
         InsnList l = mn.instructions;
@@ -469,7 +493,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
             } else if (type == AbstractInsnNode.METHOD_INSN) {
                 MethodInsnNode min = (MethodInsnNode)n;
                 n = unfoldServiceInstantiation(min, l, lvg);
-            } else if (n.getOpcode() == retopcode && isGuarded) {
+            } else if (n.getOpcode() == retopcode && isClassified(clsf, MethodClassifier.RT_AWARE)) {
                 addBTraceRuntimeExit((InsnNode)n, l, lvg);
             }
         }
@@ -572,7 +596,8 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
 
     private void addBTraceErrorHandler(MethodNode mn, LocalVarGenerator lvg) {
         Type throwableType = Type.getType(Throwable.class);
-        if (isGuarded(mn)) {
+        MethodClassifier clsf = getClassifier(mn);
+        if (isClassified(clsf, MethodClassifier.RT_AWARE)) {
             LabelNode from = new LabelNode();
             LabelNode to = new LabelNode();
             InsnList l = mn.instructions;
@@ -592,18 +617,21 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         // no runtime check for <clinit>
         if (mn.name.equals("<clinit>")) return;
 
-        if (isGuarded(mn)) {
-            LabelNode start = new LabelNode();
+        MethodClassifier clsf = getClassifier(mn);
+        if (isClassified(clsf, MethodClassifier.RT_AWARE)) {
             InsnList entryCheck = new InsnList();
             entryCheck.add(getRuntime());
-            entryCheck.add(new MethodInsnNode(
-                Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
-                "enter", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, BTRACE_RUNTIME_TYPE),
-                false
-            ));
-            entryCheck.add(new JumpInsnNode(Opcodes.IFNE, start));
-            entryCheck.add(getReturnSequence(mn, false));
-            entryCheck.add(start);
+            if (isClassified(clsf, MethodClassifier.GUARDED)) {
+                LabelNode start = new LabelNode();
+                entryCheck.add(new MethodInsnNode(
+                    Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
+                    "enter", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, BTRACE_RUNTIME_TYPE),
+                    false
+                ));
+                entryCheck.add(new JumpInsnNode(Opcodes.IFNE, start));
+                entryCheck.add(getReturnSequence(mn, false));
+                entryCheck.add(start);
+            }
             mn.instructions.insert(entryCheck);
         }
     }
@@ -657,16 +685,20 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
                                         Collections.emptyList();
     }
 
-    private boolean isGuarded(MethodNode mn) {
+    private MethodClassifier getClassifier(MethodNode mn) {
         // <clinit> will always be guarded by BTrace error handler
-        if (mn.name.equals("<clinit>")) return true;
+        if (mn.name.equals("<clinit>")) return MethodClassifier.GUARDED;
 
         for(AnnotationNode an : getAnnotations(mn)) {
-            if (guardedAnnots.contains(an.desc)) {
-                return true;
+            if (rtAwareAnnots.contains(an.desc)) {
+                if (guardedAnnots.contains(an.desc)) {
+                    return MethodClassifier.GUARDED;
+                } else {
+                    return MethodClassifier.RT_AWARE;
+                }
             }
         }
-        return false;
+        return MethodClassifier.NONE;
     }
 
     private FieldInsnNode findNodeInitialization(FieldNode fn) {
@@ -1136,5 +1168,9 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
             }
         }
         return Integer.MIN_VALUE;
+    }
+
+    private static boolean isClassified(MethodClassifier clsf, MethodClassifier requested) {
+        return clsf.ordinal() >= requested.ordinal();
     }
 }
