@@ -34,9 +34,12 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 
 import com.sun.btrace.aggregation.HistogramData;
+
 import java.util.regex.Pattern;
 
 /**
@@ -88,11 +91,35 @@ public class GridDataCommand extends DataCommand {
         return data;
     }
 
+    /**
+     * Calculates the necessary field width of each column
+     * @param objects a list of objects
+     * @return a map containing as key the column number and as value the width of the longest value
+     */
+    private Map<Integer, Integer> getColumnWidth(List<Object[]> objects) {
+        Map<Integer, Integer> columnWidth = new LinkedHashMap<>();
+        for (Object[] obj : objects) {
+            for (int column = 0; column < obj.length; ++column) {
+                int length = obj[column].toString().length();
+                Integer width = 0;
+                if (columnWidth.containsKey(column)) {
+                    width = columnWidth.get(column);
+                }
+                if (length > width) {
+                    columnWidth.put(column, length);
+                }
+            }
+        }
+        return columnWidth;
+    }
+
     public void print(PrintWriter out) {
+
         if (data != null) {
             if (name != null && !name.equals("")) {
                 out.println(name);
             }
+            Map<Integer, Integer> columnWidth = getColumnWidth(data);
             for (Object[] dataRow : data) {
 
                 // Convert histograms to strings, and pretty-print multi-line text
@@ -122,7 +149,7 @@ public class GridDataCommand extends DataCommand {
                     StringBuilder buffer = new StringBuilder();
                     for (int i = 0; i < printRow.length; i++) {
                         buffer.append("  ");
-                        buffer.append(getFormat(printRow[i]));
+                        buffer.append(getFormat(printRow[i], columnWidth, i));
                     }
                     usedFormat = buffer.toString();
                 }
@@ -143,20 +170,26 @@ public class GridDataCommand extends DataCommand {
         typeFormats.put(Double.class, "%15f");
         typeFormats.put(Float.class, "%15f");
         typeFormats.put(BigDecimal.class, "%15f");
-        typeFormats.put(String.class, "%50s");
+        typeFormats.put(String.class, "%-50s");
     }
 
     /**
-     * @param object
-     * @return
+     * Get the format of an object
+     * @param object get the format of this object
+     * @param columnWidth a map containing as key the column number and as value the width of the longest value
+     * @param column get the format of that column number
+     * @return the format of an object
      */
-    private String getFormat(Object object) {
+    private String getFormat(Object object, Map<Integer, Integer> columnWidth, Integer column) {
         if (object == null) {
-            return "%15s";
+            return "%-15s";
         }
         String usedFormat = typeFormats.get(object.getClass());
         if (usedFormat == null) {
-            return "%15s";
+            return "%-15s";
+        }
+        if (columnWidth != null && column != null && columnWidth.containsKey(column)) {
+            usedFormat = usedFormat.replaceFirst("\\d+", String.valueOf(columnWidth.get(column)));
         }
         return usedFormat;
     }
