@@ -191,16 +191,21 @@ public class Client {
                 debugPrint("compiled " + fileName);
             }
         } else if (fileName.endsWith(".class")) {
-            code = new byte[(int) file.length()];
+            int codeLen = (int)file.length();
+            code = new byte[codeLen];
             try {
-                FileInputStream fis = new FileInputStream(file);
                 if (debug) {
                     debugPrint("reading " + fileName);
                 }
-                try {
-                    fis.read(code);
-                } finally {
-                    fis.close();
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    int off = 0;
+                    int len = 0;
+                    do {
+                        len = fis.read(code, off, codeLen - off);
+                        if (len > -1) {
+                            off += len;
+                        }
+                    } while (off < codeLen && len != -1);
                 }
                 if (debug) {
                     debugPrint("read " + fileName);
@@ -525,10 +530,8 @@ public class Client {
                     warn(listener, "@DTraceRef is supported only on Solaris 11+");
                 }
             }
-        } catch (IllegalAccessException iace) {
+        } catch (IllegalAccessException | IllegalArgumentException iace) {
             iace.printStackTrace();
-        } catch (IllegalArgumentException iarge) {
-            iarge.printStackTrace();
         } catch (InvocationTargetException ite) {
             throw new RuntimeException(ite.getTargetException());
         }
