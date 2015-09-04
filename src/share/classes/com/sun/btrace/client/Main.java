@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008-2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.client;
@@ -86,15 +86,15 @@ public final class Main {
         boolean includePathDefined = false;
         String statsdDef = "";
 
-        // scan for "-v" to set DEBUG mode before anything interesting happens
-        // when "--version" is specified just print the version and exit
-        for(String arg : args) {
-            if (arg.equals("-v")) {
-                DEBUG = true;
-                break;
-            } else if (arg.equals("--version")) {
-                System.out.println(Messages.get("btrace.version"));
-                return;
+        OUTER:
+        for (String arg : args) {
+            switch (arg) {
+                case "-v":
+                    DEBUG = true;
+                    break OUTER;
+                case "--version":
+                    System.out.println(Messages.get("btrace.version"));
+                    return;
             }
         }
 
@@ -195,6 +195,7 @@ public final class Main {
 
     private static CommandListener createCommandListener(Client client) {
         return new CommandListener() {
+            @Override
             public void onCommand(Command cmd) throws IOException {
                 int type = cmd.getType();
                 if (cmd instanceof DataCommand) {
@@ -220,6 +221,7 @@ public final class Main {
         if (isDebug()) debugPrint("registering shutdown hook");
         Runtime.getRuntime().addShutdownHook(new Thread(
             new Runnable() {
+                @Override
                 public void run() {
                     if (! exiting) {
                         try {
@@ -237,6 +239,7 @@ public final class Main {
         if (isDebug()) debugPrint("registering signal handler for SIGINT");
         Signal.handle(new Signal("INT"),
             new SignalHandler() {
+                @Override
                 public void handle(Signal sig) {
                     try {
                         con.printf("Please enter your option:\n");
