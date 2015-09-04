@@ -272,9 +272,9 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
-	        boolean entered = BTraceRuntime.enter(rt);
+	        boolean entered = BTraceRuntime.enter(runtime);
 		try {
-		    if (this.runtime != null) this.runtime.handleExit(0);
+		    if (runtime != null) runtime.handleExit(0);
 		} finally {
                     if (entered) {
                         BTraceRuntime.leave();
