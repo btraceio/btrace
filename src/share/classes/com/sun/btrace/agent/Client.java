@@ -269,6 +269,19 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         Main.dumpClass(className, className, btraceCode);
         if (debug) Main.debugPrint("creating BTraceRuntime instance for " + className);
         this.runtime = new BTraceRuntime(className, args, this, inst);
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+	        boolean entered = BTraceRuntime.enter(rt);
+		try {
+		    if (this.runtime != null) this.runtime.handleExit(0);
+		} finally {
+                    if (entered) {
+                        BTraceRuntime.leave();
+		    }
+		}
+            }
+        }));
         if (debug) Main.debugPrint("created BTraceRuntime instance for " + className);
         if (debug) Main.debugPrint("removing @OnMethod, @OnProbe methods");
         byte[] codeBuf = removeMethods(btraceCode);
