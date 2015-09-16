@@ -9,7 +9,7 @@
     <property name="agent.excludes" value="**/dtrace/* **/btrace/*.class **/asm/signature/** **/asm/tree/** **/asm/util/** **/asm/xml/** **/aggregation/* **/compiler/* **/client/* **/comm/* com/sun/btrace/api/**/* com/sun/btrace/spi/**/* **/instr/** **/META-INF/*"/>
     <property name="boot.excludes" value="**/dtrace/* **/agent/* **/compiler/* **/client/* **/resources/* **/runtime/* **/util/**/* **/asm/** com/sun/btrace/api/**/* com/sun/btrace/spi/**/*"/>
     <property name="client.excludes" value="**/runtime/* **/agent/* **/util/TimeStamp* **/util/MethodId **/util/SamplingSupport **/util/templates/**/* **/instr/** **/META-INF/*"/>
-    
+
     <target name="prepare" depends="load.properties">
         <mkdir dir="${classes.dir}"/>
         <mkdir dir="${javadoc.dir}"/>
