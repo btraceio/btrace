@@ -64,7 +64,7 @@ import static com.sun.btrace.BTraceUtils.*;
      */
     @OnEvent("l0")
     public static void setL0() {
-        BTraceUtils.setInstrLevel(0);
+        BTraceUtils.setIntrusionLevel(0);
     }
 
     /**
@@ -72,6 +72,6 @@ import static com.sun.btrace.BTraceUtils.*;
      */
     @OnEvent("l1")
     public static void setL1() {
-        BTraceUtils.setInstrLevel(1);
+        BTraceUtils.setIntrusionLevel(1);
     }
 }
