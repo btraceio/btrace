@@ -331,7 +331,7 @@ public class Instrumentor extends ClassVisitor {
 
                                 invokeBTraceAction(asm, om);
                             }
-                            if (om.getLevel() > 0) {
+                            if (l != null) {
                                 mv.visitLabel(l);
                             }
                         }
@@ -368,7 +368,7 @@ public class Instrumentor extends ClassVisitor {
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(asm, om);
 
-                                if (om.getLevel() > 0) {
+                                if (l != null) {
                                     mv.visitLabel(l);
                                 }
                             }
@@ -426,7 +426,7 @@ public class Instrumentor extends ClassVisitor {
 
                                 invokeBTraceAction(asm, om);
                             }
-                            if (om.getLevel() > 0) {
+                            if (l != null) {
                                 mv.visitLabel(l);
                             }
                         }
@@ -456,7 +456,9 @@ public class Instrumentor extends ClassVisitor {
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
                                 invokeBTraceAction(asm, om);
-                                mv.visitLabel(l);
+                                if (l != null) {
+                                    mv.visitLabel(l);
+                                }
                             }
                         }
                     }
@@ -965,7 +967,7 @@ public class Instrumentor extends ClassVisitor {
                 // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">
                 return new FieldAccessInstrumentor(mv, className, superName, access, name, desc) {
 
-                    int calledInstanceIndex = -1;
+                    int calledInstanceIndex = Integer.MIN_VALUE;
                     private final String targetClassName = loc.getClazz();
                     private final String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
                     private int levelCheckVar = Integer.MIN_VALUE;
@@ -986,6 +988,11 @@ public class Instrumentor extends ClassVisitor {
                             }
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[0]);
                             if (vr.isValid()) {
+                                if (om.getTargetInstanceParameter() != -1) {
+                                    asm.dup();
+                                    calledInstanceIndex = storeNewLocal(TypeUtils.objectType);
+                                }
+
                                 Label l = null;
                                 if (om.getLevel() > 0) {
                                     l = new Label();
@@ -1001,10 +1008,6 @@ public class Instrumentor extends ClassVisitor {
                                     }
                                 }
 
-                                if (om.getTargetInstanceParameter() != -1) {
-                                    asm.dup();
-                                    calledInstanceIndex = storeNewLocal(TypeUtils.objectType);
-                                }
                                 if (where == Where.BEFORE) {
                                     loadArguments(
                                         localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
@@ -1015,7 +1018,7 @@ public class Instrumentor extends ClassVisitor {
 
                                     invokeBTraceAction(asm, om);
                                 }
-                                if (om.getLevel() > 0) {
+                                if (l != null) {
                                     mv.visitLabel(l);
                                 }
                             }
@@ -1043,11 +1046,10 @@ public class Instrumentor extends ClassVisitor {
                                     l = new Label();
                                     asm.loadLocal(Type.INT_TYPE, levelCheckVar)
                                        .jump(Opcodes.IFLT, l);
-
-                                    if (om.getReturnParameter() != -1) {
-                                        asm.dupValue(desc);
-                                        returnValIndex = storeNewLocal(fldType);
-                                    }
+                                }
+                                if (om.getReturnParameter() != -1) {
+                                    asm.dupValue(desc);
+                                    returnValIndex = storeNewLocal(fldType);
                                 }
 
                                 loadArguments(
@@ -1059,7 +1061,7 @@ public class Instrumentor extends ClassVisitor {
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
                                 invokeBTraceAction(asm, om);
-                                if (om.getLevel() > 0) {
+                                if (l != null) {
                                     mv.visitLabel(l);
                                 }
                             }
@@ -1072,7 +1074,7 @@ public class Instrumentor extends ClassVisitor {
                 return new FieldAccessInstrumentor(mv, className, superName, access, name, desc) {
                     private final String targetClassName = loc.getClazz();
                     private final String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
-                    private int calledInstanceIndex = -1;
+                    private int calledInstanceIndex = Integer.MIN_VALUE;
                     private int fldValueIndex = -1;
                     private int levelCheckVar = Integer.MIN_VALUE;
 
@@ -1091,6 +1093,21 @@ public class Instrumentor extends ClassVisitor {
                             ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{fieldType});
 
                             if (vr.isValid()) {
+                                if (!vr.isAny()) {
+                                    // store the field value
+                                    fldValueIndex = storeNewLocal(fieldType);
+                                }
+
+                                if (om.getTargetInstanceParameter() != -1) {
+                                    asm.dup();
+                                    calledInstanceIndex = storeNewLocal(TypeUtils.objectType);
+                                }
+
+                                if (!vr.isAny()) {
+                                    // need to put the set value back on stack
+                                    asm.loadLocal(fieldType, fldValueIndex);
+                                }
+
                                 Label l = null;
                                 if (om.getLevel() > 0) {
                                     l = new Label();
@@ -1104,18 +1121,6 @@ public class Instrumentor extends ClassVisitor {
                                     } else {
                                         asm.jump(Opcodes.IF_ICMPLT, l);
                                     }
-                                }
-
-                                if (!vr.isAny()) {
-                                    fldValueIndex = storeNewLocal(fieldType);
-                                }
-                                if (om.getTargetInstanceParameter() != -1) {
-                                    asm.dup();
-                                    calledInstanceIndex = storeNewLocal(TypeUtils.objectType);
-                                }
-                                if (!vr.isAny()) {
-                                    // need to put the set value back on stack
-                                    asm.loadLocal(fieldType, fldValueIndex);
                                 }
 
                                 if (where == Where.BEFORE) {
@@ -1570,7 +1575,7 @@ public class Instrumentor extends ClassVisitor {
                             Label l = null;
                             if (om.getLevel() > 0) {
                                 l = new Label();
-                                asm.getStatic(btraceClassName, "$btrace$$level", Type.INT_TYPE.getDescriptor())
+                                asm.getStatic(btraceClassName, "***$btrace$$level", Type.INT_TYPE.getDescriptor())
                                    .ldc(om.getLevel());
                                 if (where == Where.AFTER) {
                                     // must store the level in a local var to be consistent
@@ -1645,16 +1650,19 @@ public class Instrumentor extends ClassVisitor {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                         MethodInstrumentor.ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
                         if (vr.isValid()) {
-                            Label l = new Label();
-                            asm.getStatic(btraceClassName, "$btrace$$level", Type.INT_TYPE.getDescriptor())
-                               .ldc(om.getLevel());
-                            if (where == Where.AFTER) {
-                                // must store the level in a local var to be consistent
-                                asm.sub(Type.INT_TYPE).dup();
-                                levelCheckVar = storeNewLocal(Type.INT_TYPE);
-                                asm.jump(Opcodes.IFLT, l);
-                            } else {
-                                asm.jump(Opcodes.IF_ICMPLT, l);
+                            Label l = null;
+                            if (om.getLevel() > 0) {
+                                l = new Label();
+                                asm.getStatic(btraceClassName, "$btrace$$level", Type.INT_TYPE.getDescriptor())
+                                   .ldc(om.getLevel());
+                                if (where == Where.AFTER) {
+                                    // must store the level in a local var to be consistent
+                                    asm.sub(Type.INT_TYPE).dup();
+                                    levelCheckVar = storeNewLocal(Type.INT_TYPE);
+                                    asm.jump(Opcodes.IFLT, l);
+                                } else {
+                                    asm.jump(Opcodes.IF_ICMPLT, l);
+                                }
                             }
                             if (!vr.isAny()) {
                                 asm.dup();
@@ -1669,7 +1677,9 @@ public class Instrumentor extends ClassVisitor {
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(asm, om);
                             }
-                            mv.visitLabel(l);
+                            if (l != null) {
+                                mv.visitLabel(l);
+                            }
                         }
                     }
 
@@ -1679,16 +1689,21 @@ public class Instrumentor extends ClassVisitor {
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                             MethodInstrumentor.ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
                             if (vr.isValid()) {
-                                Label l = new Label();
-                                asm.loadLocal(Type.INT_TYPE, levelCheckVar)
-                                   .jump(Opcodes.IFLT, l);
+                                Label l = null;
+                                if (om.getLevel() > 0) {
+                                    l = new Label();
+                                    asm.loadLocal(Type.INT_TYPE, levelCheckVar)
+                                       .jump(Opcodes.IFLT, l);
+                                }
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
                                     constArg(om.getClassNameParameter(), className),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(asm, om);
-                                mv.visitLabel(l);
+                                if (l != null) {
+                                    mv.visitLabel(l);
+                                }
                             }
                         }
                     }
@@ -1712,8 +1727,11 @@ public class Instrumentor extends ClassVisitor {
                         ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.throwableType});
                         if (vr.isValid()) {
                             int throwableIndex = -1;
-                            Label l = new Label();
-                            asm.addLevelCheck(btraceClassName, om.getLevel(), l);
+                            Label l = null;
+                            if (om.getLevel() > 0) {
+                                l = new Label();
+                                asm.addLevelCheck(btraceClassName, om.getLevel(), l);
+                            }
                             if (!vr.isAny()) {
                                 asm.dup();
                                 throwableIndex = storeNewLocal(TypeUtils.throwableType);
@@ -1725,7 +1743,9 @@ public class Instrumentor extends ClassVisitor {
                                 localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
                             invokeBTraceAction(asm, om);
-                            mv.visitLabel(l);
+                            if (l != null) {
+                                mv.visitLabel(l);
+                            }
                         }
                     }
                 };// </editor-fold>

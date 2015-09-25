@@ -93,7 +93,7 @@ abstract public class InstrumentorTestBase {
     @Before
     public void startup() {
         try {
-            cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {};
+            resetClassLoader();
 
             Field lastFld = MethodID.class.getDeclaredField("lastMehodId");
             Field mapFld = MethodID.class.getDeclaredField("methodIds");
@@ -109,6 +109,10 @@ abstract public class InstrumentorTestBase {
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    protected final void resetClassLoader() {
+        cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {};
     }
 
     protected void cleanup() {
