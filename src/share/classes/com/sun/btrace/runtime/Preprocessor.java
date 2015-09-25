@@ -248,12 +248,29 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     }
 
     private void preprocess() {
+        addLevelField();
         processClinit();
         processFields();
 
         for(MethodNode mn : getMethods()) {
             preprocessMethod(mn);
         }
+    }
+
+    private void addLevelField() {
+        if (cn.fields == null) {
+            cn.fields = new LinkedList();
+        }
+        cn.fields.add(
+            new FieldNode(
+                Opcodes.ASM5,
+                Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_VOLATILE,
+                "$btrace$$level",
+                Type.INT_TYPE.getDescriptor(),
+                null,
+                0
+            )
+        );
     }
 
     private void preprocessMethod(MethodNode mn) {

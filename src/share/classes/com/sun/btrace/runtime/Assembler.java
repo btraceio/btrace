@@ -24,12 +24,14 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.util.Interval;
 
 /**
  * Convenient fluent wrapper over the ASM method visitor
@@ -65,7 +67,68 @@ final public class Assembler {
         return this;
     }
 
+    public Assembler jump(int opcode, Label l) {
+        mv.visitJumpInsn(opcode, l);
+        return this;
+    }
+
     public Assembler ldc(Object o) {
+        if (o instanceof Integer) {
+            int i = (int)o;
+            if (i >= -1 && i <= 5) {
+                int opcode = -1;
+                switch(i) {
+                    case 0: {
+                        opcode = ICONST_0;
+                        break;
+                    }
+                    case 1: {
+                        opcode = ICONST_1;
+                        break;
+                    }
+                    case 2: {
+                        opcode = ICONST_2;
+                        break;
+                    }
+                    case 3: {
+                        opcode = ICONST_3;
+                        break;
+                    }
+                    case 4: {
+                        opcode = ICONST_4;
+                        break;
+                    }
+                    case 5: {
+                        opcode = ICONST_5;
+                        break;
+                    }
+                    case -1: {
+                        opcode = ICONST_M1;
+                        break;
+                    }
+                }
+                mv.visitInsn(opcode);
+                return this;
+            }
+        }
+        if (o instanceof Long) {
+            long l = (long)o;
+            if (l >= 0 && l <= 1) {
+                int opcode = -1;
+                switch((int)l) {
+                    case 0: {
+                        opcode = LCONST_0;
+                        break;
+                    }
+                    case 1: {
+                        opcode = LCONST_1;
+                        break;
+                    }
+                }
+                mv.visitInsn(opcode);
+                return this;
+            }
+        }
         mv.visitLdcInsn(o);
         return this;
     }
@@ -172,12 +235,12 @@ final public class Assembler {
             case AASTORE: case BASTORE:
             case CASTORE: case SASTORE:
                 dup();
-            break;
+                break;
 
             case LALOAD: case DALOAD:
             case LASTORE: case DASTORE:
                 dup2();
-            break;
+                break;
         }
         return this;
     }
@@ -205,10 +268,10 @@ final public class Assembler {
         switch (type.getSize()) {
             case 1:
                 dup();
-            break;
+                break;
             case 2:
                 dup2();
-            break;
+                break;
         }
         return this;
     }
@@ -247,43 +310,43 @@ final public class Assembler {
                 break;
             case 'Z':
                 invokeStatic(JAVA_LANG_BOOLEAN,
-                                BOX_VALUEOF,
-                                BOX_BOOLEAN_DESC);
+                        BOX_VALUEOF,
+                        BOX_BOOLEAN_DESC);
                 break;
             case 'C':
                 invokeStatic(JAVA_LANG_CHARACTER,
-                                BOX_VALUEOF,
-                                BOX_CHARACTER_DESC);
+                        BOX_VALUEOF,
+                        BOX_CHARACTER_DESC);
                 break;
             case 'B':
                 invokeStatic(JAVA_LANG_BYTE,
-                                BOX_VALUEOF,
-                                BOX_BYTE_DESC);
+                        BOX_VALUEOF,
+                        BOX_BYTE_DESC);
                 break;
             case 'S':
                 invokeStatic(JAVA_LANG_SHORT,
-                                BOX_VALUEOF,
-                                BOX_SHORT_DESC);
+                        BOX_VALUEOF,
+                        BOX_SHORT_DESC);
                 break;
             case 'I':
                 invokeStatic(JAVA_LANG_INTEGER,
-                                BOX_VALUEOF,
-                                BOX_INTEGER_DESC);
+                        BOX_VALUEOF,
+                        BOX_INTEGER_DESC);
                 break;
             case 'J':
                 invokeStatic(JAVA_LANG_LONG,
-                                BOX_VALUEOF,
-                                BOX_LONG_DESC);
+                        BOX_VALUEOF,
+                        BOX_LONG_DESC);
                 break;
             case 'F':
                 invokeStatic(JAVA_LANG_FLOAT,
-                                BOX_VALUEOF,
-                                BOX_FLOAT_DESC);
+                        BOX_VALUEOF,
+                        BOX_FLOAT_DESC);
                 break;
             case 'D':
                 invokeStatic(JAVA_LANG_DOUBLE,
-                                BOX_VALUEOF,
-                                BOX_DOUBLE_DESC);
+                        BOX_VALUEOF,
+                        BOX_DOUBLE_DESC);
                 break;
         }
         return this;
@@ -303,50 +366,50 @@ final public class Assembler {
             case 'Z':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_BOOLEAN);
                 invokeVirtual(JAVA_LANG_BOOLEAN,
-                                BOOLEAN_VALUE,
-                                BOOLEAN_VALUE_DESC);
+                        BOOLEAN_VALUE,
+                        BOOLEAN_VALUE_DESC);
                 break;
             case 'C':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_CHARACTER);
                 invokeVirtual(JAVA_LANG_CHARACTER,
-                                CHAR_VALUE,
-                                CHAR_VALUE_DESC);
+                        CHAR_VALUE,
+                        CHAR_VALUE_DESC);
                 break;
             case 'B':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                                BYTE_VALUE,
-                                BYTE_VALUE_DESC);
+                        BYTE_VALUE,
+                        BYTE_VALUE_DESC);
                 break;
             case 'S':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                                SHORT_VALUE,
-                                SHORT_VALUE_DESC);
+                        SHORT_VALUE,
+                        SHORT_VALUE_DESC);
                 break;
             case 'I':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                                INT_VALUE,
-                                INT_VALUE_DESC);
+                        INT_VALUE,
+                        INT_VALUE_DESC);
                 break;
             case 'J':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                                LONG_VALUE,
-                                LONG_VALUE_DESC);
+                        LONG_VALUE,
+                        LONG_VALUE_DESC);
                 break;
             case 'F':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                                FLOAT_VALUE,
-                                FLOAT_VALUE_DESC);
+                        FLOAT_VALUE,
+                        FLOAT_VALUE_DESC);
                 break;
             case 'D':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                                DOUBLE_VALUE,
-                                DOUBLE_VALUE_DESC);
+                        DOUBLE_VALUE,
+                        DOUBLE_VALUE_DESC);
                 break;
         }
         return this;
@@ -381,28 +444,28 @@ final public class Assembler {
 
     public Assembler println(String msg) {
         mv.visitFieldInsn(GETSTATIC,
-                    "java/lang/System",
-                    "out",
-                    "Ljava/io/PrintStream;");
+                "java/lang/System",
+                "out",
+                "Ljava/io/PrintStream;");
         mv.visitLdcInsn(msg);
         invokeVirtual("java/io/PrintStream",
-                    "println",
-                    "(Ljava/lang/String;)V");
+                "println",
+                "(Ljava/lang/String;)V");
         return this;
     }
 
     // print the object on the top of the stack
     public Assembler printObject() {
         mv.visitFieldInsn(GETSTATIC,
-                    "java/lang/System",
-                    "out",
-                    "Ljava/io/PrintStream;");
+                "java/lang/System",
+                "out",
+                "Ljava/io/PrintStream;");
         mv.visitInsn(SWAP);
         mv.visitMethodInsn(INVOKEVIRTUAL,
-                    "java/io/PrintStream",
-                    "println",
-                    "(Ljava/lang/Object;)V",
-                    false);
+                "java/io/PrintStream",
+                "println",
+                "(Ljava/lang/Object;)V",
+                false);
         return this;
     }
 
@@ -433,6 +496,78 @@ final public class Assembler {
 
     public Assembler putStatic(String owner, String name, String desc) {
         mv.visitFieldInsn(PUTSTATIC, owner, name, desc);
+        return this;
+    }
+
+    public Assembler label(Label l) {
+        mv.visitLabel(l);
+        return this;
+    }
+
+    public Assembler addLevelCheck(String clsName, Level level, Label jmp) {
+        return addLevelCheck(clsName, level.getValue(), jmp);
+    }
+
+    public Assembler addLevelCheck(String clsName, Interval itv, Label jmp) {
+        getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+        if (itv.getA() <= 0) {
+            if (itv.getB() != Integer.MAX_VALUE) {
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, jmp);
+            }
+        } else if (itv.getA() < itv.getB()) {
+            if (itv.getB() == Integer.MAX_VALUE) {
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, jmp);
+            } else {
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, jmp);
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, jmp);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * Compares the instrumentation level interval against the runtime value.
+     * <p>
+     * If the runtime value is fitting the level interval there will be 0
+     * on stack upon return from this method. Otherwise there will be -1.
+     *
+     * @param clsName The probe class name
+     * @param level The probe instrumentation level
+     * @return itself
+     */
+    public Assembler compareLevel(String clsName, Level level) {
+        Interval itv = level.getValue();
+        if (itv.getA() <= 0) {
+            if (itv.getB() != Integer.MAX_VALUE) {
+                ldc(itv.getB());
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                sub(Type.INT_TYPE);
+            }
+        } else if (itv.getA() < itv.getB()) {
+            if (itv.getB() == Integer.MAX_VALUE) {
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getA());
+                sub(Type.INT_TYPE);
+            } else {
+                Label l1 = new Label();
+                Label l2 = new Label();
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, l1);
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, l1);
+                ldc(0);
+                jump(Opcodes.GOTO, l2);
+                label(l1);
+                ldc(-1);
+                label(l2);
+            }
+        }
         return this;
     }
 }

@@ -25,8 +25,10 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.annotations.Where;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -34,6 +36,7 @@ import java.util.HashMap;
 import java.util.Map;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
+import com.sun.btrace.util.Interval;
 import com.sun.btrace.util.LocalVariableHelper;
 
 /**
@@ -42,6 +45,7 @@ import com.sun.btrace.util.LocalVariableHelper;
  * @author A. Sundararajan
  */
 public class MethodInstrumentor extends MethodVisitor implements LocalVariableHelper {
+    protected int levelCheckVar = Integer.MIN_VALUE;
     protected void visitMethodPrologue() {
     }
 
@@ -527,5 +531,54 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             }
         }
         return new ValidationResult(true, cleansedArgIndex);
+    }
+
+    private Label levelCheck(OnMethod om, String className, boolean saveResult) {
+        Label l = null;
+        Level level = om.getLevel();
+        if (isLevelCheck(level)) {
+            l = new Label();
+            if (saveResult) {
+                // must store the level in a local var to be consistent
+                asm.compareLevel(className, level).dup();
+                levelCheckVar = storeNewLocal(Type.INT_TYPE);
+                asm.jump(Opcodes.IFLT, l);
+            } else {
+                asm.addLevelCheck(className, level, l);
+}
+        }
+        return l;
+    }
+
+    protected Label levelCheck(OnMethod om, String className) {
+        return levelCheck(om, className, false);
+    }
+
+    protected Label levelCheckBefore(OnMethod om, String className) {
+        return levelCheck(om, className, om.getLocation().getWhere() == Where.AFTER);
+    }
+
+    protected Label levelCheckAfter(OnMethod om, String className) {
+        Label l = null;
+        if (levelCheckVar != Integer.MIN_VALUE) {
+            Level level = om.getLevel();
+            if (isLevelCheck(level)) {
+                l = new Label();
+                asm.loadLocal(Type.INT_TYPE, levelCheckVar)
+                   .jump(Opcodes.IFLT, l);
+            }
+        } else {
+            l = levelCheck(om, className);
+        }
+        return l;
+    }
+
+    private static boolean isLevelCheck(Level level) {
+        return level != null && !level.getValue().equals(Interval.ge(0));
+    }
+
+    private void report(String msg) {
+        String out = "[" + getName(true) + "] " + msg;
+        System.err.println(out);
     }
 }

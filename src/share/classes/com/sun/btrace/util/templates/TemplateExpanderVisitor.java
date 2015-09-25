@@ -33,6 +33,7 @@ import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.org.objectweb.asm.TypePath;
+import com.sun.btrace.runtime.Assembler;
 import com.sun.btrace.util.LocalVariableHelper;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
@@ -48,6 +49,8 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
     final private LocalVariableHelper lvs;
 
     final private Collection<TemplateExpander> expanders = new ArrayList<>();
+    final private String className, methodName, desc;
+    final private Assembler asm;
 
     public TemplateExpanderVisitor(LocalVariableHelper lvs,
                              String className, String methodName,
@@ -56,6 +59,14 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
         this.lvs = lvs;
 
         this.expanders.add(new MethodTrackingExpander(MethodID.getMethodId(className, methodName, desc)));
+        this.className = className;
+        this.methodName = methodName;
+        this.desc = desc;
+        this.asm = new Assembler((MethodVisitor)lvs);
+    }
+
+    public Assembler asm() {
+        return asm;
     }
 
     @Override
@@ -282,7 +293,17 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
         super.visitMaxs(stack, locals);
     }
 
+    public String getClassName() {
+        return className;
+    }
 
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
 
     private boolean expanding = false;
 

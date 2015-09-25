@@ -56,6 +56,12 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
     public void visitFieldInsn(int opcode, String owner,
         String name, String desc) {
         boolean get;
+        // ignore any internal BTrace fields
+        if (name.contains("$btrace$")) {
+            super.visitFieldInsn(opcode, owner, name, desc);
+            return;
+        }
+
         if (opcode == GETFIELD || opcode == GETSTATIC) {
             get = true;
         } else {

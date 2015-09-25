@@ -116,12 +116,13 @@ final public class BTraceConfigurator extends MethodVisitor {
                         case "type":
                             om.setType((String)value);
                             break;
+                        default:
+                            System.err.println("btrace WARNING: Unsupported @OnMethod attribute: " + name);
                     }
                 }
 
                 @Override
-                public AnnotationVisitor visitAnnotation(String name,
-                          String desc) {
+                public AnnotationVisitor visitAnnotation(String name, String desc) {
                     AnnotationVisitor av1 = super.visitAnnotation(name, desc);
                     if (desc.equals(LOCATION_DESC)) {
                         loc = new Location();
@@ -166,6 +167,19 @@ final public class BTraceConfigurator extends MethodVisitor {
                                     om.setLocation(loc);
                                 }
                                 super.visitEnd();
+                            }
+                        };
+                    } else if (desc.equals(LEVEL_DESC)) {
+                        return new AnnotationVisitor(Opcodes.ASM5, av1) {
+                            @Override
+                            public void	visit(String name, Object value) {
+                                super.visit(name, value);
+
+                                switch (name) {
+                                    case "value":
+                                        om.setLevel(Level.fromString((String)value));
+                                        break;
+                                }
                             }
                         };
                     }

@@ -36,7 +36,7 @@ import java.util.StringTokenizer;
  * @since 1.3
  */
 public final class BTraceTemplates {
-    private static final Map<String, Template> templateMap = new HashMap<String, Template>();
+    private static final Map<String, Template> templateMap = new HashMap<>();
 
     public static void registerTemplates(Template ... templates) {
         for(Template t : templates) {
@@ -55,7 +55,7 @@ public final class BTraceTemplates {
             if (t != null) {
                 StringTokenizer st = new StringTokenizer(vals[1], ",");
 
-                Set<String> tags = new HashSet<String>();
+                Set<String> tags = new HashSet<>();
                 while (st.hasMoreTokens()) {
                     String param = st.nextToken();
                     tags.add(param);
