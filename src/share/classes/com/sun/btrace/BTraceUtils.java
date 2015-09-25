@@ -2253,12 +2253,28 @@ public class BTraceUtils {
     	return Collections.removeFirst(queue);
     }
 
-    public static void setInstrLevel(int level) {
-        BTraceRuntime.setInstrLevel(level);
+    /**
+     * Sets the current instrumentation intrusion level.
+     * <p>All the probes with the intrusion level lower or equal
+     * to what is being set are going to become active.</p>
+     * @param level the highest allowed intrusion level
+     *
+     * @since 1.3.4
+     */
+    public static void setIntrusionLevel(int level) {
+        BTraceRuntime.setIntrusionLevel(level);
     }
 
-    public static int getInstrLevel() {
-        return BTraceRuntime.getInstrLevel();
+    /**
+     * Returns the allowed intrusion level.
+     * <p>All the probes with the intrusion level lower or equal
+     * to what is currently set are going to become active.</p>
+     * @return the allowed intrusion level
+     *
+     * @since 1.3.4
+     */
+    public static int getIntrusionLevel() {
+        return BTraceRuntime.getIntrusionLevel();
     }
 
     /**

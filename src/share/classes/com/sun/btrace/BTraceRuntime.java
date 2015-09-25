@@ -413,7 +413,7 @@ public final class BTraceRuntime  {
         }
     }
 
-    static int getInstrLevel() {
+    static int getIntrusionLevel() {
         BTraceRuntime cur = getCurrent();
 
         try {
@@ -423,7 +423,7 @@ public final class BTraceRuntime  {
         }
     }
 
-    static void setInstrLevel(int level) {
+    static void setIntrusionLevel(int level) {
         BTraceRuntime cur = getCurrent();
         try {
             cur.level.set(cur, level);

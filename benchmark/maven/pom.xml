@@ -73,7 +73,7 @@ questions.
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jmh.version>0.9.2</jmh.version>
+        <jmh.version>1.7.1</jmh.version>
         <classes.jar>${java.home}/../Classes/classes.jar</classes.jar>
         <tools.jar>${java.home}/../lib/tools.jar</tools.jar>
     </properties>

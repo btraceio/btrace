@@ -85,7 +85,14 @@ public @interface OnMethod {
      * probes with the intrusiveness level smaller or equal to the required
      * number.
      * </p>
+     * <p>
+     * The developer must make sure that all the handlers which are interconnected
+     * in any way (eg. method entry/exit) will have a compatible intrusiveness
+     * level set.
+     * </p>
+     *
      * @return The intrusiveness level (default 0)
+     * @since 1.3.4
      */
     int level() default 0;
 }

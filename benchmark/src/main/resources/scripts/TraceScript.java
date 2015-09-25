@@ -16,8 +16,13 @@ import com.sun.btrace.annotations.Sampled;
 
 @BTrace
 public class TraceScript {
-    @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethod", level=1)
+    @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethod")
     public static void onMethodEntryEmpty(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
+
+    }
+
+    @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethodLevelNoMatch", level = 100)
+    public static void onMethodEntryEmptyLevelNoMatch(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
 
     }
 

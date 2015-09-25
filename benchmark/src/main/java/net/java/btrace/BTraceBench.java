@@ -159,6 +159,13 @@ public class BTraceBench {
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
+    public void testInstrumentedMethodLevelNoMatch() {
+        counter++;
+    }
+
+    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
     public void testInstrumentedMethodSampled() {
         counter++;
     }
@@ -287,10 +294,10 @@ public class BTraceBench {
         BTraceConfig bc = getConfig();
         try {
             Options opt = new OptionsBuilder()
-                    .addProfiler(ProfilerFactory.getProfilerByName("perfasm"))
+                    .addProfiler(ProfilerFactory.getProfilerByName("stack"))
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*testInstrumentedMethod")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test")
                     .build();
 
             new Runner(opt).run();
