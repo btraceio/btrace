@@ -121,7 +121,6 @@ abstract public class RuntimeTest {
             cp,
             testApp
         );
-        pb.environment().remove("JAVA_TOOL_OPTIONS");
 
         Process p = pb.start();
         final PrintWriter pw = new PrintWriter(p.getOutputStream());
@@ -217,7 +216,6 @@ abstract public class RuntimeTest {
             trace
         );
 
-        pb.environment().remove("JAVA_TOOL_OPTIONS");
         final Process p = pb.start();
 
         final CountDownLatch l = new CountDownLatch(checkLines);
