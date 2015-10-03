@@ -433,12 +433,12 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             Type selfType = extraTypes.get(om.getSelfParameter());
             if (selfType == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getSelfParameter()])) {
-                    System.err.println("Invalid @Self parameter. @Self parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getSelfParameter()]);
+                    report("Invalid @Self parameter. @Self parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getSelfParameter()]);
                     return ValidationResult.INVALID;
                 }
             } else {
                 if (!TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter()], selfType)) {
-                    System.err.println("Invalid @Self parameter. @Self parameter is not compatible. Expected " + selfType + ", Received " + actionArgTypes[om.getSelfParameter()]);
+                    report("Invalid @Self parameter. @Self parameter is not compatible. Expected " + selfType + ", Received " + actionArgTypes[om.getSelfParameter()]);
                     return ValidationResult.INVALID;
                 }
             }
@@ -451,12 +451,12 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             }
             if (type == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getReturnParameter()])) {
-                    System.err.println("Invalid @Return parameter. @Return parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getReturnParameter()]);
+                    report("Invalid @Return parameter. @Return parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getReturnParameter()]);
                     return ValidationResult.INVALID;
                 }
             } else {
                 if (!TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter()], type)) {
-                    System.err.println("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
+                    report("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
                     return ValidationResult.INVALID;
                 }
             }
@@ -464,7 +464,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         }
         if (om.getTargetMethodOrFieldParameter() != -1) {
             if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], Type.getType(String.class)))) {
-                System.err.println("Invalid @CalledMethod parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
+                report("Invalid @CalledMethod parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
@@ -473,12 +473,12 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             Type calledType = extraTypes.get(om.getTargetInstanceParameter());
             if (calledType == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getTargetInstanceParameter()])) {
-                    System.err.println("Invalid @CalledInstance parameter. @CalledInstance parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getTargetInstanceParameter()]);
+                    report("Invalid @CalledInstance parameter. @CalledInstance parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getTargetInstanceParameter()]);
                     return ValidationResult.INVALID;
                 }
             } else {
                 if (!TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)) {
-                    System.err.println("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
+                    report("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
                     return ValidationResult.INVALID;
                 }
             }

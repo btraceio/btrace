@@ -80,7 +80,7 @@ class TypeUtils {
     }
 
     public static boolean isArray(Type t) {
-        return t.getInternalName().startsWith("[");
+        return t.getSort() == Type.ARRAY;
     }
 
     public static boolean isThrowable(Type t) {
@@ -108,6 +108,9 @@ class TypeUtils {
         } else if(isObjectOrAnyType(left)) {
             int sort2 = right.getSort();
             return (sort2 == Type.OBJECT || sort2 == Type.ARRAY);
+        } else if (isPrimitive(left)) {
+            // a primitive type requires strict equality
+            return left.equals(right);
         } else {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
             if (cl == null) {
