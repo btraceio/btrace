@@ -31,21 +31,20 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.Return;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class NoArgsEntryReturn {
+public class NoArgsEntryReturnNoCapture {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
     public static void argsEmptyEntry(@Self Object x) {
         println("entry");
     }
 
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
-    public static void argsEmptyReturn(@Self Object x, @Return long ret) {
+    public static void argsEmptyReturn(@Self Object x) {
         println("return");
     }
 }

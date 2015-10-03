@@ -47,6 +47,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -293,6 +295,26 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                         return false;
                     }
                 }
+
+                final Map<String, Integer> annotationHisto = new HashMap<>();
+                for(VariableTree vt : node.getParameters()) {
+                    vt.accept(new TreeScanner<Void, Void>() {
+                        @Override
+                        public Void visitAnnotation(AnnotationTree at, Void p) {
+                            String annType = at.getAnnotationType().toString();
+                            Integer cnt = annotationHisto.get(annType);
+                            if (cnt == null) {
+                                cnt = 0;
+                            } else {
+                                reportError("multiple.param.annotation", at);
+                                cnt++;
+                            }
+                            annotationHisto.put(annType, cnt);
+                            return super.visitAnnotation(at, p);
+                        }
+                    }, null);
+                }
+
                 Set<Modifier> flags = node.getModifiers().getFlags();
                 if (shortSyntax) {
                     boolean err = true;

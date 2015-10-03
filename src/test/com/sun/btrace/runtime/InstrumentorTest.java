@@ -1277,8 +1277,30 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/NoArgsEntryReturn");
 
-        checkTransformation("ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyEntry (Ljava/lang/Object;)V\n"
-                + "ALOAD 0\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyReturn (Ljava/lang/Object;)V");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyEntry (Ljava/lang/Object;)V\n" +
+            "DUP2\n" +
+            "LSTORE 6\n" +
+            "ALOAD 0\n" +
+            "LLOAD 6\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturn$argsEmptyReturn (Ljava/lang/Object;J)V\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 8"
+        );
+    }
+
+    @Test
+    public void methodEntryNoArgsEntryReturnNoCapture() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/NoArgsEntryReturnNoCapture");
+
+        checkTransformation(
+            "ALOAD 0\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturnNoCapture$argsEmptyEntry (Ljava/lang/Object;)V\n" +
+            "ALOAD 0\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NoArgsEntryReturnNoCapture$argsEmptyReturn (Ljava/lang/Object;)V"
+        );
     }
 
     @Test

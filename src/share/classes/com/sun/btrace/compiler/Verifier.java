@@ -70,11 +70,9 @@ import com.sun.tools.javac.util.Context;
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class Verifier extends AbstractProcessor
                             implements TaskListener {
-    private final List<String> classNames =
-        new ArrayList<String>();
+    private final List<String> classNames = new ArrayList<>();
     private Trees treeUtils;
-    private final List<CompilationUnitTree> compUnits =
-        new ArrayList<CompilationUnitTree>();
+    private final List<CompilationUnitTree> compUnits = new ArrayList<>();
     private ClassTree currentClass;
     private final AttributionTaskListener listener = new AttributionTaskListener();
 
@@ -85,11 +83,13 @@ public class Verifier extends AbstractProcessor
         prepareContext(((JavacProcessingEnvironment)pe).getContext());
     }
 
+    @Override
     public boolean process(Set<? extends TypeElement> annotations,
                            RoundEnvironment roundEnv) {
         return true;
     }
 
+    @Override
     public void started(TaskEvent e) {
         if (e.getKind() == TaskEvent.Kind.ENTER) {
             CompilationUnitTree ct = e.getCompilationUnit();
@@ -99,6 +99,7 @@ public class Verifier extends AbstractProcessor
         }
     }
 
+    @Override
     public void finished(TaskEvent e) {
         if (e.getKind() != TaskEvent.Kind.ANALYZE) return;
         if (processingEnv == null) {
