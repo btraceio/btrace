@@ -33,6 +33,7 @@ import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -41,7 +42,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class NewArrayIntAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="newArray",
-              location=@Location(value=Kind.NEWARRAY, clazz="int", where=Where.AFTER), level = 1)
+              location=@Location(value=Kind.NEWARRAY, clazz="int", where=Where.AFTER), enableAt = @Level(">=1"))
     public static void args(@Self Object self, @Return int[] retVal) {
         println("args");
     }

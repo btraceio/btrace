@@ -29,6 +29,7 @@ import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.OnMethod;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -36,7 +37,7 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class AnytypeArgsNoSelf {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", level  = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level(">=1"))
     public static void argsNoSelf(AnyType[] args) {
         println("args no self");
     }

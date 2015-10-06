@@ -22,23 +22,35 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-package traces.onmethod.leveled;
-
-import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.Self;
-import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.Level;
+package com.sun.btrace.annotations;
 
 /**
+ * Allows specifying a probe handler instrumentation level matching expression.
+ * <p>See {@linkplain Level#value()} for the allowed expression syntax.</p>
  *
  * @author Jaroslav Bachorik
  */
-@BTrace
-public class NativeWithoutReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="nativeWithoutReturn", enableAt = @Level(">=1"))
-    public static void nMethod(@Self Object self) {
-        println("args");
-    }
+public @interface Level {
+    /**
+     * The level check expression.
+     * <p>Allowed syntax is one of the following
+     * <ul>
+     * <li>{@code @Level("NUMBER")} - the same as {@code @Level(">=NUMBER")}
+     * <li>{@code @Level("=NUMBER")} - handler is enabled when instrumentation level
+     *     equals <b>NUMBER</b></li>
+     * <li>{@code @Level(">NUMBER")} - handler is enabled when instrumentation level
+     *     is greater than <b>NUMBER</b></li>
+     * <li>{@code @Level(">=NUMBER")} - handler is enabled when instrumentation level
+     *     is greater than or equal to <b>NUMBER</b></li>
+     * <li>{@code @Level("<NUMBER")} - handler is enabled when instrumentation level
+     *     is less than <b>NUMBER</b></li>
+     * <li>{@code @Level("<=NUMBER")} - handler is enabled when instrumentation level
+     *     is less than or equal to <b>NUMBER</b></li>
+     * </ul>
+     * </p>
+     * <p>Where <b>NUMBER</b> is a non-negative integer number.
+     *
+     * @return
+     */
+    String value() default "";
 }

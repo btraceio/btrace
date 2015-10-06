@@ -33,6 +33,7 @@ import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.Sampled;
 
 /**
@@ -41,13 +42,13 @@ import com.sun.btrace.annotations.Sampled;
  */
 @BTrace
 public class ArgsDuration2Sampled {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), level = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), enableAt = @Level(">=1"))
     @Sampled(kind = Sampled.Sampler.Const)
     public static void args(@Self Object self, @Return long retVal, @Duration long dur, String a, long b, String[] c, int[] d) {
         println("args");
     }
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="/arg.*/", location=@Location(value=Kind.RETURN), level = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), enableAt = @Level("<=5"))
     @Sampled(kind = Sampled.Sampler.Const)
     public static void args2(@Self Object self, @Return long retVal, @Duration long dur, String a, long b, String[] c, int[] d) {
         println("args");

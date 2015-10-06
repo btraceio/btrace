@@ -30,6 +30,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Sampled;
@@ -40,7 +41,7 @@ import com.sun.btrace.annotations.Sampled;
  */
 @BTrace
 public class ArgsReturnSampled {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), level = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), enableAt = @Level(">=1"))
     @Sampled(kind = Sampled.Sampler.Const)
     public static void args(@Self Object self, @Return long retVal, String a, long b, String[] c, int[] d) {
         println("args");

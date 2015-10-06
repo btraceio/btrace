@@ -32,6 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -39,7 +40,7 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class ArgsDurationConstructor {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="<init>", location=@Location(value=Kind.RETURN), level = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="<init>", location=@Location(value=Kind.RETURN), enableAt = @Level(">=1"))
     public static void args(@Self Object self, @Duration long dur, String a) {
         println("args");
     }

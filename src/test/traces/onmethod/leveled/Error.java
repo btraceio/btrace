@@ -32,6 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -40,7 +41,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class Error {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="uncaught",
-              location=@Location(value=Kind.ERROR), level = 1)
+              location=@Location(value=Kind.ERROR), enableAt = @Level(">=1"))
     public static void args(@Self Object self, @ProbeMethodName String pmn, Throwable cause) {
         println("args");
     }

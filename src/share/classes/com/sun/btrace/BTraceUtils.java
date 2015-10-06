@@ -38,6 +38,7 @@ import sun.reflect.Reflection;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
+import com.sun.btrace.annotations.OnMethod;
 import java.io.Serializable;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.Reference;
@@ -2254,27 +2255,29 @@ public class BTraceUtils {
     }
 
     /**
-     * Sets the current instrumentation intrusion level.
-     * <p>All the probes with the intrusion level lower or equal
-     * to what is being set are going to become active.</p>
-     * @param level the highest allowed intrusion level
+     * Sets the current instrumentation level.
+     * <p>Instrumentation level is used in evaluating {@linkplain OnMethod#enableAt()}
+     * expressions to enable/disable the probe handler.</p>
+     * @param level an arbitrary non negative integer number
      *
      * @since 1.3.4
      */
-    public static void setIntrusionLevel(int level) {
-        BTraceRuntime.setIntrusionLevel(level);
+    public static void setInstrumentationLevel(int level) {
+        if (level >= 0) {
+            BTraceRuntime.setInstrumentationLevel(level);
+        }
     }
 
     /**
-     * Returns the allowed intrusion level.
-     * <p>All the probes with the intrusion level lower or equal
-     * to what is currently set are going to become active.</p>
-     * @return the allowed intrusion level
+     * Returns the current instrumentation level.
+     * <p>Instrumentation level is used in evaluating {@linkplain OnMethod#enableAt()}
+     * expressions to enable/disable the probe handler.</p>
+     * @return the instrumentation level (non negative integer)
      *
      * @since 1.3.4
      */
-    public static int getIntrusionLevel() {
-        return BTraceRuntime.getIntrusionLevel();
+    public static int getInstrumentationLevel() {
+        return BTraceRuntime.getInstrumentationLevel();
     }
 
     /**

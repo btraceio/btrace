@@ -35,6 +35,7 @@ import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.Sampled;
 
 /**
@@ -44,7 +45,7 @@ import com.sun.btrace.annotations.Sampled;
 @BTrace
 public class MethodCallSampledAdaptive {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), level = 1)
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), enableAt = @Level(">=1"))
     @Sampled(kind = Sampled.Sampler.Adaptive)
     public static void args(@Self Object self, String a, long b,
                             @TargetInstance Object calledSelf, @TargetMethodOrField(fqn=true) String calledMethod,

@@ -33,6 +33,7 @@ import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Where;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Duration;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -41,13 +42,13 @@ import com.sun.btrace.annotations.Duration;
 @BTrace
 public class MethodCallDuration2 {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), level = 1)
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), enableAt = @Level(">=1"))
     public static void args0(@Return long retVal, @Duration long dur, String a, long b) {
         println("args");
     }
 
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), level = 1)
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), enableAt = @Level(">=1"))
     public static void args1(@Return long retVal, @Duration long dur, String a, long b) {
         println("args");
     }

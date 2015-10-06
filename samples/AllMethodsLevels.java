@@ -40,20 +40,20 @@ import static com.sun.btrace.BTraceUtils.*;
      */
     @OnMethod(
         clazz="javax.swing.JComponent",
-        method="/.*/"
+        method="/.*/",
+        enableAt=@Level("=0")
     )
     public static void l0(@ProbeMethodName(fqn = true) String probeMethod) {
         println("# " + probeMethod);
     }
 
     /**
-     * This will intercept all the methods from javax.swing.* classes in addition
-     * to javax.swing.JComponent methods captured in 'l0'.
+     * This will intercept all the methods from javax.swing.* classes.
      */
     @OnMethod(
-        clazz="/javax\\.swing\\.(?:(?!\\.JComponent).)*/",
+        clazz="/javax\\.swing\\.*/",
         method="/.*/",
-        level = 1
+        enableAt=@Level(">=1")
     )
     public static void l1(@ProbeMethodName(fqn = true) String probeMethod) {
         println("## " + probeMethod);
@@ -64,7 +64,7 @@ import static com.sun.btrace.BTraceUtils.*;
      */
     @OnEvent("l0")
     public static void setL0() {
-        BTraceUtils.setIntrusionLevel(0);
+        BTraceUtils.setInstrumentationLevel(0);
     }
 
     /**
@@ -72,6 +72,6 @@ import static com.sun.btrace.BTraceUtils.*;
      */
     @OnEvent("l1")
     public static void setL1() {
-        BTraceUtils.setIntrusionLevel(1);
+        BTraceUtils.setInstrumentationLevel(1);
     }
 }

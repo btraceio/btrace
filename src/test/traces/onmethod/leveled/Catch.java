@@ -32,6 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import java.io.IOException;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -40,7 +41,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class Catch {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="exception",
-              location=@Location(value=Kind.CATCH), level = 1)
+              location=@Location(value=Kind.CATCH), enableAt = @Level(">=1"))
     public static void args(@Self Object self, IOException e) {
         println("args");
     }

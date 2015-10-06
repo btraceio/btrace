@@ -297,7 +297,7 @@ public class BTraceBench {
                     .addProfiler(ProfilerFactory.getProfilerByName("stack"))
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
                     .build();
 
             new Runner(opt).run();

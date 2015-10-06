@@ -29,6 +29,7 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.Sampled;
 
 /**
@@ -37,7 +38,7 @@ import com.sun.btrace.annotations.Sampled;
  */
 @BTrace
 public class ArgsSampledAdaptive {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", level = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level(">=1"))
     @Sampled(kind = Sampled.Sampler.Adaptive)
     public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
         println("this = " + self);

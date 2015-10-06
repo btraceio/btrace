@@ -34,6 +34,7 @@ import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import java.util.Map;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -42,7 +43,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class NewAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="newObject",
-              location=@Location(value=Kind.NEW, clazz="/.*/", where=Where.AFTER), level = 1)
+              location=@Location(value=Kind.NEW, clazz="/.*/", where=Where.AFTER), enableAt = @Level(">=1"))
     public static void args(@Self Object self, @Return Map instance, String instanceClassName) {
         println("args");
     }

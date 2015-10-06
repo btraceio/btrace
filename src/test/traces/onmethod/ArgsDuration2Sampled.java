@@ -47,7 +47,7 @@ public class ArgsDuration2Sampled {
         println("args");
     }
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="/arg.*/", location=@Location(value=Kind.RETURN))
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
     @Sampled(kind = Sampled.Sampler.Const)
     public static void args2(@Self Object self, @Return long retVal, @Duration long dur, String a, long b, String[] c, int[] d) {
         println("args");

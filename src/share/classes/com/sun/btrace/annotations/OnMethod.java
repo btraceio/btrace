@@ -25,6 +25,7 @@
 
 package com.sun.btrace.annotations;
 
+import com.sun.btrace.BTraceUtils;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -78,21 +79,23 @@ public @interface OnMethod {
     Location location() default @Location();
 
     /**
-     * The intrusiveness level of this probe.
+     * Activate this probe according to instrumentation level.
+     *
      * <p>
-     * It is possible to define the intrusiveness level for each probe
-     * and then by dynamically modifying per-script settings enable just the
-     * probes with the intrusiveness level smaller or equal to the required
-     * number.
+     * It is possible to define enable/disable the handler according to the
+     * current instrumentation level. Eg. {@code @OnMethod(clazz="class",
+     * method="method", enableAt=@Level(">1")}
      * </p>
      * <p>
      * The developer must make sure that all the handlers which are interconnected
-     * in any way (eg. method entry/exit) will have a compatible intrusiveness
-     * level set.
+     * in any way (eg. method entry/exit) will be enabled/disabled at a compatible
+     * instrumentation level.
      * </p>
      *
-     * @return The intrusiveness level (default 0)
+     * @return The instrumentation level (default {@code @Level("0")})
+     * @see Level
+     * @see BTraceUtils#getInstrumentationLevel()
      * @since 1.3.4
      */
-    int level() default 0;
+    Level enableAt() default @Level;
 }

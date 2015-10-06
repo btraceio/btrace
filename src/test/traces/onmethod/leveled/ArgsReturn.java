@@ -32,6 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -39,7 +40,7 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class ArgsReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), level = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), enableAt = @Level(">=1"))
     public static void args(@Self Object self, @Return long retVal, String a, long b, String[] c, int[] d) {
         println("args");
     }

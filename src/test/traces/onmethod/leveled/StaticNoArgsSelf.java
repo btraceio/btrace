@@ -29,6 +29,7 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -36,7 +37,7 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class StaticNoArgsSelf {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="noargs$static", level  = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="noargs$static", enableAt = @Level(">=1"))
     public static void argsEmpty(@Self Object self) {
         println("args empty");
     }

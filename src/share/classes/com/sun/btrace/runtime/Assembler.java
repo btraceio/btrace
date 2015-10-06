@@ -31,6 +31,7 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.util.Interval;
 
 /**
  * Convenient fluent wrapper over the ASM method visitor
@@ -103,6 +104,24 @@ final public class Assembler {
                     }
                     case -1: {
                         opcode = ICONST_M1;
+                        break;
+                    }
+                }
+                mv.visitInsn(opcode);
+                return this;
+            }
+        }
+        if (o instanceof Long) {
+            long l = (long)o;
+            if (l >= 0 && l <= 1) {
+                int opcode = -1;
+                switch((int)l) {
+                    case 0: {
+                        opcode = LCONST_0;
+                        break;
+                    }
+                    case 1: {
+                        opcode = LCONST_1;
                         break;
                     }
                 }
@@ -480,9 +499,75 @@ final public class Assembler {
         return this;
     }
 
-    public Assembler addLevelCheck(String clsName, int level, Label jmp) {
-        return getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor())
-                .ldc(level)
-                .jump(Opcodes.IF_ICMPLT, jmp);
+    public Assembler label(Label l) {
+        mv.visitLabel(l);
+        return this;
+    }
+
+    public Assembler addLevelCheck(String clsName, Level level, Label jmp) {
+        return addLevelCheck(clsName, level.getValue(), jmp);
+    }
+
+    public Assembler addLevelCheck(String clsName, Interval itv, Label jmp) {
+        getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+        if (itv.getA() <= 0) {
+            if (itv.getB() != Integer.MAX_VALUE) {
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, jmp);
+            }
+        } else if (itv.getA() < itv.getB()) {
+            if (itv.getB() == Integer.MAX_VALUE) {
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, jmp);
+            } else {
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, jmp);
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, jmp);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * Compares the instrumentation level interval against the runtime value.
+     * <p>
+     * If the runtime value is fitting the level interval there will be 0
+     * on stack upon return from this method. Otherwise there will be -1.
+     *
+     * @param clsName The probe class name
+     * @param level The probe instrumentation level
+     * @return itself
+     */
+    public Assembler compareLevel(String clsName, Level level) {
+        Interval itv = level.getValue();
+        if (itv.getA() <= 0) {
+            if (itv.getB() != Integer.MAX_VALUE) {
+                ldc(itv.getB());
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                sub(Type.INT_TYPE);
+            }
+        } else if (itv.getA() < itv.getB()) {
+            if (itv.getB() == Integer.MAX_VALUE) {
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getA());
+                sub(Type.INT_TYPE);
+            } else {
+                Label l1 = new Label();
+                Label l2 = new Label();
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, l1);
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, l1);
+                ldc(0);
+                jump(Opcodes.GOTO, l2);
+                label(l1);
+                ldc(-1);
+                label(l2);
+            }
+        }
+        return this;
     }
 }

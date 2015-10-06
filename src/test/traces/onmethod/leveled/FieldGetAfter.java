@@ -35,6 +35,7 @@ import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -43,7 +44,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class FieldGetAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="field",
-              location=@Location(value=Kind.FIELD_GET, clazz="resources.OnMethodTest", field="field", where=Where.AFTER), level = 1)
+              location=@Location(value=Kind.FIELD_GET, clazz="resources.OnMethodTest", field="field", where=Where.AFTER), enableAt = @Level(">=1"))
     public static void args(@Self Object self, @TargetInstance Object inst, @TargetMethodOrField String fldName, @Return int fldVal) {
         println("args");
     }
