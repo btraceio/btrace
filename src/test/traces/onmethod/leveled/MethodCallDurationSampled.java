@@ -33,6 +33,7 @@ import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Where;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Duration;
+import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.Sampled;
 
 /**
@@ -42,7 +43,7 @@ import com.sun.btrace.annotations.Sampled;
 @BTrace
 public class MethodCallDurationSampled {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), level = 1)
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), level = @Level(1))
     @Sampled(kind = Sampled.Sampler.Const)
     public static void args(@Return long retVal, @Duration long dur, String a, long b) {
         println("args");

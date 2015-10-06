@@ -110,6 +110,24 @@ final public class Assembler {
                 return this;
             }
         }
+        if (o instanceof Long) {
+            long l = (long)o;
+            if (l >= 0 && l <= 1) {
+                int opcode = -1;
+                switch((int)l) {
+                    case 0: {
+                        opcode = LCONST_0;
+                        break;
+                    }
+                    case 1: {
+                        opcode = LCONST_1;
+                        break;
+                    }
+                }
+                mv.visitInsn(opcode);
+                return this;
+            }
+        }
         mv.visitLdcInsn(o);
         return this;
     }
@@ -480,9 +498,69 @@ final public class Assembler {
         return this;
     }
 
-    public Assembler addLevelCheck(String clsName, int level, Label jmp) {
+    public Assembler label(Label l) {
+        mv.visitLabel(l);
+        return this;
+    }
+
+    public Assembler addLevelCheck(String clsName, Level level, Label jmp) {
+        return addLevelCheck(clsName, level.getValue(), level.getKind(), jmp);
+    }
+
+    public Assembler addLevelCheck(String clsName, int level, com.sun.btrace.annotations.Level.Cond cond, Label jmp) {
         return getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor())
                 .ldc(level)
-                .jump(Opcodes.IF_ICMPLT, jmp);
+                .jump(getLevelCmpJmp(cond), jmp);
     }
+
+    public Assembler addLevelCmp(Level level, Label jmp) {
+        return jump(getLevelCmpJmp(level.getKind()), jmp);
+    }
+
+    public Assembler addLevelIfJmp(Level level, Label jmp) {
+        return jump(getLevelCheckJmp(level.getKind()), jmp);
+    }
+
+    private static int getLevelCmpJmp(com.sun.btrace.annotations.Level.Cond l) {
+        switch (l) {
+            case EQ: {
+                return Opcodes.IF_ICMPNE;
+            }
+            case LT: {
+                return Opcodes.IF_ICMPGE;
+            }
+            case LE: {
+                return Opcodes.IF_ICMPGT;
+            }
+            case GT: {
+                return Opcodes.IF_ICMPLE;
+            }
+            case GE: {
+                return Opcodes.IF_ICMPLT;
+            }
+        }
+        return Opcodes.NOP;
+    }
+
+    private static int getLevelCheckJmp(com.sun.btrace.annotations.Level.Cond l) {
+        switch (l) {
+            case EQ: {
+                return Opcodes.IFNE;
+            }
+            case LT: {
+                return Opcodes.IFGE;
+            }
+            case LE: {
+                return Opcodes.IFGT;
+            }
+            case GT: {
+                return Opcodes.IFLE;
+            }
+            case GE: {
+                return Opcodes.IFLT;
+            }
+        }
+        return Opcodes.NOP;
+    }
+
 }

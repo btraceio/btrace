@@ -44,7 +44,7 @@ public final class Template {
     private final String owner = "com/sun/btrace/Templates";
     private final String name;
     private final String sig;
-    private final Set<String> tags = new HashSet<String>();
+    private final Set<String> tags = new HashSet<>();
 
     public Template(String name, String sig) {
         this.name = name;
@@ -54,9 +54,7 @@ public final class Template {
     public Template(String name, String sig, String ... tags) {
         this.name = name;
         this.sig = sig;
-        for(String t : tags) {
-            this.tags.add(t);
-        }
+        this.tags.addAll(Arrays.asList(tags));
     }
 
     public String getOwner() {
@@ -76,7 +74,7 @@ public final class Template {
     }
 
     public void insert(MethodVisitor mv, String ... tags) {
-        insert(mv, new HashSet<String>(Arrays.asList(tags)));
+        insert(mv, new HashSet<>(Arrays.asList(tags)));
     }
 
     public void insert(MethodVisitor mv, Set<String> tags) {
@@ -99,7 +97,7 @@ public final class Template {
     }
 
     public Map<String, String> getTagMap() {
-        Map<String, String> tMap = new HashMap<String, String>();
+        Map<String, String> tMap = new HashMap<>();
 
         for(String t : tags) {
             if (t.contains("=")) {
@@ -141,10 +139,7 @@ public final class Template {
             return false;
         }
         final Template other = (Template) obj;
-        if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
-            return false;
-        }
-        return true;
+        return !((this.name == null) ? (other.name != null) : !this.name.equals(other.name));
     }
 
     @Override

@@ -33,6 +33,7 @@ import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.Self;
 import java.util.HashMap;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -41,7 +42,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class InstanceofBefore {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="casts",
-              location=@Location(value=Kind.INSTANCEOF), level = 1)
+              location=@Location(value=Kind.INSTANCEOF), level = @Level(1))
     public static void args(@Self Object self, @ProbeClassName String pcn, HashMap casting) {
         println("args");
     }

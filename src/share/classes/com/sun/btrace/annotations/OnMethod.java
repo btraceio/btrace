@@ -94,5 +94,5 @@ public @interface OnMethod {
      * @return The intrusiveness level (default 0)
      * @since 1.3.4
      */
-    int level() default 0;
+    Level level() default @Level;
 }

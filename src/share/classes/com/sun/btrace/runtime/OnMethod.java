@@ -51,7 +51,7 @@ public class OnMethod extends SpecialParameterHolder {
     private int samplerMean = 0;
     private Sampled.Sampler samplerKind = Sampled.Sampler.None;
 
-    private int level = 0;
+    private com.sun.btrace.runtime.Level level = new com.sun.btrace.runtime.Level();
 
     public OnMethod() {
     }
@@ -129,11 +129,11 @@ public class OnMethod extends SpecialParameterHolder {
         return samplerMean;
     }
 
-    public int getLevel() {
+    public Level getLevel() {
         return level;
     }
 
-    public void setLevel(int level) {
+    public void setLevel(Level level) {
         this.level = level;
     }
 }

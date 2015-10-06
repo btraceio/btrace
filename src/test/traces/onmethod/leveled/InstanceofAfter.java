@@ -34,6 +34,7 @@ import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import java.util.HashMap;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -42,7 +43,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class InstanceofAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="casts",
-              location=@Location(value=Kind.INSTANCEOF, where=Where.AFTER), level = 1)
+              location=@Location(value=Kind.INSTANCEOF, where=Where.AFTER), level = @Level(1))
     public static void args(@Self Object self, @ProbeMethodName String pmn, HashMap casted) {
         println("args");
     }

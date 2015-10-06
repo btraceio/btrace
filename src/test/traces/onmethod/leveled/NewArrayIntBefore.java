@@ -31,6 +31,7 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -39,7 +40,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class NewArrayIntBefore {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="newArray",
-              location=@Location(value=Kind.NEWARRAY, clazz="int"), level = 1)
+              location=@Location(value=Kind.NEWARRAY, clazz="int"), level = @Level(1))
     public static void args(@Self Object self, String arrayType, int dims) {
         println("args");
     }

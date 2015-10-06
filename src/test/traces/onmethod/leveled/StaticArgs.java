@@ -28,6 +28,7 @@ package traces.onmethod.leveled;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.OnMethod;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -35,7 +36,7 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class StaticArgs {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args$static", level  = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args$static", level = @Level(1))
     public static void args(String a, long b, String[] c, int[] d) {
         println("args");
     }

@@ -35,6 +35,7 @@ import com.sun.btrace.annotations.Where;
 import com.sun.btrace.AnyType;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.Injected;
+import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.services.api.Service;
@@ -80,6 +81,12 @@ public abstract class Constants {
 
     public static final String LOCATION_DESC =
         Type.getDescriptor(Location.class);
+
+    public static final String LEVEL_DESC =
+        Type.getDescriptor(Level.class);
+
+    public static final String LEVEL_KIND_DESC =
+        Type.getDescriptor(Level.Cond.class);
 
     public static final String WHERE_DESC =
         Type.getDescriptor(Where.class);

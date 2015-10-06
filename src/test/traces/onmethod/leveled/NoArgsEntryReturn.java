@@ -31,6 +31,7 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -38,12 +39,12 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class NoArgsEntryReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", level  = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", level = @Level(1))
     public static void argsEmptyEntry(@Self Object x) {
         println("entry");
     }
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), level  = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), level = @Level(1))
     public static void argsEmptyReturn(@Self Object x) {
         println("return");
     }

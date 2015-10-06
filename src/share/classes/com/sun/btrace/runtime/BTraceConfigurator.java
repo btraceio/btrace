@@ -116,17 +116,13 @@ final public class BTraceConfigurator extends MethodVisitor {
                         case "type":
                             om.setType((String)value);
                             break;
-                        case "level":
-                            om.setLevel((int)value);
-                            break;
                         default:
                             System.err.println("btrace WARNING: Unsupported @OnMethod attribute: " + name);
                     }
                 }
 
                 @Override
-                public AnnotationVisitor visitAnnotation(String name,
-                          String desc) {
+                public AnnotationVisitor visitAnnotation(String name, String desc) {
                     AnnotationVisitor av1 = super.visitAnnotation(name, desc);
                     if (desc.equals(LOCATION_DESC)) {
                         loc = new Location();
@@ -169,6 +165,37 @@ final public class BTraceConfigurator extends MethodVisitor {
                             public void visitEnd() {
                                 if (loc != null) {
                                     om.setLocation(loc);
+                                }
+                                super.visitEnd();
+                            }
+                        };
+                    } else if (desc.equals(LEVEL_DESC)) {
+                        final com.sun.btrace.runtime.Level l = new com.sun.btrace.runtime.Level();
+                        return new AnnotationVisitor(Opcodes.ASM5, av1) {
+                            @Override
+                            public void visitEnum(String name, String desc, String value) {
+                                super.visitEnum(name, desc, value);
+
+                                if (desc.equals(LEVEL_KIND_DESC)) {
+                                    l.setKind(Enum.valueOf(com.sun.btrace.annotations.Level.Cond.class, value));
+                                }
+                            }
+
+                            @Override
+                            public void	visit(String name, Object value) {
+                                super.visit(name, value);
+
+                                switch (name) {
+                                    case "value":
+                                        l.setValue((int)value);
+                                        break;
+                                }
+                            }
+
+                            @Override
+                            public void visitEnd() {
+                                if (l != null) {
+                                    om.setLevel(l);
                                 }
                                 super.visitEnd();
                             }

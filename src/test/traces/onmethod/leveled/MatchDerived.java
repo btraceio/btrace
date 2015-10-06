@@ -31,6 +31,7 @@ import com.sun.btrace.annotations.Self;
 import java.util.Map;
 import resources.AbstractClass;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -38,7 +39,7 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class MatchDerived {
-    @OnMethod(clazz="+resources.AbstractClass", method="/do(Get|Set)/", level  = 1)
+    @OnMethod(clazz="+resources.AbstractClass", method="/do(Get|Set)/", level = @Level(1))
     public static void args(@Self AbstractClass self, String a, Map b) {
         println("args");
     }

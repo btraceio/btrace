@@ -32,6 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -40,7 +41,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class Line {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="field",
-              location=@Location(value=Kind.LINE, line=84), level = 1)
+              location=@Location(value=Kind.LINE, line=84), level = @Level(1))
     public static void args(@Self Object self, @ProbeMethodName String pmn, int line) {
         println("args");
     }

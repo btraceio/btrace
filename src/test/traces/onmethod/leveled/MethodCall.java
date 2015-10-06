@@ -35,6 +35,7 @@ import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -43,7 +44,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class MethodCall {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), level = 1)
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), level = @Level(1))
     public static void args(@Self Object self, String a, long b,
                             @TargetInstance Object calledSelf, @TargetMethodOrField(fqn=true) String calledMethod,
                             @ProbeClassName String className, @ProbeMethodName String methodName) {

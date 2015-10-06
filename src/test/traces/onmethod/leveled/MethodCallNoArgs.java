@@ -30,6 +30,7 @@ import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -38,7 +39,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class MethodCallNoArgs {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), level = 1)
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), level = @Level(1))
     public static void args() {
         println("args");
     }

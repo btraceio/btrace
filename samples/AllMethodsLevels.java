@@ -40,20 +40,20 @@ import static com.sun.btrace.BTraceUtils.*;
      */
     @OnMethod(
         clazz="javax.swing.JComponent",
-        method="/.*/"
+        method="/.*/",
+        level = @Level(value = 0, cond = Level.Cond.EQ)
     )
     public static void l0(@ProbeMethodName(fqn = true) String probeMethod) {
         println("# " + probeMethod);
     }
 
     /**
-     * This will intercept all the methods from javax.swing.* classes in addition
-     * to javax.swing.JComponent methods captured in 'l0'.
+     * This will intercept all the methods from javax.swing.* classes.
      */
     @OnMethod(
-        clazz="/javax\\.swing\\.(?:(?!\\.JComponent).)*/",
+        clazz="/javax\\.swing\\.*/",
         method="/.*/",
-        level = 1
+        level = @Level(1)
     )
     public static void l1(@ProbeMethodName(fqn = true) String probeMethod) {
         println("## " + probeMethod);

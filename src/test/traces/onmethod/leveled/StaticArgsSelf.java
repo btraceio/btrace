@@ -29,6 +29,7 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
@@ -36,7 +37,7 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class StaticArgsSelf {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args$static", level  = 1)
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args$static", level = @Level(1))
     public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
         println("args");
     }

@@ -40,7 +40,7 @@ public class BTRACE106Test extends InstrumentorTestBase {
         checkTransformation("ALOAD 0\n" +
             "LDC \"aMethod\"\n" +
             "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n" +
-            "LDC 0\n" +
+            "LCONST_0\n" +
             "LSTORE 1\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 3\n" +
