@@ -47,7 +47,6 @@ import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.templates.TemplateExpanderVisitor;
 import java.util.regex.PatternSyntaxException;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.util.Interval;
 import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 import com.sun.btrace.util.MethodID;
