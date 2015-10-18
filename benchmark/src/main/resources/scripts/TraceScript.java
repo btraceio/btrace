@@ -10,7 +10,6 @@ import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.OnError;
 import com.sun.btrace.annotations.Sampled;
 
 

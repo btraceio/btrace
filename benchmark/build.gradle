@@ -14,7 +14,7 @@ def javaHome = env['JAVA_HOME']
 
 ext {
   versions = [
-    jmh: '1.9.1'
+    jmh: '1.11.1'
   ]
 
   libs = [

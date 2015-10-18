@@ -110,6 +110,7 @@ import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -382,10 +383,19 @@ public final class BTraceRuntime  {
             public void run() {
                 try {
                     BTraceRuntime.enter();
+                    LinkedList<Command> cmds = new LinkedList<>();
                     while (true) {
-                        Command cmd = queue.take();
-                        cmdListener.onCommand(cmd);
-                        if (cmd.getType() == Command.EXIT) {
+                        cmds.add(queue.take());
+                        int prcd = queue.drainTo(cmds);
+                        boolean shouldReturn = false;
+                        Command cmd = null;
+                        while ((cmd = cmds.pollFirst()) != null) {
+                            cmdListener.onCommand(cmd);
+                            if (cmd.getType() == Command.EXIT) {
+                                shouldReturn = true;
+                            }
+                        }
+                        if (shouldReturn) {
                             return;
                         }
                     }
