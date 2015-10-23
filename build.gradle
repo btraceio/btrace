@@ -95,9 +95,22 @@ def osName = props['os.name']
 def asmVersion = '5.0.4'
 def junitVersion = '4.6'
 
-def agentExcludes = ['**/dtrace/*', '**/btrace/*.class', '**/asm/signature/**', '**/asm/util/**', '**/asm/xml/**', '**/aggregation/*', '**/compiler/*', '**/client/*', '**/comm/*', 'com/sun/btrace/api/**/*', 'com/sun/btrace/spi/**/*', '**/instr/** **/META-INF/*']
-def bootExcludes = ['**/dtrace/*', '**/agent/*', '**/compiler/*', '**/client/*', '**/resources/*', '**/runtime/*', '**/util/**/*', '**/asm/**', 'com/sun/btrace/api/**/*', 'com/sun/btrace/spi/**/*']
-def clientExcludes = ['**/runtime/*', '**/agent/*', '**/util/TimeStamp*', '**/util/MethodId', '**/util/SamplingSupport', '**/util/templates/**/*', '**/instr/** **/META-INF/*']
+def agentExcludes = ['**/dtrace/*', '**/btrace/*.class', '**/asm/signature/**', \
+                     '**/asm/util/**', '**/asm/xml/**', '**/aggregation/**', \
+                     '**/compiler/*', '**/client/**', '**/comm/*', \
+                     'com/sun/btrace/api/**', 'com/sun/btrace/spi/**', \
+                     '**/instr/**', '**/org/jctools/**', \
+                     '**/org/jctools/queues/atomic/**',
+                     '**/org/jctools/queues/spec/**', '**/META-INF/*']
+def bootExcludes = ['**/dtrace/**', '**/agent/**', '**/compiler/**', '**/client/**', \
+                    '**/resources/**', '**/runtime/**', 'com/sun/btrace/util/**', \
+                    '**/asm/**', 'com/sun/btrace/api/**', 'com/sun/btrace/spi/**',
+                    '**/org/jctools/queues/atomic/**',
+                    '**/org/jctools/queues/spec/**', '**/META-INF/**']
+def clientExcludes = ['**/org/jctools/**', '**/runtime/**', '**/agent/**', \
+                      '**/util/TimeStamp*', '**/util/MethodId', \
+                      '**/util/SamplingSupport', '**/util/templates/**', \
+                      '**/instr/**', '**/META-INF/*']
 def excludes = ['agent': agentExcludes, 'boot': bootExcludes, 'client': clientExcludes]
 
 sourceSets {
@@ -161,7 +174,10 @@ task unjar(type: Copy) {
     group 'Build'
     description 'Explode the pre-built asm jar.'
 
-    from(zipTree("lib/btrace-asm-${asmVersion}.jar"))
+    from([
+        zipTree("lib/btrace-asm-${asmVersion}.jar"),
+        zipTree("lib/btrace-jctools-core-1.1.jar")
+    ])
     into compileJava.destinationDir
 }
 
@@ -358,9 +374,12 @@ test {
 
 dependencies {
     compile files("lib/btrace-asm-${asmVersion}.jar",
-                "${javaHome}/lib/tools.jar",  // ATTENTION: build.xml uses "${javaHome}/../lib/tools.jar"
+                  "lib/btrace-jctools-core-1.1.jar",
+                  "${javaHome}/lib/tools.jar",  // ATTENTION: build.xml uses "${javaHome}/../lib/tools.jar"
         files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs()),
-                "/usr/share/lib/java/dtrace.jar")
+              "/usr/share/lib/java/dtrace.jar")
+
+    compile group: 'org.jctools', name: 'jctools-core', version: '1.1'
 
     testCompile files("test-lib/asm-all-${asmVersion}.jar",
                     "test-lib/junit-${junitVersion}.jar")

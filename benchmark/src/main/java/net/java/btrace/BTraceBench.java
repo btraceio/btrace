@@ -28,6 +28,7 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.MessageCommand;
+import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.instr.MethodTracker;
 
 import java.io.File;
@@ -235,12 +236,43 @@ public class BTraceBench {
     }
 
     @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 20, time = 800, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
     public void testSendCommand() {
-        br.send(new MessageCommand("hello"));
+        br.send(new OkayCommand());
     }
 
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+    @Threads(2)
+    @Benchmark
+    public void testSendCommandMulti2() {
+        br.send(new OkayCommand());
+    }
+
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+    @Threads(4)
+    @Benchmark
+    public void testSendCommandMulti4() {
+        br.send(new OkayCommand());
+    }
+
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+    @Threads(8)
+    @Benchmark
+    public void testSendCommandMulti8() {
+        br.send(new OkayCommand());
+    }
+
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+    @Threads(16)
+    @Benchmark
+    public void testSendCommandMulti16() {
+        br.send(new OkayCommand());
+    }
 
     long sampleHit10Checks = 0;
     long sampleHit10Sampled = 0;
@@ -297,7 +329,7 @@ public class BTraceBench {
                     .addProfiler(ProfilerFactory.getProfilerByName("stack"))
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*testSend.*")
                     .build();
 
             new Runner(opt).run();
