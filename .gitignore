@@ -26,4 +26,4 @@ junit*
 *.iml
 .gradle
 .idea
-gradle.properties
+!/lib/btrace-jctools-core-1.1.jar

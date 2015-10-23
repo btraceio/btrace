@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace;
@@ -40,7 +40,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.LinkedBlockingQueue;
 import com.sun.management.HotSpotDiagnosticMXBean;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationKey;
@@ -50,8 +49,6 @@ import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnTimer;
 import com.sun.btrace.annotations.OnEvent;
 import com.sun.btrace.annotations.OnLowMemory;
-import com.sun.btrace.annotations.Return;
-import com.sun.btrace.annotations.Self;
 import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.EventCommand;
@@ -61,8 +58,10 @@ import com.sun.btrace.comm.NumberDataCommand;
 import com.sun.btrace.comm.NumberMapDataCommand;
 import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
+import com.sun.btrace.org.jctools.queues.MessagePassingQueue;
+import com.sun.btrace.org.jctools.queues.MpmcArrayQueue;
+import com.sun.btrace.org.jctools.queues.MpscArrayQueue;
 import com.sun.btrace.profiling.MethodInvocationProfiler;
-import com.sun.btrace.runtime.Constants;
 
 import java.lang.management.GarbageCollectorMXBean;
 
@@ -111,9 +110,9 @@ import javax.management.openmbean.CompositeData;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Field;
 import java.util.HashSet;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import sun.misc.Perf;
 import sun.misc.Unsafe;
@@ -152,6 +151,28 @@ public final class BTraceRuntime  {
                 if (oldRuntime != null) {
                     rt = oldRuntime;
                 }
+            }
+        }
+    }
+
+    private static final class ConsumerWrapper implements MessagePassingQueue.Consumer<Command> {
+        private final CommandListener cmdHandler;
+        private final AtomicBoolean exitSignal;
+
+        public ConsumerWrapper(CommandListener cmdHandler, AtomicBoolean exitSignal) {
+            this.cmdHandler = cmdHandler;
+            this.exitSignal = exitSignal;
+        }
+
+        @Override
+        public void accept(Command t) {
+            try {
+                cmdHandler.onCommand(t);
+            } catch (IOException e) {
+                e.printStackTrace(System.err);
+            }
+            if (t.getType() == Command.EXIT) {
+                exitSignal.set(true);
             }
         }
     }
@@ -272,7 +293,7 @@ public final class BTraceRuntime  {
     private volatile NotificationListener memoryListener;
 
     // Command queue for the client
-    private volatile BlockingQueue<Command> queue;
+    private volatile MpscArrayQueue<Command> queue;
 
     private static class SpeculativeQueueManager {
         // maximum number of speculative buffers
@@ -282,7 +303,7 @@ public final class BTraceRuntime  {
         // next speculative buffer id
         private int nextSpeculationId;
         // speculative buffers map
-        private ConcurrentHashMap<Integer, BlockingQueue<Command>> speculativeQueues;
+        private ConcurrentHashMap<Integer, MpmcArrayQueue<Command>> speculativeQueues;
         // per thread current speculative buffer id
         private ThreadLocal<Integer> currentSpeculationId;
 
@@ -302,23 +323,23 @@ public final class BTraceRuntime  {
             int nextId = getNextSpeculationId();
             if (nextId != -1) {
                 speculativeQueues.put(nextId,
-                        new LinkedBlockingQueue<Command>(MAX_SPECULATIVE_MSG_LIMIT));
+                        new MpmcArrayQueue<Command>(MAX_SPECULATIVE_MSG_LIMIT));
             }
             return nextId;
         }
 
         boolean send(Command cmd) {
-            Integer curId = currentSpeculationId.get();
-            if ((curId != null) && (cmd.getType() != Command.EXIT)) {
-                BlockingQueue<Command> sb = speculativeQueues.get(curId);
-                if (sb != null) {
-                    try {
-                        sb.add(cmd);
-                    } catch (IllegalStateException ise) {
-                        sb.clear();
-                        sb.add(new MessageCommand("speculative buffer overflow: " + curId));
+            if (currentSpeculationId != null){
+                Integer curId = currentSpeculationId.get();
+                if ((curId != null) && (cmd.getType() != Command.EXIT)) {
+                    MpmcArrayQueue<Command> sb = speculativeQueues.get(curId);
+                    if (sb != null) {
+                        if (!sb.offer(cmd)) {
+                            sb.clear();
+                            sb.offer(new MessageCommand("speculative buffer overflow: " + curId));
+                        }
+                        return true;
                     }
-                    return true;
                 }
             }
             return false;
@@ -329,10 +350,10 @@ public final class BTraceRuntime  {
             currentSpeculationId.set(id);
         }
 
-        void commit(int id, BlockingQueue<Command> result) {
+        void commit(int id, MpscArrayQueue<Command> result) {
             validateId(id);
             currentSpeculationId.set(null);
-            BlockingQueue<Command> sb = speculativeQueues.get(id);
+            final MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
             if (sb != null) {
                 result.addAll(sb);
                 sb.clear();
@@ -363,9 +384,32 @@ public final class BTraceRuntime  {
     private volatile SpeculativeQueueManager specQueueManager;
     // background thread that sends Commands to the handler
     private volatile Thread cmdThread;
-    // CommandListener that receives the Commands
-    private volatile CommandListener cmdListener;
     private Instrumentation instrumentation;
+
+    private final AtomicBoolean exitting = new AtomicBoolean(false);
+    private final MessagePassingQueue.WaitStrategy waitStrategy = new MessagePassingQueue.WaitStrategy() {
+        @Override
+        public int idle(int i) {
+            if (exitting.get()) return 0;
+            try {
+                if (i < 3000) {
+                    Thread.yield();
+                } else if (i < 3100) {
+                    Thread.sleep(1);
+                } else {
+                    Thread.sleep(500);
+                }
+            } catch (InterruptedException e) {
+            }
+            return i+1;
+        }
+    };
+    private final MessagePassingQueue.ExitCondition exitCondition = new MessagePassingQueue.ExitCondition() {
+        @Override
+        public boolean keepRunning() {
+            return !exitting.get();
+        }
+    };
 
     private BTraceRuntime() {
     }
@@ -374,9 +418,8 @@ public final class BTraceRuntime  {
                          final CommandListener cmdListener,
                          Instrumentation inst) {
         this.args = args;
-        this.queue = new ArrayBlockingQueue<>(CMD_QUEUE_LIMIT);
+        this.queue = new MpscArrayQueue<>(CMD_QUEUE_LIMIT_DEFAULT);
         this.specQueueManager = new SpeculativeQueueManager();
-        this.cmdListener = cmdListener;
         this.className = className;
         this.instrumentation = inst;
         runtimes.put(className, this);
@@ -386,14 +429,10 @@ public final class BTraceRuntime  {
             public void run() {
                 try {
                     BTraceRuntime.enter();
-                    while (true) {
-                        Command cmd = queue.take();
-                        cmdListener.onCommand(cmd);
-                        if (cmd.getType() == Command.EXIT) {
-                            return;
-                        }
-                    }
-                } catch (InterruptedException | IOException ignored) {
+                    queue.drain(
+                        new ConsumerWrapper(cmdListener, exitting),
+                        waitStrategy, exitCondition
+                    );
                 } finally {
                     runtimes.remove(className);
                     queue.clear();
@@ -515,6 +554,7 @@ public final class BTraceRuntime  {
             final Method eventHandler = eventHandlers.get(event);
             if (eventHandler != null) {
                 rt.get().escape(new Callable<Void>() {
+                    @Override
                     public Void call() throws Exception {
                         eventHandler.invoke(null, (Object[])null);
                         return null;
@@ -2149,13 +2189,25 @@ public final class BTraceRuntime  {
     }
 
     public void send(Command cmd) {
-        try {
-            boolean speculated = specQueueManager.send(cmd);
-            if (! speculated) {
-                queue.put(cmd);
-            }
-        } catch (InterruptedException ie) {
-            ie.printStackTrace();
+        boolean speculated = specQueueManager.send(cmd);
+        if (! speculated) {
+            enqueue(cmd);
+        }
+    }
+
+    private void enqueue(Command cmd) {
+        int backoffCntr = 0;
+        while (!queue.relaxedOffer(cmd)) {
+            try {
+                if (backoffCntr < 3000) {
+                    Thread.yield();
+                } else if (backoffCntr < 3100) {
+                    Thread.sleep(1);
+                } else {
+                    Thread.sleep(100);
+                }
+            } catch (InterruptedException e) {}
+            backoffCntr++;
         }
     }
 
@@ -2175,13 +2227,9 @@ public final class BTraceRuntime  {
                     } catch (Throwable ignored) {
                     }
                 } else {
-                    try {
-                        // Do not call send(Command). Exception messages should not
-                        // go to speculative buffers!
-                        queue.put(new ErrorCommand(th));
-                    } catch (InterruptedException ie) {
-                        ie.printStackTrace();
-                    }
+                    // Do not call send(Command). Exception messages should not
+                    // go to speculative buffers!
+                    enqueue(new ErrorCommand(th));
                 }
             }
         } finally {
@@ -2233,13 +2281,13 @@ public final class BTraceRuntime  {
         for (int index = 0; index < timerHandlers.length; index++) {
             Method m = timerHandlers[index];
             try {
-                final String className = "com/sun/btrace/BTraceRunnable$" + index;
-                final byte[] buf = gen.generate(m, className);
+                final String clzName = "com/sun/btrace/BTraceRunnable$" + index;
+                final byte[] buf = gen.generate(m, clzName);
                 Class cls = AccessController.doPrivileged(
                     new PrivilegedExceptionAction<Class>() {
                         @Override
                         public Class run() throws Exception {
-                             return loader.loadClass(className.replace('/', '.'), buf);
+                             return loader.loadClass(clzName.replace('/', '.'), buf);
                         }
                     });
                 runnables[index] = (Runnable) cls.newInstance();

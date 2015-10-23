@@ -30,7 +30,9 @@ import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * Implementation of {@linkplain Profiler}
@@ -38,13 +40,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class MethodInvocationProfiler extends Profiler implements Profiler.MBeanValueProvider {
 
-    final private Collection<WeakReference<MethodInvocationRecorder>> recorders = new ConcurrentLinkedQueue<WeakReference<MethodInvocationRecorder>>();
+    final private Collection<WeakReference<MethodInvocationRecorder>> recorders = new ConcurrentLinkedDeque<>();
 
     final private ThreadLocal<MethodInvocationRecorder> recorder = new ThreadLocal<MethodInvocationRecorder>(){
         @Override
         protected MethodInvocationRecorder initialValue() {
             MethodInvocationRecorder mir = new MethodInvocationRecorder(expectedBlockCnt);
-            recorders.add(new WeakReference<MethodInvocationRecorder>(mir));
+            recorders.add(new WeakReference<>(mir));
             return mir;
         }
     };
@@ -57,14 +59,17 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         this.expectedBlockCnt = expectedMethodCnt;
     }
 
+    @Override
     public void recordEntry(String blockName) {
         recorder.get().recordEntry(blockName);
     }
 
+    @Override
     public void recordExit(String blockName, long duration) {
         recorder.get().recordExit(blockName, duration);
     }
 
+    @Override
     public void reset() {
         for(WeakReference<MethodInvocationRecorder> mirRef : recorders) {
             MethodInvocationRecorder mir = mirRef.get();
@@ -76,8 +81,9 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
 
     private long lastTs = START_TIME;
 
+    @Override
     public Snapshot snapshot(boolean reset) {
-        Map<String, Integer> idMap = new HashMap<String, Integer>();
+        Map<String, Integer> idMap = new HashMap<>();
 
         Record[] mergedRecords = null;
         int mergedEntries = 0, mergedCapacity = 0;
@@ -132,6 +138,7 @@ public class MethodInvocationProfiler extends Profiler implements Profiler.MBean
         return snp;
     }
 
+    @Override
     public Snapshot getMBeanValue() {
         return lastValidSnapshot;
     }
