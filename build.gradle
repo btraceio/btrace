@@ -379,8 +379,6 @@ dependencies {
         files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs()),
               "/usr/share/lib/java/dtrace.jar")
 
-    compile group: 'org.jctools', name: 'jctools-core', version: '1.1'
-
     testCompile files("test-lib/asm-all-${asmVersion}.jar",
                     "test-lib/junit-${junitVersion}.jar")
 
