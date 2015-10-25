@@ -223,12 +223,43 @@ public class BTraceBench {
     }
 
     @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 50, time = 800, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
     public void testSendCommand() {
         br.send(new OkayCommand());
     }
 
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+    @Threads(2)
+    @Benchmark
+    public void testSendCommandMulti2() {
+        br.send(new OkayCommand());
+    }
+
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+    @Threads(4)
+    @Benchmark
+    public void testSendCommandMulti4() {
+        br.send(new OkayCommand());
+    }
+
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+    @Threads(8)
+    @Benchmark
+    public void testSendCommandMulti8() {
+        br.send(new OkayCommand());
+    }
+
+    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+    @Threads(16)
+    @Benchmark
+    public void testSendCommandMulti16() {
+        br.send(new OkayCommand());
+    }
 
     long sampleHit10Checks = 0;
     long sampleHit10Sampled = 0;
@@ -285,7 +316,7 @@ public class BTraceBench {
                     .addProfiler("stack")
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*testSend.*")
                     .build();
 
             new Runner(opt).run();
