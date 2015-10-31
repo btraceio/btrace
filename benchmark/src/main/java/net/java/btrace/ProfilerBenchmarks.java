@@ -40,6 +40,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+import org.openjdk.jmh.runner.options.VerboseMode;
 
 /**
  * Basic benchmark for the performance of {@linkplain MethodInvocationProfiler}
@@ -124,7 +125,8 @@ public class ProfilerBenchmarks {
 
     public static void main(String[] args) throws Exception {
         Options opt = new OptionsBuilder()
-                .addProfiler("gc")
+                .addProfiler("perfasm")
+                .verbosity(VerboseMode.NORMAL)
                 .include(".*" + ProfilerBenchmarks.class.getSimpleName() + ".*test.*")
                 .build();
 
