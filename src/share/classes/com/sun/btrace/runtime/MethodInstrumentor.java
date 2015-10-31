@@ -134,16 +134,25 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     private static class LocalVarArgProvider extends ArgumentProvider {
         private final Type type;
         private final int ptr;
+        private final boolean boxValue;
 
         public LocalVarArgProvider(Assembler asm, int index, Type type, int ptr) {
+            this(asm, index, type, ptr, false);
+        }
+
+        public LocalVarArgProvider(Assembler asm, int index, Type type, int ptr, boolean boxValue) {
             super(asm, index);
             this.type = type;
             this.ptr = ptr;
+            this.boxValue = boxValue;
         }
 
         @Override
         public void doProvide() {
             asm.loadLocal(type, ptr);
+            if (boxValue) {
+                asm.box(type);
+            }
         }
 
         @Override
@@ -389,6 +398,10 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
 
     protected final ArgumentProvider localVarArg(int index, Type type, int ptr) {
         return new LocalVarArgProvider(asm, index, type, ptr);
+    }
+
+    protected final ArgumentProvider localVarArg(int index, Type type, int ptr, boolean boxValue) {
+        return new LocalVarArgProvider(asm, index, type, ptr, boxValue);
     }
 
     protected final ArgumentProvider constArg(int index, Object val) {
