@@ -14,7 +14,7 @@ hs_err_pid*
 build
 dist
 docs
-nbproject/private
+make/netbeans/nbproject/private
 TEST-*
 make/junit*
 make/private.properties
