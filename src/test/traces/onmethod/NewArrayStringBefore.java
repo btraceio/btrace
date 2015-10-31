@@ -29,10 +29,7 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
-import com.sun.btrace.annotations.Where;
-import java.util.Map;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -42,7 +39,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class NewArrayStringBefore {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="newArray",
-              location=@Location(value=Kind.NEWARRAY, clazz="java.lang.String"))
+              location=@Location(value=Kind.NEWARRAY, clazz="/java\\.lang\\.String.*/"))
     public static void args(@Self Object self, String arrayType, int dims) {
         println("args");
     }

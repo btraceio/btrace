@@ -1256,8 +1256,8 @@ public class Instrumentor extends ClassVisitor {
                     protected void onBeforeArrayNew(String desc, int dims) {
                         if (where == Where.BEFORE) {
                             String extName = TypeUtils.getJavaType(desc);
-                            String type = TypeUtils.objectOrArrayType(loc.getClazz());
-                            if (matches(type, desc)) {
+                            String type = loc.getClazz();
+                            if (matches(type, extName)) {
                                 addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                                 ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType, Type.INT_TYPE});
                                 if (vr.isValid()) {
@@ -1282,8 +1282,8 @@ public class Instrumentor extends ClassVisitor {
                     protected void onAfterArrayNew(String desc, int dims) {
                         if (where == Where.AFTER) {
                             String extName = TypeUtils.getJavaType(desc);
-                            String type = TypeUtils.objectOrArrayType(loc.getClazz());
-                            if (matches(type, desc)) {
+                            String type = loc.getClazz();
+                            if (matches(type, extName)) {
                                 StringBuilder arrayType = new StringBuilder();
                                 for (int i = 0; i < dims; i++) {
                                     arrayType.append("[");
