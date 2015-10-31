@@ -70,7 +70,7 @@ class MethodInvocationRecorder {
     private final int defaultBufferSize;
     private final Map<String, Integer> indexMap = new HashMap<String, Integer>();
     private volatile int lastIndex = 0;
-    
+
     // 0 - available; 1 - processing invocation; 2 - generating snapshot; 3 - resetting
     private final AtomicInteger writerStatus = new AtomicInteger(0);
 
@@ -83,15 +83,36 @@ class MethodInvocationRecorder {
     }
 
     void recordEntry(String blockName) {
-        try {
-            if (!writerStatus.compareAndSet(0, 1)) {
-                delayedRecords.add(new DelayedRecord(blockName, -1L));
-                return;
+        processDelayedRecords();
+        if (writerStatus.compareAndSet(0, 1)) {
+            //System.out.println("== 0->1");
+            try {
+                processEntry(blockName);
+            } finally {
+                //System.out.println("== 1->0");
+                writerStatus.compareAndSet(1, 0);
             }
-            processDelayedRecords();
-            processEntry(blockName);
-        } finally {
-            writerStatus.compareAndSet(1, 0);
+        } else {
+            while (writerStatus.get() == 3) {
+                LockSupport.parkNanos(this, 600);
+            }
+            if (writerStatus.compareAndSet(1, 3)) {
+                //System.out.println("== 1->3");
+                try {
+                    delayedRecords.add(new DelayedRecord(blockName, -1L));
+                } finally {
+                    //System.out.println("== 3->1");
+                    writerStatus.compareAndSet(3, 1);
+                }
+            } else if (writerStatus.compareAndSet(2, 3)) {
+                //System.out.println("== 2->3");
+                try {
+                    delayedRecords.add(new DelayedRecord(blockName, -1L));
+                } finally {
+                    //System.out.println("== 3->2");
+                    writerStatus.compareAndSet(3, 2);
+                }
+            }
         }
     }
 
@@ -103,15 +124,36 @@ class MethodInvocationRecorder {
     }
 
     void recordExit(String blockName, long duration) {
-        try {
-            if (!writerStatus.compareAndSet(0, 1)) {
-                delayedRecords.add(new DelayedRecord(blockName, duration));
-                return;
+        processDelayedRecords();
+        if (writerStatus.compareAndSet(0, 1)) {
+            //System.out.println("== 0->1");
+            try {
+                processExit(blockName, duration);
+            } finally {
+                //System.out.println("== 1->0");
+                writerStatus.compareAndSet(1, 0);
             }
-            processDelayedRecords();
-            processExit(blockName, duration);
-        } finally {
-            writerStatus.compareAndSet(1, 0);
+        } else {
+            while (writerStatus.get() == 3) {
+                LockSupport.parkNanos(this, 600);
+            }
+            if (writerStatus.compareAndSet(1, 3)) {
+                //System.out.println("== 1->3");
+                try {
+                    delayedRecords.add(new DelayedRecord(blockName, duration));
+                } finally {
+                    //System.out.println("== 3->1");
+                    writerStatus.compareAndSet(3, 1);
+                }
+            } else if (writerStatus.compareAndSet(2, 3)) {
+                //System.out.println("== 2->3");
+                try {
+                    delayedRecords.add(new DelayedRecord(blockName, duration));
+                } finally {
+                    //System.out.println("== 3->2");
+                    writerStatus.compareAndSet(3, 2);
+                }
+            }
         }
     }
 
@@ -142,18 +184,31 @@ class MethodInvocationRecorder {
     private void processDelayedRecords() {
         DelayedRecord dr = null;
 
-        while ((dr = delayedRecords.poll()) != null) {
-            if (dr.duration == -1) {
-                processEntry(dr.blockName);
-            } else {
-                processExit(dr.blockName, dr.duration);
+        while (!writerStatus.compareAndSet(0, 3)) {
+            LockSupport.parkNanos(this, 600);
+        }
+
+        //System.out.println("== 0->3");
+        try {
+            while ((dr = delayedRecords.poll()) != null) {
+                if (dr.duration == -1) {
+                    processEntry(dr.blockName);
+                } else {
+                    processExit(dr.blockName, dr.duration);
+                }
             }
+        } finally {
+            //System.out.println("== 3->0");
+            writerStatus.compareAndSet(3, 0);
         }
     }
 
     Profiler.Record[] getRecords(boolean reset) {
         Profiler.Record[] recs = null;
         try {
+            processDelayedRecords();
+
+            //System.out.println("== 0->2");
             while (!writerStatus.compareAndSet(0, 2)) {
                 LockSupport.parkNanos(this, 600);
             }
@@ -162,11 +217,17 @@ class MethodInvocationRecorder {
             recs = new Profiler.Record[lastIndex];
             // copy and detach the record array
             for (int i = 0; i < recs.length; i++) {
-                recs[i] = measured[i].duplicate();
+                Profiler.Record r = measured[i];
+                if (r != null) {
+                    recs[i] = r.duplicate();
+                } else {
+                    System.out.println("huuu");
+                }
             }
 
             return recs;
         } finally {
+            //System.out.println("== 2->0");
             writerStatus.compareAndSet(2, 0);
         }
     }
@@ -205,17 +266,22 @@ class MethodInvocationRecorder {
     void reset() {
         Profiler.Record[] newMeasured = new Profiler.Record[defaultBufferSize + stackPtr + 1];
         try {
-            while (!writerStatus.compareAndSet(0, 3)) {
+            while (!writerStatus.compareAndSet(0, 4)) {
                 LockSupport.parkNanos(this, 600);
             }
+            //System.out.println("== 4->0");
             if (stackPtr > -1) {
                 System.arraycopy(stackArr, 0, newMeasured, 0, stackPtr + 1);
             }
+            indexMap.clear();
             measuredPtr = stackPtr + 1;
             measured = newMeasured;
             measuredSize = measured.length;
+            lastIndex = measuredPtr;
+            carryOver = 0L;
         } finally {
-            writerStatus.compareAndSet(3, 0);
+            //System.out.println("== 4->0");
+            writerStatus.compareAndSet(4, 0);
         }
     }
 
