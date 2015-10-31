@@ -112,45 +112,61 @@ public class MethodInvocationRecorderTest {
     public void testGetRecordsConcurrent() {
         System.out.println("getRecords");
 
-        Profiler.Record[] expected = new Profiler.Record[] {
-            new Profiler.Record("r1"),
-            new Profiler.Record("r2"),
-            new Profiler.Record("r3")
-        };
-        expected[0].invocations = 1;
-        expected[0].selfTime = 10;
-        expected[0].wallTime = 30;
-        expected[1].invocations = 1;
-        expected[1].selfTime = 10;
-        expected[1].wallTime = 10;
-        expected[2].invocations = 1;
-        expected[2].selfTime = 10;
-        expected[2].wallTime = 10;
+        // multiple iterations to increase the chance of hitting concurrency issues
+        for(int i=0;i<50;i++) {
+            System.out.println("=== Iteration " + i);
 
-        final Phaser p = new Phaser(2);
-        final AtomicReference<Profiler.Record[]> recRef = new AtomicReference<Profiler.Record[]>();
+            Profiler.Record[] expected = new Profiler.Record[] {
+                new Profiler.Record("r1"),
+                new Profiler.Record("r2"),
+                new Profiler.Record("r3")
+            };
+            expected[0].invocations = 1;
+            expected[0].selfTime = 10;
+            expected[0].wallTime = 30;
+            expected[1].invocations = 1;
+            expected[1].selfTime = 10;
+            expected[1].wallTime = 10;
+            expected[2].invocations = 1;
+            expected[2].selfTime = 10;
+            expected[2].wallTime = 10;
 
-        Thread getter = new Thread(new Runnable() {
-            public void run() {
-                p.arriveAndAwaitAdvance();
-                recRef.set(mir.getRecords(false));
-                p.arriveAndAwaitAdvance();
+            final AtomicReference<Throwable> thr = new AtomicReference<>();
+            final Phaser p = new Phaser(2);
+            final AtomicReference<Profiler.Record[]> recRef = new AtomicReference<Profiler.Record[]>();
+
+            Thread getter = new Thread(new Runnable() {
+                public void run() {
+                    try {
+                        p.arriveAndAwaitAdvance();
+                        recRef.set(mir.getRecords(false));
+                    } catch (Throwable t) {
+                        thr.set(t);
+                    } finally {
+                        p.arriveAndAwaitAdvance();
+                    }
+                }
+            });
+            getter.start();
+
+
+            mir.recordEntry("r1");
+            mir.recordEntry("r2");
+            mir.recordExit("r2", 10);
+            p.arriveAndAwaitAdvance();
+            mir.recordEntry("r3");
+            mir.recordExit("r3", 10);
+            mir.recordExit("r1", 30);
+            p.arriveAndAwaitAdvance();
+
+            Profiler.Record[] result = mir.getRecords(false);
+            assertArrayRecordsEqual(expected, result);
+            Throwable t = thr.get();
+            if (t != null) {
+                fail(t.toString());
             }
-        });
-        getter.start();
-
-
-        mir.recordEntry("r1");
-        mir.recordEntry("r2");
-        mir.recordExit("r2", 10);
-        p.arriveAndAwaitAdvance();
-        mir.recordEntry("r3");
-        mir.recordExit("r3", 10);
-        mir.recordExit("r1", 30);
-        p.arriveAndAwaitAdvance();
-
-        Profiler.Record[] result = mir.getRecords(false);
-        assertArrayRecordsEqual(expected, result);
+            mir.reset();
+        }
     }
 
     /**
@@ -166,7 +182,7 @@ public class MethodInvocationRecorderTest {
         Set<Profiler.Record> obtSet = new HashSet<Profiler.Record>(Arrays.asList(obtained));
 
         if (!expSet.containsAll(obtSet) || !obtSet.containsAll(expSet)) {
-            assertArrayEquals(expected, obtained);
+            assertArrayEquals("Fokitol", expected, obtained);
         }
     }
 }
