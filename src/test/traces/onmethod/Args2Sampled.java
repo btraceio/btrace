@@ -43,7 +43,7 @@ public class Args2Sampled {
         println("args");
     }
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="/arg.*/")
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
     @Sampled(kind = Sampled.Sampler.Const)
     public static void args2(@Self Object self, String a, long b, String[] c, int[] d) {
         println("args");

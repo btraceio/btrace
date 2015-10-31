@@ -24,12 +24,14 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.util.Interval;
 
 /**
  * Convenient fluent wrapper over the ASM method visitor
@@ -65,7 +67,68 @@ final public class Assembler {
         return this;
     }
 
+    public Assembler jump(int opcode, Label l) {
+        mv.visitJumpInsn(opcode, l);
+        return this;
+    }
+
     public Assembler ldc(Object o) {
+        if (o instanceof Integer) {
+            int i = (int)o;
+            if (i >= -1 && i <= 5) {
+                int opcode = -1;
+                switch(i) {
+                    case 0: {
+                        opcode = ICONST_0;
+                        break;
+                    }
+                    case 1: {
+                        opcode = ICONST_1;
+                        break;
+                    }
+                    case 2: {
+                        opcode = ICONST_2;
+                        break;
+                    }
+                    case 3: {
+                        opcode = ICONST_3;
+                        break;
+                    }
+                    case 4: {
+                        opcode = ICONST_4;
+                        break;
+                    }
+                    case 5: {
+                        opcode = ICONST_5;
+                        break;
+                    }
+                    case -1: {
+                        opcode = ICONST_M1;
+                        break;
+                    }
+                }
+                mv.visitInsn(opcode);
+                return this;
+            }
+        }
+        if (o instanceof Long) {
+            long l = (long)o;
+            if (l >= 0 && l <= 1) {
+                int opcode = -1;
+                switch((int)l) {
+                    case 0: {
+                        opcode = LCONST_0;
+                        break;
+                    }
+                    case 1: {
+                        opcode = LCONST_1;
+                        break;
+                    }
+                }
+                mv.visitInsn(opcode);
+                return this;
+            }
+        }
         mv.visitLdcInsn(o);
         return this;
     }
@@ -433,6 +496,78 @@ final public class Assembler {
 
     public Assembler putStatic(String owner, String name, String desc) {
         mv.visitFieldInsn(PUTSTATIC, owner, name, desc);
+        return this;
+    }
+
+    public Assembler label(Label l) {
+        mv.visitLabel(l);
+        return this;
+    }
+
+    public Assembler addLevelCheck(String clsName, Level level, Label jmp) {
+        return addLevelCheck(clsName, level.getValue(), jmp);
+    }
+
+    public Assembler addLevelCheck(String clsName, Interval itv, Label jmp) {
+        getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+        if (itv.getA() <= 0) {
+            if (itv.getB() != Integer.MAX_VALUE) {
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, jmp);
+            }
+        } else if (itv.getA() < itv.getB()) {
+            if (itv.getB() == Integer.MAX_VALUE) {
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, jmp);
+            } else {
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, jmp);
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, jmp);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * Compares the instrumentation level interval against the runtime value.
+     * <p>
+     * If the runtime value is fitting the level interval there will be 0
+     * on stack upon return from this method. Otherwise there will be -1.
+     *
+     * @param clsName The probe class name
+     * @param level The probe instrumentation level
+     * @return itself
+     */
+    public Assembler compareLevel(String clsName, Level level) {
+        Interval itv = level.getValue();
+        if (itv.getA() <= 0) {
+            if (itv.getB() != Integer.MAX_VALUE) {
+                ldc(itv.getB());
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                sub(Type.INT_TYPE);
+            }
+        } else if (itv.getA() < itv.getB()) {
+            if (itv.getB() == Integer.MAX_VALUE) {
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getA());
+                sub(Type.INT_TYPE);
+            } else {
+                Label l1 = new Label();
+                Label l2 = new Label();
+                ldc(itv.getA());
+                jump(Opcodes.IF_ICMPLT, l1);
+                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                ldc(itv.getB());
+                jump(Opcodes.IF_ICMPGT, l1);
+                ldc(0);
+                jump(Opcodes.GOTO, l2);
+                label(l1);
+                ldc(-1);
+                label(l2);
+            }
+        }
         return this;
     }
 }

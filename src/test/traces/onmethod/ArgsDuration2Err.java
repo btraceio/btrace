@@ -43,8 +43,8 @@ public class ArgsDuration2Err {
     public static void args(@Self Object self, @Duration long dur, Throwable err) {
         println("args");
     }
-    
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="/arg.*/", location=@Location(value=Kind.ERROR))
+
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.ERROR))
     public static void args2(@Self Object self, @Duration long dur, Throwable err) {
         println("args");
     }

@@ -108,6 +108,7 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
+import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.concurrent.Callable;
@@ -264,6 +265,9 @@ public final class BTraceRuntime  {
 
     // BTrace Class object corresponding to this client
     private Class clazz;
+
+    // instrumentation level field for each runtime
+    private Field level;
 
     // does the client have exit action?
     private Method exitHandler;
@@ -445,6 +449,25 @@ public final class BTraceRuntime  {
     public static void initUnsafe() {
         if (unsafe == null) {
             unsafe = Unsafe.getUnsafe();
+        }
+    }
+
+    static int getInstrumentationLevel() {
+        BTraceRuntime cur = getCurrent();
+
+        try {
+            return cur.level.getInt(cur);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    static void setInstrumentationLevel(int level) {
+        BTraceRuntime cur = getCurrent();
+        try {
+            cur.level.set(cur, level);
+        } catch (Exception e) {
+            // ignore
         }
     }
 
@@ -2418,6 +2441,13 @@ public final class BTraceRuntime  {
 
         timerHandlers = new Method[timersList.size()];
         timersList.toArray(timerHandlers);
+
+        try {
+            level = cl.getDeclaredField("$btrace$$level");
+            level.setAccessible(true);
+        } catch (Throwable e) {
+            debugPrint("Instrumentation level setting not available");
+        }
 
         BTraceMBean.registerMBean(clazz);
     }

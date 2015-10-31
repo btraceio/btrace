@@ -38,6 +38,7 @@ import sun.reflect.Reflection;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
+import com.sun.btrace.annotations.OnMethod;
 import java.io.Serializable;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.Reference;
@@ -2251,6 +2252,32 @@ public class BTraceUtils {
 
     public static <V> V removeFirst(Deque<V> queue) {
     	return Collections.removeFirst(queue);
+    }
+
+    /**
+     * Sets the current instrumentation level.
+     * <p>Instrumentation level is used in evaluating {@linkplain OnMethod#enableAt()}
+     * expressions to enable/disable the probe handler.</p>
+     * @param level an arbitrary non negative integer number
+     *
+     * @since 1.3.4
+     */
+    public static void setInstrumentationLevel(int level) {
+        if (level >= 0) {
+            BTraceRuntime.setInstrumentationLevel(level);
+        }
+    }
+
+    /**
+     * Returns the current instrumentation level.
+     * <p>Instrumentation level is used in evaluating {@linkplain OnMethod#enableAt()}
+     * expressions to enable/disable the probe handler.</p>
+     * @return the instrumentation level (non negative integer)
+     *
+     * @since 1.3.4
+     */
+    public static int getInstrumentationLevel() {
+        return BTraceRuntime.getInstrumentationLevel();
     }
 
     /**

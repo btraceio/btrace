@@ -25,15 +25,16 @@
 
 package com.sun.btrace.annotations;
 
+import com.sun.btrace.BTraceUtils;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * This annotation specifies a BTrace probe point by specifying 
- * a java class (or classes), a method (or methods in it) and 
- * a specific location within it. A BTrace trace action method 
+ * This annotation specifies a BTrace probe point by specifying
+ * a java class (or classes), a method (or methods in it) and
+ * a specific location within it. A BTrace trace action method
  * annotated by this annotation is called when matching the traced
  * program reaches the specified location.
  *
@@ -46,7 +47,7 @@ public @interface OnMethod {
      * The probed (or traced) class name. This is either
      * fully qualified name of the class or regular expression
      * within two forward slash characters [like /java\\.awt\\..+/]
-     * or @annotation_of_the_class. i.e., specify a class indirectly 
+     * or @annotation_of_the_class. i.e., specify a class indirectly
      * as a class annotated by specified annotation.
      */
     String clazz();
@@ -54,8 +55,8 @@ public @interface OnMethod {
     /**
      * The probed (or traced) method name. This is either
      * the name of the method or regular expression
-     * within two forward slash characters [like /read.+/]	
-     * or @annotation_of_the_method. i.e., specify a method indirectly 
+     * within two forward slash characters [like /read.+/]
+     * or @annotation_of_the_method. i.e., specify a method indirectly
      * as a method annotated by specified annotation.
      */
     String method() default "";
@@ -77,5 +78,24 @@ public @interface OnMethod {
      */
     Location location() default @Location();
 
-    boolean follow() default false;
+    /**
+     * Activate this probe according to instrumentation level.
+     *
+     * <p>
+     * It is possible to define enable/disable the handler according to the
+     * current instrumentation level. Eg. {@code @OnMethod(clazz="class",
+     * method="method", enableAt=@Level(">1")}
+     * </p>
+     * <p>
+     * The developer must make sure that all the handlers which are interconnected
+     * in any way (eg. method entry/exit) will be enabled/disabled at a compatible
+     * instrumentation level.
+     * </p>
+     *
+     * @return The instrumentation level (default {@code @Level("0")})
+     * @see Level
+     * @see BTraceUtils#getInstrumentationLevel()
+     * @since 1.3.4
+     */
+    Level enableAt() default @Level;
 }

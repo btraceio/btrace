@@ -4,6 +4,7 @@ package scripts;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Duration;
 import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
@@ -17,6 +18,11 @@ import com.sun.btrace.annotations.Sampled;
 public class TraceScript {
     @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethod")
     public static void onMethodEntryEmpty(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
+
+    }
+
+    @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethodLevelNoMatch", enableAt = @Level("100"))
+    public static void onMethodEntryEmptyLevelNoMatch(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
 
     }
 

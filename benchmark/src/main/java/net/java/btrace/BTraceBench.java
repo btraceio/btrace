@@ -154,6 +154,13 @@ public class BTraceBench {
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
+    public void testInstrumentedMethodLevelNoMatch() {
+        counter++;
+    }
+
+    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
     public void testInstrumentedMethodSampled() {
         counter++;
     }

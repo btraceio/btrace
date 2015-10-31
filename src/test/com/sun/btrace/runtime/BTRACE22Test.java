@@ -37,7 +37,7 @@ public class BTRACE22Test extends InstrumentorTestBase {
     public void bytecodeValidation() throws Exception {
         originalBC = loadTargetClass("issues/BTRACE22");
         transform("issues/BTRACE22");
-        checkTransformation("LDC 0\n" +
+        checkTransformation("LCONST_0\n" +
             "LSTORE 1\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 3\n" +
