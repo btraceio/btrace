@@ -69,7 +69,7 @@ public class StatsdBenchmarks {
 
     public static void main(String[] args) throws Exception {
         Options opt = new OptionsBuilder()
-                .addProfiler(ProfilerFactory.getProfilerByName("stack"))
+                .addProfiler("stack")
                 .include(".*" + StatsdBenchmarks.class.getSimpleName() + ".*test.*")
                 .build();
 

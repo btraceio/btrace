@@ -319,7 +319,7 @@ public class BTraceBench {
         BTraceConfig bc = getConfig();
         try {
             Options opt = new OptionsBuilder()
-                    .addProfiler(ProfilerFactory.getProfilerByName("stack"))
+                    .addProfiler("stack")
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
                     .include(".*" + BTraceBench.class.getSimpleName() + ".*test")

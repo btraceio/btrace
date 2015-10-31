@@ -85,7 +85,7 @@ public class StringOpBenchmarks {
 
     public static void main(String[] args) throws Exception {
         Options opt = new OptionsBuilder()
-                    .addProfiler(ProfilerFactory.getProfilerByName("gc"))
+                    .addProfiler("gc")
                     .include(".*" + StringOpBenchmarks.class.getSimpleName() + ".*test.*")
                     .build();
 
