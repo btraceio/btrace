@@ -1464,6 +1464,26 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void methodEntryArgsReturnBoxed() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsReturnBoxed");
+        checkTransformation(
+            "DUP2\n" +
+            "LSTORE 6\n" +
+            "ALOAD 0\n" +
+            "LLOAD 6\n" +
+            "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsReturnBoxed$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 9\n" +
+            "MAXLOCALS = 8"
+        );
+    }
+
+    @Test
     public void methodEntryArgsReturnAugmented() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsReturnAugmented", true);
