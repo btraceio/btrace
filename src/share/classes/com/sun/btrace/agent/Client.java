@@ -456,14 +456,14 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             if (!(loc.getValue() == Kind.CALL ||
                 loc.getValue() == Kind.FIELD_GET ||
                 loc.getValue() == Kind.FIELD_SET)) {
-                Verifier.reportError("called-method.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetMethodOrFieldParameter() + ")");
+                Verifier.reportError("target-method.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetMethodOrFieldParameter() + ")");
             }
         }
         if (om.getTargetInstanceParameter() != -1) {
             if (!(loc.getValue() == Kind.CALL ||
                 loc.getValue() == Kind.FIELD_GET ||
                 loc.getValue() == Kind.FIELD_SET)) {
-                Verifier.reportError("called-instance.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetInstanceParameter() + ")");
+                Verifier.reportError("target-instance.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetInstanceParameter() + ")");
             }
         }
         if (om.getDurationParameter() != -1) {
