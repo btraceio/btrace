@@ -477,7 +477,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         }
         if (om.getTargetMethodOrFieldParameter() != -1) {
             if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], Type.getType(String.class)))) {
-                report("Invalid @CalledMethod parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
+                report("Invalid @TargetMethodOrField parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
@@ -486,12 +486,12 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             Type calledType = extraTypes.get(om.getTargetInstanceParameter());
             if (calledType == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getTargetInstanceParameter()])) {
-                    report("Invalid @CalledInstance parameter. @CalledInstance parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getTargetInstanceParameter()]);
+                    report("Invalid @TargetInstance parameter. @TargetInstance parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getTargetInstanceParameter()]);
                     return ValidationResult.INVALID;
                 }
             } else {
                 if (!TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)) {
-                    report("Invalid @CalledInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
+                    report("Invalid @TargetInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
                     return ValidationResult.INVALID;
                 }
             }
