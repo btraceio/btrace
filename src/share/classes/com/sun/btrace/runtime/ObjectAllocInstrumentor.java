@@ -42,18 +42,43 @@ import com.sun.btrace.util.LocalVariableHelper;
  * @author A. Sundararajan
  */
 public class ObjectAllocInstrumentor extends MethodInstrumentor {
+    private final boolean needsInitialization;
+    private boolean instanceCreated = false;
+
     public ObjectAllocInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv, parentClz, superClz, access, name, desc);
+        this(mv, parentClz, superClz, access, name, desc, false);
     }
 
+    public ObjectAllocInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
+        int access, String name, String desc, boolean needsInitialization) {
+        super(mv, parentClz, superClz, access, name, desc);
+        this.needsInitialization = needsInitialization;
+    }
+
+    @Override
     public void visitTypeInsn(int opcode, String desc) {
         if (opcode == NEW) {
             beforeObjectNew(desc);
         }
         super.visitTypeInsn(opcode, desc);
         if (opcode == NEW) {
-            afterObjectNew(desc);
+            if (needsInitialization) {
+                instanceCreated = true;
+            } else {
+                afterObjectNew(desc);
+            }
+        }
+    }
+
+    @Override
+    public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean iface) {
+        super.visitMethodInsn(opcode, owner, name, desc, iface);
+        if (instanceCreated) {
+            if (Constants.CONSTRUCTOR.equals(name)) {
+                instanceCreated = false;
+                afterObjectNew(owner);
+            }
         }
     }
 
