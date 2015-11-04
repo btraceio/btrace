@@ -437,9 +437,17 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/NewAfter");
 
-        checkTransformation("ASTORE 1\nALOAD 0\nALOAD 1\nLDC \"java.util.HashMap\"\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewAfter$args (Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V\n"
-                + "DUP");
+        checkTransformation(
+            "DUP\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "LDC \"java.util.HashMap\"\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewAfter$args (Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V\n" +
+            "ASTORE 2\n" +
+            "LOCALVARIABLE m Ljava/util/Map; L1 L2 2\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 3"
+        );
 
         resetClassLoader();
 
@@ -449,12 +457,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "GETSTATIC traces/onmethod/leveled/NewAfter.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L1\n" +
+            "DUP\n" +
             "ALOAD 0\n" +
             "ALOAD 1\n" +
             "LDC \"java.util.HashMap\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewAfter$args (Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V\n" +
-            "DUP\n" +
-            "INVOKESPECIAL java/util/HashMap.<init> ()V\n" +
             "ASTORE 2\n" +
             "L2\n" +
             "LINENUMBER 89 L2\n" +

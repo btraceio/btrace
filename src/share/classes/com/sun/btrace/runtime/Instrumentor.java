@@ -1188,7 +1188,7 @@ public class Instrumentor extends ClassVisitor {
 
             case NEW:
                 // <editor-fold defaultstate="collapsed" desc="New Instance Instrumentor">
-                return new ObjectAllocInstrumentor(mv, className, superName, access, name, desc) {
+                return new ObjectAllocInstrumentor(mv, className, superName, access, name, desc, om.getReturnParameter() != -1) {
 
                     @Override
                     protected void beforeObjectNew(String desc) {
