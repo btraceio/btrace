@@ -32,7 +32,8 @@ import java.lang.annotation.Target;
 
 /**
  * It is used to mark a probe method argument as the receiver of called instance
- * in {@linkplain Location} = {@linkplain Kind#CALL}
+ * with {@linkplain Location} value of {@linkplain Kind#CALL}, {@linkplain Kind#FIELD_GET}
+ * or {@linkplain Kind#FIELD_SET}.
  * @author Jaroslav Bachorik
  * @since 1.1
  */
