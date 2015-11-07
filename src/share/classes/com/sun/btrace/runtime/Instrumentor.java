@@ -896,7 +896,7 @@ public class Instrumentor extends ClassVisitor {
                     }
                 };
                 return eri;
-            // </editor-fold>            // </editor-fold>
+            // </editor-fold>
 
             case FIELD_GET:
                 // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">

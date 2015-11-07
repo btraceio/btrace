@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
+ * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,104 +18,343 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.annotations;
 
+import com.sun.btrace.AnyType;
+
 /**
  * This enum is specified in the Location
  * annotation to specify probe point kind.
- * This enum identifies various "points" of 
+ * This enum identifies various "points" of
  * interest within a Java method's bytecode.
  *
  * @author A. Sundararajan
  */
 public enum Kind {
     /**
-     * array element load
+     * <h2>Array element load</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@code type[]} - the array instance</li>
+     *   <li>{@link int int} - array index</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
+     * </ul>
      */
-    ARRAY_GET,  
+    ARRAY_GET,
 
     /**
-     * array element store
+     * <h2>Array element store</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@code type[]} - the array instance</li>
+     *   <li>{@link int int} - array index</li>
+     *   <li>{@link java.lang.Object Object} - new value</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
      */
-    ARRAY_SET,  
+    ARRAY_SET,
 
     /**
-     * method call
+     * <h2>Method call</h2>
+     * <p>
+     * The order and number of unannotated parameters (if provided) must
+     * fully match the called method signature. Instead of specific parameter
+     * types one can use {@linkplain AnyType} to match any type.
+     * </p>
+     * <p>
+     * If the only unannotated parameter is of type {@link AnyType AnyType[]}
+     * it will contain the called method parameters in the order defined by
+     * its signature.
+     * </p>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     *   <li>{@linkplain TargetInstance} - the target instance of the method call
+     *       or null if the method is static</li>
+     *   <li>{@linkplain TargetMethodOrField} - the name of the method which is called</li>
+     *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
+     *   <li>{@linkplain Duration} - the method call duration in nanoseconds (only for {@linkplain Where#AFTER}</li>
+     * </ul>
      */
     CALL,
-       
-    /**
-     * exception catch
-     */
-    CATCH,     
 
     /**
-     * checkcast
+     * <h2>Exception catch</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.Throwable Throwable} - caught throwable</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
      */
-    CHECKCAST,  
+    CATCH,
 
     /**
-     * method entry
+     * <h2>Checkcast</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.Object Object} - checked instance</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
      */
-    ENTRY,      
- 
-    /**
-     * "return" because of no-catch
-     */
-    ERROR,      
+    CHECKCAST,
 
     /**
-     * getting a field value
+     * <h2>Method entry</h2>
+     * <p>
+     * The order and number of unannotated parameters (if provided) must
+     * fully match the probed method signature. Instead of specific parameter
+     * types one can use {@linkplain AnyType} to match any type.
+     * </p>
+     * <p>
+     * If the only unannotated parameter is of type {@link AnyType AnyType[]}
+     * it will contain the probed method parameters in the order defined by
+     * its signature.
+     * </p>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
      */
-    FIELD_GET, 
+    ENTRY,
 
     /**
-     * setting a field value
+     * <h2>"return" because of no-catch</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.Throwable Throwable} - the thrown throwable</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     *   <li>{@linkplain Duration} - the method call duration in nanoseconds (only for {@linkplain Where#AFTER}</li>
+     * </ul>
      */
-    FIELD_SET,  
+    ERROR,
 
     /**
-     * instanceof check
+     * <h2>Getting a field value</h2>
+     *
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     *   <li>{@linkplain TargetInstance} - the target instance of the method call
+     *       or null if the method is static</li>
+     *   <li>{@linkplain TargetMethodOrField} - the name of the method which is called</li>
+     *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
+     * </ul>
      */
-    INSTANCEOF, 
+    FIELD_GET,
 
     /**
-     * source line number
+     * <h2>Setting a field value</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.Object Object} - new field value</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     *   <li>{@linkplain TargetInstance} - the target instance of the method call
+     *       or null if the method is static</li>
+     *   <li>{@linkplain TargetMethodOrField} - the name of the method which is called</li>
+     * </ul>
      */
-    LINE,       
+    FIELD_SET,
 
     /**
-     * new object created
+     * <h2>instanceof check</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.Object Object} - checked instance</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
      */
-    NEW,        
+    INSTANCEOF,
 
     /**
-     * new array created
+     * <h2>Source line number</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link int int} - line number</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
      */
-    NEWARRAY,   
+    LINE,
 
     /**
-     * return from method
+     * <h2>New object created</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.String String} - object type name</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
+     * </ul>
      */
-    RETURN,     
+    NEW,
 
     /**
-     * entry into a synchronized block
+     * <h2>New array created</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.String String} - array type name</li>
+     *   <li>{@link int int} - number of dimensions</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
+     * </ul>
      */
-    SYNC_ENTRY, 
+    NEWARRAY,
 
     /**
-     * exit from a synchronized block
+     * <h2>Return from method</h2>
+     * <p>
+     * The order and number of unannotated probe handler parameters (if provided)
+     * must fully match the probed method signature. Instead of specific parameter
+     * types one can use {@linkplain AnyType} to match any type.
+     * </p>
+     * <p>
+     * If the only unannotated parameter is of type {@link AnyType AnyType[]}
+     * it will contain the probed method parameters in the order defined by
+     * its signature.
+     * </p>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
+     *   <li>{@linkplain Duration} - the method call duration in nanoseconds (only for {@linkplain Where#AFTER}</li>
+     * </ul>
      */
-    SYNC_EXIT, 
+    RETURN,
 
     /**
-     * throwing an exception
+     * <h2>Entry into a synchronized block</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.Object Object} - lock object</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
      */
-    THROW       
+    SYNC_ENTRY,
+
+    /**
+     * <h2>Exit from a synchronized block</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@link java.lang.Object Object} - lock object</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
+     */
+    SYNC_EXIT,
+
+    /**
+     * <h2>Throwing an exception</h2>
+     *
+     * <h3>Unannotated probe handler parameters:</h3>
+     * <ol>
+     *   <li>{@linkplain java.lang.Throwable Throwable} - thrown exception</li>
+     * </ol>
+     * <h3>Allowed probe handler parameter annotations:</h3>
+     * <ul>
+     *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
+     *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
+     *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
+     *       if that method is null</li>
+     * </ul>
+     */
+    THROW
 };
