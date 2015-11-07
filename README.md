@@ -4,10 +4,10 @@ btrace [![Build Status](https://travis-ci.org/jbachorik/btrace.svg?branch=master
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
-1.3.3 ([Release Page](https://github.com/jbachorik/btrace/releases/latest))
+1.3.4 ([Release Page](https://github.com/jbachorik/btrace/releases/latest))
 
 ## Quick Summary
-BTrace is a safe, dynamic tracing tool for the Java platform. 
+BTrace is a safe, dynamic tracing tool for the Java platform.
 
 BTrace can be used to dynamically trace a running Java program (similar to DTrace for OpenSolaris applications and OS). BTrace dynamically instruments the classes of the target application to inject tracing code ("bytecode tracing").
 
@@ -17,7 +17,7 @@ BTrace can be used to dynamically trace a running Java program (similar to DTrac
 You will need the following applications installed
 
 * [JDK](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (preferrably JDK8)
-* [Git](http://git-scm.com/downloads) 
+* [Git](http://git-scm.com/downloads)
 * [Gradle](http://gradle.org)
 * (optionally) [Ant](http://ant.apache.org/bindownload.cgi)
 * (optionally) [Maven3](http://maven.apache.org/download.cgi)
@@ -69,7 +69,7 @@ These mailing lists are hosted at **http://librelist.com**
 
 Pull requests can be accepted only from the signers of [Oracle Contributor Agreement](http://www.oracle.com/technetwork/community/oca-486395.html)
 
-### Deb Repository		
+### Deb Repository
 
 Using the command line, add the following to your /etc/apt/sources.list system config file:
 
