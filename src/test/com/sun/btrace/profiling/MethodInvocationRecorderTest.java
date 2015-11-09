@@ -133,7 +133,7 @@ public class MethodInvocationRecorderTest {
 
             final AtomicReference<Throwable> thr = new AtomicReference<>();
             final Phaser p = new Phaser(2);
-            final AtomicReference<Profiler.Record[]> recRef = new AtomicReference<Profiler.Record[]>();
+            final AtomicReference<Profiler.Record[]> recRef = new AtomicReference<>();
 
             Thread getter = new Thread(new Runnable() {
                 public void run() {
@@ -160,7 +160,7 @@ public class MethodInvocationRecorderTest {
             p.arriveAndAwaitAdvance();
 
             Profiler.Record[] result = mir.getRecords(false);
-            assertArrayRecordsEqual(expected, result);
+            assertArrayRecordsContains(expected, result);
             Throwable t = thr.get();
             if (t != null) {
                 fail(t.toString());
@@ -177,12 +177,13 @@ public class MethodInvocationRecorderTest {
         System.out.println("reset");
     }
 
-    private void assertArrayRecordsEqual(Profiler.Record[] expected, Profiler.Record[] obtained) {
-        Set<Profiler.Record> expSet = new HashSet<Profiler.Record>(Arrays.asList(expected));
-        Set<Profiler.Record> obtSet = new HashSet<Profiler.Record>(Arrays.asList(obtained));
+    private void assertArrayRecordsContains(Profiler.Record[] expected, Profiler.Record[] obtained) {
+        Set<Profiler.Record> expSet = new HashSet<>(Arrays.asList(expected));
+        Set<Profiler.Record> obtSet = new HashSet<>(Arrays.asList(obtained));
 
-        if (!expSet.containsAll(obtSet) || !obtSet.containsAll(expSet)) {
-            assertArrayEquals("Fokitol", expected, obtained);
+        if (!expSet.containsAll(obtSet)) {
+            obtSet.removeAll(expSet);
+            fail("Profiling record contains unexpected records:\n " + obtSet + "\nExpecting:\n" + expSet);
         }
     }
 }
