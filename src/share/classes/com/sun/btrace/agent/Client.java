@@ -41,13 +41,14 @@ import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Where;
+import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
+import com.sun.btrace.comm.SetParametersCommand;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
 import com.sun.btrace.runtime.ClinitInjector;
-import com.sun.btrace.runtime.Constants;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Location;
@@ -63,6 +64,7 @@ import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.util.Map;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
 
@@ -119,7 +121,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 }
             } else {
                 if (debug) Main.debugPrint("client " + className + ": skipping transform for " + cname); // NOI18N
-            }
+                }
             return null;
         }
     };
@@ -216,10 +218,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     }
 
     protected synchronized void onExit(int exitCode) {
-        if (shouldAddTransformer()) {
-            if (debug) Main.debugPrint("onExit: removing transformer for " + className);
-            unregisterTransformer();
-        }
+        cleanupTransformers();
         try {
             if (debug) Main.debugPrint("onExit: closing all");
             Thread.sleep(300);
@@ -323,6 +322,15 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (debug) Main.debugPrint("sending exit command");
         onCommand(new ExitCommand(1));
         closeAll();
+    }
+
+    protected final void cleanupTransformers() {
+        if (shouldAddTransformer()) {
+            if (Main.isDebug()) {
+                Main.debugPrint("onExit: removing transformer for " + className);
+            }
+            unregisterTransformer();
+        }
     }
 
     // package privates below this point

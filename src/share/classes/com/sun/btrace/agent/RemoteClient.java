@@ -53,7 +53,7 @@ class RemoteClient extends Client {
         this.sock = sock;
         this.ois = new ObjectInputStream(sock.getInputStream());
         this.oos = new ObjectOutputStream(sock.getOutputStream());
-        Command cmd = WireIO.read(ois);
+            Command cmd = WireIO.read(ois);
         if (cmd.getType() == Command.INSTRUMENT) {
             if (debug) Main.debugPrint("got instrument command");
             Class btraceClazz = loadClass((InstrumentCommand)cmd);
@@ -79,7 +79,8 @@ class RemoteClient extends Client {
                             BTraceRuntime.leave();
                             BTraceRuntime.enter(getRuntime());
                             try {
-                                if (debug) Main.debugPrint("calling BTraceUtils.exit()");
+                                Main.debugPrint("calling BTraceUtils.exit()");
+                                cleanupTransformers();
                                 BTraceUtils.Sys.exit(ecmd.getExitCode());
                             } catch (Throwable th) {
                                 if (debug) Main.debugPrint(th);
@@ -107,6 +108,7 @@ class RemoteClient extends Client {
         cmdHandler.start();
     }
 
+    @Override
     public void onCommand(Command cmd) throws IOException {
         if (oos == null) {
             throw new IOException("no output stream");
@@ -124,6 +126,7 @@ class RemoteClient extends Client {
         }
     }
 
+    @Override
     protected synchronized void closeAll() throws IOException {
         if (oos != null) {
             oos.close();
