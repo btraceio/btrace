@@ -38,6 +38,7 @@ import java.net.UnknownHostException;
 import java.net.URI;
 import java.util.Map;
 import com.sun.btrace.CommandListener;
+import com.sun.btrace.SharedSettings;
 import com.sun.btrace.compiler.Compiler;
 import com.sun.btrace.annotations.DTrace;
 import com.sun.btrace.annotations.DTraceRef;
@@ -46,10 +47,12 @@ import com.sun.btrace.comm.EventCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.MessageCommand;
+import com.sun.btrace.comm.SetSettingsCommand;
 import com.sun.btrace.comm.WireIO;
 import com.sun.btrace.org.objectweb.asm.*;
 import com.sun.tools.attach.VirtualMachine;
 import java.net.ConnectException;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -359,6 +362,18 @@ public class Client {
                 }
             }
             oos = new ObjectOutputStream(sock.getOutputStream());
+            if (debug) {
+                debugPrint("setting up client settings");
+            }
+            Map<String, Object> settings = new HashMap<>();
+            settings.put(SharedSettings.DEBUG_KEY, debug);
+            settings.put(SharedSettings.DUMP_DIR_KEY, dumpClasses ? dumpDir : "");
+            settings.put(SharedSettings.TRACK_RETRANSFORMS_KEY, trackRetransforms);
+            settings.put(SharedSettings.UNSAFE_KEY, unsafe);
+            settings.put(SharedSettings.PROBE_DESC_PATH_KEY, probeDescPath);
+
+            WireIO.write(oos, new SetSettingsCommand(settings));
+
             if (debug) {
                 debugPrint("sending instrument command");
             }

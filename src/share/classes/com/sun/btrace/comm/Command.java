@@ -44,9 +44,10 @@ public abstract class Command implements Serializable {
     public static final byte GRID_DATA  = 10;
     public static final byte RETRANSFORMATION_START = 11;
     public static final byte RETRANSFORM_CLASS = 12;
+    public static final byte SET_PARAMS = 13;
 
     public static final byte FIRST_COMMAND = ERROR;
-    public static final byte LAST_COMMAND = RETRANSFORM_CLASS;
+    public static final byte LAST_COMMAND = SET_PARAMS;
 
     protected byte type;
     protected Command(byte type) {

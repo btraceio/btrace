@@ -75,6 +75,9 @@ public class WireIO {
             case Command.RETRANSFORM_CLASS:
                 cmd = new RetransformClassNotification();
                 break;
+            case Command.SET_PARAMS:
+                cmd = new SetSettingsCommand();
+                break;
            default:
                 throw new RuntimeException("invalid command: " + type);
         }

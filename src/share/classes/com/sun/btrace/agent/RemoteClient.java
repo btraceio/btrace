@@ -36,6 +36,7 @@ import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.EventCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
+import com.sun.btrace.comm.SetSettingsCommand;
 import com.sun.btrace.comm.WireIO;
 
 /**
@@ -53,16 +54,28 @@ class RemoteClient extends Client {
         this.sock = sock;
         this.ois = new ObjectInputStream(sock.getInputStream());
         this.oos = new ObjectOutputStream(sock.getOutputStream());
+        boolean hasInstrument = false;
+        while (!hasInstrument) {
             Command cmd = WireIO.read(ois);
-        if (cmd.getType() == Command.INSTRUMENT) {
-            if (debug) Main.debugPrint("got instrument command");
-            Class btraceClazz = loadClass((InstrumentCommand)cmd);
-            if (btraceClazz == null) {
-                throw new RuntimeException("can not load BTrace class");
+            switch (cmd.getType()) {
+                case Command.INSTRUMENT: {
+                    debugPrint("got instrument command");
+                    Class btraceClazz = loadClass((InstrumentCommand)cmd);
+                    if (btraceClazz == null) {
+                        throw new RuntimeException("can not load BTrace class");
+                    }
+                    hasInstrument = true;
+                    break;
+                }
+                case Command.SET_PARAMS: {
+                    setSettings(((SetSettingsCommand)cmd).getParams());
+                    break;
+                }
+                default: {
+                    errorExit(new IllegalArgumentException("expecting instrument command!"));
+                    throw new IOException("expecting instrument command!");
+                }
             }
-        } else {
-            errorExit(new IllegalArgumentException("expecting instrument command!"));
-            throw new IOException("expecting instrument command!");
         }
 
         BTraceRuntime.initUnsafe();
@@ -75,15 +88,15 @@ class RemoteClient extends Client {
                         switch (cmd.getType()) {
                         case Command.EXIT: {
                             ExitCommand ecmd = (ExitCommand)cmd;
-                            if (debug) Main.debugPrint("received exit command");
+                            debugPrint("received exit command");
                             BTraceRuntime.leave();
                             BTraceRuntime.enter(getRuntime());
                             try {
-                                Main.debugPrint("calling BTraceUtils.exit()");
+                                debugPrint("calling BTraceUtils.exit()");
                                 cleanupTransformers();
                                 BTraceUtils.Sys.exit(ecmd.getExitCode());
                             } catch (Throwable th) {
-                                if (debug) Main.debugPrint(th);
+                                debugPrint(th);
                                 BTraceRuntime.handleException(th);
                             }
                             return;
@@ -93,18 +106,20 @@ class RemoteClient extends Client {
                             break;
                         }
                         default:
-                            if (debug) Main.debugPrint("received " + cmd);
+                            if (isDebug()) {
+                                debugPrint("received " + cmd);
+                            }
                             // ignore any other command
                         }
                     } catch (Exception exp) {
-                        if (debug) Main.debugPrint(exp);
+                        debugPrint(exp);
                         break;
                     }
                 }
             }
         });
         cmdHandler.setDaemon(true);
-        if (debug) Main.debugPrint("starting client command handler thread");
+        debugPrint("starting client command handler thread");
         cmdHandler.start();
     }
 
@@ -116,12 +131,16 @@ class RemoteClient extends Client {
         oos.reset();
         switch (cmd.getType()) {
         case Command.EXIT:
-            if (debug) Main.debugPrint("client " + getClassName() + ": got " + cmd);
+            if (isDebug()) {
+                debugPrint("client " + getClassName() + ": got " + cmd);
+            }
             WireIO.write(oos, cmd);
             onExit(((ExitCommand)cmd).getExitCode());
             break;
         default:
-            if (debug) Main.debugPrint("client " + getClassName() + ": got " + cmd);
+            if (isDebug()) {
+                debugPrint("client " + getClassName() + ": got " + cmd);
+            }
             WireIO.write(oos, cmd);
         }
     }

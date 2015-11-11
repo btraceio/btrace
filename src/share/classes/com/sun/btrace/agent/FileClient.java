@@ -24,11 +24,14 @@
  */
 package com.sun.btrace.agent;
 
+import com.sun.btrace.DebugSupport;
+import com.sun.btrace.SharedSettings;
 import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
+import java.io.BufferedWriter;
 import java.lang.instrument.Instrumentation;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,6 +39,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Represents a local client communicated by trace file.
@@ -50,9 +54,20 @@ class FileClient extends Client {
 
     private volatile PrintWriter out;
 
+    FileClient(Instrumentation inst, byte[] code, String traceOutput) throws IOException {
+        this(inst, code);
+        setupWriter(traceOutput);
+    }
+
     FileClient(Instrumentation inst, byte[] code, PrintWriter traceWriter) throws IOException {
+        this(inst, code);
+        out = traceWriter;
+    }
+
+    FileClient(Instrumentation inst, byte[] code) throws IOException {
         super(inst);
-        this.out = traceWriter;
+        setSettings(SharedSettings.GLOBAL);
+
         InstrumentCommand cmd = new InstrumentCommand(code, new String[0]);
         Class btraceClazz = loadClass(cmd);
         if (btraceClazz == null) {
@@ -78,17 +93,28 @@ class FileClient extends Client {
         }, flushSec, flushSec);
     }
 
-    FileClient(Instrumentation inst, File scriptFile, PrintWriter traceWriter) throws IOException {
-        this(inst, readAll(scriptFile), traceWriter);
+    FileClient(Instrumentation inst, File scriptFile, String traceOutput) throws IOException {
+        this(inst, readAll(scriptFile), traceOutput);
     }
 
-    public void onCommand(Command cmd) throws IOException {
-        if (out == null) {
-            throw new IOException("no output stream");
+    private void setupWriter(String output) {
+        if (output.equals("::stdout")) {
+            out = new PrintWriter(System.out);
+        } else {
+            if (SharedSettings.GLOBAL.getFileRollMilliseconds() > 0) {
+                out = new PrintWriter(new BufferedWriter(
+                    TraceOutputWriter.rollingFileWriter(new File(output), settings)
+                ));
+            } else {
+                out = new PrintWriter(new BufferedWriter(TraceOutputWriter.fileWriter(new File(output), settings)));
+            }
         }
-        if (debug) {
+    }
 
-            Main.debugPrint("client " + getClassName() + ": got " + cmd);
+    @Override
+    public void onCommand(Command cmd) throws IOException {
+        if (isDebug()) {
+            debugPrint("client " + getClassName() + ": got " + cmd);
         }
         switch (cmd.getType()) {
             case Command.EXIT:
@@ -97,17 +123,26 @@ class FileClient extends Client {
             case Command.ERROR: {
                 ErrorCommand ecmd = (ErrorCommand) cmd;
                 Throwable cause = ecmd.getCause();
-                cause.printStackTrace(out);
+                if (out == null) {
+                    DebugSupport.warning("No output stream. Received ErrorCommand: " + cause.getMessage());
+                } else {
+                    cause.printStackTrace(out);
+                }
                 break;
             }
             default:
                 if (cmd instanceof DataCommand) {
-                    ((DataCommand) cmd).print(out);
+                    if (out == null) {
+                        DebugSupport.warning("No output stream. Received DataCommand.");
+                    } else {
+                        ((DataCommand) cmd).print(out);
+                    }
                 }
                 break;
         }
     }
 
+    @Override
     protected synchronized void closeAll() throws IOException {
         flusher.cancel();
         if (out != null) {
@@ -117,13 +152,10 @@ class FileClient extends Client {
 
     private static byte[] readAll(File file) throws IOException {
         int size = (int) file.length();
-        FileInputStream fis = new FileInputStream(file);
-        try {
+        try (FileInputStream fis = new FileInputStream(file)) {
             byte[] buf = new byte[size];
             fis.read(buf);
             return buf;
-        } finally {
-            fis.close();
         }
     }
 }

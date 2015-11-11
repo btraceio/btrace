@@ -141,7 +141,7 @@ public class BTraceBench {
             cl = (c) -> {
             };
         }
-        br = new BTraceRuntime("BenchmarkClass", new String[0], cl, null);
+        br = new BTraceRuntime("BenchmarkClass", new String[0], cl, null, null);
     }
 
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
@@ -323,7 +323,7 @@ public class BTraceBench {
                     .addProfiler("stack")
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*testSend.*")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
                     .build();
 
             new Runner(opt).run();
