@@ -689,11 +689,10 @@ public class Instrumentor extends ClassVisitor {
 
                     private void callAction(int opcode, String desc) {
                         if (opcode == Opcodes.CHECKCAST) {
-                            // TODO not really usefull
-                            // It would be better to check for the original and desired type
                             Type castType = Type.getObjectType(desc);
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{castType});
+                            addExtraTypeInfo(om.getTargetInstanceParameter(), TypeUtils.objectType);
+                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
                             if (vr.isValid()) {
                                 int castTypeIndex = -1;
                                 Label l = levelCheck(om, btraceClassName);
@@ -703,10 +702,11 @@ public class Instrumentor extends ClassVisitor {
                                     castTypeIndex = storeNewLocal(castType);
                                 }
                                 loadArguments(
-                                    localVarArg(vr.getArgIdx(0), castType, castTypeIndex),
+                                    constArg(vr.getArgIdx(0), castType.getClassName()),
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                    localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0),
+                                    localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, castTypeIndex));
 
                                 invokeBTraceAction(asm, om);
                                 if (l != null) {
@@ -1092,20 +1092,19 @@ public class Instrumentor extends ClassVisitor {
 
                     {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                        addExtraTypeInfo(om.getTargetInstanceParameter(), TypeUtils.objectType);
                     }
 
-                    private void callAction(int opcode, String desc) {
-                        // TODO not really usefull
-                        // It would be better to check for the original and desired type
-
+                    private void callAction(String cName) {
                         if (vr.isValid()) {
                             Label l = levelCheck(om, btraceClassName);
 
                             loadArguments(
-                                localVarArg(vr.getArgIdx(0), castType, castTypeIndex),
+                                constArg(vr.getArgIdx(0), cName),
                                 constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                 constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
+                                localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0),
+                                localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, castTypeIndex));
 
                             invokeBTraceAction(asm, om);
                             if (l != null) {
@@ -1118,14 +1117,14 @@ public class Instrumentor extends ClassVisitor {
                     protected void onBeforeTypeCheck(int opcode, String desc) {
                         if (opcode == Opcodes.INSTANCEOF) {
                             castType = Type.getObjectType(desc);
-                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{castType});
+                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
                             if (vr.isValid()) {
                                 if (!vr.isAny()) {
                                     asm.dup();
                                     castTypeIndex = storeNewLocal(castType);
                                 }
                                 if (where == Where.BEFORE) {
-                                    callAction(opcode, desc);
+                                    callAction(castType.getClassName());
                                 }
                             }
                         }
@@ -1135,10 +1134,10 @@ public class Instrumentor extends ClassVisitor {
                     protected void onAfterTypeCheck(int opcode, String desc) {
                         if (opcode == Opcodes.INSTANCEOF) {
                             castType = Type.getObjectType(desc);
-                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{castType});
+                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
                             if (vr.isValid()) {
                                 if (where == Where.AFTER) {
-                                    callAction(opcode, desc);
+                                    callAction(castType.getClassName());
                                 }
                             }
                         }

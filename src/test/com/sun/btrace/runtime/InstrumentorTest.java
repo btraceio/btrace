@@ -60,8 +60,19 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/CheckcastBefore");
 
-        checkTransformation("DUP\nASTORE 2\nALOAD 0\nLDC \"resources.OnMethodTest\"\nALOAD 2\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V");
+        checkTransformation(
+            "DUP\n" +
+            "ASTORE 2\n" +
+            "ALOAD 0\n" +
+            "LDC \"resources.OnMethodTest\"\n" +
+            "LDC \"java.util.HashMap\"\n" +
+            "ALOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "ASTORE 3\n" +
+            "LOCALVARIABLE d Ljava/util/HashMap; L2 L5 3\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 4"
+        );
 
         resetClassLoader();
 
@@ -74,8 +85,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "DUP\n" +
             "ALOAD 0\n" +
             "LDC \"resources.OnMethodTest\"\n" +
+            "LDC \"java.util.HashMap\"\n" +
             "ALOAD 2\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "CHECKCAST java/util/HashMap\n" +
             "ASTORE 3\n" +
             "L3\n" +
@@ -89,7 +101,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
             "LOCALVARIABLE d Ljava/util/HashMap; L3 L6 3\n" +
-            "MAXSTACK = 4\n" +
+            "MAXSTACK = 5\n" +
             "MAXLOCALS = 4"
         );
     }
@@ -99,8 +111,18 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/CheckcastAfter");
 
-        checkTransformation("DUP\nALOAD 0\nLDC \"casts\"\nALOAD 2\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n");
+        checkTransformation(
+            "DUP\n" +
+            "ALOAD 0\n" +
+            "LDC \"casts\"\n" +
+            "ALOAD 2\n" +
+            "LDC \"java.util.HashMap\"\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;)V\n" +
+            "ASTORE 3\n" +
+            "LOCALVARIABLE d Ljava/util/HashMap; L2 L5 3\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 4"
+        );
 
         resetClassLoader();
 
@@ -113,8 +135,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "DUP\n" +
             "ALOAD 0\n" +
             "LDC \"casts\"\n" +
+            "LDC \"java.util.HashMap\"\n" +
             "ALOAD 2\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "ASTORE 3\n" +
             "L3\n" +
             "LINENUMBER 102 L3\n" +
@@ -127,7 +150,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
             "LOCALVARIABLE d Ljava/util/HashMap; L3 L6 3\n" +
-            "MAXSTACK = 4\n" +
+            "MAXSTACK = 5\n" +
             "MAXLOCALS = 4"
         );
     }
@@ -137,8 +160,17 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/InstanceofBefore");
 
-        checkTransformation("DUP\nASTORE 3\nALOAD 0\nLDC \"resources.OnMethodTest\"\nALOAD 3\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V");
+        checkTransformation(
+            "DUP\n" +
+            "ASTORE 3\n" +
+            "ALOAD 0\n" +
+            "LDC \"resources.OnMethodTest\"\n" +
+            "LDC \"java.util.HashMap\"\n" +
+            "ALOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 4"
+        );
 
         resetClassLoader();
 
@@ -152,8 +184,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IF_ICMPLT L3\n" +
             "ALOAD 0\n" +
             "LDC \"resources.OnMethodTest\"\n" +
+            "LDC \"java.util.HashMap\"\n" +
             "ALOAD 3\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L3\n" +
             "IFEQ L4\n" +
             "L5\n" +
@@ -164,7 +197,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
             "LOCALVARIABLE d Ljava/util/HashMap; L2 L6 2\n" +
-            "MAXSTACK = 4\n" +
+            "MAXSTACK = 5\n" +
             "MAXLOCALS = 4"
         );
     }
@@ -174,8 +207,17 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/InstanceofAfter");
 
-        checkTransformation("DUP\nASTORE 3\nALOAD 0\nLDC \"casts\"\nALOAD 3\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n");
+        checkTransformation(
+            "DUP\n" +
+            "ASTORE 3\n" +
+            "ALOAD 0\n" +
+            "LDC \"casts\"\n" +
+            "LDC \"java.util.HashMap\"\n" +
+            "ALOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 4"
+        );
 
         resetClassLoader();
 
@@ -189,8 +231,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IF_ICMPLT L3\n" +
             "ALOAD 0\n" +
             "LDC \"casts\"\n" +
+            "LDC \"java.util.HashMap\"\n" +
             "ALOAD 3\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/util/HashMap;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L3\n" +
             "IFEQ L4\n" +
             "L5\n" +
@@ -201,7 +244,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
             "LOCALVARIABLE d Ljava/util/HashMap; L2 L6 2\n" +
-            "MAXSTACK = 4\n" +
+            "MAXSTACK = 5\n" +
             "MAXLOCALS = 4"
         );
     }

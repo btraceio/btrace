@@ -25,15 +25,16 @@
 
 package traces.onmethod.leveled;
 
+import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.Self;
-import java.util.HashMap;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Level;
+import com.sun.btrace.annotations.TargetInstance;
 
 /**
  *
@@ -43,7 +44,8 @@ import com.sun.btrace.annotations.Level;
 public class InstanceofBefore {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="casts",
               location=@Location(value=Kind.INSTANCEOF), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeClassName String pcn, HashMap casting) {
+    public static void args(@Self Object self, @ProbeClassName String pcn,
+                            String type, @TargetInstance AnyType target) {
         println("args");
     }
 }

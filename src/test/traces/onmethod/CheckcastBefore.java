@@ -25,14 +25,15 @@
 
 package traces.onmethod;
 
+import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.Self;
-import java.util.HashMap;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.TargetInstance;
 
 /**
  *
@@ -42,7 +43,8 @@ import static com.sun.btrace.BTraceUtils.*;
 public class CheckcastBefore {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="casts",
               location=@Location(value=Kind.CHECKCAST))
-    public static void args(@Self Object self, @ProbeClassName String pcn, HashMap casting) {
+    public static void args(@Self Object self, @ProbeClassName String pcn,
+                            String castTo, @TargetInstance AnyType target) {
         println("args");
     }
 }

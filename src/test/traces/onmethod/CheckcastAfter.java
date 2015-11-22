@@ -25,6 +25,7 @@
 
 package traces.onmethod;
 
+import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
@@ -32,8 +33,8 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
-import java.util.HashMap;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.TargetInstance;
 
 /**
  *
@@ -43,7 +44,8 @@ import static com.sun.btrace.BTraceUtils.*;
 public class CheckcastAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="casts",
               location=@Location(value=Kind.CHECKCAST, where=Where.AFTER))
-    public static void args(@Self Object self, @ProbeMethodName String pmn, HashMap casted) {
+    public static void args(@Self Object self, @ProbeMethodName String pmn,
+                            @TargetInstance AnyType target, String castTo) {
         println("args");
     }
 }
