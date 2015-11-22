@@ -276,12 +276,22 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     private void preprocessMethod(MethodNode mn) {
         // !!! The order of execution is important here !!!
         LocalVarGenerator lvg = new LocalVarGenerator(mn);
+        makePublic(mn);
         checkAugmentedReturn(mn, lvg);
         scanMethodInstructions(mn, lvg);
         addBTraceErrorHandler(mn, lvg);
         addBTraceRuntimeEnter(mn, lvg);
 
         recalculateVars(mn, lvg);
+    }
+
+    private void makePublic(MethodNode mn) {
+        if (!mn.name.contains("init>")) {
+            if ((mn.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC) {
+                mn.access &= ~(Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED);
+                mn.access |= Opcodes.ACC_PUBLIC;
+            }
+        }
     }
 
     private void processFields() {
