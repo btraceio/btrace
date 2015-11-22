@@ -290,19 +290,24 @@ public class Instrumentor extends ClassVisitor {
             case ARRAY_GET:
                 // <editor-fold defaultstate="collapsed" desc="Array Get Instrumentor">
                 return new ArrayAccessInstrumentor(mv, className, superName, access, name, desc) {
-                    int[] argsIndex = new int[]{-1, -1};
-                    final private int INSTANCE_PTR = 0;
-                    final private int INDEX_PTR = 1;
+                    int[] argsIndex = new int[]{Integer.MIN_VALUE, Integer.MIN_VALUE};
+                    final private int INDEX_PTR = 0;
+                    final private int INSTANCE_PTR = 1;
 
                     @Override
                     protected void onBeforeArrayLoad(int opcode) {
                         Type arrtype = TypeUtils.getArrayType(opcode);
                         Type retType = TypeUtils.getElementType(opcode);
+
+                        if (!locationTypeMatches(loc, arrtype, retType)) return;
+
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                        addExtraTypeInfo(om.getTargetInstanceParameter(), arrtype);
+
                         if (where == Where.AFTER) {
                             addExtraTypeInfo(om.getReturnParameter(), retType);
                         }
-                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{arrtype, Type.INT_TYPE});
+                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{Type.INT_TYPE});
                         if (vr.isValid()) {
                             if (!vr.isAny()) {
                                 asm.dup2();
@@ -313,7 +318,7 @@ public class Instrumentor extends ClassVisitor {
                             if (where == Where.BEFORE) {
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                    localVarArg(vr.getArgIdx(INSTANCE_PTR), arrtype, argsIndex[INSTANCE_PTR]),
+                                    localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, argsIndex[INSTANCE_PTR]),
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
@@ -331,13 +336,20 @@ public class Instrumentor extends ClassVisitor {
                         if (where == Where.AFTER) {
                             Type arrtype = TypeUtils.getArrayType(opcode);
                             Type retType = TypeUtils.getElementType(opcode);
+
+                            if (!locationTypeMatches(loc, arrtype, retType)) return;
+
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                            addExtraTypeInfo(om.getTargetInstanceParameter(), arrtype);
                             addExtraTypeInfo(om.getReturnParameter(), retType);
-                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{arrtype, Type.INT_TYPE});
+                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{Type.INT_TYPE});
                             if (vr.isValid()) {
                                 Label l = levelCheckAfter(om, btraceClassName);
 
                                 int retValIndex = -1;
+                                Type actionArgRetType = om.getReturnParameter() != -1 ?
+                                                            actionArgTypes[om.getReturnParameter()] :
+                                                            Type.VOID_TYPE;
                                 if (om.getReturnParameter() != -1) {
                                     asm.dupArrayValue(opcode);
                                     retValIndex = storeNewLocal(retType);
@@ -345,10 +357,10 @@ public class Instrumentor extends ClassVisitor {
 
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                    localVarArg(vr.getArgIdx(INSTANCE_PTR), arrtype, argsIndex[INSTANCE_PTR]),
+                                    localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, argsIndex[INSTANCE_PTR]),
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    localVarArg(om.getReturnParameter(), retType, retValIndex),
+                                    localVarArg(om.getReturnParameter(), retType, retValIndex, TypeUtils.isAnyType(actionArgRetType)),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(asm, om);
 
@@ -363,18 +375,28 @@ public class Instrumentor extends ClassVisitor {
             case ARRAY_SET:
                 // <editor-fold defaultstate="collapsed" desc="Array Set Instrumentor">
                 return new ArrayAccessInstrumentor(mv, className, superName, access, name, desc) {
-                    int[] argsIndex = new int[]{-1, -1, -1};
-                    final private int INSTANCE_PTR = 0, INDEX_PTR = 1, VALUE_PTR = 2;
+                    int[] argsIndex = new int[]{-1, -1, -1, -1};
+                    final private int INDEX_PTR = 0, VALUE_PTR = 1, INSTANCE_PTR = 2;
 
                     @Override
                     protected void onBeforeArrayStore(int opcode) {
                         Type elementType = TypeUtils.getElementType(opcode);
                         Type arrayType = TypeUtils.getArrayType(opcode);
 
+                        if (!locationTypeMatches(loc, arrayType, elementType)) return;
+
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{arrayType, Type.INT_TYPE, elementType});
+                        addExtraTypeInfo(om.getTargetInstanceParameter(), arrayType);
+
+                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{Type.INT_TYPE, elementType});
                         if (vr.isValid()) {
+                            Type argElementType = Type.VOID_TYPE;
+
                             if (!vr.isAny()) {
+                                int elementIdx = vr.getArgIdx(VALUE_PTR);
+                                argElementType = elementIdx > -1 ?
+                                                    actionArgTypes[elementIdx] :
+                                                    Type.VOID_TYPE;
                                 argsIndex[VALUE_PTR] = storeNewLocal(elementType);
                                 asm.dup2();
                                 argsIndex[INDEX_PTR] = storeNewLocal(Type.INT_TYPE);
@@ -386,9 +408,9 @@ public class Instrumentor extends ClassVisitor {
 
                             if (where == Where.BEFORE) {
                                 loadArguments(
-                                    localVarArg(vr.getArgIdx(INSTANCE_PTR), arrayType, argsIndex[INSTANCE_PTR]),
+                                    localVarArg(om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                    localVarArg(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR]),
+                                    localVarArg(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR], TypeUtils.isAnyType(argElementType)),
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
@@ -407,15 +429,24 @@ public class Instrumentor extends ClassVisitor {
                             Type elementType = TypeUtils.getElementType(opcode);
                             Type arrayType = TypeUtils.getArrayType(opcode);
 
+                            if (!locationTypeMatches(loc, arrayType, elementType)) return;
+
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{arrayType, Type.INT_TYPE, elementType});
+                            addExtraTypeInfo(om.getTargetInstanceParameter(), arrayType);
+
+                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{Type.INT_TYPE, elementType});
                             if (vr.isValid()) {
+                                int elementIdx = vr.getArgIdx(VALUE_PTR);
+                                Type argElementType = elementIdx > -1 ?
+                                                       actionArgTypes[elementIdx] :
+                                                       Type.VOID_TYPE;
+
                                 Label l = levelCheckAfter(om, btraceClassName);
 
                                 loadArguments(
-                                    localVarArg(vr.getArgIdx(INSTANCE_PTR), arrayType, argsIndex[INSTANCE_PTR]),
+                                    localVarArg(om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                    localVarArg(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR]),
+                                    localVarArg(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR], TypeUtils.isAnyType(argElementType)),
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));

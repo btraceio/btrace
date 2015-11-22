@@ -31,6 +31,7 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.TargetInstance;
 
 /**
  *
@@ -40,7 +41,7 @@ import static com.sun.btrace.BTraceUtils.*;
 public class ArrayGetBefore {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
               location=@Location(value=Kind.ARRAY_GET))
-    public static void args(@Self Object self, int[] arr, int index) {
+    public static void args(@Self Object self, @TargetInstance int[] arr, int index) {
         println("args");
     }
 }

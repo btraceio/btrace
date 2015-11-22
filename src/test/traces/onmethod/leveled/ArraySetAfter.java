@@ -33,6 +33,7 @@ import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Level;
+import com.sun.btrace.annotations.TargetInstance;
 
 /**
  *
@@ -42,7 +43,7 @@ import com.sun.btrace.annotations.Level;
 public class ArraySetAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
               location=@Location(value=Kind.ARRAY_SET, where=Where.AFTER), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, int[] arr, int index, int value) {
+    public static void args(@Self Object self, @TargetInstance int[] arr, int index, int value) {
         println("args");
     }
 }

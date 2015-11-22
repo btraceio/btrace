@@ -206,8 +206,28 @@ final public class Assembler {
         return this;
     }
 
+    public Assembler dup_x1() {
+        mv.visitInsn(DUP_X1);
+        return this;
+    }
+
+    public Assembler dup_x2() {
+        mv.visitInsn(DUP_X2);
+        return this;
+    }
+
     public Assembler dup2() {
         mv.visitInsn(DUP2);
+        return this;
+    }
+
+    public Assembler dup2_x1() {
+        mv.visitInsn(DUP2_X1);
+        return this;
+    }
+
+    public Assembler dup2_x2() {
+        mv.visitInsn(DUP2_X2);
         return this;
     }
 

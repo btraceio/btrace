@@ -25,6 +25,7 @@
 
 package traces.onmethod;
 
+import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
@@ -33,6 +34,7 @@ import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.TargetInstance;
 
 /**
  *
@@ -42,7 +44,7 @@ import static com.sun.btrace.BTraceUtils.*;
 public class ArrayGetAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
               location=@Location(value=Kind.ARRAY_GET, where=Where.AFTER))
-    public static void args(@Self Object self, @Return int retVal, int[] arr, int index) {
+    public static void args(@Self Object self, @Return int retVal, @TargetInstance int[] target, int index) {
         println("args");
     }
 }

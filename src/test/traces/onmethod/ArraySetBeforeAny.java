@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,15 +23,15 @@
  * questions.
  */
 
-package traces.onmethod.leveled;
+package traces.onmethod;
 
+import com.sun.btrace.AnyType;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.TargetInstance;
 
 /**
@@ -39,10 +39,10 @@ import com.sun.btrace.annotations.TargetInstance;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class ArrayGetBefore {
+public class ArraySetBeforeAny {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
-              location=@Location(value=Kind.ARRAY_GET), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @TargetInstance int[] arr, int index) {
+              location=@Location(value=Kind.ARRAY_SET))
+    public static void args(@Self Object self, @TargetInstance AnyType arr, int index, AnyType value) {
         println("args");
     }
 }

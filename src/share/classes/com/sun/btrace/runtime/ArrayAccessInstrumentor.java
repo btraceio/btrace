@@ -34,6 +34,7 @@ import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 
@@ -80,6 +81,12 @@ public class ArrayAccessInstrumentor extends MethodInstrumentor {
         } else if (arraystore) {
             onAfterArrayStore(opcode);
         }
+    }
+
+    protected final boolean locationTypeMatches(Location loc, Type arrtype, Type itemType) {
+        return loc.getType().isEmpty() ||
+                (loc.getType().equals(arrtype.getClassName()) ||
+                 loc.getType().equals(itemType.getClassName()));
     }
 
     protected void onBeforeArrayLoad(int opcode) {}

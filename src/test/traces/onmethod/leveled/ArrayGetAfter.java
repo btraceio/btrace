@@ -34,6 +34,7 @@ import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Where;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Level;
+import com.sun.btrace.annotations.TargetInstance;
 
 /**
  *
@@ -43,7 +44,7 @@ import com.sun.btrace.annotations.Level;
 public class ArrayGetAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
               location=@Location(value=Kind.ARRAY_GET, where=Where.AFTER), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @Return int retVal, int[] arr, int index) {
+    public static void args(@Self Object self, @Return int retVal, @TargetInstance int[] arr, int index) {
         println("args");
     }
 }

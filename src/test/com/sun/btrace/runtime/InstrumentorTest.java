@@ -782,8 +782,19 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArrayGetBefore");
 
-        checkTransformation("DUP2\nISTORE 3\nASTORE 4\nALOAD 0\nALOAD 4\nILOAD 3\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetBefore$args (Ljava/lang/Object;[II)V");
+        checkTransformation(
+            "DUP2\n" +
+            "ISTORE 3\n" +
+            "ASTORE 4\n" +
+            "ALOAD 0\n" +
+            "ALOAD 4\n" +
+            "ILOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetBefore$args (Ljava/lang/Object;[II)V\n" +
+            "ISTORE 5\n" +
+            "LOCALVARIABLE b I L2 L4 5\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 6"
+        );
 
         resetClassLoader();
 
@@ -820,8 +831,22 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArrayGetAfter");
 
-        checkTransformation("DUP2\nISTORE 3\nASTORE 4\nDUP\nISTORE 5\nALOAD 0\nILOAD 5\nALOAD 4\nILOAD 3\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetAfter$args (Ljava/lang/Object;I[II)V");
+        checkTransformation(
+            "DUP2\n" +
+            "ISTORE 3\n" +
+            "ASTORE 4\n" +
+            "DUP\n" +
+            "ISTORE 5\n" +
+            "ALOAD 0\n" +
+            "ILOAD 5\n" +
+            "ALOAD 4\n" +
+            "ILOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetAfter$args (Ljava/lang/Object;I[II)V\n" +
+            "ISTORE 6\n" +
+            "LOCALVARIABLE b I L2 L4 6\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 7"
+        );
 
         resetClassLoader();
 
@@ -867,8 +892,20 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArraySetBefore");
 
-        checkTransformation("ISTORE 4\nDUP2\nISTORE 5\nASTORE 6\nILOAD 4\nALOAD 0\nALOAD 6\nILOAD 5\nILOAD 4\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetBefore$args (Ljava/lang/Object;[III)V");
+        checkTransformation(
+            "ISTORE 4\n" +
+            "DUP2\n" +
+            "ISTORE 5\n" +
+            "ASTORE 6\n" +
+            "ILOAD 4\n" +
+            "ALOAD 0\n" +
+            "ALOAD 6\n" +
+            "ILOAD 5\n" +
+            "ILOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetBefore$args (Ljava/lang/Object;[III)V\n" +
+            "MAXSTACK = 7\n" +
+            "MAXLOCALS = 7"
+        );
 
         resetClassLoader();
 
@@ -906,8 +943,20 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArraySetAfter");
 
-        checkTransformation("ISTORE 4\nDUP2\nISTORE 5\nASTORE 6\nILOAD 4\nALOAD 0\nALOAD 6\nILOAD 5\nILOAD 4\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetAfter$args (Ljava/lang/Object;[III)V");
+        checkTransformation(
+            "ISTORE 4\n" +
+            "DUP2\n" +
+            "ISTORE 5\n" +
+            "ASTORE 6\n" +
+            "ILOAD 4\n" +
+            "ALOAD 0\n" +
+            "ALOAD 6\n" +
+            "ILOAD 5\n" +
+            "ILOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetAfter$args (Ljava/lang/Object;[III)V\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 7"
+        );
 
         resetClassLoader();
 
@@ -933,6 +982,229 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 5\n" +
             "ILOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArraySetAfter$args (Ljava/lang/Object;[III)V\n" +
+            "L4\n" +
+            "LINENUMBER 81 L4\n" +
+            "L5\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0\n" +
+            "LOCALVARIABLE a I L0 L5 1\n" +
+            "LOCALVARIABLE arr [I L1 L5 2\n" +
+            "LOCALVARIABLE b I L2 L5 3\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 8"
+        );
+    }
+
+    @Test
+    public void methodEntryArrayGetBeforeAny() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArrayGetBeforeAny");
+
+        checkTransformation(
+            "DUP2\n" +
+            "ISTORE 3\n" +
+            "ASTORE 4\n" +
+            "ALOAD 0\n" +
+            "ALOAD 4\n" +
+            "ILOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetBeforeAny$args (Ljava/lang/Object;Ljava/lang/Object;I)V\n" +
+            "ISTORE 5\n" +
+            "LOCALVARIABLE b I L2 L4 5\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 6"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/ArrayGetBeforeAny");
+
+        checkTransformation(
+            "DUP2\n" +
+            "ASTORE 4\n" +
+            "GETSTATIC traces/onmethod/leveled/ArrayGetBeforeAny.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L2\n" +
+            "ALOAD 0\n" +
+            "ALOAD 4\n" +
+            "ILOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArrayGetBeforeAny$args (Ljava/lang/Object;Ljava/lang/Object;I)V\n" +
+            "IALOAD\n" +
+            "ISTORE 5\n" +
+            "L3\n" +
+            "LINENUMBER 80 L3\n" +
+            "L4\n" +
+            "LINENUMBER 81 L4\n" +
+            "L5\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0\n" +
+            "LOCALVARIABLE a I L0 L5 1\n" +
+            "LOCALVARIABLE arr [I L1 L5 2\n" +
+            "LOCALVARIABLE b I L3 L5 5\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 6"
+        );
+    }
+
+    @Test
+    public void methodEntryArrayGetAfterAny() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArrayGetAfterAny");
+
+        checkTransformation(
+            "DUP2\n" +
+            "ISTORE 3\n" +
+            "ASTORE 4\n" +
+            "DUP\n" +
+            "ISTORE 5\n" +
+            "ALOAD 0\n" +
+            "ILOAD 5\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "ALOAD 4\n" +
+            "ILOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArrayGetAfterAny$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I)V\n" +
+            "ISTORE 6\n" +
+            "LOCALVARIABLE b I L2 L4 6\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 7"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/ArrayGetAfterAny");
+
+        checkTransformation(
+            "DUP2\n" +
+            "ASTORE 4\n" +
+            "GETSTATIC traces/onmethod/leveled/ArrayGetAfterAny.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "ISUB\n" +
+            "DUP\n" +
+            "ISTORE 5\n" +
+            "IFLT L2\n" +
+            "IALOAD\n" +
+            "ILOAD 5\n" +
+            "IFLT L3\n" +
+            "DUP\n" +
+            "ISTORE 6\n" +
+            "ALOAD 0\n" +
+            "ILOAD 6\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "ALOAD 4\n" +
+            "ILOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArrayGetAfterAny$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I)V\n" +
+            "L3\n" +
+            "ISTORE 7\n" +
+            "L4\n" +
+            "LINENUMBER 80 L4\n" +
+            "L5\n" +
+            "LINENUMBER 81 L5\n" +
+            "L6\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
+            "LOCALVARIABLE a I L0 L6 1\n" +
+            "LOCALVARIABLE arr [I L1 L6 2\n" +
+            "LOCALVARIABLE b I L4 L6 7\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 8"
+        );
+    }
+
+    @Test
+    public void methodEntryArraySetBeforeAny() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArraySetBeforeAny");
+
+        checkTransformation(
+            "ISTORE 4\n" +
+            "DUP2\n" +
+            "ISTORE 5\n" +
+            "ASTORE 6\n" +
+            "ILOAD 4\n" +
+            "ALOAD 0\n" +
+            "ALOAD 6\n" +
+            "ILOAD 5\n" +
+            "ILOAD 4\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetBeforeAny$args (Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)V\n" +
+            "MAXSTACK = 7\n" +
+            "MAXLOCALS = 7"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/ArraySetBeforeAny");
+
+        checkTransformation(
+            "ISTORE 4\n" +
+            "DUP2\n" +
+            "ISTORE 5\n" +
+            "ASTORE 6\n" +
+            "ILOAD 4\n" +
+            "GETSTATIC traces/onmethod/leveled/ArraySetBeforeAny.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L3\n" +
+            "ALOAD 0\n" +
+            "ALOAD 6\n" +
+            "ILOAD 5\n" +
+            "ILOAD 4\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArraySetBeforeAny$args (Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)V\n" +
+            "L3\n" +
+            "L4\n" +
+            "LINENUMBER 81 L4\n" +
+            "L5\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0\n" +
+            "LOCALVARIABLE a I L0 L5 1\n" +
+            "LOCALVARIABLE arr [I L1 L5 2\n" +
+            "LOCALVARIABLE b I L2 L5 3\n" +
+            "MAXSTACK = 7\n" +
+            "MAXLOCALS = 7"
+        );
+    }
+
+    @Test
+    public void methodEntryArraySetAfterAny() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArraySetAfterAny");
+
+        checkTransformation(
+            "ISTORE 4\n" +
+            "DUP2\n" +
+            "ISTORE 5\n" +
+            "ASTORE 6\n" +
+            "ILOAD 4\n" +
+            "ALOAD 0\n" +
+            "ALOAD 6\n" +
+            "ILOAD 5\n" +
+            "ILOAD 4\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArraySetAfterAny$args (Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)V\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 7"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/ArraySetAfterAny");
+
+        checkTransformation(
+            "ISTORE 4\n" +
+            "DUP2\n" +
+            "ISTORE 5\n" +
+            "ASTORE 6\n" +
+            "ILOAD 4\n" +
+            "GETSTATIC traces/onmethod/leveled/ArraySetAfterAny.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "ISUB\n" +
+            "DUP\n" +
+            "ISTORE 7\n" +
+            "IFLT L3\n" +
+            "L3\n" +
+            "ILOAD 7\n" +
+            "IFLT L4\n" +
+            "ALOAD 0\n" +
+            "ALOAD 6\n" +
+            "ILOAD 5\n" +
+            "ILOAD 4\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArraySetAfterAny$args (Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)V\n" +
             "L4\n" +
             "LINENUMBER 81 L4\n" +
             "L5\n" +
