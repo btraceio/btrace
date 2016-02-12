@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.DebugSupport;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
@@ -34,17 +33,52 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.JAVA_LANG_OBJECT;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.instrument.ClassFileTransformer;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
  * @author A. Sundararajan
+ * @author J. Bachorik
  */
 public final class InstrumentUtils {
+    /**
+    * Collects the type hierarchy into the provided list, sorted from the actual type to root.
+    * Common superclasses may be present multiple times (eg. {@code java.lang.Object})
+    * It will use the associated classloader to locate the class file resources.
+    * @param cl the associated classloader
+    * @param type the type to compute the hierarchy closure for
+    * @param closure the list to store the closure in
+    */
+    public static void collectHierarchyClosure(ClassLoader cl, String type, List<String> closure) {
+        if (type == null || type.equals(JAVA_LANG_OBJECT)) {
+           return;
+        }
+        try {
+           System.err.println("*** getting hierarchy for " + type);
+           InputStream typeIs = cl.getResourceAsStream(type + ".class");
+           if (typeIs != null) {
+                final List<String> mySupers = new LinkedList<>();
+                ClassReader cr = new ClassReader(typeIs);
+                cr.accept(new ClassVisitor(Opcodes.ASM5) {
+                    @Override
+                    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+                        mySupers.add(superName);
+                        mySupers.addAll(Arrays.asList(interfaces));
+                        super.visit(version, access, name, signature, superName, interfaces);
+                    }
+                }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                closure.addAll(mySupers);
+                for (String superType : mySupers) {
+                    collectHierarchyClosure(cl, superType, closure);
+                }
+            }
+       } catch (IOException e) {
+            e.printStackTrace();
+       }
+    }
+
     private static class BTraceClassWriter extends ClassWriter {
         private final ClassLoader targetCL;
         public BTraceClassWriter(ClassLoader cl, int flags) {
@@ -57,43 +91,12 @@ public final class InstrumentUtils {
             this.targetCL = cl != null ? cl : ClassLoader.getSystemClassLoader();
         }
 
-        /**
-         * Collects the type hierarchy into the provided list, sorted from the actual type to root.
-         * It will use the associated classloader to locate the class file resources.
-         * @param type the type to compute the hierarchy closure for
-         * @param closure the list to store the closure in
-         */
-        private void collectHierarchyClosure(String type, List<String> closure) {
-            if (type == null || type.equals(JAVA_LANG_OBJECT)) {
-                return;
-            }
-            try {
-                InputStream type1is = targetCL.getResourceAsStream(type + ".class");
-                final List<String> mySupers = new LinkedList<>();
-                ClassReader cr = new ClassReader(type1is);
-                cr.accept(new ClassVisitor(Opcodes.ASM5) {
-                    @Override
-                    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-                        mySupers.add(superName);
-                        mySupers.addAll(Arrays.asList(interfaces));
-                        super.visit(version, access, name, signature, superName, interfaces);
-                    }
-                }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                closure.addAll(mySupers);
-                for (String superType : mySupers) {
-                    collectHierarchyClosure(superType, closure);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
         protected String getCommonSuperClass(String type1, String type2) {
             // Using type closures resolved via the associate classloader
             List<String> type1Closure = new LinkedList<>();
             List<String> type2Closure = new LinkedList<>();
-            collectHierarchyClosure(type1, type1Closure);
-            collectHierarchyClosure(type2, type2Closure);
+            collectHierarchyClosure(targetCL, type1, type1Closure);
+            collectHierarchyClosure(targetCL, type2, type2Closure);
             // basically, do intersection
             type1Closure.retainAll(type2Closure);
 

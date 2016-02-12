@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.DebugSupport;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,13 +40,14 @@ import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.lang.ref.Reference;
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.regex.PatternSyntaxException;
 
 /**
  * This class checks whether a given target class
- * matches atleast one probe specified in a BTrace
+ * matches at least one probe specified in a BTrace
  * class.
  *
  * @author A. Sundararajan
@@ -210,22 +210,18 @@ public class ClassFilter {
             }
 
             if (subClassChecks) {
-                try {
-                    List<String> toCheck = new java.util.LinkedList<>(java.util.Arrays.asList(interfaces));
-                    toCheck.add(superName);
-                    for(String cName : toCheck) {
-                        if (!cName.equals("java/lang/Object")) {
-                            // can safely use the associated classloader to access super-classes
-                            // all of them already have been loaded and potentially instrumented
-                            Class<?> checkingClass = loader.loadClass(cName.replace("/", "."));
-                            if (ClassFilter.this.isCandidate(checkingClass)) {
-                                isCandidate = true;
-                                return;
-                            }
-                        }
+                Collection<String> closure = new LinkedList<>();
+                InstrumentUtils.collectHierarchyClosure(loader, name, (List)closure);
+
+                // bulgarian constant for converting list to set to improve search efficiency
+                if (closure.size() > 20) {
+                    closure = new HashSet<>(closure);
+                }
+                for(String st : ClassFilter.this.superTypesInternal) {
+                    if (closure.contains(st)) {
+                        isCandidate = true;
+                        return;
                     }
-                } catch (ClassNotFoundException e) {
-                    DebugSupport.warning(e);
                 }
             }
 
