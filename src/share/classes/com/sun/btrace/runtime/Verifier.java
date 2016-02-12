@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.BTraceRuntime;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
@@ -70,6 +71,7 @@ public class Verifier extends ClassVisitor {
     public static final String BTRACE_PROBEMETHODNAME_DESC = Type.getDescriptor(ProbeMethodName.class);
 
     private boolean seenBTrace;
+    private boolean classRenamed;
     private String className;
     private List<OnMethod> onMethods;
     private List<OnProbe> onProbes;
@@ -93,6 +95,10 @@ public class Verifier extends ClassVisitor {
 
     public Verifier(ClassVisitor cv) {
         this(cv, false);
+    }
+
+    public boolean isClassRenamed() {
+        return classRenamed;
     }
 
     public String getClassName() {
@@ -132,7 +138,8 @@ public class Verifier extends ClassVisitor {
         if (interfaces != null && interfaces.length > 0) {
             Verifier.this.reportSafetyError("no.interface.implementation");
         }
-        className = name;
+        className = checkClassName(name);
+        classRenamed = !className.equals(name);
         super.visit(version, access, name, signature,
                     superName, interfaces);
     }
@@ -209,7 +216,7 @@ public class Verifier extends ClassVisitor {
         MethodVisitor mv = super.visitMethod(access, methodName,
                    methodDesc, signature, exceptions);
 
-        BTraceConfigurator cfg = new BTraceConfigurator(mv, cycleDetector, onMethods, onProbes, methodName, methodDesc);
+        BTraceConfigurator cfg = new BTraceConfigurator(mv, cycleDetector, onMethods, onProbes, className, methodName, methodDesc);
 
         if (isUnsafe()) {
             return cfg;
@@ -252,6 +259,15 @@ public class Verifier extends ClassVisitor {
     private static void usage(String msg) {
         System.err.println(msg);
         System.exit(1);
+    }
+
+    private static String checkClassName(String name) {
+        int suffix = 1;
+        String origClassName = name;
+        while (BTraceRuntime.classNameExists(name.replace("/", "."))) {
+            name = origClassName + "$" + (suffix++);
+        }
+        return name;
     }
 
     // simple test main

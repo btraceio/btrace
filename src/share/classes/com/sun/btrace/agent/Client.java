@@ -48,7 +48,6 @@ import com.sun.btrace.comm.RetransformationStartNotification;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
-import com.sun.btrace.runtime.ClinitInjector;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Location;
@@ -65,9 +64,19 @@ import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.Vector;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
 
@@ -80,6 +89,7 @@ import sun.reflect.annotation.AnnotationType;
 abstract class Client implements ClassFileTransformer, CommandListener {
     protected final Instrumentation inst;
     private volatile BTraceRuntime runtime;
+    private volatile boolean isClassRenamed = false;
     private volatile String className;
     private volatile Class btraceClazz;
     private volatile byte[] btraceCode;
@@ -105,36 +115,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
 
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
-
-    final private ClassFileTransformer clInitTransformer = new ClassFileTransformer() {
-
-        @Override
-        public byte[] transform(ClassLoader loader, final String cname, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-            if (!hasSubclassChecks || classBeingRedefined != null || isBTraceClass(cname) || isSensitiveClass(cname)) return null;
-
-            if (!skipRetransforms) {
-                if (isDebug()) {
-                    Client.this.debugPrint("injecting <clinit> for " + cname); // NOI18N
-                }
-                ClassReader cr = new ClassReader(classfileBuffer);
-                ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-                ClinitInjector injector = new ClinitInjector(cw, className, cname);
-                InstrumentUtils.accept(cr, injector);
-                if (injector.isTransformed()) {
-                    byte[] instrumentedCode = cw.toByteArray();
-                    if (settings.isDumpClasses()) {
-                        debug.dumpClass(className, cname + "_clinit", instrumentedCode); // NOI18N
-                    }
-                    return instrumentedCode;
-                }
-            } else {
-                if (isDebug()) {
-                    Client.this.debugPrint("client " + className + ": skipping transform for " + cname); // NOI18N
-                }
-            }
-            return null;
-        }
-    };
 
     private static PerfReader createPerfReaderImpl() {
         // see if we can access any jvmstat class
@@ -178,21 +158,19 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             if (classBeingRedefined != null) {
                 // class already defined; retransforming
                 if (!skipRetransforms && filter.isCandidate(classBeingRedefined)) {
-                    return doTransform(classBeingRedefined, cname, classfileBuffer);
+                    return doTransform(loader, classBeingRedefined, cname, classfileBuffer);
                 } else {
                     if (isDebug()) {
-                        debugPrint("client " + className + ": skipping transform for " + cname); // NOi18N
+                        debugPrint("client " + className + "[" + skipRetransforms + "]: skipping transform for " + cname); // NOi18N
                     }
                 }
             } else {
                 // class not yet defined
-                if (!hasSubclassChecks) {
-                    if (filter.isCandidate(classfileBuffer)) {
-                        return doTransform(classBeingRedefined, cname, classfileBuffer);
-                    } else {
-                        if (isDebug()) {
-                            debugPrint("client " + className + ": skipping transform for " + cname); // NOI18N
-                        }
+                if (filter.isCandidate(loader, classfileBuffer, hasSubclassChecks)) {
+                    return doTransform(loader, classBeingRedefined, cname, classfileBuffer);
+                } else {
+                    if (isDebug()) {
+                        debugPrint("client " + className + "[" + skipRetransforms + "]: skipping transform for " + cname); // NOI18N
                     }
                 }
             }
@@ -220,16 +198,14 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     }
 
     void registerTransformer() {
-        inst.addTransformer(clInitTransformer, false);
         inst.addTransformer(this, true);
     }
 
     void unregisterTransformer() {
         inst.removeTransformer(this);
-        inst.removeTransformer(clInitTransformer);
     }
 
-    private byte[] doTransform(Class<?> classBeingRedefined, String cname, byte[] classfileBuffer) {
+    private byte[] doTransform(ClassLoader loader, Class<?> classBeingRedefined, String cname, byte[] classfileBuffer) {
         if (isDebug()) {
             debugPrint("client " + className + ": instrumenting " + cname);
         }
@@ -240,7 +216,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 debugPrint(e);
             }
         }
-        return instrument(classBeingRedefined, cname, classfileBuffer);
+        return instrument(loader, classBeingRedefined, cname, classfileBuffer);
     }
 
     protected synchronized void onExit(int exitCode) {
@@ -277,8 +253,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         ClassWriter writer = InstrumentUtils.newClassWriter(btraceCode);
         ClassReader reader = new ClassReader(btraceCode);
         ClassVisitor visitor = new Preprocessor(writer);
-        if (BTraceRuntime.classNameExists(className)) {
-            className += "$" + getCount();
+        if (isClassRenamed) {
             if (isDebug()) {
                 debugPrint("class renamed to " + className);
             }
@@ -465,10 +440,10 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                name.equals("java/lang/VerifyError"); // NOI18N
     }
 
-    private byte[] instrument(Class clazz, String cname, byte[] target) {
+    private byte[] instrument(ClassLoader loader, Class clazz, String cname, byte[] target) {
         byte[] instrumentedCode;
         try {
-            ClassWriter writer = InstrumentUtils.newClassWriter(target);
+            ClassWriter writer = InstrumentUtils.newClassWriter(loader, target);
             ClassReader reader = new ClassReader(target);
             Instrumentor i = new Instrumentor(clazz, className,  btraceCode, onMethods, writer);
             InstrumentUtils.accept(reader, i);
@@ -492,6 +467,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         debugPrint("verifying BTrace class");
         InstrumentUtils.accept(reader, verifier);
         className = verifier.getClassName().replace('/', '.');
+        isClassRenamed = verifier.isClassRenamed();
         if (isDebug()) {
             debugPrint("verified '" + className + "' successfully");
         }
@@ -505,7 +481,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             verifySpecialParameters(om);
             if (om.getClazz().startsWith("+")) {
                 hasSubclassChecks = true;
-                break;
             }
         }
     }
@@ -608,10 +583,5 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             }
         }
         return res;
-    }
-
-    private static long count = 0L;
-    private static long getCount() {
-        return count++;
     }
 }

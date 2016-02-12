@@ -54,6 +54,7 @@ final public class BTraceConfigurator extends MethodVisitor {
     protected boolean asBTrace = false;
     protected Location loc;
 
+    private final String className;
     private final String methodName;
     private final String methodDesc;
     private final String methodId;
@@ -61,8 +62,9 @@ final public class BTraceConfigurator extends MethodVisitor {
     private final List<OnMethod> onMethods;
     private final List<OnProbe> onProbes;
 
-    public BTraceConfigurator(MethodVisitor mv, CycleDetector graph, List<OnMethod> onMethods, List<OnProbe> onProbes, String methodName, String desc) {
+    public BTraceConfigurator(MethodVisitor mv, CycleDetector graph, List<OnMethod> onMethods, List<OnProbe> onProbes, String className, String methodName, String desc) {
         super(Opcodes.ASM5, mv);
+        this.className = className;
         this.methodName = methodName;
         this.methodDesc = desc;
         this.methodId = methodName + desc;

@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.DebugSupport;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,8 @@ import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.lang.ref.Reference;
+import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.regex.PatternSyntaxException;
 
 /**
@@ -149,12 +152,12 @@ public class ClassFilter {
         return false;
     }
 
-    public boolean isCandidate(byte[] classBytes) {
-        return isCandidate(new ClassReader(classBytes));
+    public boolean isCandidate(ClassLoader loader, byte[] classBytes, boolean subClassChecks) {
+        return isCandidate(loader, new ClassReader(classBytes), subClassChecks);
     }
 
-    public boolean isCandidate(ClassReader reader) {
-        CheckingVisitor cv = new CheckingVisitor();
+    public boolean isCandidate(ClassLoader loader, ClassReader reader, boolean subClassChecks) {
+        CheckingVisitor cv = new CheckingVisitor(loader, subClassChecks);
         InstrumentUtils.accept(reader, cv);
         return cv.isCandidate();
     }
@@ -183,10 +186,14 @@ public class ClassFilter {
 
         private boolean isInterface;
         private boolean isCandidate;
+        private final ClassLoader loader;
+        private final boolean subClassChecks;
         private final AnnotationVisitor nullAnnotationVisitor = new AnnotationVisitor(Opcodes.ASM5) {};
 
-        public CheckingVisitor() {
+        public CheckingVisitor(ClassLoader loader, boolean subClassChecks) {
             super(Opcodes.ASM5);
+            this.loader = loader != null ? loader : ClassLoader.getSystemClassLoader();
+            this.subClassChecks = subClassChecks;
         }
 
         boolean isCandidate() {
@@ -201,6 +208,27 @@ public class ClassFilter {
                 isCandidate = false;
                 return;
             }
+
+            if (subClassChecks) {
+                try {
+                    List<String> toCheck = new java.util.LinkedList<>(java.util.Arrays.asList(interfaces));
+                    toCheck.add(superName);
+                    for(String cName : toCheck) {
+                        if (!cName.equals("java/lang/Object")) {
+                            // can safely use the associated classloader to access super-classes
+                            // all of them already have been loaded and potentially instrumented
+                            Class<?> checkingClass = loader.loadClass(cName.replace("/", "."));
+                            if (ClassFilter.this.isCandidate(checkingClass)) {
+                                isCandidate = true;
+                                return;
+                            }
+                        }
+                    }
+                } catch (ClassNotFoundException e) {
+                    DebugSupport.warning(e);
+                }
+            }
+
             name = name.replace('/', '.');
 
             if (referenceClz.getName().equals(name)) {

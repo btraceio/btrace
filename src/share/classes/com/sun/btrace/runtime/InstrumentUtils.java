@@ -25,67 +25,86 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.DebugSupport;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.JAVA_LANG_OBJECT;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.instrument.ClassFileTransformer;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * @author A. Sundararajan
  */
 public final class InstrumentUtils {
     private static class BTraceClassWriter extends ClassWriter {
-        /**
-         * This delegating classloader allows to check whether a particular
-         * class has already been loaded by any classloader in the hierarchy
-         */
-        private static final class CheckingClassLoader extends ClassLoader {
-            public CheckingClassLoader(ClassLoader parent) {
-                super(parent);
-            }
-
-            public boolean isClassLoaded(String name) {
-                Class<?> clz = null;
-                try {
-                    clz = findClass(name);
-                } catch (ClassNotFoundException e) {
-                    clz = null;
-                }
-                return clz != null;
-            }
-        }
-
-        private static final CheckingClassLoader CHECKING_CL =
-                new CheckingClassLoader(ClassWriter.class.getClassLoader());
-
-        public BTraceClassWriter(int flags) {
+        private final ClassLoader targetCL;
+        public BTraceClassWriter(ClassLoader cl, int flags) {
             super(flags);
+            this.targetCL = cl != null ? cl : ClassLoader.getSystemClassLoader();
         }
 
-        public BTraceClassWriter(ClassReader reader, int flags) {
+        public BTraceClassWriter(ClassLoader cl, ClassReader reader, int flags) {
             super(reader, flags);
+            this.targetCL = cl != null ? cl : ClassLoader.getSystemClassLoader();
+        }
+
+        /**
+         * Collects the type hierarchy into the provided list, sorted from the actual type to root.
+         * It will use the associated classloader to locate the class file resources.
+         * @param type the type to compute the hierarchy closure for
+         * @param closure the list to store the closure in
+         */
+        private void collectHierarchyClosure(String type, List<String> closure) {
+            if (type == null || type.equals(JAVA_LANG_OBJECT)) {
+                return;
+            }
+            try {
+                InputStream type1is = targetCL.getResourceAsStream(type + ".class");
+                final List<String> mySupers = new LinkedList<>();
+                ClassReader cr = new ClassReader(type1is);
+                cr.accept(new ClassVisitor(Opcodes.ASM5) {
+                    @Override
+                    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+                        mySupers.add(superName);
+                        mySupers.addAll(Arrays.asList(interfaces));
+                        super.visit(version, access, name, signature, superName, interfaces);
+                    }
+                }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                closure.addAll(mySupers);
+                for (String superType : mySupers) {
+                    collectHierarchyClosure(superType, closure);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         protected String getCommonSuperClass(String type1, String type2) {
-            // FIXME: getCommonSuperClass is called by ClassWriter to merge two types
-            // - persumably to compute stack frame attribute. We get LinkageError
-            // when one of the types is the one being written/prepared by this ClassWriter
-            // itself! So, I catch LinkageError and return "java/lang/Object" in such cases.
-            // Revisit this for a possible better solution.
-            try {
-                type1 = getResolvedType(type1);
-                type2 = getResolvedType(type2);
-                return super.getCommonSuperClass(type1, type2);
-            } catch (LinkageError le) {
-                return JAVA_LANG_OBJECT;
-            } catch (RuntimeException re) {
-                return JAVA_LANG_OBJECT;
-            }
-        }
+            // Using type closures resolved via the associate classloader
+            List<String> type1Closure = new LinkedList<>();
+            List<String> type2Closure = new LinkedList<>();
+            collectHierarchyClosure(type1, type1Closure);
+            collectHierarchyClosure(type2, type2Closure);
+            // basically, do intersection
+            type1Closure.retainAll(type2Closure);
 
-        private static String getResolvedType(String type) {
-            return CHECKING_CL.isClassLoaded(type.replace('/', '.')) ? type : "java/lang/Object";
+            // if the intersection is not empty the first element is the closest common ancestor
+            Iterator<String> iter = type1Closure.iterator();
+            if (iter.hasNext()) {
+                String type = iter.next();
+                return type;
+            }
+
+            return JAVA_LANG_OBJECT;
         }
     }
     public static String arrayDescriptorFor(int typeCode) {
@@ -128,7 +147,7 @@ public final class InstrumentUtils {
     }
 
     public static ClassWriter newClassWriter() {
-        return newClassWriter(null, ClassWriter.COMPUTE_FRAMES);
+        return newClassWriter(null, null, ClassWriter.COMPUTE_FRAMES);
     }
 
     public static ClassWriter newClassWriter(byte[] code) {
@@ -136,13 +155,21 @@ public final class InstrumentUtils {
         if (isJDK16OrAbove(code)) {
             flags = ClassWriter.COMPUTE_FRAMES;
         }
-        return newClassWriter(null, flags);
+        return newClassWriter(null, code);
     }
 
-    public static ClassWriter newClassWriter(ClassReader reader, int flags) {
+    public static ClassWriter newClassWriter(ClassLoader cl, byte[] code) {
+        int flags = ClassWriter.COMPUTE_MAXS;
+        if (isJDK16OrAbove(code)) {
+            flags = ClassWriter.COMPUTE_FRAMES;
+        }
+        return newClassWriter(cl, new ClassReader(code), flags);
+    }
+
+    public static ClassWriter newClassWriter(ClassLoader cl, ClassReader reader, int flags) {
         ClassWriter cw = null;
-        cw = reader != null ? new BTraceClassWriter(reader, flags) :
-                              new BTraceClassWriter(flags);
+        cw = reader != null ? new BTraceClassWriter(cl, reader, flags) :
+                              new BTraceClassWriter(cl, flags);
 
         return cw;
     }

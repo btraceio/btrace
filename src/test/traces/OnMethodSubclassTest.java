@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
+ * particular file as subject to the Classpath exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -22,40 +22,23 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package resources;
+
+package traces;
+
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.ProbeMethodName;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
-public class Main extends TestApp {
-    public static void main(String[] args) throws Exception {
-        Main i = new Main();
-        i.start();
-    }
-
-    @Override
-    protected void startWork() {
-        while (!Thread.currentThread().isInterrupted()) {
-            callA();
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
-
-    private void callA() {
-        callB(1, "Hello World");
-    }
-
-    private void callB(int i, String s) {
-        print("[" + i + "] = " + s);
-    }
-
-    public void print(String msg) {
-        System.out.println(msg);
-        System.out.flush();
+@BTrace
+public class OnMethodSubclassTest {
+    @OnMethod(clazz = "+resources.TestPrinter", method = "print")
+    public static void onStartWork(@Self Object self, @ProbeMethodName String pmn) {
+        println(pmn + ":" + str(classOf(self)));
     }
 }

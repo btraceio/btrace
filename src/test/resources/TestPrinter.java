@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,40 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package resources;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
-public class Main extends TestApp {
-    public static void main(String[] args) throws Exception {
-        Main i = new Main();
-        i.start();
-    }
-
-    @Override
-    protected void startWork() {
-        while (!Thread.currentThread().isInterrupted()) {
-            callA();
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
-
-    private void callA() {
-        callB(1, "Hello World");
-    }
-
-    private void callB(int i, String s) {
-        print("[" + i + "] = " + s);
-    }
-
-    public void print(String msg) {
-        System.out.println(msg);
-        System.out.flush();
-    }
+public interface TestPrinter {
+    void print(String msg);
 }

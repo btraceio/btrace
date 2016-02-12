@@ -114,9 +114,6 @@ abstract public class RuntimeTest {
     public void test(String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
         ProcessBuilder pb = new ProcessBuilder(
             java + "/bin/java",
-            "-Dcom.sun.btrace.debug=true",
-            "-Dcom.sun.btrace.dumpClases=true",
-            "-Dcom.sun.btrace.dumpDir=/tmp",
             "-cp",
             cp,
             testApp
@@ -209,10 +206,11 @@ abstract public class RuntimeTest {
             java + "/bin/java",
             "-Dcom.sun.btrace.unsafe=" + isUnsafe,
             "-Dcom.sun.btrace.debug=" + debugBTrace,
-            "-Dcom.sun.btrace.probeDescPath= " + traceFile.getParentFile().getAbsolutePath(),
             "-cp",
             btraceExtPath,
             "com.sun.btrace.client.Main",
+            "-d", "/tmp/btrace-test",
+            "-pd", traceFile.getParentFile().getAbsolutePath(),
             pid,
             trace
         );
