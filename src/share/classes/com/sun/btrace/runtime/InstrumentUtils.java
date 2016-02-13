@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.DebugSupport;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
@@ -56,7 +57,6 @@ public final class InstrumentUtils {
            return;
         }
         try {
-           System.err.println("*** getting hierarchy for " + type);
            InputStream typeIs = cl.getResourceAsStream(type + ".class");
            if (typeIs != null) {
                 final List<String> mySupers = new LinkedList<>();
@@ -75,7 +75,7 @@ public final class InstrumentUtils {
                 }
             }
        } catch (IOException e) {
-            e.printStackTrace();
+            DebugSupport.warning(e);
        }
     }
 
