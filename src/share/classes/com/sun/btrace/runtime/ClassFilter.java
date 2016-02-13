@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,11 +40,14 @@ import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.lang.ref.Reference;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.regex.PatternSyntaxException;
 
 /**
  * This class checks whether a given target class
- * matches atleast one probe specified in a BTrace
+ * matches at least one probe specified in a BTrace
  * class.
  *
  * @author A. Sundararajan
@@ -149,12 +152,12 @@ public class ClassFilter {
         return false;
     }
 
-    public boolean isCandidate(byte[] classBytes) {
-        return isCandidate(new ClassReader(classBytes));
+    public boolean isCandidate(ClassLoader loader, byte[] classBytes, boolean subClassChecks) {
+        return isCandidate(loader, new ClassReader(classBytes), subClassChecks);
     }
 
-    public boolean isCandidate(ClassReader reader) {
-        CheckingVisitor cv = new CheckingVisitor();
+    public boolean isCandidate(ClassLoader loader, ClassReader reader, boolean subClassChecks) {
+        CheckingVisitor cv = new CheckingVisitor(loader, subClassChecks);
         InstrumentUtils.accept(reader, cv);
         return cv.isCandidate();
     }
@@ -183,10 +186,14 @@ public class ClassFilter {
 
         private boolean isInterface;
         private boolean isCandidate;
+        private final ClassLoader loader;
+        private final boolean subClassChecks;
         private final AnnotationVisitor nullAnnotationVisitor = new AnnotationVisitor(Opcodes.ASM5) {};
 
-        public CheckingVisitor() {
+        public CheckingVisitor(ClassLoader loader, boolean subClassChecks) {
             super(Opcodes.ASM5);
+            this.loader = loader != null ? loader : ClassLoader.getSystemClassLoader();
+            this.subClassChecks = subClassChecks;
         }
 
         boolean isCandidate() {
@@ -201,6 +208,23 @@ public class ClassFilter {
                 isCandidate = false;
                 return;
             }
+
+            if (subClassChecks) {
+                Collection<String> closure = new LinkedList<>();
+                InstrumentUtils.collectHierarchyClosure(loader, name, (List)closure);
+
+                // bulgarian constant for converting list to set to improve search efficiency
+                if (closure.size() > 20) {
+                    closure = new HashSet<>(closure);
+                }
+                for(String st : ClassFilter.this.superTypesInternal) {
+                    if (closure.contains(st)) {
+                        isCandidate = true;
+                        return;
+                    }
+                }
+            }
+
             name = name.replace('/', '.');
 
             if (referenceClz.getName().equals(name)) {

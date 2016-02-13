@@ -25,6 +25,8 @@
 
 package support;
 
+import static org.junit.Assert.*;
+
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.runtime.InstrumentUtils;
@@ -33,6 +35,12 @@ import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.Preprocessor;
 import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.util.MethodID;
+import org.junit.After;
+import org.junit.Before;
+import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.util.TraceClassVisitor;
+import sun.misc.Unsafe;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -41,18 +49,12 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.After;
-import org.objectweb.asm.util.TraceClassVisitor;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.objectweb.asm.util.CheckClassAdapter;
-import sun.misc.Unsafe;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
-abstract public class InstrumentorTestBase {
+public abstract class InstrumentorTestBase {
     protected static class Trace {
         final byte[] content;
         final List<OnMethod> onMethods;
@@ -194,15 +196,15 @@ abstract public class InstrumentorTestBase {
         return sw.toString();
     }
 
-    private String diff() throws IOException {
-        String origCode = asmify(originalBC);
-        String transCode = asmify(transformedBC);
-        return diff(transCode, origCode);
-    }
-
     private String diffTrace() throws IOException {
         String origCode = asmify(originalTrace);
         String transCode = asmify(transformedTrace);
+        return diff(transCode, origCode);
+    }
+
+    private String diff() throws IOException {
+        String origCode = asmify(originalBC);
+        String transCode = asmify(transformedBC);
         return diff(transCode, origCode);
     }
 
@@ -213,37 +215,44 @@ abstract public class InstrumentorTestBase {
         String[] orgArr = orig.split("\\n");
 
         // number of lines of each file
-        int M = modArr.length;
-        int N = orgArr.length;
+        int modLen = modArr.length;
+        int origLen = orgArr.length;
 
         // opt[i][j] = length of LCS of x[i..M] and y[j..N]
-        int[][] opt = new int[M+1][N+1];
+        int[][] opt = new int[modLen + 1][origLen + 1];
 
         // compute length of LCS and all subproblems via dynamic programming
-        for (int i = M-1; i >= 0; i--) {
-            for (int j = N-1; j >= 0; j--) {
-                if (modArr[i].equals(orgArr[j]))
-                    opt[i][j] = opt[i+1][j+1] + 1;
-                else
-                    opt[i][j] = Math.max(opt[i+1][j], opt[i][j+1]);
+        for (int i = modLen - 1; i >= 0; i--) {
+            for (int j = origLen - 1; j >= 0; j--) {
+                if (modArr[i].equals(orgArr[j])) {
+                    opt[i][j] = opt[i + 1][j + 1] + 1;
+                } else {
+                    opt[i][j] = Math.max(opt[i + 1][j], opt[i][j + 1]);
+                }
             }
         }
 
         // recover LCS itself and print out non-matching lines to standard output
-        int i = 0, j = 0;
-        while(i < M && j < N) {
-            if (modArr[i].equals(orgArr[j])) {
-                i++;
-                j++;
+        int modIndex = 0;
+        int origIndex = 0;
+        while (modIndex < modLen && origIndex < origLen) {
+            if (modArr[modIndex].equals(orgArr[origIndex])) {
+                modIndex++;
+                origIndex++;
+            } else if (opt[modIndex + 1][origIndex] >= opt[modIndex][origIndex + 1]) {
+                sb.append(modArr[modIndex++].trim()).append('\n');
+            } else {
+                origIndex++;
             }
-            else if (opt[i+1][j] >= opt[i][j+1]) sb.append(modArr[i++].trim()).append('\n');
-            else j++; //                                sb.append("[").append(j).append("] ").append("> " + orgArr[j++]).append('\n');
         }
 
         // dump out one remainder of one string if the other is exhausted
-        while(i < M || j < N) {
-            if      (i == M) j++; //sb.append("[").append(j).append("] ").append("> " + modArr[j++]).append('\n');
-            else if (j == N) sb.append(orgArr[i++].trim()).append('\n');
+        while (modIndex < modLen || origIndex < origLen) {
+            if (modIndex == modLen) {
+                origIndex++;
+            } else if (origIndex == origLen) {
+                sb.append(orgArr[modIndex++].trim()).append('\n');
+            }
         }
         return sb.toString().trim();
     }
@@ -297,7 +306,7 @@ abstract public class InstrumentorTestBase {
         byte[] buffer = new byte[1024];
 
         int read = -1;
-        while((read = is.read(buffer)) > 0) {
+        while ((read = is.read(buffer)) > 0) {
             byte[] newresult = new byte[result.length + read];
             System.arraycopy(result, 0, newresult, 0, result.length);
             System.arraycopy(buffer, 0, newresult, result.length, read);
