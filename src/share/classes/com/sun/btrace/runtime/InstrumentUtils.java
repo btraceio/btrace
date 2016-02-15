@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -50,9 +51,9 @@ public final class InstrumentUtils {
     * It will use the associated classloader to locate the class file resources.
     * @param cl the associated classloader
     * @param type the type to compute the hierarchy closure for
-    * @param closure the list to store the closure in
+    * @param closure the ordered set to store the closure in
     */
-    public static void collectHierarchyClosure(ClassLoader cl, String type, List<String> closure) {
+    public static void collectHierarchyClosure(ClassLoader cl, String type, LinkedHashSet<String> closure) {
         if (type == null || type.equals(JAVA_LANG_OBJECT)) {
            return;
         }
@@ -93,8 +94,8 @@ public final class InstrumentUtils {
 
         protected String getCommonSuperClass(String type1, String type2) {
             // Using type closures resolved via the associate classloader
-            List<String> type1Closure = new LinkedList<>();
-            List<String> type2Closure = new LinkedList<>();
+            LinkedHashSet<String> type1Closure = new LinkedHashSet<>();
+            LinkedHashSet<String> type2Closure = new LinkedHashSet<>();
             collectHierarchyClosure(targetCL, type1, type1Closure);
             collectHierarchyClosure(targetCL, type2, type2Closure);
             // basically, do intersection

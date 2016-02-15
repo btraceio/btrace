@@ -445,7 +445,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         try {
             ClassWriter writer = InstrumentUtils.newClassWriter(loader, target);
             ClassReader reader = new ClassReader(target);
-            Instrumentor i = new Instrumentor(clazz, className,  btraceCode, onMethods, writer);
+            Instrumentor i = new Instrumentor(loader, clazz, className,  btraceCode, onMethods, writer);
             InstrumentUtils.accept(reader, i);
             if (isDebug() && !i.hasMatch()) {
                 debugPrint("*WARNING* No method was matched for class " + cname); // NOI18N

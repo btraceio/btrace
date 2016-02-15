@@ -177,7 +177,7 @@ public abstract class InstrumentorTestBase {
         ClassWriter writer = InstrumentUtils.newClassWriter();
 
         try {
-            InstrumentUtils.accept(reader, new Instrumentor(null,
+            InstrumentUtils.accept(reader, new Instrumentor(ClassLoader.getSystemClassLoader(), null,
                         btrace.className, btrace.content,
                         btrace.onMethods, writer));
         } catch (Throwable e) {

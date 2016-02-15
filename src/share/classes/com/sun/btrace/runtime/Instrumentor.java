@@ -67,8 +67,9 @@ public class Instrumentor extends ClassVisitor {
     private Set<OnMethod> calledOnMethods;
     private String className, superName;
     private Class clazz;
+    private ClassLoader loader;
 
-    public Instrumentor(Class clazz,
+    public Instrumentor(ClassLoader loader, Class clazz,
             String btraceClassName, ClassReader btraceClass,
             List<OnMethod> onMethods, ClassVisitor cv) {
         super(ASM5, cv);
@@ -78,12 +79,13 @@ public class Instrumentor extends ClassVisitor {
         this.onMethods = onMethods;
         this.applicableOnMethods = new ArrayList<>();
         this.calledOnMethods = new HashSet<>();
+        this.loader = loader;
     }
 
-    public Instrumentor(Class clazz,
+    public Instrumentor(ClassLoader loader, Class clazz,
             String btraceClassName, byte[] btraceCode,
             List<OnMethod> onMethods, ClassVisitor cv) {
-        this(clazz, btraceClassName, new ClassReader(btraceCode), onMethods, cv);
+        this(loader, clazz, btraceClassName, new ClassReader(btraceCode), onMethods, cv);
     }
 
     final public boolean hasMatch() {
@@ -120,15 +122,19 @@ public class Instrumentor extends ClassVisitor {
                 // internal name of super type.
                 String superTypeInternal = superType.replace('.', '/');
                 /*
-                 * If we are redefining a class, then we have a Class object
-                 * of it and we can walk through it's hierarchy to match for
-                 * specified super type. But, if we are loading it a fresh, then
-                 * we can not walk through super hierarchy. We just check the
-                 * immediate super class and directly implemented interfaces
+                 * The following checks are ordered in the order of complexity
+                 * <ol>
+                 * <li>Check that the class is actually the probe declared super type</li>
+                 * <li>Check that the immediate superclass == probe declared super type</li>
+                 * <li>Check whether the immediate interfaces contain the probe declared super type</li>
+                 * <li>Collect the type hierarchy closure for the class and check if it contains
+                 *     the probe declared super type</li>
+                 * </ol>
                  */
-                if (ClassFilter.isSubTypeOf(this.clazz, superType) ||
+                if (name.equals(superTypeInternal) ||
                     superName.equals(superTypeInternal) ||
-                    isInArray(interfaces, superTypeInternal)) {
+                    isInArray(interfaces, superTypeInternal) ||
+                    ClassFilter.isSubTypeOf(name, loader, superTypeInternal)) {
                     applicableOnMethods.add(om);
                 }
             } else if (probeClazz.equals(externalName)) {
@@ -1675,7 +1681,7 @@ public class Instrumentor extends ClassVisitor {
         fis = new FileInputStream(targetClass);
         writer = InstrumentUtils.newClassWriter();
         ClassReader reader = new ClassReader(fis);
-        InstrumentUtils.accept(reader, new Instrumentor(null,
+        InstrumentUtils.accept(reader, new Instrumentor(ClassLoader.getSystemClassLoader(), null,
                     verifier.getClassName(), buf,
                     verifier.getOnMethods(), writer));
         fos = new FileOutputStream(targetClass);

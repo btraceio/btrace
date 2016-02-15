@@ -40,9 +40,11 @@ import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.lang.ref.Reference;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
 /**
@@ -182,6 +184,31 @@ public class ClassFilter {
         }
     }
 
+    /**
+     * Return whether given Class <i>typeA</i> is subtype of any of the
+     * given type names.
+     * @param typeA the type to check
+     * @param loader the classloader for loading the type (my be null)
+     * @param types any requested supertypes
+     **/
+    public static boolean isSubTypeOf(String typeA, ClassLoader loader, String ... types) {
+        loader = (loader != null ? loader : ClassLoader.getSystemClassLoader());
+
+        if (typeA == null) {
+            return false;
+        }
+        Set<String> typeSet = new HashSet<>(Arrays.asList(types));
+        if (typeSet.contains(typeA)) {
+            return true;
+        }
+
+        LinkedHashSet<String> closure = new LinkedHashSet<>();
+        InstrumentUtils.collectHierarchyClosure(loader, typeA, closure);
+
+        closure.retainAll(typeSet);
+        return !closure.isEmpty();
+    }
+
     private class CheckingVisitor extends ClassVisitor {
 
         private boolean isInterface;
@@ -210,18 +237,9 @@ public class ClassFilter {
             }
 
             if (subClassChecks) {
-                Collection<String> closure = new LinkedList<>();
-                InstrumentUtils.collectHierarchyClosure(loader, name, (List)closure);
-
-                // bulgarian constant for converting list to set to improve search efficiency
-                if (closure.size() > 20) {
-                    closure = new HashSet<>(closure);
-                }
-                for(String st : ClassFilter.this.superTypesInternal) {
-                    if (closure.contains(st)) {
-                        isCandidate = true;
-                        return;
-                    }
+                if (isSubTypeOf(name, loader, superTypes)) {
+                    isCandidate = true;
+                    return;
                 }
             }
 
