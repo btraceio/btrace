@@ -68,10 +68,11 @@ public class Instrumentor extends ClassVisitor {
     private String className, superName;
     private Class clazz;
     private ClassLoader loader;
+    private ReachableCalls rc;
 
     public Instrumentor(ClassLoader loader, Class clazz,
             String btraceClassName, ClassReader btraceClass,
-            List<OnMethod> onMethods, ClassVisitor cv) {
+            List<OnMethod> onMethods, ReachableCalls rc, ClassVisitor cv) {
         super(ASM5, cv);
         this.clazz = clazz;
         this.btraceClassName = btraceClassName.replace('.', '/');
@@ -80,12 +81,13 @@ public class Instrumentor extends ClassVisitor {
         this.applicableOnMethods = new ArrayList<>();
         this.calledOnMethods = new HashSet<>();
         this.loader = loader;
+        this.rc = rc;
     }
 
     public Instrumentor(ClassLoader loader, Class clazz,
             String btraceClassName, byte[] btraceCode,
-            List<OnMethod> onMethods, ClassVisitor cv) {
-        this(loader, clazz, btraceClassName, new ClassReader(btraceCode), onMethods, cv);
+            List<OnMethod> onMethods, ReachableCalls rc, ClassVisitor cv) {
+        this(loader, clazz, btraceClassName, new ClassReader(btraceCode), onMethods, rc, cv);
     }
 
     final public boolean hasMatch() {
@@ -1636,6 +1638,7 @@ public class Instrumentor extends ClassVisitor {
 
     @Override
     public void visitEnd() {
+        System.err.println("*** Going to copy methods from: " + btraceClassName);
         int size = applicableOnMethods.size();
         List<MethodCopier.MethodInfo> mi = new ArrayList<>(size);
         for (OnMethod om : calledOnMethods) {
@@ -1643,8 +1646,17 @@ public class Instrumentor extends ClassVisitor {
                      om.getTargetDescriptor(),
                      getActionMethodName(om.getTargetName()),
                      ACC_STATIC | ACC_PRIVATE));
+            if (rc != null) {
+                Set<String> closure = new HashSet<>();
+                rc.collectReachables(om.getTargetName(), om.getTargetDescriptor(), closure);
+                for(String c : closure) {
+                    System.err.println("*** marking to copy: " + c);
+                    String[] target = CycleDetector.method(c);
+                    mi.add(new MethodCopier.MethodInfo(target[0], target[1], getActionMethodName(target[0]), ACC_STATIC | ACC_PRIVATE));
+                }
+            }
         }
-        MethodCopier copier = new MethodCopier(btraceClass, cv, mi) {
+        MethodCopier copier = new MethodCopier(btraceClass, cv, className, mi) {
             @Override
             protected MethodVisitor addMethod(int access, String name, String desc,
                         String signature, String[] exceptions) {
@@ -1683,7 +1695,7 @@ public class Instrumentor extends ClassVisitor {
         ClassReader reader = new ClassReader(fis);
         InstrumentUtils.accept(reader, new Instrumentor(ClassLoader.getSystemClassLoader(), null,
                     verifier.getClassName(), buf,
-                    verifier.getOnMethods(), writer));
+                    verifier.getOnMethods(), null, writer));
         fos = new FileOutputStream(targetClass);
         fos.write(writer.toByteArray());
     }

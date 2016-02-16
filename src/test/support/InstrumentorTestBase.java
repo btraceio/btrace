@@ -33,6 +33,7 @@ import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.Preprocessor;
+import com.sun.btrace.runtime.ReachableCalls;
 import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.util.MethodID;
 import org.junit.After;
@@ -59,11 +60,13 @@ public abstract class InstrumentorTestBase {
         final byte[] content;
         final List<OnMethod> onMethods;
         public final String className;
+        public final ReachableCalls rc;
 
-        public Trace(byte[] content, List<OnMethod> onMethods, String className) {
+        public Trace(byte[] content, List<OnMethod> onMethods, ReachableCalls rc, String className) {
             this.content = content;
             this.onMethods = onMethods;
             this.className = className;
+            this.rc = rc;
         }
     }
 
@@ -179,7 +182,7 @@ public abstract class InstrumentorTestBase {
         try {
             InstrumentUtils.accept(reader, new Instrumentor(ClassLoader.getSystemClassLoader(), null,
                         btrace.className, btrace.content,
-                        btrace.onMethods, writer));
+                        btrace.onMethods, btrace.rc, writer));
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -270,7 +273,7 @@ public abstract class InstrumentorTestBase {
         ClassWriter writer = InstrumentUtils.newClassWriter();
         Verifier verifier = new Verifier(new Preprocessor(writer), unsafe);
         InstrumentUtils.accept(new ClassReader(originalTrace), verifier);
-        Trace t =  new Trace(writer.toByteArray(), verifier.getOnMethods(), verifier.getClassName());
+        Trace t =  new Trace(writer.toByteArray(), verifier.getOnMethods(), verifier.getReachableCalls(), verifier.getClassName());
         transformedTrace = t.content;
         if (DEBUG) {
 //            writer = InstrumentUtils.newClassWriter();

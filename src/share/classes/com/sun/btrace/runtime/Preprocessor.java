@@ -286,7 +286,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     }
 
     private void makePublic(MethodNode mn) {
-        if (!mn.name.contains("init>")) {
+        if (!mn.name.contains("init>") && isUnannotated(mn)) {
             if ((mn.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC) {
                 mn.access &= ~(Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED);
                 mn.access |= Opcodes.ACC_PUBLIC;
@@ -460,6 +460,8 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     }
 
     private void checkAugmentedReturn(MethodNode mn, LocalVarGenerator lvg) {
+        if (isUnannotated(mn)) return;
+
         Type retType = Type.getReturnType(mn.desc);
         if (retType.getSort() != Type.VOID) {
             if (getReturnMethodParameter(mn) == Integer.MIN_VALUE) {
@@ -622,6 +624,8 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     }
 
     private void addBTraceErrorHandler(MethodNode mn, LocalVarGenerator lvg) {
+        if (!mn.name.equals("<clinit>") && isUnannotated(mn)) return;
+
         Type throwableType = Type.getType(Throwable.class);
         MethodClassifier clsf = getClassifier(mn);
         if (isClassified(clsf, MethodClassifier.RT_AWARE)) {
@@ -1199,5 +1203,9 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
 
     private static boolean isClassified(MethodClassifier clsf, MethodClassifier requested) {
         return clsf.ordinal() >= requested.ordinal();
+    }
+
+    private static boolean isUnannotated(MethodNode mn) {
+        return mn == null || mn.visibleAnnotations == null || mn.visibleAnnotations.isEmpty();
     }
 }

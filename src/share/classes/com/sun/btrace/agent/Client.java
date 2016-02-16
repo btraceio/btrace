@@ -45,9 +45,12 @@ import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
+import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.ClassRenamer;
+import com.sun.btrace.runtime.Constants;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Location;
@@ -58,7 +61,9 @@ import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.Preprocessor;
 import com.sun.btrace.runtime.ProbeDescriptor;
+import com.sun.btrace.runtime.ReachableCalls;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
+import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassFileTransformer;
@@ -68,6 +73,7 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -98,6 +104,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private volatile ClassFilter filter;
     private volatile boolean skipRetransforms;
     private volatile boolean hasSubclassChecks;
+    private ReachableCalls reachableCalls;
 
     protected final SharedSettings settings = new SharedSettings();
     private final DebugSupport debug = new DebugSupport(settings);
@@ -296,10 +303,10 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         }));
         if (isDebug()) {
             debugPrint("created BTraceRuntime instance for " + className);
-            debugPrint("removing @OnMethod, @OnProbe methods");
+            debugPrint("removing @OnMethod, @OnProbe and shared methods");
         }
         byte[] codeBuf = removeMethods(btraceCode);
-        debugPrint("removed @OnMethod, @OnProbe methods");
+        debugPrint("removed @OnMethod, @OnProbe and shared methods");
         debugPrint("sending Okay command");
         onCommand(new OkayCommand());
         // This extra BTraceRuntime.enter is needed to
@@ -445,7 +452,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         try {
             ClassWriter writer = InstrumentUtils.newClassWriter(loader, target);
             ClassReader reader = new ClassReader(target);
-            Instrumentor i = new Instrumentor(loader, clazz, className,  btraceCode, onMethods, writer);
+            Instrumentor i = new Instrumentor(loader, clazz, className,  btraceCode, onMethods, reachableCalls, writer);
             InstrumentUtils.accept(reader, i);
             if (isDebug() && !i.hasMatch()) {
                 debugPrint("*WARNING* No method was matched for class " + cname); // NOI18N
@@ -466,6 +473,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM5) {}, settings.isUnsafe());
         debugPrint("verifying BTrace class");
         InstrumentUtils.accept(reader, verifier);
+        reachableCalls = verifier.getReachableCalls();
+
         className = verifier.getClassName().replace('/', '.');
         isClassRenamed = verifier.isClassRenamed();
         if (isDebug()) {

@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.org.objectweb.asm.*;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -35,6 +34,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.lang.reflect.Method;
 import static com.sun.btrace.runtime.Constants.CLASS_INITIALIZER;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This class copies a set of methods from one class
@@ -48,6 +49,8 @@ import static com.sun.btrace.runtime.Constants.CLASS_INITIALIZER;
 public class MethodCopier extends ClassVisitor {
     private final ClassReader fromClass;
     private final Iterable<MethodInfo> methods;
+    private final Map<String, String> renameMap = new HashMap<>();
+    private final String targetClzName;
 
     public static class MethodInfo {
         String name;
@@ -65,10 +68,19 @@ public class MethodCopier extends ClassVisitor {
     }
 
     public MethodCopier(ClassReader fromClass, ClassVisitor toClass,
-                       Iterable<MethodInfo> methods) {
+                        String targetClzName, Iterable<MethodInfo> methods) {
         super(Opcodes.ASM5, toClass);
         this.fromClass = fromClass;
         this.methods = methods;
+        this.targetClzName = targetClzName;
+        for (MethodInfo mi : methods) {
+            renameMap.put(mi.name, mi.newName);
+        }
+    }
+
+    @Override
+    public void visit(int version, int access, String name, String sig, String superType, String[] ifcs) {
+        super.visit(version, access, name, sig, superType, ifcs);
     }
 
     protected MethodVisitor addMethod(int access, String name, String desc,
@@ -93,9 +105,12 @@ public class MethodCopier extends ClassVisitor {
     @Override
     public void visitEnd() {
         fromClass.accept(new ClassVisitor(Opcodes.ASM5) {
+            private String className;
+
             @Override
             public void visit(int version, int access, String name,
                 String signature, String superName, String[] interfaces) {
+                className = name;
             }
 
             @Override
@@ -125,10 +140,29 @@ public class MethodCopier extends ClassVisitor {
             @Override
             public MethodVisitor visitMethod(int access, String name, String desc,
                 String signature, String[] exceptions) {
+                System.err.println("*** checking " + name + " " + desc);
                 MethodInfo mi = getMethodInfo(name, desc);
                 if (mi != null) {
-                    return addMethod(mi.newAccess, mi.newName, desc,
-                                       signature, exceptions);
+                    System.err.println("*** copying method");
+                    return new MethodVisitor(Opcodes.ASM5, addMethod(mi.newAccess, mi.newName, desc, signature, exceptions)) {
+                        private boolean shouldUpdateRefs = true;
+
+                        @Override
+                        public AnnotationVisitor visitAnnotation(String type, boolean visible) {
+                            return super.visitAnnotation(type, visible);
+                        }
+
+                        @Override
+                        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean ifc) {
+                            if (owner.equals(className)) {
+                                String newName = renameMap.get(name);
+                                name = newName != null ? newName : name;
+                                owner = targetClzName;
+                            }
+                            super.visitMethodInsn(opcode, owner, name, desc, ifc);
+                        }
+
+                    };
                 } else {
                     return null;
                 }
@@ -172,7 +206,7 @@ public class MethodCopier extends ClassVisitor {
         ClassReader reader2 = new ClassReader(new BufferedInputStream(fis2));
         FileOutputStream fos = new FileOutputStream(args[1] + ".class");
         ClassWriter writer = InstrumentUtils.newClassWriter();
-        MethodCopier copier = new MethodCopier(reader1, writer, miList);
+        MethodCopier copier = new MethodCopier(reader1, writer, args[0], miList);
         InstrumentUtils.accept(reader2, copier);
         fos.write(writer.toByteArray());
     }
