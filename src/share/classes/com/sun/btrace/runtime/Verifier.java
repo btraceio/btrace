@@ -113,6 +113,10 @@ public class Verifier extends ClassVisitor {
         return onProbes;
     }
 
+    public ReachableCalls getReachableCalls() {
+        return cycleDetector;
+    }
+
     @Override
     public void visitEnd() {
         if (cycleDetector.hasCycle()) {

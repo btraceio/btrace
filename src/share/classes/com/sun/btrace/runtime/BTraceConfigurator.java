@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import static com.sun.btrace.runtime.Verifier.BTRACE_RETURN_DESC;
 import static com.sun.btrace.runtime.Verifier.BTRACE_SELF_DESC;
 import static com.sun.btrace.runtime.Verifier.BTRACE_TARGETINSTANCE_DESC;
 import static com.sun.btrace.runtime.Verifier.BTRACE_TARGETMETHOD_DESC;
+import com.sun.btrace.util.MethodID;
 import java.util.List;
 
 /**
@@ -67,7 +68,7 @@ final public class BTraceConfigurator extends MethodVisitor {
         this.className = className;
         this.methodName = methodName;
         this.methodDesc = desc;
-        this.methodId = methodName + desc;
+        this.methodId = CycleDetector.methodId(methodName, desc);
         this.graph = graph;
         this.onMethods = onMethods;
         this.onProbes = onProbes;
@@ -315,7 +316,7 @@ final public class BTraceConfigurator extends MethodVisitor {
     public void visitMethodInsn(int opcode, String owner,
             String name, String desc, boolean itf) {
         if (opcode == Opcodes.INVOKESTATIC) {
-            graph.addEdge(methodId, name + desc);
+            graph.addEdge(methodId, CycleDetector.methodId(name, desc));
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf);
     }

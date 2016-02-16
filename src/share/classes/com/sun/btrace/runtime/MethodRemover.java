@@ -81,11 +81,11 @@ public class MethodRemover extends ClassVisitor {
                             include = false;
                             return new AnnotationVisitor(Opcodes.ASM5) {};
                         } else {
-                            return getAdaptee().visitAnnotation(annoDesc, visible);
-                        }
-                    } else {
-                        return new AnnotationVisitor(Opcodes.ASM5) {};
+                        return getAdaptee().visitAnnotation(annoDesc, visible);
                     }
+                    } else {
+                    return new AnnotationVisitor(Opcodes.ASM5) {};
+                }
                 }
 
                 @Override
