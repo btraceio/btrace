@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Represents a local client communicated by trace file.
@@ -88,7 +87,9 @@ class FileClient extends Client {
         flusher.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                out.flush();
+                if (out != null) {
+                    out.flush();
+                }
             }
         }, flushSec, flushSec);
     }
