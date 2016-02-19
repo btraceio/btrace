@@ -41,7 +41,6 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.lang.ref.Reference;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -57,7 +56,7 @@ import java.util.regex.PatternSyntaxException;
 public class ClassFilter {
     private static final Class<?> referenceClz = Reference.class;
 
-    private String[] sourceClasses;
+    private Set<String> sourceClasses;
     private Pattern[] sourceClassPatterns;
     private String[] annotationClasses;
     private Pattern[] annotationClassPatterns;
@@ -90,12 +89,6 @@ public class ClassFilter {
             return false;
         }
 
-        if (target.getName().startsWith("sun.instrument.") ||
-            target.getName().startsWith("java.lang.instrument.")) {
-            // do not instrument the instrumentation related classes
-            return false;
-        }
-
         try {
             // ignore classes annotated with @BTrace -
             // We don't want to instrument tracing classes!
@@ -111,10 +104,8 @@ public class ClassFilter {
         }
 
         String className = target.getName();
-        for (String name : sourceClasses) {
-            if (name.equals(className)) {
-                return true;
-            }
+        if (isNameMatching(className)) {
+            return true;
         }
 
         for (Pattern pat : sourceClassPatterns) {
@@ -154,14 +145,36 @@ public class ClassFilter {
         return false;
     }
 
-    public boolean isCandidate(ClassLoader loader, byte[] classBytes, boolean subClassChecks) {
-        return isCandidate(loader, new ClassReader(classBytes), subClassChecks);
+    public boolean isCandidate(ClassLoader loader, String cName, byte[] classBytes, boolean subClassChecks) {
+        return isCandidate(loader, cName, new ClassReader(classBytes), subClassChecks);
     }
 
-    public boolean isCandidate(ClassLoader loader, ClassReader reader, boolean subClassChecks) {
+    public boolean isCandidate(ClassLoader loader, String cName, ClassReader reader, boolean subClassChecks) {
+        if (isNameMatching(cName)) {
+            return true;
+        }
         CheckingVisitor cv = new CheckingVisitor(loader, subClassChecks);
-        InstrumentUtils.accept(reader, cv);
+        reader.accept(cv, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
         return cv.isCandidate();
+    }
+
+    private boolean isNameMatching(String clzName) {
+        if (clzName.startsWith("sun.instrument.") ||
+            clzName.startsWith("java.lang.instrument.")) {
+            // do not instrument the instrumentation related classes
+            return false;
+        }
+
+        if (sourceClasses.contains(clzName))  {
+            return true;
+        }
+
+        for (Pattern pat : sourceClassPatterns) {
+            if (pat.matcher(clzName).matches()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /*
@@ -396,8 +409,8 @@ public class ClassFilter {
             }
         }
 
-        sourceClasses = new String[strSrcList.size()];
-        strSrcList.toArray(sourceClasses);
+        sourceClasses = new HashSet(strSrcList.size());
+        sourceClasses.addAll(strSrcList);
         sourceClassPatterns = new Pattern[patSrcList.size()];
         patSrcList.toArray(sourceClassPatterns);
         superTypes = new String[superTypesList.size()];

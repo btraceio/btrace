@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,19 +64,9 @@ import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
-import java.lang.instrument.UnmodifiableClassException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
-import java.util.Vector;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
 
@@ -166,7 +156,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 }
             } else {
                 // class not yet defined
-                if (filter.isCandidate(loader, classfileBuffer, hasSubclassChecks)) {
+                if (filter.isCandidate(loader, cname, classfileBuffer, hasSubclassChecks)) {
                     return doTransform(loader, classBeingRedefined, cname, classfileBuffer);
                 } else {
                     if (isDebug()) {

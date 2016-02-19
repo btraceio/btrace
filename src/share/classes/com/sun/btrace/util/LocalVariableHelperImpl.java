@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -263,7 +263,7 @@ public class LocalVariableHelperImpl extends MethodVisitor implements LocalVaria
      * @return the identifier of the newly created local variable.
      *         it is a negative number -> Math.abs(ident) = the real var index
      */
-        @Override
+    @Override
     public int storeNewLocal(final Type type) {
         Object t;
         switch (type.getSort()) {
