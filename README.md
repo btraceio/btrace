@@ -1,4 +1,4 @@
-btrace [![Build Status](https://travis-ci.org/jbachorik/btrace.svg?branch=master)](https://travis-ci.org/jbachorik/btrace) [![Join the chat at https://gitter.im/jbachorik/btrace](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jbachorik/btrace?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Project Stats](https://www.openhub.net/p/btrace/widgets/project_thin_badge.gif)](https://www.openhub.net/p/btrace)
+btrace [![Build Status](https://travis-ci.org/jbachorik/btrace.svg?branch=master)](https://travis-ci.org/jbachorik/btrace) [![codecov.io](https://codecov.io/github/jbachorik/btrace/coverage.svg?branch=master)](https://codecov.io/github/jbachorik/btrace?branch=master) [![Join the chat at https://gitter.im/jbachorik/btrace](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jbachorik/btrace?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Project Stats](https://www.openhub.net/p/btrace/widgets/project_thin_badge.gif)](https://www.openhub.net/p/btrace)
 ======
 
 A safe, dynamic tracing tool for the Java platform
