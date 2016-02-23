@@ -5,6 +5,7 @@ plugins {
     id 'maven-publish'
     id "nebula.os-package" version "2.2.2"
     id "com.jfrog.bintray" version "1.2"
+    id "jacoco"
 }
 
 group 'com.sun.tools.btrace'
@@ -393,7 +394,6 @@ dependencies {
     }
 }
 
-
 publishing {
     publications {
         agent(MavenPublication) {
@@ -452,3 +452,12 @@ publishing {
     }
      */
 }
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
+}
+
+check.dependsOn jacocoTestReport
