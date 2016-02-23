@@ -38,7 +38,7 @@ import java.util.Set;
  *
  * @author Jaroslav Bachorik
  */
-public class CycleDetector implements ReachableCalls {
+public class CycleDetector {
     public static class Node {
         private final String id;
         private final Set<Edge> incoming = new HashSet<>();
@@ -224,18 +224,36 @@ public class CycleDetector implements ReachableCalls {
         return false;
     }
 
-    public void collectReachables(String name, String desc, Set<String> closure) {
-        collectReachables(methodId(name, desc), closure);
+    void callees(String name, String desc, Set<String> closure) {
+        collectOutgoings(methodId(name, desc), closure);
     }
 
-    private void collectReachables(String methodId, Set<String> closure) {
+    void callers(String name, String desc, Set<String> closure) {
+        collectIncomings(methodId(name, desc), closure);
+    }
+
+    private void collectOutgoings(String methodId, Set<String> closure) {
         for(Node n : nodes) {
             if (n.id.equals(methodId)) {
                 for(Edge e : n.outgoing) {
                     String id = e.to.id;
                     if (!closure.contains(id)) {
                         closure.add(id);
-                        collectReachables(id, closure);
+                        collectOutgoings(id, closure);
+                    }
+                }
+            }
+        }
+    }
+
+    private void collectIncomings(String methodId, Set<String> closure) {
+        for(Node n : nodes) {
+            if (n.id.equals(methodId)) {
+                for(Edge e : n.incoming) {
+                    String id = e.to.id;
+                    if (!closure.contains(id)) {
+                        closure.add(id);
+                        collectIncomings(id, closure);
                     }
                 }
             }

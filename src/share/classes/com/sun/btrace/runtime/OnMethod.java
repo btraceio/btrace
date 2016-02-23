@@ -38,7 +38,7 @@ import com.sun.btrace.annotations.Sampled;
  *
  * @author A. Sundararajan
  */
-public class OnMethod extends SpecialParameterHolder {
+public final class OnMethod extends SpecialParameterHolder {
     private String clazz;
     private String method = "";
     private String type = "";
@@ -53,7 +53,14 @@ public class OnMethod extends SpecialParameterHolder {
 
     private com.sun.btrace.runtime.Level level = null;
 
+    private BTraceMethodNode bmn;
+
     public OnMethod() {
+        // need this to deserialize from the probe descriptor
+    }
+
+    public OnMethod(BTraceMethodNode bmn) {
+        this.bmn = bmn;
     }
 
     public void copyFrom(OnMethod other) {
@@ -135,5 +142,9 @@ public class OnMethod extends SpecialParameterHolder {
 
     public void setLevel(Level level) {
         this.level = level;
+    }
+
+    public BTraceMethodNode getMethodNode() {
+        return bmn;
     }
 }

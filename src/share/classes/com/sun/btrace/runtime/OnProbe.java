@@ -41,7 +41,7 @@ import java.util.HashSet;
  *
  * @author A. Sundararajan
  */
-public class OnProbe extends SpecialParameterHolder {
+public final class OnProbe extends SpecialParameterHolder {
     private String namespace;
     private String name;
     // target method name on which this annotation is specified
@@ -49,8 +49,18 @@ public class OnProbe extends SpecialParameterHolder {
     // target method descriptor on which this annotation is specified
     private String targetDescriptor;
     private Collection<OnMethod> onMethods;
+    private BTraceMethodNode bmn;
+
+    public OnProbe(BTraceMethodNode bmn) {
+        this.bmn = bmn;
+    }
 
     public OnProbe() {
+        // need this to deserialize from the probe descriptor
+    }
+
+    void setMethodNode(BTraceMethodNode bmn) {
+        this.bmn = bmn;
     }
 
     @XmlAttribute
@@ -103,5 +113,9 @@ public class OnProbe extends SpecialParameterHolder {
         targetName = other.targetName;
         targetDescriptor = other.targetDescriptor;
         onMethods = new HashSet<OnMethod>(other.onMethods);
+    }
+
+    public BTraceMethodNode getMethodNode() {
+        return bmn;
     }
 }

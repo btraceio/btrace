@@ -34,14 +34,8 @@ import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnTimer;
 import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.TLS;
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.Attribute;
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.FieldVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
-import com.sun.btrace.org.objectweb.asm.TypePath;
 import com.sun.btrace.org.objectweb.asm.tree.AbstractInsnNode;
 import com.sun.btrace.org.objectweb.asm.tree.AnnotationNode;
 import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
@@ -61,7 +55,6 @@ import com.sun.btrace.services.api.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -87,7 +80,7 @@ import java.util.Set;
  *       @TLS fields respectively)
  *    5. Add a field to store BTraceRuntime object and
  *       initialize the same in <clinit> method
- *    6. add prolog and epilog in each BTrace action method
+ *    6. add prolog and epilogue in each BTrace action method
  *       to insert BTraceRuntime.enter/leave and also to call
  *       BTraceRuntime.handleException on exception catch
  *    7. initialize and reference any service instances
@@ -98,7 +91,7 @@ import java.util.Set;
  * @author A. Sundararajan
  * @author J. Bachorik (Tree API rewrite)
  */
-public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
+public final class Preprocessor {
     private static enum MethodClassifier {
         /**
          * No BTrace specific classifier available
@@ -149,9 +142,9 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     private static final Type THREAD_LOCAL_TYPE = Type.getType(ThreadLocal.class);
     private static final Type SERVICE_TYPE = Type.getType(Service.class);
 
-    private final static Map<String, Type> boxTypeMap = new HashMap<>();
-    private final static Set<String> guardedAnnots = new HashSet<>();
-    private final static Set<String> rtAwareAnnots = new HashSet<>();
+    private static final Map<String, Type> boxTypeMap = new HashMap<>();
+    private static final Set<String> guardedAnnots = new HashSet<>();
+    private static final Set<String> rtAwareAnnots = new HashSet<>();
 
     static {
         boxTypeMap.put("I", Type.getType(Integer.class));
@@ -174,7 +167,24 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         rtAwareAnnots.add(Type.getDescriptor(OnExit.class));
     }
 
-    private final ClassNode cn;
+    public static final Type ONMETHOD_TYPE = Type.getType(com.sun.btrace.annotations.OnMethod.class);
+    public static final Type ONPROBE_TYPE = Type.getType(com.sun.btrace.annotations.OnProbe.class);
+    public static final Type ONTIMER_TYPE = Type.getType(com.sun.btrace.annotations.OnTimer.class);
+    public static final Type ONEVENT_TYPE = Type.getType(com.sun.btrace.annotations.OnEvent.class);
+    public static final Type ONEXIT_TYPE = Type.getType(com.sun.btrace.annotations.OnExit.class);
+    public static final Type ONERROR_TYPE = Type.getType(com.sun.btrace.annotations.OnError.class);
+
+    public static interface MethodFilter {
+        public static final MethodFilter ALL = new MethodFilter() {
+            @Override
+            public boolean test(String name, String desc) {
+                return true;
+            }
+        };
+
+        boolean test(String name, String desc);
+    }
+
     private MethodNode clinit = null;
     private FieldNode rtField = null;
 
@@ -183,81 +193,17 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
     private final Map<String, Integer> serviceLocals = new HashMap<>();
 
-    private List<OnMethod> onMethods = new ArrayList<>();
+    public void process(ClassNode cn) {
+        addLevelField(cn);
+        processClinit(cn);
+        processFields(cn);
 
-    public Preprocessor(ClassVisitor cv) {
-        super(Opcodes.ASM5, cv);
-        cn = new ClassNode(Opcodes.ASM5);
-    }
-
-    @Override
-    public void accept(List<OnMethod> onMethods) {
-        this.onMethods = onMethods;
-    }
-
-    @Override
-    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-        cn.visit(version, access, name, signature, superName, interfaces);
-    }
-
-    @Override
-    public void visitSource(String file, String debug) {
-        cn.visitSource(file, debug);
-    }
-
-    @Override
-    public void visitOuterClass(String owner, String name, String desc) {
-        cn.visitOuterClass(owner, name, desc);
-    }
-
-    @Override
-    public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-        return cn.visitAnnotation(desc, visible);
-    }
-
-    @Override
-    public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
-        return cn.visitTypeAnnotation(typeRef, typePath, desc, visible);
-    }
-
-    @Override
-    public void visitAttribute(Attribute atrbt) {
-        cn.visitAttribute(atrbt);
-    }
-
-    @Override
-    public void visitInnerClass(String name, String outerName, String innerName, int access) {
-        cn.visitInnerClass(name, outerName, innerName, access);
-    }
-
-    @Override
-    public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
-        return cn.visitField(access, name, desc, signature, value);
-    }
-
-    @Override
-    public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-        return cn.visitMethod(access, name, desc, signature, exceptions);
-    }
-
-    @Override
-    public void visitEnd() {
-        cn.visitEnd();
-        preprocess();
-        cn.accept(cv);
-    }
-
-    private void preprocess() {
-        addLevelField();
-        processClinit();
-        processFields();
-
-        for(MethodNode mn : getMethods()) {
-            preprocessMethod(mn);
+        for(MethodNode mn : getMethods(cn)) {
+            preprocessMethod(cn, mn);
         }
     }
 
-    private void addLevelField() {
+    private void addLevelField(ClassNode cn) {
         if (cn.fields == null) {
             cn.fields = new LinkedList();
         }
@@ -273,14 +219,14 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         );
     }
 
-    private void preprocessMethod(MethodNode mn) {
+    private void preprocessMethod(ClassNode cn, MethodNode mn) {
         // !!! The order of execution is important here !!!
         LocalVarGenerator lvg = new LocalVarGenerator(mn);
         makePublic(mn);
-        checkAugmentedReturn(mn, lvg);
-        scanMethodInstructions(mn, lvg);
+        checkAugmentedReturn(mn);
+        scanMethodInstructions(cn, mn, lvg);
         addBTraceErrorHandler(mn, lvg);
-        addBTraceRuntimeEnter(mn, lvg);
+        addBTraceRuntimeEnter(cn, mn, lvg);
 
         recalculateVars(mn, lvg);
     }
@@ -294,22 +240,22 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         }
     }
 
-    private void processFields() {
-        Iterator<FieldNode> iter = getFields().iterator();
+    private void processFields(ClassNode cn) {
+        Iterator<FieldNode> iter = getFields(cn).iterator();
         while (iter.hasNext()) {
             FieldNode fn = iter.next();
             fn.access = fn.access &
                             ~(Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)
                             | Opcodes.ACC_PUBLIC;
-            tryProcessTLS(fn);
-            tryProcessExport(fn);
+            tryProcessTLS(cn, fn);
+            tryProcessExport(cn, fn);
             if (tryProcessInjected(fn) == null) {
                 iter.remove();
             }
         }
     }
 
-    private void tryProcessTLS(FieldNode fn) {
+    private void tryProcessTLS(ClassNode cn, FieldNode fn) {
         AnnotationNode an = null;
         if ((an = getAnnotation(fn, TLS_TYPE)) != null) {
             fn.visibleAnnotations.remove(an);
@@ -318,17 +264,17 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
             fn.desc = THREAD_LOCAL_TYPE.getDescriptor();
             fn.signature = fn.desc.substring(0, fn.desc.length() - 1) +
                            "<" + boxedDesc + ">;";
-            initTLS(fn, Type.getType(origDesc));
+            initTLS(cn, fn, Type.getType(origDesc));
         }
     }
 
-    private void tryProcessExport(FieldNode fn) {
+    private void tryProcessExport(ClassNode cn, FieldNode fn) {
         AnnotationNode an = null;
         if ((an = getAnnotation(fn, EXPORT_TYPE)) != null) {
             fn.visibleAnnotations.remove(an);
             String origDesc = fn.desc;
 
-            initExport(fn, Type.getType(origDesc));
+            initExport(cn, fn, Type.getType(origDesc));
         }
     }
 
@@ -345,13 +291,13 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         return fn;
     }
 
-    private void initTLS(FieldNode fn, Type t) {
+    private void initTLS(ClassNode cn, FieldNode fn, Type t) {
         tlsFldNames.add(fn.name);
 
-        initAnnotatedField(fn, t, tlsInitSequence(t, fn.name, fn.desc));
+        initAnnotatedField(fn, t, tlsInitSequence(cn, t, fn.name, fn.desc));
     }
 
-    private InsnList tlsInitSequence(Type t, String name, String desc) {
+    private InsnList tlsInitSequence(ClassNode cn, Type t, String name, String desc) {
         InsnList initList = new InsnList();
         initList.add(
             new MethodInsnNode(
@@ -366,15 +312,15 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         return initList;
     }
 
-    private void initExport(FieldNode fn, Type t) {
+    private void initExport(ClassNode cn, FieldNode fn, Type t) {
         exportFldNames.add(fn.name);
-        initAnnotatedField(fn, t, exportInitSequence(t, fn.name, fn.desc));
+        initAnnotatedField(fn, t, exportInitSequence(cn, t, fn.name, fn.desc));
     }
 
-    private InsnList exportInitSequence(Type t, String name, String desc) {
+    private InsnList exportInitSequence(ClassNode cn, Type t, String name, String desc) {
         InsnList init = new InsnList();
 
-        init.add(new LdcInsnNode(perfCounterName(name)));
+        init.add(new LdcInsnNode(perfCounterName(cn, name)));
         init.add(new LdcInsnNode(desc));
         init.add(new MethodInsnNode(
                 Opcodes.INVOKESTATIC,
@@ -459,7 +405,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         }
     }
 
-    private void checkAugmentedReturn(MethodNode mn, LocalVarGenerator lvg) {
+    private void checkAugmentedReturn(MethodNode mn) {
         if (isUnannotated(mn)) return;
 
         Type retType = Type.getReturnType(mn.desc);
@@ -480,18 +426,20 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
                 mn.visibleParameterAnnotations[args.length - 1] = annots;
                 mn.desc = Type.getMethodDescriptor(retType, args);
 
-                for(OnMethod om : onMethods) {
-                    if (om.getTargetName().equals(mn.name) && om.getTargetDescriptor().equals(oldDesc)) {
+                if (mn instanceof BTraceMethodNode) {
+                    BTraceMethodNode bmn = (BTraceMethodNode)mn;
+                    OnMethod om = bmn.getOnMethod();
+
+                    if (om != null && om.getTargetName().equals(mn.name) && om.getTargetDescriptor().equals(oldDesc)) {
                         om.setReturnParameter(getReturnMethodParameter(mn));
                         om.setTargetDescriptor(mn.desc);
-                        break;
                     }
                 }
             }
         }
     }
 
-    private void scanMethodInstructions(MethodNode mn, LocalVarGenerator lvg) {
+    private void scanMethodInstructions(ClassNode cn, MethodNode mn, LocalVarGenerator lvg) {
         // ignore <init> and <clinit>
         if (mn.name.startsWith("<")) return;
 
@@ -514,14 +462,14 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
                         !fin.desc.equals(THREAD_LOCAL_TYPE.getDescriptor())) {
                         n = updateTLSUsage(fin, l);
                     } else if (exportFldNames.contains(fin.name)) {
-                        n = updateExportUsage(fin, l);
+                        n = updateExportUsage(cn, fin, l);
                     } else if (injectedFlds.containsKey(fin.name)) {
-                        n = updateInjectedUsage(fin, l, lvg);
+                        n = updateInjectedUsage(cn, fin, l, lvg);
                     }
                 }
             } else if (type == AbstractInsnNode.METHOD_INSN) {
                 MethodInsnNode min = (MethodInsnNode)n;
-                n = unfoldServiceInstantiation(min, l, lvg);
+                n = unfoldServiceInstantiation(cn, min, l);
             } else if (n.getOpcode() == retopcode && isClassified(clsf, MethodClassifier.RT_AWARE)) {
                 addBTraceRuntimeExit((InsnNode)n, l, lvg);
             }
@@ -537,8 +485,8 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         }
     }
 
-    private void processClinit() {
-        for(MethodNode mn : getMethods()) {
+    private void processClinit(ClassNode cn) {
+        for(MethodNode mn : getMethods(cn)) {
             if (mn.name.equals("<clinit>")) {
                 clinit = mn;
                 break;
@@ -552,11 +500,11 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
             clinit.instructions.add(new InsnNode(Opcodes.RETURN));
             cn.methods.add(0, clinit);
         }
-        initRuntime(clinit);
+        initRuntime(cn, clinit);
     }
 
-    private void initRuntime(MethodNode clinit) {
-        addRuntimeNode();
+    private void initRuntime(ClassNode cn, MethodNode clinit) {
+        addRuntimeNode(cn);
         InsnList l = new InsnList();
         l.add(new LdcInsnNode(Type.getObjectType(cn.name)));
         l.add(new MethodInsnNode(
@@ -569,7 +517,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         l.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, rtField.name, rtField.desc));
 
         LabelNode start = new LabelNode();
-        l.add(getRuntime());
+        l.add(getRuntime(cn));
         l.add(new MethodInsnNode(
             Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
             "enter", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, BTRACE_RUNTIME_TYPE),
@@ -603,7 +551,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         }
     }
 
-    private FieldInsnNode getRuntime() {
+    private FieldInsnNode getRuntime(ClassNode cn) {
         return new FieldInsnNode(Opcodes.GETSTATIC, cn.name, rtField.name, rtField.desc);
     }
 
@@ -614,7 +562,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         );
     }
 
-    private void addRuntimeNode() {
+    private void addRuntimeNode(ClassNode cn) {
         rtField = new FieldNode(
             Opcodes.ASM5, (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC),
             "runtime", Type.getDescriptor(BTraceRuntime.class),
@@ -644,14 +592,14 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         }
     }
 
-    private void addBTraceRuntimeEnter(MethodNode mn, LocalVarGenerator lvg) {
+    private void addBTraceRuntimeEnter(ClassNode cn, MethodNode mn, LocalVarGenerator lvg) {
         // no runtime check for <clinit>
         if (mn.name.equals("<clinit>")) return;
 
         MethodClassifier clsf = getClassifier(mn);
         if (isClassified(clsf, MethodClassifier.RT_AWARE)) {
             InsnList entryCheck = new InsnList();
-            entryCheck.add(getRuntime());
+            entryCheck.add(getRuntime(cn));
             if (isClassified(clsf, MethodClassifier.GUARDED)) {
                 LabelNode start = new LabelNode();
                 entryCheck.add(new MethodInsnNode(
@@ -671,15 +619,15 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         l.insertBefore(n, getRuntimeExit());
     }
 
-    private List<MethodNode> getMethods() {
+    private List<MethodNode> getMethods(ClassNode cn) {
         return (List<MethodNode>)cn.methods;
     }
 
-    private List<FieldNode> getFields() {
+    private List<FieldNode> getFields(ClassNode cn) {
         return (List<FieldNode>)cn.fields;
     }
 
-    private AnnotationNode getAnnotation(FieldNode fn, Type annotation) {
+    public static AnnotationNode getAnnotation(FieldNode fn, Type annotation) {
         if (fn == null || (fn.visibleAnnotations == null && fn.invisibleAnnotations == null)) return null;
         String targetDesc = annotation.getDescriptor();
         if (fn.visibleAnnotations != null) {
@@ -699,7 +647,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         return null;
     }
 
-    private AnnotationNode getAnnotation(MethodNode fn, Type annotation) {
+    public static AnnotationNode getAnnotation(MethodNode fn, Type annotation) {
         if (fn == null || fn.visibleAnnotations == null) return null;
         String targetDesc = annotation.getDescriptor();
         for(AnnotationNode an : ((List<AnnotationNode>)fn.visibleAnnotations)) {
@@ -822,7 +770,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         return fin;
     }
 
-    private AbstractInsnNode updateExportUsage(FieldInsnNode fin, InsnList l) {
+    private AbstractInsnNode updateExportUsage(ClassNode cn, FieldInsnNode fin, InsnList l) {
         Type strType = Type.getType(String.class);
 
         String prefix = null;
@@ -880,7 +828,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
                                   new InsnNode(Opcodes.ACONST_NULL));
         } else {
             InsnList toInsert = new InsnList();
-            toInsert.add(new LdcInsnNode(perfCounterName(fin.name)));
+            toInsert.add(new LdcInsnNode(perfCounterName(cn, fin.name)));
             toInsert.add(new MethodInsnNode(
                 Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
                 methodName, isPut ? Type.getMethodDescriptor(Type.VOID_TYPE, tType, strType) :
@@ -894,7 +842,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         return ret;
     }
 
-    private AbstractInsnNode updateInjectedUsage(FieldInsnNode fin, InsnList l, LocalVarGenerator lvg) {
+    private AbstractInsnNode updateInjectedUsage(ClassNode cn, FieldInsnNode fin, InsnList l, LocalVarGenerator lvg) {
         Integer varIdx = serviceLocals.get(fin.name);
         if (varIdx != null) {
             VarInsnNode load = new VarInsnNode(
@@ -948,13 +896,13 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
                 toInsert.add(new TypeInsnNode(Opcodes.NEW, implType.getInternalName()));
                 toInsert.add(new InsnNode(Opcodes.DUP));
                 toInsert.add(new InsnNode(Opcodes.DUP));
-                toInsert.add(getRuntime());
+                toInsert.add(getRuntime(cn));
                 toInsert.add(new MethodInsnNode(
                     Opcodes.INVOKESPECIAL, implType.getInternalName(),
                     "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, BTRACE_RUNTIME_TYPE), false
                 ));
             } else {
-                toInsert.add(getRuntime());
+                toInsert.add(getRuntime(cn));
                 toInsert.add(new MethodInsnNode(
                     Opcodes.INVOKESTATIC, implType.getInternalName(), fctryMethod,
                     Type.getMethodDescriptor(implType, BTRACE_RUNTIME_TYPE), false
@@ -970,7 +918,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
         return next;
     }
 
-    private AbstractInsnNode unfoldServiceInstantiation(MethodInsnNode min, InsnList l, LocalVarGenerator lvg) {
+    private AbstractInsnNode unfoldServiceInstantiation(ClassNode cn, MethodInsnNode min, InsnList l) {
         if (min.owner.equals(SERVICE_TYPE.getInternalName())) {
             AbstractInsnNode next = min.getNext();
             switch (min.name) {
@@ -1047,7 +995,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
                             InsnList toInsert = new InsnList();
                             toInsert.add(new TypeInsnNode(Opcodes.NEW, sType.getInternalName()));
                             toInsert.add(new InsnNode(Opcodes.DUP));
-                            toInsert.add(getRuntime());
+                            toInsert.add(getRuntime(cn));
                             toInsert.add(new MethodInsnNode(
                                 Opcodes.INVOKESPECIAL, sType.getInternalName(),
                                 "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, BTRACE_RUNTIME_TYPE), false
@@ -1124,7 +1072,7 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
     // For each @Export field, we create a perf counter
     // with the name "btrace.<class name>.<field name>"
     private static final String BTRACE_COUNTER_PREFIX = "btrace.";
-    private String perfCounterName(String fieldName) {
+    private String perfCounterName(ClassNode cn, String fieldName) {
         return BTRACE_COUNTER_PREFIX + Type.getObjectType(cn.name).getInternalName() + "." + fieldName;
     }
 
@@ -1183,7 +1131,6 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
 
     private int getReturnMethodParameter(MethodNode mn) {
         if (mn.visibleParameterAnnotations != null) {
-            int idx = 0;
             Type[] args = Type.getArgumentTypes(mn.desc);
             for(int i=0;i<mn.visibleParameterAnnotations.length;i++) {
                 List paList = (List)mn.visibleParameterAnnotations[i];
@@ -1195,7 +1142,6 @@ public class Preprocessor extends ClassVisitor implements OnMethodsAcceptor {
                         }
                     }
                 }
-                idx += args[i].getSize();
             }
         }
         return Integer.MIN_VALUE;

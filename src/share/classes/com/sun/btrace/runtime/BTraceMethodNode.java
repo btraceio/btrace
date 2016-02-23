@@ -1,26 +1,7 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
 package com.sun.btrace.runtime;
 
@@ -28,82 +9,73 @@ import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.runtime.Constants.*;
+
+import com.sun.btrace.org.objectweb.asm.tree.MethodNode;
 import static com.sun.btrace.runtime.Verifier.BTRACE_DURATION_DESC;
 import static com.sun.btrace.runtime.Verifier.BTRACE_RETURN_DESC;
 import static com.sun.btrace.runtime.Verifier.BTRACE_SELF_DESC;
 import static com.sun.btrace.runtime.Verifier.BTRACE_TARGETINSTANCE_DESC;
 import static com.sun.btrace.runtime.Verifier.BTRACE_TARGETMETHOD_DESC;
-import com.sun.btrace.util.MethodID;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 /**
- * Parses the annotated BTrace source and builds up the structures for
- * the instrumentor.
  *
  * @author Jaroslav Bachorik
  */
-final public class BTraceConfigurator extends MethodVisitor {
-    private OnMethod om = null;
-    private OnProbe op = null;
+public class BTraceMethodNode extends MethodNode {
+    public static final Comparator<MethodNode> COMPARATOR = new Comparator<MethodNode>() {
+        @Override
+        public int compare(MethodNode o1, MethodNode o2) {
+            return (o1.name + "#" + o1.desc).compareTo(o2.name + "#" + o2.desc);
+        }
+    };
 
-    private boolean sampled = false;
-
-    protected boolean asBTrace = false;
-    protected Location loc;
-
-    private final String className;
-    private final String methodName;
-    private final String methodDesc;
-    private final String methodId;
+    private OnMethod om;
+    private OnProbe op;
+    private Location loc;
+    private boolean sampled;
+    private BTraceClassNode cn;
+    private boolean isBTraceHandler;
     private final CycleDetector graph;
-    private final List<OnMethod> onMethods;
-    private final List<OnProbe> onProbes;
+    private final String methodId;
 
-    public BTraceConfigurator(MethodVisitor mv, CycleDetector graph, List<OnMethod> onMethods, List<OnProbe> onProbes, String className, String methodName, String desc) {
-        super(Opcodes.ASM5, mv);
-        this.className = className;
-        this.methodName = methodName;
-        this.methodDesc = desc;
-        this.methodId = CycleDetector.methodId(methodName, desc);
-        this.graph = graph;
-        this.onMethods = onMethods;
-        this.onProbes = onProbes;
-    }
-
-    /**
-     * The {@linkplain OnMethod} instance created for the processed method
-     * @return {@linkplain OnMethod} or null if the method is not accordingly annotated
-     */
-    public OnMethod getOnMethod() {
-        return om;
-    }
-
-    /**
-     *
-     * @return True if the method is annotated by @Sampled annotation
-     */
-    public boolean isSampled() {
-        return sampled;
+    BTraceMethodNode(MethodNode from, BTraceClassNode cn) {
+        super(Opcodes.ASM5, from.access, from.name, from.desc, from.signature, ((List<String>)from.exceptions).toArray(new String[0]));
+        this.cn = cn;
+        this.graph = cn.getGraph();
+        this.methodId = CycleDetector.methodId(name, desc);
     }
 
     @Override
-    public AnnotationVisitor visitAnnotation(String desc,
-                          boolean visible) {
-        AnnotationVisitor av = super.visitAnnotation(desc, visible);
-
-        if (asBTrace) {
-            graph.addStarting(new CycleDetector.Node(methodName + methodDesc));
+    public void visitEnd() {
+        if (om != null) {
+            cn.addOnMethod(om);
         }
+        if (op != null) {
+            cn.addOnProbe(op);
+        }
+        if (isBTraceHandler) {
+            graph.addStarting(new CycleDetector.Node(CycleDetector.methodId(name, desc)));
+        }
+        super.visitEnd();
+    }
 
-        if (desc.equals(ONMETHOD_DESC)) {
-            om = new OnMethod();
-            onMethods.add(om);
-            om.setTargetName(methodName);
-            om.setTargetDescriptor(methodDesc);
+    @Override
+    public AnnotationVisitor visitAnnotation(String type, boolean visible) {
+        AnnotationVisitor av = super.visitAnnotation(type, visible);
+
+        if (type.startsWith("com/sun/btrace/annotations")) {
+            isBTraceHandler = true;
+        }
+        if (type.equals(ONMETHOD_DESC)) {
+            om = new OnMethod(this);
+            om.setTargetName(name);
+            om.setTargetDescriptor(desc);
             return new AnnotationVisitor(Opcodes.ASM5, av) {
                 @Override
                 public void visit(String name, Object value) {
@@ -187,11 +159,10 @@ final public class BTraceConfigurator extends MethodVisitor {
                     return av1;
                 }
             };
-        } else if (desc.equals(ONPROBE_DESC)) {
-            op = new OnProbe();
-            onProbes.add(op);
-            op.setTargetName(methodName);
-            op.setTargetDescriptor(methodDesc);
+        } else if (type.equals(ONPROBE_DESC)) {
+            op = new OnProbe(this);
+            op.setTargetName(name);
+            op.setTargetDescriptor(desc);
             return new AnnotationVisitor(Opcodes.ASM5, av) {
                 @Override
                 public void visit(String name, Object value) {
@@ -207,7 +178,7 @@ final public class BTraceConfigurator extends MethodVisitor {
                     }
                 }
             };
-        } else if (desc.equals(SAMPLER_DESC)) {
+        } else if (type.equals(SAMPLER_DESC)) {
             if (om != null) {
                 om.setSamplerKind(Sampled.Sampler.Adaptive);
                 return new AnnotationVisitor(Opcodes.ASM5, av) {
@@ -271,13 +242,53 @@ final public class BTraceConfigurator extends MethodVisitor {
         return av;
     }
 
+    @Override
+    public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+        if (opcode == Opcodes.INVOKESTATIC) {
+            graph.addEdge(methodId, CycleDetector.methodId(name, desc));
+        }
+        super.visitMethodInsn(opcode, owner, name, desc, itf);
+    }
+
+    public boolean isBcpRequired() {
+        return isBTraceHandler && om == null && op == null;
+    }
+
+    public boolean isBTraceHandler() {
+        return isBTraceHandler;
+    }
+
+    public OnMethod getOnMethod() {
+        return om;
+    }
+
+    public boolean isSampled() {
+        return sampled;
+    }
+
+    public Set<BTraceMethodNode> getCallees() {
+        return cn.callees(name, desc);
+    }
+
+    public Set<BTraceMethodNode> getCallers() {
+        return cn.callers(name, desc);
+    }
+
+    boolean isFieldInjected(String name) {
+        return cn.isFieldInjected(name);
+    }
+
+    OnProbe getOnProbe() {
+        return op;
+    }
+
     private AnnotationVisitor setSpecialParameters(final SpecialParameterHolder ph, final String desc, int parameter, AnnotationVisitor av) {
         // for OnProbe the 'loc' variable will be null; we will need to verfiy the placement later on
         if (desc.equals(BTRACE_SELF_DESC)) {
             ph.setSelfParameter(parameter);
-        } else if (desc.equals(Verifier.BTRACE_PROBECLASSNAME_DESC)) {
+        } else if (desc.equals(BTRACE_PROBECLASSNAME_DESC)) {
             ph.setClassNameParameter(parameter);
-        } else if (desc.equals(Verifier.BTRACE_PROBEMETHODNAME_DESC)) {
+        } else if (desc.equals(BTRACE_PROBEMETHODNAME_DESC)) {
             ph.setMethodParameter(parameter);
             av = new AnnotationVisitor(Opcodes.ASM5, av) {
                 @Override
@@ -313,11 +324,7 @@ final public class BTraceConfigurator extends MethodVisitor {
     }
 
     @Override
-    public void visitMethodInsn(int opcode, String owner,
-            String name, String desc, boolean itf) {
-        if (opcode == Opcodes.INVOKESTATIC) {
-            graph.addEdge(methodId, CycleDetector.methodId(name, desc));
-        }
-        super.visitMethodInsn(opcode, owner, name, desc, itf);
+    public String toString() {
+        return "BTraceMethodNode{name = " + name + ", desc=" + desc + '}';
     }
 }

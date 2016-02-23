@@ -32,7 +32,6 @@ import java.security.ProtectionDomain;
 import java.util.List;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.ErrorCommand;
@@ -45,25 +44,22 @@ import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
+import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
+import com.sun.btrace.org.objectweb.asm.tree.MethodNode;
+import com.sun.btrace.runtime.BTraceClassNode;
+import com.sun.btrace.runtime.BTraceMethodNode;
 import com.sun.btrace.runtime.ClassFilter;
-import com.sun.btrace.runtime.ClassRenamer;
-import com.sun.btrace.runtime.Constants;
+import com.sun.btrace.runtime.CycleDetector;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Location;
-import com.sun.btrace.runtime.MethodRemover;
 import com.sun.btrace.runtime.NullPerfReaderImpl;
 import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.Preprocessor;
 import com.sun.btrace.runtime.ProbeDescriptor;
-import com.sun.btrace.runtime.ReachableCalls;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
-import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassFileTransformer;
@@ -74,6 +70,7 @@ import java.util.Collection;
 import java.util.Map;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
+
 
 /**
  * Abstract class that represents a BTrace client
@@ -93,7 +90,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private volatile ClassFilter filter;
     private volatile boolean skipRetransforms;
     private volatile boolean hasSubclassChecks;
-    private ReachableCalls reachableCalls;
+    private BTraceClassNode btraceClass;
 
     protected final SharedSettings settings = new SharedSettings();
     private final DebugSupport debug = new DebugSupport(settings);
@@ -232,39 +229,34 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         String[] args = instr.getArguments();
         this.btraceCode = instr.getCode();
         try {
-            verify(btraceCode);
+            btraceClass = verifyAndLoad(btraceCode);
         } catch (Throwable th) {
             debugPrint(th);
             errorExit(th);
             return null;
-        }
-
-        if (settings.isDumpClasses()) {
-            debug.dumpClass(className + "_orig", className + "_orig", btraceCode);
+        } finally {
+            if (settings.isDumpClasses()) {
+                debug.dumpClass(className + "_orig", className + "_orig", btraceCode);
+            }
         }
 
         this.filter = new ClassFilter(onMethods);
         debugPrint("created class filter");
 
-        ClassWriter writer = InstrumentUtils.newClassWriter(btraceCode);
-        ClassReader reader = new ClassReader(btraceCode);
-        ClassVisitor visitor = new Preprocessor(writer);
         if (isClassRenamed) {
             if (isDebug()) {
                 debugPrint("class renamed to " + className);
             }
             onCommand(new RenameCommand(className));
-            visitor = new ClassRenamer(className, visitor);
         }
         try {
             if (isDebug()) {
                 debugPrint("preprocessing BTrace class " + className);
             }
-            InstrumentUtils.accept(reader, visitor);
+            btraceCode = btraceClass.getBytecode();
             if (isDebug()) {
                 debugPrint("preprocessed BTrace class " + className);
             }
-            btraceCode = writer.toByteArray();
         } catch (Throwable th) {
             debugPrint(th);
             errorExit(th);
@@ -294,7 +286,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             debugPrint("created BTraceRuntime instance for " + className);
             debugPrint("removing @OnMethod, @OnProbe and shared methods");
         }
-        byte[] codeBuf = removeMethods(btraceCode);
+        byte[] codeBuf = btraceClass.getBytecode(true);
+
         debugPrint("removed @OnMethod, @OnProbe and shared methods");
         debugPrint("sending Okay command");
         onCommand(new OkayCommand());
@@ -441,7 +434,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         try {
             ClassWriter writer = InstrumentUtils.newClassWriter(loader, target);
             ClassReader reader = new ClassReader(target);
-            Instrumentor i = new Instrumentor(loader, clazz, className,  btraceCode, onMethods, reachableCalls, writer);
+            Instrumentor i = new Instrumentor(loader, clazz, btraceClass, writer);
             InstrumentUtils.accept(reader, i);
             if (isDebug() && !i.hasMatch()) {
                 debugPrint("*WARNING* No method was matched for class " + cname); // NOI18N
@@ -457,20 +450,17 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         return instrumentedCode;
     }
 
-    private void verify(byte[] buf) {
-        ClassReader reader = new ClassReader(buf);
-        Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM5) {}, settings.isUnsafe());
-        debugPrint("verifying BTrace class");
-        InstrumentUtils.accept(reader, verifier);
-        reachableCalls = verifier.getReachableCalls();
+    private BTraceClassNode verifyAndLoad(byte[] buf) {
+        debugPrint("loading and verifying BTrace class");
+        BTraceClassNode cn = BTraceClassNode.from(buf, settings.isUnsafe());
 
-        className = verifier.getClassName().replace('/', '.');
-        isClassRenamed = verifier.isClassRenamed();
+        className = cn.name.replace('/', '.');
+        isClassRenamed = cn.isClassRenamed();
         if (isDebug()) {
             debugPrint("verified '" + className + "' successfully");
         }
-        onMethods = verifier.getOnMethods();
-        onProbes = verifier.getOnProbes();
+        onMethods = cn.getOnMethods();
+        onProbes = cn.getOnProbes();
         if (onProbes != null && !onProbes.isEmpty()) {
             // map @OnProbe's to @OnMethod's and store
             onMethods.addAll(mapOnProbes(onProbes));
@@ -481,6 +471,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 hasSubclassChecks = true;
             }
         }
+        return cn;
     }
 
     private void verifySpecialParameters(OnMethod om) {
@@ -517,13 +508,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 Verifier.reportError("duration.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getDurationParameter() + ")");
             }
         }
-    }
-
-    private static byte[] removeMethods(byte[] buf) {
-        ClassWriter writer = InstrumentUtils.newClassWriter(buf);
-        ClassReader reader = new ClassReader(buf);
-        InstrumentUtils.accept(reader, new MethodRemover(writer));
-        return writer.toByteArray();
     }
 
     private static String readClassName(byte[] classfileBuffer) {
@@ -564,7 +548,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                  // Note that the probe descriptor cache is used
                  // across BTrace sessions. So, we should not update
                  // cached OnProbes (and their OnMethods).
-                 OnMethod omn = new OnMethod();
+                 OnMethod omn = new OnMethod(op.getMethodNode());
                  omn.copyFrom(om);
                  omn.setTargetName(op.getTargetName());
                  omn.setTargetDescriptor(op.getTargetDescriptor());

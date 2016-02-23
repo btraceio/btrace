@@ -40,6 +40,8 @@ import com.sun.btrace.annotations.OnError;
 import com.sun.btrace.annotations.OnEvent;
 import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnTimer;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.services.api.Service;
@@ -76,6 +78,13 @@ public abstract class Constants {
 
     public static final String ONMETHOD_DESC =
         Type.getDescriptor(OnMethod.class);
+
+    public static final String BTRACE_PROBECLASSNAME_DESC =
+        Type.getDescriptor(ProbeClassName.class);
+
+    public static final String BTRACE_PROBEMETHODNAME_DESC =
+        Type.getDescriptor(ProbeMethodName.class);
+
     public static final String ONTIMER_DESC =
         Type.getDescriptor(OnTimer.class);
     public static final String ONEVENT_DESC =
