@@ -50,7 +50,7 @@ public class OnMethodTest {
     public static void noargs(@Self Object self) {
         tls++;
         ex += 1;
-        println(var + " [this, noargs]");
+        dump(var + " [this, noargs]");
         var = "A";
     }
 
@@ -58,7 +58,11 @@ public class OnMethodTest {
     public static void args(@Self Object self, int i, String s) {
         tls -= 1;
         ex--;
-        println(var + " [this, args]");
+        dump(var + " [this, args]");
         var = "B";
+    }
+
+    private static void dump(String s) {
+        println(s);
     }
 }

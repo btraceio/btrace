@@ -36,6 +36,10 @@ import com.sun.btrace.annotations.OnExit;
 public class OnExitTest {
     @OnExit
     public static void onexit(int code) {
-        println("onexit");
+        dump("onexit");
+    }
+
+    private static void dump(String s) {
+        println(s);
     }
 }

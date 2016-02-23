@@ -29,12 +29,9 @@ import static org.junit.Assert.*;
 
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
+import com.sun.btrace.runtime.BTraceClassNode;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Instrumentor;
-import com.sun.btrace.runtime.OnMethod;
-import com.sun.btrace.runtime.Preprocessor;
-import com.sun.btrace.runtime.ReachableCalls;
-import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.util.MethodID;
 import org.junit.After;
 import org.junit.Before;
@@ -47,7 +44,6 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -56,20 +52,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Jaroslav Bachorik
  */
 public abstract class InstrumentorTestBase {
-    protected static class Trace {
-        final byte[] content;
-        final List<OnMethod> onMethods;
-        public final String className;
-        public final ReachableCalls rc;
-
-        public Trace(byte[] content, List<OnMethod> onMethods, ReachableCalls rc, String className) {
-            this.content = content;
-            this.onMethods = onMethods;
-            this.className = className;
-            this.rc = rc;
-        }
-    }
-
     private static final boolean DEBUG = true;
 
     private static Unsafe unsafe;
@@ -98,6 +80,10 @@ public abstract class InstrumentorTestBase {
     @Before
     public void startup() {
         try {
+            originalBC = null;
+            transformedBC = null;
+            originalTrace = null;
+            transformedTrace = null;
             resetClassLoader();
 
             Field lastFld = MethodID.class.getDeclaredField("lastMehodId");
@@ -163,6 +149,10 @@ public abstract class InstrumentorTestBase {
             fail();
         }
 
+        System.err.println("=== HERE");
+        System.err.println(asmify(transformedTrace));
+        System.err.println("========");
+
         String diff = diffTrace();
         if (DEBUG) {
             System.err.println(diff);
@@ -175,14 +165,13 @@ public abstract class InstrumentorTestBase {
     }
 
     protected void transform(String traceName, boolean unsafe) throws IOException {
-        Trace btrace = loadTrace(traceName, unsafe);
+        BTraceClassNode btrace = loadTrace(traceName, unsafe);
         ClassReader reader = new ClassReader(originalBC);
         ClassWriter writer = InstrumentUtils.newClassWriter();
 
         try {
             InstrumentUtils.accept(reader, new Instrumentor(ClassLoader.getSystemClassLoader(), null,
-                        btrace.className, btrace.content,
-                        btrace.onMethods, btrace.rc, writer));
+                        btrace, writer));
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -260,21 +249,19 @@ public abstract class InstrumentorTestBase {
         return sb.toString().trim();
     }
 
-    protected Trace loadTrace(String name) throws IOException {
+    protected BTraceClassNode loadTrace(String name) throws IOException {
         return loadTrace(name, false);
     }
 
-    protected Trace loadTrace(String name, boolean unsafe) throws IOException {
+    protected BTraceClassNode loadTrace(String name, boolean unsafe) throws IOException {
         originalTrace = loadFile("traces/" + name + ".class");
         if (DEBUG) {
             System.err.println("=== Loaded Trace: " + name + "\n");
             System.err.println(asmify(originalTrace));
         }
-        ClassWriter writer = InstrumentUtils.newClassWriter();
-        Verifier verifier = new Verifier(new Preprocessor(writer), unsafe);
-        InstrumentUtils.accept(new ClassReader(originalTrace), verifier);
-        Trace t =  new Trace(writer.toByteArray(), verifier.getOnMethods(), verifier.getReachableCalls(), verifier.getClassName());
-        transformedTrace = t.content;
+        BTraceClassNode bcn = BTraceClassNode.from(originalTrace, unsafe);
+//        Trace t =  new Trace(bcn.getBytecode(), bcn.getOnMethods(), verifier.getReachableCalls(), bcn.name);
+        transformedTrace = bcn.getBytecode();
         if (DEBUG) {
 //            writer = InstrumentUtils.newClassWriter();
 //            InstrumentUtils.accept(new ClassReader(originalTrace), new Preprocessor1(writer));
@@ -282,7 +269,7 @@ public abstract class InstrumentorTestBase {
 //            System.err.println(asmify(writer.toByteArray()));
             System.err.println(asmify(transformedTrace));
         }
-        return t;
+        return bcn;
     }
 
     protected byte[] loadTargetClass(String name) throws IOException {

@@ -43,6 +43,10 @@ public class OnProbeTest {
 
     @OnProbe(name = "withargs", namespace = "com.sun.btrace")
     public static void args(@Self Object self, int i, String s) {
-        println("[this, args]");
+        dump("[this, args]");
+    }
+
+    private static void dump(String s) {
+        println(s);
     }
 }
