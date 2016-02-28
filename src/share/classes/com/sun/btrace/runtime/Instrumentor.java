@@ -1636,13 +1636,11 @@ public class Instrumentor extends ClassVisitor {
 
     @Override
     public void visitEnd() {
-        System.err.println("*** Going to copy methods from: " + bcn.name);
         Set<MethodNode> copyNodes = new TreeSet<>(BTraceMethodNode.COMPARATOR);
 
         for (OnMethod om : calledOnMethods) {
             BTraceMethodNode bmn = om.getMethodNode();
 
-            System.err.println("*** copying method: " + bmn);
             MethodNode mn = copy(bmn);
 
             copyNodes.add(mn);
@@ -1651,7 +1649,6 @@ public class Instrumentor extends ClassVisitor {
             }
         }
         for(MethodNode mn : copyNodes) {
-            System.err.println("*** physical copy: " + mn.name + mn.desc);
             mn.accept(new ClassVisitor(Opcodes.ASM5, cv) {
                 @Override
                 public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exceptions) {

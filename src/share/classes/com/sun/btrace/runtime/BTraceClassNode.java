@@ -171,6 +171,10 @@ public final class BTraceClassNode extends ClassNode {
             cv = new ClassVisitor(Opcodes.ASM5, cw) {
                 @Override
                 public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exceptions) {
+                    if (name.startsWith("<")) {
+                        // never check constructor and static initializer
+                        return super.visitMethod(access, name, desc, sig, exceptions);
+                    }
                     BTraceMethodNode bmn = idmap.get(CycleDetector.methodId(name, desc));
                     if (bmn != null) {
                         if (bmn.isBcpRequired()) {
@@ -181,6 +185,7 @@ public final class BTraceClassNode extends ClassNode {
                                 return super.visitMethod(access, name, desc, sig, exceptions);
                             }
                         }
+                        return null;
                     }
                     return super.visitMethod(access, name, desc, sig, exceptions);
                 }

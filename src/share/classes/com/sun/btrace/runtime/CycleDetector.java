@@ -250,7 +250,7 @@ public class CycleDetector {
         for(Node n : nodes) {
             if (n.id.equals(methodId)) {
                 for(Edge e : n.incoming) {
-                    String id = e.to.id;
+                    String id = e.from.id;
                     if (!closure.contains(id)) {
                         closure.add(id);
                         collectIncomings(id, closure);
