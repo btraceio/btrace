@@ -432,8 +432,10 @@ public final class Main {
                         client.registerTransformer();
                         ArrayList<Class> list = new ArrayList<>();
                         client.debugPrint("filtering loaded classes");
+                        ClassCache cc = ClassCache.getInstance();
                         for (Class c : inst.getAllLoadedClasses()) {
                             if (c != null) {
+                                cc.get(c);
                                 if (inst.isModifiableClass(c) &&
                                     client.isCandidate(c)) {
                                     client.debugPrint("candidate " + c + " added");

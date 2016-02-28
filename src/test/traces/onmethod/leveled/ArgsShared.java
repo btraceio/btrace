@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,48 @@
  * questions.
  */
 
-package traces;
+package traces.onmethod.leveled;
 
+import traces.onmethod.*;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.OnProbe;
+import com.sun.btrace.annotations.Level;
+import com.sun.btrace.annotations.TLS;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class OnProbeTest {
-    @OnProbe(name = "noargs", namespace = "com.sun.btrace")
-    public static void noargs(@Self Object self) {
-        println("[this, noargs]");
+public class ArgsShared {
+    @TLS
+    private static int cntr = 15;
+
+    @com.sun.btrace.annotations.Export
+    private static long exported = 1;
+
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level(">=1"))
+    public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
+        println("this = " + self);
+        println("args");
+        println(str(cntr));
+        cntr++;
+
+        dumpExported();
     }
 
-    @OnProbe(name = "withargs", namespace = "com.sun.btrace")
-    public static void args(@Self Object self, int i, String s) {
-        dump("[this, args]");
+    private static void dumpExported() {
+        println(str(exported));
+        incExported();
     }
 
-    private static void dump(String s) {
-        println(s);
+    private static void incExported() {
+        exported++;
+    }
+
+    private static void unusedcode() {
+        println("unused");
     }
 }

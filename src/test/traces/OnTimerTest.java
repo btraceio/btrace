@@ -42,6 +42,10 @@ public class OnTimerTest {
 
     @OnTimer(500)
     public static void ontimer() {
-        println("timer");
+        dump("timer");
+    }
+
+    private static void dump(String s) {
+        println(s);
     }
 }

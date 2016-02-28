@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
+ * particular file as subject to the Classpath exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -22,14 +22,47 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.btrace.runtime;
 
-import java.util.List;
+package traces.onmethod;
+
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.TLS;
 
 /**
- * A temporary solution for Preprocessor/Verifier onmethods list sharing
+ *
  * @author Jaroslav Bachorik
  */
-interface OnMethodsAcceptor {
-    void accept(List<OnMethod> onMethods);
+@BTrace
+public class ArgsShared {
+    @TLS
+    private static int cntr = 15;
+
+    @com.sun.btrace.annotations.Export
+    private static long exported = 1;
+
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
+    public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
+        println("this = " + self);
+        println("args");
+        println(str(cntr));
+        cntr++;
+
+        dumpExported();
+    }
+
+    private static void dumpExported() {
+        println(str(exported));
+        incExported();
+    }
+
+    private static void incExported() {
+        exported++;
+    }
+
+    private static void unusedcode() {
+        println("unused");
+    }
 }

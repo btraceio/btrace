@@ -1442,6 +1442,176 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void methodEntryArgsShared() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsShared");
+        checkTransformation("ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsShared$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 6\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$ArgsShared$args(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"args\")\n" +
+            "@Lcom/sun/btrace/annotations/Self;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/ArgsShared.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "NEW java/lang/StringBuilder\n" +
+            "DUP\n" +
+            "INVOKESPECIAL java/lang/StringBuilder.<init> ()V\n" +
+            "LDC \"this = \"\n" +
+            "INVOKEVIRTUAL java/lang/StringBuilder.append (Ljava/lang/String;)Ljava/lang/StringBuilder;\n" +
+            "ALOAD 0\n" +
+            "INVOKEVIRTUAL java/lang/StringBuilder.append (Ljava/lang/Object;)Ljava/lang/StringBuilder;\n" +
+            "INVOKEVIRTUAL java/lang/StringBuilder.toString ()Ljava/lang/String;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "GETSTATIC traces/onmethod/ArgsShared.cntr : Ljava/lang/ThreadLocal;\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
+            "CHECKCAST java/lang/Integer\n" +
+            "INVOKEVIRTUAL java/lang/Integer.intValue ()I\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.str (I)Ljava/lang/String;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "GETSTATIC traces/onmethod/ArgsShared.cntr : Ljava/lang/ThreadLocal;\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
+            "CHECKCAST java/lang/Integer\n" +
+            "INVOKEVIRTUAL java/lang/Integer.intValue ()I\n" +
+            "ICONST_1\n" +
+            "IADD\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "GETSTATIC traces/onmethod/ArgsShared.cntr : Ljava/lang/ThreadLocal;\n" +
+            "SWAP\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.set (Ljava/lang/Object;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsShared$dumpExported ()V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 6\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$ArgsShared$dumpExported()V\n" +
+            "LDC \"btrace.traces/onmethod/ArgsShared.exported\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.getPerfLong (Ljava/lang/String;)J\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.str (J)Ljava/lang/String;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsShared$incExported ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 0\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$ArgsShared$incExported()V\n" +
+            "LDC \"btrace.traces/onmethod/ArgsShared.exported\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.getPerfLong (Ljava/lang/String;)J\n" +
+            "LCONST_1\n" +
+            "LADD\n" +
+            "LDC \"btrace.traces/onmethod/ArgsShared.exported\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.putPerfLong (JLjava/lang/String;)V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 0"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/ArgsShared");
+        checkTransformation(
+            "GETSTATIC traces/onmethod/leveled/ArgsShared.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L0\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsShared$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 6\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$leveled$ArgsShared$args(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"args\", enableAt=@Lcom/sun/btrace/annotations/Level;(value=\">=1\"))\n" +
+            "@Lcom/sun/btrace/annotations/Self;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/leveled/ArgsShared.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "NEW java/lang/StringBuilder\n" +
+            "DUP\n" +
+            "INVOKESPECIAL java/lang/StringBuilder.<init> ()V\n" +
+            "LDC \"this = \"\n" +
+            "INVOKEVIRTUAL java/lang/StringBuilder.append (Ljava/lang/String;)Ljava/lang/StringBuilder;\n" +
+            "ALOAD 0\n" +
+            "INVOKEVIRTUAL java/lang/StringBuilder.append (Ljava/lang/Object;)Ljava/lang/StringBuilder;\n" +
+            "INVOKEVIRTUAL java/lang/StringBuilder.toString ()Ljava/lang/String;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "GETSTATIC traces/onmethod/leveled/ArgsShared.cntr : Ljava/lang/ThreadLocal;\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
+            "CHECKCAST java/lang/Integer\n" +
+            "INVOKEVIRTUAL java/lang/Integer.intValue ()I\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.str (I)Ljava/lang/String;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "GETSTATIC traces/onmethod/leveled/ArgsShared.cntr : Ljava/lang/ThreadLocal;\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
+            "CHECKCAST java/lang/Integer\n" +
+            "INVOKEVIRTUAL java/lang/Integer.intValue ()I\n" +
+            "ICONST_1\n" +
+            "IADD\n" +
+            "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
+            "GETSTATIC traces/onmethod/leveled/ArgsShared.cntr : Ljava/lang/ThreadLocal;\n" +
+            "SWAP\n" +
+            "INVOKEVIRTUAL java/lang/ThreadLocal.set (Ljava/lang/Object;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsShared$dumpExported ()V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 6\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$leveled$ArgsShared$dumpExported()V\n" +
+            "LDC \"btrace.traces/onmethod/leveled/ArgsShared.exported\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.getPerfLong (Ljava/lang/String;)J\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.str (J)Ljava/lang/String;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsShared$incExported ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 0\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$leveled$ArgsShared$incExported()V\n" +
+            "LDC \"btrace.traces/onmethod/leveled/ArgsShared.exported\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.getPerfLong (Ljava/lang/String;)J\n" +
+            "LCONST_1\n" +
+            "LADD\n" +
+            "LDC \"btrace.traces/onmethod/leveled/ArgsShared.exported\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.putPerfLong (JLjava/lang/String;)V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 0"
+        );
+    }
+
+    @Test
     public void methodEntryArgsSampledNoSampling() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsSampledNoSampling");
@@ -3902,6 +4072,38 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXSTACK = 5\n" +
             "\n" +
             "// access flags 0xA\n" +
+            "private static $btrace$traces$ServicesTest$testFieldInjection(Ljava/lang/String;)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"noargs$static\")\n" +
+            "@Lcom/sun/btrace/annotations/ProbeClassName;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "NEW resources/services/DummyRuntimService\n" +
+            "DUP\n" +
+            "DUP\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
+            "ASTORE 1\n" +
+            "BIPUSH 10\n" +
+            "LDC \"hey\"\n" +
+            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "ALOAD 1\n" +
+            "BIPUSH 20\n" +
+            "LDC \"ho\"\n" +
+            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 2\n" +
+            "\n" +
+            "// access flags 0xA\n" +
             "private static $btrace$traces$ServicesTest$testRuntimeService(Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"args\")\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
@@ -3979,39 +4181,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "MAXSTACK = 3\n" +
-            "MAXLOCALS = 6\n" +
-            "\n" +
-            "// access flags 0xA\n" +
-            "private static $btrace$traces$ServicesTest$testFieldInjection(Ljava/lang/String;)V\n" +
-            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"noargs$static\")\n" +
-            "@Lcom/sun/btrace/annotations/ProbeClassName;() // parameter 0\n" +
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
-            "IFNE L0\n" +
-            "RETURN\n" +
-            "L0\n" +
-            "NEW resources/services/DummyRuntimService\n" +
-            "DUP\n" +
-            "DUP\n" +
-            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
-            "ASTORE 1\n" +
-            "BIPUSH 10\n" +
-            "LDC \"hey\"\n" +
-            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
-            "ALOAD 1\n" +
-            "BIPUSH 20\n" +
-            "LDC \"ho\"\n" +
-            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "L1\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "MAXSTACK = 4\n" +
-            "MAXLOCALS = 2"
+            "MAXLOCALS = 6"
         );
     }
 
@@ -4279,6 +4449,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
+            "// access flags 0x9\n" +
+            "public static dump(Ljava/lang/String;)V\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
             "L0\n" +
             "LDC Ltraces/OnTimerTest;.class\n" +
