@@ -44,12 +44,8 @@ import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
-import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
-import com.sun.btrace.org.objectweb.asm.tree.MethodNode;
 import com.sun.btrace.runtime.BTraceClassNode;
-import com.sun.btrace.runtime.BTraceMethodNode;
 import com.sun.btrace.runtime.ClassFilter;
-import com.sun.btrace.runtime.CycleDetector;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Location;
@@ -57,7 +53,6 @@ import com.sun.btrace.runtime.NullPerfReaderImpl;
 import com.sun.btrace.runtime.Verifier;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.OnProbe;
-import com.sun.btrace.runtime.Preprocessor;
 import com.sun.btrace.runtime.ProbeDescriptor;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
@@ -105,6 +100,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         AnnotationType.class.getClass();
         Annotation.class.getClass();
         MethodTrackingExpander.class.getClass();
+        ClassCache.class.getClass();
+        ClassInfo.class.getClass();
 
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
@@ -287,6 +284,10 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             debugPrint("removing @OnMethod, @OnProbe and shared methods");
         }
         byte[] codeBuf = btraceClass.getBytecode(true);
+
+        if (settings.isDumpClasses()) {
+            debug.dumpClass(className + "_bcp", className + "_bcp", codeBuf);
+        }
 
         debugPrint("removed @OnMethod, @OnProbe and shared methods");
         debugPrint("sending Okay command");

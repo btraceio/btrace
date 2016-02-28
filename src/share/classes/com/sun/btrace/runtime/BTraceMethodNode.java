@@ -69,7 +69,7 @@ public class BTraceMethodNode extends MethodNode {
     public AnnotationVisitor visitAnnotation(String type, boolean visible) {
         AnnotationVisitor av = super.visitAnnotation(type, visible);
 
-        if (type.startsWith("com/sun/btrace/annotations")) {
+        if (type.startsWith("Lcom/sun/btrace/annotations/")) {
             isBTraceHandler = true;
         }
         if (type.equals(ONMETHOD_DESC)) {
