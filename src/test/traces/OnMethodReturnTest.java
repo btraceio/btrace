@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Reflective.*;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.TLS;
 import com.sun.btrace.annotations.Export;
@@ -43,33 +42,13 @@ import com.sun.btrace.annotations.Return;
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class OnMethodTest {
-    @TLS
-    private static int tls = 10;
-
-    @Export
-    private static long ex = 1;
-
-    private static String var = "none";
-
-    @OnMethod(clazz = "resources.Main", method = "callA")
-    public static void noargs(@Self Object self) {
-        tls++;
-        ex += 1;
-        dump(var + " [this, noargs]");
-        dump("{" + get("id", self) + "}");
-        var = "A";
-    }
-
-    @OnMethod(clazz = "resources.Main", method = "callB")
-    public static void args(@Self Object self, int i, String s) {
-        tls -= 1;
-        ex--;
-        dump(var + " [this, args]");
-        var = "B";
-    }
-
-    private static void dump(String s) {
-        println(s);
+public class OnMethodReturnTest {
+    @OnMethod(clazz = "resources.Main", method = "/call.*/", location = @Location(Kind.RETURN))
+    public static void noargs(@Self Object self, @Return AnyType ret) {
+        if (BTraceUtils.instanceOf(ret, "void")) {
+            println("[this, void]");
+        } else {
+            println("[this, " + ret + "]");
+        }
     }
 }

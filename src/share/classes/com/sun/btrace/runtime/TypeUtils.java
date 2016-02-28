@@ -102,7 +102,7 @@ class TypeUtils {
             return false;
         } else if(isObjectOrAnyType(left)) {
             int sort2 = right.getSort();
-            return (sort2 == Type.OBJECT || sort2 == Type.ARRAY || isPrimitive(right));
+            return (sort2 == Type.OBJECT || sort2 == Type.ARRAY || sort2 == Type.VOID || isPrimitive(right));
         } else if (isPrimitive(left)) {
             // a primitive type requires strict equality
             return left.equals(right);

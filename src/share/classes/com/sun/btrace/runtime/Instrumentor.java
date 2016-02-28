@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.AnyType;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -1366,13 +1367,21 @@ public class Instrumentor extends ClassVisitor {
 
                         try {
                             boolean boxReturnValue = false;
+                            Type probeRetType = getReturnType();
                             if (om.getReturnParameter() != -1) {
-                                if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
-                                    asm.dupReturnValue(retOpCode);
-                                }
                                 Type retType = Type.getArgumentTypes(om.getTargetDescriptor())[om.getReturnParameter()];
-                                boxReturnValue = TypeUtils.isAnyType(retType);
-                                retValIndex = storeNewLocal(getReturnType());
+                                if (probeRetType == Type.VOID_TYPE && TypeUtils.isAnyType(retType)) {
+                                    // no return value but still tracking
+                                    // let's push a synthetic value on stack
+                                    probeRetType = TypeUtils.objectType;
+                                    asm.getStatic(Type.getInternalName(AnyType.class), "VOID", ANYTYPE_DESC);
+                                } else {
+                                    if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
+                                        asm.dupReturnValue(retOpCode);
+                                    }
+                                    boxReturnValue = TypeUtils.isAnyType(retType);
+                                }
+                                retValIndex = storeNewLocal(probeRetType);
                             }
 
                             ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 5];
@@ -1390,7 +1399,7 @@ public class Instrumentor extends ClassVisitor {
                             }
                             actionArgs[actionArgTypes.length] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
                             actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace("/", "."));
-                            actionArgs[actionArgTypes.length + 2] = localVarArg(om.getReturnParameter(), getReturnType(), retValIndex, boxReturnValue);
+                            actionArgs[actionArgTypes.length + 2] = localVarArg(om.getReturnParameter(), probeRetType, retValIndex, boxReturnValue);
                             actionArgs[actionArgTypes.length + 3] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(asm, om.getDurationParameter()) {
                                 @Override

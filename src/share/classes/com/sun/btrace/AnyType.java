@@ -36,5 +36,6 @@ package com.sun.btrace;
  *
  * @author A. Sundararajan
  */
-public interface AnyType {
+public abstract class AnyType {
+    public static final AnyType VOID = new AnyType() {};
 }

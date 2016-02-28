@@ -1927,6 +1927,48 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void methodEntryArgsReturnVoid() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsReturnVoid");
+        checkTransformation(
+            "GETSTATIC com/sun/btrace/AnyType.VOID : Lcom/sun/btrace/AnyType;\n" +
+            "ASTORE 1\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsReturnVoid$args (Ljava/lang/Object;Ljava/lang/Object;)V\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 2\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$onmethod$ArgsReturnVoid$args(Ljava/lang/Object;Ljava/lang/Object;)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"noargs\", location=@Lcom/sun/btrace/annotations/Location;(value=Lcom/sun/btrace/annotations/Kind;.RETURN))\n" +
+            "@Lcom/sun/btrace/annotations/Self;() // parameter 0\n" +
+            "@Lcom/sun/btrace/annotations/Return;() // parameter 1\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/ArgsReturnVoid.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "ALOAD 1\n" +
+            "LDC \"void\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.instanceOf (Ljava/lang/Object;Ljava/lang/String;)Z\n" +
+            "IFEQ L2\n" +
+            "LDC \"args\"\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
+            "L2\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 2"
+        );
+    }
+
+    @Test
     public void methodEntryArgsReturnLevel() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/leveled/ArgsReturn");
