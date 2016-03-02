@@ -82,16 +82,19 @@ class FileClient extends Client {
         }
 
         final int flushSec  = flushInterval;
-
-        flusher = new Timer("BTrace FileClient Flusher", true);
-        flusher.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                if (out != null) {
-                    out.flush();
+        if (flushSec > -1) {
+            flusher = new Timer("BTrace FileClient Flusher", true);
+            flusher.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    if (out != null) {
+                        out.flush();
+                    }
                 }
-            }
-        }, flushSec, flushSec);
+            }, flushSec, flushSec);
+        } else {
+            flusher = null;
+        }
     }
 
     FileClient(Instrumentation inst, File scriptFile, String traceOutput) throws IOException {
@@ -145,7 +148,9 @@ class FileClient extends Client {
 
     @Override
     protected synchronized void closeAll() throws IOException {
-        flusher.cancel();
+        if (flusher != null) {
+            flusher.cancel();
+        }
         if (out != null) {
             out.close();
         }
