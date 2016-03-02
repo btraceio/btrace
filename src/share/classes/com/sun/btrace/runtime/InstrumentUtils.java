@@ -63,27 +63,6 @@ public final class InstrumentUtils {
         for(ClassInfo sci : ci.getSupertypes(false)) {
             closure.add(sci.getClassId().replace(".", "/"));
         }
-//        try {
-//           InputStream typeIs = cl.getResourceAsStream(type + ".class");
-//           if (typeIs != null) {
-//                final List<String> mySupers = new LinkedList<>();
-//                ClassReader cr = new ClassReader(typeIs);
-//                cr.accept(new ClassVisitor(Opcodes.ASM5) {
-//                    @Override
-//                    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-//                        mySupers.add(superName);
-//                        mySupers.addAll(Arrays.asList(interfaces));
-//                        super.visit(version, access, name, signature, superName, interfaces);
-//                    }
-//                }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-//                closure.addAll(mySupers);
-//                for (String superType : mySupers) {
-//                    collectHierarchyClosure(cl, superType, closure);
-//                }
-//            }
-//       } catch (IOException e) {
-//            DebugSupport.warning(e);
-//       }
     }
 
     private static class BTraceClassWriter extends ClassWriter {

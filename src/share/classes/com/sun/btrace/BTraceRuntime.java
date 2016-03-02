@@ -110,7 +110,6 @@ import javax.management.openmbean.CompositeData;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Field;
 import java.util.HashSet;
-import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
