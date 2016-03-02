@@ -241,6 +241,10 @@ public final class Main {
         settings.setDebug(p != null && !"false".equals(p));
         if (isDebug()) debugPrint("debugMode is " + settings.isDebug());
 
+        p = argMap.get("startupRetransform");
+        settings.setRetransformStartup(p == null || !"false".equals(p));
+        if (isDebug()) debugPrint("startupRetransform is " + settings.isRetransformStartup());
+
         p = argMap.get("dumpClasses");
         boolean dumpClasses = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("dumpClasses is " + dumpClasses);
@@ -436,7 +440,8 @@ public final class Main {
                         for (Class c : inst.getAllLoadedClasses()) {
                             if (c != null) {
                                 cc.get(c);
-                                if (inst.isModifiableClass(c) &&
+                                if (settings.isRetransformStartup() &&
+                                    inst.isModifiableClass(c) &&
                                     client.isCandidate(c)) {
                                     client.debugPrint("candidate " + c + " added");
                                     list.add(c);

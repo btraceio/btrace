@@ -46,6 +46,7 @@ final public class SharedSettings {
     private boolean debug = false;
     private boolean unsafe = false;
     private boolean trackRetransforms = false;
+    private boolean retransformStartup = true;
     private String dumpDir = null;
     private String probeDescPath = null;
     private String statsdHost = null;
@@ -178,5 +179,13 @@ final public class SharedSettings {
 
     public void setFileRollMaxRolls(int fileRollMaxRolls) {
         this.fileRollMaxRolls = fileRollMaxRolls;
+    }
+
+    public void setRetransformStartup(boolean val) {
+        this.retransformStartup = val;
+    }
+
+    public boolean isRetransformStartup() {
+        return retransformStartup;
     }
 }
