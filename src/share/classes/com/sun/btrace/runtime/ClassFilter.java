@@ -145,17 +145,29 @@ public class ClassFilter {
         return false;
     }
 
-    public boolean isCandidate(ClassLoader loader, String cName, byte[] classBytes, boolean subClassChecks) {
-        return isCandidate(loader, cName, new ClassReader(classBytes), subClassChecks);
+    public boolean isCandidate(ClassLoader loader, String cName, byte[] classBytes) {
+        return isCandidate(loader, cName, new FastClassReader(classBytes));
     }
 
-    public boolean isCandidate(ClassLoader loader, String cName, ClassReader reader, boolean subClassChecks) {
-        if (isNameMatching(cName)) {
+    private boolean isCandidate(ClassLoader loader, String cName, FastClassReader reader) {
+        if (isNameMatching(cName.replace('/', '.'))) {
             return true;
         }
-        CheckingVisitor cv = new CheckingVisitor(loader, subClassChecks);
-        reader.accept(cv, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-        return cv.isCandidate();
+        if ((annotationClasses != null && annotationClasses.length > 0) ||
+            (annotationClassPatterns != null && annotationClassPatterns.length > 0)) {
+            CheckingVisitor cv = new CheckingVisitor(loader);
+            reader.accept(cv, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+            if (cv.isCandidate()) {
+                return true;
+            }
+        }
+        if (superTypes != null && superTypes.length > 0) {
+            String[] info = reader.readClassSupers();
+            if (isSubTypeOf(cName, loader, info)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isNameMatching(String clzName) {
@@ -222,18 +234,56 @@ public class ClassFilter {
         return !closure.isEmpty();
     }
 
+    private boolean isCandidate(String clzName, String superType, String[] itfcs) {
+        clzName = clzName.replace('/', '.');
+
+        if (referenceClz.getName().equals(clzName)) {
+            // instrumenting the <b>java.lang.ref.Reference</b> class will lead
+            // to StackOverflowError in <b>java.lang.ThreadLocal.get()</b>
+            return false;
+        }
+
+        if (clzName.startsWith("sun.instrument.") ||
+            clzName.startsWith("java.lang.instrument.")) {
+            // do not instrument the instrumentation related classes
+            return false;
+        }
+
+        for (String className : sourceClasses) {
+            if (className.equals(clzName)) {
+                return true;
+            }
+        }
+
+        for (Pattern pat : sourceClassPatterns) {
+            if (pat.matcher(clzName).matches()) {
+                return true;
+            }
+        }
+
+        for (String st : superTypesInternal) {
+            if (superType.equals(st)) {
+                return true;
+            }
+            if (itfcs != null) {
+                for (String iface : itfcs) {
+                    if (iface.equals(st)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private class CheckingVisitor extends ClassVisitor {
 
         private boolean isInterface;
         private boolean isCandidate;
-        private final ClassLoader loader;
-        private final boolean subClassChecks;
         private final AnnotationVisitor nullAnnotationVisitor = new AnnotationVisitor(Opcodes.ASM5) {};
 
-        public CheckingVisitor(ClassLoader loader, boolean subClassChecks) {
+        public CheckingVisitor(ClassLoader loader) {
             super(Opcodes.ASM5);
-            this.loader = loader != null ? loader : ClassLoader.getSystemClassLoader();
-            this.subClassChecks = subClassChecks;
         }
 
         boolean isCandidate() {
@@ -241,74 +291,16 @@ public class ClassFilter {
         }
 
         @Override
-        public void visit(int version, int access, String name,
-                String signature, String superName, String[] interfaces) {
-            if ((access & ACC_INTERFACE) != 0) {
-                isInterface = true;
-                isCandidate = false;
-                return;
-            }
-
-            if (subClassChecks) {
-                if (isSubTypeOf(name, loader, superTypes)) {
-                    isCandidate = true;
-                    return;
-                }
-            }
-
-            name = name.replace('/', '.');
-
-            if (referenceClz.getName().equals(name)) {
-                // instrumenting the <b>java.lang.ref.Reference</b> class will lead
-                // to StackOverflowError in <b>java.lang.ThreadLocal.get()</b>
-                return;
-            }
-
-            if (name.startsWith("sun.instrument.") ||
-                name.startsWith("java.lang.instrument.")) {
-                // do not instrument the instrumentation related classes
-                return;
-            }
-
-            for (String className : sourceClasses) {
-                if (className.equals(name)) {
-                    isCandidate = true;
-                    return;
-                }
-            }
-
-            for (Pattern pat : sourceClassPatterns) {
-                if (pat.matcher(name).matches()) {
-                    isCandidate = true;
-                    return;
-                }
-            }
-
-            for (String st : superTypesInternal) {
-                if (superName.equals(st)) {
-                    isCandidate = true;
-                    return;
-                }
-                for (String iface : interfaces) {
-                    if (iface.equals(st)) {
-                        isCandidate = true;
-                        return;
-                    }
-                }
-            }
-        }
-
-        @Override
         public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
             if (isInterface) {
-                return nullAnnotationVisitor;
+                FastClassReader.bailout();
             }
 
             if (BTRACE_DESC.equals(desc)) {
                 // ignore classes annotated with @BTrace -
                 // we don't want to instrument tracing classes!
                 isCandidate = false;
-                return nullAnnotationVisitor;
+                FastClassReader.bailout();
             }
 
             if (!isCandidate) {
@@ -316,51 +308,18 @@ public class ClassFilter {
                 for (String name : annotationClasses) {
                     if (annoName.equals(name)) {
                         isCandidate = true;
-                        return nullAnnotationVisitor;
+                        FastClassReader.bailout();
                     }
                 }
                 for (Pattern pat : annotationClassPatterns) {
                     if (pat.matcher(annoName).matches()) {
                         isCandidate = true;
-                        return nullAnnotationVisitor;
+                        FastClassReader.bailout();
                     }
                 }
             }
 
             return nullAnnotationVisitor;
-        }
-
-        @Override
-        public void visitAttribute(Attribute attr) {
-        }
-
-        @Override
-        public void visitEnd() {
-        }
-
-        @Override
-        public FieldVisitor visitField(int access, String name,
-                String desc, String signature, Object value) {
-            return null;
-        }
-
-        @Override
-        public void visitInnerClass(String name, String outerName,
-                String innerName, int access) {
-        }
-
-        @Override
-        public MethodVisitor visitMethod(int access, String name, String desc,
-                String signature, String[] exceptions) {
-            return null;
-        }
-
-        @Override
-        public void visitOuterClass(String owner, String name, String desc) {
-        }
-
-        @Override
-        public void visitSource(String source, String debug) {
         }
     }
 

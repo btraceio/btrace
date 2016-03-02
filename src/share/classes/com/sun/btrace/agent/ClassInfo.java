@@ -28,6 +28,7 @@ import com.sun.btrace.DebugSupport;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
+import com.sun.btrace.runtime.FastClassReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
@@ -44,24 +45,6 @@ import java.util.Set;
  * @author Jaroslav Bachorik
  */
 public final class ClassInfo {
-    /**
-     * Dummy, non-stack-collecting runtime exception.
-     * It is used for execution control in ClassReader instances when resolving
-     * {@linkplain ClassInfo} supertypes information - in order to avoid
-     * processing the complete class file when the relevant info is available right
-     * at the beginning of parsing.
-     */
-    private static final class BailoutException extends RuntimeException {
-        public BailoutException() {
-        }
-
-        @Override
-        public synchronized Throwable fillInStackTrace() {
-            // we don't need the stack here
-            return this;
-        }
-
-    }
     private static volatile Method BSTRP_CHECK_MTD;
     private static final ClassLoader SYS_CL = ClassLoader.getSystemClassLoader();
     private final String cLoaderId;
@@ -125,35 +108,26 @@ public final class ClassInfo {
         return classId;
     }
 
-    private static final BailoutException BAILOUT = new BailoutException();
-
     private Collection<ClassInfo> resolveSupertypes(final ClassLoader cl, final String className) {
         final Collection<ClassInfo> supers = new LinkedList<>();
         String rsrcName = className.replace(".", "/") + ".class";
         InputStream typeIs = cl == null ? SYS_CL.getResourceAsStream(rsrcName) : cl.getResourceAsStream(rsrcName);
         if (typeIs != null) {
             try {
-                ClassReader cr = new ClassReader(typeIs);
-                cr.accept(new ClassVisitor(Opcodes.ASM5) {
-                    @Override
-                    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-                        if (superName != null) {
-                            supers.add(cache.get(inferClassLoader(cl, superName), superName));
+                FastClassReader cr = new FastClassReader(typeIs);
+                String[] info = cr.readClassSupers();
+                String superName = info[0];
+                if (superName != null) {
+                    supers.add(cache.get(inferClassLoader(cl, superName), superName));
+                }
+                if (info.length > 1) {
+                    for(int i = 1; i < info.length; i++) {
+                        String ifc = info[i];
+                        if (ifc != null) {
+                            supers.add(cache.get(inferClassLoader(cl, ifc), ifc));
                         }
-                        if (interfaces != null) {
-                            for (String ifc : interfaces) {
-                                if (ifc != null) {
-                                    supers.add(cache.get(inferClassLoader(cl, ifc), ifc));
-                                }
-                            }
-                        }
-                        throw BAILOUT;
                     }
-                }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-            } catch (BailoutException e) {
-                // ClassReader is missing execution controlling mechanism so we must
-                // abuse a runtime exception for that.
-                // Safely ignore.
+                }
             } catch (IOException e) {
                 DebugSupport.warning(e);
             }

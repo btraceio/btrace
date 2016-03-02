@@ -132,11 +132,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         boolean entered = BTraceRuntime.enter();
         try {
             if (cname == null) {
-                cname = readClassName(classfileBuffer);
-                if (cname == null) {
-                    debugPrint("skipping transform for unknown class"); // NOI18N
-                    return null;
-                }
+                cname = "<anonymous>";
             }
             if (isBTraceClass(cname) || isSensitiveClass(cname)) {
                 if (isDebug()) {
@@ -156,7 +152,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 }
             } else {
                 // class not yet defined
-                if (filter.isCandidate(loader, cname, classfileBuffer, hasSubclassChecks)) {
+                if (filter.isCandidate(loader, cname, classfileBuffer)) {
                     return doTransform(loader, classBeingRedefined, cname, classfileBuffer);
                 } else {
                     if (isDebug()) {
@@ -468,9 +464,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         }
         for(OnMethod om : onMethods) {
             verifySpecialParameters(om);
-            if (om.getClazz().startsWith("+")) {
-                hasSubclassChecks = true;
-            }
         }
         return cn;
     }
@@ -509,14 +502,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 Verifier.reportError("duration.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getDurationParameter() + ")");
             }
         }
-    }
-
-    private static String readClassName(byte[] classfileBuffer) {
-        if (classfileBuffer == null || classfileBuffer.length == 0) {
-            return null;
-        }
-        ClassReader cr = new ClassReader(classfileBuffer);
-        return cr.getClassName();
     }
 
     /**
