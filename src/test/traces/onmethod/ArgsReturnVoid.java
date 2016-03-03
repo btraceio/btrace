@@ -25,8 +25,6 @@
 
 package traces.onmethod;
 
-import com.sun.btrace.AnyType;
-import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
@@ -42,9 +40,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class ArgsReturnVoid {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="noargs", location=@Location(value=Kind.RETURN))
-    public static void args(@Self Object self, @Return AnyType retVal) {
-        if (BTraceUtils.instanceOf(retVal, "void")) {
-            println("args");
-        }
+    public static void args(@Self Object self, @Return Void retVal) {
+        println("args");
     }
 }

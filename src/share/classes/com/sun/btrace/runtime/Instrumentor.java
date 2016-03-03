@@ -1370,11 +1370,18 @@ public class Instrumentor extends ClassVisitor {
                             Type probeRetType = getReturnType();
                             if (om.getReturnParameter() != -1) {
                                 Type retType = Type.getArgumentTypes(om.getTargetDescriptor())[om.getReturnParameter()];
-                                if (probeRetType == Type.VOID_TYPE && TypeUtils.isAnyType(retType)) {
-                                    // no return value but still tracking
-                                    // let's push a synthetic value on stack
-                                    probeRetType = TypeUtils.objectType;
-                                    asm.getStatic(Type.getInternalName(AnyType.class), "VOID", ANYTYPE_DESC);
+                                if (probeRetType == Type.VOID_TYPE) {
+                                    if (TypeUtils.isAnyType(retType)) {
+                                        // no return value but still tracking
+                                        // let's push a synthetic AnyType value on stack
+                                        asm.getStatic(Type.getInternalName(AnyType.class), "VOID", ANYTYPE_DESC);
+                                        probeRetType = OBJECT_TYPE;
+                                    } else if (VOIDREF_TYPE.equals(retType)) {
+                                        // intercepting return from method not returning value (void)
+                                        // the receiver accepts java.lang.Void only so let's push NULL on stack
+                                        asm.loadNull();
+                                        probeRetType = VOIDREF_TYPE;
+                                    }
                                 } else {
                                     if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
                                         asm.dupReturnValue(retOpCode);

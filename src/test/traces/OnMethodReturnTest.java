@@ -31,8 +31,6 @@ import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.TLS;
-import com.sun.btrace.annotations.Export;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.Return;
@@ -46,9 +44,14 @@ public class OnMethodReturnTest {
     @OnMethod(clazz = "resources.Main", method = "/call.*/", location = @Location(Kind.RETURN))
     public static void noargs(@Self Object self, @Return AnyType ret) {
         if (BTraceUtils.instanceOf(ret, "void")) {
-            println("[this, void]");
+            println("[this, anytype(void)]");
         } else {
             println("[this, " + ret + "]");
         }
+    }
+
+    @OnMethod(clazz = "resources.Main", method = "/call.*/", location = @Location(Kind.RETURN))
+    public static void noargs_void(@Self Object self, @Return Void ret) {
+        println("[this, void]");
     }
 }
