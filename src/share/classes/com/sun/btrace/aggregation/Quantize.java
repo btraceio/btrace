@@ -24,30 +24,29 @@
  */
 package com.sun.btrace.aggregation;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Aggregation function that calculates a power-of-two frequency distribution of the values.
  * <p>
- * 
+ *
  * @author Christian Glencross
  */
 class Quantize implements AggregationValue {
 
-    private static final int ZERO_INDEX = 32;
+    private static final int ZERO_INDEX = 64;
 
     // Array of buckets, where each bucket contains a count of the number of
     // occurrences in a certain range determined by a base 2 logarithmic function.
     // For example:
-    // buckets[30] counts numbers in the range -4 to -7 inclusive
-    // buckets[31] counts -2s and -3s,
-    // buckets[33] counts the number of -1s
-    // buckets[32] (the mid point of the array) counts the number of zeroes
-    // buckets[33] counts the number of 1s
-    // buckets[34] counts 2s and 3s,
-    // buckets[35] counts numbers in the range 4 to 7
-    private AtomicLong[] buckets = new AtomicLong[64];
+    // buckets[ZERO_INDEX - 3] counts numbers in the range -4 to -7 inclusive
+    // buckets[ZERO_INDEX - 2] counts -2s and -3s,
+    // buckets[ZERO_INDEX - 1] counts the number of -1s
+    // buckets[ZERO_INDEX] (the mid point of the array) counts the number of zeroes
+    // buckets[ZERO_INDEX + 1] counts the number of 1s
+    // buckets[ZERO_INDEX + 2] counts 2s and 3s,
+    // buckets[ZERO_INDEX + 3] counts numbers in the range 4 to 7
+    private AtomicLong[] buckets = new AtomicLong[ZERO_INDEX * 2];
 
     public Quantize() {
         super();
@@ -58,7 +57,7 @@ class Quantize implements AggregationValue {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see com.sun.btrace.aggregation.Aggregation#add(int)
      */
     @Override
@@ -68,31 +67,18 @@ class Quantize implements AggregationValue {
     }
 
     /**
-     * Computes log to base to of the value.
-     * 
+     * Computes log to base two of the value.
+     *
      * @param the
      *            value for which to calculate the log, must be positive
      */
     private static int logBase2(long value) {
         int pos = 0;
-        if (value >= 1 << 16) {
-            value >>= 16;
-            pos += 16;
-        }
-        if (value >= 1 << 8) {
-            value >>= 8;
-            pos += 8;
-        }
-        if (value >= 1 << 4) {
-            value >>= 4;
-            pos += 4;
-        }
-        if (value >= 1 << 2) {
-            value >>= 2;
-            pos += 2;
-        }
-        if (value >= 1 << 1) {
-            pos += 1;
+        for (int off = ZERO_INDEX; off > 0; off >>= 1) {
+            if (value >= 1 << off) {
+                value >>= off;
+                pos += off;
+            }
         }
         return pos;
     }
@@ -115,7 +101,7 @@ class Quantize implements AggregationValue {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see com.sun.btrace.aggregation.Aggregation#clear()
      */
     @Override
