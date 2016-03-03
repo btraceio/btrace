@@ -233,7 +233,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                     LOGGER.log(Level.FINEST, "BTrace agent listening on port {0}", port);
                     BTraceSettings settings = settingsProvider.getSettings();
                     final Client client = new Client(
-                        port, ".", settings.isDebugMode(), true,
+                        port, null, ".", settings.isDebugMode(), true,
                         btrace.isUnsafe(), settings.isDumpClasses(),
                         settings.getDumpClassPath(),
                         settings.getStatsd()
