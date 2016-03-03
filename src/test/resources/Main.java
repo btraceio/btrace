@@ -29,6 +29,8 @@ package resources;
  * @author Jaroslav Bachorik
  */
 public class Main extends TestApp {
+    private String id = "xxx";
+    
     public static void main(String[] args) throws Exception {
         Main i = new Main();
         i.start();

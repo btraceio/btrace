@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.runtime;
 
+import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.org.objectweb.asm.Handle;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
@@ -675,7 +676,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
             }
             case Opcodes.NEWARRAY: {
                 StackItem sl = state.pop(); // size
-                state.push(new InstanceItem(Type.getType(Object.class), sl));
+                state.push(new InstanceItem(OBJECT_TYPE, sl));
                 break;
             }
         }

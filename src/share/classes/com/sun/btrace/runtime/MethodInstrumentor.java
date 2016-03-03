@@ -198,14 +198,14 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         @Override
         public void doProvide() {
             asm.push(myArgTypes.length);
-            asm.newArray(TypeUtils.objectType);
+            asm.newArray(OBJECT_TYPE);
             for (int j = 0; j < myArgTypes.length; j++) {
                 Type argType = myArgTypes[j];
                 asm.dup()
                    .push(j)
                    .loadLocal(argType, argPtr)
                    .box(argType)
-                   .arrayStore(TypeUtils.objectType);
+                   .arrayStore(OBJECT_TYPE);
                 argPtr += argType.getSize();
             }
         }
@@ -375,7 +375,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             }
 
         if (!isStatic) {
-            int index = lvt.storeNewLocal(TypeUtils.objectType); // store *callee*
+            int index = lvt.storeNewLocal(OBJECT_TYPE); // store *callee*
             backupArgsIndexes[0] = index;
         }
         return backupArgsIndexes;
@@ -388,7 +388,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     public void restoreStack(int[] backupArgsIndexes, Type[] methodArgTypes, boolean isStatic) {
         int upper = methodArgTypes.length - 1;
         if (!isStatic) {
-            asm.loadLocal(TypeUtils.objectType, backupArgsIndexes[0]);
+            asm.loadLocal(OBJECT_TYPE, backupArgsIndexes[0]);
         }
 
         for (int i = methodArgTypes.length - 1; i > -1; i--) {
@@ -446,7 +446,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             Type selfType = extraTypes.get(om.getSelfParameter());
             if (selfType == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getSelfParameter()])) {
-                    report("Invalid @Self parameter. @Self parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getSelfParameter()]);
+                    report("Invalid @Self parameter. @Self parameter is not java.lang.Object. Expected " + OBJECT_TYPE + ", Received " + actionArgTypes[om.getSelfParameter()]);
                     return ValidationResult.INVALID;
                 }
             } else {
@@ -464,7 +464,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             }
             if (type == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getReturnParameter()])) {
-                    report("Invalid @Return parameter. @Return parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getReturnParameter()]);
+                    report("Invalid @Return parameter. @Return parameter is not java.lang.Object. Expected " + OBJECT_TYPE + ", Received " + actionArgTypes[om.getReturnParameter()]);
                     return ValidationResult.INVALID;
                 }
             } else {
@@ -486,12 +486,12 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             Type calledType = extraTypes.get(om.getTargetInstanceParameter());
             if (calledType == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getTargetInstanceParameter()])) {
-                    report("Invalid @TargetInstance parameter. @TargetInstance parameter is not java.lang.Object. Expected " + TypeUtils.objectType + ", Received " + actionArgTypes[om.getTargetInstanceParameter()]);
+                    report("Invalid @TargetInstance parameter. @TargetInstance parameter is not java.lang.Object. Expected " + OBJECT_TYPE + ", Received " + actionArgTypes[om.getTargetInstanceParameter()]);
                     return ValidationResult.INVALID;
                 }
             } else {
                 if (!TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)) {
-                    report("Invalid @TargetInstance parameter. Expected " + Type.getType(Object.class) + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
+                    report("Invalid @TargetInstance parameter. Expected " + OBJECT_TYPE + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
                     return ValidationResult.INVALID;
                 }
             }

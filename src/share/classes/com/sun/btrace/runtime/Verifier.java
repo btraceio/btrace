@@ -25,12 +25,9 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.BTraceRuntime;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
-import java.util.ArrayList;
-import java.util.List;
 import com.sun.btrace.VerifierException;
 import com.sun.btrace.annotations.TargetInstance;
 import com.sun.btrace.annotations.TargetMethodOrField;
@@ -49,8 +46,6 @@ import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * This class verifies that a BTrace program is safe

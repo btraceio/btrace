@@ -26,6 +26,7 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.AnyType;
+import static com.sun.btrace.runtime.Constants.*;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import java.util.Map;
 import java.util.HashMap;
@@ -35,16 +36,10 @@ import com.sun.btrace.org.objectweb.asm.Type;
 class TypeUtils {
     private TypeUtils() {}
 
-    public static final Type objectType =
-        Type.getType(Object.class);
-    public static final Type stringType =
-        Type.getType(String.class);
     public static final Type throwableType =
         Type.getType(Throwable.class);
     public static final Type objectArrayType =
         Type.getType(Object[].class);
-    public static final Type anyType =
-        Type.getType(AnyType.class);
     public static final Type anyTypeArray =
         Type.getType(AnyType[].class);
 
@@ -60,7 +55,7 @@ class TypeUtils {
     }
 
     public static boolean isAnyType(Type t) {
-        return t.equals(anyType);
+        return t.equals(ANYTYPE_TYPE);
     }
 
     public static boolean isAnyTypeArray(Type t) {
@@ -68,7 +63,7 @@ class TypeUtils {
     }
 
     public static boolean isObject(Type t) {
-        return t.equals(objectType);
+        return t.equals(OBJECT_TYPE);
     }
 
     public static boolean isObjectOrAnyType(Type t) {
@@ -76,7 +71,7 @@ class TypeUtils {
     }
 
     public static boolean isString(Type t) {
-        return t.equals(stringType);
+        return t.equals(STRING_TYPE);
     }
 
     public static boolean isArray(Type t) {
@@ -214,7 +209,7 @@ class TypeUtils {
 
             case AALOAD:
             case AASTORE:
-                return objectType;
+                return OBJECT_TYPE;
 
             case CALOAD:
             case CASTORE:

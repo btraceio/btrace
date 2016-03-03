@@ -31,7 +31,7 @@ package com.sun.btrace;
  * is allowed in the place where it is used. We use
  * that for method signature matching when signature
  * needs to be specified loosely. Note that we don't
- * want to use java.lang.Object - because user may 
+ * want to use java.lang.Object - because user may
  * want to match java.lang.Object exactly.
  *
  * @author A. Sundararajan

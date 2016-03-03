@@ -313,7 +313,7 @@ public class Instrumentor extends ClassVisitor {
                             if (where == Where.BEFORE) {
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                    localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, argsIndex[INSTANCE_PTR]),
+                                    localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, argsIndex[INSTANCE_PTR]),
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
@@ -352,7 +352,7 @@ public class Instrumentor extends ClassVisitor {
 
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                                    localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, argsIndex[INSTANCE_PTR]),
+                                    localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, argsIndex[INSTANCE_PTR]),
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getReturnParameter(), retType, retValIndex, TypeUtils.isAnyType(actionArgRetType)),
@@ -480,7 +480,7 @@ public class Instrumentor extends ClassVisitor {
                                         @Override
                                         protected void doProvide() {
                                             asm.push(0)
-                                               .newArray(TypeUtils.objectType);
+                                               .newArray(OBJECT_TYPE);
                                         }
                                     };
                                 }
@@ -489,7 +489,7 @@ public class Instrumentor extends ClassVisitor {
                             }
                         }
                         actionArgs[actionArgTypes.length] = localVarArg(om.getReturnParameter(), returnType, returnVarIndex);
-                        actionArgs[actionArgTypes.length + 1] = localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, backupArgsIndices.length == 0 ? -1 : backupArgsIndices[0]);
+                        actionArgs[actionArgTypes.length + 1] = localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, backupArgsIndices.length == 0 ? -1 : backupArgsIndices[0]);
                         actionArgs[actionArgTypes.length + 2] = constArg(om.getTargetMethodOrFieldParameter(), method);
                         actionArgs[actionArgTypes.length + 3] = constArg(om.getClassNameParameter(), className);
                         actionArgs[actionArgTypes.length + 4] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
@@ -717,8 +717,8 @@ public class Instrumentor extends ClassVisitor {
                         if (opcode == Opcodes.CHECKCAST) {
                             Type castType = Type.getObjectType(desc);
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                            addExtraTypeInfo(om.getTargetInstanceParameter(), TypeUtils.objectType);
-                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
+                            addExtraTypeInfo(om.getTargetInstanceParameter(), OBJECT_TYPE);
+                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{STRING_TYPE});
                             if (vr.isValid()) {
                                 int castTypeIndex = -1;
                                 Label l = levelCheck(om, bcn.name);
@@ -732,7 +732,7 @@ public class Instrumentor extends ClassVisitor {
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0),
-                                    localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, castTypeIndex));
+                                    localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, castTypeIndex));
 
                                 invokeBTraceAction(asm, om);
                                 if (l != null) {
@@ -954,14 +954,14 @@ public class Instrumentor extends ClassVisitor {
                             if (vr.isValid()) {
                                 if (om.getTargetInstanceParameter() != -1) {
                                     asm.dup();
-                                    calledInstanceIndex = storeNewLocal(TypeUtils.objectType);
+                                    calledInstanceIndex = storeNewLocal(OBJECT_TYPE);
                                 }
 
                                 Label l = levelCheckBefore(om, bcn.name);
 
                                 if (where == Where.BEFORE) {
                                     loadArguments(
-                                        localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
+                                        localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, calledInstanceIndex),
                                         constArg(om.getTargetMethodOrFieldParameter(), targetFieldName),
                                         constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
@@ -1000,7 +1000,7 @@ public class Instrumentor extends ClassVisitor {
                                 }
 
                                 loadArguments(
-                                    localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
+                                    localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, calledInstanceIndex),
                                     constArg(om.getTargetMethodOrFieldParameter(), targetFieldName),
                                     localVarArg(om.getReturnParameter(), fldType, returnValIndex),
                                     constArg(om.getClassNameParameter(), className.replace("/", ".")),
@@ -1046,7 +1046,7 @@ public class Instrumentor extends ClassVisitor {
 
                                 if (om.getTargetInstanceParameter() != -1) {
                                     asm.dup();
-                                    calledInstanceIndex = storeNewLocal(TypeUtils.objectType);
+                                    calledInstanceIndex = storeNewLocal(OBJECT_TYPE);
                                 }
 
                                 if (!vr.isAny()) {
@@ -1059,7 +1059,7 @@ public class Instrumentor extends ClassVisitor {
                                 if (where == Where.BEFORE) {
                                     loadArguments(
                                         localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
-                                        localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
+                                        localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, calledInstanceIndex),
                                         constArg(om.getTargetMethodOrFieldParameter(), targetFieldName),
                                         constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
@@ -1094,7 +1094,7 @@ public class Instrumentor extends ClassVisitor {
 
                                 loadArguments(
                                         localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
-                                        localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, calledInstanceIndex),
+                                        localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, calledInstanceIndex),
                                         constArg(om.getTargetMethodOrFieldParameter(), targetFieldName),
                                         constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
@@ -1113,12 +1113,12 @@ public class Instrumentor extends ClassVisitor {
                 // <editor-fold defaultstate="collapsed" desc="InstanceOf Instrumentor">
                 return new TypeCheckInstrumentor(mv, className, superName, access, name, desc) {
                     ValidationResult vr;
-                    Type castType = TypeUtils.objectType;
+                    Type castType = OBJECT_TYPE;
                     int castTypeIndex = -1;
 
                     {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        addExtraTypeInfo(om.getTargetInstanceParameter(), TypeUtils.objectType);
+                        addExtraTypeInfo(om.getTargetInstanceParameter(), OBJECT_TYPE);
                     }
 
                     private void callAction(String cName) {
@@ -1130,7 +1130,7 @@ public class Instrumentor extends ClassVisitor {
                                 constArg(om.getClassNameParameter(), className.replace("/", ".")),
                                 constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                 localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0),
-                                localVarArg(om.getTargetInstanceParameter(), TypeUtils.objectType, castTypeIndex));
+                                localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, castTypeIndex));
 
                             invokeBTraceAction(asm, om);
                             if (l != null) {
@@ -1143,7 +1143,7 @@ public class Instrumentor extends ClassVisitor {
                     protected void onBeforeTypeCheck(int opcode, String desc) {
                         if (opcode == Opcodes.INSTANCEOF) {
                             castType = Type.getObjectType(desc);
-                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
+                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{STRING_TYPE});
                             if (vr.isValid()) {
                                 if (!vr.isAny()) {
                                     asm.dup();
@@ -1160,7 +1160,7 @@ public class Instrumentor extends ClassVisitor {
                     protected void onAfterTypeCheck(int opcode, String desc) {
                         if (opcode == Opcodes.INSTANCEOF) {
                             castType = Type.getObjectType(desc);
-                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
+                            vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{STRING_TYPE});
                             if (vr.isValid()) {
                                 if (where == Where.AFTER) {
                                     callAction(castType.getClassName());
@@ -1221,7 +1221,7 @@ public class Instrumentor extends ClassVisitor {
                             String extName = desc.replace('/', '.');
                             if (matches(loc.getClazz(), extName)) {
                                 addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                                ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
+                                ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{STRING_TYPE});
                                 if (vr.isValid()) {
                                     Label l = levelCheck(om, bcn.name);
                                     loadArguments(
@@ -1248,7 +1248,7 @@ public class Instrumentor extends ClassVisitor {
 
                                 addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                                 addExtraTypeInfo(om.getReturnParameter(), instType);
-                                ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType});
+                                ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{STRING_TYPE});
                                 if (vr.isValid()) {
                                     int returnValIndex = -1;
                                     Label l = levelCheck(om, bcn.name);
@@ -1284,7 +1284,7 @@ public class Instrumentor extends ClassVisitor {
                             String type = loc.getClazz();
                             if (matches(type, extName)) {
                                 addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                                ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType, Type.INT_TYPE});
+                                ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{STRING_TYPE, Type.INT_TYPE});
                                 if (vr.isValid()) {
                                     Label l = levelCheck(om, bcn.name);
                                     loadArguments(
@@ -1317,7 +1317,7 @@ public class Instrumentor extends ClassVisitor {
                                 Type instType = Type.getObjectType(arrayType.toString());
                                 addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                                 addExtraTypeInfo(om.getReturnParameter(), instType);
-                                ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.stringType, Type.INT_TYPE});
+                                ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{STRING_TYPE, Type.INT_TYPE});
                                 if (vr.isValid()) {
                                     int returnValIndex = -1;
                                     Label l = levelCheck(om, bcn.name);
@@ -1477,18 +1477,18 @@ public class Instrumentor extends ClassVisitor {
                     @Override
                     protected void onBeforeSyncEntry() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
+                        ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{OBJECT_TYPE});
                         if (vr.isValid()) {
                             Label l = levelCheckBefore(om, bcn.name);
 
                             if (!vr.isAny()) {
                                 asm.dup();
-                                storedObjIdx = storeNewLocal(TypeUtils.objectType);
+                                storedObjIdx = storeNewLocal(OBJECT_TYPE);
                             }
 
                             if (where == Where.BEFORE) {
                                 loadArguments(
-                                    localVarArg(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
+                                    localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
                                     constArg(om.getClassNameParameter(), className),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
@@ -1504,12 +1504,12 @@ public class Instrumentor extends ClassVisitor {
                     protected void onAfterSyncEntry() {
                         if (where == Where.AFTER) {
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
+                            ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{OBJECT_TYPE});
                             if (vr.isValid()) {
                                 Label l = levelCheckAfter(om, bcn.name);
 
                                 loadArguments(
-                                    localVarArg(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
+                                    localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
                                     constArg(om.getClassNameParameter(), className),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
@@ -1538,17 +1538,17 @@ public class Instrumentor extends ClassVisitor {
                     @Override
                     protected void onBeforeSyncExit() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        MethodInstrumentor.ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
+                        MethodInstrumentor.ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{OBJECT_TYPE});
                         if (vr.isValid()) {
                             Label l = levelCheckBefore(om, bcn.name);
                             if (!vr.isAny()) {
                                 asm.dup();
-                                storedObjIdx = storeNewLocal(TypeUtils.objectType);
+                                storedObjIdx = storeNewLocal(OBJECT_TYPE);
                             }
 
                             if (where == Where.BEFORE) {
                                 loadArguments(
-                                    localVarArg(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
+                                    localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
                                     constArg(om.getClassNameParameter(), className),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
@@ -1565,12 +1565,12 @@ public class Instrumentor extends ClassVisitor {
                     protected void onAfterSyncExit() {
                         if (where == Where.AFTER) {
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                            MethodInstrumentor.ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{TypeUtils.objectType});
+                            MethodInstrumentor.ValidationResult vr = validateArguments(om, isStatic(), actionArgTypes, new Type[]{OBJECT_TYPE});
                             if (vr.isValid()) {
                                 Label l = levelCheckAfter(om, bcn.name);
 
                                 loadArguments(
-                                    localVarArg(vr.getArgIdx(0), TypeUtils.objectType, storedObjIdx),
+                                    localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
                                     constArg(om.getClassNameParameter(), className),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));

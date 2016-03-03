@@ -25,13 +25,11 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.annotations.Sampled;
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import com.sun.btrace.org.objectweb.asm.Label;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;

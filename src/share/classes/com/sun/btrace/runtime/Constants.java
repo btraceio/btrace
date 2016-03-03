@@ -62,9 +62,14 @@ public abstract class Constants {
     public static final String CONSTRUCTOR = "<init>";
     public static final String CLASS_INITIALIZER = "<clinit>";
 
-    public static final String OBJECT_DESC = Type.getDescriptor(Object.class);
-    public static final String ANYTYPE_DESC = Type.getDescriptor(AnyType.class);
+    public static final Type OBJECT_TYPE = Type.getType(Object.class);
+    public static final String OBJECT_DESC = OBJECT_TYPE.getDescriptor();
 
+    public static final Type ANYTYPE_TYPE = Type.getType(AnyType.class);
+    public static final String ANYTYPE = ANYTYPE_TYPE.getInternalName();
+    public static final String ANYTYPE_DESC = ANYTYPE_TYPE.getDescriptor();
+
+    public static final Type STRING_TYPE = Type.getType(String.class);
 
     // BTrace specific stuff
     public static final String BTRACE_UTILS =
@@ -125,10 +130,8 @@ public abstract class Constants {
     public static final String JAVA_LANG_THREAD_LOCAL_SET = "set";
     public static final String JAVA_LANG_THREAD_LOCAL_SET_DESC = "(Ljava/lang/Object;)V";
 
-    public static final String JAVA_LANG_STRING =
-        Type.getInternalName(String.class);
-    public static final String JAVA_LANG_STRING_DESC =
-        Type.getDescriptor(String.class);
+    public static final String JAVA_LANG_STRING = STRING_TYPE.getInternalName();
+    public static final String JAVA_LANG_STRING_DESC = STRING_TYPE.getDescriptor();
 
     public static final String JAVA_LANG_NUMBER =
         Type.getInternalName(Number.class);

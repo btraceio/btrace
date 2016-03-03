@@ -28,6 +28,7 @@ package traces;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtils.Reflective.*;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.TLS;
 import com.sun.btrace.annotations.Export;
@@ -51,6 +52,7 @@ public class OnMethodTest {
         tls++;
         ex += 1;
         dump(var + " [this, noargs]");
+        dump("{" + get("id", self) + "}");
         var = "A";
     }
 

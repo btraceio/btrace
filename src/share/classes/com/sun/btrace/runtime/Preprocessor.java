@@ -34,6 +34,7 @@ import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnTimer;
 import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.TLS;
+import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.org.objectweb.asm.tree.AbstractInsnNode;
@@ -304,7 +305,7 @@ public final class Preprocessor {
                 Opcodes.INVOKESTATIC,
                 BTRACE_RUNTIME_TYPE.getInternalName(),
                 "newThreadLocal",
-                Type.getMethodDescriptor(THREAD_LOCAL_TYPE, Type.getType(Object.class)),
+                Type.getMethodDescriptor(THREAD_LOCAL_TYPE, OBJECT_TYPE),
                 false
             )
         );
@@ -328,9 +329,9 @@ public final class Preprocessor {
                 "newPerfCounter",
                 Type.getMethodDescriptor(
                     Type.VOID_TYPE,
-                    Type.getType(Object.class),
-                    Type.getType(String.class),
-                    Type.getType(String.class)
+                    OBJECT_TYPE,
+                    STRING_TYPE,
+                    STRING_TYPE
                 ),
                 false
             )
@@ -725,7 +726,7 @@ public final class Preprocessor {
                 Opcodes.INVOKEVIRTUAL,
                 THREAD_LOCAL_TYPE.getInternalName(),
                 "get",
-                Type.getMethodDescriptor(Type.getType(Object.class)),
+                Type.getMethodDescriptor(OBJECT_TYPE),
                 false
             );
             toInsert.add(getNode);
@@ -749,7 +750,7 @@ public final class Preprocessor {
                 Opcodes.INVOKEVIRTUAL,
                 THREAD_LOCAL_TYPE.getInternalName(),
                 "set",
-                Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Object.class)),
+                Type.getMethodDescriptor(Type.VOID_TYPE, OBJECT_TYPE),
                 false
             );
             l.insert(fin, setNode);

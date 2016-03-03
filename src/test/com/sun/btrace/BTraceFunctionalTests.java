@@ -131,6 +131,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
                     Assert.assertTrue(stdout.contains("[this, noargs]"));
                     Assert.assertTrue(stdout.contains("[this, args]"));
+                    Assert.assertTrue(stdout.contains("{xxx}"));
                 }
             }
         );
