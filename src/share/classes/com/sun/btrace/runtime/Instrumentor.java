@@ -1634,6 +1634,22 @@ public class Instrumentor extends ClassVisitor {
         return mn;
     }
 
+    private final ClassVisitor copyingVisitor = new ClassVisitor(Opcodes.ASM5, cv) {
+        @Override
+        public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exceptions) {
+            return new MethodVisitor(Opcodes.ASM5, super.visitMethod(access, name, desc, sig, exceptions)) {
+                @Override
+                public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itfc) {
+                    if (owner.equals(bcn.name)) {
+                        owner = className;
+                        name = getActionMethodName(name);
+                    }
+                    super.visitMethodInsn(opcode, owner, name, desc, itfc);
+                }
+            };
+        }
+    };
+
     @Override
     public void visitEnd() {
         Set<MethodNode> copyNodes = new TreeSet<>(BTraceMethodNode.COMPARATOR);
@@ -1649,22 +1665,7 @@ public class Instrumentor extends ClassVisitor {
             }
         }
         for(MethodNode mn : copyNodes) {
-            mn.accept(new ClassVisitor(Opcodes.ASM5, cv) {
-                @Override
-                public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exceptions) {
-                    return new MethodVisitor(Opcodes.ASM5, super.visitMethod(access, name, desc, sig, exceptions)) {
-                        @Override
-                        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itfc) {
-                            if (owner.equals(bcn.name)) {
-                                owner = className;
-                                name = getActionMethodName(name);
-                            }
-                            super.visitMethodInsn(opcode, owner, name, desc, itfc);
-                        }
-                    };
-                }
-
-            });
+            mn.accept(copyingVisitor);
         }
         cv.visitEnd();
     }
