@@ -38,6 +38,7 @@ import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.Interval;
 import com.sun.btrace.util.LocalVariableHelper;
+import java.lang.reflect.Modifier;
 
 /**
  * Base class for all out method instrumenting classes.
@@ -303,7 +304,14 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     }
 
     public final String getName(boolean fqn) {
-        return (fqn ? parentClz + "." : "") + name + (fqn ? desc : "");
+        StringBuilder sb = new StringBuilder();
+        if (fqn) {
+            sb.append(Modifier.toString(access)).append(' ')
+              .append(TypeUtils.descriptorToDeclaration(desc, parentClz, name));
+        } else {
+            sb.append(name);
+        }
+        return sb.toString();
     }
 
     @Override

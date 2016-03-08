@@ -73,6 +73,9 @@ final public class Assembler {
     }
 
     public Assembler ldc(Object o) {
+        if (o == null) {
+            return loadNull();
+        }
         if (o instanceof Integer) {
             int i = (int)o;
             if (i >= -1 && i <= 5) {

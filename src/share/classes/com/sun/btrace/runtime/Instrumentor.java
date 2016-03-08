@@ -273,6 +273,49 @@ public class Instrumentor extends ClassVisitor {
         };
     }
 
+    private String getMethodOrFieldName(boolean fqn, int opcode, String owner, String name, String desc) {
+        StringBuilder mName = new StringBuilder();
+        if (fqn) {
+            switch (opcode) {
+                case Opcodes.INVOKEDYNAMIC: {
+                    mName.append("dynamic");
+                    break;
+                }
+                case Opcodes.INVOKEINTERFACE: {
+                    mName.append("interface");
+                    break;
+                }
+                case Opcodes.INVOKESPECIAL: {
+                    mName.append("special");
+                    break;
+                }
+                case Opcodes.INVOKESTATIC: {
+                    mName.append("static");
+                    break;
+                }
+                case Opcodes.INVOKEVIRTUAL: {
+                    mName.append("virtual");
+                    break;
+                }
+                case Opcodes.PUTSTATIC:
+                case Opcodes.GETSTATIC: {
+                    mName.append("static field");
+                    break;
+                }
+                case Opcodes.PUTFIELD:
+                case Opcodes.GETFIELD: {
+                    mName.append("field");
+                    break;
+                }
+            }
+            mName.append(' ');
+            mName.append(TypeUtils.descriptorToDeclaration(desc, owner, name));
+        } else {
+            mName.append(name);
+        }
+        return mName.toString();
+    }
+
     private LocalVariableHelper instrumentorFor(
         final OnMethod om, LocalVariableHelper mv,
         final int access, final String name, final String desc) {
@@ -314,7 +357,7 @@ public class Instrumentor extends ClassVisitor {
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
                                     localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, argsIndex[INSTANCE_PTR]),
-                                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -353,7 +396,7 @@ public class Instrumentor extends ClassVisitor {
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
                                     localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, argsIndex[INSTANCE_PTR]),
-                                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getReturnParameter(), retType, retValIndex, TypeUtils.isAnyType(actionArgRetType)),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
@@ -406,7 +449,7 @@ public class Instrumentor extends ClassVisitor {
                                     localVarArg(om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
                                     localVarArg(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR], TypeUtils.isAnyType(argElementType)),
-                                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -442,7 +485,7 @@ public class Instrumentor extends ClassVisitor {
                                     localVarArg(om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
                                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
                                     localVarArg(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR], TypeUtils.isAnyType(argElementType)),
-                                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -491,7 +534,7 @@ public class Instrumentor extends ClassVisitor {
                         actionArgs[actionArgTypes.length] = localVarArg(om.getReturnParameter(), returnType, returnVarIndex);
                         actionArgs[actionArgTypes.length + 1] = localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, backupArgsIndices.length == 0 ? -1 : backupArgsIndices[0]);
                         actionArgs[actionArgTypes.length + 2] = constArg(om.getTargetMethodOrFieldParameter(), method);
-                        actionArgs[actionArgTypes.length + 3] = constArg(om.getClassNameParameter(), className);
+                        actionArgs[actionArgTypes.length + 3] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
                         actionArgs[actionArgTypes.length + 4] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
                         actionArgs[actionArgTypes.length + 5] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                         actionArgs[actionArgTypes.length + 6] = new ArgumentProvider(asm, om.getDurationParameter()) {
@@ -523,7 +566,7 @@ public class Instrumentor extends ClassVisitor {
                             int parentMid = MethodID.getMethodId(className, name, desc);
                             int mid = MethodID.getMethodId("c$" + parentMid + "$" + cOwner, cName, cDesc);
 
-                            String method = (om.isTargetMethodOrFieldFqn() ? (cOwner + ".") : "") + cName + (om.isTargetMethodOrFieldFqn() ? cDesc : "");
+                            String method = getMethodOrFieldName(om.isTargetMethodOrFieldFqn(), opcode, cOwner, cName, cDesc);
                             Type[] calledMethodArgs = Type.getArgumentTypes(cDesc);
                             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                             if (where == Where.AFTER) {
@@ -697,7 +740,7 @@ public class Instrumentor extends ClassVisitor {
                             }
                             loadArguments(
                                 localVarArg(vr.getArgIdx(0), exctype, index),
-                                constArg(om.getClassNameParameter(), className),
+                                constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                 constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                 localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -729,7 +772,7 @@ public class Instrumentor extends ClassVisitor {
                                 }
                                 loadArguments(
                                     constArg(vr.getArgIdx(0), castType.getClassName()),
-                                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0),
                                     localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, castTypeIndex));
@@ -783,7 +826,7 @@ public class Instrumentor extends ClassVisitor {
                             }
                         }
                         actionArgs[actionArgTypes.length] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
-                        actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace("/", "."));
+                        actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
                         actionArgs[actionArgTypes.length + 2] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                         loadArguments(actionArgs);
 
@@ -863,7 +906,7 @@ public class Instrumentor extends ClassVisitor {
                             ArgumentProvider[] actionArgs = new ArgumentProvider[5];
 
                             actionArgs[0] = localVarArg(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex);
-                            actionArgs[1] = constArg(om.getClassNameParameter(), className.replace("/", "."));
+                            actionArgs[1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
                             actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
                             actionArgs[3] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[4] = new ArgumentProvider(asm, om.getDurationParameter()) {
@@ -934,7 +977,7 @@ public class Instrumentor extends ClassVisitor {
 
                     int calledInstanceIndex = Integer.MIN_VALUE;
                     private final String targetClassName = loc.getClazz();
-                    private final String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
+                    private final String targetFieldName = loc.getField();
 
                     @Override
                     protected void onBeforeGetField(int opcode, String owner,
@@ -962,8 +1005,14 @@ public class Instrumentor extends ClassVisitor {
                                 if (where == Where.BEFORE) {
                                     loadArguments(
                                         localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, calledInstanceIndex),
-                                        constArg(om.getTargetMethodOrFieldParameter(), targetFieldName),
-                                        constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                        constArg(om.getTargetMethodOrFieldParameter(), getMethodOrFieldName(
+                                            om.isTargetMethodOrFieldFqn(),
+                                            opcode,
+                                            targetClassName,
+                                            targetFieldName,
+                                            desc
+                                        )),
+                                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                         localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1001,9 +1050,15 @@ public class Instrumentor extends ClassVisitor {
 
                                 loadArguments(
                                     localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, calledInstanceIndex),
-                                    constArg(om.getTargetMethodOrFieldParameter(), targetFieldName),
+                                    constArg(om.getTargetMethodOrFieldParameter(), getMethodOrFieldName(
+                                        om.isTargetMethodOrFieldFqn(),
+                                        opcode,
+                                        targetClassName,
+                                        targetFieldName,
+                                        desc
+                                    )),
                                     localVarArg(om.getReturnParameter(), fldType, returnValIndex),
-                                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1020,7 +1075,7 @@ public class Instrumentor extends ClassVisitor {
                 // <editor-fold defaultstate="collapsed" desc="Field Set Instrumentor">
                 return new FieldAccessInstrumentor(mv, className, superName, access, name, desc) {
                     private final String targetClassName = loc.getClazz();
-                    private final String targetFieldName = (om.isTargetMethodOrFieldFqn() ? targetClassName + "." : "") + loc.getField();
+                    private final String targetFieldName = loc.getField();
                     private int calledInstanceIndex = Integer.MIN_VALUE;
                     private int fldValueIndex = -1;
 
@@ -1030,6 +1085,7 @@ public class Instrumentor extends ClassVisitor {
                         if (om.getTargetInstanceParameter() != -1 && isStaticAccess) {
                             return;
                         }
+
                         if (matches(targetClassName, owner.replace('/', '.'))
                                 && matches(targetFieldName, name)) {
 
@@ -1060,8 +1116,14 @@ public class Instrumentor extends ClassVisitor {
                                     loadArguments(
                                         localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
                                         localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, calledInstanceIndex),
-                                        constArg(om.getTargetMethodOrFieldParameter(), targetFieldName),
-                                        constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                        constArg(om.getTargetMethodOrFieldParameter(), getMethodOrFieldName(
+                                            om.isTargetMethodOrFieldFqn(),
+                                            opcode,
+                                            targetClassName,
+                                            targetFieldName,
+                                            desc
+                                        )),
+                                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                         localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1095,8 +1157,14 @@ public class Instrumentor extends ClassVisitor {
                                 loadArguments(
                                         localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
                                         localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, calledInstanceIndex),
-                                        constArg(om.getTargetMethodOrFieldParameter(), targetFieldName),
-                                        constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                        constArg(om.getTargetMethodOrFieldParameter(), getMethodOrFieldName(
+                                            om.isTargetMethodOrFieldFqn(),
+                                            opcode,
+                                            targetClassName,
+                                            targetFieldName,
+                                            desc
+                                        )),
+                                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                         localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1127,7 +1195,7 @@ public class Instrumentor extends ClassVisitor {
 
                             loadArguments(
                                 constArg(vr.getArgIdx(0), cName),
-                                constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                 constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                 localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0),
                                 localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, castTypeIndex));
@@ -1183,7 +1251,7 @@ public class Instrumentor extends ClassVisitor {
                             Label l = levelCheck(om, bcn.name);
                             loadArguments(
                                 constArg(vr.getArgIdx(0), line),
-                                constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                 constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                 localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1226,7 +1294,7 @@ public class Instrumentor extends ClassVisitor {
                                     Label l = levelCheck(om, bcn.name);
                                     loadArguments(
                                         constArg(vr.getArgIdx(0), extName),
-                                        constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                         localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1259,7 +1327,7 @@ public class Instrumentor extends ClassVisitor {
                                     loadArguments(
                                         constArg(vr.getArgIdx(0), extName),
                                         localVarArg(om.getReturnParameter(), instType, returnValIndex),
-                                        constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                         localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1290,7 +1358,7 @@ public class Instrumentor extends ClassVisitor {
                                     loadArguments(
                                         constArg(vr.getArgIdx(0), extName),
                                         constArg(vr.getArgIdx(1), dims),
-                                        constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                         localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1329,7 +1397,7 @@ public class Instrumentor extends ClassVisitor {
                                         constArg(vr.getArgIdx(0), extName),
                                         constArg(vr.getArgIdx(1), dims),
                                         localVarArg(om.getReturnParameter(), instType, returnValIndex),
-                                        constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                         constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                         localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
@@ -1389,7 +1457,7 @@ public class Instrumentor extends ClassVisitor {
                                 }
                             }
                             actionArgs[actionArgTypes.length] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
-                            actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace("/", "."));
+                            actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
                             actionArgs[actionArgTypes.length + 2] = localVarArg(om.getReturnParameter(), getReturnType(), retValIndex, boxReturnValue);
                             actionArgs[actionArgTypes.length + 3] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(asm, om.getDurationParameter()) {
@@ -1489,7 +1557,7 @@ public class Instrumentor extends ClassVisitor {
                             if (where == Where.BEFORE) {
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
-                                    constArg(om.getClassNameParameter(), className),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(asm, om);
@@ -1510,7 +1578,7 @@ public class Instrumentor extends ClassVisitor {
 
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
-                                    constArg(om.getClassNameParameter(), className),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(asm, om);
@@ -1549,7 +1617,7 @@ public class Instrumentor extends ClassVisitor {
                             if (where == Where.BEFORE) {
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
-                                    constArg(om.getClassNameParameter(), className),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(asm, om);
@@ -1571,7 +1639,7 @@ public class Instrumentor extends ClassVisitor {
 
                                 loadArguments(
                                     localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
-                                    constArg(om.getClassNameParameter(), className),
+                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                     localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
                                 invokeBTraceAction(asm, om);
@@ -1608,7 +1676,7 @@ public class Instrumentor extends ClassVisitor {
                             }
                             loadArguments(
                                 localVarArg(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex),
-                                constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                 constArg(om.getMethodParameter(),getName(om.isMethodFqn())),
                                 localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 

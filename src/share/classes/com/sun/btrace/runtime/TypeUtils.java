@@ -289,6 +289,28 @@ class TypeUtils {
         return buf.toString();
     }
 
+    public static String descriptorToDeclaration(String desc, String owner, String name) {
+        Type retType = Type.getReturnType(desc);
+        Type[] args = desc.contains("(") ? Type.getArgumentTypes(desc) : new Type[0];
+        StringBuilder sb = new StringBuilder();
+        sb.append(getJavaType(retType.getDescriptor())).append(' ')
+          .append(owner.replace('/', '.')).append('#').append(name);
+        if (args.length > 0) {
+            sb.append("(");
+            boolean more = false;
+            for(Type t : args) {
+                if (more) {
+                    sb.append(", ");
+                } else {
+                    more = true;
+                }
+                sb.append(getJavaType(t.getDescriptor()));
+            }
+            sb.append(')');
+        }
+        return sb.toString();
+    }
+
     public static String getJavaType(String desc) {
         int arrIndex = desc.lastIndexOf("[") + 1;
         desc = desc.substring(arrIndex);
