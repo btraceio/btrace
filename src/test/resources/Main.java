@@ -49,11 +49,12 @@ public class Main extends TestApp {
     }
 
     private void callA() {
-        callB(1, "Hello World");
+        print("i=" + callB(1, "Hello World"));
     }
 
-    private void callB(int i, String s) {
+    private int callB(int i, String s) {
         print("[" + i + "] = " + s);
+        return i + 1;
     }
 
     public void print(String msg) {

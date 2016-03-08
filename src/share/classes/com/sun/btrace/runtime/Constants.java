@@ -62,6 +62,8 @@ public abstract class Constants {
     public static final String CONSTRUCTOR = "<init>";
     public static final String CLASS_INITIALIZER = "<clinit>";
 
+    public static final Type VOIDREF_TYPE = Type.getType(Void.class);
+
     public static final Type OBJECT_TYPE = Type.getType(Object.class);
     public static final String OBJECT_DESC = OBJECT_TYPE.getDescriptor();
 

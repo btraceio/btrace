@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
+ * particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -23,53 +23,24 @@
  * questions.
  */
 
-package traces;
+package traces.onmethod;
 
-import com.sun.btrace.AnyType;
-import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.annotations.Self;
-import static com.sun.btrace.BTraceUtils.*;
-import static com.sun.btrace.BTraceUtils.Reflective.*;
-import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.TLS;
-import com.sun.btrace.annotations.Export;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
+import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class OnMethodTest {
-    @TLS
-    private static int tls = 10;
-
-    @Export
-    private static long ex = 1;
-
-    private static String var = "none";
-
-    @OnMethod(clazz = "resources.Main", method = "callA")
-    public static void noargs(@Self Object self) {
-        tls++;
-        ex += 1;
-        dump(var + " [this, noargs]");
-        dump("{" + get("id", self) + "}");
-        var = "A";
-    }
-
-    @OnMethod(clazz = "resources.Main", method = "callB")
-    public static void args(@Self Object self, int i, String s) {
-        tls -= 1;
-        ex--;
-        dump(var + " [this, args]");
-        var = "B";
-    }
-
-    private static void dump(String s) {
-        println(s);
+public class ArgsReturnVoid {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="noargs", location=@Location(value=Kind.RETURN))
+    public static void args(@Self Object self, @Return Void retVal) {
+        println("args");
     }
 }

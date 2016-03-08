@@ -1164,6 +1164,32 @@ public final class BTraceRuntime  {
         }
     }
 
+    /**
+     * @see BTraceUtils#instanceOf(java.lang.Object, java.lang.String)
+     */
+    static boolean instanceOf(Object obj, String className) {
+        if (obj instanceof AnyType) {
+            // the only time we can have AnyType on stack
+            // is if it was passed in as a placeholder
+            // for void @Return parameter value
+            if (className.equalsIgnoreCase("void")) {
+                return obj.equals(AnyType.VOID);
+            }
+            return false;
+        }
+        Class objClass = obj.getClass();
+        ClassLoader cl = objClass.getClassLoader();
+        cl = cl != null ? cl : ClassLoader.getSystemClassLoader();
+        try {
+            Class target = cl.loadClass(className);
+            return target.isAssignableFrom(objClass);
+        } catch (ClassNotFoundException e) {
+            // non-existing class
+            getCurrent().debugPrint(e);
+            return false;
+        }
+    }
+
     private final static class BTraceAtomicInteger extends AtomicInteger {
         BTraceAtomicInteger(int initVal) {
             super(initVal);
@@ -2553,6 +2579,10 @@ public final class BTraceRuntime  {
 
     private void debugPrint(String msg) {
         debug.print(msg);
+    }
+
+    private void debugPrint(Throwable t) {
+        debug.print(t);
     }
 
     private static void warning(String msg) {
