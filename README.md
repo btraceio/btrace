@@ -57,6 +57,9 @@ Or, alternatively, you may install one of the *.rpm or *.deb packages
 
 For the detailed user guide, please, check the [Wiki](https://github.com/jbachorik/btrace/wiki/Home).
 
+### Maven Integration
+The [maven plugin](https://github.com/btraceio/btrace-maven) is providing easy compilation of __BTrace__ scripts as a part of the build process. As a bonus you can utilize the _BTrace Project Archetype_ to bootstrap developing __BTrace__ scripts.
+
 ## Mailing lists
 
 These mailing lists are hosted at **http://librelist.com**
