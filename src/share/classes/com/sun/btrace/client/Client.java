@@ -105,6 +105,8 @@ public class Client {
 
     // port on which BTrace agent listens
     private final int port;
+    // the output file or null
+    private final String outputFile;
     // are we running debug mode?
     private final boolean debug;
     // do we need to track retransforming single classes? (will impose additional overhead)
@@ -125,18 +127,19 @@ public class Client {
     private volatile ObjectOutputStream oos;
 
     public Client(int port) {
-        this(port, ".", false, false, false, false, null, null);
+        this(port, null, ".", false, false, false, false, null, null);
     }
 
     public Client(int port, String probeDescPath) {
-        this(port, probeDescPath, false, false, false, false, null, null);
+        this(port, null, probeDescPath, false, false, false, false, null, null);
     }
 
-    public Client(int port, String probeDescPath,
+    public Client(int port, String outputFile, String probeDescPath,
             boolean debug, boolean trackRetransforms,
             boolean unsafe, boolean dumpClasses,
             String dumpDir, String statsdDef) {
         this.port = port;
+        this.outputFile = outputFile;
         this.probeDescPath = probeDescPath;
         this.debug = debug;
         this.unsafe = unsafe;
@@ -371,6 +374,7 @@ public class Client {
             settings.put(SharedSettings.TRACK_RETRANSFORMS_KEY, trackRetransforms);
             settings.put(SharedSettings.UNSAFE_KEY, unsafe);
             settings.put(SharedSettings.PROBE_DESC_PATH_KEY, probeDescPath);
+            settings.put(SharedSettings.OUTPUT_FILE_KEY, outputFile);
 
             WireIO.write(oos, new SetSettingsCommand(settings));
 

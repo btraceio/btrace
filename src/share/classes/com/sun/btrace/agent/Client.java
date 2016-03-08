@@ -56,13 +56,21 @@ import com.sun.btrace.runtime.OnProbe;
 import com.sun.btrace.runtime.ProbeDescriptor;
 import com.sun.btrace.runtime.RunnableGeneratorImpl;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
 
@@ -86,6 +94,9 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     private volatile boolean skipRetransforms;
     private volatile boolean hasSubclassChecks;
     private BTraceClassNode btraceClass;
+
+    private Timer flusher;
+    protected volatile PrintWriter out;
 
     protected final SharedSettings settings = new SharedSettings();
     private final DebugSupport debug = new DebugSupport(settings);
@@ -118,7 +129,79 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     }
 
     Client(Instrumentation inst) {
-        this.inst = inst;
+        this(inst, null);
+    }
+
+    Client(Instrumentation inst, SharedSettings s) {
+        this.inst  = inst;
+        if (s != null) {
+            this.settings.from(s);
+        }
+        String traceOutput = settings.getOutputFile();
+        if (traceOutput != null) {
+            setupWriter(traceOutput);
+        }
+    }
+
+    protected void setupWriter(String output) {
+        if (output.equals("::stdout")) {
+            out = new PrintWriter(System.out);
+        } else {
+            output = templateOutputFileName(output);
+            if (isDebug()) {
+                debugPrint("Redirecting output to " + output);
+            }
+            if (SharedSettings.GLOBAL.getFileRollMilliseconds() > 0) {
+                out = new PrintWriter(new BufferedWriter(
+                    TraceOutputWriter.rollingFileWriter(new File(output), settings)
+                ));
+            } else {
+                out = new PrintWriter(new BufferedWriter(TraceOutputWriter.fileWriter(new File(output), settings)));
+            }
+        }
+        out.append("### BTrace Log: " + DateFormat.getInstance().format(new Date()) + "\n\n");
+        startFlusher();
+    }
+
+    private void startFlusher() {
+        int flushInterval;
+        String flushIntervalStr = System.getProperty("com.sun.btrace.FileClient.flush", "5");
+        try {
+            flushInterval = Integer.parseInt(flushIntervalStr);
+        } catch (NumberFormatException e) {
+            flushInterval = 5; // default
+        }
+
+        final int flushSec  = flushInterval;
+        if (flushSec > -1) {
+            flusher = new Timer("BTrace FileClient Flusher", true);
+            flusher.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    if (out != null) {
+                        out.flush();
+                    }
+                }
+            }, flushSec, flushSec);
+        } else {
+            flusher = null;
+        }
+    }
+
+    private String templateOutputFileName(String fName) {
+        if (fName != null) {
+            boolean dflt = fName.contains("[default]");
+            String agentName = System.getProperty("btrace.agent", "default");
+            fName = fName
+                        .replace("${ts}", String.valueOf(System.currentTimeMillis()))
+                        .replace("${agent}", agentName != null ? "." + agentName : "")
+                        .replace("[default]", "");
+
+            if (dflt && settings.isDebug()) {
+                debugPrint("scriptOutputFile not specified. defaulting to " + fName);
+            }
+        }
+        return fName;
     }
 
     @Override
@@ -173,14 +256,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
                 BTraceRuntime.leave();
             }
         }
-    }
-
-    protected final void setSettings(SharedSettings other) {
-        settings.from(other);
-    }
-
-    protected final void setSettings(Map<String, Object> params) {
-        settings.from(params);
     }
 
     void registerTransformer() {
@@ -319,7 +394,14 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         return this.btraceClazz;
     }
 
-    protected abstract void closeAll() throws IOException;
+    protected void closeAll() throws IOException {
+        if (flusher != null) {
+            flusher.cancel();
+        }
+        if (out != null) {
+            out.close();
+        }
+    }
 
     protected void errorExit(Throwable th) throws IOException {
         debugPrint("sending error command");

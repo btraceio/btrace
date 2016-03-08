@@ -28,8 +28,9 @@ package com.sun.btrace.comm;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.IOException;
+import java.io.PrintWriter;
 
-public class ErrorCommand extends Command {
+public class ErrorCommand extends Command implements PrintableCommand {
     private Throwable cause;
     public ErrorCommand(Throwable cause) {
         super(ERROR);
@@ -51,5 +52,11 @@ public class ErrorCommand extends Command {
 
     public Throwable getCause() {
         return cause;
+    }
+
+    @Override
+    public void print(PrintWriter out) {
+        out.append("! ERROR\n");
+        getCause().printStackTrace(out);
     }
 }

@@ -40,6 +40,7 @@ final public class SharedSettings {
     public static final String STATSD_PORT_KEY = "statsdPort";
     public static final String FILEROLL_INTERVAL_KEY = "fileRollMilliseconds";
     public static final String FILEROLL_MAXROLLS_KEY = "fileRollMaxRolls";
+    public static final String OUTPUT_FILE_KEY = "scriptOutputFile";
 
     public static final SharedSettings GLOBAL = new SharedSettings();
 
@@ -53,6 +54,7 @@ final public class SharedSettings {
     private int statsdPort = 8125; // default statsd port
     private int fileRollMilliseconds = Integer.MIN_VALUE;
     private int fileRollMaxRolls = 5; // default hold max 100 logs
+    private String outputFile;
 
     public void from(Map<String, Object> params) {
         Boolean b = (Boolean)params.get(DEBUG_KEY);
@@ -91,6 +93,10 @@ final public class SharedSettings {
         if (i != null) {
             fileRollMaxRolls = i;
         }
+        s = (String)params.get(OUTPUT_FILE_KEY);
+        if (s != null && !s.isEmpty()) {
+            outputFile = s;
+        }
     }
 
     public void from(SharedSettings other) {
@@ -103,6 +109,7 @@ final public class SharedSettings {
         statsdPort = other.statsdPort;
         fileRollMilliseconds = other.fileRollMilliseconds;
         fileRollMaxRolls = other.fileRollMaxRolls;
+        outputFile = other.outputFile;
     }
 
     public boolean isDebug() {
@@ -187,5 +194,13 @@ final public class SharedSettings {
 
     public boolean isRetransformStartup() {
         return retransformStartup;
+    }
+
+    public String getOutputFile() {
+        return outputFile;
+    }
+
+    public void setOutputFile(String outputFile) {
+        this.outputFile = outputFile;
     }
 }
