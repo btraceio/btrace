@@ -73,10 +73,7 @@ class RemoteClient extends Client {
                 }
                 case Command.SET_PARAMS: {
                     settings.from(((SetSettingsCommand)cmd).getParams());
-                    String out = settings.getOutputFile();
-                    if (out != null) {
-                        setupWriter(out);
-                    }
+                    setupWriter();
                     break;
                 }
                 default: {

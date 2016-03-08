@@ -65,10 +65,8 @@ import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import sun.reflect.annotation.AnnotationParser;
@@ -137,16 +135,18 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (s != null) {
             this.settings.from(s);
         }
-        String traceOutput = settings.getOutputFile();
-        if (traceOutput != null) {
-            setupWriter(traceOutput);
-        }
+        setupWriter();
     }
 
-    protected void setupWriter(String output) {
-        if (output.equals("::stdout")) {
+    protected void setupWriter() {
+        String outputFile = settings.getOutputFile();
+        if (outputFile == null) return;
+
+        if (outputFile.equals("::stdout")) {
             out = new PrintWriter(System.out);
         } else {
+            String outputDir = settings.getOutputDir();
+            String output = (outputDir != null ? outputDir + File.separator : "") + outputFile;
             output = templateOutputFileName(output);
             if (isDebug()) {
                 debugPrint("Redirecting output to " + output);
@@ -192,7 +192,9 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (fName != null) {
             boolean dflt = fName.contains("[default]");
             String agentName = System.getProperty("btrace.agent", "default");
+            String clientName = settings.getClientName();
             fName = fName
+                        .replace("${client}", clientName != null ? clientName : "")
                         .replace("${ts}", String.valueOf(System.currentTimeMillis()))
                         .replace("${agent}", agentName != null ? "." + agentName : "")
                         .replace("[default]", "");

@@ -42,10 +42,6 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.util.Messages;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.PrintWriter;
-import java.util.Date;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -182,9 +178,8 @@ public final class Main {
 
         p = argMap.get("script");
         if (p != null) {
-            StringTokenizer tokenizer = new StringTokenizer(p, ",");
-
-	    if (isDebug()) {
+            StringTokenizer tokenizer = new StringTokenizer(p, ":");
+            if (isDebug()) {
                 debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + p);
             }
             while (tokenizer.hasMoreTokens()) {
@@ -269,6 +264,12 @@ public final class Main {
             if (isDebug()) debugPrint("scriptOutputFile is " + p);
         }
 
+        p = argMap.get("scriptOutputDir");
+        if (p != null && p.length() > 0) {
+            settings.setOutputDir(p);
+            if (isDebug()) debugPrint("scriptOutputDir is " + p);
+        }
+
         p = argMap.get("fileRollMilliseconds");
         if (p != null && p.length() > 0) {
             Long msParsed = null;
@@ -307,31 +308,37 @@ public final class Main {
         if (isDebug()) debugPrint("probe descriptor path is " + settings.getProbeDescPath());
     }
 
-    private static void loadBTraceScript(String filename, boolean traceToStdOut) {
+    private static void loadBTraceScript(String filePath, boolean traceToStdOut) {
         try {
-            if (! filename.endsWith(".class")) {
+            if (! filePath.endsWith(".class")) {
                 if (isDebug()) {
-                    debugPrint("refusing " + filename + ". script should be a pre-compiled .class file");
+                    debugPrint("refusing " + filePath + ". script should be a pre-compiled .class file");
                 }
                 return;
             }
-            File traceScript = new File(filename);
+            File traceScript = new File(filePath);
             if (! traceScript.exists()) {
                 if (isDebug()) debugPrint("script " + traceScript + " does not exist!");
                 return;
             }
 
+            SharedSettings clientSettings = new SharedSettings();
+            clientSettings.from(settings);
+            clientSettings.setClientName(traceScript.getName());
             if (traceToStdOut) {
-                settings.setOutputFile("::stdout");
+                clientSettings.setOutputFile("::stdout");
             } else {
-            	String traceOutput = settings.getOutputFile();
-
+            	String traceOutput = clientSettings.getOutputFile();
+                String outDir = clientSettings.getOutputDir();
                 if (traceOutput == null || traceOutput.length() == 0) {
-                    settings.setOutputFile(filename + "${agent}.${ts}.btrace[default]");
+                    clientSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
+                }
+                if (outDir == null || outDir.length() == 0) {
+                    clientSettings.setOutputDir(traceScript.getParent());
                 }
             }
 
-            Client client = new FileClient(inst, traceScript, settings);
+            Client client = new FileClient(inst, traceScript, clientSettings);
 
             handleNewClient(client).get();
         } catch (RuntimeException | IOException | ExecutionException re) {

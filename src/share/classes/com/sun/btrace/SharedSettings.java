@@ -55,6 +55,8 @@ final public class SharedSettings {
     private int fileRollMilliseconds = Integer.MIN_VALUE;
     private int fileRollMaxRolls = 5; // default hold max 100 logs
     private String outputFile;
+    private String outputDir;
+    private String clientName;
 
     public void from(Map<String, Object> params) {
         Boolean b = (Boolean)params.get(DEBUG_KEY);
@@ -110,6 +112,8 @@ final public class SharedSettings {
         fileRollMilliseconds = other.fileRollMilliseconds;
         fileRollMaxRolls = other.fileRollMaxRolls;
         outputFile = other.outputFile;
+        outputDir = other.outputDir;
+        clientName = other.clientName;
     }
 
     public boolean isDebug() {
@@ -202,5 +206,21 @@ final public class SharedSettings {
 
     public void setOutputFile(String outputFile) {
         this.outputFile = outputFile;
+    }
+
+    public void setOutputDir(String p) {
+        this.outputDir = p;
+    }
+
+    public String getOutputDir() {
+        return outputDir;
+    }
+
+    public String getClientName() {
+        return clientName;
+    }
+
+    public void setClientName(String clientName) {
+        this.clientName = clientName;
     }
 }
