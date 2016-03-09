@@ -45,7 +45,7 @@ import com.sun.btrace.annotations.Level;
 public class FieldGetAfter {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="field",
               location=@Location(value=Kind.FIELD_GET, clazz="resources.OnMethodTest", field="field", where=Where.AFTER), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @TargetInstance Object inst, @TargetMethodOrField String fldName, @Return int fldVal) {
+    public static void args(@Self Object self, @TargetInstance Object inst, @TargetMethodOrField(fqn = true) String fldName, @Return int fldVal) {
         println("args");
     }
 }

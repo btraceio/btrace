@@ -28,6 +28,7 @@ package traces.onmethod;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.OnMethod;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.ProbeMethodName;
 
 /**
  *
@@ -36,7 +37,7 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class ArgsNoSelf {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    public static void argsNoSelf(String a, long b, String[] c, int[] d) {
+    public static void argsNoSelf(@ProbeMethodName(fqn = true) String pmn, String a, long b, String[] c, int[] d) {
         println("args no self");
     }
 }
