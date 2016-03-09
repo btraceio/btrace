@@ -25,6 +25,8 @@
 
 package traces;
 
+import com.sun.btrace.AnyType;
+import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
@@ -32,6 +34,9 @@ import static com.sun.btrace.BTraceUtils.Reflective.*;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.TLS;
 import com.sun.btrace.annotations.Export;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
+import com.sun.btrace.annotations.Return;
 
 /**
  *

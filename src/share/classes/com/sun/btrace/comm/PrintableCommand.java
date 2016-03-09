@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,23 +22,19 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package com.sun.btrace.comm;
 
+import java.io.PrintWriter;
+
 /**
- * Command that carries arbitrary "result/output" data.
- *
- * @author A> Sundararajan
+ * Marks any command which is able to print its internal info into
+ * the provided {@linkplain PrintWriter}
+ * @author Jaroslav Bachorik
  */
-public abstract class DataCommand extends Command implements PrintableCommand {
-    protected String name;
-
-    public DataCommand(byte type,String name) {
-        super(type);
-        this.name = name;
-    }
-
-    public String getName() {
-        return name;
-    }
+public interface PrintableCommand {
+    /**
+     * Print the command internal info
+     * @param out the associated {@linkplain PrintWriter}
+     */
+    void print(PrintWriter out);
 }

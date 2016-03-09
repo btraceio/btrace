@@ -170,6 +170,12 @@ processTestResources {
     include 'traces/**/*.xml'
 }
 
+test {
+    testLogging {
+        events "failed"
+        exceptionFormat "short"
+    }
+}
 
 task unjar(type: Copy) {
     group 'Build'

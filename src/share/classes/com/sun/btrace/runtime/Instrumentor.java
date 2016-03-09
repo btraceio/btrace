@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.AnyType;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -1434,13 +1435,28 @@ public class Instrumentor extends ClassVisitor {
 
                         try {
                             boolean boxReturnValue = false;
+                            Type probeRetType = getReturnType();
                             if (om.getReturnParameter() != -1) {
-                                if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
-                                    asm.dupReturnValue(retOpCode);
-                                }
                                 Type retType = Type.getArgumentTypes(om.getTargetDescriptor())[om.getReturnParameter()];
-                                boxReturnValue = TypeUtils.isAnyType(retType);
-                                retValIndex = storeNewLocal(getReturnType());
+                                if (probeRetType == Type.VOID_TYPE) {
+                                    if (TypeUtils.isAnyType(retType)) {
+                                        // no return value but still tracking
+                                        // let's push a synthetic AnyType value on stack
+                                        asm.getStatic(Type.getInternalName(AnyType.class), "VOID", ANYTYPE_DESC);
+                                        probeRetType = OBJECT_TYPE;
+                                    } else if (VOIDREF_TYPE.equals(retType)) {
+                                        // intercepting return from method not returning value (void)
+                                        // the receiver accepts java.lang.Void only so let's push NULL on stack
+                                        asm.loadNull();
+                                        probeRetType = VOIDREF_TYPE;
+                                    }
+                                } else {
+                                    if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
+                                        asm.dupReturnValue(retOpCode);
+                                    }
+                                    boxReturnValue = TypeUtils.isAnyType(retType);
+                                }
+                                retValIndex = storeNewLocal(probeRetType);
                             }
 
                             ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 5];
@@ -1457,8 +1473,8 @@ public class Instrumentor extends ClassVisitor {
                                 }
                             }
                             actionArgs[actionArgTypes.length] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
-                            actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
-                            actionArgs[actionArgTypes.length + 2] = localVarArg(om.getReturnParameter(), getReturnType(), retValIndex, boxReturnValue);
+                            actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace("/", "."));
+                            actionArgs[actionArgTypes.length + 2] = localVarArg(om.getReturnParameter(), probeRetType, retValIndex, boxReturnValue);
                             actionArgs[actionArgTypes.length + 3] = localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0);
                             actionArgs[actionArgTypes.length + 4] = new ArgumentProvider(asm, om.getDurationParameter()) {
                                 @Override

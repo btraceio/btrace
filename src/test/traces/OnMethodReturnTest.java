@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,22 +23,35 @@
  * questions.
  */
 
-package com.sun.btrace.comm;
+package traces;
+
+import com.sun.btrace.AnyType;
+import com.sun.btrace.BTraceUtils;
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
+import com.sun.btrace.annotations.Return;
 
 /**
- * Command that carries arbitrary "result/output" data.
  *
- * @author A> Sundararajan
+ * @author Jaroslav Bachorik
  */
-public abstract class DataCommand extends Command implements PrintableCommand {
-    protected String name;
-
-    public DataCommand(byte type,String name) {
-        super(type);
-        this.name = name;
+@BTrace
+public class OnMethodReturnTest {
+    @OnMethod(clazz = "resources.Main", method = "/call.*/", location = @Location(Kind.RETURN))
+    public static void noargs(@Self Object self, @Return AnyType ret) {
+        if (BTraceUtils.instanceOf(ret, "void")) {
+            println("[this, anytype(void)]");
+        } else {
+            println("[this, " + ret + "]");
+        }
     }
 
-    public String getName() {
-        return name;
+    @OnMethod(clazz = "resources.Main", method = "/call.*/", location = @Location(Kind.RETURN))
+    public static void noargs_void(@Self Object self, @Return Void ret) {
+        println("[this, void]");
     }
 }

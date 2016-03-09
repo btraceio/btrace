@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
+ * particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -23,22 +23,24 @@
  * questions.
  */
 
-package com.sun.btrace.comm;
+package traces.onmethod;
+
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Location;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Return;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
 
 /**
- * Command that carries arbitrary "result/output" data.
  *
- * @author A> Sundararajan
+ * @author Jaroslav Bachorik
  */
-public abstract class DataCommand extends Command implements PrintableCommand {
-    protected String name;
-
-    public DataCommand(byte type,String name) {
-        super(type);
-        this.name = name;
-    }
-
-    public String getName() {
-        return name;
+@BTrace
+public class ArgsReturnVoid {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="noargs", location=@Location(value=Kind.RETURN))
+    public static void args(@Self Object self, @Return Void retVal) {
+        println("args");
     }
 }

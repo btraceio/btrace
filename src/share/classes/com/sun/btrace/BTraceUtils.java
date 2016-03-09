@@ -391,6 +391,20 @@ public class BTraceUtils {
     }
 
     /**
+     * Checks whether the provided object is an instance of the named class.
+     * <cite>Note: this method can be rather CPU intensive, use with caution</cite>
+     * @param obj the object to check
+     * @param className the class name; as a special case {@code void} can be provided
+     *                  to check whether the instance is a void value wrapper - {@linkplain AnyType.VOID}
+     * @return {@code true} if the object can be assigned to an instance of 'className' type
+     *
+     * @since 1.3.5
+     */
+    public static boolean instanceOf(Object obj, String className) {
+        return BTraceRuntime.instanceOf(obj, className);
+    }
+
+    /**
      * Returns the Class object representing the class or interface
      * that declares the field represented by the given Field object.
 

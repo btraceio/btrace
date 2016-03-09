@@ -28,17 +28,13 @@ import com.sun.btrace.DebugSupport;
 import com.sun.btrace.SharedSettings;
 import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.DataCommand;
-import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
-import java.io.BufferedWriter;
+import com.sun.btrace.comm.PrintableCommand;
 import java.lang.instrument.Instrumentation;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Represents a local client communicated by trace file.
@@ -49,70 +45,21 @@ import java.util.TimerTask;
  * @author J.Bachorik
  */
 class FileClient extends Client {
-    private final Timer flusher;
-
-    private volatile PrintWriter out;
-
-    FileClient(Instrumentation inst, byte[] code, String traceOutput) throws IOException {
-        this(inst, code);
-        setupWriter(traceOutput);
+    FileClient(Instrumentation inst, byte[] code, SharedSettings s) throws IOException {
+        super(inst, s);
+        init(code);
     }
 
-    FileClient(Instrumentation inst, byte[] code, PrintWriter traceWriter) throws IOException {
-        this(inst, code);
-        out = traceWriter;
-    }
-
-    FileClient(Instrumentation inst, byte[] code) throws IOException {
-        super(inst);
-        setSettings(SharedSettings.GLOBAL);
-
+    private void init(byte[] code) throws IOException {
         InstrumentCommand cmd = new InstrumentCommand(code, new String[0]);
         Class btraceClazz = loadClass(cmd);
         if (btraceClazz == null) {
             throw new RuntimeException("can not load BTrace class");
         }
-
-        int flushInterval;
-        String flushIntervalStr = System.getProperty("com.sun.btrace.FileClient.flush", "5");
-        try {
-            flushInterval = Integer.parseInt(flushIntervalStr);
-        } catch (NumberFormatException e) {
-            flushInterval = 5; // default
-        }
-
-        final int flushSec  = flushInterval;
-        if (flushSec > -1) {
-            flusher = new Timer("BTrace FileClient Flusher", true);
-            flusher.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    if (out != null) {
-                        out.flush();
-                    }
-                }
-            }, flushSec, flushSec);
-        } else {
-            flusher = null;
-        }
     }
 
-    FileClient(Instrumentation inst, File scriptFile, String traceOutput) throws IOException {
-        this(inst, readAll(scriptFile), traceOutput);
-    }
-
-    private void setupWriter(String output) {
-        if (output.equals("::stdout")) {
-            out = new PrintWriter(System.out);
-        } else {
-            if (SharedSettings.GLOBAL.getFileRollMilliseconds() > 0) {
-                out = new PrintWriter(new BufferedWriter(
-                    TraceOutputWriter.rollingFileWriter(new File(output), settings)
-                ));
-            } else {
-                out = new PrintWriter(new BufferedWriter(TraceOutputWriter.fileWriter(new File(output), settings)));
-            }
-        }
+    FileClient(Instrumentation inst, File scriptFile, SharedSettings s) throws IOException {
+        this(inst, readAll(scriptFile), s);
     }
 
     @Override
@@ -124,18 +71,8 @@ class FileClient extends Client {
             case Command.EXIT:
                 onExit(((ExitCommand) cmd).getExitCode());
                 break;
-            case Command.ERROR: {
-                ErrorCommand ecmd = (ErrorCommand) cmd;
-                Throwable cause = ecmd.getCause();
-                if (out == null) {
-                    DebugSupport.warning("No output stream. Received ErrorCommand: " + cause.getMessage());
-                } else {
-                    cause.printStackTrace(out);
-                }
-                break;
-            }
             default:
-                if (cmd instanceof DataCommand) {
+                if (cmd instanceof PrintableCommand) {
                     if (out == null) {
                         DebugSupport.warning("No output stream. Received DataCommand.");
                     } else {
@@ -143,16 +80,6 @@ class FileClient extends Client {
                     }
                 }
                 break;
-        }
-    }
-
-    @Override
-    protected synchronized void closeAll() throws IOException {
-        if (flusher != null) {
-            flusher.cancel();
-        }
-        if (out != null) {
-            out.close();
         }
     }
 

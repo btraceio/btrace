@@ -42,10 +42,6 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.util.Messages;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.PrintWriter;
-import java.util.Date;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -61,7 +57,6 @@ import java.util.concurrent.ThreadFactory;
 public final class Main {
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
-    private static volatile String scriptOutputFile;
     private static volatile Long fileRollMilliseconds;
 
     private static final SharedSettings settings = SharedSettings.GLOBAL;
@@ -183,9 +178,8 @@ public final class Main {
 
         p = argMap.get("script");
         if (p != null) {
-            StringTokenizer tokenizer = new StringTokenizer(p, ",");
-
-	    if (isDebug()) {
+            StringTokenizer tokenizer = new StringTokenizer(p, ":");
+            if (isDebug()) {
                 debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + p);
             }
             while (tokenizer.hasMoreTokens()) {
@@ -263,9 +257,17 @@ public final class Main {
         p = argMap.get("trackRetransforms");
         settings.setTrackRetransforms(p != null && !"false".equals(p));
         if (settings.isTrackRetransforms()) debugPrint("trackRetransforms is " + settings.isTrackRetransforms());
-        scriptOutputFile = argMap.get("scriptOutputFile");
-        if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
-            if (isDebug()) debugPrint("scriptOutputFile is " + scriptOutputFile);
+
+        p = argMap.get("scriptOutputFile");
+        if (p != null && p.length() > 0) {
+            settings.setOutputFile(p);
+            if (isDebug()) debugPrint("scriptOutputFile is " + p);
+        }
+
+        p = argMap.get("scriptOutputDir");
+        if (p != null && p.length() > 0) {
+            settings.setOutputDir(p);
+            if (isDebug()) debugPrint("scriptOutputDir is " + p);
         }
 
         p = argMap.get("fileRollMilliseconds");
@@ -306,57 +308,37 @@ public final class Main {
         if (isDebug()) debugPrint("probe descriptor path is " + settings.getProbeDescPath());
     }
 
-    // This is really a *private* interface to Glassfish monitoring.
-    // For now, please avoid using this in any other scenario.
-    public static void handleFlashLightClient(byte[] code, PrintWriter traceWriter) {
-        handleNewClient(code, traceWriter);
-    }
-
-    // This is really a *private* interface to Glassfish monitoring.
-    // For now, please avoid using this in any other scenario.
-    public static void handleFlashLightClient(byte[] code) {
+    private static void loadBTraceScript(String filePath, boolean traceToStdOut) {
         try {
-            String twn = "flashlighttrace" + (new Date()).getTime();
-            PrintWriter traceWriter = null;
-            traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(twn + ".btrace"))));
-            handleFlashLightClient(code, traceWriter);
-        } catch (IOException ioexp) {
-            if (isDebug()) {
-                debugPrint(ioexp);
-            }
-        }
-    }
-
-    private static void loadBTraceScript(String filename, boolean traceToStdOut) {
-        try {
-            if (! filename.endsWith(".class")) {
+            if (! filePath.endsWith(".class")) {
                 if (isDebug()) {
-                    debugPrint("refusing " + filename + ". script should be a pre-compiled .class file");
+                    debugPrint("refusing " + filePath + ". script should be a pre-compiled .class file");
                 }
                 return;
             }
-            File traceScript = new File(filename);
+            File traceScript = new File(filePath);
             if (! traceScript.exists()) {
                 if (isDebug()) debugPrint("script " + traceScript + " does not exist!");
                 return;
             }
 
-            String traceOutput = null;
+            SharedSettings clientSettings = new SharedSettings();
+            clientSettings.from(settings);
+            clientSettings.setClientName(traceScript.getName());
             if (traceToStdOut) {
-                traceOutput = "::stdout";
+                clientSettings.setOutputFile("::stdout");
             } else {
-                String agentName = System.getProperty("btrace.agent", "default");
-            	traceOutput = scriptOutputFile;
-
+            	String traceOutput = clientSettings.getOutputFile();
+                String outDir = clientSettings.getOutputDir();
                 if (traceOutput == null || traceOutput.length() == 0) {
-                    traceOutput = filename + (agentName != null ? "." + agentName  : "") + ".${ts}.btrace";
-                    if (isDebug()) debugPrint("scriptOutputFile not specified. defaulting to " + traceOutput);
+                    clientSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
+                    if (outDir == null || outDir.length() == 0) {
+                        clientSettings.setOutputDir(traceScript.getParent());
+                    }
                 }
-                traceOutput = templateFileName(traceOutput);
-                if (isDebug()) debugPrint("Redirecting output to " + traceOutput);
             }
 
-            Client client = new FileClient(inst, traceScript, traceOutput);
+            Client client = new FileClient(inst, traceScript, clientSettings);
 
             handleNewClient(client).get();
         } catch (RuntimeException | IOException | ExecutionException re) {
@@ -364,13 +346,6 @@ public final class Main {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-    }
-
-    private static String templateFileName(String fName) {
-        if (fName != null) {
-            fName = fName.replace("${ts}", String.valueOf(System.currentTimeMillis()));
-        }
-        return fName;
     }
 
     public static final int BTRACE_DEFAULT_PORT = 2020;
@@ -390,6 +365,7 @@ public final class Main {
         try {
             if (isDebug()) debugPrint("starting server at " + port);
             System.setProperty("btrace.port", String.valueOf(port));
+            String scriptOutputFile = settings.getOutputFile();
             if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
                 System.setProperty("btrace.output", scriptOutputFile);
             }
@@ -410,16 +386,6 @@ public final class Main {
                 if (isDebug()) debugPrint(re);
             } catch (InterruptedException e) {
                 return;
-            }
-        }
-    }
-
-    private static void handleNewClient(byte[] code, PrintWriter traceWriter) {
-        try {
-            handleNewClient(new FileClient(inst, code, traceWriter));
-        } catch (RuntimeException | IOException re) {
-            if (isDebug()) {
-                debugPrint(re);
             }
         }
     }

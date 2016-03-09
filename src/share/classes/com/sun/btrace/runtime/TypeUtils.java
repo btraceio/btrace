@@ -82,6 +82,10 @@ class TypeUtils {
         return t.equals(throwableType);
     }
 
+    public static boolean isVoid(Type t) {
+        return t == Type.VOID_TYPE || VOIDREF_TYPE.equals(t);
+    }
+
     /**
      * Checks the type compatibility<br/>
      * Two types are compatible when and only when:
@@ -98,11 +102,13 @@ class TypeUtils {
     public static boolean isCompatible(Type left, Type right) {
         if (left.equals(right)) {
             return true;
+        } else if (isVoid(left)) {
+            return isVoid(right);
         } else if (isArray(left)) {
             return false;
         } else if(isObjectOrAnyType(left)) {
             int sort2 = right.getSort();
-            return (sort2 == Type.OBJECT || sort2 == Type.ARRAY || isPrimitive(right));
+            return (sort2 == Type.OBJECT || sort2 == Type.ARRAY || sort2 == Type.VOID || isPrimitive(right));
         } else if (isPrimitive(left)) {
             // a primitive type requires strict equality
             return left.equals(right);
