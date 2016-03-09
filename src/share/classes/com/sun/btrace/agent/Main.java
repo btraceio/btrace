@@ -332,9 +332,9 @@ public final class Main {
                 String outDir = clientSettings.getOutputDir();
                 if (traceOutput == null || traceOutput.length() == 0) {
                     clientSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
-                }
-                if (outDir == null || outDir.length() == 0) {
-                    clientSettings.setOutputDir(traceScript.getParent());
+                    if (outDir == null || outDir.length() == 0) {
+                        clientSettings.setOutputDir(traceScript.getParent());
+                    }
                 }
             }
 

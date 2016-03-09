@@ -67,6 +67,8 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import sun.reflect.annotation.AnnotationParser;
@@ -78,19 +80,22 @@ import sun.reflect.annotation.AnnotationType;
  * at the BTrace agent.
  *
  * @author A. Sundararajan
+ * @author J. Bachorik (j.bachorik@btrace.io)
  */
 abstract class Client implements ClassFileTransformer, CommandListener {
+    private static final Map<String, PrintWriter> writerMap = new HashMap<>();
+
     protected final Instrumentation inst;
     private volatile BTraceRuntime runtime;
     private volatile boolean isClassRenamed = false;
     private volatile String className;
+    private volatile String outputName;
     private volatile Class btraceClazz;
     private volatile byte[] btraceCode;
     private volatile List<OnMethod> onMethods;
     private volatile List<OnProbe> onProbes;
     private volatile ClassFilter filter;
     private volatile boolean skipRetransforms;
-    private volatile boolean hasSubclassChecks;
     private BTraceClassNode btraceClass;
 
     private Timer flusher;
@@ -142,25 +147,32 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         String outputFile = settings.getOutputFile();
         if (outputFile == null) return;
 
-        if (outputFile.equals("::stdout")) {
-            out = new PrintWriter(System.out);
-        } else {
+        if (!outputFile.equals("::stdout")) {
             String outputDir = settings.getOutputDir();
             String output = (outputDir != null ? outputDir + File.separator : "") + outputFile;
-            output = templateOutputFileName(output);
+            outputFile = templateOutputFileName(output);
             if (isDebug()) {
-                debugPrint("Redirecting output to " + output);
-            }
-            if (SharedSettings.GLOBAL.getFileRollMilliseconds() > 0) {
-                out = new PrintWriter(new BufferedWriter(
-                    TraceOutputWriter.rollingFileWriter(new File(output), settings)
-                ));
-            } else {
-                out = new PrintWriter(new BufferedWriter(TraceOutputWriter.fileWriter(new File(output), settings)));
+                debugPrint("Redirecting output to " + outputFile);
             }
         }
-        out.append("### BTrace Log: " + DateFormat.getInstance().format(new Date()) + "\n\n");
-        startFlusher();
+        out = writerMap.get(outputFile);
+        if (out == null) {
+            if (outputFile.equals("::stdout")) {
+                out = new PrintWriter(System.out);
+            } else {
+                if (SharedSettings.GLOBAL.getFileRollMilliseconds() > 0) {
+                    out = new PrintWriter(new BufferedWriter(
+                        TraceOutputWriter.rollingFileWriter(new File(outputFile), settings)
+                    ));
+                } else {
+                    out = new PrintWriter(new BufferedWriter(TraceOutputWriter.fileWriter(new File(outputFile), settings)));
+                }
+            }
+            writerMap.put(outputFile, out);
+            out.append("### BTrace Log: " + DateFormat.getInstance().format(new Date()) + "\n\n");
+            startFlusher();
+        }
+        outputName = outputFile;
     }
 
     private void startFlusher() {
@@ -403,6 +415,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (out != null) {
             out.close();
         }
+        writerMap.remove(outputName);
     }
 
     protected void errorExit(Throwable th) throws IOException {
