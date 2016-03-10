@@ -25,15 +25,12 @@
 package com.sun.btrace.agent;
 
 import com.sun.btrace.DebugSupport;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.runtime.FastClassReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Set;
@@ -84,7 +81,7 @@ public final class ClassInfo {
         if (onlyDirect) {
             return supertypes;
         }
-        Set<ClassInfo> supers = new HashSet<>();
+        Set<ClassInfo> supers = new LinkedHashSet<>();
         supers.addAll(supertypes);
         for (ClassInfo ci : supertypes) {
             supers.addAll(ci.getSupertypes(onlyDirect));
