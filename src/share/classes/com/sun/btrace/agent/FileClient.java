@@ -27,7 +27,6 @@ package com.sun.btrace.agent;
 import com.sun.btrace.DebugSupport;
 import com.sun.btrace.SharedSettings;
 import com.sun.btrace.comm.Command;
-import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.PrintableCommand;
@@ -88,7 +87,7 @@ class FileClient extends Client {
     private static byte[] readAll(File file) throws IOException {
         String path = file.getPath();
         if (path.startsWith(Main.EMBEDDED_SCRIPT_HEADER)) {
-            try (InputStream is = FileClient.class.getClassLoader().getResourceAsStream(path)) {
+            try (InputStream is = ClassLoader.getSystemResourceAsStream(path)) {
                 return readAll(is, -1);
             }
         } else {

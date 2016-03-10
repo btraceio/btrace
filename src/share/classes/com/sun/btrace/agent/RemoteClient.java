@@ -33,7 +33,6 @@ import java.net.Socket;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.comm.Command;
-import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.EventCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
