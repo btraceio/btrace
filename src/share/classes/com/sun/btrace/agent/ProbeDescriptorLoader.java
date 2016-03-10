@@ -61,18 +61,18 @@ final class ProbeDescriptorLoader {
         // check in the cache
         ProbeDescriptor res = probeDescMap.get(namespace);
         if (res != null) {
-            if (debug.isDebug()) debug.print("probe descriptor cache hit for " + namespace);
+            if (debug.isDebug()) debug.debug("probe descriptor cache hit for " + namespace);
             return res;
         } else {
             // load probe descriptor for the given namespace
             File file = findFile(namespace);
             if (file == null) {
-                if (debug.isDebug()) debug.print("didn't find probe descriptor file " + namespace);
+                if (debug.isDebug()) debug.debug("didn't find probe descriptor file " + namespace);
                 return null;
             }
             ProbeDescriptor pd = load(file);
             if (pd != null) {
-                if (debug.isDebug()) debug.print("read probe descriptor for " + namespace);
+                if (debug.isDebug()) debug.debug("read probe descriptor for " + namespace);
                 probeDescMap.put(namespace, pd);
             }
             return pd;
@@ -83,14 +83,14 @@ final class ProbeDescriptorLoader {
     private ProbeDescriptor load(File file) {
         try {
             JAXBContext jc = JAXBContext.newInstance("com.sun.btrace.annotations:com.sun.btrace.runtime");
-            if (debug.isDebug()) debug.print("reading " + file);
+            if (debug.isDebug()) debug.debug("reading " + file);
             Unmarshaller u = jc.createUnmarshaller();
             u.setEventHandler(new DefaultValidationEventHandler());
             ProbeDescriptor pd = (ProbeDescriptor)u.unmarshal(file);
             pd.setProbes(pd.getProbes());
             return pd;
         } catch (JAXBException exp) {
-            if (debug.isDebug()) debug.print(exp);
+            if (debug.isDebug()) debug.debug(exp);
             return null;
         }
     }
@@ -99,13 +99,13 @@ final class ProbeDescriptorLoader {
     private File findFile(String namespace) {
         for (String dir : probeDescDirs) {
             File f = new File(dir.trim(), namespace.trim() + ".xml");
-            if (debug.isDebug()) debug.print("looking for probe descriptor file '" + f.getPath() + "' (" + f.exists() + ", " + f.isFile() + ")");
+            if (debug.isDebug()) debug.debug("looking for probe descriptor file '" + f.getPath() + "' (" + f.exists() + ", " + f.isFile() + ")");
             if (f.exists() && f.isFile()) {
-                if (debug.isDebug()) debug.print("probe descriptor for " + namespace + " is " + f);
+                if (debug.isDebug()) debug.debug("probe descriptor for " + namespace + " is " + f);
                 return f;
             }
         }
-        if (debug.isDebug()) debug.print("no probe descriptor found for " + namespace);
+        if (debug.isDebug()) debug.debug("no probe descriptor found for " + namespace);
         return null;
     }
 }

@@ -75,13 +75,17 @@ final public class DebugSupport {
         }
     }
 
-    public void print(String msg) {
+    public static void info(String msg) {
+        System.out.println("btrace INFO: " + msg);
+    }
+
+    public void debug(String msg) {
         if (settings.isDebug()) {
             System.out.println("btrace DEBUG: " + msg);
         }
     }
 
-    public void print(Throwable th) {
+    public void debug(Throwable th) {
         if (settings.isDebug()) {
             System.out.println("btrace DEBUG: " + th);
             th.printStackTrace(System.out);

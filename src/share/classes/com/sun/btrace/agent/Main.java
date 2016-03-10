@@ -42,11 +42,15 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.util.Messages;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.jar.JarEntry;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -55,6 +59,8 @@ import java.util.concurrent.ThreadFactory;
  * @author Joachim Skeie (rolling output)
  */
 public final class Main {
+    static final String EMBEDDED_SCRIPT_HEADER = "META-INF/btrace/";
+
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
     private static volatile Long fileRollMilliseconds;
@@ -93,6 +99,7 @@ public final class Main {
         parseArgs(args);
         if (isDebug()) debugPrint("parsed command line arguments");
 
+        final Collection<String> embeddedScripts = new LinkedList<>();
         String bootClassPath = argMap.get("bootClassPath");
         if (bootClassPath != null) {
             if (isDebug()) {
@@ -104,7 +111,9 @@ public final class Main {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
                     if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        inst.appendToBootstrapClassLoaderSearch(new JarFile(f));
+                        JarFile jf = new JarFile(f);
+//                        collectScripts(jf, embeddedScripts);
+                        inst.appendToBootstrapClassLoaderSearch(jf);
                     } else {
                         debugPrint("ignoring boot classpath element '" + path +
                                    "' - only jar files allowed");
@@ -128,7 +137,9 @@ public final class Main {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
                     if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        inst.appendToSystemClassLoaderSearch(new JarFile(f));
+                        JarFile jf = new JarFile(f);
+//                        collectScripts(jf, embeddedScripts);
+                        inst.appendToSystemClassLoaderSearch(jf);
                     } else {
                         debugPrint("ignoring system classpath element '" + path +
                                    "' - only jar files allowed");
@@ -171,27 +182,39 @@ public final class Main {
         }
     }
 
+//    private static void collectScripts(JarFile jf, Collection<String> scripts) {
+//        Enumeration<JarEntry> entries = jf.entries();
+//        while (entries.hasMoreElements()) {
+//            JarEntry e = entries.nextElement();
+//            String name = e.getName();
+//            if (name.startsWith(EMBEDDED_SCRIPT_HEADER) && name.endsWith(".class")) {
+//                scripts.add(name);
+//            }
+//        }
+//    }
+
     private static void startScripts() {
         String p = argMap.get("stdout");
         boolean traceToStdOut = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("stdout is " + traceToStdOut);
 
-        p = argMap.get("script");
-        if (p != null) {
-            StringTokenizer tokenizer = new StringTokenizer(p, ":");
+        String script = argMap.get("script");
+        String scriptDir = argMap.get("scriptdir");
+
+        if (script != null) {
+            StringTokenizer tokenizer = new StringTokenizer(script, ":");
             if (isDebug()) {
-                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + p);
+                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + script);
             }
             while (tokenizer.hasMoreTokens()) {
                 loadBTraceScript(tokenizer.nextToken(), traceToStdOut);
             }
         }
-        p = argMap.get("scriptdir");
-        if (p != null) {
-            File scriptdir = new File(p);
-            if (scriptdir.isDirectory()) {
-                if (isDebug()) debugPrint("found scriptdir: " + scriptdir.getAbsolutePath());
-                File[] files = scriptdir.listFiles();
+        if (scriptDir != null) {
+            File dir = new File(scriptDir);
+            if (dir.isDirectory()) {
+                if (isDebug()) debugPrint("found scriptdir: " + dir.getAbsolutePath());
+                File[] files = dir.listFiles();
                 if (files != null) {
                     for (File file : files) {
                        loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
@@ -310,21 +333,26 @@ public final class Main {
 
     private static void loadBTraceScript(String filePath, boolean traceToStdOut) {
         try {
-            if (! filePath.endsWith(".class")) {
-                if (isDebug()) {
-                    debugPrint("refusing " + filePath + ". script should be a pre-compiled .class file");
-                }
-                return;
-            }
+            String scriptName = "";
+            String scriptParent = "";
             File traceScript = new File(filePath);
+            scriptName = traceScript.getName();
+            scriptParent = traceScript.getParent();
+
             if (! traceScript.exists()) {
-                if (isDebug()) debugPrint("script " + traceScript + " does not exist!");
+                traceScript = new File(EMBEDDED_SCRIPT_HEADER + filePath);
+            }
+
+            if (! scriptName.endsWith(".class")) {
+                if (isDebug()) {
+                    debugPrint("refusing " + filePath + " - script should be a pre-compiled .class file");
+                }
                 return;
             }
 
             SharedSettings clientSettings = new SharedSettings();
             clientSettings.from(settings);
-            clientSettings.setClientName(traceScript.getName());
+            clientSettings.setClientName(scriptName);
             if (traceToStdOut) {
                 clientSettings.setOutputFile("::stdout");
             } else {
@@ -333,7 +361,7 @@ public final class Main {
                 if (traceOutput == null || traceOutput.length() == 0) {
                     clientSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
                     if (outDir == null || outDir.length() == 0) {
-                        clientSettings.setOutputDir(traceScript.getParent());
+                        clientSettings.setOutputDir(scriptParent);
                     }
                 }
             }
@@ -341,6 +369,10 @@ public final class Main {
             Client client = new FileClient(inst, traceScript, clientSettings);
 
             handleNewClient(client).get();
+        } catch (NullPointerException e) {
+            if (isDebug()) {
+                debugPrint("script " + filePath + " does not exist!");
+            }
         } catch (RuntimeException | IOException | ExecutionException re) {
             if (isDebug()) debugPrint(re);
         } catch (InterruptedException e) {
@@ -460,10 +492,10 @@ public final class Main {
     }
 
     private static void debugPrint(String msg) {
-        debug.print(msg);
+        debug.debug(msg);
     }
 
     private static void debugPrint(Throwable th) {
-        debug.print(th);
+        debug.debug(th);
     }
 }

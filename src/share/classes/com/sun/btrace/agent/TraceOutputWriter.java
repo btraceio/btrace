@@ -59,7 +59,7 @@ abstract public class TraceOutputWriter extends Writer {
                 }
                 delegate = new FileWriter(output);
             } catch (IOException e) {
-                debug.print(e);
+                debug.debug(e);
                 throw e;
             }
         }
@@ -96,7 +96,7 @@ abstract public class TraceOutputWriter extends Writer {
                 baseName = output.getName();
                 this.settings = settings;
             } catch (IOException e) {
-                debug.print(e);
+                debug.debug(e);
                 throw e;
             }
         }
@@ -140,7 +140,7 @@ abstract public class TraceOutputWriter extends Writer {
                 writerLock.writeLock().lock();
                 currentFileWriter = getNextWriter();
             } catch (IOException e) {
-                debug.print(e);
+                debug.debug(e);
             } finally {
                 writerLock.writeLock().unlock();
             }

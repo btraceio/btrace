@@ -2578,11 +2578,11 @@ public final class BTraceRuntime  {
     }
 
     private void debugPrint(String msg) {
-        debug.print(msg);
+        debug.debug(msg);
     }
 
     private void debugPrint(Throwable t) {
-        debug.print(t);
+        debug.debug(t);
     }
 
     private static void warning(String msg) {

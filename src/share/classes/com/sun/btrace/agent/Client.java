@@ -102,7 +102,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     protected volatile PrintWriter out;
 
     protected final SharedSettings settings = new SharedSettings();
-    private final DebugSupport debug = new DebugSupport(settings);
+    protected final DebugSupport debug = new DebugSupport(settings);
 
     static {
         ClassFilter.class.getClass();
@@ -151,9 +151,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             String outputDir = settings.getOutputDir();
             String output = (outputDir != null ? outputDir + File.separator : "") + outputFile;
             outputFile = templateOutputFileName(output);
-            if (isDebug()) {
-                debugPrint("Redirecting output to " + outputFile);
-            }
+            infoPrint("Redirecting output to " + outputFile);
         }
         out = writerMap.get(outputFile);
         if (out == null) {
@@ -436,16 +434,20 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     }
 
     // package privates below this point
+    final void infoPrint(String msg) {
+        DebugSupport.info(msg);
+    }
+
     final boolean isDebug() {
         return settings.isDebug();
     }
 
     final void debugPrint(String msg) {
-        debug.print(msg);
+        debug.debug(msg);
     }
 
     final void debugPrint(Throwable th) {
-        debug.print(th);
+        debug.debug(th);
     }
 
     final BTraceRuntime getRuntime() {

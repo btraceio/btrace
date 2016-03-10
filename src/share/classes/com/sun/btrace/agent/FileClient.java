@@ -35,6 +35,8 @@ import java.lang.instrument.Instrumentation;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 
 /**
  * Represents a local client communicated by trace file.
@@ -76,7 +78,7 @@ class FileClient extends Client {
                     if (out == null) {
                         DebugSupport.warning("No output stream. Received DataCommand.");
                     } else {
-                        ((DataCommand) cmd).print(out);
+                        ((PrintableCommand) cmd).print(out);
                     }
                 }
                 break;
@@ -84,11 +86,33 @@ class FileClient extends Client {
     }
 
     private static byte[] readAll(File file) throws IOException {
-        int size = (int) file.length();
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] buf = new byte[size];
-            fis.read(buf);
-            return buf;
+        String path = file.getPath();
+        if (path.startsWith(Main.EMBEDDED_SCRIPT_HEADER)) {
+            try (InputStream is = FileClient.class.getClassLoader().getResourceAsStream(path)) {
+                return readAll(is, -1);
+            }
+        } else {
+            int size = (int) file.length();
+            try (FileInputStream fis = new FileInputStream(file)) {
+                return readAll(fis, size);
+            }
         }
+    }
+
+    private static byte[] readAll(InputStream is, int size) throws IOException {
+        if (is == null) throw new NullPointerException();
+
+        byte[] buf = new byte[size != -1 ? size : 1024];
+        int bufsize = buf.length;
+        int off = 0;
+        int read;
+        while ((read = is.read(buf, off, bufsize - off)) > -1) {
+            off += read;
+            if (off >= bufsize) {
+                buf = Arrays.copyOf(buf, bufsize * 2);
+                bufsize = buf.length;
+            }
+        }
+        return Arrays.copyOf(buf, off);
     }
 }
