@@ -29,6 +29,8 @@ package resources;
  * @author Jaroslav Bachorik
  */
 public class Main extends TestApp {
+    private String id = "xxx";
+    
     public static void main(String[] args) throws Exception {
         Main i = new Main();
         i.start();
@@ -47,11 +49,16 @@ public class Main extends TestApp {
     }
 
     private void callA() {
-        callB(1, "Hello World");
+        print("i=" + callB(1, "Hello World"));
     }
 
-    private void callB(int i, String s) {
-        System.out.println("[" + i + "] = " + s);
+    private int callB(int i, String s) {
+        print("[" + i + "] = " + s);
+        return i + 1;
+    }
+
+    public void print(String msg) {
+        System.out.println(msg);
         System.out.flush();
     }
 }

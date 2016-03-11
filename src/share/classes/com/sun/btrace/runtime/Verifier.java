@@ -28,8 +28,6 @@ package com.sun.btrace.runtime;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
-import java.util.ArrayList;
-import java.util.List;
 import com.sun.btrace.VerifierException;
 import com.sun.btrace.annotations.TargetInstance;
 import com.sun.btrace.annotations.TargetMethodOrField;
@@ -48,8 +46,6 @@ import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * This class verifies that a BTrace program is safe
@@ -70,46 +66,33 @@ public class Verifier extends ClassVisitor {
     public static final String BTRACE_PROBEMETHODNAME_DESC = Type.getDescriptor(ProbeMethodName.class);
 
     private boolean seenBTrace;
-    private String className;
-    private List<OnMethod> onMethods;
-    private List<OnProbe> onProbes;
-    private boolean unsafeScript, unsafeAllowed;
-    private CycleDetector cycleDetector;
+    private boolean classRenamed;
+    private final boolean unsafeAllowed;
 
-    protected final Set<String> injectedFields = new HashSet<>();
+    private final BTraceClassNode cn;
 
-    public Verifier(ClassVisitor cv, boolean unsafe) {
+    public Verifier(BTraceClassNode cv, boolean unsafe) {
         super(Opcodes.ASM5, cv);
         this.unsafeAllowed = unsafe;
-        this.onMethods = new ArrayList<>();
-        onProbes = new ArrayList<>();
-        cycleDetector = new CycleDetector();
-
-        if (cv instanceof OnMethodsAcceptor) {
-            ((OnMethodsAcceptor)cv).accept(onMethods);
-        }
+        this.cn = cv;
     }
 
 
-    public Verifier(ClassVisitor cv) {
+    public Verifier(BTraceClassNode cv) {
         this(cv, false);
     }
 
+    public boolean isClassRenamed() {
+        return classRenamed;
+    }
+
     public String getClassName() {
-        return className;
-    }
-
-    public List<OnMethod> getOnMethods() {
-        return onMethods;
-    }
-
-    public List<OnProbe> getOnProbes() {
-        return onProbes;
+        return cn.name;
     }
 
     @Override
     public void visitEnd() {
-        if (cycleDetector.hasCycle()) {
+        if (cn.getGraph().hasCycle()) {
             Verifier.this.reportSafetyError("execution.loop.danger");
         }
         super.visitEnd();
@@ -132,15 +115,14 @@ public class Verifier extends ClassVisitor {
         if (interfaces != null && interfaces.length > 0) {
             Verifier.this.reportSafetyError("no.interface.implementation");
         }
-        className = name;
         super.visit(version, access, name, signature,
                     superName, interfaces);
     }
 
     @Override
-    public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-        AnnotationVisitor delegate = super.visitAnnotation(desc, visible);
-        if (desc.equals(BTRACE_DESC)) {
+    public AnnotationVisitor visitAnnotation(String type, boolean visible) {
+        AnnotationVisitor delegate = super.visitAnnotation(type, visible);
+        if (type.equals(BTRACE_DESC)) {
             seenBTrace = true;
             return new AnnotationVisitor(Opcodes.ASM5, delegate) {
                 @Override
@@ -149,7 +131,7 @@ public class Verifier extends ClassVisitor {
                         if (!unsafeAllowed) {
                             Verifier.this.reportSafetyError("agent.unsafe.not.allowed");
                         }
-                        unsafeScript = true; // Found @BTrace(..., unsafe=true)
+                        cn.setUnsafe(); // Found @BTrace(..., unsafe=true)
                     }
                     super.visit(name, value);
                 }
@@ -167,23 +149,13 @@ public class Verifier extends ClassVisitor {
         if ((access & ACC_STATIC) == 0) {
             reportSafetyError("agent.no.instance.variables", name);
         }
-        FieldVisitor fv = new FieldVisitor(Opcodes.ASM5, super.visitField(access, name, desc, signature, value)) {
-
-            @Override
-            public AnnotationVisitor visitAnnotation(String aType, boolean aVisible) {
-                if (aType.equals(INJECTED_DESC)) {
-                    injectedFields.add(name);
-                }
-                return super.visitAnnotation(aType, aVisible);
-            }
-        };
-        return fv;
+        return super.visitField(access, name, desc, signature, value);
     }
 
     @Override
     public void visitInnerClass(String name, String outerName,
             String innerName, int access) {
-        if (className.equals(outerName)) {
+        if (cn.name.equals(outerName)) {
             reportSafetyError("no.nested.class");
         }
     }
@@ -206,16 +178,7 @@ public class Verifier extends ClassVisitor {
             }
         }
 
-        MethodVisitor mv = super.visitMethod(access, methodName,
-                   methodDesc, signature, exceptions);
-
-        BTraceConfigurator cfg = new BTraceConfigurator(mv, cycleDetector, onMethods, onProbes, methodName, methodDesc);
-
-        if (isUnsafe()) {
-            return cfg;
-        } else {
-            return new MethodVerifier(this, cfg, access, className, methodName, methodDesc);
-        }
+        return super.visitMethod(access, methodName, methodDesc, signature, exceptions);
     }
 
     @Override
@@ -229,7 +192,7 @@ public class Verifier extends ClassVisitor {
     }
 
     void reportSafetyError(String err, String msg) {
-        if (isUnsafe()) return;
+        if (cn.isUnsafe()) return;
         reportError(err, msg);
     }
 
@@ -243,10 +206,6 @@ public class Verifier extends ClassVisitor {
             str += ": " + msg;
         }
         throw new VerifierException(str);
-    }
-
-    private boolean isUnsafe() {
-        return (unsafeScript && unsafeAllowed);
     }
 
     private static void usage(String msg) {
@@ -267,7 +226,7 @@ public class Verifier extends ClassVisitor {
         }
         FileInputStream fis = new FileInputStream(file);
         ClassReader reader = new ClassReader(new BufferedInputStream(fis));
-        Verifier verifier = new Verifier(new ClassVisitor(Opcodes.ASM5) {});
+        Verifier verifier = new Verifier(new BTraceClassNode());
         reader.accept(verifier, 0);
     }
 }

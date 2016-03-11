@@ -131,6 +131,43 @@ public class BTraceFunctionalTests extends RuntimeTest {
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
                     Assert.assertTrue(stdout.contains("[this, noargs]"));
                     Assert.assertTrue(stdout.contains("[this, args]"));
+                    Assert.assertTrue(stdout.contains("{xxx}"));
+                }
+            }
+        );
+    }
+
+    @Test
+    public void testOnMethodReturn() throws Exception {
+        test(
+            "resources.Main",
+            "traces/OnMethodReturnTest.java",
+            5,
+            new ResultValidator() {
+                public void validate(String stdout, String stderr, int retcode) {
+                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+                    Assert.assertTrue(stdout.contains("[this, anytype(void)]"));
+                    Assert.assertTrue(stdout.contains("[this, void]"));
+                    Assert.assertTrue(stdout.contains("[this, 2]"));
+                }
+            }
+        );
+    }
+
+    @Test
+    public void testOnMethodSubclass() throws Exception {
+        debugBTrace = true;
+        debugTestApp = true;
+        test(
+            "resources.Main",
+            "traces/OnMethodSubclassTest.java",
+            5,
+            new ResultValidator() {
+                public void validate(String stdout, String stderr, int retcode) {
+                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+                    Assert.assertTrue(stdout.contains("print:class resources.Main"));
                 }
             }
         );

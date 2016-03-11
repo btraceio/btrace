@@ -37,7 +37,7 @@ import com.sun.btrace.annotations.Level;
  */
 @BTrace(unsafe = true)
 public class ArgsUnsafe {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level("1"))
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level(">=1"))
     public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
         try {
             double la = Sys.VM.systemLoadAverage();

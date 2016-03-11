@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,14 +18,15 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.AnyType;
+import static com.sun.btrace.runtime.Constants.*;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import java.util.Map;
 import java.util.HashMap;
@@ -35,16 +36,10 @@ import com.sun.btrace.org.objectweb.asm.Type;
 class TypeUtils {
     private TypeUtils() {}
 
-    public static final Type objectType =
-        Type.getType(Object.class);
-    public static final Type stringType =
-        Type.getType(String.class);
     public static final Type throwableType =
         Type.getType(Throwable.class);
     public static final Type objectArrayType =
         Type.getType(Object[].class);
-    public static final Type anyType =
-        Type.getType(AnyType.class);
     public static final Type anyTypeArray =
         Type.getType(AnyType[].class);
 
@@ -60,7 +55,7 @@ class TypeUtils {
     }
 
     public static boolean isAnyType(Type t) {
-        return t.equals(anyType);
+        return t.equals(ANYTYPE_TYPE);
     }
 
     public static boolean isAnyTypeArray(Type t) {
@@ -68,7 +63,7 @@ class TypeUtils {
     }
 
     public static boolean isObject(Type t) {
-        return t.equals(objectType);
+        return t.equals(OBJECT_TYPE);
     }
 
     public static boolean isObjectOrAnyType(Type t) {
@@ -76,7 +71,7 @@ class TypeUtils {
     }
 
     public static boolean isString(Type t) {
-        return t.equals(stringType);
+        return t.equals(STRING_TYPE);
     }
 
     public static boolean isArray(Type t) {
@@ -85,6 +80,10 @@ class TypeUtils {
 
     public static boolean isThrowable(Type t) {
         return t.equals(throwableType);
+    }
+
+    public static boolean isVoid(Type t) {
+        return t == Type.VOID_TYPE || VOIDREF_TYPE.equals(t);
     }
 
     /**
@@ -103,11 +102,13 @@ class TypeUtils {
     public static boolean isCompatible(Type left, Type right) {
         if (left.equals(right)) {
             return true;
+        } else if (isVoid(left)) {
+            return isVoid(right);
         } else if (isArray(left)) {
             return false;
         } else if(isObjectOrAnyType(left)) {
             int sort2 = right.getSort();
-            return (sort2 == Type.OBJECT || sort2 == Type.ARRAY || isPrimitive(right));
+            return (sort2 == Type.OBJECT || sort2 == Type.ARRAY || sort2 == Type.VOID || isPrimitive(right));
         } else if (isPrimitive(left)) {
             // a primitive type requires strict equality
             return left.equals(right);
@@ -214,7 +215,7 @@ class TypeUtils {
 
             case AALOAD:
             case AASTORE:
-                return objectType;
+                return OBJECT_TYPE;
 
             case CALOAD:
             case CASTORE:
@@ -292,6 +293,28 @@ class TypeUtils {
         }
         buf.append(descriptor);
         return buf.toString();
+    }
+
+    public static String descriptorToDeclaration(String desc, String owner, String name) {
+        Type retType = Type.getReturnType(desc);
+        Type[] args = desc.contains("(") ? Type.getArgumentTypes(desc) : new Type[0];
+        StringBuilder sb = new StringBuilder();
+        sb.append(getJavaType(retType.getDescriptor())).append(' ')
+          .append(owner.replace('/', '.')).append('#').append(name);
+        if (args.length > 0) {
+            sb.append("(");
+            boolean more = false;
+            for(Type t : args) {
+                if (more) {
+                    sb.append(", ");
+                } else {
+                    more = true;
+                }
+                sb.append(getJavaType(t.getDescriptor()));
+            }
+            sb.append(')');
+        }
+        return sb.toString();
     }
 
     public static String getJavaType(String desc) {

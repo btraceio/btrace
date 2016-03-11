@@ -27,11 +27,9 @@ package net.java.btrace;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.DataCommand;
-import com.sun.btrace.comm.MessageCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.instr.MethodTracker;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -45,12 +43,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Arrays;
-import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -63,7 +58,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.profile.ProfilerFactory;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
@@ -147,7 +141,7 @@ public class BTraceBench {
             cl = (c) -> {
             };
         }
-        br = new BTraceRuntime("BenchmarkClass", new String[0], cl, null);
+        br = new BTraceRuntime("BenchmarkClass", new String[0], cl, null, null);
     }
 
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
@@ -196,6 +190,13 @@ public class BTraceBench {
     @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
     @Benchmark
     public void testInstrumentedMethodPrintln3() {
+        counter++;
+    }
+
+    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+    @Benchmark
+    public void testInstrumentedMethodPrintln24() {
         counter++;
     }
 
@@ -322,7 +323,7 @@ public class BTraceBench {
                     .addProfiler("stack")
                     .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
                             + "script=" + bc.scriptPath)
-                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test")
+                    .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
                     .build();
 
             new Runner(opt).run();
@@ -340,9 +341,9 @@ public class BTraceBench {
         URL[] urls = ((URLClassLoader)cl).getURLs();
         for (URL url: urls) {
             final String path = url.getPath();
-            if (path.endsWith("btrace-agent.jar")) {
+            if (path.contains("btrace-agent")) {
                 agentPath = fs.getPath(path);
-            } else if (path.endsWith("btrace-boot.jar")) {
+            } else if (path.contains("btrace-boot")) {
                 bootPath = fs.getPath(path);
             }
         }

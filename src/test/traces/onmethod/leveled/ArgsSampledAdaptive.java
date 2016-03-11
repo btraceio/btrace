@@ -38,7 +38,7 @@ import com.sun.btrace.annotations.Sampled;
  */
 @BTrace
 public class ArgsSampledAdaptive {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level("1"))
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level(">=1"))
     @Sampled(kind = Sampled.Sampler.Adaptive)
     public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
         println("this = " + self);

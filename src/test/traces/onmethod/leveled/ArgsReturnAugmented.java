@@ -39,7 +39,7 @@ import com.sun.btrace.annotations.Level;
  */
 @BTrace(unsafe = true)
 public class ArgsReturnAugmented {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), enableAt = @Level("1"))
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), enableAt = @Level(">=1"))
     public static long args(@Self Object self, String a, long b, String[] c, int[] d) {
         println("args");
         return 1;

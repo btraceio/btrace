@@ -110,7 +110,6 @@ import javax.management.openmbean.CompositeData;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Field;
 import java.util.HashSet;
-import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -251,17 +250,19 @@ public final class BTraceRuntime  {
 
     // Per-client state starts here.
 
+    private final DebugSupport debug;
+
     // current thread's exception
     private ThreadLocal<Throwable> currentException = new ThreadLocal<>();
 
     // "command line" args supplied by client
-    private String[] args;
+    private final String[] args;
 
     // whether current runtime has been disabled?
     private volatile boolean disabled;
 
     // Class object of the BTrace class [of this client]
-    private String className;
+    private final String className;
 
     // BTrace Class object corresponding to this client
     private Class clazz;
@@ -293,7 +294,7 @@ public final class BTraceRuntime  {
     private volatile NotificationListener memoryListener;
 
     // Command queue for the client
-    private volatile MpscArrayQueue<Command> queue;
+    private final MpscArrayQueue<Command> queue;
 
     private static class SpeculativeQueueManager {
         // maximum number of speculative buffers
@@ -381,10 +382,10 @@ public final class BTraceRuntime  {
         }
     }
     // per client speculative buffer manager
-    private volatile SpeculativeQueueManager specQueueManager;
+    private final SpeculativeQueueManager specQueueManager;
     // background thread that sends Commands to the handler
     private volatile Thread cmdThread;
-    private Instrumentation instrumentation;
+    private final Instrumentation instrumentation;
 
     private final AtomicBoolean exitting = new AtomicBoolean(false);
     private final MessagePassingQueue.WaitStrategy waitStrategy = new MessagePassingQueue.WaitStrategy() {
@@ -412,16 +413,24 @@ public final class BTraceRuntime  {
     };
 
     private BTraceRuntime() {
+        debug = new DebugSupport(null);
+        args = null;
+        queue = null;
+        specQueueManager = null;
+        className = null;
+        instrumentation = null;
     }
 
     public BTraceRuntime(final String className, String[] args,
                          final CommandListener cmdListener,
-                         Instrumentation inst) {
+                         DebugSupport ds, Instrumentation inst) {
         this.args = args;
         this.queue = new MpscArrayQueue<>(CMD_QUEUE_LIMIT_DEFAULT);
         this.specQueueManager = new SpeculativeQueueManager();
         this.className = className;
         this.instrumentation = inst;
+        this.debug = ds != null ? ds : new DebugSupport(null);
+
         runtimes.put(className, this);
         clients.add(className);
         this.cmdThread = new Thread(new Runnable() {
@@ -1127,10 +1136,7 @@ public final class BTraceRuntime  {
                 rt.instrumentation.retransformClasses(clazz);
             }
         } catch (Throwable e) {
-            if (e instanceof VerifyError) {
-                System.out.println("btrace DEBUG: " + ((VerifyError)e).getMessage());
-            }
-            e.printStackTrace(System.out);
+            warning(e);
         }
     }
 
@@ -1155,6 +1161,32 @@ public final class BTraceRuntime  {
             } else {
                 return null;
             }
+        }
+    }
+
+    /**
+     * @see BTraceUtils#instanceOf(java.lang.Object, java.lang.String)
+     */
+    static boolean instanceOf(Object obj, String className) {
+        if (obj instanceof AnyType) {
+            // the only time we can have AnyType on stack
+            // is if it was passed in as a placeholder
+            // for void @Return parameter value
+            if (className.equalsIgnoreCase("void")) {
+                return obj.equals(AnyType.VOID);
+            }
+            return false;
+        }
+        Class objClass = obj.getClass();
+        ClassLoader cl = objClass.getClassLoader();
+        cl = cl != null ? cl : ClassLoader.getSystemClassLoader();
+        try {
+            Class target = cl.loadClass(className);
+            return target.isAssignableFrom(objClass);
+        } catch (ClassNotFoundException e) {
+            // non-existing class
+            getCurrent().debugPrint(e);
+            return false;
         }
     }
 
@@ -2491,7 +2523,7 @@ public final class BTraceRuntime  {
             } catch (LinkageError le) {
                 if (loader == null ||
                     loader.getResource("com/sun/btrace") == null) {
-                    System.err.println("cannot load libbtrace.so, will miss DTrace probes from BTrace");
+                    warning("cannot load libbtrace.so, will miss DTrace probes from BTrace");
                     return;
                 }
                 String path = loader.getResource("com/sun/btrace").toString();
@@ -2521,7 +2553,7 @@ public final class BTraceRuntime  {
                     System.load(path);
                     dtraceEnabled = true;
                 } catch (LinkageError le1) {
-                    System.err.println("cannot load libbtrace.so, will miss DTrace probes from BTrace");
+                    warning("cannot load libbtrace.so, will miss DTrace probes from BTrace");
                 }
             }
         }
@@ -2538,14 +2570,26 @@ public final class BTraceRuntime  {
                 CMD_QUEUE_LIMIT = Integer.parseInt(maxQLen);
 //                debugPrint("The cmd queue limit set to " + CMD_QUEUE_LIMIT);
             } catch (NumberFormatException e) {
-                debugPrint("\"" + maxQLen + "\" is not a valid int number. " +
+                warning("\"" + maxQLen + "\" is not a valid int number. " +
                         "Using the default cmd queue limit of " + CMD_QUEUE_LIMIT_DEFAULT);
                 CMD_QUEUE_LIMIT = CMD_QUEUE_LIMIT_DEFAULT;
             }
         }
     }
 
-    private static void debugPrint(String msg) {
-        System.out.println("btrace DEBUG: " + msg);
+    private void debugPrint(String msg) {
+        debug.debug(msg);
+    }
+
+    private void debugPrint(Throwable t) {
+        debug.debug(t);
+    }
+
+    private static void warning(String msg) {
+        DebugSupport.warning(msg);
+    }
+
+    private static void warning(Throwable t) {
+        DebugSupport.warning(t);
     }
 }

@@ -42,7 +42,7 @@ import com.sun.btrace.annotations.Level;
 @BTrace
 public class ErrorDuration {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="uncaught",
-              location=@Location(value=Kind.ERROR), enableAt = @Level("1"))
+              location=@Location(value=Kind.ERROR), enableAt = @Level(">=1"))
     public static void args(@Self Object self, @ProbeMethodName String pmn, @Duration long dur, Throwable cause) {
         println("args");
     }

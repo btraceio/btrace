@@ -33,6 +33,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import static com.sun.btrace.BTraceUtils.Reflective.*;
 
 /**
  *
@@ -42,6 +43,6 @@ import static com.sun.btrace.BTraceUtils.*;
 public class ArgsReturnBoxed {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
     public static void args(@Self Object self, @Return AnyType retVal, String a, long b, String[] c, int[] d) {
-        println("args");
+        println("args " + getLong("value", self));
     }
 }

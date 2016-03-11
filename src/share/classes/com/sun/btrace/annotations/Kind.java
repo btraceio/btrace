@@ -123,7 +123,7 @@ public enum Kind {
      *
      * <h3>Unannotated probe handler parameters:</h3>
      * <ol>
-     *   <li>{@link java.lang.Object Object} - checked instance</li>
+     *   <li>{@link java.lang.String String} - type to cast to</li>
      * </ol>
      * <h3>Allowed probe handler parameter annotations:</h3>
      * <ul>
@@ -131,6 +131,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
      *       if that method is null</li>
+     *   <li>{@linkplain TargetInstance} - the casted instance ({@linkplain AnyType})</li>
      * </ul>
      */
     CHECKCAST,
@@ -217,7 +218,7 @@ public enum Kind {
      *
      * <h3>Unannotated probe handler parameters:</h3>
      * <ol>
-     *   <li>{@link java.lang.Object Object} - checked instance</li>
+     *   <li>{@link java.lang.String String} - type to check against</li>
      * </ol>
      * <h3>Allowed probe handler parameter annotations:</h3>
      * <ul>
@@ -225,6 +226,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
      *       if that method is null</li>
+     *   <li>{@linkplain TargetInstance} - the checked instance ({@linkplain AnyType})</li>
      * </ul>
      */
     INSTANCEOF,

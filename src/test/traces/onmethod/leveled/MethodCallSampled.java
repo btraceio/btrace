@@ -45,7 +45,7 @@ import com.sun.btrace.annotations.Sampled;
 @BTrace
 public class MethodCallSampled {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), enableAt = @Level("1"))
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), enableAt = @Level(">=1"))
     @Sampled(kind = Sampled.Sampler.Const)
     public static void args(@Self Object self, String a, long b,
                             @TargetInstance Object calledSelf, @TargetMethodOrField(fqn=true) String calledMethod,

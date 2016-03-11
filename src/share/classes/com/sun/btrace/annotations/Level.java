@@ -26,21 +26,31 @@ package com.sun.btrace.annotations;
 
 /**
  * Allows specifying a probe handler instrumentation level matching expression.
- * <p>Allowed syntax is one of the following
- * <ul>
- * <li>{@code @Level("=NUMBER")} - handler is enabled when instrumentation level
- *     equals <b>NUMBER</b></li>
- * <li>{@code @Level(">NUMBER")} - handler is enabled when instrumentation level
- *     is greater than <b>NUMBER</b></li>
- * <li>{@code @Level(">=NUMBER")} - handler is enabled when instrumentation level
- *     is greater than or equal to <b>NUMBER</b></li>
- * <li>{@code @Level("<NUMBER")} - handler is enabled when instrumentation level
- *     is less than <b>NUMBER</b></li>
- * <li>{@code @Level("<=NUMBER")} - handler is enabled when instrumentation level
- *     is less than or equal to <b>NUMBER</b></li>
- * <li>
+ * <p>See {@linkplain Level#value()} for the allowed expression syntax.</p>
+ *
  * @author Jaroslav Bachorik
  */
 public @interface Level {
+    /**
+     * The level check expression.
+     * <p>Allowed syntax is one of the following
+     * <ul>
+     * <li>{@code @Level("NUMBER")} - the same as {@code @Level(">=NUMBER")}
+     * <li>{@code @Level("=NUMBER")} - handler is enabled when instrumentation level
+     *     equals <b>NUMBER</b></li>
+     * <li>{@code @Level(">NUMBER")} - handler is enabled when instrumentation level
+     *     is greater than <b>NUMBER</b></li>
+     * <li>{@code @Level(">=NUMBER")} - handler is enabled when instrumentation level
+     *     is greater than or equal to <b>NUMBER</b></li>
+     * <li>{@code @Level("<NUMBER")} - handler is enabled when instrumentation level
+     *     is less than <b>NUMBER</b></li>
+     * <li>{@code @Level("<=NUMBER")} - handler is enabled when instrumentation level
+     *     is less than or equal to <b>NUMBER</b></li>
+     * </ul>
+     * </p>
+     * <p>Where <b>NUMBER</b> is a non-negative integer number.
+     *
+     * @return
+     */
     String value() default "";
 }

@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace;
@@ -388,6 +388,20 @@ public class BTraceUtils {
      */
     public static Class classOf(Object obj) {
         return Reflective.classOf(obj);
+    }
+
+    /**
+     * Checks whether the provided object is an instance of the named class.
+     * <cite>Note: this method can be rather CPU intensive, use with caution</cite>
+     * @param obj the object to check
+     * @param className the class name; as a special case {@code void} can be provided
+     *                  to check whether the instance is a void value wrapper - {@linkplain AnyType.VOID}
+     * @return {@code true} if the object can be assigned to an instance of 'className' type
+     *
+     * @since 1.3.5
+     */
+    public static boolean instanceOf(Object obj, String className) {
+        return BTraceRuntime.instanceOf(obj, className);
     }
 
     /**
@@ -2264,8 +2278,8 @@ public class BTraceUtils {
      */
     public static void setInstrumentationLevel(int level) {
         if (level >= 0) {
-        BTraceRuntime.setInstrumentationLevel(level);
-    }
+            BTraceRuntime.setInstrumentationLevel(level);
+        }
     }
 
     /**
@@ -5338,7 +5352,7 @@ public class BTraceUtils {
          */
         public static Class classForName(String name, ClassLoader cl) {
             try {
-                    return Class.forName(name, false, cl);
+                return Class.forName(name, false, cl);
             } catch (ClassNotFoundException exp) {
                 throw translate(exp);
             }
@@ -5533,6 +5547,36 @@ public class BTraceUtils {
         }
 
         /**
+         * Gets the value of an instance <code>byte</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the <code>byte</code> value
+         * from
+         * @return the value of the <code>byte</code> field
+         *
+         * @since 1.3.5
+         */
+        public static byte getByte(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return getByte(f, instance);
+        }
+
+        /**
+         * Gets the value of a static <code>byte</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the <code>byte</code> value
+         * from
+         * @return the value of the <code>byte</code> field
+         *
+         * @since 1.3.5
+         */
+        public static byte getByteStatic(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return getByte(f, null);
+        }
+
+        /**
          * Gets the value of a static <code>short</code> field.
          *
          * @param field Field object whose value is returned.
@@ -5561,6 +5605,36 @@ public class BTraceUtils {
             } catch (Exception exp) {
                 throw translate(exp);
             }
+        }
+
+        /**
+         * Gets the value of an instance <code>short</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the <code>short</code> value
+         * from
+         * @return the value of the <code>short</code> field
+         *
+         * @since 1.3.5
+         */
+        public static short getShort(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return getShort(f, instance);
+        }
+
+        /**
+         * Gets the value of a static <code>short</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the <code>short</code> value
+         * from
+         * @return the value of the <code>short</code> field
+         *
+         * @since 1.3.5
+         */
+        public static short getShortStatic(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return getShort(f, null);
         }
 
         /**
@@ -5595,6 +5669,36 @@ public class BTraceUtils {
         }
 
         /**
+         * Gets the value of an instance <code>int</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the <code>int</code> value
+         * from
+         * @return the value of the <code>int</code> field
+         *
+         * @since 1.3.5
+         */
+        public static int getInt(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return getInt(f, instance);
+        }
+
+        /**
+         * Gets the value of a sttaic <code>int</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the <code>int</code> value
+         * from
+         * @return the value of the <code>int</code> field
+         *
+         * @since 1.3.5
+         */
+        public static int getIntStatic(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return getInt(f, null);
+        }
+
+        /**
          * Gets the value of a static <code>long</code> field.
          *
          * @param field Field object whose value is returned.
@@ -5623,6 +5727,36 @@ public class BTraceUtils {
             } catch (Exception exp) {
                 throw translate(exp);
             }
+        }
+
+        /**
+         * Gets the value of an instance <code>long</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the <code>long</code> value
+         * from
+         * @return the value of the <code>long</code> field
+         *
+         * @since 1.3.5
+         */
+        public static long getLong(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return getLong(f, instance);
+        }
+
+        /**
+         * Gets the value of a static <code>long</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the <code>long</code> value
+         * from
+         * @return the value of the <code>long</code> field
+         *
+         * @since 1.3.5
+         */
+        public static long getLongStatic(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return getLong(f, null);
         }
 
         /**
@@ -5657,6 +5791,36 @@ public class BTraceUtils {
         }
 
         /**
+         * Gets the value of an instance <code>float</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the <code>float</code> value
+         * from
+         * @return the value of the <code>float</code> field
+         *
+         * @since 1.3.5
+         */
+        public static float getFloat(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return getFloat(f, instance);
+        }
+
+        /**
+         * Gets the value of a static <code>float</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the <code>float</code> value
+         * from
+         * @return the value of the <code>float</code> field
+         *
+         * @since 1.3.5
+         */
+        public static float getFloatStatic(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return getFloat(f, null);
+        }
+
+        /**
          * Gets the value of a static <code>double</code> field.
          *
          * @param field Field object whose value is returned.
@@ -5685,6 +5849,36 @@ public class BTraceUtils {
             } catch (Exception exp) {
                 throw translate(exp);
             }
+        }
+
+        /**
+         * Gets the value of an instance <code>double</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the <code>double</code> value
+         * from
+         * @return the value of the <code>double</code> field
+         *
+         * @since 1.3.5
+         */
+        public static double getDouble(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return getDouble(f, instance);
+        }
+
+        /**
+         * Gets the value of a static <code>double</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the <code>double</code> value
+         * from
+         * @return the value of the <code>double</code> field
+         *
+         * @since 1.3.5
+         */
+        public static double getDouble(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return getDouble(f, null);
         }
 
         /**
@@ -5719,6 +5913,36 @@ public class BTraceUtils {
         }
 
         /**
+         * Gets the value of an instance <code>boolean</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the <code>boolean</code> value
+         * from
+         * @return the value of the <code>boolean</code> field
+         *
+         * @since 1.3.5
+         */
+        public static boolean getBoolean(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return getBoolean(f, instance);
+        }
+
+        /**
+         * Gets the value of a static <code>boolean</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the <code>boolean</code> value
+         * from
+         * @return the value of the <code>boolean</code> field
+         *
+         * @since 1.3.5
+         */
+        public static boolean getBooleanStatic(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return getBoolean(f, null);
+        }
+
+        /**
          * Gets the value of a static <code>char</code> field.
          *
          * @param field Field object whose value is returned.
@@ -5750,6 +5974,36 @@ public class BTraceUtils {
         }
 
         /**
+         * Gets the value of an instance <code>char</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the <code>char</code> value
+         * from
+         * @return the value of the <code>char</code> field
+         *
+         * @since 1.3.5
+         */
+        public static char getChar(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return getChar(f, instance);
+        }
+
+        /**
+         * Gets the value of a static <code>char</code> field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the <code>char</code> value
+         * from
+         * @return the value of the <code>char</code> field
+         *
+         * @since 1.3.5
+         */
+        public static char getCharStatic(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return getChar(f, null);
+        }
+
+        /**
          * Gets the value of a static reference field.
          *
          * @param field Field object whose value is returned.
@@ -5778,6 +6032,36 @@ public class BTraceUtils {
             } catch (Exception exp) {
                 throw translate(exp);
             }
+        }
+
+        /**
+         * Gets the value of an instance reference field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param obj the object to extract the reference value
+         * from
+         * @return the value of the reference field
+         *
+         * @since 1.3.5
+         */
+        public static Object get(String name, Object instance) {
+            Field f = getField(instance.getClass(), name, true);
+            return get(f, instance);
+        }
+
+        /**
+         * Gets the value of a static reference field.
+         *
+         * @param name name of the field whose value is returned.
+         * @param clazz the class to extract the reference value
+         * from
+         * @return the value of the reference field
+         *
+         * @since 1.3.5
+         */
+        public static Object getStatic(String name, Class clazz) {
+            Field f = getField(clazz, name, true);
+            return get(f, null);
         }
 
         /**

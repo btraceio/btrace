@@ -70,5 +70,34 @@ public class TraceScript {
     public static void onMethodEntryPrintln3(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
         println(pcn);
         println(pmn);
+        println(pmn);
+    }
+
+    @OnMethod(clazz="net.java.btrace.BTraceBench", method="testInstrumentedMethodPrintln24")
+    public static void onMethodEntryPrintln24(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
+        println(pcn);
+        println(pmn);
+        println(pmn);
     }
 }

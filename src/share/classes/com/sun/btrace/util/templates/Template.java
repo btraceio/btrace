@@ -104,6 +104,8 @@ public final class Template {
                 String[] kv = t.split("=");
                 if (kv.length == 2) {
                     tMap.put(kv[0], kv[1]);
+                } else {
+                    tMap.put(kv[0], "");
                 }
             } else {
                 tMap.put(t, "");

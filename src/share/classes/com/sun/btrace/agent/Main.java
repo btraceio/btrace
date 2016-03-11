@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,62 +18,53 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.agent;
 
+import com.sun.btrace.DebugSupport;
+import com.sun.btrace.SharedSettings;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.net.Socket;
 import java.net.ServerSocket;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.OkayCommand;
-import com.sun.btrace.runtime.OnProbe;
-import com.sun.btrace.runtime.OnMethod;
-import com.sun.btrace.runtime.ProbeDescriptor;
 import com.sun.btrace.util.Messages;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.PrintWriter;
-import java.util.Date;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
  *
  * @author A. Sundararajan
- * @authos Joachim Skeie (rolling output)
+ * @author Joachim Skeie (rolling output)
  */
 public final class Main {
+    static final String EMBEDDED_SCRIPT_HEADER = "META-INF/btrace/";
+
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
-    private static volatile boolean debugMode;
-    private static volatile boolean trackRetransforms;
-    private static volatile boolean unsafeMode;
-    private static volatile boolean dumpClasses;
-    private static volatile String dumpDir;
-    private static volatile String probeDescPath;
-    private static volatile String scriptOutputFile;
-    private static volatile Long fileRollMilliseconds;;
+    private static volatile Long fileRollMilliseconds;
+
+    private static final SharedSettings settings = SharedSettings.GLOBAL;
+    private static final DebugSupport debug = new DebugSupport(settings);
 
     // #BTRACE-42: Non-daemon thread prevents traced application from exiting
     private static final ThreadFactory daemonizedThreadFactory = new ThreadFactory() {
@@ -103,10 +94,10 @@ public final class Main {
             Main.inst = inst;
         }
 
-        if (isDebug()) debugPrint("parsing command line arguments");
         parseArgs(args);
         if (isDebug()) debugPrint("parsed command line arguments");
 
+        final Collection<String> embeddedScripts = new LinkedList<>();
         String bootClassPath = argMap.get("bootClassPath");
         if (bootClassPath != null) {
             if (isDebug()) {
@@ -118,7 +109,9 @@ public final class Main {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
                     if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        inst.appendToBootstrapClassLoaderSearch(new JarFile(f));
+                        JarFile jf = new JarFile(f);
+//                        collectScripts(jf, embeddedScripts);
+                        inst.appendToBootstrapClassLoaderSearch(jf);
                     } else {
                         debugPrint("ignoring boot classpath element '" + path +
                                    "' - only jar files allowed");
@@ -142,7 +135,9 @@ public final class Main {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
                     if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        inst.appendToSystemClassLoaderSearch(new JarFile(f));
+                        JarFile jf = new JarFile(f);
+//                        collectScripts(jf, embeddedScripts);
+                        inst.appendToSystemClassLoaderSearch(jf);
                     } else {
                         debugPrint("ignoring system classpath element '" + path +
                                    "' - only jar files allowed");
@@ -185,28 +180,39 @@ public final class Main {
         }
     }
 
+//    private static void collectScripts(JarFile jf, Collection<String> scripts) {
+//        Enumeration<JarEntry> entries = jf.entries();
+//        while (entries.hasMoreElements()) {
+//            JarEntry e = entries.nextElement();
+//            String name = e.getName();
+//            if (name.startsWith(EMBEDDED_SCRIPT_HEADER) && name.endsWith(".class")) {
+//                scripts.add(name);
+//            }
+//        }
+//    }
+
     private static void startScripts() {
         String p = argMap.get("stdout");
         boolean traceToStdOut = p != null && !"false".equals(p);
         if (isDebug()) debugPrint("stdout is " + traceToStdOut);
 
-        p = argMap.get("script");
-        if (p != null) {
-            StringTokenizer tokenizer = new StringTokenizer(p, ",");
+        String script = argMap.get("script");
+        String scriptDir = argMap.get("scriptdir");
 
-	    if (isDebug()) {
-                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + p);
+        if (script != null) {
+            StringTokenizer tokenizer = new StringTokenizer(script, ":");
+            if (isDebug()) {
+                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + script);
             }
             while (tokenizer.hasMoreTokens()) {
                 loadBTraceScript(tokenizer.nextToken(), traceToStdOut);
             }
         }
-        p = argMap.get("scriptdir");
-        if (p != null) {
-            File scriptdir = new File(p);
-            if (scriptdir.isDirectory()) {
-                if (isDebug()) debugPrint("found scriptdir: " + scriptdir.getAbsolutePath());
-                File[] files = scriptdir.listFiles();
+        if (scriptDir != null) {
+            File dir = new File(scriptDir);
+            if (dir.isDirectory()) {
+                if (isDebug()) debugPrint("found scriptdir: " + dir.getAbsolutePath());
+                File[] files = dir.listFiles();
                 if (files != null) {
                     for (File file : files) {
                        loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
@@ -247,8 +253,21 @@ public final class Main {
             usage();
         }
         p = argMap.get("debug");
-        debugMode = p != null && !"false".equals(p);
-        if (isDebug()) debugPrint("debugMode is " + debugMode);
+        settings.setDebug(p != null && !"false".equals(p));
+        if (isDebug()) debugPrint("debugMode is " + settings.isDebug());
+
+        p = argMap.get("startupRetransform");
+        settings.setRetransformStartup(p == null || !"false".equals(p));
+        if (isDebug()) debugPrint("startupRetransform is " + settings.isRetransformStartup());
+
+        p = argMap.get("dumpClasses");
+        boolean dumpClasses = p != null && !"false".equals(p);
+        if (isDebug()) debugPrint("dumpClasses is " + dumpClasses);
+        if (dumpClasses) {
+            String dumpDir = argMap.get("dumpDir");
+            settings.setDumpDir(dumpDir != null ? dumpDir : ".");
+            if (isDebug()) debugPrint("dumpDir is " + dumpDir);
+        }
 
         p = argMap.get("cmdQueueLimit");
         if (p != null) {
@@ -257,11 +276,19 @@ public final class Main {
         }
 
         p = argMap.get("trackRetransforms");
-        trackRetransforms = p != null && !"false".equals(p);
-        if (isRetransformTracking()) debugPrint("trackRetransforms is " + trackRetransforms);
-        scriptOutputFile = argMap.get("scriptOutputFile");
-        if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
-            if (isDebug()) debugPrint("scriptOutputFile is " + scriptOutputFile);
+        settings.setTrackRetransforms(p != null && !"false".equals(p));
+        if (settings.isTrackRetransforms()) debugPrint("trackRetransforms is " + settings.isTrackRetransforms());
+
+        p = argMap.get("scriptOutputFile");
+        if (p != null && p.length() > 0) {
+            settings.setOutputFile(p);
+            if (isDebug()) debugPrint("scriptOutputFile is " + p);
+        }
+
+        p = argMap.get("scriptOutputDir");
+        if (p != null && p.length() > 0) {
+            settings.setOutputDir(p);
+            if (isDebug()) debugPrint("scriptOutputDir is " + p);
         }
 
         p = argMap.get("fileRollMilliseconds");
@@ -278,108 +305,77 @@ public final class Main {
             }
         }
 	p = argMap.get("unsafe");
-        unsafeMode = "true".equals(p);
-        if (isDebug()) debugPrint("unsafeMode is " + unsafeMode);
-        p = argMap.get("dumpClasses");
-        dumpClasses = p != null && !"false".equals(p);
-        if (isDebug()) debugPrint("dumpClasses is " + dumpClasses);
-        if (dumpClasses) {
-            dumpDir = argMap.get("dumpDir");
-            if (dumpDir == null) {
-                dumpDir = ".";
-            }
-            if (isDebug()) debugPrint("dumpDir is " + dumpDir);
-        }
+        settings.setUnsafe(p != null && "true".equals(p));
+        if (isDebug()) debugPrint("unsafeMode is " + settings.isUnsafe());
 
         String statsdDef = argMap.get("statsd");
         if (statsdDef != null) {
             String[] parts = statsdDef.split(":");
-            // TODO need a settings registry instead of system properties
             if (parts.length == 2) {
-                System.setProperty("com.sun.btrace.statsd.host", parts[0]);
-                System.setProperty("com.sun.btrace.statsd.port", parts[1]);
+                settings.setStatsdHost(parts[0].trim());
+                try {
+                    settings.setStatsdPort(Integer.parseInt(parts[1].trim()));
+                } catch (NumberFormatException e) {
+                    debug.warning("Invalid statsd port number: " + parts[1]);
+                    // leave the port unconfigured
+                }
             } else if (parts.length == 1) {
-                System.setProperty("com.sun.btrace.statsd.host", parts[0]);
+                settings.setStatsdHost(parts[0].trim());
             }
         }
 
-        probeDescPath = argMap.get("probeDescPath");
-        if (probeDescPath == null) {
-            probeDescPath = ".";
-        }
-        if (isDebug()) debugPrint("probe descriptor path is " + probeDescPath);
-        ProbeDescriptorLoader.init(probeDescPath);
+        String probeDescPath = argMap.get("probeDescPath");
+        settings.setProbeDescPath(probeDescPath != null ? probeDescPath : ".");
+        if (isDebug()) debugPrint("probe descriptor path is " + settings.getProbeDescPath());
     }
 
-    // This is really a *private* interface to Glassfish monitoring.
-    // For now, please avoid using this in any other scenario.
-    public static void handleFlashLightClient(byte[] code, PrintWriter traceWriter) {
-        handleNewClient(code, traceWriter);
-    }
-
-    // This is really a *private* interface to Glassfish monitoring.
-    // For now, please avoid using this in any other scenario.
-    public static void handleFlashLightClient(byte[] code) {
+    private static void loadBTraceScript(String filePath, boolean traceToStdOut) {
         try {
-            String twn = "flashlighttrace" + (new Date()).getTime();
-            PrintWriter traceWriter = null;
-            traceWriter = new PrintWriter(new BufferedWriter(new FileWriter(new File(twn + ".btrace"))));
-            handleFlashLightClient(code, traceWriter);
-        } catch (IOException ioexp) {
-            if (isDebug()) {
-                debugPrint(ioexp);
-            }
-        }
-    }
+            String scriptName = "";
+            String scriptParent = "";
+            File traceScript = new File(filePath);
+            scriptName = traceScript.getName();
+            scriptParent = traceScript.getParent();
 
-    private static void loadBTraceScript(String filename, boolean traceToStdOut) {
-        try {
-            if (! filename.endsWith(".class")) {
-                if (isDebug()) {
-                    debugPrint("refusing " + filename + ". script should be a pre-compiled .class file");
-                }
-                return;
-            }
-            File traceScript = new File(filename);
             if (! traceScript.exists()) {
-                if (isDebug()) debugPrint("script " + traceScript + " does not exist!");
+                traceScript = new File(EMBEDDED_SCRIPT_HEADER + filePath);
+            }
+
+            if (! scriptName.endsWith(".class")) {
+                if (isDebug()) {
+                    debugPrint("refusing " + filePath + " - script should be a pre-compiled .class file");
+                }
                 return;
             }
 
-            PrintWriter traceWriter = null;
+            SharedSettings clientSettings = new SharedSettings();
+            clientSettings.from(settings);
+            clientSettings.setClientName(scriptName);
             if (traceToStdOut) {
-                traceWriter = new PrintWriter(System.out);
+                clientSettings.setOutputFile("::stdout");
             } else {
-                String agentName = System.getProperty("btrace.agent", "default");
-            	String currentBtraceScriptOutput = scriptOutputFile;
-
-                if (currentBtraceScriptOutput == null || currentBtraceScriptOutput.length() == 0) {
-                    currentBtraceScriptOutput = filename + (agentName != null ? "." + agentName  : "") + ".${ts}.btrace";
-                    if (isDebug()) debugPrint("scriptOutputFile not specified. defaulting to " + currentBtraceScriptOutput);
-                }
-                currentBtraceScriptOutput = templateFileName(currentBtraceScriptOutput);
-                if (fileRollMilliseconds != null && fileRollMilliseconds > 0) {
-                    traceWriter = new PrintWriter(new BufferedWriter(TraceOutputWriter.rollingFileWriter(new File(currentBtraceScriptOutput), 100, fileRollMilliseconds, TimeUnit.MILLISECONDS)));
-                } else {
-                    traceWriter = new PrintWriter(new BufferedWriter(TraceOutputWriter.fileWriter(new File(currentBtraceScriptOutput))));
+            	String traceOutput = clientSettings.getOutputFile();
+                String outDir = clientSettings.getOutputDir();
+                if (traceOutput == null || traceOutput.length() == 0) {
+                    clientSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
+                    if (outDir == null || outDir.length() == 0) {
+                        clientSettings.setOutputDir(scriptParent);
+                    }
                 }
             }
 
-            Client client = new FileClient(inst, traceScript, traceWriter);
+            Client client = new FileClient(inst, traceScript, clientSettings);
 
             handleNewClient(client).get();
+        } catch (NullPointerException e) {
+            if (isDebug()) {
+                debugPrint("script " + filePath + " does not exist!");
+            }
         } catch (RuntimeException | IOException | ExecutionException re) {
             if (isDebug()) debugPrint(re);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-    }
-
-    private static String templateFileName(String fName) {
-        if (fName != null) {
-            fName = fName.replace("${ts}", String.valueOf(System.currentTimeMillis()));
-        }
-        return fName;
     }
 
     public static final int BTRACE_DEFAULT_PORT = 2020;
@@ -399,6 +395,7 @@ public final class Main {
         try {
             if (isDebug()) debugPrint("starting server at " + port);
             System.setProperty("btrace.port", String.valueOf(port));
+            String scriptOutputFile = settings.getOutputFile();
             if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
                 System.setProperty("btrace.output", scriptOutputFile);
             }
@@ -423,16 +420,6 @@ public final class Main {
         }
     }
 
-    private static void handleNewClient(byte[] code, PrintWriter traceWriter) {
-        try {
-            handleNewClient(new FileClient(inst, code, traceWriter));
-        } catch (RuntimeException | IOException re) {
-            if (isDebug()) {
-                debugPrint(re);
-            }
-        }
-    }
-
     private static Future<?> handleNewClient(final Client client) {
         return serializedExecutor.submit(new Runnable() {
 
@@ -440,23 +427,26 @@ public final class Main {
             public void run() {
                 boolean entered = BTraceRuntime.enter();
                 try {
-                    if (isDebug()) debugPrint("new Client created " + client);
+                    client.debugPrint("new Client created " + client);
                     if (client.shouldAddTransformer()) {
                         client.registerTransformer();
                         ArrayList<Class> list = new ArrayList<>();
-                        if (isDebug()) debugPrint("filtering loaded classes");
+                        client.debugPrint("filtering loaded classes");
+                        ClassCache cc = ClassCache.getInstance();
                         for (Class c : inst.getAllLoadedClasses()) {
                             if (c != null) {
-                                if (inst.isModifiableClass(c) &&
+                                cc.get(c);
+                                if (settings.isRetransformStartup() &&
+                                    inst.isModifiableClass(c) &&
                                     client.isCandidate(c)) {
-                                    if (isDebug()) debugPrint("candidate " + c + " added");
+                                    client.debugPrint("candidate " + c + " added");
                                     list.add(c);
                                 }
                             }
                         }
                         list.trimToSize();
                         int size = list.size();
-                        if (isDebug()) debugPrint("added as ClassFileTransformer");
+                        client.debugPrint("added as ClassFileTransformer");
                         if (size > 0) {
                             Class[] classes = new Class[size];
                             list.toArray(classes);
@@ -466,7 +456,7 @@ public final class Main {
                                     try {
                                         inst.retransformClasses(c);
                                     } catch (VerifyError e) {
-                                        debugPrint("verification error: " + c.getName());
+                                        client.debugPrint("verification error: " + c.getName());
                                     }
                                 }
                             } else {
@@ -492,108 +482,18 @@ public final class Main {
     }
 
     private static void error(String msg) {
-        System.err.println(msg);
+        System.err.println("btrace ERROR: " + msg);
     }
 
-    static void dumpClass(String btraceClassName, String targetClassName, byte[] code) {
-        if (dumpClasses) {
-            try {
-                targetClassName = targetClassName.replace(".", File.separator).replace("/", File.separator);
-                int index = targetClassName.lastIndexOf(File.separatorChar);
-                StringBuilder buf = new StringBuilder();
-                if (!dumpDir.equals(".")) {
-                    buf.append(dumpDir);
-                    buf.append(File.separatorChar);
-                }
-                String dir = buf.toString();
-                if (index != -1) {
-                    dir += targetClassName.substring(0, index);
-                }
-                new File(dir).mkdirs();
-                String file;
-                if (index != -1) {
-                    file = targetClassName.substring(index+1);
-                } else {
-                    file = targetClassName;
-                }
-                file += ".class";
-                new File(dir).mkdirs();
-                File out = new File(dir, file);
-                try (FileOutputStream fos = new FileOutputStream(out)) {
-                    fos.write(code);
-                }
-            } catch (Exception exp) {
-                exp.printStackTrace();
-            }
-        }
+    private static boolean isDebug() {
+        return settings.isDebug();
     }
 
-    /**
-     * Maps a list of @OnProbe's to a list @OnMethod's using
-     * probe descriptor XML files.
-     */
-    static List<OnMethod> mapOnProbes(List<OnProbe> onProbes) {
-        List<OnMethod> res = new ArrayList<>();
-        for (OnProbe op : onProbes) {
-            String ns = op.getNamespace();
-            if (isDebug()) debugPrint("about to load probe descriptor for " + ns);
-            // load probe descriptor for this namespace
-            ProbeDescriptor probeDesc = ProbeDescriptorLoader.load(ns);
-            if (probeDesc == null) {
-                if (isDebug()) debugPrint("failed to find probe descriptor for " + ns);
-                continue;
-            }
-            // find particular probe mappings using "local" name
-            OnProbe foundProbe = probeDesc.findProbe(op.getName());
-            if (foundProbe == null) {
-                if (isDebug()) debugPrint("no probe mappings for " + op.getName());
-                continue;
-            }
-            if (isDebug()) debugPrint("found probe mappings for " + op.getName());
-            Collection<OnMethod> omColl = foundProbe.getOnMethods();
-            for (OnMethod om : omColl) {
-                 // copy the info in a new OnMethod so that
-                 // we can set target method name and descriptor
-                 // Note that the probe descriptor cache is used
-                 // across BTrace sessions. So, we should not update
-                 // cached OnProbes (and their OnMethods).
-                 OnMethod omn = new OnMethod();
-                 omn.copyFrom(om);
-                 omn.setTargetName(op.getTargetName());
-                 omn.setTargetDescriptor(op.getTargetDescriptor());
-                 omn.setClassNameParameter(op.getClassNameParameter());
-                 omn.setMethodParameter(op.getMethodParameter());
-                 omn.setDurationParameter(op.getDurationParameter());
-                 omn.setMethodFqn(op.isMethodFqn());
-                 omn.setReturnParameter(op.getReturnParameter());
-                 omn.setSelfParameter(op.getSelfParameter());
-                 omn.setTargetInstanceParameter(op.getTargetInstanceParameter());
-                 omn.setTargetMethodOrFieldFqn(op.isTargetMethodOrFieldFqn());
-                 omn.setTargetMethodOrFieldParameter(op.getTargetMethodOrFieldParameter());
-                 res.add(omn);
-            }
-        }
-        return res;
+    private static void debugPrint(String msg) {
+        debug.debug(msg);
     }
 
-    static boolean isDebug() {
-        return debugMode;
-    }
-
-    static boolean isRetransformTracking() {
-        return trackRetransforms;
-    }
-
-    static boolean isUnsafe() {
-        return unsafeMode;
-    }
-
-    static void debugPrint(String msg) {
-        System.out.println("btrace DEBUG: " + msg);
-    }
-
-    static void debugPrint(Throwable th) {
-        System.out.println("btrace DEBUG: " + th);
-        th.printStackTrace();
+    private static void debugPrint(Throwable th) {
+        debug.debug(th);
     }
 }

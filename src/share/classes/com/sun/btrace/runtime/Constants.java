@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.runtime;
@@ -36,6 +36,12 @@ import com.sun.btrace.AnyType;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.Level;
+import com.sun.btrace.annotations.OnError;
+import com.sun.btrace.annotations.OnEvent;
+import com.sun.btrace.annotations.OnExit;
+import com.sun.btrace.annotations.OnTimer;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.services.api.Service;
@@ -56,9 +62,16 @@ public abstract class Constants {
     public static final String CONSTRUCTOR = "<init>";
     public static final String CLASS_INITIALIZER = "<clinit>";
 
-    public static final String OBJECT_DESC = Type.getDescriptor(Object.class);
-    public static final String ANYTYPE_DESC = Type.getDescriptor(AnyType.class);
+    public static final Type VOIDREF_TYPE = Type.getType(Void.class);
 
+    public static final Type OBJECT_TYPE = Type.getType(Object.class);
+    public static final String OBJECT_DESC = OBJECT_TYPE.getDescriptor();
+
+    public static final Type ANYTYPE_TYPE = Type.getType(AnyType.class);
+    public static final String ANYTYPE = ANYTYPE_TYPE.getInternalName();
+    public static final String ANYTYPE_DESC = ANYTYPE_TYPE.getDescriptor();
+
+    public static final Type STRING_TYPE = Type.getType(String.class);
 
     // BTrace specific stuff
     public static final String BTRACE_UTILS =
@@ -72,6 +85,21 @@ public abstract class Constants {
 
     public static final String ONMETHOD_DESC =
         Type.getDescriptor(OnMethod.class);
+
+    public static final String BTRACE_PROBECLASSNAME_DESC =
+        Type.getDescriptor(ProbeClassName.class);
+
+    public static final String BTRACE_PROBEMETHODNAME_DESC =
+        Type.getDescriptor(ProbeMethodName.class);
+
+    public static final String ONTIMER_DESC =
+        Type.getDescriptor(OnTimer.class);
+    public static final String ONEVENT_DESC =
+        Type.getDescriptor(OnEvent.class);
+    public static final String ONEXIT_DESC =
+        Type.getDescriptor(OnExit.class);
+    public static final String ONERROR_DESC =
+        Type.getDescriptor(OnError.class);
 
     public static final String SAMPLER_DESC =
         Type.getDescriptor(Sampled.class);
@@ -104,10 +132,8 @@ public abstract class Constants {
     public static final String JAVA_LANG_THREAD_LOCAL_SET = "set";
     public static final String JAVA_LANG_THREAD_LOCAL_SET_DESC = "(Ljava/lang/Object;)V";
 
-    public static final String JAVA_LANG_STRING =
-        Type.getInternalName(String.class);
-    public static final String JAVA_LANG_STRING_DESC =
-        Type.getDescriptor(String.class);
+    public static final String JAVA_LANG_STRING = STRING_TYPE.getInternalName();
+    public static final String JAVA_LANG_STRING_DESC = STRING_TYPE.getDescriptor();
 
     public static final String JAVA_LANG_NUMBER =
         Type.getInternalName(Number.class);

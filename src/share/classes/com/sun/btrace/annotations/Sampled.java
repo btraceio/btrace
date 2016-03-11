@@ -57,8 +57,6 @@ public @interface Sampled {
     public static enum Sampler {
         /**
          * No Sampling
-         *//**
-         * No Sampling
          */
         None,
         /**

@@ -1,21 +1,21 @@
 /*
  * Copyright (c) 2008 Sun Microsystems, Inc. All Rights Reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * - Redistribution of source code must retain the above copyright
  *   notice, this list of conditions and the following disclaimer.
- * 
+ *
  * - Redistribution in binary form must reproduce the above copyright
  *   notice, this list of conditions and the following disclaimer in the
  *   documentation and/or other materials provided with the distribution.
- * 
+ *
  * Neither the name of Sun Microsystems, Inc. or the names of
  * contributors may be used to endorse or promote products derived from
  * this software without specific prior written permission.
- * 
+ *
  * This software is provided "AS IS," without a warranty of any kind. ALL
  * EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES,
  * INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A
@@ -28,11 +28,11 @@
  * DAMAGES, HOWEVER CAUSED AND REGARDLESS OF THE THEORY OF LIABILITY,
  * ARISING OUT OF THE USE OF OR INABILITY TO USE THIS SOFTWARE, EVEN IF
  * SUN HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
- * 
+ *
  * You acknowledge that this software is not designed or intended for use
  * in the design, construction, operation or maintenance of any nuclear
  * facility.
- * 
+ *
  * Sun gratefully acknowledges that this software was originally authored
  * and developed by Kenneth Bradley Russell and Christopher John Kline.
  */
@@ -56,21 +56,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** 
+/**
  * A minimal pseudo-C-preprocessor derived from PCPP of the GlueGen project.
- * 
+ *
  * @author Kenneth B. Russell (original author)
  * @author A. Sundararajan (changes documented below)
  *
  * Changes:
- * 
+ *
  *     * Changed the package name.
  *     * Formatted with NetBeans.
  *     * Removed preservation of #define directives. commented #defines emission.
  *     * Commented out printing of line directives.
  *     * Print space char in output only for word tokens. This way multicharacter
- *       operators such as ==, != etc. are property printed. 
- *              
+ *       operators such as ==, != etc. are property printed.
+ *
  */
 public class PCPP {
 
@@ -79,7 +79,7 @@ public class PCPP {
     public PCPP(List/*<String>*/ includePaths) {
         this.includePaths = includePaths;
     }
-    
+
     public void setOut(Writer out) {
         writer = (out instanceof PrintWriter)? (PrintWriter)out : new PrintWriter(out);
     }
@@ -363,9 +363,9 @@ public class PCPP {
             } else {
                 // Output white space plus current token, handling #defines
                 // (though not properly -- only handling #defines to constants and the empty string)
-                
+
                 // !!HACK!! - print space only for word tokens. This way multicharacter
-                // operators such as ==, != etc. are property printed. 
+                // operators such as ==, != etc. are property printed.
                 if (tok == StreamTokenizer.TT_WORD) {
                     print(" ");
                 }
@@ -435,7 +435,7 @@ public class PCPP {
                         name + "\", at \"" + filename() + "\" line " + lineNumber() +
                         ": \"" + name + "\" was not previously defined");
             } else {
-            // System.err.println("UNDEFINED: '" + name + "'  (line " + lineNumber() + " file " + filename() + ")");        
+            // System.err.println("UNDEFINED: '" + name + "'  (line " + lineNumber() + " file " + filename() + ")");
             }
             nonConstantDefines.remove(name);
         } else {
@@ -601,7 +601,7 @@ public class PCPP {
         String symbolName = nextWord();
         debugPrint(true, (isIfdef ? "#ifdef " : "#ifndef ") + symbolName);
         boolean symbolIsDefined = defineMap.get(symbolName) != null;
-        //debugPrint(true, "HANDLE_IFDEF: ifdef(" + symbolName + ") = " + symbolIsDefined );    
+        //debugPrint(true, "HANDLE_IFDEF: ifdef(" + symbolName + ") = " + symbolIsDefined );
         pushEnableBit(enabled() && symbolIsDefined == isIfdef);
     }
 
@@ -639,7 +639,7 @@ public class PCPP {
 
     //static int tmp = -1;
     /**
-     * This method is called recursively to process nested sub-expressions such as: 
+     * This method is called recursively to process nested sub-expressions such as:
      * <pre>
      *   #if !defined(OPENSTEP) && !(defined(NeXT) || !defined(NeXT_PDO))
      *</pre>
@@ -660,7 +660,7 @@ public class PCPP {
         int tok;
         do {
             tok = nextToken(true);
-            //System.out.println("-- READ: [" + (tok == StreamTokenizer.TT_EOL ? "<EOL>" :curTokenAsString()) + "]"); 
+            //System.out.println("-- READ: [" + (tok == StreamTokenizer.TT_EOL ? "<EOL>" :curTokenAsString()) + "]");
             switch (tok) {
                 case '(':
                     ++openParens;
@@ -739,7 +739,7 @@ public class PCPP {
                                 return (!nonConstantDefines.contains(word));
                             } else {
                                 // The statement is true if the symbol evaluates to a non-zero value
-                                // 
+                                //
                                 // NOTE: This doesn't yet handle evaluable expressions like "#if
                                 // SOME_SYMBOL > 5" or "#if SOME_SYMBOL == 0", both of which are
                                 // valid syntax. It only handles numeric symbols like "#if 1"
@@ -823,7 +823,7 @@ public class PCPP {
             Reader reader = new BufferedReader(new FileReader(fullname));
             run(reader, fullname);
         } else {
-        //System.out.println("INACTIVE BLOCK, SKIPPING " + filename);      
+        //System.out.println("INACTIVE BLOCK, SKIPPING " + filename);
         }
     }
 
@@ -896,7 +896,7 @@ public class PCPP {
     private void lineDirective() {
         /*
          * Originally this code was emitting line directives. We don't need those.
-         * 
+         *
          * print("# " + lineNumber() + " \"" + filename() + "\"");
          * println();
          */

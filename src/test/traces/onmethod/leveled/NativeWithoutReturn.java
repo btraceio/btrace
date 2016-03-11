@@ -37,7 +37,7 @@ import com.sun.btrace.annotations.Level;
  */
 @BTrace
 public class NativeWithoutReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="nativeWithoutReturn", enableAt = @Level("1"))
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="nativeWithoutReturn", enableAt = @Level(">=1"))
     public static void nMethod(@Self Object self) {
         println("args");
     }

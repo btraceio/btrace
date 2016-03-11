@@ -42,7 +42,7 @@ import com.sun.btrace.annotations.Level;
 @BTrace
 public class MethodCallDuration {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), enableAt = @Level("1"))
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), enableAt = @Level(">=1"))
     public static void args(@Return long retVal, @Duration long dur, String a, long b) {
         println("args");
     }

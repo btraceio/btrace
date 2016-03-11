@@ -73,6 +73,9 @@ final public class Assembler {
     }
 
     public Assembler ldc(Object o) {
+        if (o == null) {
+            return loadNull();
+        }
         if (o instanceof Integer) {
             int i = (int)o;
             if (i >= -1 && i <= 5) {
@@ -206,8 +209,28 @@ final public class Assembler {
         return this;
     }
 
+    public Assembler dup_x1() {
+        mv.visitInsn(DUP_X1);
+        return this;
+    }
+
+    public Assembler dup_x2() {
+        mv.visitInsn(DUP_X2);
+        return this;
+    }
+
     public Assembler dup2() {
         mv.visitInsn(DUP2);
+        return this;
+    }
+
+    public Assembler dup2_x1() {
+        mv.visitInsn(DUP2_X1);
+        return this;
+    }
+
+    public Assembler dup2_x2() {
+        mv.visitInsn(DUP2_X2);
         return this;
     }
 
@@ -235,12 +258,12 @@ final public class Assembler {
             case AASTORE: case BASTORE:
             case CASTORE: case SASTORE:
                 dup();
-                break;
+            break;
 
             case LALOAD: case DALOAD:
             case LASTORE: case DASTORE:
                 dup2();
-                break;
+            break;
         }
         return this;
     }
@@ -268,10 +291,10 @@ final public class Assembler {
         switch (type.getSize()) {
             case 1:
                 dup();
-                break;
+            break;
             case 2:
                 dup2();
-                break;
+            break;
         }
         return this;
     }
@@ -310,43 +333,43 @@ final public class Assembler {
                 break;
             case 'Z':
                 invokeStatic(JAVA_LANG_BOOLEAN,
-                        BOX_VALUEOF,
-                        BOX_BOOLEAN_DESC);
+                                BOX_VALUEOF,
+                                BOX_BOOLEAN_DESC);
                 break;
             case 'C':
                 invokeStatic(JAVA_LANG_CHARACTER,
-                        BOX_VALUEOF,
-                        BOX_CHARACTER_DESC);
+                                BOX_VALUEOF,
+                                BOX_CHARACTER_DESC);
                 break;
             case 'B':
                 invokeStatic(JAVA_LANG_BYTE,
-                        BOX_VALUEOF,
-                        BOX_BYTE_DESC);
+                                BOX_VALUEOF,
+                                BOX_BYTE_DESC);
                 break;
             case 'S':
                 invokeStatic(JAVA_LANG_SHORT,
-                        BOX_VALUEOF,
-                        BOX_SHORT_DESC);
+                                BOX_VALUEOF,
+                                BOX_SHORT_DESC);
                 break;
             case 'I':
                 invokeStatic(JAVA_LANG_INTEGER,
-                        BOX_VALUEOF,
-                        BOX_INTEGER_DESC);
+                                BOX_VALUEOF,
+                                BOX_INTEGER_DESC);
                 break;
             case 'J':
                 invokeStatic(JAVA_LANG_LONG,
-                        BOX_VALUEOF,
-                        BOX_LONG_DESC);
+                                BOX_VALUEOF,
+                                BOX_LONG_DESC);
                 break;
             case 'F':
                 invokeStatic(JAVA_LANG_FLOAT,
-                        BOX_VALUEOF,
-                        BOX_FLOAT_DESC);
+                                BOX_VALUEOF,
+                                BOX_FLOAT_DESC);
                 break;
             case 'D':
                 invokeStatic(JAVA_LANG_DOUBLE,
-                        BOX_VALUEOF,
-                        BOX_DOUBLE_DESC);
+                                BOX_VALUEOF,
+                                BOX_DOUBLE_DESC);
                 break;
         }
         return this;
@@ -366,50 +389,50 @@ final public class Assembler {
             case 'Z':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_BOOLEAN);
                 invokeVirtual(JAVA_LANG_BOOLEAN,
-                        BOOLEAN_VALUE,
-                        BOOLEAN_VALUE_DESC);
+                                BOOLEAN_VALUE,
+                                BOOLEAN_VALUE_DESC);
                 break;
             case 'C':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_CHARACTER);
                 invokeVirtual(JAVA_LANG_CHARACTER,
-                        CHAR_VALUE,
-                        CHAR_VALUE_DESC);
+                                CHAR_VALUE,
+                                CHAR_VALUE_DESC);
                 break;
             case 'B':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                        BYTE_VALUE,
-                        BYTE_VALUE_DESC);
+                                BYTE_VALUE,
+                                BYTE_VALUE_DESC);
                 break;
             case 'S':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                        SHORT_VALUE,
-                        SHORT_VALUE_DESC);
+                                SHORT_VALUE,
+                                SHORT_VALUE_DESC);
                 break;
             case 'I':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                        INT_VALUE,
-                        INT_VALUE_DESC);
+                                INT_VALUE,
+                                INT_VALUE_DESC);
                 break;
             case 'J':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                        LONG_VALUE,
-                        LONG_VALUE_DESC);
+                                LONG_VALUE,
+                                LONG_VALUE_DESC);
                 break;
             case 'F':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                        FLOAT_VALUE,
-                        FLOAT_VALUE_DESC);
+                                FLOAT_VALUE,
+                                FLOAT_VALUE_DESC);
                 break;
             case 'D':
                 mv.visitTypeInsn(CHECKCAST, JAVA_LANG_NUMBER);
                 invokeVirtual(JAVA_LANG_NUMBER,
-                        DOUBLE_VALUE,
-                        DOUBLE_VALUE_DESC);
+                                DOUBLE_VALUE,
+                                DOUBLE_VALUE_DESC);
                 break;
         }
         return this;
@@ -444,28 +467,28 @@ final public class Assembler {
 
     public Assembler println(String msg) {
         mv.visitFieldInsn(GETSTATIC,
-                "java/lang/System",
-                "out",
-                "Ljava/io/PrintStream;");
+                    "java/lang/System",
+                    "out",
+                    "Ljava/io/PrintStream;");
         mv.visitLdcInsn(msg);
         invokeVirtual("java/io/PrintStream",
-                "println",
-                "(Ljava/lang/String;)V");
+                    "println",
+                    "(Ljava/lang/String;)V");
         return this;
     }
 
     // print the object on the top of the stack
     public Assembler printObject() {
         mv.visitFieldInsn(GETSTATIC,
-                "java/lang/System",
-                "out",
-                "Ljava/io/PrintStream;");
+                    "java/lang/System",
+                    "out",
+                    "Ljava/io/PrintStream;");
         mv.visitInsn(SWAP);
         mv.visitMethodInsn(INVOKEVIRTUAL,
-                "java/io/PrintStream",
-                "println",
-                "(Ljava/lang/Object;)V",
-                false);
+                    "java/io/PrintStream",
+                    "println",
+                    "(Ljava/lang/Object;)V",
+                    false);
         return this;
     }
 

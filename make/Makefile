@@ -1,6 +1,7 @@
 BUILDDIR=../build
 SRCDIR=../src
 OUTDIR=${BUILDDIR}/`uname -p`
+CC=gcc
 
 # FIXME: 64 bit option
 

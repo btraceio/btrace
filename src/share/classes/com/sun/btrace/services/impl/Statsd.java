@@ -25,6 +25,7 @@
 package com.sun.btrace.services.impl;
 
 import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.SharedSettings;
 import com.sun.btrace.services.spi.SimpleService;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -51,9 +52,6 @@ import java.util.concurrent.ThreadFactory;
  * @author Jaroslav Bachorik
  */
 final public class Statsd extends SimpleService {
-    private final static String STATSD_HOST = "com.sun.btrace.statsd.host";
-    private final static String STATSD_PORT = "com.sun.btrace.statsd.port";
-
     public static enum Priority {
         NORMAL, LOW
     }
@@ -89,20 +87,14 @@ final public class Statsd extends SimpleService {
                     ds = new DatagramSocket();
                     DatagramPacket dp = new DatagramPacket(new byte[0], 0);
                     try {
-                        dp.setAddress(InetAddress.getByName(System.getProperty(STATSD_HOST, "localhost")));
+                        dp.setAddress(InetAddress.getByName(SharedSettings.GLOBAL.getStatsdHost()));
                     } catch (UnknownHostException e) {
-                        System.err.println("[statsd] invalid host defined: " + System.getProperty(STATSD_HOST));
+                        System.err.println("[statsd] invalid host defined: " + SharedSettings.GLOBAL.getStatsdHost());
                         dp.setAddress(InetAddress.getLoopbackAddress());
                     } catch (SecurityException e) {
                         dp.setAddress(InetAddress.getLoopbackAddress());
                     }
-                    try {
-                        int port = Integer.parseInt(System.getProperty(STATSD_PORT, "8125"));
-                        dp.setPort(port);
-                    } catch (NumberFormatException e) {
-                        System.err.println("[statsd] invalid port defined: " + System.getProperty(STATSD_PORT));
-                        dp.setPort(8125);
-                    }
+                    dp.setPort(SharedSettings.GLOBAL.getStatsdPort());
 
                     while (true) {
                         String m = q.take();

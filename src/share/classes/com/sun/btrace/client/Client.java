@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 package com.sun.btrace.client;
 
@@ -38,6 +38,7 @@ import java.net.UnknownHostException;
 import java.net.URI;
 import java.util.Map;
 import com.sun.btrace.CommandListener;
+import com.sun.btrace.SharedSettings;
 import com.sun.btrace.compiler.Compiler;
 import com.sun.btrace.annotations.DTrace;
 import com.sun.btrace.annotations.DTraceRef;
@@ -46,10 +47,12 @@ import com.sun.btrace.comm.EventCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.MessageCommand;
+import com.sun.btrace.comm.SetSettingsCommand;
 import com.sun.btrace.comm.WireIO;
 import com.sun.btrace.org.objectweb.asm.*;
 import com.sun.tools.attach.VirtualMachine;
 import java.net.ConnectException;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -102,6 +105,8 @@ public class Client {
 
     // port on which BTrace agent listens
     private final int port;
+    // the output file or null
+    private final String outputFile;
     // are we running debug mode?
     private final boolean debug;
     // do we need to track retransforming single classes? (will impose additional overhead)
@@ -122,18 +127,19 @@ public class Client {
     private volatile ObjectOutputStream oos;
 
     public Client(int port) {
-        this(port, ".", false, false, false, false, null, null);
+        this(port, null, ".", false, false, false, false, null, null);
     }
 
     public Client(int port, String probeDescPath) {
-        this(port, probeDescPath, false, false, false, false, null, null);
+        this(port, null, probeDescPath, false, false, false, false, null, null);
     }
 
-    public Client(int port, String probeDescPath,
+    public Client(int port, String outputFile, String probeDescPath,
             boolean debug, boolean trackRetransforms,
             boolean unsafe, boolean dumpClasses,
             String dumpDir, String statsdDef) {
         this.port = port;
+        this.outputFile = outputFile;
         this.probeDescPath = probeDescPath;
         this.debug = debug;
         this.unsafe = unsafe;
@@ -359,6 +365,19 @@ public class Client {
                 }
             }
             oos = new ObjectOutputStream(sock.getOutputStream());
+            if (debug) {
+                debugPrint("setting up client settings");
+            }
+            Map<String, Object> settings = new HashMap<>();
+            settings.put(SharedSettings.DEBUG_KEY, debug);
+            settings.put(SharedSettings.DUMP_DIR_KEY, dumpClasses ? dumpDir : "");
+            settings.put(SharedSettings.TRACK_RETRANSFORMS_KEY, trackRetransforms);
+            settings.put(SharedSettings.UNSAFE_KEY, unsafe);
+            settings.put(SharedSettings.PROBE_DESC_PATH_KEY, probeDescPath);
+            settings.put(SharedSettings.OUTPUT_FILE_KEY, outputFile);
+
+            WireIO.write(oos, new SetSettingsCommand(settings));
+
             if (debug) {
                 debugPrint("sending instrument command");
             }

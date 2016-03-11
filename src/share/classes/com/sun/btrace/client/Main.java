@@ -36,6 +36,7 @@ import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
+import com.sun.btrace.comm.PrintableCommand;
 import com.sun.btrace.util.Messages;
 
 /**
@@ -50,6 +51,7 @@ public final class Main {
     private static boolean DEBUG;
     private static boolean UNSAFE;
     private static  boolean DUMP_CLASSES;
+    private static String OUTPUT_FILE;
     private static String DUMP_DIR;
     private static String PROBE_DESC_PATH;
     public static final boolean TRACK_RETRANSFORM;
@@ -118,6 +120,9 @@ public final class Main {
                 } else if (args[count].equals("-u")) {
                     UNSAFE = true;
                     if (isDebug()) debugPrint("btrace unsafe mode is set");
+                } else if (args[count].equals("-o")) {
+                    OUTPUT_FILE = args[++count];
+                    if (isDebug()) debugPrint("outputFile is " + OUTPUT_FILE);
                 } else if (args[count].equals("-d")) {
                     DUMP_CLASSES = true;
                     DUMP_DIR = args[++count];
@@ -171,7 +176,7 @@ public final class Main {
         }
 
         try {
-            Client client = new Client(port, PROBE_DESC_PATH,
+            Client client = new Client(port, OUTPUT_FILE, PROBE_DESC_PATH,
                 DEBUG, TRACK_RETRANSFORM, UNSAFE, DUMP_CLASSES, DUMP_DIR, statsdDef);
             if (! new File(fileName).exists()) {
                 errorExit("File not found: " + fileName, 1);
@@ -198,7 +203,7 @@ public final class Main {
             @Override
             public void onCommand(Command cmd) throws IOException {
                 int type = cmd.getType();
-                if (cmd instanceof DataCommand) {
+                if (cmd instanceof PrintableCommand) {
                     ((DataCommand)cmd).print(out);
                     out.flush();
                 } else if (type == Command.EXIT) {
@@ -206,12 +211,6 @@ public final class Main {
                     out.flush();
                     ExitCommand ecmd = (ExitCommand)cmd;
                     System.exit(ecmd.getExitCode());
-                } else if (type == Command.ERROR) {
-                    ErrorCommand ecmd = (ErrorCommand)cmd;
-                    Throwable cause = ecmd.getCause();
-                    if (cause != null) {
-                        cause.printStackTrace();
-                    }
                 }
             }
         };

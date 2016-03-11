@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,24 +18,24 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 package com.sun.btrace.agent;
 
+import com.sun.btrace.DebugSupport;
+import com.sun.btrace.SharedSettings;
 import com.sun.btrace.comm.Command;
-import com.sun.btrace.comm.DataCommand;
-import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
+import com.sun.btrace.comm.PrintableCommand;
 import java.lang.instrument.Instrumentation;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.io.InputStream;
+import java.util.Arrays;
 
 /**
  * Represents a local client communicated by trace file.
@@ -46,84 +46,72 @@ import java.util.TimerTask;
  * @author J.Bachorik
  */
 class FileClient extends Client {
-    private final Timer flusher;
+    FileClient(Instrumentation inst, byte[] code, SharedSettings s) throws IOException {
+        super(inst, s);
+        init(code);
+    }
 
-    private volatile PrintWriter out;
-
-    FileClient(Instrumentation inst, byte[] code, PrintWriter traceWriter) throws IOException {
-        super(inst);
-        this.out = traceWriter;
+    private void init(byte[] code) throws IOException {
         InstrumentCommand cmd = new InstrumentCommand(code, new String[0]);
         Class btraceClazz = loadClass(cmd);
         if (btraceClazz == null) {
             throw new RuntimeException("can not load BTrace class");
         }
-
-        int flushInterval;
-        String flushIntervalStr = System.getProperty("com.sun.btrace.FileClient.flush", "5");
-        try {
-            flushInterval = Integer.parseInt(flushIntervalStr);
-        } catch (NumberFormatException e) {
-            flushInterval = 5; // default
-        }
-
-        final int flushSec  = flushInterval;
-
-        flusher = new Timer("BTrace FileClient Flusher", true);
-        flusher.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                out.flush();
-            }
-        }, flushSec, flushSec);
     }
 
-    FileClient(Instrumentation inst, File scriptFile, PrintWriter traceWriter) throws IOException {
-        this(inst, readAll(scriptFile), traceWriter);
+    FileClient(Instrumentation inst, File scriptFile, SharedSettings s) throws IOException {
+        this(inst, readAll(scriptFile), s);
     }
 
+    @Override
     public void onCommand(Command cmd) throws IOException {
-        if (out == null) {
-            throw new IOException("no output stream");
-        }
-        if (debug) {
-
-            Main.debugPrint("client " + getClassName() + ": got " + cmd);
+        if (isDebug()) {
+            debugPrint("client " + getClassName() + ": got " + cmd);
         }
         switch (cmd.getType()) {
             case Command.EXIT:
                 onExit(((ExitCommand) cmd).getExitCode());
                 break;
-            case Command.ERROR: {
-                ErrorCommand ecmd = (ErrorCommand) cmd;
-                Throwable cause = ecmd.getCause();
-                cause.printStackTrace(out);
-                break;
-            }
             default:
-                if (cmd instanceof DataCommand) {
-                    ((DataCommand) cmd).print(out);
+                if (cmd instanceof PrintableCommand) {
+                    if (out == null) {
+                        DebugSupport.warning("No output stream. Received DataCommand.");
+                    } else {
+                        ((PrintableCommand) cmd).print(out);
+                    }
                 }
                 break;
         }
     }
 
-    protected synchronized void closeAll() throws IOException {
-        flusher.cancel();
-        if (out != null) {
-            out.close();
+    private static byte[] readAll(File file) throws IOException {
+        String path = file.getPath();
+        if (path.startsWith(Main.EMBEDDED_SCRIPT_HEADER)) {
+            try (InputStream is = ClassLoader.getSystemResourceAsStream(path)) {
+                return readAll(is, -1);
+            }
+        } else {
+            int size = (int) file.length();
+            try (FileInputStream fis = new FileInputStream(file)) {
+                return readAll(fis, size);
+            }
         }
     }
 
-    private static byte[] readAll(File file) throws IOException {
-        int size = (int) file.length();
-        FileInputStream fis = new FileInputStream(file);
-        try {
-            byte[] buf = new byte[size];
-            fis.read(buf);
-            return buf;
-        } finally {
-            fis.close();
+    private static byte[] readAll(InputStream is, int size) throws IOException {
+        if (is == null) throw new NullPointerException();
+
+        byte[] buf = new byte[size != -1 ? size : 1024];
+        int bufsize = buf.length;
+        int off = 0;
+        int read;
+        while ((read = is.read(buf, off, bufsize - off)) > -1) {
+            off += read;
+            if (off >= bufsize) {
+                buf = Arrays.copyOf(buf, bufsize * 2);
+                bufsize = buf.length;
+            }
         }
+        return Arrays.copyOf(buf, off);
     }
 }

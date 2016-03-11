@@ -31,7 +31,7 @@ import java.io.InputStreamReader;
  *
  * @author Jaroslav Bachorik
  */
-abstract public class TestApp {
+abstract public class TestApp implements TestPrinter {
     final public void start() throws Exception {
         Thread t = new Thread(new Runnable() {
             public void run() {

@@ -25,7 +25,6 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.annotations.Sampled;
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -72,10 +71,6 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
         unboxMethods.add("doubleValue");
     }
 
-    private final Verifier verifier;
-    private final BTraceConfigurator cfg;
-
-    protected boolean asBTrace = false;
     protected Location loc;
 
     private final String className;
@@ -86,10 +81,8 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
 
     private Object delayedClzLoad = null;
 
-    public MethodVerifier(Verifier v, BTraceConfigurator cfg, int access, String className, String methodName, String desc) {
-        super(cfg, className, desc, ((access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC));
-        this.verifier = v;
-        this.cfg = cfg;
+    public MethodVerifier(BTraceMethodNode parent, int access, String className, String methodName, String desc) {
+        super(parent, className, desc, ((access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC));
         this.className = className;
         this.methodName = methodName;
         this.methodDesc = desc;
@@ -97,47 +90,34 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
         labels = new HashMap<>();
     }
 
-    @Override
-    public AnnotationVisitor visitAnnotation(String desc,
-                                  boolean visible) {
-        AnnotationVisitor av = super.visitAnnotation(desc, visible);
-
-        if (desc.startsWith("Lcom/sun/btrace/annotations/")) {
-            asBTrace = true;
-        }
-
-        return av;
+    private BTraceMethodNode getParent() {
+        return (BTraceMethodNode)mv;
     }
 
     @Override
     public void visitEnd() {
-        if (asBTrace) { // only btrace handlers are enforced to be public
+        super.visitEnd();
+        if (getParent().isBTraceHandler()) { // only btrace handlers are enforced to be public
             if ((access & ACC_PUBLIC) == 0 && !methodName.equals(CLASS_INITIALIZER)) {
-                reportError("method.should.be.public", methodName + methodDesc);
+                Verifier.reportError("method.should.be.public", methodName + methodDesc);
             }
             if (Type.getReturnType(methodDesc) != Type.VOID_TYPE) {
-                reportError("return.type.should.be.void", methodName + methodDesc);
-            }
-
-            if (cfg.getOnMethod() != null) {
-                validateSamplerLocation();
+                Verifier.reportError("return.type.should.be.void", methodName + methodDesc);
             }
         }
-
+        validateSamplerLocation();
         labels.clear();
-        super.visitEnd();
     }
 
     @Override
-    public void visitFieldInsn(int opcode, String owner,
-            String name, String desc) {
+    public void visitFieldInsn(int opcode, String owner, String name, String desc) {
         if (opcode == PUTFIELD) {
-            reportError("no.assignment");
+            Verifier.reportError("no.assignment");
         }
 
         if (opcode == PUTSTATIC) {
             if (!owner.equals(className)) {
-                reportError("no.assignment");
+                Verifier.reportError("no.assignment");
             }
         }
         super.visitFieldInsn(opcode, owner, name, desc);
@@ -154,14 +134,14 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
             case BASTORE:
             case CASTORE:
             case SASTORE:
-                reportError("no.assignment");
+                Verifier.reportError("no.assignment");
                 break;
             case ATHROW:
-                reportError("no.throw");
+                Verifier.reportError("no.throw");
                 break;
             case MONITORENTER:
             case MONITOREXIT:
-                reportError("no.synchronized.blocks");
+                Verifier.reportError("no.synchronized.blocks");
                 break;
         }
         super.visitInsn(opcode);
@@ -170,7 +150,7 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
     @Override
     public void visitIntInsn(int opcode, int operand) {
         if (opcode == NEWARRAY) {
-            reportError("no.array.creation");
+            Verifier.reportError("no.array.creation");
         }
         super.visitIntInsn(opcode, operand);
     }
@@ -178,7 +158,7 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
     @Override
     public void visitJumpInsn(int opcode, Label label) {
         if (labels.get(label) != null) {
-            reportError("no.loops");
+            Verifier.reportError("no.loops");
         }
         super.visitJumpInsn(opcode, label);
     }
@@ -211,12 +191,12 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
                 } else {
                     List<StackItem> args = getMethodParams(desc, false);
                     if (!isServiceTarget(args.get(0))) {
-                        reportError("no.method.calls", owner + "." + name + desc);
+                        Verifier.reportError("no.method.calls", owner + "." + name + desc);
                     }
                 }
                 break;
             case INVOKEINTERFACE:
-                reportError("no.method.calls", owner + "." + name + desc);
+                Verifier.reportError("no.method.calls", owner + "." + name + desc);
                 break;
             case INVOKESPECIAL:
                 if (owner.equals(JAVA_LANG_OBJECT) && name.equals(CONSTRUCTOR)) {
@@ -224,7 +204,7 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
                 } else if (owner.equals(Type.getInternalName(StringBuilder.class))) {
                     // allow string concatenation via StringBuilder
                 } else {
-                    reportError("no.method.calls", owner + "." + name + desc);
+                    Verifier.reportError("no.method.calls", owner + "." + name + desc);
                 }
                 break;
             case INVOKESTATIC:
@@ -238,37 +218,37 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
                         // These calls are generated by javac for autoboxing
                         // and can't be caught sourc AST analyzer as well.
                     } else {
-                        reportError("no.method.calls", owner + "." + name + desc);
+                        Verifier.reportError("no.method.calls", owner + "." + name + desc);
                     }
                 }
                 break;
         }
         if (delayedClzLoad != null) {
-            reportError("no.class.literals", delayedClzLoad.toString());
+            Verifier.reportError("no.class.literals", delayedClzLoad.toString());
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf);
     }
 
     @Override
     public void visitMultiANewArrayInsn(String desc, int dims) {
-        reportError("no.array.creation");
+        Verifier.reportError("no.array.creation");
     }
 
     @Override
     public void visitTryCatchBlock(Label start, Label end,
             Label handler, String type) {
-        reportError("no.catch");
+        Verifier.reportError("no.catch");
     }
 
     @Override
     public void visitTypeInsn(int opcode, String desc) {
         if (opcode == ANEWARRAY) {
-            reportError("no.array.creation", desc);
+            Verifier.reportError("no.array.creation", desc);
         }
         if (opcode == NEW) {
             // allow StringBuilder creation for string concatenation
             if (!desc.equals(Type.getInternalName(StringBuilder.class))) {
-                reportError("no.new.object", desc);
+                Verifier.reportError("no.new.object", desc);
             }
         }
         super.visitTypeInsn(opcode, desc);
@@ -277,17 +257,9 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
     @Override
     public void visitVarInsn(int opcode, int var) {
         if (opcode == RET) {
-            reportError("no.try");
+            Verifier.reportError("no.try");
         }
         super.visitVarInsn(opcode, var);
-    }
-
-    private void reportError(String err) {
-        reportError(err, null);
-    }
-
-    private void reportError(String err, String msg) {
-        verifier.reportSafetyError(err, msg);
     }
 
     private static boolean isPrimitiveWrapper(String type) {
@@ -300,7 +272,7 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
             if (ri.getOwner().equals(Type.getInternalName(Service.class))) {
                 return true;
             } else if (ri.getOwner().equals(className) &&
-                verifier.injectedFields.contains(ri.getName())) {
+                getParent().isFieldInjected(ri.getName())) {
                 return true;
             }
         }
@@ -313,12 +285,17 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
     }
 
     private void validateSamplerLocation() {
-        if (cfg.getOnMethod() == null && cfg.isSampled()) {
-            reportError("sampler.invalid.location", methodName + methodDesc);
+        BTraceMethodNode mn = getParent();
+        // if not sampled just return
+        if (!mn.isSampled()) return;
+
+        OnMethod om = mn.getOnMethod();
+        if (om == null && mn.isSampled()) {
+            Verifier.reportError("sampler.invalid.location", methodName + methodDesc);
             return;
         }
-        if (cfg.getOnMethod().getSamplerKind() != Sampled.Sampler.None) {
-            switch (cfg.getOnMethod().getLocation().getValue()) {
+        if (om.getSamplerKind() != Sampled.Sampler.None) {
+            switch (om.getLocation().getValue()) {
                 case ENTRY:
                 case RETURN:
                 case ERROR:
@@ -327,7 +304,7 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
                     break;
                 }
                 default: {
-                    reportError("sampler.invalid.location", methodName + methodDesc);
+                    Verifier.reportError("sampler.invalid.location", methodName + methodDesc);
                 }
             }
         }

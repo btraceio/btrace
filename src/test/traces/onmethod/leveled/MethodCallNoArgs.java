@@ -39,7 +39,7 @@ import com.sun.btrace.annotations.Level;
 @BTrace
 public class MethodCallNoArgs {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), enableAt = @Level("1"))
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), enableAt = @Level(">=1"))
     public static void args() {
         println("args");
     }

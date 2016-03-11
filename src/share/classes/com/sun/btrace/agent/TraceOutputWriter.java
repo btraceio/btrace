@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,13 +18,15 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 package com.sun.btrace.agent;
 
+import com.sun.btrace.DebugSupport;
+import com.sun.btrace.SharedSettings;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -39,15 +41,27 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @author Jaroslav Bachorik
  */
 abstract public class TraceOutputWriter extends Writer {
+    final protected DebugSupport debug;
+
+    protected TraceOutputWriter(SharedSettings settings) {
+        debug = new DebugSupport(settings);
+    }
+
     static private class SimpleFileOutput extends TraceOutputWriter {
         final private FileWriter delegate;
 
-        public SimpleFileOutput(File output) throws IOException {
-            File parent = output.getParentFile();
-            if (parent != null) {
-                output.getParentFile().mkdirs();
+        public SimpleFileOutput(File output, SharedSettings settings) throws IOException {
+            super(settings);
+            try {
+                File parent = output.getParentFile();
+                if (parent != null) {
+                    output.getParentFile().mkdirs();
+                }
+                delegate = new FileWriter(output);
+            } catch (IOException e) {
+                debug.debug(e);
+                throw e;
             }
-            delegate = new FileWriter(output);
         }
         @Override
         public void close() throws IOException {
@@ -69,20 +83,22 @@ abstract public class TraceOutputWriter extends Writer {
         final private ReentrantReadWriteLock writerLock = new ReentrantReadWriteLock();
         // @GuardedBy writerLock
         private FileWriter currentFileWriter;
-        private String path, baseName;
+        private final String path, baseName;
         private int counter = 1;
-        private int maxRolls;
+        protected final SharedSettings settings;
 
-        public RollingFileWriter(File output) throws IOException {
-            this(output, 5);
-        }
-
-        public RollingFileWriter(File output, int maxRolls) throws IOException {
-            output.getParentFile().mkdirs();
-            currentFileWriter = new FileWriter(output);
-            path = output.getParentFile().getAbsolutePath();
-            baseName = output.getName();
-            this.maxRolls = maxRolls;
+        public RollingFileWriter(File output, SharedSettings settings) throws IOException {
+            super(settings);
+            try {
+                output.getParentFile().mkdirs();
+                currentFileWriter = new FileWriter(output);
+                path = output.getParentFile().getAbsolutePath();
+                baseName = output.getName();
+                this.settings = settings;
+            } catch (IOException e) {
+                debug.debug(e);
+                throw e;
+            }
         }
 
         @Override
@@ -124,7 +140,7 @@ abstract public class TraceOutputWriter extends Writer {
                 writerLock.writeLock().lock();
                 currentFileWriter = getNextWriter();
             } catch (IOException e) {
-                Main.debugPrint(e);
+                debug.debug(e);
             } finally {
                 writerLock.writeLock().unlock();
             }
@@ -140,7 +156,7 @@ abstract public class TraceOutputWriter extends Writer {
             }
             scriptOutputFile_renameFrom.renameTo(scriptOutputFile_renameTo);
             scriptOutputFile_renameFrom = new File(path + File.separator + baseName);
-            if (counter > maxRolls) {
+            if (counter > settings.getFileRollMaxRolls()) {
                 counter = 1;
             }
             return new FileWriter(scriptOutputFile_renameFrom);
@@ -151,25 +167,17 @@ abstract public class TraceOutputWriter extends Writer {
 
     static private class TimeBasedRollingFileWriter extends RollingFileWriter {
         private long lastTimeStamp = System.currentTimeMillis();
-        private long interval;
-        private TimeUnit unit;
+        private final TimeUnit unit = TimeUnit.MILLISECONDS;
 
-        public TimeBasedRollingFileWriter(File output, int maxRolls, long interval, TimeUnit unit) throws IOException {
-            super(output, maxRolls);
-            this.interval = interval;
-            this.unit = unit;
+        public TimeBasedRollingFileWriter(File output, SharedSettings settings) throws IOException {
+            super(output, settings);
         }
 
-        public TimeBasedRollingFileWriter(File output, long interval, TimeUnit unit) throws IOException {
-            super(output);
-            this.interval = interval;
-            this.unit = unit;
-        }
-
+        @Override
         protected boolean needsRoll() {
             long currTime = System.currentTimeMillis();
-            long myInterval =  currTime- lastTimeStamp;
-            if (unit.convert(myInterval, TimeUnit.MILLISECONDS) >= interval) {
+            long myInterval =  currTime - lastTimeStamp;
+            if (unit.convert(myInterval, TimeUnit.MILLISECONDS) >= settings.getFileRollMilliseconds()) {
                 lastTimeStamp = currTime;
                 return true;
             }
@@ -180,14 +188,15 @@ abstract public class TraceOutputWriter extends Writer {
     /**
      * Plain file writer - all output will go to one specified file
      * @param output The file to put the output to
+     * @param settings The settings storage
      * @return Returns an appropriate {@linkplain  TraceOutputWriter} instance or NULL
      */
-    public static TraceOutputWriter fileWriter(File output) {
+    public static TraceOutputWriter fileWriter(File output, SharedSettings settings) {
         TraceOutputWriter instance = null;
         try {
-            instance = new SimpleFileOutput(output);
+            instance = new SimpleFileOutput(output, settings);
         } catch (IOException e) {
-            Main.debugPrint(e);
+            // ignore
         }
         return instance;
     }
@@ -195,34 +204,15 @@ abstract public class TraceOutputWriter extends Writer {
     /**
      * Time based rolling file writer. Defaults to 100 allowed output chunks.
      * @param output The file to put the output to
-     * @param interval The interval between rolling the output file
-     * @param unit The {@linkplain TimeUnit} value the interval is represented in
+     * @param settings The shared settings
      * @return Returns an appropriate {@linkplain  TraceOutputWriter} instance or NULL
      */
-    public static TraceOutputWriter rollingFileWriter(File output, long interval, TimeUnit unit) {
+    public static TraceOutputWriter rollingFileWriter(File output, SharedSettings settings) {
         TraceOutputWriter instance = null;
         try {
-            instance = new TimeBasedRollingFileWriter(null, interval, unit);
+            instance = new TimeBasedRollingFileWriter(null, settings);
         } catch (IOException e) {
-            Main.debugPrint(e);
-        }
-        return instance;
-    }
-
-    /**
-     * Time based rolling file writer.
-     * @param output The file to put the output to
-     * @param maxRolls Maximum number of roll chunks
-     * @param interval The interval between rolling the output file
-     * @param unit The {@linkplain TimeUnit} value the interval is represented in
-     * @return Returns an appropriate {@linkplain  TraceOutputWriter} instance or NULL
-     */
-    public static TraceOutputWriter rollingFileWriter(File output, int maxRolls, long interval, TimeUnit unit) {
-        TraceOutputWriter instance = null;
-        try {
-            instance = new TimeBasedRollingFileWriter(output, maxRolls, interval, unit);
-        } catch (IOException e) {
-            Main.debugPrint(e);
+            // ignore
         }
         return instance;
     }

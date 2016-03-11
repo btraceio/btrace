@@ -41,7 +41,7 @@ import com.sun.btrace.annotations.Level;
 @BTrace(unsafe = true)
 public class MethodCallReturnAugmented1 {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), enableAt = @Level("1"))
+              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), enableAt = @Level(">=1"))
     public static long args(@Return long retVal, String a, long b) {
         println("args");
         return retVal + 1;

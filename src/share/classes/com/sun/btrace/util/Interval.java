@@ -205,8 +205,7 @@ public class Interval implements Comparable<Interval>{
         } else {
             m = COMP_PATTERN.matcher(s);
             if (m.matches()) {
-                String operator = m.group(1);
-                operator = operator == null ? "GE" : operator;
+                String operator = m.group(1) != null ? m.group(1) : "";
                 String val = m.group(2);
                 int level = Integer.parseInt(val);
                 switch (operator) {

@@ -42,7 +42,7 @@ public class Level {
     }
 
     public static Level fromString(String s) {
-        Interval l = s != null ? Interval.fromString(s) : Interval.all();
-        return new Level(l);
+        Interval itv = Interval.fromString(s);
+        return new Level(itv);
     }
-    }
+}

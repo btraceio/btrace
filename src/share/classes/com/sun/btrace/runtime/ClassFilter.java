@@ -1,12 +1,12 @@
 /*
- * Copyright 2008-2010 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Sun designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Sun in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -18,9 +18,9 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 package com.sun.btrace.runtime;
 
@@ -40,6 +40,10 @@ import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.lang.ref.Reference;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
 /**
@@ -52,7 +56,7 @@ import java.util.regex.PatternSyntaxException;
 public class ClassFilter {
     private static final Class<?> referenceClz = Reference.class;
 
-    private String[] sourceClasses;
+    private Set<String> sourceClasses;
     private Pattern[] sourceClassPatterns;
     private String[] annotationClasses;
     private Pattern[] annotationClassPatterns;
@@ -85,12 +89,6 @@ public class ClassFilter {
             return false;
         }
 
-        if (target.getName().startsWith("sun.instrument.") ||
-            target.getName().startsWith("java.lang.instrument.")) {
-            // do not instrument the instrumentation related classes
-            return false;
-        }
-
         try {
             // ignore classes annotated with @BTrace -
             // We don't want to instrument tracing classes!
@@ -98,7 +96,6 @@ public class ClassFilter {
                 return false;
             }
         } catch (Throwable t) {
-            System.err.println("btrace WARNING: " + target.getName() + " matching failed due to exception:\n" + t.getMessage());
             // thrown from java.lang.Class.initAnnotationsIfNecessary()
             // seems to be a case when trying to access non-existing annotations
             // on a superclass
@@ -107,10 +104,8 @@ public class ClassFilter {
         }
 
         String className = target.getName();
-        for (String name : sourceClasses) {
-            if (name.equals(className)) {
-                return true;
-            }
+        if (isNameMatching(className)) {
+            return true;
         }
 
         for (Pattern pat : sourceClassPatterns) {
@@ -150,14 +145,48 @@ public class ClassFilter {
         return false;
     }
 
-    public boolean isCandidate(byte[] classBytes) {
-        return isCandidate(new ClassReader(classBytes));
+    public boolean isCandidate(ClassLoader loader, String cName, byte[] classBytes) {
+        return isCandidate(loader, cName, new FastClassReader(classBytes));
     }
 
-    public boolean isCandidate(ClassReader reader) {
-        CheckingVisitor cv = new CheckingVisitor();
-        InstrumentUtils.accept(reader, cv);
-        return cv.isCandidate();
+    private boolean isCandidate(ClassLoader loader, String cName, FastClassReader reader) {
+        if (isNameMatching(cName.replace('/', '.'))) {
+            return true;
+        }
+        if ((annotationClasses != null && annotationClasses.length > 0) ||
+            (annotationClassPatterns != null && annotationClassPatterns.length > 0)) {
+            CheckingVisitor cv = new CheckingVisitor(loader);
+            reader.accept(cv, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+            if (cv.isCandidate()) {
+                return true;
+            }
+        }
+        if (superTypes != null && superTypes.length > 0) {
+            String[] info = reader.readClassSupers();
+            if (isSubTypeOf(cName, loader, info)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isNameMatching(String clzName) {
+        if (clzName.startsWith("sun.instrument.") ||
+            clzName.startsWith("java.lang.instrument.")) {
+            // do not instrument the instrumentation related classes
+            return false;
+        }
+
+        if (sourceClasses.contains(clzName))  {
+            return true;
+        }
+
+        for (Pattern pat : sourceClassPatterns) {
+            if (pat.matcher(clzName).matches()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /*
@@ -180,13 +209,80 @@ public class ClassFilter {
         }
     }
 
+    /**
+     * Return whether given Class <i>typeA</i> is subtype of any of the
+     * given type names.
+     * @param typeA the type to check
+     * @param loader the classloader for loading the type (my be null)
+     * @param types any requested supertypes
+     **/
+    public static boolean isSubTypeOf(String typeA, ClassLoader loader, String ... types) {
+        loader = (loader != null ? loader : ClassLoader.getSystemClassLoader());
+
+        if (typeA == null) {
+            return false;
+        }
+        Set<String> typeSet = new HashSet<>(Arrays.asList(types));
+        if (typeSet.contains(typeA)) {
+            return true;
+        }
+
+        LinkedHashSet<String> closure = new LinkedHashSet<>();
+        InstrumentUtils.collectHierarchyClosure(loader, typeA, closure);
+
+        closure.retainAll(typeSet);
+        return !closure.isEmpty();
+    }
+
+    private boolean isCandidate(String clzName, String superType, String[] itfcs) {
+        clzName = clzName.replace('/', '.');
+
+        if (referenceClz.getName().equals(clzName)) {
+            // instrumenting the <b>java.lang.ref.Reference</b> class will lead
+            // to StackOverflowError in <b>java.lang.ThreadLocal.get()</b>
+            return false;
+        }
+
+        if (clzName.startsWith("sun.instrument.") ||
+            clzName.startsWith("java.lang.instrument.")) {
+            // do not instrument the instrumentation related classes
+            return false;
+        }
+
+        for (String className : sourceClasses) {
+            if (className.equals(clzName)) {
+                return true;
+            }
+        }
+
+        for (Pattern pat : sourceClassPatterns) {
+            if (pat.matcher(clzName).matches()) {
+                return true;
+            }
+        }
+
+        for (String st : superTypesInternal) {
+            if (superType.equals(st)) {
+                return true;
+            }
+            if (itfcs != null) {
+                for (String iface : itfcs) {
+                    if (iface.equals(st)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private class CheckingVisitor extends ClassVisitor {
 
         private boolean isInterface;
         private boolean isCandidate;
         private final AnnotationVisitor nullAnnotationVisitor = new AnnotationVisitor(Opcodes.ASM5) {};
 
-        public CheckingVisitor() {
+        public CheckingVisitor(ClassLoader loader) {
             super(Opcodes.ASM5);
         }
 
@@ -195,66 +291,16 @@ public class ClassFilter {
         }
 
         @Override
-        public void visit(int version, int access, String name,
-                String signature, String superName, String[] interfaces) {
-            if ((access & ACC_INTERFACE) != 0) {
-                isInterface = true;
-                isCandidate = false;
-                return;
-            }
-            name = name.replace('/', '.');
-
-            if (referenceClz.getName().equals(name)) {
-                // instrumenting the <b>java.lang.ref.Reference</b> class will lead
-                // to StackOverflowError in <b>java.lang.ThreadLocal.get()</b>
-                return;
-            }
-
-            if (name.startsWith("sun.instrument.") ||
-                name.startsWith("java.lang.instrument.")) {
-                // do not instrument the instrumentation related classes
-                return;
-            }
-
-            for (String className : sourceClasses) {
-                if (className.equals(name)) {
-                    isCandidate = true;
-                    return;
-                }
-            }
-
-            for (Pattern pat : sourceClassPatterns) {
-                if (pat.matcher(name).matches()) {
-                    isCandidate = true;
-                    return;
-                }
-            }
-
-            for (String st : superTypesInternal) {
-                if (superName.equals(st)) {
-                    isCandidate = true;
-                    return;
-                }
-                for (String iface : interfaces) {
-                    if (iface.equals(st)) {
-                        isCandidate = true;
-                        return;
-                    }
-                }
-            }
-        }
-
-        @Override
         public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
             if (isInterface) {
-                return nullAnnotationVisitor;
+                FastClassReader.bailout();
             }
 
             if (BTRACE_DESC.equals(desc)) {
                 // ignore classes annotated with @BTrace -
                 // we don't want to instrument tracing classes!
                 isCandidate = false;
-                return nullAnnotationVisitor;
+                FastClassReader.bailout();
             }
 
             if (!isCandidate) {
@@ -262,51 +308,18 @@ public class ClassFilter {
                 for (String name : annotationClasses) {
                     if (annoName.equals(name)) {
                         isCandidate = true;
-                        return nullAnnotationVisitor;
+                        FastClassReader.bailout();
                     }
                 }
                 for (Pattern pat : annotationClassPatterns) {
                     if (pat.matcher(annoName).matches()) {
                         isCandidate = true;
-                        return nullAnnotationVisitor;
+                        FastClassReader.bailout();
                     }
                 }
             }
 
             return nullAnnotationVisitor;
-        }
-
-        @Override
-        public void visitAttribute(Attribute attr) {
-        }
-
-        @Override
-        public void visitEnd() {
-        }
-
-        @Override
-        public FieldVisitor visitField(int access, String name,
-                String desc, String signature, Object value) {
-            return null;
-        }
-
-        @Override
-        public void visitInnerClass(String name, String outerName,
-                String innerName, int access) {
-        }
-
-        @Override
-        public MethodVisitor visitMethod(int access, String name, String desc,
-                String signature, String[] exceptions) {
-            return null;
-        }
-
-        @Override
-        public void visitOuterClass(String owner, String name, String desc) {
-        }
-
-        @Override
-        public void visitSource(String source, String debug) {
         }
     }
 
@@ -355,8 +368,8 @@ public class ClassFilter {
             }
         }
 
-        sourceClasses = new String[strSrcList.size()];
-        strSrcList.toArray(sourceClasses);
+        sourceClasses = new HashSet(strSrcList.size());
+        sourceClasses.addAll(strSrcList);
         sourceClassPatterns = new Pattern[patSrcList.size()];
         patSrcList.toArray(sourceClassPatterns);
         superTypes = new String[superTypesList.size()];

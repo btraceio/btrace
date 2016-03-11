@@ -29,3 +29,4 @@ junit*
 !/lib/btrace-jctools-core-1.1.jar
 CHANGELOG.md
 gradle.properties
+/.nb-gradle/
