@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,12 @@ public final class OnMethod extends SpecialParameterHolder {
     // target method descriptor on which this annotation is specified
     private String targetDescriptor;
 
+    private boolean classRegexMatcher = false;
+    private boolean methodRegexMatcher = false;
+    private boolean classAnnotationMatcher = false;
+    private boolean methodAnnotationMatcher = false;
+    private boolean subtypeMatcher = false;
+
     private int samplerMean = 0;
     private Sampled.Sampler samplerKind = Sampled.Sampler.None;
 
@@ -77,6 +83,24 @@ public final class OnMethod extends SpecialParameterHolder {
     }
 
     public void setClazz(String clazz) {
+        if (clazz.charAt(0) == '+') {
+            this.subtypeMatcher = true;
+            clazz = clazz.substring(1);
+        } else {
+            this.subtypeMatcher = false;
+            if (clazz.charAt(0) == '@') {
+                this.classAnnotationMatcher = true;
+                clazz = clazz.substring(1);
+            } else {
+                this.classAnnotationMatcher = false;
+            }
+            if (clazz.charAt(0) == '/' && Constants.REGEX_SPECIFIER.matcher(clazz).matches()) {
+                this.classRegexMatcher = true;
+                clazz = clazz.substring(1, clazz.length() - 1);
+            } else {
+                this.classRegexMatcher = false;
+            }
+        }
         this.clazz = clazz;
     }
 
@@ -85,6 +109,18 @@ public final class OnMethod extends SpecialParameterHolder {
     }
 
     public void setMethod(String method) {
+        if (method.charAt(0) == '@') {
+            this.methodAnnotationMatcher = true;
+            method = method.substring(1);
+        } else {
+            this.methodAnnotationMatcher = false;
+        }
+        if (method.charAt(0) == '/' && Constants.REGEX_SPECIFIER.matcher(method).matches()) {
+            this.methodRegexMatcher = true;
+            method = method.substring(1, method.length() - 1);
+        } else {
+            this.methodRegexMatcher = false;
+        }
         this.method = method;
     }
 
@@ -146,5 +182,30 @@ public final class OnMethod extends SpecialParameterHolder {
 
     public BTraceMethodNode getMethodNode() {
         return bmn;
+    }
+
+    public boolean isClassRegexMatcher() {
+        return classRegexMatcher;
+    }
+
+    public boolean isMethodRegexMatcher() {
+        return methodRegexMatcher;
+    }
+
+    public boolean isClassAnnotationMatcher() {
+        return classAnnotationMatcher;
+    }
+
+    public boolean isMethodAnnotationMatcher() {
+        return methodAnnotationMatcher;
+    }
+
+    public boolean isSubtypeMatcher() {
+        return subtypeMatcher;
+    }
+
+    @Override
+    public String toString() {
+        return "OnMethod{" + "clazz=" + clazz + ", method=" + method + ", type=" + type + ", loc=" + loc + ", targetName=" + targetName + ", targetDescriptor=" + targetDescriptor + ", classRegexMatcher=" + classRegexMatcher + ", methodRegexMatcher=" + methodRegexMatcher + ", classAnnotationMatcher=" + classAnnotationMatcher + ", methodAnnotationMatcher=" + methodAnnotationMatcher + ", subtypeMatcher=" + subtypeMatcher + ", samplerMean=" + samplerMean + ", samplerKind=" + samplerKind + ", level=" + level + ", bmn=" + bmn + '}';
     }
 }

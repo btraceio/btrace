@@ -22,10 +22,9 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.btrace.agent;
+package com.sun.btrace.runtime;
 
 import com.sun.btrace.DebugSupport;
-import com.sun.btrace.runtime.FastClassReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
@@ -101,7 +100,11 @@ public final class ClassInfo {
      * Class ID = internal class name
      * @return internal class name
      */
-    public String getClassId() {
+    public String getClassName() {
+        return classId.replace('.', '/');
+    }
+
+    public String getJavaClassName() {
         return classId;
     }
 
@@ -111,7 +114,7 @@ public final class ClassInfo {
         InputStream typeIs = cl == null ? SYS_CL.getResourceAsStream(rsrcName) : cl.getResourceAsStream(rsrcName);
         if (typeIs != null) {
             try {
-                FastClassReader cr = new FastClassReader(typeIs);
+                BTraceClassReader cr = new BTraceClassReader(cl, typeIs);
                 String[] info = cr.readClassSupers();
                 String superName = info[0];
                 if (superName != null) {

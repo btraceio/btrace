@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,29 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.runtime.instr.LineNumberInstrumentor;
+import com.sun.btrace.runtime.instr.MethodReturnInstrumentor;
+import com.sun.btrace.runtime.instr.SynchronizedInstrumentor;
+import com.sun.btrace.runtime.instr.MethodCallInstrumentor;
+import com.sun.btrace.runtime.instr.CatchInstrumentor;
+import com.sun.btrace.runtime.instr.ErrorReturnInstrumentor;
+import com.sun.btrace.runtime.instr.ThrowInstrumentor;
+import com.sun.btrace.runtime.instr.FieldAccessInstrumentor;
+import com.sun.btrace.runtime.instr.MethodInstrumentor;
+import com.sun.btrace.runtime.instr.TypeCheckInstrumentor;
+import com.sun.btrace.runtime.instr.ObjectAllocInstrumentor;
+import com.sun.btrace.runtime.instr.ArrayAccessInstrumentor;
+import com.sun.btrace.runtime.instr.ArrayAllocInstrumentor;
 import com.sun.btrace.AnyType;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.annotations.Where;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
@@ -53,6 +60,7 @@ import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.TreeSet;
 
@@ -63,19 +71,25 @@ import java.util.TreeSet;
  * @author A. Sundararajan
  */
 public class Instrumentor extends ClassVisitor {
-    private final BTraceClassNode bcn;
-    private final List<OnMethod> applicableOnMethods = new ArrayList<>();
+    private final BTraceProbe bcn;
+    private final Collection<OnMethod> applicableOnMethods;
     private final Set<OnMethod> calledOnMethods = new HashSet<>();
     private String className, superName;
-    private Class clazz;
-    private ClassLoader loader;
+    private final ClassLoader loader;
 
-    public Instrumentor(ClassLoader loader, Class clazz,
-            BTraceClassNode bcn, ClassVisitor cv) {
+    static Instrumentor create(BTraceClassReader cr, BTraceProbe bcn, ClassVisitor cv) {
+        Collection<OnMethod> applicables = bcn.getApplicableHandlers(cr);
+        if (applicables != null && !applicables.isEmpty()) {
+            return new Instrumentor(cr.getClassLoader(), bcn, applicables, cv);
+        }
+        return null;
+    }
+
+    private Instrumentor(ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
         super(ASM5, cv);
-        this.clazz = clazz;
         this.bcn = bcn;
-        this.loader = loader;
+        this.loader = cl;
+        this.applicableOnMethods = applicables;
     }
 
     final public boolean hasMatch() {
@@ -87,79 +101,7 @@ public class Instrumentor extends ClassVisitor {
         String signature, String superName, String[] interfaces) {
         className = name;
         this.superName = superName;
-        // we filter the probe methods applicable for this particular
-        // class by brute force walking. FIXME: should I optimize?
-        String externalName = name.replace('/', '.');
-        for (OnMethod om : bcn.getOnMethods()) {
-            String probeClazz = om.getClazz();
-            if (probeClazz.length() == 0) {
-                continue;
-            }
-            char firstChar = probeClazz.charAt(0);
-            if (firstChar == '/' &&
-                REGEX_SPECIFIER.matcher(probeClazz).matches()) {
-                probeClazz = probeClazz.substring(1, probeClazz.length() - 1);
-                try {
-                    if (externalName.matches(probeClazz)) {
-                        applicableOnMethods.add(om);
-                    }
-                } catch (PatternSyntaxException pse) {
-                    reportPatternSyntaxException(probeClazz);
-                }
-            } else if (firstChar == '+') {
-                // super type being matched.
-                String superType = probeClazz.substring(1);
-                // internal name of super type.
-                String superTypeInternal = superType.replace('.', '/');
-                /*
-                 * The following checks are ordered in the order of complexity
-                 * <ol>
-                 * <li>Check that the class is actually the probe declared super type</li>
-                 * <li>Check that the immediate superclass == probe declared super type</li>
-                 * <li>Check whether the immediate interfaces contain the probe declared super type</li>
-                 * <li>Collect the type hierarchy closure for the class and check if it contains
-                 *     the probe declared super type</li>
-                 * </ol>
-                 */
-                if (name.equals(superTypeInternal) ||
-                    superName.equals(superTypeInternal) ||
-                    isInArray(interfaces, superTypeInternal) ||
-                    ClassFilter.isSubTypeOf(name, loader, superTypeInternal)) {
-                    applicableOnMethods.add(om);
-                }
-            } else if (probeClazz.equals(externalName)) {
-                applicableOnMethods.add(om);
-            }
-        }
         super.visit(version, access, name, signature, superName, interfaces);
-    }
-
-    @Override
-    public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-        AnnotationVisitor av = super.visitAnnotation(desc, visible);
-        String extName = Type.getType(desc).getClassName();
-        for (OnMethod om : bcn.getOnMethods()) {
-            String probeClazz = om.getClazz();
-            if (probeClazz.length() > 0 && probeClazz.charAt(0) == '@') {
-                probeClazz = probeClazz.substring(1);
-                if (probeClazz.length() == 0) {
-                    continue;
-                }
-                if (REGEX_SPECIFIER.matcher(probeClazz).matches()) {
-                    probeClazz = probeClazz.substring(1, probeClazz.length() - 1);
-                    try {
-                        if (extName.matches(probeClazz)) {
-                            applicableOnMethods.add(om);
-                        }
-                    } catch (PatternSyntaxException pse) {
-                        reportPatternSyntaxException(probeClazz);
-                    }
-                } else if (probeClazz.equals(extName)) {
-                    applicableOnMethods.add(om);
-                }
-            }
-        }
-        return av;
     }
 
     @Override
@@ -185,8 +127,10 @@ public class Instrumentor extends ClassVisitor {
                 appliedOnMethods.add(om);
             } else {
                 String methodName = om.getMethod();
+                boolean regexMatch = om.isMethodRegexMatcher();
                 if (methodName.equals("")) {
-                    methodName = "/.*/"; // match all the methods
+                    methodName = ".*"; // match all the methods
+                    regexMatch = true;
                 }
                 if (methodName.equals("#")) {
                     methodName = om.getTargetName(); // match just the same-named method
@@ -195,9 +139,7 @@ public class Instrumentor extends ClassVisitor {
                 if (methodName.equals(name) &&
                     typeMatches(om.getType(), desc)) {
                     appliedOnMethods.add(om);
-                } else if (methodName.charAt(0) == '/' &&
-                           REGEX_SPECIFIER.matcher(methodName).matches()) {
-                    methodName = methodName.substring(1, methodName.length() - 1);
+                } else if (regexMatch) {
                     try {
                         if (name.matches(methodName) &&
                             typeMatches(om.getType(), desc)) {
@@ -250,13 +192,8 @@ public class Instrumentor extends ClassVisitor {
                 for (OnMethod om : applicableOnMethods) {
                     String extAnnoName = Type.getType(annoDesc).getClassName();
                     String annoName = om.getMethod();
-                    if (annoName.length() > 0 && annoName.charAt(0) == '@') {
-                        annoName = annoName.substring(1);
-                        if (annoName.length() == 0) {
-                            continue;
-                        }
-                        if (REGEX_SPECIFIER.matcher(annoName).matches()) {
-                            annoName = annoName.substring(1, annoName.length() - 1);
+                    if (om.isMethodAnnotationMatcher()) {
+                        if (om.isMethodRegexMatcher()) {
                             try {
                                 if (extAnnoName.matches(annoName)) {
                                     visitor = instrumentorFor(om, visitor, mAccess, name, desc);
@@ -310,7 +247,7 @@ public class Instrumentor extends ClassVisitor {
                 }
             }
             mName.append(' ');
-            mName.append(TypeUtils.descriptorToDeclaration(desc, owner, name));
+            mName.append(TypeUtils.descriptorToSimplified(desc, owner, name));
         } else {
             mName.append(name);
         }
@@ -1754,35 +1691,6 @@ public class Instrumentor extends ClassVisitor {
         cv.visitEnd();
     }
 
-
-    public static void main(String[] args) throws Exception {
-        if (args.length != 2) {
-            System.err.println("Usage: java com.sun.btrace.runtime.Instrumentor <btrace-class> <target-class>]");
-            System.exit(1);
-        }
-
-        String className = args[0].replace('.', '/') + ".class";
-        FileInputStream fis = new FileInputStream(className);
-        byte[] buf = new byte[(int)new File(className).length()];
-        fis.read(buf);
-        fis.close();
-        BTraceClassNode bcn = BTraceClassNode.from(buf, true);
-        Verifier verifier = new Verifier(bcn);
-        InstrumentUtils.accept(new ClassReader(buf), verifier);
-        buf = bcn.getBytecode();
-        FileOutputStream fos = new FileOutputStream(className);
-        fos.write(buf);
-        fos.close();
-        String targetClass = args[1].replace('.', '/') + ".class";
-        fis = new FileInputStream(targetClass);
-        ClassWriter writer = InstrumentUtils.newClassWriter();
-        ClassReader reader = new ClassReader(fis);
-        InstrumentUtils.accept(reader, new Instrumentor(ClassLoader.getSystemClassLoader(), null,
-                    bcn, writer));
-        fos = new FileOutputStream(targetClass);
-        fos.write(writer.toByteArray());
-    }
-
     private String getActionMethodName(String name) {
         return InstrumentUtils.getActionPrefix(bcn.name) + name;
     }
@@ -1793,6 +1701,12 @@ public class Instrumentor extends ClassVisitor {
         calledOnMethods.add(om);
     }
 
+    /**
+     * Currently used for regex matching in the 'location' attribute
+     * @param pattern
+     * @param input
+     * @return
+     */
     private boolean matches(String pattern, String input) {
         if (pattern.length() == 0) {
             return false;
@@ -1820,15 +1734,6 @@ public class Instrumentor extends ClassVisitor {
             Type[] args2 = Type.getArgumentTypes(desc);
             return TypeUtils.isCompatible(args1, args2);
         }
-    }
-
-    private static boolean isInArray(String[] candidates, String given) {
-        for (String c : candidates) {
-            if (c.equals(given)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static String getLevelStrSafe(OnMethod om) {

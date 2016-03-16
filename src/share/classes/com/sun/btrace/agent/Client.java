@@ -25,11 +25,13 @@
 
 package com.sun.btrace.agent;
 
+import com.sun.btrace.runtime.BTraceProbeFactory;
+import com.sun.btrace.runtime.ClassCache;
+import com.sun.btrace.runtime.ClassInfo;
+import com.sun.btrace.runtime.BTraceTransformer;
 import com.sun.btrace.DebugSupport;
 import com.sun.btrace.SharedSettings;
 import java.io.IOException;
-import java.security.ProtectionDomain;
-import java.util.List;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.BTraceRuntime;
@@ -40,32 +42,20 @@ import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
-import com.sun.btrace.annotations.Kind;
-import com.sun.btrace.annotations.Where;
-import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.comm.RetransformationStartNotification;
-import com.sun.btrace.runtime.BTraceClassNode;
+import com.sun.btrace.runtime.BTraceProbe;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
-import com.sun.btrace.runtime.Location;
-import com.sun.btrace.runtime.NullPerfReaderImpl;
-import com.sun.btrace.runtime.Verifier;
-import com.sun.btrace.runtime.OnMethod;
-import com.sun.btrace.runtime.OnProbe;
-import com.sun.btrace.runtime.ProbeDescriptor;
-import com.sun.btrace.runtime.RunnableGeneratorImpl;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
-import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -82,27 +72,21 @@ import sun.reflect.annotation.AnnotationType;
  * @author A. Sundararajan
  * @author J. Bachorik (j.bachorik@btrace.io)
  */
-abstract class Client implements ClassFileTransformer, CommandListener {
+abstract class Client implements CommandListener {
     private static final Map<String, PrintWriter> writerMap = new HashMap<>();
 
     protected final Instrumentation inst;
     private volatile BTraceRuntime runtime;
-    private volatile boolean isClassRenamed = false;
-    private volatile String className;
     private volatile String outputName;
-    private volatile Class btraceClazz;
     private volatile byte[] btraceCode;
-    private volatile List<OnMethod> onMethods;
-    private volatile List<OnProbe> onProbes;
-    private volatile ClassFilter filter;
-    private volatile boolean skipRetransforms;
-    private BTraceClassNode btraceClass;
+    private BTraceProbe probe;
 
     private Timer flusher;
     protected volatile PrintWriter out;
 
-    protected final SharedSettings settings = new SharedSettings();
-    protected final DebugSupport debug = new DebugSupport(settings);
+    protected final SharedSettings settings;
+    protected final DebugSupport debug;
+    private final BTraceTransformer transformer;
 
     static {
         ClassFilter.class.getClass();
@@ -120,30 +104,19 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
 
-    private static PerfReader createPerfReaderImpl() {
-        // see if we can access any jvmstat class
-        try {
-            Class.forName("sun.jvmstat.monitor.MonitoredHost");
-            return (PerfReader) Class.forName("com.sun.btrace.runtime.PerfReaderImpl").newInstance();
-        } catch (Exception exp) {
-            // no luck, create null implementation
-            return new NullPerfReaderImpl();
-        }
+    Client(ClientContext ctx) {
+        this(ctx.getInstr(), ctx.getSettings(), ctx.getTransformer());
     }
 
-    Client(Instrumentation inst) {
-        this(inst, null);
-    }
-
-    Client(Instrumentation inst, SharedSettings s) {
+    private Client(Instrumentation inst, SharedSettings s, BTraceTransformer t) {
         this.inst  = inst;
-        if (s != null) {
-            this.settings.from(s);
-        }
+        this.settings = s != null ? s : SharedSettings.GLOBAL;
+        this.transformer = t;
+        this.debug = new DebugSupport(settings);
         setupWriter();
     }
 
-    protected void setupWriter() {
+    protected final void setupWriter() {
         String outputFile = settings.getOutputFile();
         if (outputFile == null) return;
 
@@ -216,82 +189,6 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         return fName;
     }
 
-    @Override
-    public byte[] transform(
-                ClassLoader loader,
-                String cname,
-                Class<?> classBeingRedefined,
-                ProtectionDomain protectionDomain,
-                byte[] classfileBuffer)
-        throws IllegalClassFormatException {
-        boolean entered = BTraceRuntime.enter();
-        try {
-            if (cname == null) {
-                cname = "<anonymous>";
-            }
-            if (isBTraceClass(cname) || isSensitiveClass(cname)) {
-                if (isDebug()) {
-                    debugPrint("skipping transform for BTrace class " + cname); // NOI18N
-                }
-                return null;
-            }
-
-            if (classBeingRedefined != null) {
-                // class already defined; retransforming
-                if (!skipRetransforms && filter.isCandidate(classBeingRedefined)) {
-                    return doTransform(loader, classBeingRedefined, cname, classfileBuffer);
-                } else {
-                    if (isDebug()) {
-                        debugPrint("client " + className + "[" + skipRetransforms + "]: skipping transform for " + cname); // NOi18N
-                    }
-                }
-            } else {
-                // class not yet defined
-                if (filter.isCandidate(loader, cname, classfileBuffer)) {
-                    return doTransform(loader, classBeingRedefined, cname, classfileBuffer);
-                } else {
-                    if (isDebug()) {
-                        debugPrint("client " + className + "[" + skipRetransforms + "]: skipping transform for " + cname); // NOI18N
-                    }
-                }
-            }
-
-            return null; // ignore
-        } catch (Exception e) {
-            e.printStackTrace();
-            if (e instanceof IllegalClassFormatException) {
-                throw (IllegalClassFormatException)e;
-            }
-            return null;
-        } finally {
-            if (entered) {
-                BTraceRuntime.leave();
-            }
-        }
-    }
-
-    void registerTransformer() {
-        inst.addTransformer(this, true);
-    }
-
-    void unregisterTransformer() {
-        inst.removeTransformer(this);
-    }
-
-    private byte[] doTransform(ClassLoader loader, Class<?> classBeingRedefined, String cname, byte[] classfileBuffer) {
-        if (isDebug()) {
-            debugPrint("client " + className + ": instrumenting " + cname);
-        }
-        if (settings.isTrackRetransforms()) {
-            try {
-                onCommand(new RetransformClassNotification(cname));
-            } catch (IOException e) {
-                debugPrint(e);
-            }
-        }
-        return instrument(loader, classBeingRedefined, cname, classfileBuffer);
-    }
-
     protected synchronized void onExit(int exitCode) {
         cleanupTransformers();
         try {
@@ -305,50 +202,27 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         }
     }
 
-    protected Class loadClass(InstrumentCommand instr) throws IOException {
+    protected final Class loadClass(InstrumentCommand instr) throws IOException {
         String[] args = instr.getArguments();
         this.btraceCode = instr.getCode();
         try {
-            btraceClass = verifyAndLoad(btraceCode);
-        } catch (Throwable th) {
-            debugPrint(th);
-            errorExit(th);
-            return null;
-        } finally {
-            if (settings.isDumpClasses()) {
-                debug.dumpClass(className + "_orig", className + "_orig", btraceCode);
-            }
-        }
-
-        this.filter = new ClassFilter(onMethods);
-        debugPrint("created class filter");
-
-        if (isClassRenamed) {
-            if (isDebug()) {
-                debugPrint("class renamed to " + className);
-            }
-            onCommand(new RenameCommand(className));
-        }
-        try {
-            if (isDebug()) {
-                debugPrint("preprocessing BTrace class " + className);
-            }
-            btraceCode = btraceClass.getBytecode();
-            if (isDebug()) {
-                debugPrint("preprocessed BTrace class " + className);
-            }
+            probe = verifyAndLoad(btraceCode);
         } catch (Throwable th) {
             debugPrint(th);
             errorExit(th);
             return null;
         }
-        if (settings.isDumpClasses()) {
-            debug.dumpClass(className, className, btraceCode);
+
+        if (probe.isClassRenamed()) {
+            if (isDebug()) {
+                debugPrint("class renamed to " + probe.getClassName());
+            }
+            onCommand(new RenameCommand(probe.getClassName()));
         }
         if (isDebug()) {
-            debugPrint("creating BTraceRuntime instance for " + className);
+            debugPrint("creating BTraceRuntime instance for " + probe.getClassName());
         }
-        this.runtime = new BTraceRuntime(className, args, this, debug, inst);
+        this.runtime = new BTraceRuntime(probe.getClassName(), args, this, debug, inst);
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
@@ -363,47 +237,19 @@ abstract class Client implements ClassFileTransformer, CommandListener {
             }
         }));
         if (isDebug()) {
-            debugPrint("created BTraceRuntime instance for " + className);
-            debugPrint("removing @OnMethod, @OnProbe and shared methods");
-        }
-        byte[] codeBuf = btraceClass.getBytecode(true);
-
-        if (settings.isDumpClasses()) {
-            debug.dumpClass(className + "_bcp", className + "_bcp", codeBuf);
+            debugPrint("created BTraceRuntime instance for " + probe.getClassName());
+            debugPrint("sending Okay command");
         }
 
-        debugPrint("removed @OnMethod, @OnProbe and shared methods");
-        debugPrint("sending Okay command");
         onCommand(new OkayCommand());
-        // This extra BTraceRuntime.enter is needed to
-        // check whether we have already entered before.
-        boolean enteredHere = BTraceRuntime.enter();
+
         try {
-            // The trace class static initializer needs to be run
-            // without BTraceRuntime.enter(). Please look at the
-            // static initializer code of trace class.
-            BTraceRuntime.leave();
-            if (isDebug()) {
-                debugPrint("about to defineClass " + className);
-            }
-            if (shouldAddTransformer()) {
-                this.btraceClazz = runtime.defineClass(codeBuf);
-            } else {
-                this.btraceClazz = runtime.defineClass(codeBuf, false);
-            }
-            if (isDebug()) {
-                debugPrint("defineClass succeeded for " + className);
-            }
+            return probe.register(runtime, transformer);
         } catch (Throwable th) {
             debugPrint(th);
             errorExit(th);
             return null;
-        } finally {
-            // leave BTraceRuntime enter state as it was before
-            // we started executing this method.
-            if (! enteredHere) BTraceRuntime.enter();
         }
-        return this.btraceClazz;
     }
 
     protected void closeAll() throws IOException {
@@ -416,7 +262,7 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         writerMap.remove(outputName);
     }
 
-    protected void errorExit(Throwable th) throws IOException {
+    protected final void errorExit(Throwable th) throws IOException {
         debugPrint("sending error command");
         onCommand(new ErrorCommand(th));
         debugPrint("sending exit command");
@@ -425,11 +271,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
     }
 
     protected final void cleanupTransformers() {
-        if (shouldAddTransformer()) {
-            if (isDebug()) {
-                debugPrint("onExit: removing transformer for " + className);
-            }
-            unregisterTransformer();
+        if (probe != null) {
+            probe.unregister();
         }
     }
 
@@ -454,12 +297,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         return runtime;
     }
 
-    final String getClassName() {
-        return className;
-    }
-
-    final Class getBTraceClass() {
-        return btraceClazz;
+    protected final String getClassName() {
+        return probe.getClassName();
     }
 
     final boolean isCandidate(Class c) {
@@ -470,16 +309,8 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         if (isBTraceClass(cname)) {
             return false;
         } else {
-            return filter.isCandidate(c);
+            return probe.willInstrument(c);
         }
-    }
-
-    final boolean shouldAddTransformer() {
-        return onMethods != null && onMethods.size() > 0;
-    }
-
-    final void skipRetransforms() {
-        skipRetransforms = true;
     }
 
     final void startRetransformClasses(int numClasses) {
@@ -507,148 +338,62 @@ abstract class Client implements ClassFileTransformer, CommandListener {
         return name.startsWith("com/sun/btrace/");
     }
 
-    /*
-     * Certain classes like java.lang.ThreadLocal and it's
-     * inner classes, java.lang.Object cannot be safely
-     * instrumented with BTrace. This is because BTrace uses
-     * ThreadLocal class to check recursive entries due to
-     * BTrace's own functions. But this leads to infinite recursions
-     * if BTrace instruments java.lang.ThreadLocal for example.
-     * For now, we avoid such classes till we find a solution.
-     */
-    private static boolean isSensitiveClass(String name) {
-        return name.equals("java/lang/Object") || // NOI18N
-               name.startsWith("java/lang/ThreadLocal") || // NOI18N
-               name.startsWith("sun/reflect") || // NOI18N
-               name.equals("sun/misc/Unsafe")  || // NOI18N
-               name.startsWith("sun/security/") || // NOI18N
-               name.equals("java/lang/VerifyError"); // NOI18N
-    }
+    private BTraceProbe verifyAndLoad(byte[] buf) {
+        BTraceProbeFactory f = new BTraceProbeFactory(settings);
+        debugPrint("loading BTrace class");
+        BTraceProbe cn = f.createProbe(buf);
 
-    private byte[] instrument(ClassLoader loader, Class clazz, String cname, byte[] target) {
-        byte[] instrumentedCode;
-        try {
-            ClassWriter writer = InstrumentUtils.newClassWriter(loader, target);
-            ClassReader reader = new ClassReader(target);
-            Instrumentor i = new Instrumentor(loader, clazz, btraceClass, writer);
-            InstrumentUtils.accept(reader, i);
-            if (isDebug() && !i.hasMatch()) {
-                debugPrint("*WARNING* No method was matched for class " + cname); // NOI18N
-            }
-            instrumentedCode = writer.toByteArray();
-        } catch (Throwable th) {
-            debugPrint(th);
-            return null;
-        }
-        if (settings.isDumpClasses()) {
-            debug.dumpClass(className, cname, instrumentedCode);
-        }
-        return instrumentedCode;
-    }
-
-    private BTraceClassNode verifyAndLoad(byte[] buf) {
-        debugPrint("loading and verifying BTrace class");
-        BTraceClassNode cn = BTraceClassNode.from(buf, settings.isUnsafe());
-
-        className = cn.name.replace('/', '.');
-        isClassRenamed = cn.isClassRenamed();
         if (isDebug()) {
-            debugPrint("verified '" + className + "' successfully");
-        }
-        onMethods = cn.getOnMethods();
-        onProbes = cn.getOnProbes();
-        if (onProbes != null && !onProbes.isEmpty()) {
-            // map @OnProbe's to @OnMethod's and store
-            onMethods.addAll(mapOnProbes(onProbes));
-        }
-        for(OnMethod om : onMethods) {
-            verifySpecialParameters(om);
+            debugPrint("loaded '" + cn.getClassName() + "' successfully");
         }
         return cn;
     }
 
-    private void verifySpecialParameters(OnMethod om) {
-        Location loc = om.getLocation();
-        if (om.getReturnParameter() != -1) {
-            if (!(loc.getValue() == Kind.RETURN ||
-                (loc.getValue() == Kind.CALL && loc.getWhere() == Where.AFTER) ||
-                (loc.getValue() == Kind.ARRAY_GET && loc.getWhere() == Where.AFTER) ||
-                (loc.getValue() == Kind.FIELD_GET && loc.getWhere() == Where.AFTER) ||
-                (loc.getValue() == Kind.NEW && loc.getWhere() == Where.AFTER) ||
-                (loc.getValue() == Kind.NEWARRAY && loc.getWhere() == Where.AFTER))) {
-                Verifier.reportError("return.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getReturnParameter() + ")");;
-            }
-        }
-        if (om.getTargetMethodOrFieldParameter() != -1) {
-            if (!(loc.getValue() == Kind.CALL ||
-                loc.getValue() == Kind.FIELD_GET ||
-                loc.getValue() == Kind.FIELD_SET)) {
-                Verifier.reportError("target-method.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetMethodOrFieldParameter() + ")");
-            }
-        }
-        if (om.getTargetInstanceParameter() != -1) {
-            if (!(loc.getValue() == Kind.CALL ||
-                loc.getValue() == Kind.FIELD_GET ||
-                loc.getValue() == Kind.FIELD_SET)) {
-                Verifier.reportError("target-instance.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetInstanceParameter() + ")");
-            }
-        }
-        if (om.getDurationParameter() != -1) {
-            if (!((loc.getValue() == Kind.RETURN ||
-                loc.getValue() == Kind.ERROR) ||
-                (loc.getValue() == Kind.CALL &&
-                loc.getWhere() == Where.AFTER))) {
-                Verifier.reportError("duration.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getDurationParameter() + ")");
-            }
+    private static PerfReader createPerfReaderImpl() {
+        // see if we can access any jvmstat class
+        try {
+            Class.forName("sun.jvmstat.monitor.MonitoredHost");
+            return (PerfReader) Class.forName("com.sun.btrace.agent.PerfReaderImpl").newInstance();
+        } catch (Exception exp) {
+            // no luck, create null implementation
+            return new NullPerfReaderImpl();
         }
     }
 
-    /**
-     * Maps a list of @OnProbe's to a list @OnMethod's using
-     * probe descriptor XML files.
-     */
-    private List<OnMethod> mapOnProbes(List<OnProbe> onProbes) {
-        ProbeDescriptorLoader pdl = new ProbeDescriptorLoader(settings.getProbeDescPath(), debug);
-        List<OnMethod> res = new ArrayList<>();
-        for (OnProbe op : onProbes) {
-            String ns = op.getNamespace();
-            if (isDebug()) debugPrint("about to load probe descriptor for " + ns);
-            // load probe descriptor for this namespace
-            ProbeDescriptor probeDesc = pdl.load(ns);
-            if (probeDesc == null) {
-                if (isDebug()) debugPrint("failed to find probe descriptor for " + ns);
-                continue;
+    void retransformLoaded() throws UnmodifiableClassException {
+        if (probe.isTransforming() && settings.isRetransformStartup()) {
+            ArrayList<Class> list = new ArrayList<>();
+            debugPrint("retransforming loaded classes");
+            debugPrint("filtering loaded classes");
+            ClassCache cc = ClassCache.getInstance();
+            for (Class c : inst.getAllLoadedClasses()) {
+                if (c != null) {
+                    cc.get(c);
+                    if (inst.isModifiableClass(c) &&  isCandidate(c)) {
+                        debugPrint("candidate " + c + " added");
+                        list.add(c);
+                    }
+                }
             }
-            // find particular probe mappings using "local" name
-            OnProbe foundProbe = probeDesc.findProbe(op.getName());
-            if (foundProbe == null) {
-                if (isDebug()) debugPrint("no probe mappings for " + op.getName());
-                continue;
-            }
-            if (isDebug()) debugPrint("found probe mappings for " + op.getName());
-            Collection<OnMethod> omColl = foundProbe.getOnMethods();
-            for (OnMethod om : omColl) {
-                 // copy the info in a new OnMethod so that
-                 // we can set target method name and descriptor
-                 // Note that the probe descriptor cache is used
-                 // across BTrace sessions. So, we should not update
-                 // cached OnProbes (and their OnMethods).
-                 OnMethod omn = new OnMethod(op.getMethodNode());
-                 omn.copyFrom(om);
-                 omn.setTargetName(op.getTargetName());
-                 omn.setTargetDescriptor(op.getTargetDescriptor());
-                 omn.setClassNameParameter(op.getClassNameParameter());
-                 omn.setMethodParameter(op.getMethodParameter());
-                 omn.setDurationParameter(op.getDurationParameter());
-                 omn.setMethodFqn(op.isMethodFqn());
-                 omn.setReturnParameter(op.getReturnParameter());
-                 omn.setSelfParameter(op.getSelfParameter());
-                 omn.setTargetInstanceParameter(op.getTargetInstanceParameter());
-                 omn.setTargetMethodOrFieldFqn(op.isTargetMethodOrFieldFqn());
-                 omn.setTargetMethodOrFieldParameter(op.getTargetMethodOrFieldParameter());
-                 res.add(omn);
+            list.trimToSize();
+            int size = list.size();
+            if (size > 0) {
+                Class[] classes = new Class[size];
+                list.toArray(classes);
+                startRetransformClasses(size);
+                if (isDebug()) {
+                    for(Class c : classes) {
+                        try {
+                            inst.retransformClasses(c);
+                        } catch (VerifyError e) {
+                            debugPrint("verification error: " + c.getName());
+                        }
+                    }
+                } else {
+                    inst.retransformClasses(classes);
+                }
             }
         }
-        return res;
+        runtime.send(new OkayCommand());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,7 @@ import java.util.HashMap;
 import java.util.StringTokenizer;
 import com.sun.btrace.org.objectweb.asm.Type;
 
-class TypeUtils {
+public final class TypeUtils {
     private TypeUtils() {}
 
     public static final Type throwableType =
@@ -87,7 +87,8 @@ class TypeUtils {
     }
 
     /**
-     * Checks the type compatibility<br/>
+     * Checks the type compatibility
+     * <p>
      * Two types are compatible when and only when:
      * <ol>
      * <li>They are exactly the same</li>
@@ -95,6 +96,7 @@ class TypeUtils {
      *     the right parameter is either {@linkplain Object} or an array</li>
      * <li>The left parameter is assignable from the right one (is a superclass of the right one)</li>
      * </ol>
+     * </p>
      * @param left The left type parameter
      * @param right The right type parameter
      * @return Returns true if a value of the left {@linkplain Type} can hold the value of the right {@linkplain Type}
@@ -155,7 +157,6 @@ class TypeUtils {
                 if (isAnyType(args1[i]) &&
                    (sort2 == Type.OBJECT || sort2 == Type.ARRAY ||
                     isPrimitive(args2[i]))) {
-                    continue;
                 } else {
                     return false;
                 }
@@ -245,7 +246,7 @@ class TypeUtils {
     private static final Map<String, String> primitives;
 
     static {
-        primitives = new HashMap<String, String>();
+        primitives = new HashMap<>();
         primitives.put("void", "V");
         primitives.put("byte", "B");
         primitives.put("char", "C");
@@ -295,7 +296,7 @@ class TypeUtils {
         return buf.toString();
     }
 
-    public static String descriptorToDeclaration(String desc, String owner, String name) {
+    public static String descriptorToSimplified(String desc, String owner, String name) {
         Type retType = Type.getReturnType(desc);
         Type[] args = desc.contains("(") ? Type.getArgumentTypes(desc) : new Type[0];
         StringBuilder sb = new StringBuilder();

@@ -49,7 +49,7 @@ final public class SharedSettings {
     private boolean trackRetransforms = false;
     private boolean retransformStartup = true;
     private String dumpDir = null;
-    private String probeDescPath = null;
+    private String probeDescPath = ".";
     private String statsdHost = null;
     private int statsdPort = 8125; // default statsd port
     private int fileRollMilliseconds = Integer.MIN_VALUE;

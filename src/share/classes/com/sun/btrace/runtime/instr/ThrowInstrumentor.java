@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,14 +23,9 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
+package com.sun.btrace.runtime.instr;
 
-import com.sun.btrace.org.objectweb.asm.*;
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 
 /**
@@ -63,28 +58,5 @@ public class ThrowInstrumentor extends MethodInstrumentor {
                     "printStackTrace",
                     "()V",
                     false);
-    }
-
-    public static void main(final String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println("Usage: java com.sun.btrace.runtime.ThrowInstrumentor <class>");
-            System.exit(1);
-        }
-
-        args[0] = args[0].replace('.', '/');
-        FileInputStream fis = new FileInputStream(args[0] + ".class");
-        ClassReader reader = new ClassReader(new BufferedInputStream(fis));
-        FileOutputStream fos = new FileOutputStream(args[0] + ".class");
-        ClassWriter writer = InstrumentUtils.newClassWriter();
-        InstrumentUtils.accept(reader,
-            new ClassVisitor(Opcodes.ASM5, writer) {
-                 public MethodVisitor visitMethod(int access, String name, String desc,
-                     String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc,
-                             signature, exceptions);
-                     return new ThrowInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
-                 }
-            });
-        fos.write(writer.toByteArray());
     }
 }

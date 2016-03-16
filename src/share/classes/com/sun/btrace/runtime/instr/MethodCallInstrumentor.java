@@ -23,17 +23,8 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
+package com.sun.btrace.runtime.instr;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
-import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 
 /**
@@ -79,29 +70,5 @@ public class MethodCallInstrumentor extends MethodInstrumentor {
 
     protected int getCallId() {
         return callId;
-    }
-
-    public static void main(final String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println("Usage: java com.sun.btrace.runtime.MethodCallInstrumentor <class>");
-            System.exit(1);
-        }
-
-        args[0] = args[0].replace('.', '/');
-        FileInputStream fis = new FileInputStream(args[0] + ".class");
-        ClassReader reader = new ClassReader(new BufferedInputStream(fis));
-        FileOutputStream fos = new FileOutputStream(args[0] + ".class");
-        ClassWriter writer = InstrumentUtils.newClassWriter();
-        InstrumentUtils.accept(reader,
-            new ClassVisitor(Opcodes.ASM5, writer) {
-                 @Override
-                 public MethodVisitor visitMethod(int access, String name, String desc,
-                     String signature, String[] exceptions) {
-                     MethodVisitor mv = super.visitMethod(access, name, desc,
-                             signature, exceptions);
-                     return new MethodCallInstrumentor(new LocalVariableHelperImpl(mv, access, desc), args[0], args[0], access, name, desc);
-                 }
-            });
-        fos.write(writer.toByteArray());
     }
 }

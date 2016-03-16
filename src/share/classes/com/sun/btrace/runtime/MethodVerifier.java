@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ import java.util.List;
  *
  * @author A. Sundararajan
  */
-final public class MethodVerifier extends StackTrackingMethodVisitor {
+final class MethodVerifier extends StackTrackingMethodVisitor {
 
     final private static Set<String> primitiveWrapperTypes;
     final private static Set<String> unboxMethods;
@@ -294,7 +294,7 @@ final public class MethodVerifier extends StackTrackingMethodVisitor {
             Verifier.reportError("sampler.invalid.location", methodName + methodDesc);
             return;
         }
-        if (om.getSamplerKind() != Sampled.Sampler.None) {
+        if (om != null && om.getSamplerKind() != Sampled.Sampler.None) {
             switch (om.getLocation().getValue()) {
                 case ENTRY:
                 case RETURN:

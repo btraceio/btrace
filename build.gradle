@@ -100,7 +100,7 @@ def agentExcludes = ['**/dtrace/*', '**/btrace/*.class', '**/asm/signature/**', 
                      '**/asm/util/**', '**/asm/xml/**', '**/aggregation/**', \
                      '**/compiler/*', '**/client/**', '**/comm/*', \
                      'com/sun/btrace/api/**', 'com/sun/btrace/spi/**', \
-                     '**/instr/**', '**/org/jctools/**', \
+                     'com/sun/btrace/instr/**', '**/org/jctools/**', \
                      '**/org/jctools/queues/atomic/**',
                      '**/org/jctools/queues/spec/**', '**/META-INF/*']
 def bootExcludes = ['**/dtrace/**', '**/agent/**', '**/compiler/**', '**/client/**', \

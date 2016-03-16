@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.btrace.agent;
+package com.sun.btrace.runtime;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -54,6 +54,14 @@ public final class ClassCache {
         return ci;
     }
 
+    /**
+     * Returns a cached {@linkplain ClassInfo} value.
+     * If the corresponding value has not been cached yet then it is
+     * created and put into the cache.
+     * @param cl The associated {@linkplain ClassLoader}
+     * @param className The Java class name or internal class name
+     * @return
+     */
     public ClassInfo get(ClassLoader cl, String className) {
         String id = getId(cl, className);
         ClassInfo ci = classMap.get(id);

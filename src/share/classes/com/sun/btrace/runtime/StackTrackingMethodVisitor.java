@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,13 +50,13 @@ import java.util.Set;
  *
  * @author Jaroslav Bachorik
  */
-public class StackTrackingMethodVisitor extends MethodVisitor {
+class StackTrackingMethodVisitor extends MethodVisitor {
     abstract public static class StackItem {
         public static enum Kind {
             VARIABLE, CONSTANT, INSTANCE, RESULT
         }
 
-        private Set<StackItem> parents = new HashSet<StackItem>();
+        private Set<StackItem> parents = new HashSet<>();
 
         public StackItem(StackItem ... parents) {
             this.parents.addAll(Arrays.asList(parents));
@@ -106,10 +106,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
                 return false;
             }
             final VariableItem other = (VariableItem) obj;
-            if (this.var != other.var) {
-                return false;
-            }
-            return true;
+            return this.var == other.var;
         }
     }
 
@@ -146,10 +143,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
                 return false;
             }
             final ConstantItem other = (ConstantItem) obj;
-            if (this.val != other.val && (this.val == null || !this.val.equals(other.val))) {
-                return false;
-            }
-            return true;
+            return !(this.val != other.val && (this.val == null || !this.val.equals(other.val)));
         }
     }
 
@@ -186,10 +180,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
                 return false;
             }
             final InstanceItem other = (InstanceItem) obj;
-            if (this.t != other.t && (this.t == null || !this.t.equals(other.t))) {
-                return false;
-            }
-            return true;
+            return !(this.t != other.t && (this.t == null || !this.t.equals(other.t)));
         }
     }
 
@@ -258,10 +249,7 @@ public class StackTrackingMethodVisitor extends MethodVisitor {
             if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
                 return false;
             }
-            if ((this.desc == null) ? (other.desc != null) : !this.desc.equals(other.desc)) {
-                return false;
-            }
-            return true;
+            return !((this.desc == null) ? (other.desc != null) : !this.desc.equals(other.desc));
         }
     }
 

@@ -23,13 +23,17 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
+package com.sun.btrace.runtime.instr;
 
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.runtime.Assembler;
+import com.sun.btrace.runtime.Level;
+import com.sun.btrace.runtime.OnMethod;
+import com.sun.btrace.runtime.TypeUtils;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -307,7 +311,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         StringBuilder sb = new StringBuilder();
         if (fqn) {
             sb.append(Modifier.toString(access)).append(' ')
-              .append(TypeUtils.descriptorToDeclaration(desc, parentClz, name));
+              .append(TypeUtils.descriptorToSimplified(desc, parentClz, name));
         } else {
             sb.append(name);
         }
