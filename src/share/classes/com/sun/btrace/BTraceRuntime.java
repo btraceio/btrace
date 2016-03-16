@@ -500,7 +500,7 @@ public final class BTraceRuntime  {
     @CallerSensitive
     public Class defineClass(byte[] code) {
         Class caller = isNewerThan8 ? Reflection.getCallerClass() : Reflection.getCallerClass(2);
-        if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
+        if (! caller.getName().startsWith("com.sun.btrace.")) {
             throw new SecurityException("unsafe defineClass");
         }
         return defineClassImpl(code, true);
@@ -509,7 +509,7 @@ public final class BTraceRuntime  {
     @CallerSensitive
     public Class defineClass(byte[] code, boolean mustBeBootstrap) {
         Class caller = isNewerThan8 ? Reflection.getCallerClass() : Reflection.getCallerClass(2);
-        if (! caller.getName().equals("com.sun.btrace.agent.Client")) {
+        if (! caller.getName().startsWith("com.sun.btrace.")) {
             throw new SecurityException("unsafe defineClass");
         }
         return defineClassImpl(code, mustBeBootstrap);

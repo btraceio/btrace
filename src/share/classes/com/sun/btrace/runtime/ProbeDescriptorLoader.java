@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,14 +23,13 @@
  * questions.
  */
 
-package com.sun.btrace.agent;
+package com.sun.btrace.runtime;
 
 import com.sun.btrace.DebugSupport;
 import java.io.File;
 import java.util.Map;
 import javax.xml.bind.*;
 import javax.xml.bind.helpers.DefaultValidationEventHandler;
-import com.sun.btrace.runtime.ProbeDescriptor;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**

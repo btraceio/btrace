@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,10 @@
 package com.sun.btrace.agent;
 
 import com.sun.btrace.DebugSupport;
-import com.sun.btrace.SharedSettings;
 import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.PrintableCommand;
-import java.lang.instrument.Instrumentation;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -46,8 +44,8 @@ import java.util.Arrays;
  * @author J.Bachorik
  */
 class FileClient extends Client {
-    FileClient(Instrumentation inst, byte[] code, SharedSettings s) throws IOException {
-        super(inst, s);
+    FileClient(ClientContext ctx, byte[] code) throws IOException {
+        super(ctx);
         init(code);
     }
 
@@ -59,8 +57,8 @@ class FileClient extends Client {
         }
     }
 
-    FileClient(Instrumentation inst, File scriptFile, SharedSettings s) throws IOException {
-        this(inst, readAll(scriptFile), s);
+    FileClient(ClientContext ctx, File scriptFile) throws IOException {
+        this(ctx, readAll(scriptFile));
     }
 
     @Override

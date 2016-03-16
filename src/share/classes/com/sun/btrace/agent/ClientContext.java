@@ -1,11 +1,11 @@
-<!--
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+/*
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
+ * particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -21,18 +21,38 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
--->
-<btrace-probes namespace="com.sun.btrace">
-    <probe name="noargs">
-        <map>
-            <clazz>resources.Main</clazz>
-            <method>callA</method>
-        </map>
-    </probe>
-    <probe name="withargs">
-        <map>
-            <clazz>resources.Main</clazz>
-            <method>callB</method>
-        </map>
-    </probe>
-</btrace-probes>
+ */
+package com.sun.btrace.agent;
+
+import com.sun.btrace.runtime.BTraceTransformer;
+import com.sun.btrace.SharedSettings;
+import java.lang.instrument.Instrumentation;
+
+/**
+ * Client-context data class
+ * @author Jaroslav Bachorik
+ */
+class ClientContext {
+    private final Instrumentation instr;
+    private final BTraceTransformer transformer;
+    private final SharedSettings settings;
+
+    ClientContext(Instrumentation instr, BTraceTransformer transformer, SharedSettings settings) {
+        this.instr = instr;
+        this.transformer = transformer;
+        this.settings = settings;
+    }
+
+    Instrumentation getInstr() {
+        return instr;
+    }
+
+    BTraceTransformer getTransformer() {
+        return transformer;
+    }
+
+    SharedSettings getSettings() {
+        return settings;
+    }
+
+}

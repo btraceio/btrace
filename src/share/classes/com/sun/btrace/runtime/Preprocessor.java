@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,6 @@ import com.sun.btrace.org.objectweb.asm.tree.TryCatchBlockNode;
 import com.sun.btrace.org.objectweb.asm.tree.TypeInsnNode;
 import com.sun.btrace.org.objectweb.asm.tree.VarInsnNode;
 import com.sun.btrace.services.api.Service;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -92,7 +91,7 @@ import java.util.Set;
  * @author A. Sundararajan
  * @author J. Bachorik (Tree API rewrite)
  */
-public final class Preprocessor {
+final class Preprocessor {
     private static enum MethodClassifier {
         /**
          * No BTrace specific classifier available
@@ -1132,7 +1131,6 @@ public final class Preprocessor {
 
     private int getReturnMethodParameter(MethodNode mn) {
         if (mn.visibleParameterAnnotations != null) {
-            Type[] args = Type.getArgumentTypes(mn.desc);
             for(int i=0;i<mn.visibleParameterAnnotations.length;i++) {
                 List paList = (List)mn.visibleParameterAnnotations[i];
                 if (paList != null) {

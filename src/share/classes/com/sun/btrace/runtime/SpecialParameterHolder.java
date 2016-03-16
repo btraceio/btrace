@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,11 @@
 package com.sun.btrace.runtime;
 
 /**
- *
+ * A generalized super-class for various runtime classes
+ * representing the BTrace annotations
  * @author Jaroslav Bachorik
  */
-abstract public class SpecialParameterHolder {
+abstract class SpecialParameterHolder {
     private int selfParameter = -1;
     private int methodParameter = -1;
     private int classNameParameter = -1;
@@ -112,7 +113,7 @@ abstract public class SpecialParameterHolder {
         this.durationParameter = durationParameter;
     }
 
-    public void copyFrom(SpecialParameterHolder other) {
+    final public void copyFrom(SpecialParameterHolder other) {
         classNameParameter = other.classNameParameter;
         durationParameter = other.durationParameter;
         methodParameter = other.methodParameter;

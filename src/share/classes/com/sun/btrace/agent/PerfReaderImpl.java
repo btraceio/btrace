@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
+package com.sun.btrace.agent;
 
 import com.sun.btrace.PerfReader;
 import java.net.URISyntaxException;
@@ -36,23 +36,17 @@ import sun.jvmstat.monitor.MonitorException;
 import sun.jvmstat.monitor.StringMonitor;
 import sun.jvmstat.monitor.VmIdentifier;
 
-public class PerfReaderImpl implements PerfReader {
+final class PerfReaderImpl implements PerfReader {
     private volatile MonitoredVm thisVm;
 
-    private MonitoredVm getThisVm() {
+    private synchronized MonitoredVm getThisVm() {
         if (thisVm == null) {
-            synchronized (this) {
-                if (thisVm == null) {
-                    try {
-                        MonitoredHost localHost = MonitoredHost.getMonitoredHost("localhost");
-                        VmIdentifier vmIdent = new VmIdentifier("0");
-                        thisVm = localHost.getMonitoredVm(vmIdent);
-                    } catch (MonitorException me) {
-                        throw new IllegalArgumentException("jvmstat perf counters not available: " + me);
-                    } catch (URISyntaxException use) {
-                        throw new IllegalArgumentException("jvmstat perf counters not available: " + use);
-                    }
-                }
+            try {
+                MonitoredHost localHost = MonitoredHost.getMonitoredHost("localhost");
+                VmIdentifier vmIdent = new VmIdentifier("0");
+                thisVm = localHost.getMonitoredVm(vmIdent);
+            } catch (MonitorException | URISyntaxException me) {
+                throw new IllegalArgumentException("jvmstat perf counters not available: " + me);
             }
         }
         return thisVm;
@@ -66,6 +60,7 @@ public class PerfReaderImpl implements PerfReader {
         }
     }
 
+    @Override
     public int perfInt(String name) {
         Monitor mon = findByName(name);
         if (mon == null) {
@@ -80,6 +75,7 @@ public class PerfReaderImpl implements PerfReader {
         }
     }
 
+    @Override
     public long perfLong(String name) {
         Monitor mon = findByName(name);
         if (mon == null) {
@@ -87,11 +83,12 @@ public class PerfReaderImpl implements PerfReader {
         }
         if (mon instanceof LongMonitor) {
             return ((LongMonitor)mon).longValue();
-        } else { 
+        } else {
             throw new IllegalArgumentException(name + " is not a long");
         }
     }
 
+    @Override
     public String perfString(String name) {
         Monitor mon = findByName(name);
         if (mon == null) {

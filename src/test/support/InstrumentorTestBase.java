@@ -25,11 +25,14 @@
 
 package support;
 
+import com.sun.btrace.SharedSettings;
 import static org.junit.Assert.*;
 
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.runtime.BTraceClassNode;
+import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
+import com.sun.btrace.runtime.BTraceProbe;
+import com.sun.btrace.runtime.BTraceProbeFactory;
 import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.util.MethodID;
@@ -71,6 +74,8 @@ public abstract class InstrumentorTestBase {
     protected byte[] transformedTrace;
 
     private ClassLoader cl;
+    private final SharedSettings settings = SharedSettings.GLOBAL;
+    private final BTraceProbeFactory factory = new BTraceProbeFactory(settings);
 
     @After
     public void tearDown() {
@@ -165,19 +170,16 @@ public abstract class InstrumentorTestBase {
     }
 
     protected void transform(String traceName, boolean unsafe) throws IOException {
-        BTraceClassNode btrace = loadTrace(traceName, unsafe);
-        ClassReader reader = new ClassReader(originalBC);
-        ClassWriter writer = InstrumentUtils.newClassWriter();
+        settings.setUnsafe(unsafe);
+        BTraceProbe btrace = loadTrace(traceName, unsafe);
 
-        try {
-            InstrumentUtils.accept(reader, new Instrumentor(ClassLoader.getSystemClassLoader(), null,
-                        btrace, writer));
-        } catch (Throwable e) {
-            e.printStackTrace();
+        transformedBC = InstrumentUtils.instrument(originalBC, btrace);
+
+        if (transformedBC != null) {
+            load();
+        } else {
+            fail("Failed instrumenting class");
         }
-
-        transformedBC = writer.toByteArray();
-        load();
         System.err.println("==== " + traceName);
     }
 
@@ -186,6 +188,12 @@ public abstract class InstrumentorTestBase {
         TraceClassVisitor acv = new TraceClassVisitor(new PrintWriter(sw));
         new org.objectweb.asm.ClassReader(bytecode).accept(acv, ClassReader.SKIP_FRAMES);
         return sw.toString();
+    }
+
+    protected String asmify(ClassNode cn) {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        cn.accept(cw);
+        return asmify(cw.toByteArray());
     }
 
     private String diffTrace() throws IOException {
@@ -249,19 +257,19 @@ public abstract class InstrumentorTestBase {
         return sb.toString().trim();
     }
 
-    protected BTraceClassNode loadTrace(String name) throws IOException {
+    protected BTraceProbe loadTrace(String name) throws IOException {
         return loadTrace(name, false);
     }
 
-    protected BTraceClassNode loadTrace(String name, boolean unsafe) throws IOException {
+    protected BTraceProbe loadTrace(String name, boolean unsafe) throws IOException {
         originalTrace = loadFile("traces/" + name + ".class");
         if (DEBUG) {
             System.err.println("=== Loaded Trace: " + name + "\n");
             System.err.println(asmify(originalTrace));
         }
-        BTraceClassNode bcn = BTraceClassNode.from(originalTrace, unsafe);
+        BTraceProbe bcn = factory.createProbe(originalTrace);
 //        Trace t =  new Trace(bcn.getBytecode(), bcn.getOnMethods(), verifier.getReachableCalls(), bcn.name);
-        transformedTrace = bcn.getBytecode();
+        transformedTrace = extractBytecode(bcn);
         if (DEBUG) {
 //            writer = InstrumentUtils.newClassWriter();
 //            InstrumentUtils.accept(new ClassReader(originalTrace), new Preprocessor1(writer));
@@ -303,5 +311,11 @@ public abstract class InstrumentorTestBase {
             result = newresult;
         }
         return result;
+    }
+
+    private byte[] extractBytecode(BTraceProbe bp) {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        bp.accept(cw);
+        return cw.toByteArray();
     }
 }

@@ -28,19 +28,15 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import static com.sun.btrace.org.objectweb.asm.Opcodes.ACC_INTERFACE;
-import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.Attribute;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.annotations.BTrace;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
 import java.lang.ref.Reference;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -65,8 +61,9 @@ public class ClassFilter {
     // same as above but stored in internal name form ('/' instead of '.')
     private String[] superTypesInternal;
 
+    private final List<OnMethod> onMethods;
+
     static {
-        CheckingVisitor.class.getClass();
         ClassReader.class.getClass();
         AnnotationVisitor.class.getClass();
         FieldVisitor.class.getClass();
@@ -75,7 +72,8 @@ public class ClassFilter {
     }
 
     public ClassFilter(List<OnMethod> onMethods) {
-        init(onMethods);
+        this.onMethods = new ArrayList<>(onMethods);
+        init();
     }
 
     public boolean isCandidate(Class target) {
@@ -145,35 +143,57 @@ public class ClassFilter {
         return false;
     }
 
-    public boolean isCandidate(ClassLoader loader, String cName, byte[] classBytes) {
-        return isCandidate(loader, cName, new FastClassReader(classBytes));
-    }
+    Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr) {
+        final Collection<OnMethod> applicables = new ArrayList<>(onMethods.size());
+        final String targetName = cr.getClassName().replace('/', '.');
 
-    private boolean isCandidate(ClassLoader loader, String cName, FastClassReader reader) {
-        if (isNameMatching(cName.replace('/', '.'))) {
-            return true;
-        }
-        if ((annotationClasses != null && annotationClasses.length > 0) ||
-            (annotationClassPatterns != null && annotationClassPatterns.length > 0)) {
-            CheckingVisitor cv = new CheckingVisitor(loader);
-            reader.accept(cv, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-            if (cv.isCandidate()) {
-                return true;
+        outer:
+        for(OnMethod om : onMethods) {
+            String probeClass = om.getClazz();
+            if (probeClass == null || probeClass.isEmpty()) continue;
+
+            if (probeClass.equals(targetName)) {
+                applicables.add(om);
+                continue;
+            }
+            // Check regex match
+            if (om.isClassRegexMatcher() && !om.isClassAnnotationMatcher()) {
+                if (Pattern.matches(probeClass, targetName)) {
+                    applicables.add(om);
+                    continue;
+                }
+            }
+            if (om.isClassAnnotationMatcher()) {
+                Collection<String> annoTypes = cr.getAnnotationTypes();
+                if (om.isClassRegexMatcher()) {
+                    Pattern annoCheck = Pattern.compile(probeClass);
+                    for(String annoType : annoTypes) {
+                        if (annoCheck.matcher(annoType).matches()) {
+                            applicables.add(om);
+                            continue outer;
+                        }
+                    }
+                } else {
+                    if (annoTypes.contains(probeClass)) {
+                        applicables.add(om);
+                        continue;
+                    }
+                }
+            }
+            // And, finally, check the class hierarchy
+            if (om.isSubtypeMatcher()) {
+                // internal name of super type.
+                if (isSubTypeOf(cr.getClassName(), cr.getClassLoader(), probeClass)) {
+                    applicables.add(om);
+                }
             }
         }
-        if (superTypes != null && superTypes.length > 0) {
-            String[] info = reader.readClassSupers();
-            if (isSubTypeOf(cName, loader, info)) {
-                return true;
-            }
-        }
-        return false;
+        return applicables;
     }
 
-    private boolean isNameMatching(String clzName) {
-        if (clzName.startsWith("sun.instrument.") ||
-            clzName.startsWith("java.lang.instrument.")) {
-            // do not instrument the instrumentation related classes
+    public boolean isNameMatching(String clzName) {
+        if (isSensitiveClass(clzName)) {
+            // do not instrument the sensitive classes
             return false;
         }
 
@@ -217,113 +237,50 @@ public class ClassFilter {
      * @param types any requested supertypes
      **/
     public static boolean isSubTypeOf(String typeA, ClassLoader loader, String ... types) {
-        loader = (loader != null ? loader : ClassLoader.getSystemClassLoader());
-
         if (typeA == null) {
             return false;
         }
+        if (types.length == 0) {
+            return false;
+        }
+
+        boolean internal = types[0].contains("/");
+
+        loader = (loader != null ? loader : ClassLoader.getSystemClassLoader());
+
         Set<String> typeSet = new HashSet<>(Arrays.asList(types));
         if (typeSet.contains(typeA)) {
             return true;
         }
 
         LinkedHashSet<String> closure = new LinkedHashSet<>();
-        InstrumentUtils.collectHierarchyClosure(loader, typeA, closure);
+        InstrumentUtils.collectHierarchyClosure(loader, typeA, closure, internal);
 
         closure.retainAll(typeSet);
         return !closure.isEmpty();
     }
 
-    private boolean isCandidate(String clzName, String superType, String[] itfcs) {
-        clzName = clzName.replace('/', '.');
-
-        if (referenceClz.getName().equals(clzName)) {
-            // instrumenting the <b>java.lang.ref.Reference</b> class will lead
-            // to StackOverflowError in <b>java.lang.ThreadLocal.get()</b>
-            return false;
-        }
-
-        if (clzName.startsWith("sun.instrument.") ||
-            clzName.startsWith("java.lang.instrument.")) {
-            // do not instrument the instrumentation related classes
-            return false;
-        }
-
-        for (String className : sourceClasses) {
-            if (className.equals(clzName)) {
-                return true;
-            }
-        }
-
-        for (Pattern pat : sourceClassPatterns) {
-            if (pat.matcher(clzName).matches()) {
-                return true;
-            }
-        }
-
-        for (String st : superTypesInternal) {
-            if (superType.equals(st)) {
-                return true;
-            }
-            if (itfcs != null) {
-                for (String iface : itfcs) {
-                    if (iface.equals(st)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+    /*
+     * Certain classes like java.lang.ThreadLocal and it's
+     * inner classes, java.lang.Object cannot be safely
+     * instrumented with BTrace. This is because BTrace uses
+     * ThreadLocal class to check recursive entries due to
+     * BTrace's own functions. But this leads to infinite recursions
+     * if BTrace instruments java.lang.ThreadLocal for example.
+     * For now, we avoid such classes till we find a solution.
+     */
+    private static boolean isSensitiveClass(String name) {
+        return name.equals("java.lang.Object") || // NOI18N
+               name.startsWith("java.lang.ThreadLocal") || // NOI18N
+               name.startsWith("sun.reflect") || // NOI18N
+               name.equals("sun.misc.Unsafe")  || // NOI18N
+               name.startsWith("sun.security/") || // NOI18N
+               name.equals("java.lang.VerifyError") || // NOI18N
+               name.startsWith("sun.instrument.") || // NOI18N
+               name.startsWith("java.lang.instrument."); // NOI18N
     }
 
-    private class CheckingVisitor extends ClassVisitor {
-
-        private boolean isInterface;
-        private boolean isCandidate;
-        private final AnnotationVisitor nullAnnotationVisitor = new AnnotationVisitor(Opcodes.ASM5) {};
-
-        public CheckingVisitor(ClassLoader loader) {
-            super(Opcodes.ASM5);
-        }
-
-        boolean isCandidate() {
-            return isCandidate;
-        }
-
-        @Override
-        public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-            if (isInterface) {
-                FastClassReader.bailout();
-            }
-
-            if (BTRACE_DESC.equals(desc)) {
-                // ignore classes annotated with @BTrace -
-                // we don't want to instrument tracing classes!
-                isCandidate = false;
-                FastClassReader.bailout();
-            }
-
-            if (!isCandidate) {
-                String annoName = Type.getType(desc).getClassName();
-                for (String name : annotationClasses) {
-                    if (annoName.equals(name)) {
-                        isCandidate = true;
-                        FastClassReader.bailout();
-                    }
-                }
-                for (Pattern pat : annotationClassPatterns) {
-                    if (pat.matcher(annoName).matches()) {
-                        isCandidate = true;
-                        FastClassReader.bailout();
-                    }
-                }
-            }
-
-            return nullAnnotationVisitor;
-        }
-    }
-
-    private void init(List<OnMethod> onMethods) {
+    private void init() {
         List<String> strSrcList = new ArrayList<>();
         List<Pattern> patSrcList = new ArrayList<>();
         List<String> superTypesList = new ArrayList<>();
@@ -336,33 +293,22 @@ public class ClassFilter {
             if (className.length() == 0) {
                 continue;
             }
-            char firstCh = className.charAt(0);
-            if (firstCh == '/' &&
-                    REGEX_SPECIFIER.matcher(className).matches()) {
+            if (om.isClassRegexMatcher()) {
                 try {
-                    Pattern p = Pattern.compile(className.substring(1,
-                            className.length() - 1));
-                    patSrcList.add(p);
+                    Pattern p = Pattern.compile(className);
+                    if (om.isClassAnnotationMatcher()) {
+                        patAnoList.add(p);
+                    } else {
+                        patSrcList.add(p);
+                    }
                 } catch (PatternSyntaxException pse) {
                     System.err.println("btrace ERROR: invalid regex pattern - " + className.substring(1, className.length() - 1));
                 }
-            } else if (firstCh == '@') {
-                className = className.substring(1);
-                if (REGEX_SPECIFIER.matcher(className).matches()) {
-                    try {
-                        Pattern p = Pattern.compile(
-                                className.substring(1, className.length() - 1));
-                        patAnoList.add(p);
-                    } catch (PatternSyntaxException pse) {
-                        System.err.println("btrace ERROR: invalid regex pattern - " + className.substring(1, className.length() - 1));
-                    }
-                } else {
-                    strAnoList.add(className);
-                }
-            } else if (firstCh == '+') {
-                String superType = className.substring(1);
-                superTypesList.add(superType);
-                superTypesInternalList.add(superType.replace('.', '/'));
+            } else if (om.isClassAnnotationMatcher()) {
+                strAnoList.add(className);
+            } else if (om.isSubtypeMatcher()) {
+                superTypesList.add(className);
+                superTypesInternalList.add(className.replace('.', '/'));
             } else {
                 strSrcList.add(className);
             }

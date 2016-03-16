@@ -1,7 +1,26 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 package com.sun.btrace.runtime;
 
@@ -39,28 +58,29 @@ public class BTraceMethodNode extends MethodNode {
     private OnProbe op;
     private Location loc;
     private boolean sampled;
-    private BTraceClassNode cn;
+    private final BTraceProbe cn;
     private boolean isBTraceHandler;
-    private final CycleDetector graph;
+    private final CallGraph graph;
     private final String methodId;
 
-    BTraceMethodNode(MethodNode from, BTraceClassNode cn) {
+    BTraceMethodNode(MethodNode from, BTraceProbe cn) {
         super(Opcodes.ASM5, from.access, from.name, from.desc, from.signature, ((List<String>)from.exceptions).toArray(new String[0]));
         this.cn = cn;
         this.graph = cn.getGraph();
-        this.methodId = CycleDetector.methodId(name, desc);
+        this.methodId = CallGraph.methodId(name, desc);
     }
 
     @Override
     public void visitEnd() {
         if (om != null) {
+            verifySpecialParameters(om);
             cn.addOnMethod(om);
         }
         if (op != null) {
             cn.addOnProbe(op);
         }
         if (isBTraceHandler) {
-            graph.addStarting(new CycleDetector.Node(CycleDetector.methodId(name, desc)));
+            graph.addStarting(new CallGraph.Node(CallGraph.methodId(name, desc)));
         }
         super.visitEnd();
     }
@@ -245,7 +265,7 @@ public class BTraceMethodNode extends MethodNode {
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
         if (opcode == Opcodes.INVOKESTATIC) {
-            graph.addEdge(methodId, CycleDetector.methodId(name, desc));
+            graph.addEdge(methodId, CallGraph.methodId(name, desc));
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf);
     }
@@ -322,6 +342,49 @@ public class BTraceMethodNode extends MethodNode {
         }
         return av;
     }
+
+    private void verifySpecialParameters(OnMethod om) {
+        Location loc = om.getLocation();
+        if (om.getReturnParameter() != -1) {
+            if (!(loc.getValue() == Kind.RETURN ||
+                (loc.getValue() == Kind.CALL && loc.getWhere() == Where.AFTER) ||
+                (loc.getValue() == Kind.ARRAY_GET && loc.getWhere() == Where.AFTER) ||
+                (loc.getValue() == Kind.FIELD_GET && loc.getWhere() == Where.AFTER) ||
+                (loc.getValue() == Kind.NEW && loc.getWhere() == Where.AFTER) ||
+                (loc.getValue() == Kind.NEWARRAY && loc.getWhere() == Where.AFTER))) {
+                Verifier.reportError("return.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getReturnParameter() + ")");;
+            }
+        }
+        if (om.getTargetMethodOrFieldParameter() != -1) {
+            if (!(loc.getValue() == Kind.CALL ||
+                loc.getValue() == Kind.FIELD_GET ||
+                loc.getValue() == Kind.FIELD_SET ||
+                loc.getValue() == Kind.ARRAY_GET ||
+                loc.getValue() == Kind.ARRAY_SET)) {
+                Verifier.reportError("target-method.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetMethodOrFieldParameter() + ")");
+            }
+        }
+        if (om.getTargetInstanceParameter() != -1) {
+            if (!(loc.getValue() == Kind.CALL ||
+                loc.getValue() == Kind.FIELD_GET ||
+                loc.getValue() == Kind.FIELD_SET ||
+                loc.getValue() == Kind.ARRAY_GET ||
+                loc.getValue() == Kind.ARRAY_SET ||
+                loc.getValue() == Kind.INSTANCEOF ||
+                loc.getValue() == Kind.CHECKCAST)) {
+                Verifier.reportError("target-instance.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetInstanceParameter() + ")");
+            }
+        }
+        if (om.getDurationParameter() != -1) {
+            if (!((loc.getValue() == Kind.RETURN ||
+                loc.getValue() == Kind.ERROR) ||
+                (loc.getValue() == Kind.CALL &&
+                loc.getWhere() == Where.AFTER))) {
+                Verifier.reportError("duration.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getDurationParameter() + ")");
+            }
+        }
+    }
+
 
     @Override
     public String toString() {
