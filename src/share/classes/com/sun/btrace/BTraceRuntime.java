@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,7 @@ import com.sun.btrace.comm.StringMapDataCommand;
 import com.sun.btrace.comm.GridDataCommand;
 import com.sun.btrace.org.jctools.queues.MessagePassingQueue;
 import com.sun.btrace.org.jctools.queues.MpmcArrayQueue;
-import com.sun.btrace.org.jctools.queues.MpscArrayQueue;
+import com.sun.btrace.org.jctools.queues.MpscChunkedArrayQueue;
 import com.sun.btrace.profiling.MethodInvocationProfiler;
 
 import java.lang.management.GarbageCollectorMXBean;
@@ -294,7 +294,7 @@ public final class BTraceRuntime  {
     private volatile NotificationListener memoryListener;
 
     // Command queue for the client
-    private final MpscArrayQueue<Command> queue;
+    private final MpscChunkedArrayQueue<Command> queue;
 
     private static class SpeculativeQueueManager {
         // maximum number of speculative buffers
@@ -351,7 +351,7 @@ public final class BTraceRuntime  {
             currentSpeculationId.set(id);
         }
 
-        void commit(int id, MpscArrayQueue<Command> result) {
+        void commit(int id, MpscChunkedArrayQueue<Command> result) {
             validateId(id);
             currentSpeculationId.set(null);
             final MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
@@ -425,7 +425,7 @@ public final class BTraceRuntime  {
                          final CommandListener cmdListener,
                          DebugSupport ds, Instrumentation inst) {
         this.args = args;
-        this.queue = new MpscArrayQueue<>(CMD_QUEUE_LIMIT_DEFAULT);
+        this.queue = new MpscChunkedArrayQueue<>(CMD_QUEUE_LIMIT_DEFAULT);
         this.specQueueManager = new SpeculativeQueueManager();
         this.className = className;
         this.instrumentation = inst;
