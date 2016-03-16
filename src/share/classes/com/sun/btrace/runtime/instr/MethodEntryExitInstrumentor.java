@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,24 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
+package com.sun.btrace.runtime.instr;
 
-import com.sun.btrace.PerfReader;
+import com.sun.btrace.util.LocalVariableHelper;
 
 /**
- * Dummy perf reader that throws UnsupportedOperationException always.
- * We use this when we don't have access to jvmstat classes.
+ * Instruments method entry and exit points. For exit, both normal and abnormal
+ * (exception) return points are instrumented. Subclasses can decide what code
+ * is inserted at entry/exit points.
  *
  * @author A. Sundararajan
  */
-public class NullPerfReaderImpl implements PerfReader {
-    public int perfInt(String name) {
-        throw new UnsupportedOperationException("jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
+public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
+    public MethodEntryExitInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
+        int access, String name, String desc) {
+        super(mv, parentClz, superClz, access, name, desc);
     }
 
-    public long perfLong(String name) {
-        throw new UnsupportedOperationException("jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
-    }
-
-    public String perfString(String name) {
-        throw new UnsupportedOperationException("jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
+    protected void onMethodReturn(int opcode) {
+        asm.println("on method return");
     }
 }

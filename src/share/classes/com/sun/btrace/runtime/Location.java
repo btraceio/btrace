@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,10 +33,10 @@ import com.sun.btrace.annotations.Where;
  * com.sun.btrace.annotations.Location. We can not read the
  * Location annotation using reflection API [because we strip
  * @OnMethod annotated methods before defineClass]. Instead,
- * we read Location annotation while parsing the BTrace class and 
+ * we read Location annotation while parsing the BTrace class and
  * store the data in an instance of this class. Please note that
  * the get/set methods have to be in sync with Location annotation.
- * 
+ *
  * @author A. Sundararajan
  */
 public class Location {
@@ -102,5 +102,10 @@ public class Location {
 
     public Where getWhere() {
         return where;
+    }
+
+    @Override
+    public String toString() {
+        return "Location{" + "clazz=" + clazz + ", method=" + method + ", type=" + type + ", field=" + field + ", line=" + line + ", value=" + value + ", where=" + where + '}';
     }
 }

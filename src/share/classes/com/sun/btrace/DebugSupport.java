@@ -42,11 +42,15 @@ final public class DebugSupport {
         return settings.isDebug();
     }
 
-    public void dumpClass(String btraceClassName, String targetClassName, byte[] code) {
+    public boolean isDumpClasses() {
+        return settings.isDumpClasses();
+    }
+
+    public void dumpClass(String className, byte[] code) {
         if (settings.isDumpClasses()) {
             try {
-                targetClassName = targetClassName.replace(".", File.separator).replace("/", File.separator);
-                int index = targetClassName.lastIndexOf(File.separatorChar);
+                className = className.replace(".", File.separator).replace("/", File.separator);
+                int index = className.lastIndexOf(File.separatorChar);
                 StringBuilder buf = new StringBuilder();
                 if (!settings.getDumpDir().equals(".")) {
                     buf.append(settings.getDumpDir());
@@ -54,14 +58,14 @@ final public class DebugSupport {
                 }
                 String dir = buf.toString();
                 if (index != -1) {
-                    dir += targetClassName.substring(0, index);
+                    dir += className.substring(0, index);
                 }
                 new File(dir).mkdirs();
                 String file;
                 if (index != -1) {
-                    file = targetClassName.substring(index+1);
+                    file = className.substring(index+1);
                 } else {
-                    file = targetClassName;
+                    file = className;
                 }
                 file += ".class";
                 new File(dir).mkdirs();

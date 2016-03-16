@@ -35,10 +35,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- *
+ * This class allows building an arbitrary graph caller-callee relationship
  * @author Jaroslav Bachorik
  */
-public class CycleDetector {
+final class CallGraph {
     public static class Node {
         private final String id;
         private final Set<Edge> incoming = new HashSet<>();
@@ -199,7 +199,7 @@ public class CycleDetector {
 
     public boolean hasCycle() {
         Set<Node> looped = findCycles();
-        Set<Node> checkingSet = new HashSet<Node>(looped);
+        Set<Node> checkingSet = new HashSet<>(looped);
 
         checkingSet.retainAll(startingNodes);
         if (!checkingSet.isEmpty()) {
@@ -207,7 +207,7 @@ public class CycleDetector {
             return true;
         }
 
-        Deque<Node> processingQueue = new ArrayDeque<Node>();
+        Deque<Node> processingQueue = new ArrayDeque<>();
         for(Node n : startingNodes) {
             processingQueue.push(n);
             do {
@@ -263,7 +263,7 @@ public class CycleDetector {
     private Set<Node> findCycles() {
         if (nodes.size() < 2) return Collections.EMPTY_SET;
 
-        Map<String, Node> checkingNodes = new HashMap<String, Node>();
+        Map<String, Node> checkingNodes = new HashMap<>();
         for(Node n : nodes) {
             Node newN = checkingNodes.get(n.id);
             if (newN == null) {
@@ -293,7 +293,7 @@ public class CycleDetector {
         }
 
         boolean changesMade = false;
-        Set<Node> sortedNodes = new HashSet<Node>(checkingNodes.values());
+        Set<Node> sortedNodes = new HashSet<>(checkingNodes.values());
         do {
             changesMade = false;
 
@@ -303,10 +303,10 @@ public class CycleDetector {
                 if ((n.incoming.isEmpty() && !startingNodes.contains(n)) ||
                      n.outgoing.isEmpty()) {
                     changesMade = true;
-                    for(Edge e : new HashSet<Edge>(n.incoming)) {
+                    for(Edge e : new HashSet<>(n.incoming)) {
                         e.delete();
                     }
-                    for (Edge e : new HashSet<Edge>(n.outgoing)) {
+                    for (Edge e : new HashSet<>(n.outgoing)) {
                         e.delete();
                     }
                     iter.remove();

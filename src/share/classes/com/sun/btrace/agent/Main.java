@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.btrace.agent;
 
+import com.sun.btrace.runtime.BTraceTransformer;
 import com.sun.btrace.DebugSupport;
 import com.sun.btrace.SharedSettings;
 import java.io.File;
@@ -33,17 +34,13 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.net.Socket;
 import java.net.ServerSocket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.comm.ErrorCommand;
-import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.util.Messages;
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -65,6 +62,7 @@ public final class Main {
 
     private static final SharedSettings settings = SharedSettings.GLOBAL;
     private static final DebugSupport debug = new DebugSupport(settings);
+    private static final BTraceTransformer transformer = new BTraceTransformer(debug);
 
     // #BTRACE-42: Non-daemon thread prevents traced application from exiting
     private static final ThreadFactory daemonizedThreadFactory = new ThreadFactory() {
@@ -97,7 +95,6 @@ public final class Main {
         parseArgs(args);
         if (isDebug()) debugPrint("parsed command line arguments");
 
-        final Collection<String> embeddedScripts = new LinkedList<>();
         String bootClassPath = argMap.get("bootClassPath");
         if (bootClassPath != null) {
             if (isDebug()) {
@@ -110,7 +107,6 @@ public final class Main {
                     File f = new File(path);
                     if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
                         JarFile jf = new JarFile(f);
-//                        collectScripts(jf, embeddedScripts);
                         inst.appendToBootstrapClassLoaderSearch(jf);
                     } else {
                         debugPrint("ignoring boot classpath element '" + path +
@@ -136,7 +132,6 @@ public final class Main {
                     File f = new File(path);
                     if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
                         JarFile jf = new JarFile(f);
-//                        collectScripts(jf, embeddedScripts);
                         inst.appendToSystemClassLoaderSearch(jf);
                     } else {
                         debugPrint("ignoring system classpath element '" + path +
@@ -150,6 +145,7 @@ public final class Main {
             }
         }
 
+        inst.addTransformer(transformer, true);
         startScripts();
 
         String tmp = argMap.get("noServer");
@@ -179,17 +175,6 @@ public final class Main {
             BTraceRuntime.leave();
         }
     }
-
-//    private static void collectScripts(JarFile jf, Collection<String> scripts) {
-//        Enumeration<JarEntry> entries = jf.entries();
-//        while (entries.hasMoreElements()) {
-//            JarEntry e = entries.nextElement();
-//            String name = e.getName();
-//            if (name.startsWith(EMBEDDED_SCRIPT_HEADER) && name.endsWith(".class")) {
-//                scripts.add(name);
-//            }
-//        }
-//    }
 
     private static void startScripts() {
         String p = argMap.get("stdout");
@@ -363,8 +348,8 @@ public final class Main {
                     }
                 }
             }
-
-            Client client = new FileClient(inst, traceScript, clientSettings);
+            ClientContext ctx = new ClientContext(inst, transformer, clientSettings);
+            Client client = new FileClient(ctx, traceScript);
 
             handleNewClient(client).get();
         } catch (NullPointerException e) {
@@ -410,7 +395,8 @@ public final class Main {
                 if (isDebug()) debugPrint("waiting for clients");
                 Socket sock = ss.accept();
                 if (isDebug()) debugPrint("client accepted " + sock);
-                Client client = new RemoteClient(inst, sock);
+                ClientContext ctx = new ClientContext(inst, transformer, settings);
+                Client client = new RemoteClient(ctx, sock);
                 handleNewClient(client).get();
             } catch (RuntimeException | IOException | ExecutionException re) {
                 if (isDebug()) debugPrint(re);
@@ -428,44 +414,7 @@ public final class Main {
                 boolean entered = BTraceRuntime.enter();
                 try {
                     client.debugPrint("new Client created " + client);
-                    if (client.shouldAddTransformer()) {
-                        client.registerTransformer();
-                        ArrayList<Class> list = new ArrayList<>();
-                        client.debugPrint("filtering loaded classes");
-                        ClassCache cc = ClassCache.getInstance();
-                        for (Class c : inst.getAllLoadedClasses()) {
-                            if (c != null) {
-                                cc.get(c);
-                                if (settings.isRetransformStartup() &&
-                                    inst.isModifiableClass(c) &&
-                                    client.isCandidate(c)) {
-                                    client.debugPrint("candidate " + c + " added");
-                                    list.add(c);
-                                }
-                            }
-                        }
-                        list.trimToSize();
-                        int size = list.size();
-                        client.debugPrint("added as ClassFileTransformer");
-                        if (size > 0) {
-                            Class[] classes = new Class[size];
-                            list.toArray(classes);
-                            client.startRetransformClasses(size);
-                            if (isDebug()) {
-                                for(Class c : classes) {
-                                    try {
-                                        inst.retransformClasses(c);
-                                    } catch (VerifyError e) {
-                                        client.debugPrint("verification error: " + c.getName());
-                                    }
-                                }
-                            } else {
-                                inst.retransformClasses(classes);
-                            }
-                            client.skipRetransforms();
-                        }
-                    }
-                    client.getRuntime().send(new OkayCommand());
+                    client.retransformLoaded();
                 } catch (UnmodifiableClassException uce) {
                     if (isDebug()) {
                         debugPrint(uce);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.BufferedInputStream;
 import com.sun.btrace.VerifierException;
 import com.sun.btrace.annotations.TargetInstance;
 import com.sun.btrace.annotations.TargetMethodOrField;
@@ -40,7 +37,6 @@ import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.util.Messages;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
@@ -69,16 +65,16 @@ public class Verifier extends ClassVisitor {
     private boolean classRenamed;
     private final boolean unsafeAllowed;
 
-    private final BTraceClassNode cn;
+    private final BTraceProbe cn;
 
-    public Verifier(BTraceClassNode cv, boolean unsafe) {
+    public Verifier(BTraceProbe cv, boolean unsafe) {
         super(Opcodes.ASM5, cv);
         this.unsafeAllowed = unsafe;
         this.cn = cv;
     }
 
 
-    public Verifier(BTraceClassNode cv) {
+    public Verifier(BTraceProbe cv) {
         this(cv, false);
     }
 
@@ -211,22 +207,5 @@ public class Verifier extends ClassVisitor {
     private static void usage(String msg) {
         System.err.println(msg);
         System.exit(1);
-    }
-
-    // simple test main
-    public static void main(String[] args) throws Exception {
-        if (args.length == 0) {
-            usage("java com.sun.btrace.runtime.Verifier <.class file>");
-        }
-
-        args[0] = args[0].replace('.', '/');
-        File file = new File(args[0] + ".class");
-        if (! file.exists()) {
-            usage("file '" + args[0] + ".class' does not exist");
-        }
-        FileInputStream fis = new FileInputStream(file);
-        ClassReader reader = new ClassReader(new BufferedInputStream(fis));
-        Verifier verifier = new Verifier(new BTraceClassNode());
-        reader.accept(verifier, 0);
     }
 }
