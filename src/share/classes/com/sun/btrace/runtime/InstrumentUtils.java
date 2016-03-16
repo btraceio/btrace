@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,14 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.DebugSupport;
-import com.sun.btrace.agent.ClassCache;
-import com.sun.btrace.agent.ClassInfo;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.JAVA_LANG_OBJECT;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * @author A. Sundararajan
@@ -52,50 +44,21 @@ public final class InstrumentUtils {
     * Common superclasses may be present multiple times (eg. {@code java.lang.Object})
     * It will use the associated classloader to locate the class file resources.
     * @param cl the associated classloader
-    * @param type the type to compute the hierarchy closure for
+    * @param type the type to compute the hierarchy closure for (either Java or internal name format)
     * @param closure the ordered set to store the closure in
+    * @param useInternal should internal types names be used in the closure
     */
-    public static void collectHierarchyClosure(ClassLoader cl, String type, LinkedHashSet<String> closure) {
+    public static void collectHierarchyClosure(ClassLoader cl, String type,
+                                               LinkedHashSet<String> closure, boolean useInternal) {
         if (type == null || type.equals(JAVA_LANG_OBJECT)) {
            return;
         }
         ClassInfo ci = ClassCache.getInstance().get(cl, type);
         for(ClassInfo sci : ci.getSupertypes(false)) {
-            closure.add(sci.getClassId().replace(".", "/"));
+            closure.add(useInternal ? sci.getClassName() : sci.getJavaClassName());
         }
     }
 
-    private static class BTraceClassWriter extends ClassWriter {
-        private final ClassLoader targetCL;
-        public BTraceClassWriter(ClassLoader cl, int flags) {
-            super(flags);
-            this.targetCL = cl != null ? cl : ClassLoader.getSystemClassLoader();
-        }
-
-        public BTraceClassWriter(ClassLoader cl, ClassReader reader, int flags) {
-            super(reader, flags);
-            this.targetCL = cl != null ? cl : ClassLoader.getSystemClassLoader();
-        }
-
-        protected String getCommonSuperClass(String type1, String type2) {
-            // Using type closures resolved via the associate classloader
-            LinkedHashSet<String> type1Closure = new LinkedHashSet<>();
-            LinkedHashSet<String> type2Closure = new LinkedHashSet<>();
-            collectHierarchyClosure(targetCL, type1, type1Closure);
-            collectHierarchyClosure(targetCL, type2, type2Closure);
-            // basically, do intersection
-            type1Closure.retainAll(type2Closure);
-
-            // if the intersection is not empty the first element is the closest common ancestor
-            Iterator<String> iter = type1Closure.iterator();
-            if (iter.hasNext()) {
-                String type = iter.next();
-                return type;
-            }
-
-            return JAVA_LANG_OBJECT;
-        }
-    }
     public static String arrayDescriptorFor(int typeCode) {
         switch (typeCode) {
             case T_BOOLEAN:
@@ -119,51 +82,99 @@ public final class InstrumentUtils {
         }
     }
 
+    public static byte[] instrument(byte[] code, BTraceProbe probe) {
+        BTraceClassReader cr = newClassReader(code);
+        ClassWriter cw = newClassWriter(cr);
+
+        ClassVisitor instr = Instrumentor.create(cr, probe, cw);
+        if (instr != null) {
+            accept(cr, instr);
+            return cw.toByteArray();
+        }
+        return code;
+    }
+
     public static void accept(ClassReader reader, ClassVisitor visitor) {
         accept(reader, visitor, ClassReader.SKIP_FRAMES);
     }
 
     public static void accept(ClassReader reader, ClassVisitor visitor, int flags) {
+        if (reader == null || visitor == null) return;
+
         reader.accept(visitor, flags);
     }
 
     private static boolean isJDK16OrAbove(byte[] code) {
-        // skip 0xCAFEBABE magic and minor version
-        final int majorOffset = 4 + 2;
-        int major = (((code[majorOffset] << 8) & 0xFF00) |
-                ((code[majorOffset + 1]) & 0xFF));
+        return isJDK16OrAbove(getMajor(code));
+    }
+
+    private static boolean isJDK16OrAbove(BTraceClassReader cr) {
+        return isJDK16OrAbove(getMajor(cr));
+    }
+
+    private static boolean isJDK16OrAbove(int major) {
         return major >= 50;
     }
 
+    private static int getMajor(BTraceClassReader cr) {
+        return cr.getClassVersion();
+    }
+
+    private static int getMajor(byte[] code) {
+        // skip 0xCAFEBABE magic and minor version
+        final int majorOffset = 4 + 2;
+        return (((code[majorOffset] << 8) & 0xFF00) |
+               ((code[majorOffset + 1]) & 0xFF));
+    }
+
     public static ClassWriter newClassWriter() {
-        return newClassWriter(null, null, ClassWriter.COMPUTE_FRAMES);
+        return newClassWriter(null, ClassWriter.COMPUTE_FRAMES);
     }
 
-    public static ClassWriter newClassWriter(byte[] code) {
+    static BTraceClassWriter newClassWriter(ClassLoader cl, String className, byte[] code) {
         int flags = ClassWriter.COMPUTE_MAXS;
         if (isJDK16OrAbove(code)) {
             flags = ClassWriter.COMPUTE_FRAMES;
         }
-        return newClassWriter(null, code);
+        return newClassWriter(new BTraceClassReader(cl, code), flags);
     }
 
-    public static ClassWriter newClassWriter(ClassLoader cl, byte[] code) {
+    static BTraceClassWriter newClassWriter(BTraceClassReader cr) {
         int flags = ClassWriter.COMPUTE_MAXS;
-        if (isJDK16OrAbove(code)) {
+
+        if (isJDK16OrAbove(cr)) {
             flags = ClassWriter.COMPUTE_FRAMES;
         }
-        return newClassWriter(cl, new ClassReader(code), flags);
+        return newClassWriter(cr, flags);
     }
 
-    public static ClassWriter newClassWriter(ClassLoader cl, ClassReader reader, int flags) {
-        ClassWriter cw = null;
-        cw = reader != null ? new BTraceClassWriter(cl, reader, flags) :
-                              new BTraceClassWriter(cl, flags);
+    static BTraceClassWriter newClassWriter(BTraceClassReader reader, int flags) {
+        BTraceClassWriter cw = null;
+        cw = reader != null ? new BTraceClassWriter(reader.getClassLoader(), reader, flags) :
+                              new BTraceClassWriter(null, flags);
 
         return cw;
     }
 
-    public static final String getActionPrefix(String className) {
+    static BTraceClassReader newClassReader(byte[] code) {
+        return new BTraceClassReader(ClassLoader.getSystemClassLoader(), code);
+    }
+
+    static BTraceClassReader newClassReader(ClassLoader cl, byte[] code) {
+        return new BTraceClassReader(cl, code);
+    }
+
+    static BTraceClassReader newClassReader(InputStream is)
+    throws IOException{
+        return new BTraceClassReader(ClassLoader.getSystemClassLoader(), is);
+    }
+
+    static BTraceClassReader newClassReader(ClassLoader cl, InputStream is)
+    throws IOException{
+        return new BTraceClassReader(cl, is);
+    }
+
+    static final String getActionPrefix(String className) {
         return Constants.BTRACE_METHOD_PREFIX + className.replace('/', '$') + "$";
     }
 }

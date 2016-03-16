@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.btrace.agent;
 
-import java.lang.instrument.Instrumentation;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -50,8 +49,8 @@ class RemoteClient extends Client {
     private volatile ObjectInputStream ois;
     private volatile ObjectOutputStream oos;
 
-    RemoteClient(Instrumentation inst, Socket sock) throws IOException {
-        super(inst);
+    RemoteClient(ClientContext ctx, Socket sock) throws IOException {
+        super(ctx);
         this.sock = sock;
         this.ois = new ObjectInputStream(sock.getInputStream());
         this.oos = new ObjectOutputStream(sock.getOutputStream());
@@ -82,6 +81,7 @@ class RemoteClient extends Client {
 
         BTraceRuntime.initUnsafe();
         Thread cmdHandler = new Thread(new Runnable() {
+            @Override
             public void run() {
                 BTraceRuntime.enter();
                 while (true) {

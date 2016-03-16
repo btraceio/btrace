@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.btrace.runtime;
+package com.sun.btrace.agent;
 
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import java.lang.reflect.Method;
@@ -32,6 +32,7 @@ import com.sun.btrace.instr.RunnableGenerator;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.runtime.InstrumentUtils;
 
 /**
  * This class generates a java.lang.Runnable implementation
