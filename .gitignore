@@ -26,7 +26,7 @@ junit*
 *.iml
 .gradle
 .idea
-!/lib/btrace-jctools-core-1.1.jar
+!/lib/btrace-jctools-core-*.jar
 CHANGELOG.md
 gradle.properties
 /.nb-gradle/
