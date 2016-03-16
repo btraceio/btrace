@@ -1,10 +1,10 @@
-btrace [![Build Status](https://travis-ci.org/btraceio/btrace.svg?branch=master)](https://travis-ci.org/btraceio/btrace) [![codecov.io](https://codecov.io/github/btraceio/btrace/coverage.svg?branch=master)](https://codecov.io/github/btraceio/btrace?branch=master) [![Join the chat at https://gitter.im/jbachorik/btrace](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jbachorik/btrace?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Project Stats](https://www.openhub.net/p/btrace/widgets/project_thin_badge.gif)](https://www.openhub.net/p/btrace)
+btrace [![Build Status](https://travis-ci.org/btraceio/btrace.svg?branch=master)](https://travis-ci.org/btraceio/btrace) [![codecov.io](https://codecov.io/github/btraceio/btrace/coverage.svg?branch=master)](https://codecov.io/github/btraceio/btrace?branch=master) [![Join the chat at https://gitter.im/jbachorik/btrace](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/btraceio/btrace?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Project Stats](https://www.openhub.net/p/btrace/widgets/project_thin_badge.gif)](https://www.openhub.net/p/btrace)
 ======
 
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
-1.3.4 ([Release Page](https://github.com/jbachorik/btrace/releases/latest))
+1.3.4 ([Release Page](https://github.com/btraceio/btrace/releases/latest))
 
 ## Quick Summary
 BTrace is a safe, dynamic tracing tool for the Java platform.
@@ -42,7 +42,7 @@ The binary dist packages can be found in `<btrace>/dist` as the *.tar.gz and *.z
 
 ## Using BTrace
 ### Installation
-Download a distribution file from the [release page](https://github.com/jbachorik/btrace/releases/tag/v1.3). Explode the binary distribution file (either *.tar.gz or *.zip) to a directory of your choice.
+Download a distribution file from the [release page](https://github.com/btraceio/btrace/releases/latest). Explode the binary distribution file (either *.tar.gz or *.zip) to a directory of your choice.
 
 You may set the system environment variable __BTRACE_HOME__ to point to the directory containing the exploded distribution.
 
@@ -55,7 +55,7 @@ Or, alternatively, you may install one of the *.rpm or *.deb packages
 * `<btrace>/bin/btracec <trace_script>` will compile the provided trace script
 * `<btrace>/bin/btracer <compiled_script> <args to launch a java app>` will start the specified java application with the btrace agent running and the script previously compiled by *btracec* loaded
 
-For the detailed user guide, please, check the [Wiki](https://github.com/jbachorik/btrace/wiki/Home).
+For the detailed user guide, please, check the [Wiki](https://github.com/btraceio/btrace/wiki/Home).
 
 ### Maven Integration
 The [maven plugin](https://github.com/btraceio/btrace-maven) is providing easy compilation of __BTrace__ scripts as a part of the build process. As a bonus you can utilize the _BTrace Project Archetype_ to bootstrap developing __BTrace__ scripts.
