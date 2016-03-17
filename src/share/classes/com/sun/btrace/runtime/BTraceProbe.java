@@ -26,6 +26,7 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.DebugSupport;
+import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
@@ -64,6 +65,7 @@ public final class BTraceProbe extends ClassNode {
     private final Preprocessor prep = new Preprocessor();
 
     private final BTraceProbeFactory factory;
+    private volatile BTraceRuntime rt = null;
     private final DebugSupport debug;
     private ClassFilter filter = null;
     private String className;
@@ -177,10 +179,6 @@ public final class BTraceProbe extends ClassNode {
         return className;
     }
 
-    public void dumpBytecode() {
-
-    }
-
     public Class register(BTraceRuntime rt, BTraceTransformer t) {
         byte[] code = getBytecode(true);
         if (debug.isDumpClasses()) {
@@ -189,6 +187,7 @@ public final class BTraceProbe extends ClassNode {
         Class clz = defineClass(rt, code);
         t.register(this);
         this.transformer = t;
+        this.rt = rt;
         return clz;
     }
 
@@ -199,6 +198,7 @@ public final class BTraceProbe extends ClassNode {
             }
             transformer.unregister(this);
         }
+        this.rt = null;
     }
 
     public byte[] getBytecode(boolean onlyBcpMethods) {
@@ -286,6 +286,12 @@ public final class BTraceProbe extends ClassNode {
 
     CallGraph getGraph() {
         return graph;
+    }
+
+    void notifyTransform(String className) {
+        if (rt != null && factory.getSettings().isTrackRetransforms()) {
+            rt.send(new RetransformClassNotification(className.replace('/', '.')));
+        }
     }
 
     /**

@@ -138,6 +138,23 @@ public class BTraceFunctionalTests extends RuntimeTest {
     }
 
     @Test
+    public void testOnMethodTrackRetransform() throws Exception {
+        trackRetransforms = true;
+        test(
+            "resources.Main",
+            "traces/OnMethodTest.java",
+            2,
+            new ResultValidator() {
+                public void validate(String stdout, String stderr, int retcode) {
+                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+                    Assert.assertTrue(stdout.contains("Going to retransform class"));
+                }
+            }
+        );
+    }
+
+    @Test
     public void testOnMethodReturn() throws Exception {
         test(
             "resources.Main",

@@ -204,7 +204,7 @@ public final class Main {
             public void onCommand(Command cmd) throws IOException {
                 int type = cmd.getType();
                 if (cmd instanceof PrintableCommand) {
-                    ((DataCommand)cmd).print(out);
+                    ((PrintableCommand)cmd).print(out);
                     out.flush();
                 } else if (type == Command.EXIT) {
                     exiting = true;
