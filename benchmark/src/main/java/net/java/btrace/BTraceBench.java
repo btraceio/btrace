@@ -321,7 +321,7 @@ public class BTraceBench {
         try {
             Options opt = new OptionsBuilder()
                     .addProfiler("stack")
-                    .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=noServer=true,"
+                    .jvmArgsPrepend("-javaagent:" + bc.agentJar + "=stdout=true,noServer=true,"
                             + "script=" + bc.scriptPath)
                     .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
                     .build();
