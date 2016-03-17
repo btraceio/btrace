@@ -103,6 +103,10 @@ abstract public class RuntimeTest {
      * Timeout in ms to wait for the expected BTrace output
      */
     protected long timeout = 10000L;
+    /**
+     * Track retransforming progress
+     */
+    protected boolean trackRetransforms = false;
 
     protected void reset() {
         debugTestApp = false;
@@ -133,6 +137,7 @@ abstract public class RuntimeTest {
         final AtomicReference<String> pidStringRef = new AtomicReference<>();
 
         Thread outT = new Thread(new Runnable() {
+            @Override
             public void run() {
                 try {
                     String l;
@@ -158,6 +163,7 @@ abstract public class RuntimeTest {
 
         Thread errT = new Thread(new Runnable() {
 
+            @Override
             public void run() {
                 try {
                     String l = null;
@@ -206,6 +212,7 @@ abstract public class RuntimeTest {
             java + "/bin/java",
             "-Dcom.sun.btrace.unsafe=" + isUnsafe,
             "-Dcom.sun.btrace.debug=" + debugBTrace,
+            "-Dcom.sun.btrace.trackRetransforms=" + trackRetransforms,
             "-cp",
             btraceExtPath,
             "com.sun.btrace.client.Main",
@@ -221,6 +228,7 @@ abstract public class RuntimeTest {
         final CountDownLatch l = new CountDownLatch(checkLines);
 
         new Thread(new Runnable() {
+            @Override
             public void run() {
                 try {
                     BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()));
@@ -245,6 +253,7 @@ abstract public class RuntimeTest {
         }, "Stderr Reader").start();
 
         new Thread(new Runnable() {
+            @Override
             public void run() {
                 try {
                     BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));

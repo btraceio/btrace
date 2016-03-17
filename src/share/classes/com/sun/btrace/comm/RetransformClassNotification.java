@@ -28,13 +28,14 @@ package com.sun.btrace.comm;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 /**
  * This command is sent out as a notification that a class
  * is going to be transformed
  * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
  */
-public class RetransformClassNotification extends Command {
+public class RetransformClassNotification extends Command implements PrintableCommand {
     private String className;
 
     public RetransformClassNotification(String className) {
@@ -57,5 +58,10 @@ public class RetransformClassNotification extends Command {
 
     public String getClassName() {
         return className;
+    }
+
+    @Override
+    public void print(PrintWriter out) {
+        out.append("Going to retransform class ").append(className).append('\n');
     }
 }
