@@ -31,6 +31,9 @@ import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.regex.Pattern;
 
 /**
  * The single entry point for class transformation.
@@ -44,8 +47,82 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @author Jaroslav Bachorik
  */
 public class BTraceTransformer implements ClassFileTransformer {
+    private static class Filter {
+        static enum Result {
+            TRUE, FALSE, MAYBE
+        }
+        private boolean isFast = true;
+        private boolean isRegex = false;
+
+
+        private final ConcurrentMap<String, Integer> nameMap = new ConcurrentSkipListMap<>();
+        private final ConcurrentMap<Pattern, Integer> nameRegexMap = new ConcurrentSkipListMap<>();
+
+        void add(OnMethod om) {
+            String name = om.getClazz().replace('.', '/');
+            if (om.isSubtypeMatcher() || om.isClassAnnotationMatcher()) {
+                isFast = false;
+            } else {
+                if (om.isClassRegexMatcher()) {
+                    isRegex = true;
+                    addToMap(nameRegexMap, Pattern.compile(name));
+                } else {
+                    addToMap(nameMap, name);
+                }
+            }
+        }
+        
+        void remove(OnMethod om) {
+            String name = om.getClazz().replace('.', '/');
+            if (!(om.isSubtypeMatcher() || om.isClassAnnotationMatcher())) {
+                if (om.isClassRegexMatcher()) {
+                    removeFromMap(nameRegexMap, Pattern.compile(name));
+                } else {
+                    removeFromMap(nameMap, name);
+                }
+            }
+        }
+
+        private static <K> void addToMap(ConcurrentMap<K, Integer> map, K name) {
+            Integer i = map.putIfAbsent(name, 1);
+            if (i != null) {
+                while (!map.replace(name, i, i + 1)) {
+                    i = map.get(name);
+                }
+            }
+        }
+
+        private static <K> void removeFromMap(ConcurrentMap<K, Integer> map, K name) {
+            Integer freq = map.get(name);
+            while (freq != null && !map.replace(name, freq, freq - 1)) {
+                freq = map.get(name);
+            }
+            if (freq == null || freq == 0) {
+                map.remove(name);
+            }
+        }
+
+        public Result matchClass(String className) {
+            if (isFast) {
+                if (nameMap.containsKey(className)) {
+                    return Result.TRUE;
+                }
+                if (isRegex) {
+                    className = className.replace('/', '.');
+                    for(Pattern p : nameRegexMap.keySet()) {
+                        if (p.matcher(className).matches()) {
+                            return Result.TRUE;
+                        }
+                    }
+                }
+                return Result.FALSE;
+            }
+            return Result.MAYBE;
+        }
+    }
     private final DebugSupport debug;
     private final Collection<BTraceProbe> probes = new ConcurrentLinkedDeque<>();
+    private final Filter filter = new Filter();
 
     public BTraceTransformer(DebugSupport d) {
         debug = d;
@@ -53,28 +130,35 @@ public class BTraceTransformer implements ClassFileTransformer {
 
     public final void register(BTraceProbe p) {
         probes.add(p);
+        for(OnMethod om : p.onmethods()) {
+            filter.add(om);
+        }
     }
 
     public final void unregister(BTraceProbe p) {
         probes.remove(p);
+        for(OnMethod om : p.onmethods()) {
+            filter.remove(om);
+        }
     }
 
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         if (probes.isEmpty()) return null;
 
+        className = className != null ? className : "<anonymous>";
+
+        if (isBTraceClass(className) || isSensitiveClass(className)) {
+            if (isDebug()) {
+                debugPrint("skipping transform for BTrace class " + className); // NOI18N
+            }
+            return null;
+        }
+
+        if (filter.matchClass(className) == Filter.Result.FALSE) return null;
+
         boolean entered = BTraceRuntime.enter();
         try {
-            if (className == null) {
-                className = "<anonymous>";
-            }
-            if (isBTraceClass(className) || isSensitiveClass(className)) {
-                if (isDebug()) {
-                    debugPrint("skipping transform for BTrace class " + className); // NOI18N
-                }
-                return null;
-            }
-
             BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
             BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
             for(BTraceProbe p : probes) {
@@ -106,7 +190,7 @@ public class BTraceTransformer implements ClassFileTransformer {
             }
         }
     }
-
+    
     private static boolean isBTraceClass(String name) {
         return name.startsWith("com/sun/btrace/");
     }

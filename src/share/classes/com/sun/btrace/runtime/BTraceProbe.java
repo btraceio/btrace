@@ -48,6 +48,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 /**
  *
@@ -70,6 +73,8 @@ public final class BTraceProbe extends ClassNode {
     private ClassFilter filter = null;
     private String className;
     private BTraceTransformer transformer;
+    private boolean subtypeMatcher = false;
+    private boolean annotationMatcher = false;
 
     private BTraceProbe(BTraceProbeFactory factory) {
         super(Opcodes.ASM5);
@@ -142,7 +147,8 @@ public final class BTraceProbe extends ClassNode {
             }
             // Check regex match
             if (om.isClassRegexMatcher() && !om.isClassAnnotationMatcher()) {
-                if (Pattern.matches(probeClass, targetName)) {
+                Pattern p = Pattern.compile(probeClass);
+                if (p.matcher(targetName).matches()) {
                     applicables.add(om);
                     continue;
                 }
@@ -150,9 +156,9 @@ public final class BTraceProbe extends ClassNode {
             if (om.isClassAnnotationMatcher()) {
                 Collection<String> annoTypes = cr.getAnnotationTypes();
                 if (om.isClassRegexMatcher()) {
-                    Pattern annoCheck = Pattern.compile(probeClass);
+                    Pattern p = Pattern.compile(probeClass);
                     for(String annoType : annoTypes) {
-                        if (annoCheck.matcher(annoType).matches()) {
+                        if (p.matcher(annoType).matches()) {
                             applicables.add(om);
                             continue outer;
                         }
@@ -173,6 +179,15 @@ public final class BTraceProbe extends ClassNode {
             }
         }
         return applicables;
+    }
+    
+    public Iterable<OnMethod> onmethods() {
+        return new Iterable<OnMethod>() {
+            @Override
+            public Iterator<OnMethod> iterator() {
+                return Collections.unmodifiableCollection(onMethods).iterator();
+            }
+        };
     }
 
     public String getClassName() {
@@ -269,6 +284,8 @@ public final class BTraceProbe extends ClassNode {
     }
 
     void addOnMethod(OnMethod om) {
+        subtypeMatcher |= om.isSubtypeMatcher();
+        annotationMatcher |= om.isClassAnnotationMatcher();
         onMethods.add(om);
     }
 
@@ -338,7 +355,7 @@ public final class BTraceProbe extends ClassNode {
                  omn.setTargetInstanceParameter(op.getTargetInstanceParameter());
                  omn.setTargetMethodOrFieldFqn(op.isTargetMethodOrFieldFqn());
                  omn.setTargetMethodOrFieldParameter(op.getTargetMethodOrFieldParameter());
-                 onMethods.add(omn);
+                 addOnMethod(omn);
             }
         }
     }

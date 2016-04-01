@@ -73,12 +73,12 @@ import sun.reflect.annotation.AnnotationType;
  * @author J. Bachorik (j.bachorik@btrace.io)
  */
 abstract class Client implements CommandListener {
-    private static final Map<String, PrintWriter> writerMap = new HashMap<>();
+    private static final Map<String, PrintWriter> WRITER_MAP = new HashMap<>();
 
     protected final Instrumentation inst;
     private volatile BTraceRuntime runtime;
     private volatile String outputName;
-    private volatile byte[] btraceCode;
+    private byte[] btraceCode;
     private BTraceProbe probe;
 
     private Timer flusher;
@@ -126,7 +126,7 @@ abstract class Client implements CommandListener {
             outputFile = templateOutputFileName(output);
             infoPrint("Redirecting output to " + outputFile);
         }
-        out = writerMap.get(outputFile);
+        out = WRITER_MAP.get(outputFile);
         if (out == null) {
             if (outputFile.equals("::stdout")) {
                 out = new PrintWriter(System.out);
@@ -139,7 +139,7 @@ abstract class Client implements CommandListener {
                     out = new PrintWriter(new BufferedWriter(TraceOutputWriter.fileWriter(new File(outputFile), settings)));
                 }
             }
-            writerMap.put(outputFile, out);
+            WRITER_MAP.put(outputFile, out);
             out.append("### BTrace Log: " + DateFormat.getInstance().format(new Date()) + "\n\n");
             startFlusher();
         }
@@ -259,7 +259,7 @@ abstract class Client implements CommandListener {
         if (out != null) {
             out.close();
         }
-        writerMap.remove(outputName);
+        WRITER_MAP.remove(outputName);
     }
 
     protected final void errorExit(Throwable th) throws IOException {
@@ -306,7 +306,7 @@ abstract class Client implements CommandListener {
         if (c.isInterface() || c.isPrimitive() || c.isArray()) {
             return false;
         }
-        if (isBTraceClass(cname)) {
+        if (ClassFilter.isBTraceClass(cname) || ClassFilter.isSensitiveClass(cname)) {
             return false;
         } else {
             return probe.willInstrument(c);
@@ -334,10 +334,6 @@ abstract class Client implements CommandListener {
     }
 
     // Internals only below this point
-    private static boolean isBTraceClass(String name) {
-        return name.startsWith("com/sun/btrace/");
-    }
-
     private BTraceProbe verifyAndLoad(byte[] buf) {
         BTraceProbeFactory f = new BTraceProbeFactory(settings);
         debugPrint("loading BTrace class");

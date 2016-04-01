@@ -50,7 +50,7 @@ import java.util.regex.PatternSyntaxException;
  * @author A. Sundararajan
  */
 public class ClassFilter {
-    private static final Class<?> referenceClz = Reference.class;
+    private static final Class<?> REFERENCE_CLASS = Reference.class;
 
     private Set<String> sourceClasses;
     private Pattern[] sourceClassPatterns;
@@ -81,7 +81,7 @@ public class ClassFilter {
             return false;
         }
 
-        if (referenceClz.equals(target)) {
+        if (REFERENCE_CLASS.equals(target)) {
             // instrumenting the <b>java.lang.ref.Reference</b> class will lead
             // to StackOverflowError in <b>java.lang.ThreadLocal.get()</b>
             return false;
@@ -192,11 +192,6 @@ public class ClassFilter {
     }
 
     public boolean isNameMatching(String clzName) {
-        if (isSensitiveClass(clzName)) {
-            // do not instrument the sensitive classes
-            return false;
-        }
-
         if (sourceClasses.contains(clzName))  {
             return true;
         }
@@ -269,15 +264,19 @@ public class ClassFilter {
      * if BTrace instruments java.lang.ThreadLocal for example.
      * For now, we avoid such classes till we find a solution.
      */
-    private static boolean isSensitiveClass(String name) {
-        return name.equals("java.lang.Object") || // NOI18N
-               name.startsWith("java.lang.ThreadLocal") || // NOI18N
-               name.startsWith("sun.reflect") || // NOI18N
-               name.equals("sun.misc.Unsafe")  || // NOI18N
-               name.startsWith("sun.security/") || // NOI18N
-               name.equals("java.lang.VerifyError") || // NOI18N
-               name.startsWith("sun.instrument.") || // NOI18N
-               name.startsWith("java.lang.instrument."); // NOI18N
+    public static boolean isSensitiveClass(String name) {
+        return name.equals("java/lang/Object") || // NOI18N
+               name.startsWith("java/lang/ThreadLocal") || // NOI18N
+               name.startsWith("sun/reflect") || // NOI18N
+               name.equals("sun/misc/Unsafe")  || // NOI18N
+               name.startsWith("sun/security/") || // NOI18N
+               name.equals("java/lang/VerifyError") || // NOI18N
+               name.startsWith("sun/instrument/") || // NOI18N
+               name.startsWith("java/lang/instrument/"); // NOI18N
+    }
+    
+    public static boolean isBTraceClass(String name) {
+        return name.startsWith("com/sun/btrace/");
     }
 
     private void init() {
