@@ -631,7 +631,7 @@ public class Instrumentor extends ClassVisitor {
 
                                     Label l = levelCheckAfter(om, bcn.name);
 
-                                    String method = cName + cDesc;
+                                    String method = getMethodOrFieldName(om.isTargetMethodOrFieldFqn(), opcode, cOwner, cName, cDesc);;
                                     boolean withReturn = om.getReturnParameter() != -1 && returnType != Type.VOID_TYPE;
                                     if (withReturn) {
                                         // store the return value to a local variable
