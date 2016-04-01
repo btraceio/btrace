@@ -45,9 +45,9 @@ bintray {
         repo = 'maven'
         name = 'btrace'
         desc = 'BTrace'
-        websiteUrl = 'https://github.com/jbachorik/btrace'
-        issueTrackerUrl = 'https://github.com/jbachorik/btrace/issues'
-        vcsUrl = 'https://github.com/jbachorik/btrace.git'
+        websiteUrl = 'https://github.com/btraceio/btrace'
+        issueTrackerUrl = 'https://github.com/btraceio/btrace/issues'
+        vcsUrl = 'https://github.com/btraceio/btrace.git'
         licenses = ['GPL-2.0+CE']
         labels = []
         publicDownloadNumbers = true
@@ -66,11 +66,11 @@ bintray {
 
 def pomDetails = {
     resolveStrategy = Closure.DELEGATE_FIRST
-    url 'https://github.com/jbachorik/btrace'
+    url 'https://github.com/btraceio/btrace'
     scm {
-        url 'https://github.com/jbachorik/btrace'
-        connection 'scm:git:https://github.com/jbachorik/btrace.git'
-        developerConnection 'scm:git:https://github.com/jbachorik/btrace.git'
+        url 'https://github.com/btraceio/btrace'
+        connection 'scm:git:https://github.com/btraceio/btrace.git'
+        developerConnection 'scm:git:https://github.com/btraceio/btrace.git'
     }
     licenses {
         license {
@@ -82,7 +82,7 @@ def pomDetails = {
         developer {
             id 'yardus'
             name 'Jaroslav Bachorik'
-            email 'j.bachorik@gmail.com'
+            email 'j.bachorik@btrace.io'
         }
     }
 }
