@@ -23,31 +23,28 @@
  * questions.
  */
 
-package traces.onmethod;
+package traces.onmethod.leveled;
 
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.TargetInstance;
 import com.sun.btrace.annotations.TargetMethodOrField;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
-import com.sun.btrace.annotations.ProbeClassName;
-import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.TargetInstance;
+import com.sun.btrace.annotations.Level;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
 @BTrace
-public class MethodCallStatic {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTargetStatic"))
-    public static void args(@Self Object self, String a, long b,
-                            @TargetInstance Object target,
-                            @TargetMethodOrField(fqn=true) String calledMethod,
-                            @ProbeClassName String className, @ProbeMethodName String methodName) {
+public class FieldGetBeforeStatic {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="staticField",
+              location=@Location(value=Kind.FIELD_GET, clazz="/.*\\.OnMethodTest/", field="sField"),
+              enableAt = @Level(">=1"))
+    public static void args(@Self Object self, @TargetInstance Object inst, @TargetMethodOrField String fldName) {
         println("args");
     }
 }

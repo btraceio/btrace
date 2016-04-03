@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,7 +83,7 @@ public class OnMethodTest {
     public void field() {
         this.field = this.field + 1;
     }
-
+    
     public void newObject() {
         Map<String, String> m = new HashMap<String, String>();
     }
@@ -136,4 +136,10 @@ public class OnMethodTest {
 
     public native long nativeWithReturn(int a, String b, long[] c, Object[] d);
     public native void nativeWithoutReturn(int a, String b, long[] c, Object[] d);
+    
+    private static long sField;
+    
+    public void staticField() {
+        OnMethodTest.sField += 1;
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -419,6 +419,10 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     protected final ArgumentProvider constArg(int index, Object val) {
         return new ConstantArgProvider(asm, index, val);
     }
+    
+    protected final ArgumentProvider selfArg(int index, Type type) {
+        return isStatic() ? constArg(index, null) : localVarArg(index, type, 0);
+    }
 
     protected final ArgumentProvider anytypeArg(int index, int basePtr) {
         return new AnyTypeArgProvider(asm, index, basePtr);
@@ -448,13 +452,10 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         return superClz;
     }
 
-    protected ValidationResult validateArguments(OnMethod om, boolean staticFlag, Type[] actionArgTypes, Type[] methodArgTypes) {
+    protected ValidationResult validateArguments(OnMethod om, Type[] actionArgTypes, Type[] methodArgTypes) {
         int specialArgsCount = 0;
 
         if (om.getSelfParameter() != -1) {
-            if (staticFlag) {
-                return ValidationResult.INVALID;
-            }
             Type selfType = extraTypes.get(om.getSelfParameter());
             if (selfType == null) {
                 if (!TypeUtils.isObject(actionArgTypes[om.getSelfParameter()])) {

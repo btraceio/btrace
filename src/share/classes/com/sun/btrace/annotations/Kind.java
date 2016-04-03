@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
      * </ul>
      */
@@ -69,7 +69,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      * </ul>
      */
     ARRAY_SET,
@@ -91,7 +91,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      *   <li>{@linkplain TargetInstance} - the target instance of the method call
      *       or null if the method is static</li>
      *   <li>{@linkplain TargetMethodOrField} - the name of the method which is called</li>
@@ -113,7 +113,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      * </ul>
      */
     CATCH,
@@ -130,7 +130,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      *   <li>{@linkplain TargetInstance} - the casted instance ({@linkplain AnyType})</li>
      * </ul>
      */
@@ -153,7 +153,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      * </ul>
      */
     ENTRY,
@@ -170,7 +170,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      *   <li>{@linkplain Duration} - the method call duration in nanoseconds (only for {@linkplain Where#AFTER}</li>
      * </ul>
      */
@@ -184,9 +184,9 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
-     *   <li>{@linkplain TargetInstance} - the target instance of the method call
-     *       or null if the method is static</li>
+     *       if that method is static</li>
+     *   <li>{@linkplain TargetInstance} - the field owner instance or null 
+     *       if the field is static</li>
      *   <li>{@linkplain TargetMethodOrField} - the name of the method which is called</li>
      *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
      * </ul>
@@ -205,9 +205,9 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
-     *   <li>{@linkplain TargetInstance} - the target instance of the method call
-     *       or null if the method is static</li>
+     *       if that field is static</li>
+     *   <li>{@linkplain TargetInstance} - the field owner instance or null 
+     *       if the field is static</li>
      *   <li>{@linkplain TargetMethodOrField} - the name of the method which is called</li>
      * </ul>
      */
@@ -225,7 +225,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      *   <li>{@linkplain TargetInstance} - the checked instance ({@linkplain AnyType})</li>
      * </ul>
      */
@@ -243,7 +243,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      * </ul>
      */
     LINE,
@@ -260,7 +260,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
      * </ul>
      */
@@ -279,7 +279,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
      * </ul>
      */
@@ -302,7 +302,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      *   <li>{@linkplain Return} - the return value of the method call (only for {@linkplain Where#AFTER})</li>
      *   <li>{@linkplain Duration} - the method call duration in nanoseconds (only for {@linkplain Where#AFTER}</li>
      * </ul>
@@ -321,7 +321,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      * </ul>
      */
     SYNC_ENTRY,
@@ -338,7 +338,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      * </ul>
      */
     SYNC_EXIT,
@@ -355,7 +355,7 @@ public enum Kind {
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
-     *       if that method is null</li>
+     *       if that method is static</li>
      * </ul>
      */
     THROW

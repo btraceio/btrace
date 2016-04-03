@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1239,6 +1239,38 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXLOCALS = 8"
         );
     }
+    
+    @Test
+    public void methodEntryFieldStaticGetBefore() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/FieldGetBeforeStatic");
+
+        checkTransformation(
+            "ALOAD 0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"sField\"\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldGetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V"
+        );
+        
+        resetClassLoader();
+        
+        transform("onmethod/leveled/FieldGetBeforeStatic");
+
+        checkTransformation(
+            "GETSTATIC traces/onmethod/leveled/FieldGetBeforeStatic.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L1\n" +
+            "ALOAD 0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"sField\"\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldGetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V\n" +
+            "L1\n" +
+            "L2\n" +
+            "LINENUMBER 144 L2\n" +
+            "L3\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0"
+        );
+    }
 
     @Test
     public void methodEntryFieldGetBefore() throws Exception {
@@ -1269,6 +1301,55 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "MAXSTACK = 5\n" +
             "MAXLOCALS = 2"
+        );
+    }
+    
+    @Test
+    public void methodEntryFieldStaticGetAfter() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/FieldGetAfterStatic");
+
+        checkTransformation(
+            "DUP2\n" +
+            "LSTORE 1\n" +
+            "ALOAD 0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"static field long resources.OnMethodTest#sField\"\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldGetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "MAXSTACK = 7\n" +
+            "MAXLOCALS = 3"
+        );
+        
+        resetClassLoader();
+        
+        transform("onmethod/leveled/FieldGetAfterStatic");
+
+        checkTransformation(
+            "GETSTATIC traces/onmethod/leveled/FieldGetAfterStatic.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "ISUB\n" +
+            "DUP\n" +
+            "ISTORE 1\n" +
+            "IFLT L1\n" +
+            "L1\n" +
+            "ILOAD 1\n" +
+            "IFLT L2\n" +
+            "DUP2\n" +
+            "LSTORE 2\n" +
+            "ALOAD 0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"static field long resources.OnMethodTest#sField\"\n" +
+            "LLOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldGetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "L2\n" +
+            "L3\n" +
+            "LINENUMBER 144 L3\n" +
+            "RETURN\n" +
+            "L4\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0\n" +
+            "MAXSTACK = 7\n" +
+            "MAXLOCALS = 4"
         );
     }
 
@@ -1323,6 +1404,49 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXLOCALS = 4"
         );
     }
+    
+    @Test
+    public void methodEntryFieldStaticSetBefore() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/FieldSetBeforeStatic");
+
+        checkTransformation(
+            "LSTORE 1\n" +
+            "LLOAD 1\n" +
+            "ALOAD 0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"sField\"\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldSetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "MAXSTACK = 7\n" +
+            "MAXLOCALS = 3"
+        );
+        
+        resetClassLoader();
+        
+        transform("onmethod/leveled/FieldSetBeforeStatic");
+
+        checkTransformation(
+            "LSTORE 1\n" +
+            "LLOAD 1\n" +
+            "GETSTATIC traces/onmethod/leveled/FieldSetBeforeStatic.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L1\n" +
+            "ALOAD 0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"sField\"\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldSetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "L1\n" +
+            "L2\n" +
+            "LINENUMBER 144 L2\n" +
+            "RETURN\n" +
+            "L3\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
+            "MAXSTACK = 7\n" +
+            "MAXLOCALS = 3"
+        );
+    }
 
     @Test
     public void methodEntryFieldSetBefore() throws Exception {
@@ -1370,6 +1494,40 @@ public class InstrumentorTest extends InstrumentorTestBase {
         );
     }
 
+    @Test
+    public void methodEntryFieldStaticSetAfter() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/FieldSetAfterStatic");
+
+        checkTransformation(
+            "LSTORE 1\n" +
+            "LLOAD 1\n" +
+            "ALOAD 0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"sField\"\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldSetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 3"
+        );
+        
+        resetClassLoader();
+        
+        transform("onmethod/FieldSetAfterStatic");
+
+        checkTransformation(
+            "LSTORE 1\n" +
+            "LLOAD 1\n" +
+            "ALOAD 0\n" +
+            "ACONST_NULL\n" +
+            "LDC \"sField\"\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldSetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "MAXSTACK = 5\n" +
+            "MAXLOCALS = 3"
+        );
+    }
+    
     @Test
     public void methodEntryFieldSetAfter() throws Exception {
         loadTargetClass("OnMethodTest");
@@ -3276,7 +3434,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/StaticNoArgsSelf");
 
-        checkTransformation("");
+        checkTransformation(
+            "ACONST_NULL\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticNoArgsSelf$argsEmpty (Ljava/lang/Object;)V\n" +
+            "MAXSTACK = 1"
+        );
     }
 
     @Test
@@ -4032,13 +4194,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 0\n" +
             "ALOAD 6\n" +
             "LLOAD 4\n" +
+            "ACONST_NULL\n" +
             "LDC \"static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)\"\n" +
             "LDC \"resources.OnMethodTest\"\n" +
             "LDC \"callTopLevel\"\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallStatic$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallStatic$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
             "ALOAD 6\n" +
             "LLOAD 4\n" +
-            "MAXSTACK = 9\n" +
+            "MAXSTACK = 10\n" +
             "MAXLOCALS = 7"
         );
 
