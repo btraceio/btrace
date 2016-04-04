@@ -12,7 +12,7 @@
     "files":
         [
           {
-            "includePattern": "build/distributions/btrace-bin(.*)?\\.(tgz|zip)", 
+            "includePattern": "build/distributions/btrace-bin(.*)\\.(tgz|zip)", 
 	    "uploadPattern": "btrace-bin-SNAPSHOT.$2",
 	    "matrixParams": {
 	      "override": 1
