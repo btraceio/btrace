@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.runtime.Constants;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.util.Messages;
 import java.util.concurrent.ExecutionException;
@@ -54,7 +55,6 @@ import java.util.concurrent.ThreadFactory;
  * @author Joachim Skeie (rolling output)
  */
 public final class Main {
-    static final String EMBEDDED_SCRIPT_HEADER = "META-INF/btrace/";
 
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
@@ -91,7 +91,7 @@ public final class Main {
         } else {
             Main.inst = inst;
         }
-
+        
         parseArgs(args);
         if (isDebug()) debugPrint("parsed command line arguments");
 
@@ -323,7 +323,7 @@ public final class Main {
             scriptParent = traceScript.getParent();
 
             if (! traceScript.exists()) {
-                traceScript = new File(EMBEDDED_SCRIPT_HEADER + filePath);
+                traceScript = new File(Constants.EMBEDDED_SCRIPT_HEADER + filePath);
             }
 
             if (! scriptName.endsWith(".class")) {

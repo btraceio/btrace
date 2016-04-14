@@ -27,6 +27,9 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.DebugSupport;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.Map;
 import javax.xml.bind.*;
 import javax.xml.bind.helpers.DefaultValidationEventHandler;
@@ -46,7 +49,8 @@ final class ProbeDescriptorLoader {
 
     ProbeDescriptorLoader(String probeDescPath, DebugSupport ds) {
         // split probe descriptor path into directories
-        this.probeDescDirs = probeDescPath.split(File.pathSeparator);
+        this.probeDescDirs = probeDescPath != null ? 
+                                probeDescPath.split(File.pathSeparator) : null;
         this.debug = ds;
     }
 
@@ -64,7 +68,7 @@ final class ProbeDescriptorLoader {
             return res;
         } else {
             // load probe descriptor for the given namespace
-            File file = findFile(namespace);
+            InputStream file = openDescriptor(namespace);
             if (file == null) {
                 if (debug.isDebug()) debug.debug("didn't find probe descriptor file " + namespace);
                 return null;
@@ -79,13 +83,12 @@ final class ProbeDescriptorLoader {
     }
 
     // unmarshall BTrace probe descriptor from XML
-    private ProbeDescriptor load(File file) {
+    private ProbeDescriptor load(InputStream stream) {
         try {
             JAXBContext jc = JAXBContext.newInstance("com.sun.btrace.annotations:com.sun.btrace.runtime");
-            if (debug.isDebug()) debug.debug("reading " + file);
             Unmarshaller u = jc.createUnmarshaller();
             u.setEventHandler(new DefaultValidationEventHandler());
-            ProbeDescriptor pd = (ProbeDescriptor)u.unmarshal(file);
+            ProbeDescriptor pd = (ProbeDescriptor)u.unmarshal(stream);
             pd.setProbes(pd.getProbes());
             return pd;
         } catch (JAXBException exp) {
@@ -94,17 +97,39 @@ final class ProbeDescriptorLoader {
         }
     }
 
-    // look for <namespace>.xml file in each probe descriptor dir
-    private File findFile(String namespace) {
+    // look for <namespace>.xml file in each probe descriptor dir or on classpath
+    private InputStream openDescriptor(String namespace) {
+        InputStream is = null;
+        if (probeDescDirs != null) {
+            is = openDescriptorFromDirs(namespace);
+        }
+        if (is == null) {
+            is = openDescriptorFromClassPath(namespace);
+        }
+        if (is == null && debug.isDebug()) debug.debug("no probe descriptor found for " + namespace);
+        return is;
+    }
+    
+    private InputStream openDescriptorFromDirs(String namespace) {
+        String desc = namespace.trim() + ".xml";
         for (String dir : probeDescDirs) {
-            File f = new File(dir.trim(), namespace.trim() + ".xml");
+            File f = new File(dir.trim(), desc);
             if (debug.isDebug()) debug.debug("looking for probe descriptor file '" + f.getPath() + "' (" + f.exists() + ", " + f.isFile() + ")");
             if (f.exists() && f.isFile()) {
                 if (debug.isDebug()) debug.debug("probe descriptor for " + namespace + " is " + f);
-                return f;
+                try {
+                    return new FileInputStream(f);
+                } catch (FileNotFoundException e) {
+                    // ignore; never happens
+                }
             }
         }
-        if (debug.isDebug()) debug.debug("no probe descriptor found for " + namespace);
         return null;
+    }
+    
+    private InputStream openDescriptorFromClassPath(String namespace) {
+        String target = Constants.EMBEDDED_SCRIPT_HEADER + namespace.trim() + ".xml";
+        if (debug.isDebug()) debug.debug("looking for probe descriptor file '" + target);
+        return ClassLoader.getSystemResourceAsStream(target);
     }
 }

@@ -362,10 +362,7 @@ public final class BTraceProbe extends ClassNode {
 
     private ProbeDescriptorLoader getProbeDescriptorLoader() {
         String path = factory.getSettings().getProbeDescPath();
-        if (path != null) {
-            return new ProbeDescriptorLoader(path, debug);
-        }
-        return null;
+        return new ProbeDescriptorLoader(path, debug);
     }
 
     private void initialize(byte[] code) {

@@ -33,6 +33,8 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.OnProbe;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.AnyType;
+import com.sun.btrace.AnyType;
+import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.Level;
@@ -181,4 +183,5 @@ public abstract class Constants {
     public static final String LONG_VALUE_DESC= "()J";
     public static final String FLOAT_VALUE_DESC= "()F";
     public static final String DOUBLE_VALUE_DESC= "()D";
+    public static final String EMBEDDED_SCRIPT_HEADER = "META-INF/btrace/";
 }

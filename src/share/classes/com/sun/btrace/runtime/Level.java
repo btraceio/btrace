@@ -33,16 +33,23 @@ import com.sun.btrace.util.Interval;
 public class Level {
     private final Interval value;
 
+    public Level() {
+        this(">0");
+    }
+    
     private Level(Interval i) {
         this.value = i;
     }
-
+    
+    private Level(String s) {
+        this(Interval.fromString(s));
+    }
+    
     public Interval getValue() {
         return value;
     }
 
     public static Level fromString(String s) {
-        Interval itv = Interval.fromString(s);
-        return new Level(itv);
+        return new Level(s);
     }
 }
