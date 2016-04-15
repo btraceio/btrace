@@ -1,0 +1,23 @@
+{
+    "package": {
+        "name": "btrace-bin",
+        "repo": "Snapshots",
+        "subject": "btraceio"
+    },
+
+    "version": {
+        "name": "SNAPSHOT"
+    },
+
+    "files":
+        [
+          {
+            "includePattern": "build/distributions/(.*)\.(tgz|zip)", 
+	    "uploadPattern": "btrace-bin-SNAPSHOT.$2",
+	    "matrixParams": {
+	      "override": 1
+            }
+	  }
+        ],
+    "publish": true
+}
