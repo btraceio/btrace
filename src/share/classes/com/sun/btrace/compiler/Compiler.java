@@ -46,6 +46,7 @@ import java.util.Map;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.DiagnosticCollector;
+import javax.tools.FileObject;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -175,6 +176,9 @@ public class Compiler {
                     fos.write(c.getValue());
                 }
             }
+        } else {
+            // fail
+            System.exit(1);
         }
     }
 
@@ -264,7 +268,7 @@ public class Compiler {
         // print dignostics messages in case of failures.
         if (task.call() == false || containsErrors(diagnostics)) {
             for (Diagnostic diagnostic : diagnostics.getDiagnostics()) {
-                perr.println(diagnostic.getMessage(null));
+                printDiagnostic(diagnostic, perr);
             }
             perr.flush();
             return null;
@@ -291,6 +295,34 @@ public class Compiler {
                 manager.close();
             } catch (IOException exp) {
             }
+        }
+    }
+
+    private void printDiagnostic(Diagnostic diagnostic, final PrintWriter perr) {
+        FileObject fo = (FileObject)diagnostic.getSource();
+        String fname = fo.getName();
+        String[] lines = null;
+        try {
+            lines = fo.getCharContent(true).toString().split("\\n");
+        } catch (IOException e) {
+
+        }
+
+        perr.println(
+            fname + ":" +
+            diagnostic.getLineNumber() + ": error: " +
+            diagnostic.getMessage(null)
+        );
+        if (lines != null) {
+            // might be overflowing if there is more than 2^15 lines in the class
+            perr.println(lines[(int)diagnostic.getLineNumber() - 1]);
+
+            StringBuilder sb = new StringBuilder();
+            for(int i=0;i<diagnostic.getColumnNumber() - 1;i++) {
+                sb.append(' ');
+            }
+            sb.append('^');
+            perr.println(sb.toString());
         }
     }
 
