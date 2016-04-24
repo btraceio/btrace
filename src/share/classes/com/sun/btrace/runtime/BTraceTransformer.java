@@ -30,6 +30,7 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -56,22 +57,23 @@ public class BTraceTransformer implements ClassFileTransformer {
 
 
         private final ConcurrentMap<String, Integer> nameMap = new ConcurrentSkipListMap<>();
-        private final ConcurrentMap<Pattern, Integer> nameRegexMap = new ConcurrentSkipListMap<>();
+        private final ConcurrentMap<Pattern, Integer> nameRegexMap = new ConcurrentHashMap<>();
 
         void add(OnMethod om) {
-            String name = om.getClazz().replace('.', '/');
             if (om.isSubtypeMatcher() || om.isClassAnnotationMatcher()) {
                 isFast = false;
             } else {
                 if (om.isClassRegexMatcher()) {
                     isRegex = true;
+                    String name = om.getClazz().replace("\\.", "/");
                     addToMap(nameRegexMap, Pattern.compile(name));
                 } else {
+                    String name = om.getClazz().replace('.', '/');
                     addToMap(nameMap, name);
                 }
             }
         }
-        
+
         void remove(OnMethod om) {
             String name = om.getClazz().replace('.', '/');
             if (!(om.isSubtypeMatcher() || om.isClassAnnotationMatcher())) {
@@ -108,7 +110,6 @@ public class BTraceTransformer implements ClassFileTransformer {
                     return Result.TRUE;
                 }
                 if (isRegex) {
-                    className = className.replace('/', '.');
                     for(Pattern p : nameRegexMap.keySet()) {
                         if (p.matcher(className).matches()) {
                             return Result.TRUE;
@@ -190,7 +191,7 @@ public class BTraceTransformer implements ClassFileTransformer {
             }
         }
     }
-    
+
     private static boolean isBTraceClass(String name) {
         return name.startsWith("com/sun/btrace/");
     }
