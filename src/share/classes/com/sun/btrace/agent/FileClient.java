@@ -85,7 +85,7 @@ class FileClient extends Client {
 
     private static byte[] readAll(File file) throws IOException {
         String path = file.getPath();
-        if (path.startsWith(Constants.EMBEDDED_SCRIPT_HEADER)) {
+        if (path.startsWith(Constants.EMBEDDED_BTRACE_SECTION_HEADER)) {
             try (InputStream is = ClassLoader.getSystemResourceAsStream(path)) {
                 return readAll(is, -1);
             }

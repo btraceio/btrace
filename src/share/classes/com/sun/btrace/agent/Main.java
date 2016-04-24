@@ -22,7 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package com.sun.btrace.agent;
 
 import com.sun.btrace.runtime.BTraceTransformer;
@@ -42,6 +41,8 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.runtime.Constants;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.util.Messages;
+import java.io.InputStream;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -67,6 +68,7 @@ public final class Main {
     // #BTRACE-42: Non-daemon thread prevents traced application from exiting
     private static final ThreadFactory daemonizedThreadFactory = new ThreadFactory() {
         ThreadFactory delegate = Executors.defaultThreadFactory();
+
         @Override
         public Thread newThread(Runnable r) {
             Thread result = delegate.newThread(r);
@@ -91,59 +93,12 @@ public final class Main {
         } else {
             Main.inst = inst;
         }
-        
-        parseArgs(args);
-        if (isDebug()) debugPrint("parsed command line arguments");
 
-        String bootClassPath = argMap.get("bootClassPath");
-        if (bootClassPath != null) {
-            if (isDebug()) {
-                 debugPrint("Bootstrap ClassPath: " + bootClassPath);
-            }
-            StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
-            try {
-                while (tokenizer.hasMoreTokens()) {
-                    String path = tokenizer.nextToken();
-                    File f = new File(path);
-                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        JarFile jf = new JarFile(f);
-                        inst.appendToBootstrapClassLoaderSearch(jf);
-                    } else {
-                        debugPrint("ignoring boot classpath element '" + path +
-                                   "' - only jar files allowed");
-                    }
-                }
-            } catch (IOException ex) {
-                debugPrint("adding to boot classpath failed!");
-                debugPrint(ex);
-                return;
-            }
+        loadArgs(args);
+        if (argMap.containsKey("debug")) {
+            debugPrint("parsed command line arguments");
         }
-
-        String systemClassPath = argMap.get("systemClassPath");
-        if (systemClassPath != null) {
-            if (isDebug()) {
-                 debugPrint("System ClassPath: " + systemClassPath);
-            }
-            StringTokenizer tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
-            try {
-                while (tokenizer.hasMoreTokens()) {
-                    String path = tokenizer.nextToken();
-                    File f = new File(path);
-                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        JarFile jf = new JarFile(f);
-                        inst.appendToSystemClassLoaderSearch(jf);
-                    } else {
-                        debugPrint("ignoring system classpath element '" + path +
-                                   "' - only jar files allowed");
-                    }
-                }
-            } catch (IOException ex) {
-                debugPrint("adding to boot classpath failed!");
-                debugPrint(ex);
-                return;
-            }
-        }
+        parseArgs();
 
         inst.addTransformer(transformer, true);
         startScripts();
@@ -151,7 +106,9 @@ public final class Main {
         String tmp = argMap.get("noServer");
         boolean noServer = tmp != null && !"false".equals(tmp);
         if (noServer) {
-            if (isDebug()) debugPrint("noServer is true, server not started");
+            if (isDebug()) {
+                debugPrint("noServer is true, server not started");
+            }
             return;
         }
         Thread agentThread = new Thread(new Runnable() {
@@ -169,17 +126,44 @@ public final class Main {
         BTraceRuntime.enter();
         try {
             agentThread.setDaemon(true);
-            if (isDebug()) debugPrint("starting agent thread");
+            if (isDebug()) {
+                debugPrint("starting agent thread");
+            }
             agentThread.start();
         } finally {
             BTraceRuntime.leave();
         }
     }
 
+    private static void loadDefaultArguments() {
+        try {
+            String propTarget = Constants.EMBEDDED_BTRACE_SECTION_HEADER + "agent.properties";
+            InputStream is = ClassLoader.getSystemResourceAsStream(propTarget);
+            if (is != null) {
+                Properties ps = new Properties();
+                ps.load(is);
+                for (Map.Entry<Object, Object> entry : ps.entrySet()) {
+                    String argKey = (String) entry.getKey();
+                    String argVal = (String) entry.getValue();
+                    if (!argMap.containsKey(argKey)) {
+                        System.err.println("applying default agent argument '" + argKey + "'='" + argVal + "'");
+                        argMap.put(argKey, argVal);
+                        if (argKey.equals("debug")) {
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            debug.debug(e);
+        }
+    }
+
     private static void startScripts() {
         String p = argMap.get("stdout");
         boolean traceToStdOut = p != null && !"false".equals(p);
-        if (isDebug()) debugPrint("stdout is " + traceToStdOut);
+        if (isDebug()) {
+            debugPrint("stdout is " + traceToStdOut);
+        }
 
         String script = argMap.get("script");
         String scriptDir = argMap.get("scriptdir");
@@ -187,7 +171,7 @@ public final class Main {
         if (script != null) {
             StringTokenizer tokenizer = new StringTokenizer(script, ":");
             if (isDebug()) {
-                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are " ) + script);
+                debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are ") + script);
             }
             while (tokenizer.hasMoreTokens()) {
                 loadBTraceScript(tokenizer.nextToken(), traceToStdOut);
@@ -196,11 +180,13 @@ public final class Main {
         if (scriptDir != null) {
             File dir = new File(scriptDir);
             if (dir.isDirectory()) {
-                if (isDebug()) debugPrint("found scriptdir: " + dir.getAbsolutePath());
+                if (isDebug()) {
+                    debugPrint("found scriptdir: " + dir.getAbsolutePath());
+                }
                 File[] files = dir.listFiles();
                 if (files != null) {
                     for (File file : files) {
-                       loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
+                        loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
                     }
                 }
             }
@@ -212,8 +198,7 @@ public final class Main {
         System.exit(0);
     }
 
-
-    private static void parseArgs(String args) {
+    private static void loadArgs(String args) {
         if (args == null) {
             args = "";
         }
@@ -223,35 +208,48 @@ public final class Main {
             int i = s.indexOf('=');
             String key, value = "";
             if (i != -1) {
-                key = s.substring(0,i).trim();
-                if (i+1 < s.length()) {
-                    value = s.substring(i+1).trim();
+                key = s.substring(0, i).trim();
+                if (i + 1 < s.length()) {
+                    value = s.substring(i + 1).trim();
                 }
             } else {
                 key = s;
             }
             argMap.put(key, value);
         }
+    }
 
+    private static void parseArgs() {
         String p = argMap.get("help");
         if (p != null) {
             usage();
         }
+
+        processClasspaths();
+
         p = argMap.get("debug");
         settings.setDebug(p != null && !"false".equals(p));
-        if (isDebug()) debugPrint("debugMode is " + settings.isDebug());
+        if (isDebug()) {
+            debugPrint("debugMode is " + settings.isDebug());
+        }
 
         p = argMap.get("startupRetransform");
         settings.setRetransformStartup(p == null || !"false".equals(p));
-        if (isDebug()) debugPrint("startupRetransform is " + settings.isRetransformStartup());
+        if (isDebug()) {
+            debugPrint("startupRetransform is " + settings.isRetransformStartup());
+        }
 
         p = argMap.get("dumpClasses");
         boolean dumpClasses = p != null && !"false".equals(p);
-        if (isDebug()) debugPrint("dumpClasses is " + dumpClasses);
+        if (isDebug()) {
+            debugPrint("dumpClasses is " + dumpClasses);
+        }
         if (dumpClasses) {
             String dumpDir = argMap.get("dumpDir");
             settings.setDumpDir(dumpDir != null ? dumpDir : ".");
-            if (isDebug()) debugPrint("dumpDir is " + dumpDir);
+            if (isDebug()) {
+                debugPrint("dumpDir is " + dumpDir);
+            }
         }
 
         p = argMap.get("cmdQueueLimit");
@@ -262,18 +260,24 @@ public final class Main {
 
         p = argMap.get("trackRetransforms");
         settings.setTrackRetransforms(p != null && !"false".equals(p));
-        if (settings.isTrackRetransforms()) debugPrint("trackRetransforms is " + settings.isTrackRetransforms());
+        if (settings.isTrackRetransforms()) {
+            debugPrint("trackRetransforms is " + settings.isTrackRetransforms());
+        }
 
         p = argMap.get("scriptOutputFile");
         if (p != null && p.length() > 0) {
             settings.setOutputFile(p);
-            if (isDebug()) debugPrint("scriptOutputFile is " + p);
+            if (isDebug()) {
+                debugPrint("scriptOutputFile is " + p);
+            }
         }
 
         p = argMap.get("scriptOutputDir");
         if (p != null && p.length() > 0) {
             settings.setOutputDir(p);
-            if (isDebug()) debugPrint("scriptOutputDir is " + p);
+            if (isDebug()) {
+                debugPrint("scriptOutputDir is " + p);
+            }
         }
 
         p = argMap.get("fileRollMilliseconds");
@@ -286,12 +290,16 @@ public final class Main {
                 fileRollMilliseconds = null;
             }
             if (fileRollMilliseconds != null) {
-                if (isDebug()) debugPrint("fileRollMilliseconds is " + fileRollMilliseconds);
+                if (isDebug()) {
+                    debugPrint("fileRollMilliseconds is " + fileRollMilliseconds);
+                }
             }
         }
-	p = argMap.get("unsafe");
+        p = argMap.get("unsafe");
         settings.setUnsafe(p != null && "true".equals(p));
-        if (isDebug()) debugPrint("unsafeMode is " + settings.isUnsafe());
+        if (isDebug()) {
+            debugPrint("unsafeMode is " + settings.isUnsafe());
+        }
 
         String statsdDef = argMap.get("statsd");
         if (statsdDef != null) {
@@ -311,7 +319,63 @@ public final class Main {
 
         String probeDescPath = argMap.get("probeDescPath");
         settings.setProbeDescPath(probeDescPath != null ? probeDescPath : ".");
-        if (isDebug()) debugPrint("probe descriptor path is " + settings.getProbeDescPath());
+        if (isDebug()) {
+            debugPrint("probe descriptor path is " + settings.getProbeDescPath());
+        }
+    }
+
+    private static void processClasspaths() {
+        String bootClassPath = argMap.get("bootClassPath");
+        if (bootClassPath != null) {
+            if (isDebug()) {
+                debugPrint("Bootstrap ClassPath: " + bootClassPath);
+            }
+            StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
+            try {
+                while (tokenizer.hasMoreTokens()) {
+                    String path = tokenizer.nextToken();
+                    File f = new File(path);
+                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+                        JarFile jf = new JarFile(f);
+                        inst.appendToBootstrapClassLoaderSearch(jf);
+                    } else {
+                        debugPrint("ignoring boot classpath element '" + path
+                                + "' - only jar files allowed");
+                    }
+                }
+            } catch (IOException ex) {
+                debugPrint("adding to boot classpath failed!");
+                debugPrint(ex);
+                return;
+            }
+        }
+
+        String systemClassPath = argMap.get("systemClassPath");
+        if (systemClassPath != null) {
+            if (isDebug()) {
+                debugPrint("System ClassPath: " + systemClassPath);
+            }
+            StringTokenizer tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
+            try {
+                while (tokenizer.hasMoreTokens()) {
+                    String path = tokenizer.nextToken();
+                    File f = new File(path);
+                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+                        JarFile jf = new JarFile(f);
+                        inst.appendToSystemClassLoaderSearch(jf);
+                    } else {
+                        debugPrint("ignoring system classpath element '" + path
+                                + "' - only jar files allowed");
+                    }
+                }
+            } catch (IOException ex) {
+                debugPrint("adding to boot classpath failed!");
+                debugPrint(ex);
+                return;
+            }
+        }
+
+        loadDefaultArguments();
     }
 
     private static void loadBTraceScript(String filePath, boolean traceToStdOut) {
@@ -322,11 +386,11 @@ public final class Main {
             scriptName = traceScript.getName();
             scriptParent = traceScript.getParent();
 
-            if (! traceScript.exists()) {
-                traceScript = new File(Constants.EMBEDDED_SCRIPT_HEADER + filePath);
+            if (!traceScript.exists()) {
+                traceScript = new File(Constants.EMBEDDED_BTRACE_SECTION_HEADER + filePath);
             }
 
-            if (! scriptName.endsWith(".class")) {
+            if (!scriptName.endsWith(".class")) {
                 if (isDebug()) {
                     debugPrint("refusing " + filePath + " - script should be a pre-compiled .class file");
                 }
@@ -339,7 +403,7 @@ public final class Main {
             if (traceToStdOut) {
                 clientSettings.setOutputFile("::stdout");
             } else {
-            	String traceOutput = clientSettings.getOutputFile();
+                String traceOutput = clientSettings.getOutputFile();
                 String outDir = clientSettings.getOutputDir();
                 if (traceOutput == null || traceOutput.length() == 0) {
                     clientSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
@@ -357,7 +421,9 @@ public final class Main {
                 debugPrint("script " + filePath + " does not exist!");
             }
         } catch (RuntimeException | IOException | ExecutionException re) {
-            if (isDebug()) debugPrint(re);
+            if (isDebug()) {
+                debugPrint(re);
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -378,7 +444,9 @@ public final class Main {
         }
         ServerSocket ss;
         try {
-            if (isDebug()) debugPrint("starting server at " + port);
+            if (isDebug()) {
+                debugPrint("starting server at " + port);
+            }
             System.setProperty("btrace.port", String.valueOf(port));
             String scriptOutputFile = settings.getOutputFile();
             if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
@@ -392,14 +460,20 @@ public final class Main {
 
         while (true) {
             try {
-                if (isDebug()) debugPrint("waiting for clients");
+                if (isDebug()) {
+                    debugPrint("waiting for clients");
+                }
                 Socket sock = ss.accept();
-                if (isDebug()) debugPrint("client accepted " + sock);
+                if (isDebug()) {
+                    debugPrint("client accepted " + sock);
+                }
                 ClientContext ctx = new ClientContext(inst, transformer, settings);
                 Client client = new RemoteClient(ctx, sock);
                 handleNewClient(client).get();
             } catch (RuntimeException | IOException | ExecutionException re) {
-                if (isDebug()) debugPrint(re);
+                if (isDebug()) {
+                    debugPrint(re);
+                }
             } catch (InterruptedException e) {
                 return;
             }

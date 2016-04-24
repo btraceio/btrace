@@ -128,7 +128,7 @@ final class ProbeDescriptorLoader {
     }
     
     private InputStream openDescriptorFromClassPath(String namespace) {
-        String target = Constants.EMBEDDED_SCRIPT_HEADER + namespace.trim() + ".xml";
+        String target = Constants.EMBEDDED_BTRACE_SECTION_HEADER + namespace.trim() + ".xml";
         if (debug.isDebug()) debug.debug("looking for probe descriptor file '" + target);
         return ClassLoader.getSystemResourceAsStream(target);
     }

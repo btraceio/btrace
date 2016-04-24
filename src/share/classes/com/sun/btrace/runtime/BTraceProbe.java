@@ -47,10 +47,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
-import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
 
 /**
  *
@@ -180,7 +179,7 @@ public final class BTraceProbe extends ClassNode {
         }
         return applicables;
     }
-    
+
     public Iterable<OnMethod> onmethods() {
         return new Iterable<OnMethod>() {
             @Override

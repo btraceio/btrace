@@ -183,5 +183,5 @@ public abstract class Constants {
     public static final String LONG_VALUE_DESC= "()J";
     public static final String FLOAT_VALUE_DESC= "()F";
     public static final String DOUBLE_VALUE_DESC= "()D";
-    public static final String EMBEDDED_SCRIPT_HEADER = "META-INF/btrace/";
+    public static final String EMBEDDED_BTRACE_SECTION_HEADER = "META-INF/btrace/";
 }
