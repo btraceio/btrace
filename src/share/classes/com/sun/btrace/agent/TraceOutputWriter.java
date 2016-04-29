@@ -149,7 +149,7 @@ abstract class TraceOutputWriter extends Writer {
         private FileWriter getNextWriter() throws IOException {
         	currentFileWriter.close();
         	File scriptOutputFile_renameFrom = new File(path + File.separator + baseName);
-        	File scriptOutputFile_renameTo = new File(path + File.separator + baseName + "." + (counter++));
+        	File scriptOutputFile_renameTo = new File(path + File.separator + baseName.substring(0, baseName.indexOf("-")) + ".btrace." + (counter++));
 
             if (scriptOutputFile_renameTo.exists()) {
             	scriptOutputFile_renameTo.delete();
@@ -210,7 +210,7 @@ abstract class TraceOutputWriter extends Writer {
     public static TraceOutputWriter rollingFileWriter(File output, SharedSettings settings) {
         TraceOutputWriter instance = null;
         try {
-            instance = new TimeBasedRollingFileWriter(null, settings);
+            instance = new TimeBasedRollingFileWriter(output, settings);
         } catch (IOException e) {
             // ignore
         }

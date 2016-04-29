@@ -131,7 +131,7 @@ abstract class Client implements CommandListener {
             if (outputFile.equals("::stdout")) {
                 out = new PrintWriter(System.out);
             } else {
-                if (SharedSettings.GLOBAL.getFileRollMilliseconds() > 0) {
+                if (settings.getFileRollMilliseconds() > 0) {
                     out = new PrintWriter(new BufferedWriter(
                         TraceOutputWriter.rollingFileWriter(new File(outputFile), settings)
                     ));
