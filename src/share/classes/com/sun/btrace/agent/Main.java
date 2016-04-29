@@ -290,9 +290,25 @@ public final class Main {
                 fileRollMilliseconds = null;
             }
             if (fileRollMilliseconds != null) {
+                debugPrint("fileRollMilliseconds is " + settings.isUnsafe());
+                settings.setFileRollMilliseconds(fileRollMilliseconds.intValue());
                 if (isDebug()) {
                     debugPrint("fileRollMilliseconds is " + fileRollMilliseconds);
                 }
+            }
+        }
+
+        p = argMap.get("fileRollMaxRolls");
+        if (p != null && p.length() > 0) {
+            Integer rolls = null;
+            try {
+                rolls = Integer.parseInt(p);
+            } catch (NumberFormatException nfe) {
+                rolls = null;
+            }
+
+            if (rolls != null) {
+                settings.setFileRollMaxRolls(rolls);
             }
         }
         p = argMap.get("unsafe");
