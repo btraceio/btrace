@@ -290,7 +290,6 @@ public final class Main {
                 fileRollMilliseconds = null;
             }
             if (fileRollMilliseconds != null) {
-                debugPrint("fileRollMilliseconds is " + settings.isUnsafe());
                 settings.setFileRollMilliseconds(fileRollMilliseconds.intValue());
                 if (isDebug()) {
                     debugPrint("fileRollMilliseconds is " + fileRollMilliseconds);
