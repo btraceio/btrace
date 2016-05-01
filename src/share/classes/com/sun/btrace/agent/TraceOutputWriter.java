@@ -210,7 +210,7 @@ abstract class TraceOutputWriter extends Writer {
     public static TraceOutputWriter rollingFileWriter(File output, SharedSettings settings) {
         TraceOutputWriter instance = null;
         try {
-            instance = new TimeBasedRollingFileWriter(null, settings);
+            instance = new TimeBasedRollingFileWriter(output, settings);
         } catch (IOException e) {
             // ignore
         }
