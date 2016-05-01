@@ -149,7 +149,7 @@ abstract class TraceOutputWriter extends Writer {
         private FileWriter getNextWriter() throws IOException {
         	currentFileWriter.close();
         	File scriptOutputFile_renameFrom = new File(path + File.separator + baseName);
-        	File scriptOutputFile_renameTo = new File(path + File.separator + baseName.substring(0, baseName.indexOf("-")) + ".btrace." + (counter++));
+        	File scriptOutputFile_renameTo = new File(path + File.separator + baseName + "." + (counter++));
 
             if (scriptOutputFile_renameTo.exists()) {
             	scriptOutputFile_renameTo.delete();
