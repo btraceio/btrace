@@ -1516,7 +1516,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/FieldSetAfterStatic");
 
         checkTransformation(
-            "\"LSTORE 1\n" +
+            "LSTORE 1\n" +
             "LLOAD 1\n" +
             "GETSTATIC traces/onmethod/leveled/FieldSetAfterStatic.$btrace$$level : I\n" +
             "ICONST_1\n" +
