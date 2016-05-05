@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.btrace.compiler;
 
-import com.sun.btrace.BTraceUtils;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 import javax.lang.model.element.Modifier;
@@ -38,13 +36,14 @@ import com.sun.source.util.TreeScanner;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.OnError;
+import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.util.Messages;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.tree.JCTree;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -61,12 +60,14 @@ import javax.lang.model.type.TypeMirror;
  * @author A. Sundararajan
  */
 public class VerifierVisitor extends TreeScanner<Boolean, Void> {
+    private static final String ON_ERROR_TYPE = OnError.class.getName();
+    private static final String ON_EXIT_TYPE = OnExit.class.getName();
+    private static final String THROWABLE_TYPE = Throwable.class.getName();
+
     private final Verifier verifier;
     private String className;
+    private String fqn;
     private boolean insideMethod;
-    private volatile static Method[] btraceMethods;
-    private volatile static Class[] btraceClasses;
-    private volatile static ExecutableElement[] sharedMethods;
 
     private boolean shortSyntax = false;
     private TypeMirror btraceServiceTm = null;
@@ -82,7 +83,6 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 shared.add((ExecutableElement)e);
             }
         }
-        sharedMethods = shared.toArray(new ExecutableElement[shared.size()]);
         btraceServiceTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.spi.BTraceService").asType();
         runtimeServiceTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.spi.RuntimeService").asType();
         simpleServiceTm = verifier.getElementUtils().getTypeElement("com.sun.btrace.services.spi.SimpleService").asType();
@@ -91,97 +91,84 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     @Override
     public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
+        Element e = getElement(node);
+        if (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR) {
+            String name = ((ExecutableElement)e).getSimpleName().toString();
 
-        ExpressionTree xt = node.getMethodSelect();
-        if (xt.getKind() == Tree.Kind.MEMBER_SELECT) {
-            MemberSelectTree mst = (MemberSelectTree)xt;
-            xt = mst.getExpression();
-            TypeMirror tm = getType(xt);
-            if (verifier.getTypeUtils().isSubtype(tm, serviceInjectorTm)) {
-                if (validateInjectionParams(node)) {
-                    return super.visitMethodInvocation(node, v);
-                } else {
-                    return reportError("service.injector.literals", node);
-                }
-            } else if (verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
+            // allow constructor calls
+            if (name.equals("<init>")) {
                 return super.visitMethodInvocation(node, v);
+            }
+
+            Element parent = null;
+            do {
+                parent = e.getEnclosingElement();
+            } while (parent != null && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
+
+            if (parent != null) {
+                TypeMirror tm = parent.asType();
+                String typeName = tm.toString();
+
+                if (isSameClass(typeName)) {
+                    return super.visitMethodInvocation(node, v);
+                }
+                if (isBTraceClass(typeName)) {
+                    return super.visitMethodInvocation(node, v);
+                }
+                // check service injection
+                if (verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
+                    return super.visitMethodInvocation(node, v);
+                }
+                if (verifier.getTypeUtils().isSubtype(tm, serviceInjectorTm)) {
+                    if (!validateInjectionParams(node)) {
+                        reportError("service.injector.literals", node);
+                    }
+
+                    return super.visitMethodInvocation(node, v);
+                }
             }
         }
+        reportError("no.method.calls", node);
+        return super.visitMethodInvocation(node, v);
+    }
 
-        ExpressionTree methodSelect = node.getMethodSelect();
-        if (methodSelect.getKind() == Tree.Kind.IDENTIFIER) {
-            String name = ((IdentifierTree)methodSelect).getName().toString();
-            int numArgs = 0;
-            List<? extends Tree> args = node.getArguments();
-            if (args != null) {
-                numArgs = args.size();
-            }
+    private boolean isSameClass(String typeName) {
+        return fqn.equals(typeName);
+    }
 
-            if (name.equals("super") ||
-                isBTraceMethod(name, numArgs) ||
-                isSharedMethod(name, numArgs)) {
-                return super.visitMethodInvocation(node, v);
-            } // else fall through ..
-        } else if (methodSelect.getKind() == Tree.Kind.MEMBER_SELECT) {
-            String name = ((MemberSelectTree)methodSelect).getIdentifier().toString();
-            JCTree et = (JCTree)((MemberSelectTree)methodSelect).getExpression();
-
-            String clzName = et.type != null ? (et.type.tsym != null ? et.type.tsym.getQualifiedName().toString() : null) : null;
-            if (clzName == null) {
-                clzName = et.toString();
-            }
-
-            if (clzName.equals("BTraceUtils") ||
-                clzName.equals("com.sun.btrace.BTraceUtils") ||
-                clzName.startsWith("BTraceUtils.") ||
-                clzName.startsWith("com.sun.btrace.BTraceUtils.") ||
-                isBTraceClass(clzName)) {
-                int numArgs = 0;
-                List<? extends Tree> args = node.getArguments();
-                if (args != null) {
-                    numArgs = args.size();
-                }
-                if (isBTraceMethod(name, numArgs)) {
-                    return super.visitMethodInvocation(node, v);
-                } // else fall through..
-            } // else fall through..
-        } // else fall through..
-        return reportError("no.method.calls", node);
+    private boolean isBTraceClass(String typeName) {
+        return typeName.equals("com.sun.btrace.BTraceUtils") || typeName.startsWith("com.sun.btrace.BTraceUtils.");
     }
 
     @Override
     public Boolean visitAssert(AssertTree node, Void v) {
-        return reportError("no.asserts", node);
+        reportError("no.asserts", node);
+        return super.visitAssert(node, v);
     }
 
     @Override
     public Boolean visitAssignment(AssignmentTree node, Void v) {
-        if (checkLValue(node.getVariable())) {
-            return super.visitAssignment(node, v);
-        } else {
-            return Boolean.FALSE;
-        }
+        checkLValue(node.getVariable());
+        return super.visitAssignment(node, v);
     }
 
     @Override
     public Boolean visitCompoundAssignment(CompoundAssignmentTree node, Void v) {
-        if (checkLValue(node.getVariable())) {
-            return super.visitCompoundAssignment(node, v);
-        } else {
-            return Boolean.FALSE;
-        }
+        checkLValue(node.getVariable());
+        return super.visitCompoundAssignment(node, v);
     }
 
     @Override
     public Boolean visitCatch(CatchTree node, Void v) {
-        return reportError("no.catch", node);
+        reportError("no.catch", node);
+        return super.visitCatch(node, v);
     }
 
     @Override
     public Boolean visitClass(ClassTree node, Void v) {
         // check for local class
         if (insideMethod) {
-            return reportError("no.local.class", node);
+            reportError("no.local.class", node);
         }
 
         // check for short BTrace syntax (inferring redundant access qualifiers)
@@ -196,7 +183,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         List<? extends Tree> members = node.getMembers();
         for (Tree m : members) {
             if (m.getKind() == Tree.Kind.CLASS) {
-                return reportError("no.nested.class", m);
+                reportError("no.nested.class", m);
             }
 
             if (m.getKind() == Tree.Kind.VARIABLE) {
@@ -204,11 +191,11 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 boolean isStatic = isStatic(vt.getModifiers().getFlags());
                 if (shortSyntax) {
                     if (isStatic) {
-                        return reportError("no.static.variables", m);
+                        reportError("no.static.variables", m);
                     }
                 } else {
                     if (! isStatic) {
-                        return reportError("no.instance.variables", m);
+                        reportError("no.instance.variables", m);
                     }
                 }
             }
@@ -220,35 +207,35 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             String name = superClass.toString();
             if (!name.equals("Object") &&
                 !name.equals("java.lang.Object")) {
-                return reportError("object.superclass.required", superClass);
+                reportError("object.superclass.required", superClass);
             }
         }
 
         // should not implement interfaces
         List<? extends Tree> interfaces = node.getImplementsClause();
         if (interfaces != null && interfaces.size() > 0) {
-            return reportError("no.interface.implementation", interfaces.get(0));
+            reportError("no.interface.implementation", interfaces.get(0));
         }
 
         ModifiersTree mt = node.getModifiers();
         if (!shortSyntax && ! isPublic(mt.getFlags())) {
-            return reportError("class.should.be.public", node);
+            reportError("class.should.be.public", node);
         }
         List<? extends AnnotationTree> anno = mt.getAnnotations();
-        if (anno == null || anno.isEmpty()) {
-            return reportError("not.a.btrace.program", node);
-        }
-        String btrace = BTrace.class.getName();
-        for (AnnotationTree at : anno) {
-            String name = at.getAnnotationType().toString();
-            if (name.equals(btrace) ||
-                name.equals("BTrace")) {
-                String oldClassName = className;
-                try {
-                    className = node.getSimpleName().toString();
-                    return super.visitClass(node, v);
-                } finally {
-                    className = oldClassName;
+        if (anno != null && !anno.isEmpty()) {
+            String btrace = BTrace.class.getName();
+            for (AnnotationTree at : anno) {
+                String name = at.getAnnotationType().toString();
+                if (name.equals(btrace) ||
+                    name.equals("BTrace")) {
+                    String oldClassName = className;
+                    try {
+                        className = node.getSimpleName().toString();
+                        fqn = getElement(node).asType().toString();
+                        return super.visitClass(node, v);
+                    } finally {
+                        className = oldClassName;
+                    }
                 }
             }
         }
@@ -257,17 +244,20 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     @Override
     public Boolean visitDoWhileLoop(DoWhileLoopTree node, Void v) {
-        return reportError("no.do.while", node);
+        reportError("no.do.while", node);
+        return super.visitDoWhileLoop(node, v);
     }
 
     @Override
     public Boolean visitEnhancedForLoop(EnhancedForLoopTree node, Void v) {
-        return reportError("no.enhanced.for", node);
+        reportError("no.enhanced.for", node);
+        return super.visitEnhancedForLoop(node, v);
     }
 
     @Override
     public Boolean visitForLoop(ForLoopTree node, Void v) {
-        return reportError("no.for.loop", node);
+        reportError("no.for.loop", node);
+        return super.visitForLoop(node, v);
     }
 
     @Override
@@ -279,20 +269,18 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             if (name.contentEquals("<init>")) {
                 return super.visitMethod(node, v);
             } else {
-                if (!checkSampling(node)) {
-                    return false;
-                }
+                checkSampling(node);
+
                 if (isExitHandler(node)) {
                     if (node.getParameters().size() != 1 || ! "int".equals(node.getParameters().get(0).getType().toString())) {
                         reportError("onexit.invalid", node);
-                        return false;
+                        return super.visitMethod(node, v);
                     }
                 }
                 if (isErrorHandler(node)) {
                     Element thrElement = getElement(node.getParameters().get(0).getType());
-                    if (node.getParameters().size() != 1 || ! "java.lang.Throwable".equals(thrElement.toString())) {
+                    if (node.getParameters().size() != 1 || ! THROWABLE_TYPE.equals(thrElement.toString())) {
                         reportError("onerror.invalid", node);
-                        return false;
                     }
                 }
 
@@ -317,15 +305,11 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
                 Set<Modifier> flags = node.getModifiers().getFlags();
                 if (shortSyntax) {
-                    boolean err = true;
                     if (isStatic(flags)) {
-                        err &= reportError("no.static.method", node);
+                        reportError("no.static.method", node);
                     }
                     if (isSynchronized(flags)) {
-                        err &= reportError("no.synchronized.methods", node);
-                    }
-                    if (err) {
-                        return false;
+                        reportError("no.synchronized.methods", node);
                     }
                 } else {
                     boolean isStatic = isStatic(flags);
@@ -333,23 +317,20 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                         boolean isPublic = isPublic(node.getModifiers().getFlags());
                         if (isPublic) {
                             if (isSynchronized(flags)) {
-                                return reportError("no.synchronized.methods", node);
-                            } else {
-                                return super.visitMethod(node, v);
+                                reportError("no.synchronized.methods", node);
                             }
                         } else {
                             // force the "public" modifier only on the annotated methods
                             if (isAnnotated(node)) {
-                                return reportError("method.should.be.public", node);
+                                reportError("method.should.be.public", node);
                             }
-                            return super.visitMethod(node, v);
                         }
                     } else {
-                        return reportError("no.instance.method", node);
+                        reportError("no.instance.method", node);
                     }
                 }
 
-                return false;
+                return super.visitMethod(node, v);
             }
         } finally {
             insideMethod = oldInsideMethod;
@@ -358,30 +339,19 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     @Override
     public Boolean visitNewArray(NewArrayTree node, Void v) {
-        return reportError("no.array.creation", node);
+        reportError("no.array.creation", node);
+        return super.visitNewArray(node, v);
     }
 
     @Override
     public Boolean visitNewClass(NewClassTree node, Void v) {
-        return reportError("no.new.object", node);
+        reportError("no.new.object", node);
+        return super.visitNewClass(node, v);
     }
 
     @Override
     public Boolean visitReturn(ReturnTree node, Void v) {
-        if (node.getExpression() != null) {
-            TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), node);
-            while (tp != null) {
-                tp = tp.getParentPath();
-                Tree leaf = tp.getLeaf();
-                if (leaf.getKind() == Tree.Kind.METHOD) {
-                    if (isAnnotated((MethodTree)leaf)) {
-                        return reportError("return.type.should.be.void", node);
-                    } else {
-                        return super.visitReturn(node, v);
-                    }
-                }
-            }
-        }
+        reportError("return.type.should.be.void", node);
         return super.visitReturn(node, v);
     }
 
@@ -390,7 +360,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         if (node.getIdentifier().contentEquals("class")) {
             TypeMirror tm = getType(node.getExpression());
             if (!verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
-                return reportError("no.class.literals", node);
+                reportError("no.class.literals", node);
             }
         }
         return super.visitMemberSelect(node, v);
@@ -398,17 +368,20 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     @Override
     public Boolean visitSynchronized(SynchronizedTree node, Void v) {
-        return reportError("no.synchronized.blocks", node);
+        reportError("no.synchronized.blocks", node);
+        return super.visitSynchronized(node, v);
     }
 
     @Override
     public Boolean visitThrow(ThrowTree node, Void v) {
-        return reportError("no.throw", node);
+        reportError("no.throw", node);
+        return super.visitThrow(node, v);
     }
 
     @Override
     public Boolean visitTry(TryTree node, Void v) {
-        return reportError("no.try", node);
+        reportError("no.try", node);
+        return super.visitTry(node, v);
     }
 
     @Override
@@ -420,25 +393,25 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             if (verifier.getTypeUtils().isSubtype(ve.asType(), btraceServiceTm)) {
                 Injected i = ve.getAnnotation(Injected.class);
                 if (i == null) {
-                    return reportError("missing.injected", vt);
+                    reportError("missing.injected", vt);
                 } else {
                     switch (i.value()) {
                         case RUNTIME: {
                             if (!verifier.getTypeUtils().isSubtype(ve.asType(), runtimeServiceTm)) {
-                                return reportError("injected.no.runtime", vt);
+                                reportError("injected.no.runtime", vt);
                             }
                             break;
                         }
                         case SIMPLE: {
                             if (!verifier.getTypeUtils().isSubtype(ve.asType(), simpleServiceTm)) {
-                                return reportError("injected.no.simple", vt);
+                                reportError("injected.no.simple", vt);
                             }
                             break;
                         }
                     }
                 }
                 if (vt.getInitializer() != null) {
-                    return reportError("injected.no.initializer", vt.getInitializer());
+                    reportError("injected.no.initializer", vt.getInitializer());
                 }
             }
         }
@@ -448,12 +421,14 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     @Override
     public Boolean visitWhileLoop(WhileLoopTree node, Void v)  {
-        return reportError("no.while.loop", node);
+        reportError("no.while.loop", node);
+        return super.visitWhileLoop(node, v);
     }
 
     @Override
     public Boolean visitOther(Tree node, Void v) {
-        return reportError("no.other", node);
+        reportError("no.other", node);
+        return super.visitOther(node, v);
     }
 
     private boolean isStatic(Set<Modifier> modifiers) {
@@ -488,7 +463,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         List<? extends AnnotationTree> annos = mt.getAnnotations();
         for(AnnotationTree at : annos) {
             String annFqn = ((JCTree)at.getAnnotationType()).type.tsym.getQualifiedName().toString();
-            if (annFqn.equals("com.sun.btrace.annotations.OnError")) {
+            if (annFqn.equals(ON_ERROR_TYPE)) {
                 return true;
             }
         }
@@ -500,7 +475,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         List<? extends AnnotationTree> annos = mt.getAnnotations();
         for(AnnotationTree at : annos) {
             String annFqn = ((JCTree)at.getAnnotationType()).type.tsym.getQualifiedName().toString();
-            if (annFqn.equals("com.sun.btrace.annotations.OnExit")) {
+            if (annFqn.equals(ON_EXIT_TYPE)) {
                 return true;
             }
         }
@@ -564,62 +539,6 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return true;
     }
 
-    private static boolean isBTraceMethod(String name, int numArgs) {
-        initBTraceClassesAndMethods();
-        for (Method m : btraceMethods) {
-            if (m.getName().equals(name) &&
-                m.getParameterTypes().length == numArgs) {
-                return true;
-            } else if (m.getName().equals(name) &&
-                    m.getParameterTypes().length < numArgs &&
-                    m.isVarArgs()) {
-            	return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean isSharedMethod(String name, int numArgs) {
-        if (sharedMethods == null) return false;
-
-        for(ExecutableElement m : sharedMethods) {
-            if (m.getSimpleName().contentEquals(name) &&
-                m.getParameters().size() == numArgs) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean isBTraceClass(String name) {
-        initBTraceClassesAndMethods();
-        String postFix = "$" + name;
-        for (Class c : btraceClasses) {
-            if (c.getName().endsWith(postFix)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static void initBTraceClassesAndMethods() {
-        if (btraceMethods == null) {
-            synchronized (VerifierVisitor.class) {
-                if (btraceMethods == null) {
-                    Collection<Method> methods = new ArrayList<Method>();
-                    Collection<Class> classes = new ArrayList<Class>();
-                    methods.addAll(Arrays.asList(BTraceUtils.class.getDeclaredMethods()));
-                    for(Class clz : BTraceUtils.class.getDeclaredClasses()) {
-                        classes.add(clz);
-                        methods.addAll(Arrays.asList(clz.getDeclaredMethods()));
-                    }
-                    btraceMethods = methods.toArray(new Method[methods.size()]);
-                    btraceClasses = classes.toArray(new Class[classes.size()]);
-                }
-            }
-        }
-    }
-
     private Boolean reportError(String msg, Tree node) {
         SourcePositions srcPos = verifier.getSourcePositions();
         CompilationUnitTree compUnit = verifier.getCompilationUnit();
@@ -628,7 +547,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
             long line = compUnit.getLineMap().getLineNumber(pos);
             String name = compUnit.getSourceFile().getName();
             msg = String.format("%s:%d:%s", name, line, Messages.get(msg));
-            verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
+            verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg, getElement(node));
         } else {
             verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
         }

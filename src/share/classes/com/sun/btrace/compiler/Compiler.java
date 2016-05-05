@@ -300,10 +300,11 @@ public class Compiler {
 
     private void printDiagnostic(Diagnostic diagnostic, final PrintWriter perr) {
         FileObject fo = (FileObject)diagnostic.getSource();
-        String fname = fo.getName();
+        String fname = fo != null ? fo.getName() : "<null>";
         String[] lines = null;
         try {
-            lines = fo.getCharContent(true).toString().split("\\n");
+            CharSequence charContent = fo != null ? fo.getCharContent(true) : null;
+            lines = charContent != null ? charContent.toString().split("\\n") : null;
         } catch (IOException e) {
 
         }

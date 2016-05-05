@@ -260,7 +260,7 @@ task buildTraces(type: Exec) {
     executable "bin/${btracec}"
     args "-cp ${buildDir}/classes/test"
     args "-d ${buildDir}/classes/test"
-    args fileTree(dir: "src/test/traces", include: '**/*.java')
+    args fileTree(dir: "src/test/traces", include: '**/*.java', exclude: 'verifier/**/*.java')
 }
 
 
