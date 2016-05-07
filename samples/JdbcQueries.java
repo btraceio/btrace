@@ -41,7 +41,7 @@ import com.sun.btrace.annotations.*;
  * different types of aggregation function.
  * <p>
  *
- * @author Christian Glencross 
+ * @author Christian Glencross
  */
 @BTrace
 public class JdbcQueries {
@@ -70,7 +70,7 @@ public class JdbcQueries {
 
     /**
      * If "--stack" is passed on command line, print the Java stack trace of the JDBC statement.
-     * 
+     *
      * Otherwise we print the SQL.
      */
     private static boolean useStackTrace = Sys.$(2) != null && Strings.strcmp("--stack", Sys.$(2)) == 0;
@@ -80,7 +80,7 @@ public class JdbcQueries {
 
     /**
      * Capture SQL used to create prepared statements.
-     * 
+     *
      * @param args
      *            the list of method parameters. args[1] is the SQL.
      */
@@ -91,7 +91,7 @@ public class JdbcQueries {
 
     /**
      * Cache SQL associated with a prepared statement.
-     * 
+     *
      * @param arg
      *            the return value from the prepareXxx() method.
      */
@@ -109,7 +109,7 @@ public class JdbcQueries {
     // Otherwise the SQL is in the first argument.
 
     @OnMethod(clazz = "+java.sql.Statement", method = "/execute($|Update|Query|Batch)/")
-    public static void onExecute(@Self Object currentStatement, AnyType[] args) {
+    public static void onExecute(@Self Statement currentStatement, AnyType[] args) {
         if (args.length == 0) {
             // No SQL argument; lookup the SQL from the prepared statement
             executingStatement = Collections.get(preparedStatementDescriptions, currentStatement);
