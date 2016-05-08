@@ -1239,7 +1239,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXLOCALS = 8"
         );
     }
-    
+
     @Test
     public void methodEntryFieldStaticGetBefore() throws Exception {
         loadTargetClass("OnMethodTest");
@@ -1251,9 +1251,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"sField\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldGetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V"
         );
-        
+
         resetClassLoader();
-        
+
         transform("onmethod/leveled/FieldGetBeforeStatic");
 
         checkTransformation(
@@ -1303,7 +1303,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXLOCALS = 2"
         );
     }
-    
+
     @Test
     public void methodEntryFieldStaticGetAfter() throws Exception {
         loadTargetClass("OnMethodTest");
@@ -1320,9 +1320,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXSTACK = 7\n" +
             "MAXLOCALS = 3"
         );
-        
+
         resetClassLoader();
-        
+
         transform("onmethod/leveled/FieldGetAfterStatic");
 
         checkTransformation(
@@ -1404,7 +1404,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXLOCALS = 4"
         );
     }
-    
+
     @Test
     public void methodEntryFieldStaticSetBefore() throws Exception {
         loadTargetClass("OnMethodTest");
@@ -1421,9 +1421,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXSTACK = 7\n" +
             "MAXLOCALS = 3"
         );
-        
+
         resetClassLoader();
-        
+
         transform("onmethod/leveled/FieldSetBeforeStatic");
 
         checkTransformation(
@@ -1510,24 +1510,38 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXSTACK = 5\n" +
             "MAXLOCALS = 3"
         );
-        
+
         resetClassLoader();
-        
-        transform("onmethod/FieldSetAfterStatic");
+
+        transform("onmethod/leveled/FieldSetAfterStatic");
 
         checkTransformation(
             "LSTORE 1\n" +
             "LLOAD 1\n" +
+            "GETSTATIC traces/onmethod/leveled/FieldSetAfterStatic.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "ISUB\n" +
+            "DUP\n" +
+            "ISTORE 3\n" +
+            "IFLT L1\n" +
+            "L1\n" +
+            "ILOAD 3\n" +
+            "IFLT L2\n" +
             "ALOAD 0\n" +
             "ACONST_NULL\n" +
             "LDC \"sField\"\n" +
             "LLOAD 1\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$FieldSetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldSetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
+            "L2\n" +
+            "LINENUMBER 144 L2\n" +
+            "RETURN\n" +
+            "L3\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "MAXSTACK = 5\n" +
-            "MAXLOCALS = 3"
+            "MAXLOCALS = 4"
         );
     }
-    
+
     @Test
     public void methodEntryFieldSetAfter() throws Exception {
         loadTargetClass("OnMethodTest");
@@ -1666,7 +1680,15 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgs() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/Args");
-        checkTransformation("ALOAD 0\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Args$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Args$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 6"
+        );
 
         resetClassLoader();
 
@@ -1680,6 +1702,39 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Args$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 6"
+        );
+    }
+
+    @Test
+    public void methodEntryArgsReload() throws Exception {
+        enableUniqueClientClassNameCheck();
+        loadTargetClass("OnMethodTest");
+        loadTrace("onmethod/Args");
+        transform("onmethod/Args");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Args$1$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 6"
+        );
+
+        resetClassLoader();
+
+        loadTrace("onmethod/leveled/Args");
+        transform("onmethod/leveled/Args");
+        checkTransformation("GETSTATIC traces/onmethod/leveled/Args$1.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L0\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Args$1$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "MAXSTACK = 6"
         );
     }

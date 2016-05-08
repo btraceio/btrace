@@ -70,7 +70,7 @@ public final class BTraceProbe extends ClassNode {
     private volatile BTraceRuntime rt = null;
     private final DebugSupport debug;
     private ClassFilter filter = null;
-    private String className;
+    private String className, origName;
     private BTraceTransformer transformer;
     private boolean subtypeMatcher = false;
     private boolean annotationMatcher = false;
@@ -102,10 +102,10 @@ public final class BTraceProbe extends ClassNode {
 
     @Override
     public void visit(int version, int access, String name, String sig, String superType, String[] itfcs) {
-        String className = checkClassName(name);
+        this.origName = name;
+        this.className = BTraceRuntime.getClientName(name);
         classRenamed = !className.equals(name);
         super.visit(version, access, className, sig, superType, itfcs);
-        this.className = className.replace('/', '.');
     }
 
     @Override
@@ -115,7 +115,7 @@ public final class BTraceProbe extends ClassNode {
         BTraceMethodNode bmn = new BTraceMethodNode(mn, this);
         methods.add(bmn);
         idmap.put(CallGraph.methodId(name, desc), bmn);
-        return isUnsafe() ? bmn : new MethodVerifier(bmn, access, this.name, name, desc);
+        return isUnsafe() ? bmn : new MethodVerifier(bmn, access, this.origName, name, desc);
     }
 
     @Override
@@ -190,7 +190,18 @@ public final class BTraceProbe extends ClassNode {
     }
 
     public String getClassName() {
-        return className;
+        return getClassName(false);
+    }
+
+    public String getClassName(boolean internal) {
+        return internal ? className : className.replace("/", ".");
+    }
+
+    String translateOwner(String owner) {
+        if (owner.equals(origName)) {
+            return this.className;
+        }
+        return owner;
     }
 
     public Class register(BTraceRuntime rt, BTraceTransformer t) {
@@ -433,15 +444,6 @@ public final class BTraceProbe extends ClassNode {
             // we started executing this method.
             if (! enteredHere) BTraceRuntime.enter();
         }
-    }
-
-    private static String checkClassName(String name) {
-        int suffix = 1;
-        String origClassName = name;
-        while (BTraceRuntime.classNameExists(name.replace("/", "."))) {
-            name = origClassName + "$" + (suffix++);
-        }
-        return name;
     }
 
     @Override

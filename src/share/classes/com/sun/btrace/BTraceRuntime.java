@@ -222,6 +222,9 @@ public final class BTraceRuntime  {
         }
     };
 
+    // for testing purposes
+    private static boolean uniqueClientClassNames = true;
+
     // BTraceRuntime against BTrace class name
     private static Map<String, BTraceRuntime> runtimes = new ConcurrentHashMap<>();
 
@@ -432,7 +435,6 @@ public final class BTraceRuntime  {
         this.debug = ds != null ? ds : new DebugSupport(null);
 
         runtimes.put(className, this);
-        clients.add(className);
         this.cmdThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -480,8 +482,18 @@ public final class BTraceRuntime  {
         }
     }
 
-    public static boolean classNameExists(String name) {
-        return clients.contains(name);
+    public static String getClientName(String forClassName) {
+        if (!uniqueClientClassNames) {
+            return forClassName;
+        }
+
+        String name = forClassName;
+        int suffix = 1;
+        while (clients.contains(name)) {
+            name = forClassName + "$" + (suffix++);
+        }
+        clients.add(name);
+        return name;
     }
 
     @CallerSensitive

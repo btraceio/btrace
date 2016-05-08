@@ -25,6 +25,7 @@
 
 package support;
 
+import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.SharedSettings;
 import static org.junit.Assert.*;
 
@@ -34,7 +35,6 @@ import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
 import com.sun.btrace.runtime.BTraceProbe;
 import com.sun.btrace.runtime.BTraceProbeFactory;
 import com.sun.btrace.runtime.InstrumentUtils;
-import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.util.MethodID;
 import org.junit.After;
 import org.junit.Before;
@@ -49,6 +49,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.BeforeClass;
 
 /**
  *
@@ -58,6 +59,8 @@ public abstract class InstrumentorTestBase {
     private static final boolean DEBUG = true;
 
     private static Unsafe unsafe;
+
+    private static Field uccn = null;
 
     static {
         try {
@@ -76,6 +79,21 @@ public abstract class InstrumentorTestBase {
     private ClassLoader cl;
     private final SharedSettings settings = SharedSettings.GLOBAL;
     private final BTraceProbeFactory factory = new BTraceProbeFactory(settings);
+
+    protected final void enableUniqueClientClassNameCheck() throws Exception {
+        uccn.set(null, true);
+    }
+
+    protected final void disableUniqueClientClassNameCheck() throws Exception {
+        uccn.set(null, false);
+    }
+
+    @BeforeClass
+    public static void classStartup() throws Exception {
+        uccn = BTraceRuntime.class.getDeclaredField("uniqueClientClassNames");
+        uccn.setAccessible(true);
+        uccn.set(null, true);
+    }
 
     @After
     public void tearDown() {
@@ -102,6 +120,7 @@ public abstract class InstrumentorTestBase {
 
             last.set(1);
             map.clear();
+            disableUniqueClientClassNameCheck();
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
