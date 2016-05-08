@@ -32,7 +32,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.Formatter;
+import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -52,6 +55,7 @@ import java.util.concurrent.ThreadFactory;
  * @author Jaroslav Bachorik
  */
 final public class Statsd extends SimpleService {
+    private static final Charset CHARSET = Charset.forName("ascii");
     public static enum Priority {
         NORMAL, LOW
     }
@@ -64,14 +68,16 @@ final public class Statsd extends SimpleService {
     }
 
     private final BlockingQueue<String> q = new ArrayBlockingQueue<>(120000);
-    private final ExecutorService e = Executors.newSingleThreadExecutor(new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, "BTrace Statsd Submitter");
-            t.setDaemon(true);
-            return t;
+    private final ExecutorService e = Executors.newSingleThreadExecutor(
+        new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, "jStatsD Client Submitter");
+                t.setDaemon(true);
+                return t;
+            }
         }
-    });
+    );
 
     public static Statsd getInstance() {
         return Singleton.INSTANCE;
@@ -97,9 +103,24 @@ final public class Statsd extends SimpleService {
                     dp.setPort(SharedSettings.GLOBAL.getStatsdPort());
 
                     while (true) {
-                        String m = q.take();
-                        dp.setData(m.getBytes());
-                        ds.send(dp);
+                        Collection<String> msgs = new LinkedList<>();
+                        msgs.add(q.take());
+                        q.drainTo(msgs);
+
+                        StringBuilder sb = new StringBuilder();
+                        for(String m : msgs) {
+                            if (sb.length() + m.length() < 511) {
+                                sb.append(m).append('\n');
+                            } else {
+                                dp.setData(sb.toString().getBytes(CHARSET));
+                                ds.send(dp);
+                                sb.setLength(0);
+                            }
+                        }
+                        if (sb.length() > 0) {
+                            dp.setData(sb.toString().getBytes(CHARSET));
+                            ds.send(dp);
+                        }
                     }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
@@ -117,7 +138,7 @@ final public class Statsd extends SimpleService {
      * @param name the counter name
      */
     public void increment(String name) {
-        count(name, 1);
+        delta(name, 1, 0.0d, null);
     }
 
     /**
@@ -128,7 +149,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void increment(String name, String tags) {
-        count(name, 1, tags);
+        delta(name, 1, 0.0d, tags);
     }
 
     /**
@@ -140,7 +161,7 @@ final public class Statsd extends SimpleService {
      *     sampled every 1/10th of the time.
      */
     public void increment(String name, double sampleRate) {
-        count(name, 1, sampleRate);
+        delta(name, 1, sampleRate, null);
     }
 
     /**
@@ -155,7 +176,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void increment(String name, double sampleRate, String tags) {
-        count(name, 1, sampleRate, tags);
+        delta(name, 1, sampleRate, tags);
     }
 
     /**
@@ -163,7 +184,7 @@ final public class Statsd extends SimpleService {
      * @param name the counter name
      */
     public void decrement(String name) {
-        count(name, -1);
+        delta(name, -1, 0.0d, null);
     }
 
     /**
@@ -174,7 +195,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void decrement(String name, String tags) {
-        count(name, -1, tags);
+        delta(name, -1, 0.0d, tags);
     }
 
     /**
@@ -186,7 +207,7 @@ final public class Statsd extends SimpleService {
      *     sampled every 1/10th of the time.
      */
     public void decrement(String name, double sampleRate) {
-        count(name, -1, sampleRate);
+        delta(name, -1, sampleRate, null);
     }
 
     /**
@@ -201,7 +222,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void decrement(String name, double sampleRate, String tags) {
-        count(name, -1, sampleRate, tags);
+        delta(name, -1, sampleRate, tags);
     }
 
     /**
@@ -209,11 +230,11 @@ final public class Statsd extends SimpleService {
      *
      * @param name
      *     the name of the counter to adjust
-     * @param delta
-     *     the amount to adjust the counter by
+     * @param count
+     *     the counter value
      */
-    public void count(String name, long delta) {
-        count(name, delta, null);
+    public void count(String name, long count) {
+        count(name, count, null);
     }
 
     /**
@@ -221,14 +242,14 @@ final public class Statsd extends SimpleService {
      *
      * @param name
      *     the name of the counter to adjust
-     * @param delta
-     *     the amount to adjust the counter by
+     * @param count
+     *     the counter value
      * @param tags
      *     Only for DogStatsD compatible collectors.
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
-    public void count(String name, long delta, String tags) {
-        count(name, delta, 0d, tags);
+    public void count(String name, long count, String tags) {
+        count(name, count, 0d, tags);
     }
 
     /**
@@ -236,15 +257,15 @@ final public class Statsd extends SimpleService {
      *
      * @param name
      *     the name of the counter to adjust
-     * @param delta
-     *     the amount to adjust the counter by
+     * @param count
+     *     the counter value
      * @param sampleRate
      *     the sampling rate being employed. For example, a rate of 0.1 would
      *     tell StatsD that this counter is being sent
      *     sampled every 1/10th of the time.
      */
-    public void count(String name, long delta, double sampleRate) {
-        count(name, delta, sampleRate, null);
+    public void count(String name, long count, double sampleRate) {
+        count(name, count, sampleRate, null);
     }
 
     /**
@@ -252,8 +273,8 @@ final public class Statsd extends SimpleService {
      *
      * @param name
      *     the name of the counter to adjust
-     * @param delta
-     *     the amount to adjust the counter by
+     * @param count
+     *     the counter value
      * @param sampleRate
      *     the sampling rate being employed. For example, a rate of 0.1 would
      *     tell StatsD that this counter is being sent
@@ -262,8 +283,8 @@ final public class Statsd extends SimpleService {
      *     Only for DogStatsD compatible collectors.
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
-    public void count(String name, long delta, double sampleRate, String tags) {
-        submit(name, delta, sampleRate, "c", tags);
+    public void count(String name, long count, double sampleRate, String tags) {
+        submit(name, count, sampleRate, "c", tags);
     }
 
     /**
@@ -274,7 +295,7 @@ final public class Statsd extends SimpleService {
      * @param value
      *     the value to set the gauge to
      */
-    public void gauge(String name, double value) {
+    public void gauge(String name, long value) {
         gauge(name, value, null);
     }
 
@@ -289,7 +310,7 @@ final public class Statsd extends SimpleService {
      *     Only for DogStatsD compatible collectors.
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
-    public void gauge(String name, double value, String tags) {
+    public void gauge(String name, long value, String tags) {
         submit(name, value, 0d, "g", tags);
     }
 
@@ -363,7 +384,7 @@ final public class Statsd extends SimpleService {
      * @param value
      *     the measured value
      */
-    public void histo(String name, double value) {
+    public void histo(String name, long value) {
         histo(name, value, null);
     }
 
@@ -379,7 +400,7 @@ final public class Statsd extends SimpleService {
      *     tell StatsD that this metric value is being sent
      *     sampled every 1/10th of the time.
      */
-    public void histo(String name, double value, double sampleRate) {
+    public void histo(String name, long value, double sampleRate) {
         histo(name, value, sampleRate, null);
     }
 
@@ -394,7 +415,7 @@ final public class Statsd extends SimpleService {
      *     Only for DogStatsD compatible collectors.
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
-    public void histo(String name, double value, String tags) {
+    public void histo(String name, long value, String tags) {
         histo(name, value, 0d, tags);
     }
 
@@ -413,7 +434,7 @@ final public class Statsd extends SimpleService {
      *     Only for DogStatsD compatible collectors.
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
-    public void histo(String name, double value, double sampleRate, String tags) {
+    public void histo(String name, long value, double sampleRate, String tags) {
         submit(name, value, sampleRate, "h", tags);
     }
 
@@ -524,6 +545,22 @@ final public class Statsd extends SimpleService {
         q.offer(sb.toString());
     }
 
+    private void delta(String name, long value, double sampleRate, String tags) {
+        StringBuilder sb = new StringBuilder(name);
+        Formatter fmt = new Formatter(sb);
+
+        sb.append(':');
+        if (value > 0) {
+            sb.append('+');
+        } else if (value < 0) {
+            sb.append('-');
+        }
+        sb.append(value).append('|').append('g');
+        appendSampleRate(sampleRate, sb, fmt);
+        appendTags(tags, sb);
+        q.offer(sb.toString());
+    }
+
     private void submit(String name, long value, double sampleRate, String type, String tags) {
         StringBuilder sb = new StringBuilder(name);
         Formatter fmt = new Formatter(sb);
@@ -542,18 +579,6 @@ final public class Statsd extends SimpleService {
         q.offer(sb.toString());
     }
 
-    private void submit(String name, double value, double sampleRate, String type, String tags) {
-        StringBuilder sb = new StringBuilder(name);
-        Formatter fmt = new Formatter(sb);
-
-        sb.append(':');
-        fmt.format("%.3f", value);
-        sb.append(value).append('|').append(type);
-        appendSampleRate(sampleRate, sb, fmt);
-        appendTags(tags, sb);
-        q.offer(sb.toString());
-    }
-
     private void appendTags(String tags, StringBuilder sb) {
         if (tags != null && !tags.isEmpty()) {
             sb.append("|#").append(tags);
@@ -562,7 +587,7 @@ final public class Statsd extends SimpleService {
 
     private void appendSampleRate(double sampleRate, StringBuilder sb, Formatter fmt) {
         if (sampleRate > 0) {
-            sb.append('|');
+            sb.append("|@");
             fmt.format("%.3f", sampleRate);
         }
     }
