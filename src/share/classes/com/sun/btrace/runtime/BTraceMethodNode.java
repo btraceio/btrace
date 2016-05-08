@@ -264,10 +264,16 @@ public class BTraceMethodNode extends MethodNode {
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+        owner = cn.translateOwner(owner);
         if (opcode == Opcodes.INVOKESTATIC) {
             graph.addEdge(methodId, CallGraph.methodId(name, desc));
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf);
+    }
+
+    @Override
+    public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+        super.visitFieldInsn(opcode, cn.translateOwner(owner), name, desc);
     }
 
     public boolean isBcpRequired() {
