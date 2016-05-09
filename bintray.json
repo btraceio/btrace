@@ -1,7 +1,7 @@
 {
     "package": {
         "name": "btrace-bin",
-        "repo": "Snapshots",
+        "repo": "snapshots",
         "subject": "btraceio"
     },
 
