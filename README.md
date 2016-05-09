@@ -4,7 +4,7 @@ btrace [![Build Status](https://travis-ci.org/btraceio/btrace.svg?branch=master)
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
-1.3.5 ([Release Page](https://github.com/jbachorik/btrace/releases/latest))
+1.3.6 ([Release Page](https://github.com/jbachorik/btrace/releases/latest))
 
 ## Quick Summary
 BTrace is a safe, dynamic tracing tool for the Java platform.
@@ -77,15 +77,15 @@ Pull requests can be accepted only from the signers of [Oracle Contributor Agree
 Using the command line, add the following to your /etc/apt/sources.list system config file:
 
 ```
-echo "deb http://dl.bintray.com/jbachorik/deb trusty universe" | sudo tee -a /etc/apt/sources.list
+echo "deb http://dl.bintray.com/btraceio/deb trusty universe" | sudo tee -a /etc/apt/sources.list
 ```
 
 Or, add the repository URLs using the "Software Sources" admin UI:
 
 ```
-deb http://dl.bintray.com/jbachorik/deb trusty universe
+deb http://dl.bintray.com/btraceio/deb trusty universe
 ```
 
 ### RPM Repository
 
-Grab the _*.repo_ file `wget https://bintray.com/jbachorik/rpm/rpm -O bintray-jbachorik-rpm.repo` and use it.
+Grab the _*.repo_ file `wget https://bintray.com/btraceio/rpm/rpm -O bintray-jbachorik-rpm.repo` and use it.
