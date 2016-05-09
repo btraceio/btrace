@@ -299,32 +299,7 @@ public class Compiler {
     }
 
     private void printDiagnostic(Diagnostic diagnostic, final PrintWriter perr) {
-        FileObject fo = (FileObject)diagnostic.getSource();
-        String fname = fo != null ? fo.getName() : "<null>";
-        String[] lines = null;
-        try {
-            CharSequence charContent = fo != null ? fo.getCharContent(true) : null;
-            lines = charContent != null ? charContent.toString().split("\\n") : null;
-        } catch (IOException e) {
-
-        }
-
-        perr.println(
-            fname + ":" +
-            diagnostic.getLineNumber() + ": error: " +
-            diagnostic.getMessage(null)
-        );
-        if (lines != null) {
-            // might be overflowing if there is more than 2^15 lines in the class
-            perr.println(lines[(int)diagnostic.getLineNumber() - 1]);
-
-            StringBuilder sb = new StringBuilder();
-            for(int i=0;i<diagnostic.getColumnNumber() - 1;i++) {
-                sb.append(' ');
-            }
-            sb.append('^');
-            perr.println(sb.toString());
-        }
+        perr.println(diagnostic);
     }
 
     /** Checks if the list of diagnostic messages contains at least one error. Certain

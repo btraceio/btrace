@@ -556,7 +556,25 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     private Element getElement(Tree t) {
         TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), t);
-        return verifier.getTreeUtils().getElement(tp);
+        Element e = verifier.getTreeUtils().getElement(tp);
+        if (e == null) {
+            // hack to make JDK 7 symbol resolution working
+            if (t instanceof MethodInvocationTree) {
+                JCTree.JCExpression jce = ((JCTree.JCMethodInvocation)t).meth;
+                if (jce instanceof IdentifierTree) {
+                    e = ((JCTree.JCIdent)jce).sym;
+                } else if (jce instanceof MemberSelectTree) {
+                    e = ((JCTree.JCFieldAccess)jce).sym;
+                }
+            } else if (t instanceof JCTree.JCIdent) {
+                e = ((JCTree.JCIdent)t).sym;
+            } else if (t instanceof JCTree.JCNewClass) {
+                e = ((JCTree.JCIdent)((JCTree.JCNewClass)t).clazz).sym;
+            } else if (t instanceof JCTree.JCThrow) {
+                e = ((JCTree.JCNewClass)((JCTree.JCThrow)t).expr).type.tsym;
+            }
+        }
+        return e;
     }
 
     private TypeMirror getType(Tree t) {
