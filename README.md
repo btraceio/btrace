@@ -4,7 +4,7 @@ btrace [![Build Status](https://travis-ci.org/btraceio/btrace.svg?branch=master)
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
-1.3.6 ([Release Page](https://github.com/jbachorik/btrace/releases/latest))
+1.3.7 ([Release Page](https://github.com/jbachorik/btrace/releases/latest))
 
 ## Quick Summary
 BTrace is a safe, dynamic tracing tool for the Java platform.
