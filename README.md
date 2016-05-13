@@ -88,4 +88,4 @@ deb http://dl.bintray.com/btraceio/deb trusty universe
 
 ### RPM Repository
 
-Grab the _*.repo_ file `wget https://bintray.com/btraceio/rpm/rpm -O bintray-jbachorik-rpm.repo` and use it.
+Grab the _*.repo_ file `wget https://bintray.com/btraceio/rpm/rpm -O bintray-btraceio-rpm.repo` and use it.
