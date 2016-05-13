@@ -1,7 +1,6 @@
 [![Download](https://api.bintray.com/packages/btraceio/releases/btrace/images/download.svg) ](https://bintray.com/btraceio/releases/btrace/_latestVersion) [![Build Status](https://travis-ci.org/btraceio/btrace.svg?branch=master)](https://travis-ci.org/btraceio/btrace) [![codecov.io](https://codecov.io/github/btraceio/btrace/coverage.svg?branch=master)](https://codecov.io/github/btraceio/btrace?branch=master) [![Join the chat at https://gitter.im/jbachorik/btrace](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/btraceio/btrace?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Project Stats](https://www.openhub.net/p/btrace/widgets/project_thin_badge.gif)](https://www.openhub.net/p/btrace)
 
-# btrace 
-======
+# btrace
 
 A safe, dynamic tracing tool for the Java platform
 
