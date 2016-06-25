@@ -425,7 +425,7 @@ public class Instrumentor extends ClassVisitor {
                                     localVarArg(vr.getArgIdx(VALUE_PTR), elementType, argsIndex[VALUE_PTR], TypeUtils.isAnyType(argElementType)),
                                     constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    isStatic() ? constArg(om.getSelfParameter(), null) : 
+                                    isStatic() ? constArg(om.getSelfParameter(), null) :
                                                  localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
                                 invokeBTraceAction(asm, om);
@@ -471,7 +471,7 @@ public class Instrumentor extends ClassVisitor {
                             }
                         }
                         actionArgs[actionArgTypes.length] = localVarArg(om.getReturnParameter(), returnType, returnVarIndex);
-                        actionArgs[actionArgTypes.length + 1] = staticCall ? constArg(om.getTargetInstanceParameter(), null) : 
+                        actionArgs[actionArgTypes.length + 1] = staticCall ? constArg(om.getTargetInstanceParameter(), null) :
                                                                              localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, backupArgsIndices.length == 0 ? -1 : backupArgsIndices[0]);
                         actionArgs[actionArgTypes.length + 2] = constArg(om.getTargetMethodOrFieldParameter(), method);
                         actionArgs[actionArgTypes.length + 3] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
@@ -604,7 +604,10 @@ public class Instrumentor extends ClassVisitor {
                             ValidationResult vr = validateArguments(om, actionArgTypes, calledMethodArgs);
                             if (vr.isValid()) {
                                 if (om.getDurationParameter() == -1) {
-                                    MethodTrackingExpander.EXIT.insert(mv);
+                                    MethodTrackingExpander.EXIT.insert(
+                                        mv, MethodTrackingExpander.$METHODID
+                                            + "=" + mid
+                                    );
                                 }
                                 if (where == Where.AFTER) {
                                     if (om.getDurationParameter() != -1) {

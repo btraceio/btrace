@@ -26,7 +26,6 @@
 
 package com.sun.btrace.util;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Jaroslav Bachorik
  */
 public class MethodID {
-    private static final ConcurrentMap<String, Integer> methodIds = new ConcurrentHashMap<String, Integer>();
+    private static final ConcurrentMap<String, Integer> methodIds = new ConcurrentHashMap<>();
     static final AtomicInteger lastMehodId = new AtomicInteger(1);
 
     /**
