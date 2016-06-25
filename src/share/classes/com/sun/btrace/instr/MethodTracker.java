@@ -25,7 +25,6 @@
 package com.sun.btrace.instr;
 
 import com.sun.btrace.util.MethodID;
-import com.sun.btrace.instr.RandomIntProvider;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 

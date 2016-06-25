@@ -3660,7 +3660,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 5\n" +
             "ILOAD 4\n" +
             "IFEQ L2\n" +
-            "LDC 9\n" +
+            "LDC 10\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.updateEndTs (I)V\n" +
             "L2\n" +
             "L3\n" +
@@ -3711,7 +3711,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 6\n" +
             "ILOAD 4\n" +
             "IFEQ L4\n" +
-            "LDC 9\n" +
+            "LDC 10\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.updateEndTs (I)V\n" +
             "L4\n" +
             "L5\n" +
