@@ -22,7 +22,7 @@ plugins {
 }
 
 dependencies {
-    errorprone 'com.google.errorprone:error_prone_core:2.0.8'
+    errorprone 'com.google.errorprone:error_prone_core:2.0.5'
 }
 
 group 'com.sun.tools.btrace'
