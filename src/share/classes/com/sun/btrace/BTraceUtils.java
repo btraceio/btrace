@@ -876,6 +876,7 @@ public class BTraceUtils {
      * probed (or traced) class.
      * @deprecated Since 1.1. Use {@linkplain ProbeClassName} and {@linkplain Self} annotations instead
      */
+    @Deprecated
     public static Class probeClass() {
         return Reflection.getCallerClass(STACK_DEC);
     }

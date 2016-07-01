@@ -49,7 +49,7 @@ public @interface Location {
     /**
      * Specifies where do want to probe with
      * respect to the location of interest.
-     * 
+     *
      * @see Where
      */
     Where where() default Where.BEFORE;
@@ -78,7 +78,7 @@ public @interface Location {
     /**
      * Specifies field or method type for
      * certain kind of probe locations. The type
-     * is specified like in Java source - except 
+     * is specified like in Java source - except
      * the method or field name and parameter names
      * are not included.
      */

@@ -324,7 +324,7 @@ public final class Main {
                 try {
                     settings.setStatsdPort(Integer.parseInt(parts[1].trim()));
                 } catch (NumberFormatException e) {
-                    debug.warning("Invalid statsd port number: " + parts[1]);
+                    DebugSupport.warning("Invalid statsd port number: " + parts[1]);
                     // leave the port unconfigured
                 }
             } else if (parts.length == 1) {
