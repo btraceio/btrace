@@ -1,15 +1,14 @@
 import javax.tools.ToolProvider
 
 buildscript {
-  repositories {
-    mavenCentral()
-  }
+    repositories {
+        mavenCentral()
+    }
 
-  dependencies {
-    classpath "net.ltgt.gradle:gradle-errorprone-plugin:0.0.8"
-  }
+    dependencies {
+        classpath "net.ltgt.gradle:gradle-errorprone-plugin:0.0.8"
+    }
 }
-
 
 plugins {
     id 'java'
@@ -18,11 +17,14 @@ plugins {
     id "nebula.os-package" version "2.2.2"
     id "com.jfrog.bintray" version "1.6"
     id "jacoco"
-    id "net.ltgt.errorprone" version "0.0.8"
 }
 
-dependencies {
-    errorprone 'com.google.errorprone:error_prone_core:2.0.5'
+def currentJvm = org.gradle.internal.jvm.Jvm.current()
+
+// don't enable errorprone for JDK 7 - it does not work
+if (!currentJvm.toString().startsWith("1.7")) {
+    apply plugin: 'net.ltgt.errorprone'
+    dependencies.create('com.google.errorprone:error_prone_core:2.0.5')
 }
 
 group 'com.sun.tools.btrace'
@@ -200,9 +202,9 @@ task unjar(type: Copy) {
     description 'Explode the pre-built asm jar.'
 
     from([
-        zipTree("lib/btrace-asm-${asmVersion}.jar"),
-        zipTree("lib/btrace-jctools-core-1.2.jar")
-    ])
+            zipTree("lib/btrace-asm-${asmVersion}.jar"),
+            zipTree("lib/btrace-jctools-core-1.2.jar")
+        ])
     into compileJava.destinationDir
 }
 
