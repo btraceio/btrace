@@ -30,3 +30,4 @@ junit*
 CHANGELOG.md
 gradle.properties
 /.nb-gradle/
+/.nb-gradle-properties

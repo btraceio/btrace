@@ -499,7 +499,7 @@ public class Postprocessor extends ClassVisitor {
         }
 
         @Override
-        public void visitTableSwitchInsn(int i, int i1, Label label, Label[] labels) {
+        public void visitTableSwitchInsn(int i, int i1, Label label, Label ...labels) {
             simulatedStack.poll();
             if (copyEnabled) {
                 super.visitTableSwitchInsn(i, i1, label, labels);

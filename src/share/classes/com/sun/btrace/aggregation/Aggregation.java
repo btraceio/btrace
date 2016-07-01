@@ -43,7 +43,7 @@ public class Aggregation implements Cloneable {
 
     private static final AggregationKey NULL_AGGREGATION_KEY = new AggregationKey(new Object[0]);
     private final AggregationFunction type;
-    private final ConcurrentHashMap<AggregationKey, AggregationValue> values = new ConcurrentHashMap<AggregationKey, AggregationValue>();
+    private final ConcurrentHashMap<AggregationKey, AggregationValue> values = new ConcurrentHashMap<>();
 
     /**
      * Creates an aggregation.
@@ -138,7 +138,7 @@ public class Aggregation implements Cloneable {
      */
     public List<Object[]> getData() {
         List<Entry<AggregationKey, AggregationValue>> sortedContents = sort();
-        List<Object[]> result = new ArrayList<Object[]>(sortedContents.size());
+        List<Object[]> result = new ArrayList<>(sortedContents.size());
 
         for (Entry<AggregationKey, AggregationValue> item : sortedContents) {
 
@@ -153,44 +153,45 @@ public class Aggregation implements Cloneable {
 
         return result;
     }
-    
-    
+
+
     /**
-     * Returns a list of the AggregationKeys that belong to this aggregation. 
+     * Returns a list of the AggregationKeys that belong to this aggregation.
      * @return a list of aggregationsKeys belonging to this aggregation.
      */
     public List<AggregationKey> getKeyData() {
-    	List<AggregationKey> keyList = new ArrayList<AggregationKey>();
+    	List<AggregationKey> keyList = new ArrayList<>();
     	List<Entry<AggregationKey, AggregationValue>> sortedContents = sort();
     	for (Entry<AggregationKey, AggregationValue> item : sortedContents) {
     		keyList.add(item.getKey());
     	}
-    	
+
     	return keyList;
     }
 
     /**
-     * Returns a value for the given key if the key has a value associated with it. Returns zero if the key is not 
+     * Returns a value for the given key if the key has a value associated with it. Returns zero if the key is not
      * valid for this Aggregation.
      * @param key
-     * @return the value for the given key, or zero. 
+     * @return the value for the given key, or zero.
      */
     public Long getValueForKey(AggregationKey key) {
     	AggregationValue aggregationValue = values.get(key);
     	if (aggregationValue != null) {
     		return aggregationValue.getValue();
     	} else {
-    		return 0l;
+    		return 0L;
     	}
     }
     /**
      * @return a list of key/value pairs contained in this aggregation by sorted by ascending value.
      */
     private List<Map.Entry<AggregationKey, AggregationValue>> sort() {
-        ArrayList<Map.Entry<AggregationKey, AggregationValue>> result = new ArrayList<Entry<AggregationKey, AggregationValue>>(
+        ArrayList<Map.Entry<AggregationKey, AggregationValue>> result = new ArrayList<>(
                 values.entrySet());
         Collections.sort(result, new Comparator<Map.Entry<AggregationKey, AggregationValue>>() {
 
+            @Override
             public int compare(Entry<AggregationKey, AggregationValue> o1, Entry<AggregationKey, AggregationValue> o2) {
                 long i1 = o1.getValue().getValue();
                 long i2 = o2.getValue().getValue();

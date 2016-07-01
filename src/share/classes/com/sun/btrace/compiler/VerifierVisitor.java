@@ -510,6 +510,9 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 case CALL: {
                     return true;
                 }
+                default: {
+                    // noop
+                }
             }
             reportError("sampler.invalid.location", node);
             return false;

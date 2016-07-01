@@ -719,13 +719,13 @@ class StackTrackingMethodVisitor extends MethodVisitor {
                 break;
             }
             case Opcodes.LCONST_0: {
-                StackItem si = new ConstantItem(0l);
+                StackItem si = new ConstantItem(0L);
                 state.push(si);
                 state.push(si);
                 break;
             }
             case Opcodes.LCONST_1: {
-                StackItem si = new ConstantItem(1l);
+                StackItem si = new ConstantItem(1L);
                 state.push(si);
                 state.push(si);
                 break;

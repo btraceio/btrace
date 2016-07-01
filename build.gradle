@@ -1,5 +1,16 @@
 import javax.tools.ToolProvider
 
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+
+  dependencies {
+    classpath "net.ltgt.gradle:gradle-errorprone-plugin:0.0.8"
+  }
+}
+
+
 plugins {
     id 'java'
     id 'maven'
@@ -7,6 +18,11 @@ plugins {
     id "nebula.os-package" version "2.2.2"
     id "com.jfrog.bintray" version "1.6"
     id "jacoco"
+    id "net.ltgt.errorprone" version "0.0.8"
+}
+
+dependencies {
+    errorprone 'com.google.errorprone:error_prone_core:2.0.8'
 }
 
 group 'com.sun.tools.btrace'

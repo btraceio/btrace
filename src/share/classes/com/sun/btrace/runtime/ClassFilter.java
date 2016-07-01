@@ -64,11 +64,11 @@ public class ClassFilter {
     private final List<OnMethod> onMethods;
 
     static {
-        ClassReader.class.getClass();
-        AnnotationVisitor.class.getClass();
-        FieldVisitor.class.getClass();
-        MethodVisitor.class.getClass();
-        Attribute.class.getClass();
+        ClassReader.class.getClassLoader();
+        AnnotationVisitor.class.getClassLoader();
+        FieldVisitor.class.getClassLoader();
+        MethodVisitor.class.getClassLoader();
+        Attribute.class.getClassLoader();
     }
 
     public ClassFilter(List<OnMethod> onMethods) {
@@ -274,7 +274,7 @@ public class ClassFilter {
                name.startsWith("sun/instrument/") || // NOI18N
                name.startsWith("java/lang/instrument/"); // NOI18N
     }
-    
+
     public static boolean isBTraceClass(String name) {
         return name.startsWith("com/sun/btrace/");
     }

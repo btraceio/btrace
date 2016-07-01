@@ -339,10 +339,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
         if (this.pid != other.pid) {
             return false;
         }
-        if (this.getName() != other.getName() && (this.getName() == null || !this.getName().equals(other.getName()))) {
-            return false;
-        }
-        return true;
+        return !(this.getName() != other.getName() && (this.getName() == null || !this.getName().equals(other.getName())));
     }
 
     @Override
