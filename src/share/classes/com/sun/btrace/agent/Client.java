@@ -89,17 +89,17 @@ abstract class Client implements CommandListener {
     private final BTraceTransformer transformer;
 
     static {
-        ClassFilter.class.getClass();
-        InstrumentUtils.class.getClass();
-        Instrumentor.class.getClass();
-        ClassReader.class.getClass();
-        ClassWriter.class.getClass();
-        AnnotationParser.class.getClass();
-        AnnotationType.class.getClass();
-        Annotation.class.getClass();
-        MethodTrackingExpander.class.getClass();
-        ClassCache.class.getClass();
-        ClassInfo.class.getClass();
+        ClassFilter.class.getClassLoader();
+        InstrumentUtils.class.getClassLoader();
+        Instrumentor.class.getClassLoader();
+        ClassReader.class.getClassLoader();
+        ClassWriter.class.getClassLoader();
+        AnnotationParser.class.getClassLoader();
+        AnnotationType.class.getClassLoader();
+        Annotation.class.getClassLoader();
+        MethodTrackingExpander.class.getClassLoader();
+        ClassCache.class.getClassLoader();
+        ClassInfo.class.getClassLoader();
 
         BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
     }
@@ -199,6 +199,10 @@ abstract class Client implements CommandListener {
             Thread.currentThread().interrupt();
         } catch (IOException ioexp) {
             debugPrint(ioexp);
+        } finally {
+            if (runtime != null) {
+                runtime.shutdownCmdLine();
+            }
         }
     }
 
@@ -226,14 +230,16 @@ abstract class Client implements CommandListener {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
-	        boolean entered = BTraceRuntime.enter(runtime);
-		try {
-		    if (runtime != null) runtime.handleExit(0);
-		} finally {
+                boolean entered = BTraceRuntime.enter(runtime);
+                try {
+                    if (runtime != null) {
+                        runtime.handleExit(0);
+                    }
+                } finally {
                     if (entered) {
                         BTraceRuntime.leave();
-		    }
-		}
+                    }
+                }
             }
         }));
         if (isDebug()) {
