@@ -44,10 +44,14 @@ abstract public class TestApp implements TestPrinter {
         t.start();
 
         String resp = new BufferedReader(new InputStreamReader(System.in)).readLine();
-        if (!"done".equals(resp)) {
+        System.out.println("Received " + resp + " - " + "done".equals(resp));
+        if ("done".equals(resp)) {
             System.out.flush();
+            System.out.println(System.currentTimeMillis() + ":  Interrupting the worker thread");
             t.interrupt();
+            System.out.println(System.currentTimeMillis() + ": Waiting for the worker thread to finish");
             t.join();
+            System.out.println(System.currentTimeMillis() + ": Worker thread finished");
         }
     }
 

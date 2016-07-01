@@ -527,6 +527,10 @@ public final class BTraceRuntime  {
         return defineClassImpl(code, mustBeBootstrap);
     }
 
+    public void shutdownCmdLine() {
+        exitting.set(true);
+    }
+
     /**
      * Enter method is called by every probed method just
      * before the probe actions start.

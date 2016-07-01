@@ -88,31 +88,35 @@ class RemoteClient extends Client {
                     try {
                         Command cmd = WireIO.read(ois);
                         switch (cmd.getType()) {
-                        case Command.EXIT: {
-                            ExitCommand ecmd = (ExitCommand)cmd;
-                            debugPrint("received exit command");
-                            BTraceRuntime.leave();
-                            BTraceRuntime.enter(getRuntime());
-                            try {
-                                debugPrint("calling BTraceUtils.exit()");
-                                cleanupTransformers();
-                                BTraceUtils.Sys.exit(ecmd.getExitCode());
-                            } catch (Throwable th) {
-                                debugPrint(th);
-                                BTraceRuntime.handleException(th);
+                            case Command.EXIT: {
+                                ExitCommand ecmd = (ExitCommand)cmd;
+                                debugPrint("received exit command");
+                                BTraceRuntime.leave();
+                                try {
+                                    debugPrint("cleaning up transformers");
+                                    cleanupTransformers();
+                                    debugPrint("calling BTraceUtils.exit()");
+                                    BTraceUtils.Sys.exit(ecmd.getExitCode());
+                                    debugPrint("done");
+                                } catch (Throwable th) {
+                                    // ExitException is expected here
+                                    if (!th.getClass().getName().equals("com.sun.btrace.ExitException")) {
+                                        debugPrint(th);
+                                        BTraceRuntime.handleException(th);
+                                    }
+                                }
+                                return;
                             }
-                            return;
-                        }
-                        case Command.EVENT: {
-                            getRuntime().handleEvent((EventCommand)cmd);
-                            break;
-                        }
-                        default:
-                            if (isDebug()) {
-                                debugPrint("received " + cmd);
+                            case Command.EVENT: {
+                                getRuntime().handleEvent((EventCommand)cmd);
+                                break;
                             }
-                            // ignore any other command
-                        }
+                            default:
+                                if (isDebug()) {
+                                    debugPrint("received " + cmd);
+                                }
+                                // ignore any other command
+                            }
                     } catch (Exception exp) {
                         debugPrint(exp);
                         break;
