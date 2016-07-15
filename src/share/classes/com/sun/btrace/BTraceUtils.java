@@ -3419,11 +3419,12 @@ public class BTraceUtils {
                 return;
             }
             StackTraceElement[] st = exception.getStackTrace();
-            println(exception);
+            println(exception.toString());
             BTraceRuntime.stackTrace("\t", st, 0, numFrames);
             Throwable cause = exception.getCause();
             while (cause != null) {
-                println("Caused by:");
+                print("Caused by: ");
+                println(cause.toString());
                 st = cause.getStackTrace();
                 BTraceRuntime.stackTrace("\t", st, 0, numFrames);
                 cause = cause.getCause();
