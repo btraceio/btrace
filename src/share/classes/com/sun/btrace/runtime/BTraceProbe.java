@@ -26,6 +26,7 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.DebugSupport;
+import com.sun.btrace.VerifierException;
 import com.sun.btrace.comm.RetransformClassNotification;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
@@ -74,6 +75,7 @@ public final class BTraceProbe extends ClassNode {
     private BTraceTransformer transformer;
     private boolean subtypeMatcher = false;
     private boolean annotationMatcher = false;
+    private VerifierException verifierException = null;
 
     private BTraceProbe(BTraceProbeFactory factory) {
         super(Opcodes.ASM5);
@@ -289,6 +291,14 @@ public final class BTraceProbe extends ClassNode {
         return classRenamed;
     }
 
+    public boolean isVerified() {
+        return verifierException == null;
+    }
+
+    public VerifierException getVerifierException() {
+        return verifierException;
+    }
+
     boolean isFieldInjected(String name) {
         return injectedFields.contains(name);
     }
@@ -404,6 +414,8 @@ public final class BTraceProbe extends ClassNode {
             }
             mapOnProbes();
             this.filter = new ClassFilter(onMethods);
+        } catch (VerifierException e) {
+            verifierException = e;
         } finally {
             if (debug.isDumpClasses()) {
                 debug.dumpClass(name, getBytecode(false));

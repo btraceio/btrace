@@ -25,7 +25,7 @@
 
 package com.sun.btrace;
 
-/** 
+/**
  * Instance of this exception type is thrown by BTrace
  * Verifier when an input .class is not a valid BTrace program.
  *
@@ -34,5 +34,9 @@ package com.sun.btrace;
 public class VerifierException extends RuntimeException {
     public VerifierException(String msg) {
         super(msg);
+    }
+
+    public VerifierException(Throwable cause) {
+        super(cause);
     }
 }
