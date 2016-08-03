@@ -145,10 +145,36 @@ public final class Main {
                 for (Map.Entry<Object, Object> entry : ps.entrySet()) {
                     String argKey = (String) entry.getKey();
                     String argVal = (String) entry.getValue();
-                    if (!argMap.containsKey(argKey)) {
-                        System.err.println("applying default agent argument '" + argKey + "'='" + argVal + "'");
-                        argMap.put(argKey, argVal);
-                        if (argKey.equals("debug")) {
+                    if (argKey.equals("script")) {
+                        // special treatment for the 'script' parameter
+                        boolean replace = false;
+                        String scriptVal = argVal;
+                        if (scriptVal.startsWith("!")) {
+                            scriptVal = scriptVal.substring(1);
+                            replace = true;
+                        } else {
+                            String oldVal = argMap.get(argKey);
+                            if (oldVal != null && !oldVal.isEmpty()) {
+                                scriptVal = oldVal + ":" + scriptVal;
+                            } else {
+                                replace = true;
+                            }
+                            System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
+
+                        }
+                        if (replace) {
+                            System.err.println("setting default agent argument '" + argKey + "' with '" + scriptVal + "'");
+                        } else {
+                            System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
+                        }
+                        
+                        argMap.put(argKey, scriptVal);
+                    } else {
+                        if (!argMap.containsKey(argKey)) {
+                            System.err.println("applying default agent argument '" + argKey + "'='" + argVal + "'");
+                            argMap.put(argKey, argVal);
+                            if (argKey.equals("debug")) {
+                            }
                         }
                     }
                 }
