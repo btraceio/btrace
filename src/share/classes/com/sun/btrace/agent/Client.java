@@ -210,7 +210,10 @@ abstract class Client implements CommandListener {
         String[] args = instr.getArguments();
         this.btraceCode = instr.getCode();
         try {
-            probe = verifyAndLoad(btraceCode);
+            probe = load(btraceCode);
+            if (!probe.isVerified()) {
+                throw probe.getVerifierException();
+            }
         } catch (Throwable th) {
             debugPrint(th);
             errorExit(th);
@@ -304,7 +307,7 @@ abstract class Client implements CommandListener {
     }
 
     protected final String getClassName() {
-        return probe.getClassName();
+        return probe != null ? probe.getClassName() : "<unknown>";
     }
 
     final boolean isCandidate(Class c) {
@@ -340,13 +343,17 @@ abstract class Client implements CommandListener {
     }
 
     // Internals only below this point
-    private BTraceProbe verifyAndLoad(byte[] buf) {
+    private BTraceProbe load(byte[] buf) {
         BTraceProbeFactory f = new BTraceProbeFactory(settings);
         debugPrint("loading BTrace class");
         BTraceProbe cn = f.createProbe(buf);
 
         if (isDebug()) {
-            debugPrint("loaded '" + cn.getClassName() + "' successfully");
+            if (cn.isVerified()) {
+                debugPrint("loaded '" + cn.getClassName() + "' successfully");
+            } else {
+                debugPrint(cn.getClassName() + " failed verification");
+            }
         }
         return cn;
     }
