@@ -351,7 +351,20 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
     @Override
     public Boolean visitReturn(ReturnTree node, Void v) {
-        reportError("return.type.should.be.void", node);
+        if (node.getExpression() != null) {
+            TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), node);
+            while (tp != null) {
+                tp = tp.getParentPath();
+                Tree leaf = tp.getLeaf();
+                if (leaf.getKind() == Tree.Kind.METHOD) {
+                    if (isAnnotated((MethodTree)leaf)) {
+                        return reportError("return.type.should.be.void", node);
+                    } else {
+                        return super.visitReturn(node, v);
+                    }
+                }
+            }
+        }
         return super.visitReturn(node, v);
     }
 
