@@ -86,10 +86,12 @@ final class BTraceClassWriter extends ClassWriter {
         InstrumentUtils.collectHierarchyClosure(targetCL, type2, type2Closure, true);
         // basically, do intersection
         type1Closure.retainAll(type2Closure);
+
         // if the intersection is not empty the first element is the closest common ancestor
         Iterator<String> iter = type1Closure.iterator();
         if (iter.hasNext()) {
-            return iter.next();
+            String common = iter.next();
+            return common;
         }
         return Constants.JAVA_LANG_OBJECT;
     }

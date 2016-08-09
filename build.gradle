@@ -15,7 +15,7 @@ plugins {
     id 'maven'
     id 'maven-publish'
     id "nebula.os-package" version "2.2.2"
-    id "com.jfrog.bintray" version "1.6"
+    id "com.jfrog.bintray" version "1.7"
     id "jacoco"
 }
 

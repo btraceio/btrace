@@ -47,6 +47,7 @@ public final class ClassInfo {
     private final String classId;
     private final Collection<ClassInfo> supertypes = new LinkedList<>();
     private final ClassCache cache;
+    private boolean isInterface = false;
 
     ClassInfo(ClassCache cache, Class clz) {
         this.cache = cache;
@@ -62,13 +63,14 @@ public final class ClassInfo {
                 supertypes.add(cache.get(itfc));
             }
         }
+        this.isInterface = clz.isInterface();
     }
 
     ClassInfo(ClassCache cache, ClassLoader cl, String className) {
         this.cache = cache;
         cLoaderId = (cl != null ? cl.toString() : "<null>");
         classId = className.replace("/", ".");
-        supertypes.addAll(resolveSupertypes(cl, className));
+        loadExternalClass(cl, className);
     }
 
     /**
@@ -108,23 +110,28 @@ public final class ClassInfo {
         return classId;
     }
 
-    private Collection<ClassInfo> resolveSupertypes(final ClassLoader cl, final String className) {
-        final Collection<ClassInfo> supers = new LinkedList<>();
+    public boolean isInterface() {
+        return isInterface;
+    }
+
+    private void loadExternalClass(final ClassLoader cl, final String className) {
         String rsrcName = className.replace(".", "/") + ".class";
         InputStream typeIs = cl == null ? SYS_CL.getResourceAsStream(rsrcName) : cl.getResourceAsStream(rsrcName);
         if (typeIs != null) {
             try {
                 BTraceClassReader cr = new BTraceClassReader(cl, typeIs);
+
+                this.isInterface = cr.isInterface();
                 String[] info = cr.readClassSupers();
                 String superName = info[0];
                 if (superName != null) {
-                    supers.add(cache.get(inferClassLoader(cl, superName), superName));
+                    supertypes.add(cache.get(inferClassLoader(cl, superName), superName));
                 }
                 if (info.length > 1) {
                     for(int i = 1; i < info.length; i++) {
                         String ifc = info[i];
                         if (ifc != null) {
-                            supers.add(cache.get(inferClassLoader(cl, ifc), ifc));
+                            supertypes.add(cache.get(inferClassLoader(cl, ifc), ifc));
                         }
                     }
                 }
@@ -132,7 +139,6 @@ public final class ClassInfo {
                 DebugSupport.warning(e);
             }
         }
-        return supers;
     }
 
     private static ClassLoader inferClassLoader(ClassLoader initiating, String className) {
@@ -207,10 +213,12 @@ public final class ClassInfo {
         if (!Objects.equals(this.cLoaderId, other.cLoaderId)) {
             return false;
         }
-        if (!Objects.equals(this.classId, other.classId)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this.classId, other.classId);
+    }
+
+    @Override
+    public String toString() {
+        return "ClassInfo{" + "cLoaderId=" + cLoaderId + ", classId=" + classId + ", supertypes=" + supertypes + '}';
     }
 
 }

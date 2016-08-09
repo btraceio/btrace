@@ -134,7 +134,7 @@ final class BTraceClassReader extends ClassReader {
     }
 
     public boolean isInterface() {
-        return (getAccess() & Opcodes.ACC_STATIC) != 0;
+        return (getAccess() & Opcodes.ACC_INTERFACE) != 0;
     }
 
     public boolean isBTrace() {

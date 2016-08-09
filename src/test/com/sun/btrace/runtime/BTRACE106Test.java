@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import support.InstrumentorTestBase;
 import org.junit.Test;
 
 /**

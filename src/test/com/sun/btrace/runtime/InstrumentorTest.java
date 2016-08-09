@@ -27,7 +27,6 @@ package com.sun.btrace.runtime;
 import com.sun.btrace.instr.RandomIntProvider;
 import java.lang.reflect.Field;
 import org.junit.BeforeClass;
-import support.InstrumentorTestBase;
 import org.junit.Test;
 
 /**
