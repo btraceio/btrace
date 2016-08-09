@@ -78,6 +78,11 @@ public class Instrumentor extends ClassVisitor {
     private final ClassLoader loader;
 
     static Instrumentor create(BTraceClassReader cr, BTraceProbe bcn, ClassVisitor cv) {
+        if (cr.isInterface()) {
+            // do not instrument interfaces
+            return null;
+        }
+        
         Collection<OnMethod> applicables = bcn.getApplicableHandlers(cr);
         if (applicables != null && !applicables.isEmpty()) {
             return new Instrumentor(cr.getClassLoader(), bcn, applicables, cv);

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package support;
+package com.sun.btrace.runtime;
 
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.SharedSettings;
@@ -190,14 +190,19 @@ public abstract class InstrumentorTestBase {
 
     protected void transform(String traceName, boolean unsafe) throws IOException {
         settings.setUnsafe(unsafe);
+        BTraceClassReader cr = InstrumentUtils.newClassReader(cl, originalBC);
+        BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
         BTraceProbe btrace = loadTrace(traceName, unsafe);
 
-        transformedBC = InstrumentUtils.instrument(originalBC, btrace);
+        cw.addInstrumentor(btrace);
+
+        transformedBC = cw.instrument();
 
         if (transformedBC != null) {
             load();
         } else {
-            fail("Failed instrumenting class");
+            System.err.println("Unable to instrument class " + cr.getJavaClassName());
+            transformedBC = originalBC;
         }
         System.err.println("==== " + traceName);
     }

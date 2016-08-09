@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.DebugSupport;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,11 +36,7 @@ import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.annotations.BTrace;
 import java.lang.ref.Reference;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.PatternSyntaxException;
 
 /**
@@ -232,7 +229,7 @@ public class ClassFilter {
      * @param types any requested supertypes
      **/
     public static boolean isSubTypeOf(String typeA, ClassLoader loader, String ... types) {
-        if (typeA == null) {
+        if (typeA == null || typeA.equals(Constants.JAVA_LANG_OBJECT)) {
             return false;
         }
         if (types.length == 0) {
@@ -243,16 +240,23 @@ public class ClassFilter {
 
         loader = (loader != null ? loader : ClassLoader.getSystemClassLoader());
 
+        if (internal) {
+            typeA = typeA.replace('.', '/');
+        } else {
+            typeA = typeA.replace('/', '.');
+        }
+
         Set<String> typeSet = new HashSet<>(Arrays.asList(types));
         if (typeSet.contains(typeA)) {
             return true;
         }
-
-        LinkedHashSet<String> closure = new LinkedHashSet<>();
-        InstrumentUtils.collectHierarchyClosure(loader, typeA, closure, internal);
-
-        closure.retainAll(typeSet);
-        return !closure.isEmpty();
+        ClassInfo ci = ClassCache.getInstance().get(loader, typeA);
+        Collection<String> sTypes = new LinkedList<>();
+        for (ClassInfo sCi : ci.getSupertypes(false)) {
+            sTypes.add(internal ? sCi.getClassName() : sCi.getJavaClassName());
+        }
+        sTypes.retainAll(typeSet);
+        return !sTypes.isEmpty();
     }
 
     /*

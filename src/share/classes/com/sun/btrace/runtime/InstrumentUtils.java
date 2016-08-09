@@ -33,6 +33,7 @@ import static com.sun.btrace.runtime.Constants.JAVA_LANG_OBJECT;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * @author A. Sundararajan
@@ -49,12 +50,23 @@ public final class InstrumentUtils {
     * @param useInternal should internal types names be used in the closure
     */
     public static void collectHierarchyClosure(ClassLoader cl, String type,
-                                               LinkedHashSet<String> closure, boolean useInternal) {
+                                               Set<String> closure, boolean useInternal) {
         if (type == null || type.equals(JAVA_LANG_OBJECT)) {
            return;
         }
         ClassInfo ci = ClassCache.getInstance().get(cl, type);
+
+        Set<ClassInfo> ciSet = new LinkedHashSet<>();
+
+        // add self
+        ciSet.add(ci);
         for(ClassInfo sci : ci.getSupertypes(false)) {
+            if (!sci.isInterface() && !sci.getClassName().equals(JAVA_LANG_OBJECT)) {
+                ciSet.add(sci);
+            }
+        }
+
+        for (ClassInfo sci : ciSet) {
             closure.add(useInternal ? sci.getClassName() : sci.getJavaClassName());
         }
     }
@@ -80,18 +92,6 @@ public final class InstrumentUtils {
             default:
                 throw new IllegalArgumentException();
         }
-    }
-
-    public static byte[] instrument(byte[] code, BTraceProbe probe) {
-        BTraceClassReader cr = newClassReader(code);
-        ClassWriter cw = newClassWriter(cr);
-
-        ClassVisitor instr = Instrumentor.create(cr, probe, cw);
-        if (instr != null) {
-            accept(cr, instr);
-            return cw.toByteArray();
-        }
-        return code;
     }
 
     public static void accept(ClassReader reader, ClassVisitor visitor) {
@@ -131,7 +131,7 @@ public final class InstrumentUtils {
         return newClassWriter(null, ClassWriter.COMPUTE_FRAMES);
     }
 
-    static BTraceClassWriter newClassWriter(ClassLoader cl, String className, byte[] code) {
+    static BTraceClassWriter newClassWriter(ClassLoader cl, byte[] code) {
         int flags = ClassWriter.COMPUTE_MAXS;
         if (isJDK16OrAbove(code)) {
             flags = ClassWriter.COMPUTE_FRAMES;
