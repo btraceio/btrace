@@ -38,6 +38,7 @@ import com.sun.btrace.comm.InstrumentCommand;
 import com.sun.btrace.comm.PrintableCommand;
 import com.sun.btrace.comm.SetSettingsCommand;
 import com.sun.btrace.comm.WireIO;
+import java.net.SocketException;
 
 /**
  * Represents a remote client communicated by socket.
@@ -91,20 +92,8 @@ class RemoteClient extends Client {
                             case Command.EXIT: {
                                 ExitCommand ecmd = (ExitCommand)cmd;
                                 debugPrint("received exit command");
-                                BTraceRuntime.leave();
-                                try {
-                                    debugPrint("cleaning up transformers");
-                                    cleanupTransformers();
-                                    debugPrint("calling BTraceUtils.exit()");
-                                    BTraceUtils.Sys.exit(ecmd.getExitCode());
-                                    debugPrint("done");
-                                } catch (Throwable th) {
-                                    // ExitException is expected here
-                                    if (!th.getClass().getName().equals("com.sun.btrace.ExitException")) {
-                                        debugPrint(th);
-                                        BTraceRuntime.handleException(th);
-                                    }
-                                }
+                                onCommand(ecmd);
+
                                 return;
                             }
                             case Command.EVENT: {
@@ -134,26 +123,33 @@ class RemoteClient extends Client {
         if (oos == null) {
             throw new IOException("no output stream");
         }
-        oos.reset();
+        if (isDebug()) {
+            debugPrint("client " + getClassName() + ": got " + cmd);
+        }
+        boolean isConnected = true;
+        try {
+            oos.reset();
+        } catch (SocketException e) {
+            isConnected = false;
+        }
+
         switch (cmd.getType()) {
             case Command.EXIT:
-                if (isDebug()) {
-                    debugPrint("client " + getClassName() + ": got " + cmd);
+                if (isConnected) {
+                    WireIO.write(oos, cmd);
                 }
-                WireIO.write(oos, cmd);
                 onExit(((ExitCommand)cmd).getExitCode());
                 break;
             default:
-                if (isDebug()) {
-                    debugPrint("client " + getClassName() + ": got " + cmd);
-                }
                 if (out != null) {
                     if (cmd instanceof PrintableCommand) {
                         ((PrintableCommand) cmd).print(out);
                         return;
                     }
                 }
-                WireIO.write(oos, cmd);
+                if (isConnected) {
+                    WireIO.write(oos, cmd);
+                }
         }
     }
 
@@ -163,12 +159,15 @@ class RemoteClient extends Client {
 
         if (oos != null) {
             oos.close();
+            oos = null;
         }
         if (ois != null) {
             ois.close();
+            ois = null;
         }
         if (sock != null) {
             sock.close();
+            sock = null;
         }
     }
 }

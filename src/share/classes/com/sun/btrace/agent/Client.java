@@ -35,6 +35,7 @@ import java.io.IOException;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
@@ -190,19 +191,29 @@ abstract class Client implements CommandListener {
     }
 
     protected synchronized void onExit(int exitCode) {
-        cleanupTransformers();
+        BTraceRuntime.leave();
         try {
-            debugPrint("onExit: closing all");
+            debugPrint("onExit:");
+            debugPrint("cleaning up transformers");
+            cleanupTransformers();
+            debugPrint("removing instrumentation");
+            retransformLoaded();
+            debugPrint("closing all I/O");
             Thread.sleep(300);
-            closeAll();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        } catch (IOException ioexp) {
-            debugPrint(ioexp);
-        } finally {
-            if (runtime != null) {
-                runtime.shutdownCmdLine();
+            try {
+                closeAll();
+            } catch (IOException e) {
+                // ignore IOException when closing
             }
+            debugPrint("done");
+        } catch (Throwable th) {
+            // ExitException is expected here
+            if (!th.getClass().getName().equals("com.sun.btrace.ExitException")) {
+                debugPrint(th);
+                BTraceRuntime.handleException(th);
+            }
+        } finally {
+            runtime.shutdownCmdLine();
         }
     }
 
