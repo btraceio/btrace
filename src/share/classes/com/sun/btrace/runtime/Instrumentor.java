@@ -60,6 +60,7 @@ import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
+import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.TreeSet;
@@ -82,7 +83,7 @@ public class Instrumentor extends ClassVisitor {
             // do not instrument interfaces
             return null;
         }
-        
+
         Collection<OnMethod> applicables = bcn.getApplicableHandlers(cr);
         if (applicables != null && !applicables.isEmpty()) {
             return new Instrumentor(cr.getClassLoader(), bcn, applicables, cv);
@@ -117,14 +118,7 @@ public class Instrumentor extends ClassVisitor {
 
         if (applicableOnMethods.isEmpty() ||
             (access & ACC_ABSTRACT) != 0) {
-            return new TemplateExpanderVisitor(
-                new LocalVariableHelperImpl(
-                    super.visitMethod(access, name, desc, signature, exceptions),
-                    access,
-                    desc
-                ),
-                className, name, desc
-            );
+            return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
         for (OnMethod om : applicableOnMethods) {
@@ -158,14 +152,7 @@ public class Instrumentor extends ClassVisitor {
         }
 
         if (appliedOnMethods.isEmpty()) {
-            return new TemplateExpanderVisitor(
-                new LocalVariableHelperImpl(
-                    super.visitMethod(access, name, desc, signature, exceptions),
-                    access,
-                    desc
-                ),
-                className, name, desc
-            );
+            return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
         MethodVisitor methodVisitor;
