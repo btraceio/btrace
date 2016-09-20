@@ -89,6 +89,8 @@ abstract class Client implements CommandListener {
     protected final DebugSupport debug;
     private final BTraceTransformer transformer;
 
+    private volatile boolean shuttingDown = false;
+
     static {
         ClassFilter.class.getClassLoader();
         InstrumentUtils.class.getClassLoader();
@@ -191,29 +193,31 @@ abstract class Client implements CommandListener {
     }
 
     protected synchronized void onExit(int exitCode) {
-        BTraceRuntime.leave();
-        try {
-            debugPrint("onExit:");
-            debugPrint("cleaning up transformers");
-            cleanupTransformers();
-            debugPrint("removing instrumentation");
-            retransformLoaded();
-            debugPrint("closing all I/O");
-            Thread.sleep(300);
+        if (!shuttingDown) {
+            BTraceRuntime.leave();
             try {
-                closeAll();
-            } catch (IOException e) {
-                // ignore IOException when closing
+                debugPrint("onExit:");
+                debugPrint("cleaning up transformers");
+                cleanupTransformers();
+                debugPrint("removing instrumentation");
+                retransformLoaded();
+                debugPrint("closing all I/O");
+                Thread.sleep(300);
+                try {
+                    closeAll();
+                } catch (IOException e) {
+                    // ignore IOException when closing
+                }
+                debugPrint("done");
+            } catch (Throwable th) {
+                // ExitException is expected here
+                if (!th.getClass().getName().equals("com.sun.btrace.ExitException")) {
+                    debugPrint(th);
+                    BTraceRuntime.handleException(th);
+                }
+            } finally {
+                runtime.shutdownCmdLine();
             }
-            debugPrint("done");
-        } catch (Throwable th) {
-            // ExitException is expected here
-            if (!th.getClass().getName().equals("com.sun.btrace.ExitException")) {
-                debugPrint(th);
-                BTraceRuntime.handleException(th);
-            }
-        } finally {
-            runtime.shutdownCmdLine();
         }
     }
 
@@ -246,6 +250,7 @@ abstract class Client implements CommandListener {
             public void run() {
                 boolean entered = BTraceRuntime.enter(runtime);
                 try {
+                    shuttingDown = true;
                     if (runtime != null) {
                         runtime.handleExit(0);
                     }
