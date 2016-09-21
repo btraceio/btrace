@@ -60,7 +60,6 @@ import com.sun.btrace.util.LocalVariableHelperImpl;
 import com.sun.btrace.util.LocalVariableHelper;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.TreeSet;
@@ -76,7 +75,6 @@ public class Instrumentor extends ClassVisitor {
     private final Collection<OnMethod> applicableOnMethods;
     private final Set<OnMethod> calledOnMethods = new HashSet<>();
     private String className, superName;
-    private final ClassLoader loader;
 
     static Instrumentor create(BTraceClassReader cr, BTraceProbe bcn, ClassVisitor cv) {
         if (cr.isInterface()) {
@@ -86,15 +84,14 @@ public class Instrumentor extends ClassVisitor {
 
         Collection<OnMethod> applicables = bcn.getApplicableHandlers(cr);
         if (applicables != null && !applicables.isEmpty()) {
-            return new Instrumentor(cr.getClassLoader(), bcn, applicables, cv);
+            return new Instrumentor(bcn, applicables, cv);
         }
         return null;
     }
 
-    private Instrumentor(ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
+    private Instrumentor(BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
         super(ASM5, cv);
         this.bcn = bcn;
-        this.loader = cl;
         this.applicableOnMethods = applicables;
     }
 

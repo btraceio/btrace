@@ -118,6 +118,25 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         private final int index;
         protected final Assembler asm;
 
+        static final Comparator<ArgumentProvider> COMPARATOR = new Comparator<ArgumentProvider>() {
+            @Override
+            public final int compare(ArgumentProvider o1, ArgumentProvider o2) {
+                if (o1 == null && o2 == null) {
+                    return 0;
+                }
+                if (o1 != null && o2 == null) return -1;
+                if (o2 != null && o1 == null) return 1;
+
+                if (o1.index == o2.index) {
+                    return 0;
+                }
+                if (o1.index < o2.index) {
+                    return -1;
+                }
+                return 1;
+            }
+        };
+
         public ArgumentProvider(Assembler asm, int index) {
             this.index = index;
             this.asm = asm;
@@ -346,24 +365,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     }
 
     protected void loadArguments(ArgumentProvider ... argumentProviders) {
-        Arrays.sort(argumentProviders, new Comparator<ArgumentProvider>() {
-            @Override
-            public int compare(ArgumentProvider o1, ArgumentProvider o2) {
-                if (o1 == null && o2 == null) {
-                    return 0;
-                }
-                if (o1 != null && o2 == null) return -1;
-                if (o2 != null && o1 == null) return 1;
-
-                if (o1.getIndex() == o2.getIndex()) {
-                    return 0;
-                }
-                if (o1.getIndex() < o2.getIndex()) {
-                    return -1;
-                }
-                return 1;
-            }
-        });
+        Arrays.sort(argumentProviders, ArgumentProvider.COMPARATOR);
 
         for(ArgumentProvider provider : argumentProviders) {
             if (provider != null) provider.provide();
@@ -419,7 +421,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     protected final ArgumentProvider constArg(int index, Object val) {
         return new ConstantArgProvider(asm, index, val);
     }
-    
+
     protected final ArgumentProvider selfArg(int index, Type type) {
         return isStatic() ? constArg(index, null) : localVarArg(index, type, 0);
     }

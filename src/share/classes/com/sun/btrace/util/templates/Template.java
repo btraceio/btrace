@@ -46,15 +46,19 @@ public final class Template {
     private final String sig;
     private final Set<String> tags = new HashSet<>();
 
+    private final String id;
+
     public Template(String name, String sig) {
         this.name = name;
         this.sig = sig;
+        this.id = getId(owner, name, sig);
     }
 
     public Template(String name, String sig, String ... tags) {
         this.name = name;
         this.sig = sig;
         this.tags.addAll(Arrays.asList(tags));
+        this.id = getId(owner, name, sig);
     }
 
     public String getOwner() {
@@ -100,13 +104,12 @@ public final class Template {
         Map<String, String> tMap = new HashMap<>();
 
         for(String t : tags) {
-            if (t.contains("=")) {
-                String[] kv = t.split("=");
-                if (kv.length == 2) {
-                    tMap.put(kv[0], kv[1]);
-                } else {
-                    tMap.put(kv[0], "");
-                }
+            int idx = t.indexOf('=');
+            if (idx > -1) {
+                String key, val;
+                key = t.substring(0, idx);
+                val = t.substring(idx + 1);
+                tMap.put(key, val);
             } else {
                 tMap.put(t, "");
             }
@@ -124,7 +127,7 @@ public final class Template {
     }
 
     String getId() {
-        return owner + "#" + name + "sig";
+        return id;
     }
 
     @Override
@@ -152,7 +155,9 @@ public final class Template {
     }
 
     static String getId(String owner, String name, String sig) {
-        return owner + "#" + name + "sig";
+        StringBuilder sb = new StringBuilder(owner);
+        sb.append('#').append(name).append("#").append(sig);
+        return sb.toString();
     }
 
     public final Template duplicate() {
