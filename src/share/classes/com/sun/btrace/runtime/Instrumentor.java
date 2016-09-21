@@ -75,25 +75,23 @@ public class Instrumentor extends ClassVisitor {
     private final Collection<OnMethod> applicableOnMethods;
     private final Set<OnMethod> calledOnMethods = new HashSet<>();
     private String className, superName;
-    private final ClassLoader loader;
 
     static Instrumentor create(BTraceClassReader cr, BTraceProbe bcn, ClassVisitor cv) {
         if (cr.isInterface()) {
             // do not instrument interfaces
             return null;
         }
-        
+
         Collection<OnMethod> applicables = bcn.getApplicableHandlers(cr);
         if (applicables != null && !applicables.isEmpty()) {
-            return new Instrumentor(cr.getClassLoader(), bcn, applicables, cv);
+            return new Instrumentor(bcn, applicables, cv);
         }
         return null;
     }
 
-    private Instrumentor(ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
+    private Instrumentor(BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
         super(ASM5, cv);
         this.bcn = bcn;
-        this.loader = cl;
         this.applicableOnMethods = applicables;
     }
 
@@ -117,14 +115,7 @@ public class Instrumentor extends ClassVisitor {
 
         if (applicableOnMethods.isEmpty() ||
             (access & ACC_ABSTRACT) != 0) {
-            return new TemplateExpanderVisitor(
-                new LocalVariableHelperImpl(
-                    super.visitMethod(access, name, desc, signature, exceptions),
-                    access,
-                    desc
-                ),
-                className, name, desc
-            );
+            return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
         for (OnMethod om : applicableOnMethods) {
@@ -158,14 +149,7 @@ public class Instrumentor extends ClassVisitor {
         }
 
         if (appliedOnMethods.isEmpty()) {
-            return new TemplateExpanderVisitor(
-                new LocalVariableHelperImpl(
-                    super.visitMethod(access, name, desc, signature, exceptions),
-                    access,
-                    desc
-                ),
-                className, name, desc
-            );
+            return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
         MethodVisitor methodVisitor;
