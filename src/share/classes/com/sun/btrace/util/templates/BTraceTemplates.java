@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 /**
  * A central place for bytecode templates
@@ -36,24 +37,25 @@ import java.util.StringTokenizer;
  * @since 1.3
  */
 public final class BTraceTemplates {
-    private static final Map<String, Template> templateMap = new HashMap<>();
+    private static final Map<String, Template> TEMPLATE_MAP = new HashMap<>();
 
     public static void registerTemplates(Template ... templates) {
         for(Template t : templates) {
-            templateMap.put(t.getId(), t);
+            TEMPLATE_MAP.put(t.getId(), t);
         }
     }
 
     public static Template getTemplate(String owner, String name, String sig) {
         Template t;
 
-        if (name.contains(":")) {
-            String[] vals = name.split("\\:");
-            name = vals[0];
+        int idx = name.indexOf(':');
+        if (idx > -1) {
+            String tName = name.substring(0, idx);
+            String tagList = name.substring(idx + 1);
 
-            t = getTemplate(Template.getId(owner, name, sig));
+            t = getTemplate(Template.getId(owner, tName, sig));
             if (t != null) {
-                StringTokenizer st = new StringTokenizer(vals[1], ",");
+                StringTokenizer st = new StringTokenizer(tagList, ",");
 
                 Set<String> tags = new HashSet<>();
                 while (st.hasMoreTokens()) {
@@ -71,7 +73,7 @@ public final class BTraceTemplates {
     }
 
     private static Template getTemplate(String id) {
-        Template t = templateMap.get(id);
+        Template t = TEMPLATE_MAP.get(id);
         return t != null ? t.duplicate() : null;
     }
 }
