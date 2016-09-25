@@ -30,8 +30,10 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.regex.Pattern;
@@ -47,7 +49,7 @@ import java.util.regex.Pattern;
  * @since 1.3.5
  * @author Jaroslav Bachorik
  */
-public class BTraceTransformer implements ClassFileTransformer {
+public final class BTraceTransformer implements ClassFileTransformer {
     private static class Filter {
         static enum Result {
             TRUE, FALSE, MAYBE
@@ -56,8 +58,8 @@ public class BTraceTransformer implements ClassFileTransformer {
         private boolean isRegex = false;
 
 
-        private final ConcurrentMap<String, Integer> nameMap = new ConcurrentSkipListMap<>();
-        private final ConcurrentMap<Pattern, Integer> nameRegexMap = new ConcurrentHashMap<>();
+        private final Map<String, Integer> nameMap = new HashMap<>();
+        private final Map<Pattern, Integer> nameRegexMap = new HashMap<>();
 
         void add(OnMethod om) {
             if (om.isSubtypeMatcher() || om.isClassAnnotationMatcher()) {
@@ -85,34 +87,44 @@ public class BTraceTransformer implements ClassFileTransformer {
             }
         }
 
-        private static <K> void addToMap(ConcurrentMap<K, Integer> map, K name) {
-            Integer i = map.putIfAbsent(name, 1);
-            if (i != null) {
-                while (!map.replace(name, i, i + 1)) {
-                    i = map.get(name);
+        private static <K> void addToMap(final Map<K, Integer> map, K name) {
+            synchronized(map) {
+                Integer i = map.get(name);
+                if (i == null) {
+                    map.put(name, 1);
+                } else {
+                    map.put(name, i++);
                 }
             }
         }
 
-        private static <K> void removeFromMap(ConcurrentMap<K, Integer> map, K name) {
-            Integer freq = map.get(name);
-            while (freq != null && !map.replace(name, freq, freq - 1)) {
-                freq = map.get(name);
-            }
-            if (freq == null || freq == 0) {
-                map.remove(name);
+        private static <K> void removeFromMap(Map<K, Integer> map, K name) {
+            synchronized(map) {
+                Integer freq = map.get(name);
+                if (freq != null) {
+                    int i = freq - 1;
+                    if (i == 0) {
+                        map.remove(name);
+                    } else {
+                        map.put(name, i);
+                    }
+                }
             }
         }
 
         public Result matchClass(String className) {
             if (isFast) {
-                if (nameMap.containsKey(className)) {
-                    return Result.TRUE;
+                synchronized(nameMap) {
+                    if (nameMap.containsKey(className)) {
+                        return Result.TRUE;
+                    }
                 }
                 if (isRegex) {
-                    for(Pattern p : nameRegexMap.keySet()) {
-                        if (p.matcher(className).matches()) {
-                            return Result.TRUE;
+                    synchronized(nameRegexMap) {
+                        for(Pattern p : nameRegexMap.keySet()) {
+                            if (p.matcher(className).matches()) {
+                                return Result.TRUE;
+                            }
                         }
                     }
                 }
@@ -122,21 +134,21 @@ public class BTraceTransformer implements ClassFileTransformer {
         }
     }
     private final DebugSupport debug;
-    private final Collection<BTraceProbe> probes = new ConcurrentLinkedDeque<>();
+    private final Collection<BTraceProbe> probes = new LinkedList<>();
     private final Filter filter = new Filter();
 
     public BTraceTransformer(DebugSupport d) {
         debug = d;
     }
 
-    public final void register(BTraceProbe p) {
+    public final synchronized void register(BTraceProbe p) {
         probes.add(p);
         for(OnMethod om : p.onmethods()) {
             filter.add(om);
         }
     }
 
-    public final void unregister(BTraceProbe p) {
+    public final synchronized void unregister(BTraceProbe p) {
         probes.remove(p);
         for(OnMethod om : p.onmethods()) {
             filter.remove(om);
@@ -144,12 +156,12 @@ public class BTraceTransformer implements ClassFileTransformer {
     }
 
     @Override
-    public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+    public synchronized byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         if (probes.isEmpty()) return null;
 
         className = className != null ? className : "<anonymous>";
 
-        if (isBTraceClass(className) || isSensitiveClass(className)) {
+        if (loader == null && (isBTraceClass(className) || isSensitiveClass(className))) {
             if (isDebug()) {
                 debugPrint("skipping transform for BTrace class " + className); // NOI18N
             }
@@ -206,12 +218,16 @@ public class BTraceTransformer implements ClassFileTransformer {
      * For now, we avoid such classes till we find a solution.
      */
     private static boolean isSensitiveClass(String name) {
-        return name.equals("java/lang/Object") || // NOI18N
-               name.startsWith("java/lang/ThreadLocal") || // NOI18N
-               name.startsWith("sun/reflect") || // NOI18N
-               name.equals("sun/misc/Unsafe")  || // NOI18N
-               name.startsWith("sun/security/") || // NOI18N
-               name.equals("java/lang/VerifyError"); // NOI18N
+        if (name.startsWith("java/lang/")) {
+            return name.equals("java/lang/Object") || // NOI18N
+                   name.startsWith("java/lang/ThreadLocal") || // NOI18N
+                   name.equals("java/lang/VerifyError"); // NOI18N
+        } else if (name.startsWith("sun/")) {
+            return name.startsWith("sun/reflect") || // NOI18N
+                   name.equals("sun/misc/Unsafe")  || // NOI18N
+                   name.startsWith("sun/security/"); // NOI18N
+        }
+        return false;
     }
 
     private boolean isDebug() {

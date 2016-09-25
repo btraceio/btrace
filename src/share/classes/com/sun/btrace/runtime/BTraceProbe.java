@@ -51,6 +51,37 @@ import java.util.regex.Pattern;
 import java.util.Collections;
 import java.util.Iterator;
 import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
+import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
 
 /**
  *

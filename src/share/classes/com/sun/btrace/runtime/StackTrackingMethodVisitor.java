@@ -1170,7 +1170,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
             } else {
                 state.join(label);
                 if (handlers.contains(label)) {
-                    state.push(new InstanceItem(Type.getType(Throwable.class)));
+                    state.push(new InstanceItem(THROWABLE_TYPE));
                 }
             }
         }

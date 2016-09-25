@@ -491,8 +491,8 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             specialArgsCount++;
         }
         if (om.getTargetMethodOrFieldParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], Type.getType(String.class)))) {
-                report("Invalid @TargetMethodOrField parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], STRING_TYPE))) {
+                report("Invalid @TargetMethodOrField parameter. Expected " + STRING_TYPE + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
@@ -519,13 +519,13 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             specialArgsCount++;
         }
         if (om.getClassNameParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], Type.getType(String.class)))) {
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], STRING_TYPE))) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
         if (om.getMethodParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], Type.getType(String.class)))) {
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], STRING_TYPE))) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;

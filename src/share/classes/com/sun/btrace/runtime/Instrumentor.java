@@ -811,7 +811,7 @@ public class Instrumentor extends ClassVisitor {
                     ValidationResult vr;
                     {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        vr = validateArguments(om, actionArgTypes, new Type[]{TypeUtils.throwableType});
+                        vr = validateArguments(om, actionArgTypes, new Type[]{THROWABLE_TYPE});
                     }
 
                     @Override
@@ -823,12 +823,12 @@ public class Instrumentor extends ClassVisitor {
 
                             if (!vr.isAny()) {
                                 asm.dup();
-                                throwableIndex = storeNewLocal(TypeUtils.throwableType);
+                                throwableIndex = storeNewLocal(THROWABLE_TYPE);
                             }
 
                             ArgumentProvider[] actionArgs = new ArgumentProvider[5];
 
-                            actionArgs[0] = localVarArg(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex);
+                            actionArgs[0] = localVarArg(vr.getArgIdx(0), THROWABLE_TYPE, throwableIndex);
                             actionArgs[1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
                             actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
                             actionArgs[3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
@@ -1598,16 +1598,16 @@ public class Instrumentor extends ClassVisitor {
                     @Override
                     protected void onThrow() {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        ValidationResult vr = validateArguments(om, actionArgTypes, new Type[]{TypeUtils.throwableType});
+                        ValidationResult vr = validateArguments(om, actionArgTypes, new Type[]{THROWABLE_TYPE});
                         if (vr.isValid()) {
                             int throwableIndex = -1;
                             Label l = levelCheck(om, bcn.name);
                             if (!vr.isAny()) {
                                 asm.dup();
-                                throwableIndex = storeNewLocal(TypeUtils.throwableType);
+                                throwableIndex = storeNewLocal(THROWABLE_TYPE);
                             }
                             loadArguments(
-                                localVarArg(vr.getArgIdx(0), TypeUtils.throwableType, throwableIndex),
+                                localVarArg(vr.getArgIdx(0), THROWABLE_TYPE, throwableIndex),
                                 constArg(om.getClassNameParameter(), className.replace('/', '.')),
                                 constArg(om.getMethodParameter(),getName(om.isMethodFqn())),
                                 selfArg(om.getSelfParameter(), Type.getObjectType(className)));

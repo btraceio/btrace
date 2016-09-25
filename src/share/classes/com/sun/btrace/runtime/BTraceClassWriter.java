@@ -29,7 +29,7 @@ import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.LinkedList;
 
 /**
  * A hacked version of <a href="http://asm.ow2.org/asm50/javadoc/user/org/objectweb/asm/ClassWriter.html">ClassWriter</a>
@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @author Jaroslav Bachorik
  */
 final class BTraceClassWriter extends ClassWriter {
-    private final Deque<Instrumentor> instrumentors = new ConcurrentLinkedDeque<>();
+    private final Deque<Instrumentor> instrumentors = new LinkedList<>();
     private final ClassLoader targetCL;
     private final BTraceClassReader cr;
 
@@ -56,23 +56,27 @@ final class BTraceClassWriter extends ClassWriter {
 
     public void addInstrumentor(BTraceProbe bp) {
         if (cr != null && bp != null) {
-            Instrumentor top = instrumentors.peekLast();
-            ClassVisitor parent = top != null ? top : this;
-            Instrumentor i = Instrumentor.create(cr, bp, parent);
-            if (i != null) {
-                instrumentors.add(i);
+            synchronized(instrumentors) {
+                Instrumentor top = instrumentors.peekLast();
+                ClassVisitor parent = top != null ? top : this;
+                Instrumentor i = Instrumentor.create(cr, bp, parent);
+                if (i != null) {
+                    instrumentors.add(i);
+                }
             }
         }
     }
 
     public byte[] instrument() {
-        if (instrumentors.isEmpty()) return null;
-
-        ClassVisitor top = instrumentors.peekLast();
-        InstrumentUtils.accept(cr, top != null ? top : this);
         boolean hit = false;
-        for(Instrumentor i : instrumentors) {
-            hit |= i.hasMatch();
+        synchronized(instrumentors) {
+            if (instrumentors.isEmpty()) return null;
+
+            ClassVisitor top = instrumentors.peekLast();
+            InstrumentUtils.accept(cr, top != null ? top : this);
+            for(Instrumentor i : instrumentors) {
+                hit |= i.hasMatch();
+            }
         }
         return hit ? this.toByteArray() : null;
     }

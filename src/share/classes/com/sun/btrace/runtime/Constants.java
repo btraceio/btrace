@@ -28,23 +28,15 @@ package com.sun.btrace.runtime;
 import java.util.regex.Pattern;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
+import com.sun.btrace.annotations.Level;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.OnProbe;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.AnyType;
-import com.sun.btrace.AnyType;
+import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.BTraceUtils;
-import com.sun.btrace.BTraceUtils;
-import com.sun.btrace.annotations.Injected;
-import com.sun.btrace.annotations.Level;
-import com.sun.btrace.annotations.OnError;
-import com.sun.btrace.annotations.OnEvent;
-import com.sun.btrace.annotations.OnExit;
-import com.sun.btrace.annotations.OnTimer;
-import com.sun.btrace.annotations.ProbeClassName;
-import com.sun.btrace.annotations.ProbeMethodName;
-import com.sun.btrace.annotations.Sampled;
+import com.sun.btrace.annotations.*;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.services.api.Service;
 
@@ -75,6 +67,21 @@ public abstract class Constants {
 
     public static final Type STRING_TYPE = Type.getType(String.class);
 
+    public static final Type CLASS_TYPE = Type.getType(Class.class);
+
+    public static final String INT_DESC = Type.INT_TYPE.getDescriptor();
+
+    public static final Type THROWABLE_TYPE = Type.getType(Throwable.class);
+    public static final String THROWABLE_INTERNAL = THROWABLE_TYPE.getInternalName();
+
+    public static final Type BTRACERT_TYPE = Type.getType(BTraceRuntime.class);
+    public static final String BTRACERT_INTERNAL = BTRACERT_TYPE.getInternalName();
+    public static final String BTRACERT_DESC = BTRACERT_TYPE.getDescriptor();
+
+    public static final Type THREAD_LOCAL_TYPE = Type.getType(ThreadLocal.class);
+    public static final String THREAD_LOCAL_DESC = THREAD_LOCAL_TYPE.getDescriptor();
+    public static final String THREAD_LOCAL_INTERNAL = THREAD_LOCAL_TYPE.getInternalName();
+
     // BTrace specific stuff
     public static final String BTRACE_UTILS =
         Type.getInternalName(BTraceUtils.class);
@@ -103,8 +110,11 @@ public abstract class Constants {
     public static final String ONERROR_DESC =
         Type.getDescriptor(OnError.class);
 
-    public static final String SAMPLER_DESC =
+    public static final String SAMPLED_DESC =
         Type.getDescriptor(Sampled.class);
+
+    public static final String SAMPLER_DESC =
+        Type.getDescriptor(Sampled.Sampler.class);
 
     public static final String ONPROBE_DESC =
         Type.getDescriptor(OnProbe.class);
@@ -123,6 +133,21 @@ public abstract class Constants {
 
     public static final String INJECTED_DESC =
         Type.getDescriptor(Injected.class);
+
+    public static final String RETURN_DESC =
+        Type.getDescriptor(Return.class);
+
+    public static final String SELF_DESC =
+        Type.getDescriptor(Self.class);
+
+    public static final String TARGETMETHOD_DESC =
+        Type.getDescriptor(TargetMethodOrField.class);
+
+    public static final String TARGETINSTANCE_DESC =
+        Type.getDescriptor(TargetInstance.class);
+
+    public static final String DURATION_DESC =
+        Type.getDescriptor(Duration.class);
 
     // class name pattern is specified with this pattern
     public static final Pattern REGEX_SPECIFIER = Pattern.compile("/.+/");
@@ -184,4 +209,6 @@ public abstract class Constants {
     public static final String FLOAT_VALUE_DESC= "()F";
     public static final String DOUBLE_VALUE_DESC= "()D";
     public static final String EMBEDDED_BTRACE_SECTION_HEADER = "META-INF/btrace/";
+
+    public static final String BTRACE_LEVEL_FLD = "$btrace$$level";
 }

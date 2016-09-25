@@ -532,7 +532,7 @@ final public class Assembler {
     }
 
     public Assembler addLevelCheck(String clsName, Interval itv, Label jmp) {
-        getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+        getStatic(clsName, "$btrace$$level", INT_DESC);
         if (itv.getA() <= 0) {
             if (itv.getB() != Integer.MAX_VALUE) {
                 ldc(itv.getB());
@@ -545,7 +545,7 @@ final public class Assembler {
             } else {
                 ldc(itv.getA());
                 jump(Opcodes.IF_ICMPLT, jmp);
-                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                getStatic(clsName, "$btrace$$level", INT_DESC);
                 ldc(itv.getB());
                 jump(Opcodes.IF_ICMPGT, jmp);
             }
@@ -568,12 +568,12 @@ final public class Assembler {
         if (itv.getA() <= 0) {
             if (itv.getB() != Integer.MAX_VALUE) {
                 ldc(itv.getB());
-                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                getStatic(clsName, BTRACE_LEVEL_FLD, INT_DESC);
                 sub(Type.INT_TYPE);
             }
         } else if (itv.getA() < itv.getB()) {
             if (itv.getB() == Integer.MAX_VALUE) {
-                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                getStatic(clsName, BTRACE_LEVEL_FLD, INT_DESC);
                 ldc(itv.getA());
                 sub(Type.INT_TYPE);
             } else {
@@ -581,7 +581,7 @@ final public class Assembler {
                 Label l2 = new Label();
                 ldc(itv.getA());
                 jump(Opcodes.IF_ICMPLT, l1);
-                getStatic(clsName, "$btrace$$level", Type.INT_TYPE.getDescriptor());
+                getStatic(clsName, BTRACE_LEVEL_FLD, INT_DESC);
                 ldc(itv.getB());
                 jump(Opcodes.IF_ICMPGT, l1);
                 ldc(0);
