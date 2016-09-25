@@ -36,8 +36,6 @@ import com.sun.btrace.org.objectweb.asm.Type;
 public final class TypeUtils {
     private TypeUtils() {}
 
-    public static final Type throwableType =
-        Type.getType(Throwable.class);
     public static final Type objectArrayType =
         Type.getType(Object[].class);
     public static final Type anyTypeArray =
@@ -79,7 +77,7 @@ public final class TypeUtils {
     }
 
     public static boolean isThrowable(Type t) {
-        return t.equals(throwableType);
+        return t.equals(THROWABLE_TYPE);
     }
 
     public static boolean isVoid(Type t) {

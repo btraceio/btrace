@@ -26,22 +26,14 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.VerifierException;
-import com.sun.btrace.annotations.TargetInstance;
-import com.sun.btrace.annotations.TargetMethodOrField;
-import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.annotations.ProbeClassName;
-import com.sun.btrace.annotations.ProbeMethodName;
-import com.sun.btrace.annotations.Return;
-import com.sun.btrace.annotations.Self;
 import com.sun.btrace.util.Messages;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
-import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
  * This class verifies that a BTrace program is safe
@@ -53,14 +45,6 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * @autohr J. Bachorik
  */
 public class Verifier extends ClassVisitor {
-    public static final String BTRACE_SELF_DESC = Type.getDescriptor(Self.class);
-    public static final String BTRACE_RETURN_DESC = Type.getDescriptor(Return.class);
-    public static final String BTRACE_TARGETMETHOD_DESC = Type.getDescriptor(TargetMethodOrField.class);
-    public static final String BTRACE_TARGETINSTANCE_DESC = Type.getDescriptor(TargetInstance.class);
-    public static final String BTRACE_DURATION_DESC = Type.getDescriptor(Duration.class);
-    public static final String BTRACE_PROBECLASSNAME_DESC = Type.getDescriptor(ProbeClassName.class);
-    public static final String BTRACE_PROBEMETHODNAME_DESC = Type.getDescriptor(ProbeMethodName.class);
-
     private boolean seenBTrace;
     private boolean classRenamed;
     private final boolean unsafeAllowed;

@@ -102,18 +102,19 @@ final public class SharedSettings {
     }
 
     public void from(SharedSettings other) {
+        clientName = other.clientName;
         debug = other.debug;
         dumpDir = other.dumpDir;
-        trackRetransforms = other.trackRetransforms;
-        unsafe = other.unsafe;
-        probeDescPath = other.probeDescPath;
-        statsdHost = other.statsdHost;
-        statsdPort = other.statsdPort;
         fileRollMilliseconds = other.fileRollMilliseconds;
         fileRollMaxRolls = other.fileRollMaxRolls;
         outputFile = other.outputFile;
         outputDir = other.outputDir;
-        clientName = other.clientName;
+        probeDescPath = other.probeDescPath;
+        retransformStartup = other.retransformStartup;
+        statsdHost = other.statsdHost;
+        statsdPort = other.statsdPort;
+        trackRetransforms = other.trackRetransforms;
+        unsafe = other.unsafe;
     }
 
     public boolean isDebug() {

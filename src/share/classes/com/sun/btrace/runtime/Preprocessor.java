@@ -135,44 +135,60 @@ final class Preprocessor {
         }
     }
 
-    private static final Type BTRACE_RUNTIME_TYPE = Type.getType(BTraceRuntime.class);
     private static final Type TLS_TYPE = Type.getType(TLS.class);
     private static final Type EXPORT_TYPE = Type.getType(Export.class);
     private static final Type INJECTED_TYPE = Type.getType(Injected.class);
-    private static final Type THREAD_LOCAL_TYPE = Type.getType(ThreadLocal.class);
     private static final Type SERVICE_TYPE = Type.getType(Service.class);
+    private static final String SERVICE_INTERNAL = SERVICE_TYPE.getInternalName();
+
+    private static final String NEW_TLS_DESC = Type.getMethodDescriptor(THREAD_LOCAL_TYPE, OBJECT_TYPE);
+    private static final String TLS_SET_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, OBJECT_TYPE);
+    private static final String TLS_GET_DESC = Type.getMethodDescriptor(OBJECT_TYPE);
+    private static final String NEW_PERFCOUNTER_DESC = Type.getMethodDescriptor(
+        Type.VOID_TYPE,
+        OBJECT_TYPE,
+        STRING_TYPE,
+        STRING_TYPE
+    );
+    private static final String BTRACERT_FOR_CLASS_DESC = Type.getMethodDescriptor(BTRACERT_TYPE, CLASS_TYPE);
+    private static final String BTRACERT_ENTER_DESC = Type.getMethodDescriptor(Type.BOOLEAN_TYPE, BTRACERT_TYPE);
+    private static final String BTRACERT_HANDLE_EXCEPTION_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, THROWABLE_TYPE);
+    private static final String RT_SERVICE_CTR_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, BTRACERT_TYPE);
+    private static final String SERVICE_CTR_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class));
 
     private static final Map<String, Type> boxTypeMap = new HashMap<>();
     private static final Set<String> guardedAnnots = new HashSet<>();
     private static final Set<String> rtAwareAnnots = new HashSet<>();
 
-    static {
-        boxTypeMap.put("I", Type.getType(Integer.class));
-        boxTypeMap.put("S", Type.getType(Short.class));
-        boxTypeMap.put("J", Type.getType(Long.class));
-        boxTypeMap.put("F", Type.getType(Float.class));
-        boxTypeMap.put("D", Type.getType(Double.class));
-        boxTypeMap.put("B", Type.getType(Byte.class));
-        boxTypeMap.put("Z", Type.getType(Boolean.class));
-        boxTypeMap.put("C", Type.getType(Character.class));
+    private static final Type INTEGER_TYPE = Type.getType(Integer.class);
+    private static final Type SHORT_TYPE = Type.getType(Short.class);
+    private static final Type LONG_TYPE = Type.getType(Long.class);
+    private static final Type FLOAT_TYPE = Type.getType(Float.class);
+    private static final Type DOUBLE_TYPE = Type.getType(Double.class);
+    private static final Type BYTE_TYPE = Type.getType(Byte.class);
+    private static final Type BOOLEAN_TYPE = Type.getType(Boolean.class);
+    private static final Type CHARACTER_TYPE = Type.getType(Character.class);
 
-        rtAwareAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnMethod.class));
-        rtAwareAnnots.add(Type.getDescriptor(OnTimer.class));
-        rtAwareAnnots.add(Type.getDescriptor(OnEvent.class));
-        rtAwareAnnots.add(Type.getDescriptor(OnError.class));
-        rtAwareAnnots.add(Type.getDescriptor(com.sun.btrace.annotations.OnProbe.class));
+    static {
+        boxTypeMap.put("I", INTEGER_TYPE);
+        boxTypeMap.put("S", SHORT_TYPE);
+        boxTypeMap.put("J", LONG_TYPE);
+        boxTypeMap.put("F", FLOAT_TYPE);
+        boxTypeMap.put("D", DOUBLE_TYPE);
+        boxTypeMap.put("B", BYTE_TYPE);
+        boxTypeMap.put("Z", BOOLEAN_TYPE);
+        boxTypeMap.put("C", CHARACTER_TYPE);
+
+        rtAwareAnnots.add(ONMETHOD_DESC);
+        rtAwareAnnots.add(ONTIMER_DESC);
+        rtAwareAnnots.add(ONEVENT_DESC);
+        rtAwareAnnots.add(ONERROR_DESC);
+        rtAwareAnnots.add(ONPROBE_DESC);
         guardedAnnots.addAll(rtAwareAnnots);
 
         // @OnExit is rtAware but not guarded
-        rtAwareAnnots.add(Type.getDescriptor(OnExit.class));
+        rtAwareAnnots.add(ONEXIT_DESC);
     }
-
-    public static final Type ONMETHOD_TYPE = Type.getType(com.sun.btrace.annotations.OnMethod.class);
-    public static final Type ONPROBE_TYPE = Type.getType(com.sun.btrace.annotations.OnProbe.class);
-    public static final Type ONTIMER_TYPE = Type.getType(com.sun.btrace.annotations.OnTimer.class);
-    public static final Type ONEVENT_TYPE = Type.getType(com.sun.btrace.annotations.OnEvent.class);
-    public static final Type ONEXIT_TYPE = Type.getType(com.sun.btrace.annotations.OnExit.class);
-    public static final Type ONERROR_TYPE = Type.getType(com.sun.btrace.annotations.OnError.class);
 
     public static interface MethodFilter {
         public static final MethodFilter ALL = new MethodFilter() {
@@ -207,12 +223,10 @@ final class Preprocessor {
         if (cn.fields == null) {
             cn.fields = new LinkedList();
         }
-        cn.fields.add(
-            new FieldNode(
+        cn.fields.add(new FieldNode(
                 Opcodes.ASM5,
-                Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_VOLATILE,
-                "$btrace$$level",
-                Type.INT_TYPE.getDescriptor(),
+                Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_VOLATILE, BTRACE_LEVEL_FLD,
+                INT_DESC,
                 null,
                 0
             )
@@ -226,7 +240,7 @@ final class Preprocessor {
         checkAugmentedReturn(mn);
         scanMethodInstructions(cn, mn, lvg);
         addBTraceErrorHandler(mn, lvg);
-        addBTraceRuntimeEnter(cn, mn, lvg);
+        addBTraceRuntimeEnter(cn, mn);
 
         recalculateVars(mn, lvg);
     }
@@ -261,7 +275,7 @@ final class Preprocessor {
             fn.visibleAnnotations.remove(an);
             String origDesc = fn.desc;
             String boxedDesc = boxDesc(origDesc);
-            fn.desc = THREAD_LOCAL_TYPE.getDescriptor();
+            fn.desc = THREAD_LOCAL_DESC;
             fn.signature = fn.desc.substring(0, fn.desc.length() - 1) +
                            "<" + boxedDesc + ">;";
             initTLS(cn, fn, Type.getType(origDesc));
@@ -281,7 +295,6 @@ final class Preprocessor {
     private FieldNode tryProcessInjected(FieldNode fn) {
         AnnotationNode an = null;
         if ((an = getAnnotation(fn, INJECTED_TYPE)) != null) {
-            String origDesc = fn.desc;
             if (fn.visibleAnnotations != null) fn.visibleAnnotations.remove(an);
             if (fn.invisibleAnnotations != null) fn.invisibleAnnotations.remove(an);
 
@@ -302,9 +315,9 @@ final class Preprocessor {
         initList.add(
             new MethodInsnNode(
                 Opcodes.INVOKESTATIC,
-                BTRACE_RUNTIME_TYPE.getInternalName(),
+                BTRACERT_INTERNAL,
                 "newThreadLocal",
-                Type.getMethodDescriptor(THREAD_LOCAL_TYPE, OBJECT_TYPE),
+                NEW_TLS_DESC,
                 false
             )
         );
@@ -324,14 +337,9 @@ final class Preprocessor {
         init.add(new LdcInsnNode(desc));
         init.add(new MethodInsnNode(
                 Opcodes.INVOKESTATIC,
-                BTRACE_RUNTIME_TYPE.getInternalName(),
+                BTRACERT_INTERNAL,
                 "newPerfCounter",
-                Type.getMethodDescriptor(
-                    Type.VOID_TYPE,
-                    OBJECT_TYPE,
-                    STRING_TYPE,
-                    STRING_TYPE
-                ),
+                NEW_PERFCOUNTER_DESC,
                 false
             )
         );
@@ -459,7 +467,7 @@ final class Preprocessor {
                 FieldInsnNode fin = (FieldInsnNode)n;
                 if (fin.owner.equals(cn.name)) {
                     if (tlsFldNames.contains(fin.name) &&
-                        !fin.desc.equals(THREAD_LOCAL_TYPE.getDescriptor())) {
+                        !fin.desc.equals(THREAD_LOCAL_DESC)) {
                         n = updateTLSUsage(fin, l);
                     } else if (exportFldNames.contains(fin.name)) {
                         n = updateExportUsage(cn, fin, l);
@@ -509,9 +517,9 @@ final class Preprocessor {
         l.add(new LdcInsnNode(Type.getObjectType(cn.name)));
         l.add(new MethodInsnNode(
             Opcodes.INVOKESTATIC,
-            BTRACE_RUNTIME_TYPE.getInternalName(),
+            BTRACERT_INTERNAL,
             "forClass",
-            Type.getMethodDescriptor(BTRACE_RUNTIME_TYPE, Type.getType(Class.class)),
+            BTRACERT_FOR_CLASS_DESC,
             false)
         );
         l.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, rtField.name, rtField.desc));
@@ -519,8 +527,8 @@ final class Preprocessor {
         LabelNode start = new LabelNode();
         l.add(getRuntime(cn));
         l.add(new MethodInsnNode(
-            Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
-            "enter", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, BTRACE_RUNTIME_TYPE),
+            Opcodes.INVOKESTATIC, BTRACERT_INTERNAL,
+            "enter", BTRACERT_ENTER_DESC,
             false
         ));
         l.add(new JumpInsnNode(Opcodes.IFNE, start));
@@ -544,7 +552,7 @@ final class Preprocessor {
                     }
                 }
                 clinit1.instructions.insertBefore(n, new MethodInsnNode(
-                    Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
+                    Opcodes.INVOKESTATIC, BTRACERT_INTERNAL,
                     "start", "()V", false
                 ));
             }
@@ -557,7 +565,7 @@ final class Preprocessor {
 
     private MethodInsnNode getRuntimeExit() {
         return new MethodInsnNode(
-            Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
+            Opcodes.INVOKESTATIC, BTRACERT_INTERNAL,
             "leave", "()V", false
         );
     }
@@ -574,7 +582,6 @@ final class Preprocessor {
     private void addBTraceErrorHandler(MethodNode mn, LocalVarGenerator lvg) {
         if (!mn.name.equals("<clinit>") && isUnannotated(mn)) return;
 
-        Type throwableType = Type.getType(Throwable.class);
         MethodClassifier clsf = getClassifier(mn);
         if (isClassified(clsf, MethodClassifier.RT_AWARE)) {
             LabelNode from = new LabelNode();
@@ -583,16 +590,16 @@ final class Preprocessor {
             l.insert(from);
             l.add(to);
             l.add(new MethodInsnNode(
-                Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
-                "handleException", Type.getMethodDescriptor(Type.VOID_TYPE, throwableType),
+                Opcodes.INVOKESTATIC, BTRACERT_INTERNAL,
+                "handleException", BTRACERT_HANDLE_EXCEPTION_DESC,
                 false
             ));
             l.add(getReturnSequence(mn, true));
-            mn.tryCatchBlocks.add(new TryCatchBlockNode(from, to, to, throwableType.getInternalName()));
+            mn.tryCatchBlocks.add(new TryCatchBlockNode(from, to, to, THROWABLE_INTERNAL));
         }
     }
 
-    private void addBTraceRuntimeEnter(ClassNode cn, MethodNode mn, LocalVarGenerator lvg) {
+    private void addBTraceRuntimeEnter(ClassNode cn, MethodNode mn) {
         // no runtime check for <clinit>
         if (mn.name.equals("<clinit>")) return;
 
@@ -603,8 +610,8 @@ final class Preprocessor {
             if (isClassified(clsf, MethodClassifier.GUARDED)) {
                 LabelNode start = new LabelNode();
                 entryCheck.add(new MethodInsnNode(
-                    Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
-                    "enter", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, BTRACE_RUNTIME_TYPE),
+                    Opcodes.INVOKESTATIC, BTRACERT_INTERNAL,
+                    "enter", BTRACERT_ENTER_DESC,
                     false
                 ));
                 entryCheck.add(new JumpInsnNode(Opcodes.IFNE, start));
@@ -698,7 +705,7 @@ final class Preprocessor {
             if (n.getType() == AbstractInsnNode.METHOD_INSN) {
                 MethodInsnNode min = (MethodInsnNode)n;
                 if (min.getOpcode() == Opcodes.INVOKESTATIC &&
-                    min.owner.equals(BTRACE_RUNTIME_TYPE.getInternalName()) &&
+                    min.owner.equals(BTRACERT_INTERNAL) &&
                     min.name.equals("start")) {
                     return min;
                 }
@@ -713,7 +720,7 @@ final class Preprocessor {
         // retrieve the TLS field
         fin.setOpcode(Opcodes.GETSTATIC);
         // change the desc from the contained type to TLS type
-        fin.desc = THREAD_LOCAL_TYPE.getDescriptor();
+        fin.desc = THREAD_LOCAL_DESC;
 
         String boxed = boxDesc(unboxed);
         Type unboxedType = Type.getType(unboxed);
@@ -723,9 +730,8 @@ final class Preprocessor {
             InsnList toInsert = new InsnList();
             MethodInsnNode getNode = new MethodInsnNode(
                 Opcodes.INVOKEVIRTUAL,
-                THREAD_LOCAL_TYPE.getInternalName(),
-                "get",
-                Type.getMethodDescriptor(OBJECT_TYPE),
+                THREAD_LOCAL_INTERNAL,
+                "get", TLS_GET_DESC,
                 false
             );
             toInsert.add(getNode);
@@ -747,9 +753,8 @@ final class Preprocessor {
             }
             MethodInsnNode setNode = new MethodInsnNode(
                 Opcodes.INVOKEVIRTUAL,
-                THREAD_LOCAL_TYPE.getInternalName(),
-                "set",
-                Type.getMethodDescriptor(Type.VOID_TYPE, OBJECT_TYPE),
+                THREAD_LOCAL_INTERNAL,
+                "set", TLS_SET_DESC,
                 false
             );
             l.insert(fin, setNode);
@@ -771,8 +776,6 @@ final class Preprocessor {
     }
 
     private AbstractInsnNode updateExportUsage(ClassNode cn, FieldInsnNode fin, InsnList l) {
-        Type strType = Type.getType(String.class);
-
         String prefix = null;
         boolean isPut = false;
         // all the perf related methods start either with 'getPerf' or 'putPerf'
@@ -794,28 +797,28 @@ final class Preprocessor {
             case Type.CHAR:
             case Type.BOOLEAN: {
                 methodName = prefix + "Int";
-                tType = Type.getType(int.class);
+                tType = Type.INT_TYPE;
                 break;
             }
             case Type.LONG: {
                 methodName = prefix + "Long";
-                tType = Type.getType(long.class);
+                tType = Type.LONG_TYPE;
                 break;
             }
             case Type.FLOAT: {
                 methodName = prefix + "Float";
-                tType = Type.getType(float.class);
+                tType = Type.FLOAT_TYPE;
                 break;
             }
             case Type.DOUBLE: {
                 methodName = prefix + "Double";
-                tType = Type.getType(double.class);
+                tType = Type.DOUBLE_TYPE;
                 break;
             }
             case Type.OBJECT: {
-                if (t.equals(strType)) {
+                if (t.equals(STRING_TYPE)) {
                     methodName = prefix + "String";
-                    tType = strType;
+                    tType = STRING_TYPE;
                 }
                 break;
             }
@@ -830,9 +833,9 @@ final class Preprocessor {
             InsnList toInsert = new InsnList();
             toInsert.add(new LdcInsnNode(perfCounterName(cn, fin.name)));
             toInsert.add(new MethodInsnNode(
-                Opcodes.INVOKESTATIC, BTRACE_RUNTIME_TYPE.getInternalName(),
-                methodName, isPut ? Type.getMethodDescriptor(Type.VOID_TYPE, tType, strType) :
-                                    Type.getMethodDescriptor(tType, strType),
+                Opcodes.INVOKESTATIC, BTRACERT_INTERNAL,
+                methodName, isPut ? Type.getMethodDescriptor(Type.VOID_TYPE, tType, STRING_TYPE) :
+                                    Type.getMethodDescriptor(tType, STRING_TYPE),
                 false
             ));
             l.insert(fin, toInsert);
@@ -899,13 +902,13 @@ final class Preprocessor {
                 toInsert.add(getRuntime(cn));
                 toInsert.add(new MethodInsnNode(
                     Opcodes.INVOKESPECIAL, implType.getInternalName(),
-                    "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, BTRACE_RUNTIME_TYPE), false
+                    "<init>", RT_SERVICE_CTR_DESC, false
                 ));
             } else {
                 toInsert.add(getRuntime(cn));
                 toInsert.add(new MethodInsnNode(
                     Opcodes.INVOKESTATIC, implType.getInternalName(), fctryMethod,
-                    Type.getMethodDescriptor(implType, BTRACE_RUNTIME_TYPE), false
+                    Type.getMethodDescriptor(implType, BTRACERT_TYPE), false
                 ));
                 toInsert.add(new InsnNode(Opcodes.DUP));
             }
@@ -919,7 +922,7 @@ final class Preprocessor {
     }
 
     private AbstractInsnNode unfoldServiceInstantiation(ClassNode cn, MethodInsnNode min, InsnList l) {
-        if (min.owner.equals(SERVICE_TYPE.getInternalName())) {
+        if (min.owner.equals(SERVICE_INTERNAL)) {
             AbstractInsnNode next = min.getNext();
             switch (min.name) {
                 case "simple": {
@@ -936,12 +939,12 @@ final class Preprocessor {
                             }
                             // ---
 
-                            Type sType = (Type)((LdcInsnNode)ldcType).cst;
+                            String sType = ((Type)((LdcInsnNode)ldcType).cst).getInternalName();
                             InsnList toInsert = new InsnList();
-                            toInsert.add(new TypeInsnNode(Opcodes.NEW, sType.getInternalName()));
+                            toInsert.add(new TypeInsnNode(Opcodes.NEW, sType));
                             toInsert.add(new InsnNode(Opcodes.DUP));
                             toInsert.add(new MethodInsnNode(
-                                Opcodes.INVOKESPECIAL, sType.getInternalName(),
+                                Opcodes.INVOKESPECIAL, sType,
                                 "<init>", "()V", false
                             ));
                             l.insertBefore(next, toInsert);
@@ -961,16 +964,16 @@ final class Preprocessor {
                             }
                             // ---
 
-                            Type sType = (Type)((LdcInsnNode)ldcType).cst;
+                            String sType = ((Type)((LdcInsnNode)ldcType).cst).getInternalName();
                             String fMethod = (String)((LdcInsnNode)ldcFMethod).cst;
 
                             InsnList toInsert = new InsnList();
-                            toInsert.add(new TypeInsnNode(Opcodes.NEW, sType.getInternalName()));
+                            toInsert.add(new TypeInsnNode(Opcodes.NEW, sType));
                             toInsert.add(new InsnNode(Opcodes.DUP));
                             toInsert.add(new LdcInsnNode(fMethod));
                             toInsert.add(new MethodInsnNode(
-                                Opcodes.INVOKESPECIAL, sType.getInternalName(),
-                                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)), false
+                                Opcodes.INVOKESPECIAL, sType,
+                                "<init>", SERVICE_CTR_DESC, false
                             ));
                             l.insertBefore(next, toInsert);
                         }
@@ -991,14 +994,14 @@ final class Preprocessor {
                             }
                             // ---
 
-                            Type sType = (Type)((LdcInsnNode)ldcType).cst;
+                            String sType = ((Type)((LdcInsnNode)ldcType).cst).getInternalName();
                             InsnList toInsert = new InsnList();
-                            toInsert.add(new TypeInsnNode(Opcodes.NEW, sType.getInternalName()));
+                            toInsert.add(new TypeInsnNode(Opcodes.NEW, sType));
                             toInsert.add(new InsnNode(Opcodes.DUP));
                             toInsert.add(getRuntime(cn));
                             toInsert.add(new MethodInsnNode(
-                                Opcodes.INVOKESPECIAL, sType.getInternalName(),
-                                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, BTRACE_RUNTIME_TYPE), false
+                                Opcodes.INVOKESPECIAL, sType,
+                                "<init>", RT_SERVICE_CTR_DESC, false
                             ));
                             l.insertBefore(next, toInsert);
                         }
@@ -1101,19 +1104,19 @@ final class Preprocessor {
 
     private MethodInsnNode unboxNode(Type boxed, Type unboxed) {
         String mName = null;
-        if (boxed.equals(Type.getType(Integer.class))) {
+        if (boxed.equals(INTEGER_TYPE)) {
             mName = "intValue";
-        } else if (boxed.equals(Type.getType(Short.class))) {
+        } else if (boxed.equals(SHORT_TYPE)) {
             mName = "shortValue";
-        } else if (boxed.equals(Type.getType(Long.class))) {
+        } else if (boxed.equals(LONG_TYPE)) {
             mName = "longValue";
-        } else if (boxed.equals(Type.getType(Float.class))) {
+        } else if (boxed.equals(FLOAT_TYPE)) {
             mName = "floatValue";
-        } else if (boxed.equals(Type.getType(Double.class))) {
+        } else if (boxed.equals(DOUBLE_TYPE)) {
             mName = "doubleValue";
-        } else if (boxed.equals(Type.getType(Boolean.class))) {
+        } else if (boxed.equals(BOOLEAN_TYPE)) {
             mName = "booleanValue";
-        } else if (boxed.equals(Type.getType(Character.class))) {
+        } else if (boxed.equals(CHARACTER_TYPE)) {
             mName = "charValue";
         }
 
@@ -1136,7 +1139,7 @@ final class Preprocessor {
                 if (paList != null) {
                     for(Object anObj : paList) {
                         AnnotationNode an = (AnnotationNode)anObj;
-                        if (an.desc.equals(Type.getDescriptor(Return.class))) {
+                        if (an.desc.equals(RETURN_DESC)) {
                             return i;
                         }
                     }

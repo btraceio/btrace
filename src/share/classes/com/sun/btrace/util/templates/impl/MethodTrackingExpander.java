@@ -31,6 +31,7 @@ import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.runtime.Assembler;
+import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.BaseTemplateExpander;
 import com.sun.btrace.util.templates.Template;
@@ -557,7 +558,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                 for(Interval i : optimized) {
                     Label nextCheck = new Label();
                     if (globalLevelVar == Integer.MIN_VALUE) {
-                        asm.getStatic(e.getClassName(), "$btrace$$level", Type.INT_TYPE.getDescriptor())
+                        asm.getStatic(e.getClassName(), BTRACE_LEVEL_FLD, INT_DESC)
                            .dup();
                         globalLevelVar = e.storeNewLocal(Type.INT_TYPE);
                     } else {
