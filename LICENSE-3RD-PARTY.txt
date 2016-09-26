@@ -31,6 +31,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 
 [lib/btrace-jctools-1.2.jar](https://github.com/JCTools/JCTools)
+[lib/btrace-hppcrt-0.7.4.jar](https://github.com/vsonnier/hppcrt)
 Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/

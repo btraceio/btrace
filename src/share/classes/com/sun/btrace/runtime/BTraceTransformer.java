@@ -26,16 +26,14 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.DebugSupport;
+import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
+import com.sun.btrace.com.carrotsearch.hppcrt.cursors.ObjectCursor;
+import com.sun.btrace.com.carrotsearch.hppcrt.maps.ObjectIntHashMap;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.regex.Pattern;
 
 /**
@@ -50,7 +48,7 @@ import java.util.regex.Pattern;
  * @author Jaroslav Bachorik
  */
 public final class BTraceTransformer implements ClassFileTransformer {
-    private static class Filter {
+    static class Filter {
         static enum Result {
             TRUE, FALSE, MAYBE
         }
@@ -58,8 +56,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
         private boolean isRegex = false;
 
 
-        private final Map<String, Integer> nameMap = new HashMap<>();
-        private final Map<Pattern, Integer> nameRegexMap = new HashMap<>();
+        private final ObjectIntMap<String> nameMap = new ObjectIntHashMap<>();
+        private final ObjectIntMap<Pattern> nameRegexMap = new ObjectIntHashMap<>();
 
         void add(OnMethod om) {
             if (om.isSubtypeMatcher() || om.isClassAnnotationMatcher()) {
@@ -74,6 +72,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
                     addToMap(nameMap, name);
                 }
             }
+
         }
 
         void remove(OnMethod om) {
@@ -87,27 +86,17 @@ public final class BTraceTransformer implements ClassFileTransformer {
             }
         }
 
-        private static <K> void addToMap(final Map<K, Integer> map, K name) {
+        private static <K> void addToMap(ObjectIntMap<K> map, K name) {
             synchronized(map) {
-                Integer i = map.get(name);
-                if (i == null) {
-                    map.put(name, 1);
-                } else {
-                    map.put(name, i++);
-                }
+                map.putOrAdd(name, 1, 1);
             }
         }
 
-        private static <K> void removeFromMap(Map<K, Integer> map, K name) {
+        private static <K> void removeFromMap(ObjectIntMap<K> map, K name) {
             synchronized(map) {
-                Integer freq = map.get(name);
-                if (freq != null) {
-                    int i = freq - 1;
-                    if (i == 0) {
-                        map.remove(name);
-                    } else {
-                        map.put(name, i);
-                    }
+                int freq = map.addTo(name, -1);
+                if (freq == 0) {
+                    map.remove(name);
                 }
             }
         }
@@ -121,8 +110,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
                 }
                 if (isRegex) {
                     synchronized(nameRegexMap) {
-                        for(Pattern p : nameRegexMap.keySet()) {
-                            if (p.matcher(className).matches()) {
+                        for(ObjectCursor<Pattern> p : nameRegexMap.keys()) {
+                            if (p.value.matcher(className).matches()) {
                                 return Result.TRUE;
                             }
                         }
@@ -153,6 +142,10 @@ public final class BTraceTransformer implements ClassFileTransformer {
         for(OnMethod om : p.onmethods()) {
             filter.remove(om);
         }
+    }
+
+    Filter getFilter() {
+        return filter;
     }
 
     @Override

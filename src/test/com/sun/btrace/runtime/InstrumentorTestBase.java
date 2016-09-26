@@ -27,14 +27,12 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.SharedSettings;
+import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
 import static org.junit.Assert.*;
 
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
-import com.sun.btrace.runtime.BTraceProbe;
-import com.sun.btrace.runtime.BTraceProbeFactory;
-import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.util.MethodID;
 import org.junit.After;
 import org.junit.Before;
@@ -47,7 +45,6 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.BeforeClass;
 
@@ -116,7 +113,7 @@ public abstract class InstrumentorTestBase {
             mapFld.setAccessible(true);
 
             AtomicInteger last = (AtomicInteger)lastFld.get(null);
-            Map map = (Map)mapFld.get(null);
+            ObjectIntMap<String> map = (ObjectIntMap<String>)mapFld.get(null);
 
             last.set(1);
             map.clear();
