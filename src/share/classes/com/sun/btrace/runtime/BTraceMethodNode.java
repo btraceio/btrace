@@ -74,7 +74,7 @@ public class BTraceMethodNode extends MethodNode {
             cn.addOnProbe(op);
         }
         if (isBTraceHandler) {
-            graph.addStarting(new CallGraph.Node(CallGraph.methodId(name, desc)));
+            graph.addStarting(new CallGraph.Node(methodId));
         }
         super.visitEnd();
     }
