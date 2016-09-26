@@ -26,8 +26,8 @@
 
 package com.sun.btrace.util;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
+import com.sun.btrace.com.carrotsearch.hppcrt.maps.ObjectIntHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Jaroslav Bachorik
  */
 public class MethodID {
-    private static final ConcurrentMap<String, Integer> methodIds = new ConcurrentHashMap<>();
+    private static final ObjectIntMap<String> methodIds = new ObjectIntHashMap<>();
     static final AtomicInteger lastMehodId = new AtomicInteger(1);
 
     /**
@@ -44,16 +44,12 @@ public class MethodID {
      * @return An ID belonging to the provided method tag
      */
     public static int getMethodId(String methodTag) {
-        Integer id = null;
-        if (methodIds.putIfAbsent(methodTag, -1) == null) {
-            id = lastMehodId.getAndIncrement();
-            methodIds.put(methodTag, id);
-        } else {
-            while ((id = methodIds.get(methodTag)) == -1) {
-                Thread.yield();
+        synchronized(methodIds) {
+            if (!methodIds.containsKey(methodTag)) {
+                methodIds.put(methodTag, lastMehodId.getAndIncrement());
             }
+            return methodIds.get(methodTag);
         }
-        return id;
     }
 
     public static int getMethodId(String className, String method, String desc) {

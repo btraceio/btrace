@@ -28,12 +28,10 @@ package com.sun.btrace.runtime;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.annotations.Export;
 import com.sun.btrace.annotations.Injected;
-import com.sun.btrace.annotations.OnError;
-import com.sun.btrace.annotations.OnEvent;
-import com.sun.btrace.annotations.OnExit;
-import com.sun.btrace.annotations.OnTimer;
 import com.sun.btrace.annotations.Return;
 import com.sun.btrace.annotations.TLS;
+import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
+import com.sun.btrace.com.carrotsearch.hppcrt.maps.ObjectIntHashMap;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
@@ -207,7 +205,7 @@ final class Preprocessor {
     private final Set<String> tlsFldNames = new HashSet<>();
     private final Set<String> exportFldNames = new HashSet<>();
     private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
-    private final Map<String, Integer> serviceLocals = new HashMap<>();
+    private final ObjectIntMap<String> serviceLocals = new ObjectIntHashMap<>();
 
     public void process(ClassNode cn) {
         addLevelField(cn);
@@ -675,12 +673,15 @@ final class Preprocessor {
         // <clinit> will always be guarded by BTrace error handler
         if (mn.name.equals("<clinit>")) return MethodClassifier.GUARDED;
 
-        for(AnnotationNode an : getAnnotations(mn)) {
-            if (rtAwareAnnots.contains(an.desc)) {
-                if (guardedAnnots.contains(an.desc)) {
-                    return MethodClassifier.GUARDED;
-                } else {
-                    return MethodClassifier.RT_AWARE;
+        List<AnnotationNode> annots = getAnnotations(mn);
+        if (!annots.isEmpty()) {
+            for(AnnotationNode an : annots) {
+                if (rtAwareAnnots.contains(an.desc)) {
+                    if (guardedAnnots.contains(an.desc)) {
+                        return MethodClassifier.GUARDED;
+                    } else {
+                        return MethodClassifier.RT_AWARE;
+                    }
                 }
             }
         }
@@ -846,11 +847,10 @@ final class Preprocessor {
     }
 
     private AbstractInsnNode updateInjectedUsage(ClassNode cn, FieldInsnNode fin, InsnList l, LocalVarGenerator lvg) {
-        Integer varIdx = serviceLocals.get(fin.name);
-        if (varIdx != null) {
+        if (serviceLocals.containsKey(fin.name)) {
             VarInsnNode load = new VarInsnNode(
                 Type.getType(fin.desc).getOpcode(Opcodes.ILOAD),
-                varIdx
+                serviceLocals.get(fin.name)
             );
             l.insert(fin, load);
             l.remove(fin);
@@ -877,7 +877,7 @@ final class Preprocessor {
                 }
             }
         }
-        varIdx = lvg.newVar(implType);
+        int varIdx = lvg.newVar(implType);
         if (svcType.equals("SIMPLE")) {
             if (fctryMethod == null || fctryMethod.isEmpty()) {
                 toInsert.add(new TypeInsnNode(Opcodes.NEW, implType.getInternalName()));

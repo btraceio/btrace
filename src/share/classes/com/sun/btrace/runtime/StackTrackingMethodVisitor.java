@@ -30,6 +30,8 @@ import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.com.carrotsearch.hppcrt.IntObjectMap;
+import com.sun.btrace.com.carrotsearch.hppcrt.maps.IntObjectHashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -255,17 +257,17 @@ class StackTrackingMethodVisitor extends MethodVisitor {
 
     private final class FrameState {
         private Deque<StackItem> stack;
-        final private Map<Integer, StackItem> vars;
-        final private Map<Integer, StackItem> args;
+        final private IntObjectMap<StackItem> vars;
+        final private IntObjectMap<StackItem> args;
 
-        public FrameState(Map<Integer, StackItem> args) {
-            this(new LinkedList<StackItem>(), new HashMap<Integer, StackItem>(), args);
+        public FrameState(IntObjectMap<StackItem> args) {
+            this(new LinkedList<StackItem>(), null, args);
         }
 
-        private FrameState(Deque<StackItem> s, Map<Integer, StackItem> v, Map<Integer, StackItem> args) {
+        private FrameState(Deque<StackItem> s, IntObjectMap<StackItem> v, IntObjectMap<StackItem> args) {
             this.stack = new LinkedList<>(s);
-            this.vars = new HashMap<>(v);
-            this.args = new HashMap<>(args);
+            this.vars = v != null ? new IntObjectHashMap<>(v) : new IntObjectHashMap<StackItem>();
+            this.args = new IntObjectHashMap<>(args);
         }
 
         public StackItem peek() {
@@ -312,7 +314,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
         private FrameState fState;
 
         public State(InstanceItem receiver, Type[] args) {
-            Map<Integer, StackItem> argMap = new HashMap<>();
+            IntObjectMap<StackItem> argMap = new IntObjectHashMap<>();
             int index = 0;
             if (receiver != null) {
                 argMap.put(index++, receiver);
