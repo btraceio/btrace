@@ -12,6 +12,11 @@ BTrace is a safe, dynamic tracing tool for the Java platform.
 
 BTrace can be used to dynamically trace a running Java program (similar to DTrace for OpenSolaris applications and OS). BTrace dynamically instruments the classes of the target application to inject tracing code ("bytecode tracing").
 
+## Credits
+* Powered by [JCTools](https://github.com/JCTools/JCTools)
+* Powered by [hppcrt](https://github.com/vsonnier/hppcrt)
+* Optimized with [JProfiler Java Profiler](http://www.ej-technologies.com/products/jprofiler/overview.html)
+
 ## Building BTrace
 
 ### Setup
