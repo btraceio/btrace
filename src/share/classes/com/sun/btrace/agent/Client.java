@@ -121,7 +121,7 @@ abstract class Client implements CommandListener {
 
     protected final void setupWriter() {
         String outputFile = settings.getOutputFile();
-        if (outputFile == null) return;
+        if (outputFile == null || outputFile.equals("::null")) return;
 
         if (!outputFile.equals("::stdout")) {
             String outputDir = settings.getOutputDir();

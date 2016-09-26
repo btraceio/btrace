@@ -26,22 +26,14 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.VerifierException;
-import com.sun.btrace.annotations.TargetInstance;
-import com.sun.btrace.annotations.TargetMethodOrField;
-import com.sun.btrace.annotations.Duration;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.annotations.ProbeClassName;
-import com.sun.btrace.annotations.ProbeMethodName;
-import com.sun.btrace.annotations.Return;
-import com.sun.btrace.annotations.Self;
 import com.sun.btrace.util.Messages;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
-import com.sun.btrace.org.objectweb.asm.Type;
 
 /**
  * This class verifies that a BTrace program is safe
@@ -53,14 +45,6 @@ import com.sun.btrace.org.objectweb.asm.Type;
  * @autohr J. Bachorik
  */
 public class Verifier extends ClassVisitor {
-    public static final String BTRACE_SELF_DESC = Type.getDescriptor(Self.class);
-    public static final String BTRACE_RETURN_DESC = Type.getDescriptor(Return.class);
-    public static final String BTRACE_TARGETMETHOD_DESC = Type.getDescriptor(TargetMethodOrField.class);
-    public static final String BTRACE_TARGETINSTANCE_DESC = Type.getDescriptor(TargetInstance.class);
-    public static final String BTRACE_DURATION_DESC = Type.getDescriptor(Duration.class);
-    public static final String BTRACE_PROBECLASSNAME_DESC = Type.getDescriptor(ProbeClassName.class);
-    public static final String BTRACE_PROBEMETHODNAME_DESC = Type.getDescriptor(ProbeMethodName.class);
-
     private boolean seenBTrace;
     private boolean classRenamed;
     private final boolean unsafeAllowed;
@@ -88,8 +72,10 @@ public class Verifier extends ClassVisitor {
 
     @Override
     public void visitEnd() {
-        if (cn.getGraph().hasCycle()) {
-            Verifier.this.reportSafetyError("execution.loop.danger");
+        if (!cn.isUnsafe()) {
+            if (cn.getGraph().hasCycle()) {
+                Verifier.this.reportSafetyError("execution.loop.danger");
+            }
         }
         super.visitEnd();
     }
@@ -97,19 +83,21 @@ public class Verifier extends ClassVisitor {
     @Override
     public void visit(int version, int access, String name,
             String signature, String superName, String[] interfaces) {
-        if ((access & ACC_INTERFACE) != 0 ||
-            (access & ACC_ENUM) != 0  ) {
-            Verifier.this.reportSafetyError("btrace.program.should.be.class");
-        }
-        if ((access & ACC_PUBLIC) == 0) {
-            reportSafetyError("class.should.be.public", name);
-        }
+        if (!cn.isUnsafe()) {
+            if ((access & ACC_INTERFACE) != 0 ||
+                (access & ACC_ENUM) != 0  ) {
+                Verifier.this.reportSafetyError("btrace.program.should.be.class");
+            }
+            if ((access & ACC_PUBLIC) == 0) {
+                reportSafetyError("class.should.be.public", name);
+            }
 
-        if (! superName.equals(JAVA_LANG_OBJECT)) {
-            reportSafetyError("object.superclass.required", superName);
-        }
-        if (interfaces != null && interfaces.length > 0) {
-            Verifier.this.reportSafetyError("no.interface.implementation");
+            if (! superName.equals(JAVA_LANG_OBJECT)) {
+                reportSafetyError("object.superclass.required", superName);
+            }
+            if (interfaces != null && interfaces.length > 0) {
+                Verifier.this.reportSafetyError("no.interface.implementation");
+            }
         }
         super.visit(version, access, name, signature,
                     superName, interfaces);
@@ -142,8 +130,10 @@ public class Verifier extends ClassVisitor {
         if (! seenBTrace) {
             reportSafetyError("not.a.btrace.program");
         }
-        if ((access & ACC_STATIC) == 0) {
-            reportSafetyError("agent.no.instance.variables", name);
+        if (!cn.isUnsafe()) {
+            if ((access & ACC_STATIC) == 0) {
+                reportSafetyError("agent.no.instance.variables", name);
+            }
         }
         return super.visitField(access, name, desc, signature, value);
     }
@@ -151,8 +141,10 @@ public class Verifier extends ClassVisitor {
     @Override
     public void visitInnerClass(String name, String outerName,
             String innerName, int access) {
-        if (cn.name.equals(outerName)) {
-            reportSafetyError("no.nested.class");
+        if (!cn.isUnsafe()) {
+            if (cn.name.equals(outerName)) {
+                reportSafetyError("no.nested.class");
+            }
         }
     }
 
@@ -164,13 +156,15 @@ public class Verifier extends ClassVisitor {
             reportSafetyError("not.a.btrace.program");
         }
 
-        if ((access & ACC_SYNCHRONIZED) != 0) {
-            reportSafetyError("no.synchronized.methods", methodName + methodDesc);
-        }
+        if (!cn.isUnsafe()) {
+            if ((access & ACC_SYNCHRONIZED) != 0) {
+                reportSafetyError("no.synchronized.methods", methodName + methodDesc);
+            }
 
-        if (! methodName.equals(CONSTRUCTOR)) {
-            if ((access & ACC_STATIC) == 0) {
-                reportSafetyError("no.instance.method", methodName + methodDesc);
+            if (! methodName.equals(CONSTRUCTOR)) {
+                if ((access & ACC_STATIC) == 0) {
+                    reportSafetyError("no.instance.method", methodName + methodDesc);
+                }
             }
         }
 
@@ -180,7 +174,9 @@ public class Verifier extends ClassVisitor {
     @Override
     public void visitOuterClass(String owner, String name,
             String desc) {
-        reportSafetyError("no.outer.class");
+        if (!cn.isUnsafe()) {
+            reportSafetyError("no.outer.class");
+        }
     }
 
     void reportSafetyError(String err) {
@@ -188,7 +184,6 @@ public class Verifier extends ClassVisitor {
     }
 
     void reportSafetyError(String err, String msg) {
-        if (cn.isUnsafe()) return;
         reportError(err, msg);
     }
 

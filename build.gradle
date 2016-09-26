@@ -203,7 +203,8 @@ task unjar(type: Copy) {
 
     from([
             zipTree("lib/btrace-asm-${asmVersion}.jar"),
-            zipTree("lib/btrace-jctools-core-1.2.jar")
+            zipTree("lib/btrace-jctools-core-1.2.jar"),
+            zipTree("lib/btrace-hppcrt-0.7.4.jar")
         ])
     into compileJava.destinationDir
 }
@@ -402,6 +403,7 @@ test {
 dependencies {
     compile files("lib/btrace-asm-${asmVersion}.jar",
                   "lib/btrace-jctools-core-1.2.jar",
+                  "lib/btrace-hppcrt-0.7.4.jar",
                   "${javaHome}/lib/tools.jar",  // ATTENTION: build.xml uses "${javaHome}/../lib/tools.jar"
         files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs()),
               "/usr/share/lib/java/dtrace.jar")

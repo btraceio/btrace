@@ -100,7 +100,7 @@ class FileClient extends Client {
     private static byte[] readAll(InputStream is, int size) throws IOException {
         if (is == null) throw new NullPointerException();
 
-        byte[] buf = new byte[size != -1 ? size : 1024];
+        byte[] buf = new byte[size != -1 ? size : 8192];
         int bufsize = buf.length;
         int off = 0;
         int read;

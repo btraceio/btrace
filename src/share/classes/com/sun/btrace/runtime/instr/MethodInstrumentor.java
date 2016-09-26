@@ -26,6 +26,8 @@
 package com.sun.btrace.runtime.instr;
 
 import com.sun.btrace.annotations.Where;
+import com.sun.btrace.com.carrotsearch.hppcrt.IntObjectMap;
+import com.sun.btrace.com.carrotsearch.hppcrt.maps.IntObjectHashMap;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
@@ -36,8 +38,6 @@ import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.TypeUtils;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.Interval;
@@ -243,7 +243,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     private final String desc;
     private Type returnType;
     private Type[] argumentTypes;
-    private Map<Integer, Type> extraTypes;
+    private IntObjectMap<Type> extraTypes;
     private Label skipLabel;
     private boolean prologueVisited = false;
 
@@ -264,7 +264,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         this.desc = desc;
         this.returnType = Type.getReturnType(desc);
         this.argumentTypes = Type.getArgumentTypes(desc);
-        extraTypes = new HashMap<>();
+        extraTypes = new IntObjectHashMap<>();
         this.lvt = lvt;
         if (lvt instanceof MethodInstrumentor) {
             ((MethodInstrumentor)lvt).parent = this;
@@ -491,8 +491,8 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             specialArgsCount++;
         }
         if (om.getTargetMethodOrFieldParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], Type.getType(String.class)))) {
-                report("Invalid @TargetMethodOrField parameter. Expected " + Type.getType(String.class) + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], STRING_TYPE))) {
+                report("Invalid @TargetMethodOrField parameter. Expected " + STRING_TYPE + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
@@ -519,13 +519,13 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             specialArgsCount++;
         }
         if (om.getClassNameParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], Type.getType(String.class)))) {
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], STRING_TYPE))) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
         if (om.getMethodParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], Type.getType(String.class)))) {
+            if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], STRING_TYPE))) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;

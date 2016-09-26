@@ -29,15 +29,9 @@ import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.annotations.Where;
 import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
-import com.sun.btrace.org.objectweb.asm.Type;
 import static com.sun.btrace.runtime.Constants.*;
 
 import com.sun.btrace.org.objectweb.asm.tree.MethodNode;
-import static com.sun.btrace.runtime.Verifier.BTRACE_DURATION_DESC;
-import static com.sun.btrace.runtime.Verifier.BTRACE_RETURN_DESC;
-import static com.sun.btrace.runtime.Verifier.BTRACE_SELF_DESC;
-import static com.sun.btrace.runtime.Verifier.BTRACE_TARGETINSTANCE_DESC;
-import static com.sun.btrace.runtime.Verifier.BTRACE_TARGETMETHOD_DESC;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -80,7 +74,7 @@ public class BTraceMethodNode extends MethodNode {
             cn.addOnProbe(op);
         }
         if (isBTraceHandler) {
-            graph.addStarting(new CallGraph.Node(CallGraph.methodId(name, desc)));
+            graph.addStarting(new CallGraph.Node(methodId));
         }
         super.visitEnd();
     }
@@ -198,7 +192,7 @@ public class BTraceMethodNode extends MethodNode {
                     }
                 }
             };
-        } else if (type.equals(SAMPLER_DESC)) {
+        } else if (type.equals(SAMPLED_DESC)) {
             if (om != null) {
                 om.setSamplerKind(Sampled.Sampler.Adaptive);
                 return new AnnotationVisitor(Opcodes.ASM5, av) {
@@ -217,7 +211,7 @@ public class BTraceMethodNode extends MethodNode {
                     public void visitEnum(String name, String desc, String value) {
                         super.visitEnum(name, desc, value);
 
-                        if (name.equals("kind") && desc.equals(Type.getDescriptor(Sampled.Sampler.class))) {
+                        if (name.equals("kind") && desc.equals(SAMPLER_DESC)) {
                             om.setSamplerKind(Sampled.Sampler.valueOf(value));
                         }
                     }
@@ -310,7 +304,7 @@ public class BTraceMethodNode extends MethodNode {
 
     private AnnotationVisitor setSpecialParameters(final SpecialParameterHolder ph, final String desc, int parameter, AnnotationVisitor av) {
         // for OnProbe the 'loc' variable will be null; we will need to verfiy the placement later on
-        if (desc.equals(BTRACE_SELF_DESC)) {
+        if (desc.equals(SELF_DESC)) {
             ph.setSelfParameter(parameter);
         } else if (desc.equals(BTRACE_PROBECLASSNAME_DESC)) {
             ph.setClassNameParameter(parameter);
@@ -326,9 +320,9 @@ public class BTraceMethodNode extends MethodNode {
                 }
 
             };
-        } else if (desc.equals(BTRACE_RETURN_DESC)) {
+        } else if (desc.equals(RETURN_DESC)) {
             ph.setReturnParameter(parameter);
-        } else if (desc.equals(BTRACE_TARGETMETHOD_DESC)) {
+        } else if (desc.equals(TARGETMETHOD_DESC)) {
             ph.setTargetMethodOrFieldParameter(parameter);
 
             av = new AnnotationVisitor(Opcodes.ASM5, av) {
@@ -341,9 +335,9 @@ public class BTraceMethodNode extends MethodNode {
                 }
 
             };
-        } else if (desc.equals(BTRACE_TARGETINSTANCE_DESC)) {
+        } else if (desc.equals(TARGETINSTANCE_DESC)) {
             ph.setTargetInstanceParameter(parameter);
-        } else if (desc.equals(BTRACE_DURATION_DESC)) {
+        } else if (desc.equals(DURATION_DESC)) {
             ph.setDurationParameter(parameter);
         }
         return av;
@@ -358,7 +352,7 @@ public class BTraceMethodNode extends MethodNode {
                 (loc.getValue() == Kind.FIELD_GET && loc.getWhere() == Where.AFTER) ||
                 (loc.getValue() == Kind.NEW && loc.getWhere() == Where.AFTER) ||
                 (loc.getValue() == Kind.NEWARRAY && loc.getWhere() == Where.AFTER))) {
-                Verifier.reportError("return.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getReturnParameter() + ")");;
+                Verifier.reportError("return.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getReturnParameter() + ")");
             }
         }
         if (om.getTargetMethodOrFieldParameter() != -1) {

@@ -73,8 +73,6 @@ public final class BTraceProbe extends ClassNode {
     private ClassFilter filter = null;
     private String className, origName;
     private BTraceTransformer transformer;
-    private boolean subtypeMatcher = false;
-    private boolean annotationMatcher = false;
     private VerifierException verifierException = null;
 
     private BTraceProbe(BTraceProbeFactory factory) {
@@ -304,8 +302,6 @@ public final class BTraceProbe extends ClassNode {
     }
 
     void addOnMethod(OnMethod om) {
-        subtypeMatcher |= om.isSubtypeMatcher();
-        annotationMatcher |= om.isClassAnnotationMatcher();
         onMethods.add(om);
     }
 
