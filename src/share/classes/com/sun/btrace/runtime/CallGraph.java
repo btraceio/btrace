@@ -33,12 +33,15 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * This class allows building an arbitrary graph caller-callee relationship
  * @author Jaroslav Bachorik
  */
 final class CallGraph {
+    private static final Pattern MID_SPLIT_PTN = Pattern.compile("\\:\\:");
+
     public static class Node {
         private final String id;
         private final Set<Edge> incoming = new HashSet<>();
@@ -73,10 +76,7 @@ final class CallGraph {
                 return false;
             }
             final Node other = (Node) obj;
-            if ((this.id == null) ? (other.id != null) : !this.id.equals(other.id)) {
-                return false;
-            }
-            return true;
+            return !((this.id == null) ? (other.id != null) : !this.id.equals(other.id));
         }
 
         @Override
@@ -132,10 +132,7 @@ final class CallGraph {
             if (this.from != other.from && (this.from == null || !this.from.equals(other.from))) {
                 return false;
             }
-            if (this.to != other.to && (this.to == null || !this.to.equals(other.to))) {
-                return false;
-            }
-            return true;
+            return !(this.to != other.to && (this.to == null || !this.to.equals(other.to)));
         }
 
         @Override
@@ -156,7 +153,7 @@ final class CallGraph {
 
     public static String[] method(String methodId) {
         if (methodId.contains("::")) {
-            return methodId.split("\\:\\:");
+            return MID_SPLIT_PTN.split(methodId);
         }
         return new String[0];
     }
