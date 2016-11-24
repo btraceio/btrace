@@ -242,27 +242,34 @@ public final class Main {
                 public void handle(Signal sig) {
                     try {
                         con.printf("Please enter your option:\n");
-                        con.printf("\t1. exit\n\t2. send an event\n\t3. send a named event\n");
+                        con.printf("\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n");
                         con.flush();
                         String option = con.readLine();
                         option = option.trim();
                         if (option == null) {
                             return;
                         }
-                        if (option.equals("1")) {
-                            System.exit(0);
-                        } else if (option.equals("2")) {
-                            if (isDebug()) debugPrint("sending event command");
-                            client.sendEvent();
-                        } else if (option.equals("3")) {
-                            con.printf("Please enter the event name: ");
-                            String name = con.readLine();
-                            if (name != null) {
+                        switch (option) {
+                            case "1":
+                                System.exit(0);
+                            case "2":
                                 if (isDebug()) debugPrint("sending event command");
-                                client.sendEvent(name);
-                            }
-                        } else {
-                            con.printf("invalid option!\n");
+                                client.sendEvent();
+                                break;
+                            case "3":
+                                con.printf("Please enter the event name: ");
+                                String name = con.readLine();
+                                if (name != null) {
+                                    if (isDebug()) debugPrint("sending event command");
+                                    client.sendEvent(name);
+                                }
+                                break;
+                            case "4":
+                                out.flush();
+                                break;
+                            default:
+                                con.printf("invalid option!\n");
+                                break;
                         }
                     } catch (IOException ioexp) {
                         if (isDebug()) debugPrint(ioexp.toString());
