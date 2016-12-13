@@ -41,7 +41,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A simple way to submit <a href="https://github.com/etsy/statsd/">statsd</a> metrics.

@@ -386,39 +386,41 @@ abstract class Client implements CommandListener {
     }
 
     void retransformLoaded() throws UnmodifiableClassException {
-        if (probe.isTransforming() && settings.isRetransformStartup()) {
-            ArrayList<Class> list = new ArrayList<>();
-            debugPrint("retransforming loaded classes");
-            debugPrint("filtering loaded classes");
-            ClassCache cc = ClassCache.getInstance();
-            for (Class c : inst.getAllLoadedClasses()) {
-                if (c != null) {
-                    cc.get(c);
-                    if (inst.isModifiableClass(c) &&  isCandidate(c)) {
-                        debugPrint("candidate " + c + " added");
-                        list.add(c);
-                    }
-                }
-            }
-            list.trimToSize();
-            int size = list.size();
-            if (size > 0) {
-                Class[] classes = new Class[size];
-                list.toArray(classes);
-                startRetransformClasses(size);
-                if (isDebug()) {
-                    for(Class c : classes) {
-                        try {
-                            inst.retransformClasses(c);
-                        } catch (VerifyError e) {
-                            debugPrint("verification error: " + c.getName());
+        if (runtime != null) {
+            if (probe.isTransforming() && settings.isRetransformStartup()) {
+                ArrayList<Class> list = new ArrayList<>();
+                debugPrint("retransforming loaded classes");
+                debugPrint("filtering loaded classes");
+                ClassCache cc = ClassCache.getInstance();
+                for (Class c : inst.getAllLoadedClasses()) {
+                    if (c != null) {
+                        cc.get(c);
+                        if (inst.isModifiableClass(c) &&  isCandidate(c)) {
+                            debugPrint("candidate " + c + " added");
+                            list.add(c);
                         }
                     }
-                } else {
-                    inst.retransformClasses(classes);
+                }
+                list.trimToSize();
+                int size = list.size();
+                if (size > 0) {
+                    Class[] classes = new Class[size];
+                    list.toArray(classes);
+                    startRetransformClasses(size);
+                    if (isDebug()) {
+                        for(Class c : classes) {
+                            try {
+                                inst.retransformClasses(c);
+                            } catch (VerifyError e) {
+                                debugPrint("verification error: " + c.getName());
+                            }
+                        }
+                    } else {
+                        inst.retransformClasses(classes);
+                    }
                 }
             }
+            runtime.send(new OkayCommand());
         }
-        runtime.send(new OkayCommand());
     }
 }

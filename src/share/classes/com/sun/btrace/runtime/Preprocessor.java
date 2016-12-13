@@ -154,9 +154,9 @@ final class Preprocessor {
     private static final String RT_SERVICE_CTR_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, BTRACERT_TYPE);
     private static final String SERVICE_CTR_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class));
 
-    private static final Map<String, Type> boxTypeMap = new HashMap<>();
-    private static final Set<String> guardedAnnots = new HashSet<>();
-    private static final Set<String> rtAwareAnnots = new HashSet<>();
+    private static final Map<String, Type> BOX_TYPE_MAP = new HashMap<>();
+    private static final Set<String> GUARDED_ANNOTS = new HashSet<>();
+    private static final Set<String> RT_AWARE_ANNOTS = new HashSet<>();
 
     private static final Type INTEGER_TYPE = Type.getType(Integer.class);
     private static final Type SHORT_TYPE = Type.getType(Short.class);
@@ -168,24 +168,24 @@ final class Preprocessor {
     private static final Type CHARACTER_TYPE = Type.getType(Character.class);
 
     static {
-        boxTypeMap.put("I", INTEGER_TYPE);
-        boxTypeMap.put("S", SHORT_TYPE);
-        boxTypeMap.put("J", LONG_TYPE);
-        boxTypeMap.put("F", FLOAT_TYPE);
-        boxTypeMap.put("D", DOUBLE_TYPE);
-        boxTypeMap.put("B", BYTE_TYPE);
-        boxTypeMap.put("Z", BOOLEAN_TYPE);
-        boxTypeMap.put("C", CHARACTER_TYPE);
+        BOX_TYPE_MAP.put("I", INTEGER_TYPE);
+        BOX_TYPE_MAP.put("S", SHORT_TYPE);
+        BOX_TYPE_MAP.put("J", LONG_TYPE);
+        BOX_TYPE_MAP.put("F", FLOAT_TYPE);
+        BOX_TYPE_MAP.put("D", DOUBLE_TYPE);
+        BOX_TYPE_MAP.put("B", BYTE_TYPE);
+        BOX_TYPE_MAP.put("Z", BOOLEAN_TYPE);
+        BOX_TYPE_MAP.put("C", CHARACTER_TYPE);
 
-        rtAwareAnnots.add(ONMETHOD_DESC);
-        rtAwareAnnots.add(ONTIMER_DESC);
-        rtAwareAnnots.add(ONEVENT_DESC);
-        rtAwareAnnots.add(ONERROR_DESC);
-        rtAwareAnnots.add(ONPROBE_DESC);
-        guardedAnnots.addAll(rtAwareAnnots);
+        RT_AWARE_ANNOTS.add(ONMETHOD_DESC);
+        RT_AWARE_ANNOTS.add(ONTIMER_DESC);
+        RT_AWARE_ANNOTS.add(ONEVENT_DESC);
+        RT_AWARE_ANNOTS.add(ONERROR_DESC);
+        RT_AWARE_ANNOTS.add(ONPROBE_DESC);
+        GUARDED_ANNOTS.addAll(RT_AWARE_ANNOTS);
 
         // @OnExit is rtAware but not guarded
-        rtAwareAnnots.add(ONEXIT_DESC);
+        RT_AWARE_ANNOTS.add(ONEXIT_DESC);
     }
 
     public static interface MethodFilter {
@@ -676,8 +676,8 @@ final class Preprocessor {
         List<AnnotationNode> annots = getAnnotations(mn);
         if (!annots.isEmpty()) {
             for(AnnotationNode an : annots) {
-                if (rtAwareAnnots.contains(an.desc)) {
-                    if (guardedAnnots.contains(an.desc)) {
+                if (RT_AWARE_ANNOTS.contains(an.desc)) {
+                    if (GUARDED_ANNOTS.contains(an.desc)) {
                         return MethodClassifier.GUARDED;
                     } else {
                         return MethodClassifier.RT_AWARE;
@@ -1080,7 +1080,7 @@ final class Preprocessor {
     }
 
     private String boxDesc(String desc) {
-        Type boxed = boxTypeMap.get(desc);
+        Type boxed = BOX_TYPE_MAP.get(desc);
         return boxed != null ? boxed.getDescriptor() : desc;
     }
 

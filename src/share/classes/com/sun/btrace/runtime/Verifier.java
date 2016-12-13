@@ -127,7 +127,7 @@ public class Verifier extends ClassVisitor {
     @Override
     public FieldVisitor	visitField(int access, final String name,
             String desc, String signature, Object value) {
-        if (! seenBTrace) {
+        if (!seenBTrace) {
             reportSafetyError("not.a.btrace.program");
         }
         if (!cn.isUnsafe()) {
@@ -152,7 +152,7 @@ public class Verifier extends ClassVisitor {
     public MethodVisitor visitMethod(final int access, final String methodName,
             final String methodDesc, String signature, String[] exceptions) {
 
-        if (! seenBTrace) {
+        if (!seenBTrace) {
             reportSafetyError("not.a.btrace.program");
         }
 

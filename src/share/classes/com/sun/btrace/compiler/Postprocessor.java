@@ -93,6 +93,13 @@ public class Postprocessor extends ClassVisitor {
 
         final List<Attribute> attrs = new ArrayList<>();
         return new FieldVisitor(Opcodes.ASM5) {
+            private final List<String> annotations = new ArrayList<>();
+
+            @Override
+            public AnnotationVisitor visitAnnotation(String type, boolean visible) {
+                annotations.add(type);
+                return super.visitAnnotation(type, visible);
+            }
 
             @Override
             public void visitAttribute(Attribute atrbt) {
@@ -102,8 +109,9 @@ public class Postprocessor extends ClassVisitor {
 
             @Override
             public void visitEnd() {
-                FieldDescriptor fd = new FieldDescriptor(access, name, desc,
-                    signature, value, attrs);
+                FieldDescriptor fd = new FieldDescriptor(
+                    access, name, desc,signature, value, attrs, annotations
+                );
                 fields.add(fd);
                 super.visitEnd();
             }
@@ -132,6 +140,11 @@ public class Postprocessor extends ClassVisitor {
             FieldVisitor fv = super.visitField(fieldAccess,
                                  fieldName,
                                  fieldDesc, fieldSignature, fieldValue);
+
+            for (String aType : fd.annotations) {
+                System.out.println("*** field annotation: " + aType);
+                fv.visitAnnotation(aType, true);
+            }
 
             for (Attribute attr : fd.attributes) {
                 fv.visitAttribute(attr);
@@ -645,21 +658,25 @@ public class Postprocessor extends ClassVisitor {
     }
 
     private static class FieldDescriptor {
-        int access;
-        String name, desc, signature;
-        Object value;
-        List<Attribute> attributes;
+        final int access;
+        final String name, desc, signature;
+        final Object value;
+        final List<Attribute> attributes;
+        final List<String> annotations;
         int var = -1;
         boolean initialized;
 
         FieldDescriptor(int acc, String n, String d,
-                        String sig, Object val, List<Attribute> attrs) {
+                        String sig, Object val,
+                        List<Attribute> attrs,
+                        List<String> annots) {
             access = acc;
             name = n;
             desc = d;
             signature = sig;
             value = val;
             attributes = attrs;
+            annotations = annots;
         }
     }
 }
