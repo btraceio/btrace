@@ -36,7 +36,8 @@ public class BTRACE106Test extends InstrumentorTestBase {
     public void annotatedClass() throws Exception {
         originalBC = loadTargetClass("issues/BTRACE106");
         transform("issues/BTRACE106");
-        checkTransformation("ALOAD 0\n" +
+        checkTransformation(
+            "ALOAD 0\n" +
             "LDC \"aMethod\"\n" +
             "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n" +
             "LCONST_0\n" +
@@ -47,6 +48,10 @@ public class BTRACE106Test extends InstrumentorTestBase {
             "LLOAD 3\n" +
             "LSUB\n" +
             "LSTORE 1\n" +
+            "ALOAD 0\n" +
+            "LDC \"bMethod\"\n" +
+            "LLOAD 1\n" +
+            "INVOKESTATIC resources/issues/BTRACE106.$btrace$traces$issues$BTRACE106$o3 (Ljava/lang/Object;Ljava/lang/String;J)V\n" +
             "ALOAD 0\n" +
             "LDC \"bMethod\"\n" +
             "LLOAD 1\n" +

@@ -44,4 +44,12 @@ import static com.sun.btrace.BTraceUtils.*;
     public static void o2(@Self Object self, @ProbeMethodName String pmn, @Duration long dur) { // all calls to methods
         println(pmn);
     }
+    @OnMethod(
+        clazz="@/.*\\.Deprecated/",
+        method="@/.*\\.Deprecated/",
+        location=@Location(Kind.RETURN)
+    )
+    public static void o3(@Self Object self, @ProbeMethodName String pmn, @Duration long dur) { // all calls to methods
+        println(pmn);
+    }
 }

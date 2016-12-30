@@ -195,7 +195,8 @@ public class Instrumentor extends ClassVisitor {
                         }
                     }
                 }
-                return ((MethodVisitor)visitor).visitAnnotation(annoDesc, visible);
+                mv = (MethodVisitor)visitor;
+                return mv.visitAnnotation(annoDesc, visible);
             }
         };
     }
