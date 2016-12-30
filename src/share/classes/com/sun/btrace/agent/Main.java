@@ -42,6 +42,8 @@ import com.sun.btrace.runtime.Constants;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.util.Messages;
 import java.io.InputStream;
+import java.net.URL;
+import java.util.Enumeration;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -169,12 +171,10 @@ public final class Main {
                         }
 
                         argMap.put(argKey, scriptVal);
-                    } else {
+                    } else if (!(argKey.equals("systemClassPath") || argKey.equals("bootClassPath"))) {
                         if (!argMap.containsKey(argKey)) {
                             System.err.println("applying default agent argument '" + argKey + "'='" + argVal + "'");
                             argMap.put(argKey, argVal);
-                            if (argKey.equals("debug")) {
-                            }
                         }
                     }
                 }
@@ -421,7 +421,42 @@ public final class Main {
             }
         }
 
+        addPreconfLibs();
+
         loadDefaultArguments();
+    }
+
+    private static void addPreconfLibs() {
+        URL u = Main.class.getClassLoader().getResource(Main.class.getName().replace('.', '/') + ".class");
+        if (u != null) {
+            String path = u.toString();
+            int delimiterPos = path.lastIndexOf('!');
+            if (delimiterPos > -1) {
+                String jar = path.substring(9, delimiterPos);
+                File jarFile = new File(jar);
+                String libPath = new File(jarFile.getParent() + File.separator + "btrace-libs").getAbsolutePath();
+                File bootLibs = new File(libPath + File.separator + "boot");
+                File sysLibs = new File(libPath + File.separator + "system");
+                if (bootLibs.exists()) {
+                    for (File f : bootLibs.listFiles()) {
+                        if (f.getName().toLowerCase().endsWith(".jar")) {
+                            try {
+                                inst.appendToBootstrapClassLoaderSearch(new JarFile(f));
+                            } catch (IOException e) {}
+                        }
+                    }
+                }
+                if (sysLibs.exists()) {
+                    for (File f : sysLibs.listFiles()) {
+                        if (f.getName().toLowerCase().endsWith(".jar")) {
+                            try {
+                                inst.appendToSystemClassLoaderSearch(new JarFile(f));
+                            } catch (IOException e) {}
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private static void loadBTraceScript(String filePath, boolean traceToStdOut) {
