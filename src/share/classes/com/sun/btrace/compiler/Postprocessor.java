@@ -33,18 +33,34 @@ import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
 public class Postprocessor extends ClassVisitor {
+    private static final class AnnotationDef {
+        private final String type;
+        private final Map<String, Object> values = new HashMap<>();
+
+        public AnnotationDef(String type) {
+            this.type = type;
+        }
+
+        public void addValue(String name, Object val) {
+            values.put(name, val);
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public Map<String, Object> getValues() {
+            return values;
+        }
+    }
+
     private final List<FieldDescriptor> fields = new ArrayList<>();
     private boolean shortSyntax = false;
     private String className = "";
@@ -93,12 +109,20 @@ public class Postprocessor extends ClassVisitor {
 
         final List<Attribute> attrs = new ArrayList<>();
         return new FieldVisitor(Opcodes.ASM5) {
-            private final List<String> annotations = new ArrayList<>();
+            private final List<AnnotationDef> annotations = new ArrayList<>();
 
             @Override
             public AnnotationVisitor visitAnnotation(String type, boolean visible) {
-                annotations.add(type);
-                return super.visitAnnotation(type, visible);
+                final AnnotationDef ad = new AnnotationDef(type);
+                annotations.add(ad);
+                return new AnnotationVisitor(Opcodes.ASM5, super.visitAnnotation(type, visible)) {
+                    @Override
+                    public void visit(String name, Object val) {
+                        ad.addValue(name, val);
+                        super.visit(name, val);
+                    }
+
+                };
             }
 
             @Override
@@ -110,7 +134,7 @@ public class Postprocessor extends ClassVisitor {
             @Override
             public void visitEnd() {
                 FieldDescriptor fd = new FieldDescriptor(
-                    access, name, desc,signature, value, attrs, annotations
+                    access, name, desc, signature, value, attrs, annotations
                 );
                 fields.add(fd);
                 super.visitEnd();
@@ -141,9 +165,11 @@ public class Postprocessor extends ClassVisitor {
                                  fieldName,
                                  fieldDesc, fieldSignature, fieldValue);
 
-            for (String aType : fd.annotations) {
-                System.out.println("*** field annotation: " + aType);
-                fv.visitAnnotation(aType, true);
+            for (AnnotationDef ad : fd.annotations) {
+                AnnotationVisitor av = fv.visitAnnotation(ad.getType(), true);
+                for (Map.Entry<String, Object> attr : ad.getValues().entrySet()) {
+                    av.visit(attr.getKey(), attr.getValue());
+                }
             }
 
             for (Attribute attr : fd.attributes) {
@@ -662,14 +688,14 @@ public class Postprocessor extends ClassVisitor {
         final String name, desc, signature;
         final Object value;
         final List<Attribute> attributes;
-        final List<String> annotations;
+        final List<AnnotationDef> annotations;
         int var = -1;
         boolean initialized;
 
         FieldDescriptor(int acc, String n, String d,
                         String sig, Object val,
                         List<Attribute> attrs,
-                        List<String> annots) {
+                        List<AnnotationDef> annots) {
             access = acc;
             name = n;
             desc = d;
