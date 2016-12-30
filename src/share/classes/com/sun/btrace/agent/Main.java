@@ -137,7 +137,7 @@ public final class Main {
         }
     }
 
-    private static void loadDefaultArguments() {
+    private static void loadDefaultArguments(String config) {
         try {
             String propTarget = Constants.EMBEDDED_BTRACE_SECTION_HEADER + "agent.properties";
             InputStream is = ClassLoader.getSystemResourceAsStream(propTarget);
@@ -145,36 +145,53 @@ public final class Main {
                 Properties ps = new Properties();
                 ps.load(is);
                 for (Map.Entry<Object, Object> entry : ps.entrySet()) {
+                    String keyConfig = "";
                     String argKey = (String) entry.getKey();
-                    String argVal = (String) entry.getValue();
-                    if (argKey.equals("script")) {
-                        // special treatment for the 'script' parameter
-                        boolean replace = false;
-                        String scriptVal = argVal;
-                        if (scriptVal.startsWith("!")) {
-                            scriptVal = scriptVal.substring(1);
-                            replace = true;
-                        } else {
-                            String oldVal = argMap.get(argKey);
-                            if (oldVal != null && !oldVal.isEmpty()) {
-                                scriptVal = oldVal + ":" + scriptVal;
-                            } else {
-                                replace = true;
+                    int configPos = argKey.lastIndexOf("#");
+                    if (configPos > -1) {
+                        keyConfig = argKey.substring(0, configPos);
+                        argKey = argKey.substring(configPos + 1);
+                    }
+                    if (config == null || config.equals(keyConfig)) {
+                        String argVal = (String) entry.getValue();
+                        switch (argKey) {
+                            case "script": {
+                                // special treatment for the 'script' parameter
+                                boolean replace = false;
+                                String scriptVal = argVal;
+                                if (scriptVal.startsWith("!")) {
+                                    scriptVal = scriptVal.substring(1);
+                                    replace = true;
+                                } else {
+                                    String oldVal = argMap.get(argKey);
+                                    if (oldVal != null && !oldVal.isEmpty()) {
+                                        scriptVal = oldVal + ":" + scriptVal;
+                                    } else {
+                                        replace = true;
+                                    }
+                                    System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
+
+                                }
+                                if (replace) {
+                                    System.err.println("setting default agent argument '" + argKey + "' with '" + scriptVal + "'");
+                                } else {
+                                    System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
+                                }
+
+                                argMap.put(argKey, scriptVal);
                             }
-                            System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
-
-                        }
-                        if (replace) {
-                            System.err.println("setting default agent argument '" + argKey + "' with '" + scriptVal + "'");
-                        } else {
-                            System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
-                        }
-
-                        argMap.put(argKey, scriptVal);
-                    } else if (!(argKey.equals("systemClassPath") || argKey.equals("bootClassPath"))) {
-                        if (!argMap.containsKey(argKey)) {
-                            System.err.println("applying default agent argument '" + argKey + "'='" + argVal + "'");
-                            argMap.put(argKey, argVal);
+                            case "systemClassPath":
+                            case "bootClassPath":
+                            case "config": {
+                                System.err.println("argument '" + argKey + "' is not overridable");
+                                break;
+                            }
+                            default: {
+                                if (!argMap.containsKey(argKey)) {
+                                    System.err.println("applying default agent argument '" + argKey + "'='" + argVal + "'");
+                                    argMap.put(argKey, argVal);
+                                }
+                            }
                         }
                     }
                 }
@@ -252,6 +269,7 @@ public final class Main {
         }
 
         processClasspaths();
+        loadDefaultArguments(argMap.get("config"));
 
         p = argMap.get("debug");
         settings.setDebug(p != null && !"false".equals(p));
@@ -422,8 +440,6 @@ public final class Main {
         }
 
         addPreconfLibs();
-
-        loadDefaultArguments();
     }
 
     private static void addPreconfLibs() {
