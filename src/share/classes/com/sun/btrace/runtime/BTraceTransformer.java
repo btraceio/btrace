@@ -154,7 +154,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
         className = className != null ? className : "<anonymous>";
 
-        if (loader == null && (isBTraceClass(className) || isSensitiveClass(className))) {
+        if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader())) && (isBTraceClass(className) || isSensitiveClass(className))) {
             if (isDebug()) {
                 debugPrint("skipping transform for BTrace class " + className); // NOI18N
             }
@@ -198,7 +198,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
     }
 
     private static boolean isBTraceClass(String name) {
-        return name.startsWith("com/sun/btrace/");
+        return ClassFilter.isBTraceClass(name);
     }
 
     /*
@@ -211,16 +211,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
      * For now, we avoid such classes till we find a solution.
      */
     private static boolean isSensitiveClass(String name) {
-        if (name.startsWith("java/lang/")) {
-            return name.equals("java/lang/Object") || // NOI18N
-                   name.startsWith("java/lang/ThreadLocal") || // NOI18N
-                   name.equals("java/lang/VerifyError"); // NOI18N
-        } else if (name.startsWith("sun/")) {
-            return name.startsWith("sun/reflect") || // NOI18N
-                   name.equals("sun/misc/Unsafe")  || // NOI18N
-                   name.startsWith("sun/security/"); // NOI18N
-        }
-        return false;
+        return ClassFilter.isSensitiveClass(name);
     }
 
     private boolean isDebug() {

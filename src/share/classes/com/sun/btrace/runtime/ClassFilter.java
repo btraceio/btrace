@@ -269,14 +269,23 @@ public class ClassFilter {
      * For now, we avoid such classes till we find a solution.
      */
     public static boolean isSensitiveClass(String name) {
-        return name.equals("java/lang/Object") || // NOI18N
-               name.startsWith("java/lang/ThreadLocal") || // NOI18N
-               name.startsWith("sun/reflect") || // NOI18N
-               name.equals("sun/misc/Unsafe")  || // NOI18N
-               name.startsWith("sun/security/") || // NOI18N
-               name.equals("java/lang/VerifyError") || // NOI18N
-               name.startsWith("sun/instrument/") || // NOI18N
-               name.startsWith("java/lang/instrument/"); // NOI18N
+        if (name.startsWith("java/lang/")) {
+            return name.equals("java/lang/Object") || // NOI18N
+                   name.equals("java/lang/String") ||
+                   name.startsWith("java/lang/ThreadLocal") || // NOI18N
+                   name.equals("java/lang/VerifyError") ||
+                   name.startsWith("java/lang/instrument/") ||
+                   name.startsWith("java/lang/invoke/") ||
+                   name.startsWith("java/lang/ref/");
+
+        } else if (name.startsWith("java/util/")) {
+            return name.startsWith("java/lang/concurrent/");
+        } else if (name.startsWith("sun/")) {
+            return name.startsWith("sun/reflect") || // NOI18N
+                   name.equals("sun/misc/Unsafe")  || // NOI18N
+                   name.startsWith("sun/security/"); // NOI18N
+        }
+        return false;
     }
 
     public static boolean isBTraceClass(String name) {
