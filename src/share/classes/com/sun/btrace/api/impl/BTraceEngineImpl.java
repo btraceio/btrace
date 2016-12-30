@@ -234,7 +234,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                     BTraceSettings settings = settingsProvider.getSettings();
                     final Client client = new Client(
                         port, null, ".", settings.isDebugMode(), true,
-                        btrace.isUnsafe(), settings.isDumpClasses(),
+                        btrace.isTrusted(), settings.isDumpClasses(),
                         settings.getDumpClassPath(),
                         settings.getStatsd()
                     );

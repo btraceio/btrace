@@ -101,12 +101,12 @@ public class Compiler {
         String classPath = ".";
         String outputDir = ".";
         String includePath = null;
-        boolean unsafe = false;
+        boolean trusted = false;
         int count = 0;
         boolean classPathDefined = false;
         boolean outputDirDefined = false;
         boolean includePathDefined = false;
-        boolean unsafeDefined = false;
+        boolean trustedDefined = false;
 
         for (;;) {
             if (args[count].charAt(0) == '-') {
@@ -123,9 +123,9 @@ public class Compiler {
                 } else if (args[count].equals("-I") && !includePathDefined) {
                     includePath = args[++count];
                     includePathDefined = true;
-                } else if (args[count].equals("-unsafe") && !unsafeDefined) {
-                    unsafe = true;
-                    unsafeDefined = true;
+                } else if ((args[count].equals("-unsafe") || args[count].equals("-trusted")) && !trustedDefined) {
+                    trusted = true;
+                    trustedDefined = true;
                 } else {
                     usage();
                 }

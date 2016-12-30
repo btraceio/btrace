@@ -167,7 +167,7 @@ public final class Main {
                         } else {
                             System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
                         }
-                        
+
                         argMap.put(argKey, scriptVal);
                     } else {
                         if (!argMap.containsKey(argKey)) {
@@ -336,10 +336,15 @@ public final class Main {
                 settings.setFileRollMaxRolls(rolls);
             }
         }
+        boolean trusted = false;
         p = argMap.get("unsafe");
-        settings.setUnsafe(p != null && "true".equals(p));
+        trusted |= (p != null && "true".equals(p));
+        p = argMap.get("trusted");
+        trusted |= (p != null && "true".equals(p));
+
+        settings.setTrusted(trusted);
         if (isDebug()) {
-            debugPrint("unsafeMode is " + settings.isUnsafe());
+            debugPrint("trustedMode is " + settings.isTrusted());
         }
 
         String statsdDef = argMap.get("statsd");

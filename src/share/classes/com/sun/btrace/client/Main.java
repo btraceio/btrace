@@ -49,7 +49,7 @@ import com.sun.btrace.util.Messages;
 public final class Main {
     public static volatile boolean exiting;
     private static boolean DEBUG;
-    private static boolean UNSAFE;
+    private static boolean TRUSTED;
     private static  boolean DUMP_CLASSES;
     private static String OUTPUT_FILE;
     private static String DUMP_DIR;
@@ -64,8 +64,9 @@ public final class Main {
         if (isDebug()) debugPrint("btrace debug mode is set");
         TRACK_RETRANSFORM = Boolean.getBoolean("com.sun.btrace.trackRetransforms");
         if (isDebug() && TRACK_RETRANSFORM) debugPrint("trackRetransforms flag is set");
-        UNSAFE = Boolean.getBoolean("com.sun.btrace.unsafe");
-        if (isDebug() && UNSAFE) debugPrint("btrace unsafe mode is set");
+        TRUSTED = Boolean.getBoolean("com.sun.btrace.unsafe");
+        TRUSTED |= Boolean.getBoolean("com.sun.btrace.trusted");
+        if (isDebug() && TRUSTED) debugPrint("btrace trusted mode is set");
         DUMP_CLASSES = Boolean.getBoolean("com.sun.btrace.dumpClasses");
         if (isDebug() && DUMP_CLASSES) debugPrint("dumpClasses flag is set");
         DUMP_DIR = System.getProperty("com.sun.btrace.dumpDir", ".");
@@ -118,8 +119,8 @@ public final class Main {
                     }
                     portDefined = true;
                 } else if (args[count].equals("-u")) {
-                    UNSAFE = true;
-                    if (isDebug()) debugPrint("btrace unsafe mode is set");
+                    TRUSTED = true;
+                    if (isDebug()) debugPrint("btrace trusted mode is set");
                 } else if (args[count].equals("-o")) {
                     OUTPUT_FILE = args[++count];
                     if (isDebug()) debugPrint("outputFile is " + OUTPUT_FILE);
@@ -177,7 +178,7 @@ public final class Main {
 
         try {
             Client client = new Client(port, OUTPUT_FILE, PROBE_DESC_PATH,
-                DEBUG, TRACK_RETRANSFORM, UNSAFE, DUMP_CLASSES, DUMP_DIR, statsdDef);
+                DEBUG, TRACK_RETRANSFORM, TRUSTED, DUMP_CLASSES, DUMP_DIR, statsdDef);
             if (! new File(fileName).exists()) {
                 errorExit("File not found: " + fileName, 1);
             }
@@ -288,7 +289,7 @@ public final class Main {
     }
 
     private static boolean isUnsafe() {
-        return UNSAFE;
+        return TRUSTED;
     }
 
     private static void debugPrint(String msg) {

@@ -33,7 +33,9 @@ import java.util.Map;
 final public class SharedSettings {
     public static final String DEBUG_KEY = "debug";
     public static final String DUMP_DIR_KEY = "dumpDir";
+    @Deprecated
     public static final String UNSAFE_KEY = "unsafe";
+    public static final String TRUSTED_KEY = "trusted";
     public static final String TRACK_RETRANSFORMS_KEY = "trackRetransforms";
     public static final String PROBE_DESC_PATH_KEY = "probeDescPath";
     public static final String STATSD_HOST_KEY = "statsdHost";
@@ -45,7 +47,7 @@ final public class SharedSettings {
     public static final SharedSettings GLOBAL = new SharedSettings();
 
     private boolean debug = false;
-    private boolean unsafe = false;
+    private boolean trusted = false;
     private boolean trackRetransforms = false;
     private boolean retransformStartup = true;
     private String dumpDir = null;
@@ -69,7 +71,11 @@ final public class SharedSettings {
         }
         b = (Boolean)params.get(UNSAFE_KEY);
         if (b != null) {
-            unsafe = b;
+            trusted = b;
+        }
+        b = (Boolean)params.get(TRUSTED_KEY);
+        if (b != null) {
+            trusted |= b;
         }
         String s = (String)params.get(DUMP_DIR_KEY);
         if (s != null && !s.isEmpty()) {
@@ -114,7 +120,7 @@ final public class SharedSettings {
         statsdHost = other.statsdHost;
         statsdPort = other.statsdPort;
         trackRetransforms = other.trackRetransforms;
-        unsafe = other.unsafe;
+        trusted = other.trusted;
     }
 
     public boolean isDebug() {
@@ -125,8 +131,16 @@ final public class SharedSettings {
         return dumpDir != null;
     }
 
+    @Deprecated
+    /**
+     * @deprecated use {@linkplain SharedSettings#isTrusted()} instead
+     */
     public boolean isUnsafe() {
-        return unsafe;
+        return trusted;
+    }
+
+    public boolean isTrusted() {
+        return trusted;
     }
 
     public String getDumpDir() {
@@ -145,8 +159,8 @@ final public class SharedSettings {
         debug = value;
     }
 
-    public void setUnsafe(boolean value) {
-        unsafe = value;
+    public void setTrusted(boolean value) {
+        trusted = value;
     }
 
     public void setDumpDir(String value) {

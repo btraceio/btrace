@@ -172,28 +172,28 @@ public class Verifier extends AbstractProcessor
             className = pkgName + "." + className;
         }
         classNames.add(className);
-        if (hasUnsafeAnnotation(ct, topElement)) {
+        if (hasTrustedAnnotation(ct, topElement)) {
             return true;
         }
         Boolean value = ct.accept(new VerifierVisitor(this, topElement), null);
         return value == null? true : value;
     }
 
-    /** Detects if the class is annotated as @BTrace(unsafe=true). */
-    private boolean hasUnsafeAnnotation(ClassTree ct, Element topElement) {
+    /** Detects if the class is annotated as @BTrace(trusted=true). */
+    private boolean hasTrustedAnnotation(ClassTree ct, Element topElement) {
         for (AnnotationTree at : ct.getModifiers().getAnnotations()) {
             String annFqn = ((JCTree)at.getAnnotationType()).type.tsym.getQualifiedName().toString();
             if (!annFqn.equals(BTrace.class.getName())) {
                 continue;
             }
-            // now we have @BTrace, look for unsafe = xxx
+            // now we have @BTrace, look for unsafe = xxx or trusted = xxx
             for (ExpressionTree ext : at.getArguments()) {
                 if (!(ext instanceof JCAssign)) {
                     continue;
                 }
                 JCAssign assign = (JCAssign) ext;
                 String name = ((JCIdent)assign.lhs).name.toString();
-                if (!"unsafe".equals(name)) {
+                if (!"unsafe".equals(name) && !"trusted".equals(name)) {
                     continue;
                 }
                 // now rhs is the value of @BTrace.unsafe.
