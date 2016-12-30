@@ -410,6 +410,7 @@ abstract class Client implements CommandListener {
                     if (isDebug()) {
                         for(Class c : classes) {
                             try {
+                                debugPrint("Attempting to retransform class: " + c.getName());
                                 inst.retransformClasses(c);
                             } catch (VerifyError e) {
                                 debugPrint("verification error: " + c.getName());
