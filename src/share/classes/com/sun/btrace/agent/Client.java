@@ -55,6 +55,7 @@ import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.lang.management.ManagementFactory;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -62,6 +63,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
 
@@ -182,14 +185,45 @@ abstract class Client implements CommandListener {
             fName = fName
                         .replace("${client}", clientName != null ? clientName : "")
                         .replace("${ts}", String.valueOf(System.currentTimeMillis()))
+                        .replace("${pid}", pid())
                         .replace("${agent}", agentName != null ? "." + agentName : "")
                         .replace("[default]", "");
 
+            fName = replaceSysProps(fName);
             if (dflt && settings.isDebug()) {
                 debugPrint("scriptOutputFile not specified. defaulting to " + fName);
             }
         }
         return fName;
+    }
+
+    private static final Pattern SYSPROP_PTN = Pattern.compile("\\$\\{(.+?)\\}");
+
+    private String replaceSysProps(String str) {
+        int replaced = 0;
+        do {
+            StringBuffer sb = new StringBuffer();
+            replaced = replaceSysProps(str, sb);
+            str = sb.toString();
+        } while (replaced > 0);
+        return str;
+    }
+
+    private int replaceSysProps(String str, StringBuffer sb) {
+        int cnt = 0;
+        Matcher m = SYSPROP_PTN.matcher(str);
+        while (m.find()) {
+            String key = m.group(1);
+            String val = System.getProperty(key);
+            if (val != null) {
+                cnt++;
+                m.appendReplacement(sb, val);
+            } else {
+                m.appendReplacement(sb, m.group(0));
+            }
+        }
+        m.appendTail(sb);
+        return cnt;
     }
 
     protected synchronized void onExit(int exitCode) {
@@ -423,5 +457,17 @@ abstract class Client implements CommandListener {
             }
             runtime.send(new OkayCommand());
         }
+    }
+
+    private static String pid() {
+        String pName = ManagementFactory.getRuntimeMXBean().getName();
+        if (pName != null && pName.length() > 0) {
+            String[] parts = pName.split("@");
+            if (parts.length == 2) {
+                return parts[0];
+            }
+        }
+
+        return "-1";
     }
 }
