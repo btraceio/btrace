@@ -33,18 +33,34 @@ import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
 public class Postprocessor extends ClassVisitor {
+    private static final class AnnotationDef {
+        private final String type;
+        private final Map<String, Object> values = new HashMap<>();
+
+        public AnnotationDef(String type) {
+            this.type = type;
+        }
+
+        public void addValue(String name, Object val) {
+            values.put(name, val);
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public Map<String, Object> getValues() {
+            return values;
+        }
+    }
+
     private final List<FieldDescriptor> fields = new ArrayList<>();
     private boolean shortSyntax = false;
     private String className = "";
@@ -93,6 +109,21 @@ public class Postprocessor extends ClassVisitor {
 
         final List<Attribute> attrs = new ArrayList<>();
         return new FieldVisitor(Opcodes.ASM5) {
+            private final List<AnnotationDef> annotations = new ArrayList<>();
+
+            @Override
+            public AnnotationVisitor visitAnnotation(String type, boolean visible) {
+                final AnnotationDef ad = new AnnotationDef(type);
+                annotations.add(ad);
+                return new AnnotationVisitor(Opcodes.ASM5, super.visitAnnotation(type, visible)) {
+                    @Override
+                    public void visit(String name, Object val) {
+                        ad.addValue(name, val);
+                        super.visit(name, val);
+                    }
+
+                };
+            }
 
             @Override
             public void visitAttribute(Attribute atrbt) {
@@ -102,8 +133,9 @@ public class Postprocessor extends ClassVisitor {
 
             @Override
             public void visitEnd() {
-                FieldDescriptor fd = new FieldDescriptor(access, name, desc,
-                    signature, value, attrs);
+                FieldDescriptor fd = new FieldDescriptor(
+                    access, name, desc, signature, value, attrs, annotations
+                );
                 fields.add(fd);
                 super.visitEnd();
             }
@@ -132,6 +164,13 @@ public class Postprocessor extends ClassVisitor {
             FieldVisitor fv = super.visitField(fieldAccess,
                                  fieldName,
                                  fieldDesc, fieldSignature, fieldValue);
+
+            for (AnnotationDef ad : fd.annotations) {
+                AnnotationVisitor av = fv.visitAnnotation(ad.getType(), true);
+                for (Map.Entry<String, Object> attr : ad.getValues().entrySet()) {
+                    av.visit(attr.getKey(), attr.getValue());
+                }
+            }
 
             for (Attribute attr : fd.attributes) {
                 fv.visitAttribute(attr);
@@ -645,21 +684,25 @@ public class Postprocessor extends ClassVisitor {
     }
 
     private static class FieldDescriptor {
-        int access;
-        String name, desc, signature;
-        Object value;
-        List<Attribute> attributes;
+        final int access;
+        final String name, desc, signature;
+        final Object value;
+        final List<Attribute> attributes;
+        final List<AnnotationDef> annotations;
         int var = -1;
         boolean initialized;
 
         FieldDescriptor(int acc, String n, String d,
-                        String sig, Object val, List<Attribute> attrs) {
+                        String sig, Object val,
+                        List<Attribute> attrs,
+                        List<AnnotationDef> annots) {
             access = acc;
             name = n;
             desc = d;
             signature = sig;
             value = val;
             attributes = attrs;
+            annotations = annots;
         }
     }
 }

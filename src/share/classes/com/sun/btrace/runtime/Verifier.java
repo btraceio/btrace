@@ -47,13 +47,13 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
 public class Verifier extends ClassVisitor {
     private boolean seenBTrace;
     private boolean classRenamed;
-    private final boolean unsafeAllowed;
+    private final boolean trustedAllowed;
 
     private final BTraceProbe cn;
 
-    public Verifier(BTraceProbe cv, boolean unsafe) {
+    public Verifier(BTraceProbe cv, boolean trusted) {
         super(Opcodes.ASM5, cv);
-        this.unsafeAllowed = unsafe;
+        this.trustedAllowed = trusted;
         this.cn = cv;
     }
 
@@ -72,7 +72,7 @@ public class Verifier extends ClassVisitor {
 
     @Override
     public void visitEnd() {
-        if (!cn.isUnsafe()) {
+        if (!cn.isTrusted()) {
             if (cn.getGraph().hasCycle()) {
                 Verifier.this.reportSafetyError("execution.loop.danger");
             }
@@ -83,7 +83,7 @@ public class Verifier extends ClassVisitor {
     @Override
     public void visit(int version, int access, String name,
             String signature, String superName, String[] interfaces) {
-        if (!cn.isUnsafe()) {
+        if (!cn.isTrusted()) {
             if ((access & ACC_INTERFACE) != 0 ||
                 (access & ACC_ENUM) != 0  ) {
                 Verifier.this.reportSafetyError("btrace.program.should.be.class");
@@ -92,7 +92,7 @@ public class Verifier extends ClassVisitor {
                 reportSafetyError("class.should.be.public", name);
             }
 
-            if (! superName.equals(JAVA_LANG_OBJECT)) {
+            if (! superName.equals(OBJECT_INTERNAL)) {
                 reportSafetyError("object.superclass.required", superName);
             }
             if (interfaces != null && interfaces.length > 0) {
@@ -111,11 +111,11 @@ public class Verifier extends ClassVisitor {
             return new AnnotationVisitor(Opcodes.ASM5, delegate) {
                 @Override
                 public void visit(String name, Object value) {
-                    if ("unsafe".equals(name) && Boolean.TRUE.equals(value)) {
-                        if (!unsafeAllowed) {
+                    if (("unsafe".equals(name) || "trusted".equals(name)) && Boolean.TRUE.equals(value)) {
+                        if (!trustedAllowed) {
                             Verifier.this.reportSafetyError("agent.unsafe.not.allowed");
                         }
-                        cn.setUnsafe(); // Found @BTrace(..., unsafe=true)
+                        cn.setTrusted(); // Found @BTrace(..., trusted=true)
                     }
                     super.visit(name, value);
                 }
@@ -127,10 +127,10 @@ public class Verifier extends ClassVisitor {
     @Override
     public FieldVisitor	visitField(int access, final String name,
             String desc, String signature, Object value) {
-        if (! seenBTrace) {
+        if (!seenBTrace) {
             reportSafetyError("not.a.btrace.program");
         }
-        if (!cn.isUnsafe()) {
+        if (!cn.isTrusted()) {
             if ((access & ACC_STATIC) == 0) {
                 reportSafetyError("agent.no.instance.variables", name);
             }
@@ -141,7 +141,7 @@ public class Verifier extends ClassVisitor {
     @Override
     public void visitInnerClass(String name, String outerName,
             String innerName, int access) {
-        if (!cn.isUnsafe()) {
+        if (!cn.isTrusted()) {
             if (cn.name.equals(outerName)) {
                 reportSafetyError("no.nested.class");
             }
@@ -152,11 +152,11 @@ public class Verifier extends ClassVisitor {
     public MethodVisitor visitMethod(final int access, final String methodName,
             final String methodDesc, String signature, String[] exceptions) {
 
-        if (! seenBTrace) {
+        if (!seenBTrace) {
             reportSafetyError("not.a.btrace.program");
         }
 
-        if (!cn.isUnsafe()) {
+        if (!cn.isTrusted()) {
             if ((access & ACC_SYNCHRONIZED) != 0) {
                 reportSafetyError("no.synchronized.methods", methodName + methodDesc);
             }
@@ -174,7 +174,7 @@ public class Verifier extends ClassVisitor {
     @Override
     public void visitOuterClass(String owner, String name,
             String desc) {
-        if (!cn.isUnsafe()) {
+        if (!cn.isTrusted()) {
             reportSafetyError("no.outer.class");
         }
     }

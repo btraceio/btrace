@@ -29,11 +29,11 @@ import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import static com.sun.btrace.runtime.Constants.JAVA_LANG_OBJECT;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import static com.sun.btrace.runtime.Constants.OBJECT_INTERNAL;
 
 /**
  * @author A. Sundararajan
@@ -51,7 +51,7 @@ public final class InstrumentUtils {
     */
     public static void collectHierarchyClosure(ClassLoader cl, String type,
                                                Set<String> closure, boolean useInternal) {
-        if (type == null || type.equals(JAVA_LANG_OBJECT)) {
+        if (type == null || type.equals(OBJECT_INTERNAL)) {
            return;
         }
         ClassInfo ci = ClassCache.getInstance().get(cl, type);
@@ -61,7 +61,7 @@ public final class InstrumentUtils {
         // add self
         ciSet.add(ci);
         for(ClassInfo sci : ci.getSupertypes(false)) {
-            if (!sci.isInterface() && !sci.getClassName().equals(JAVA_LANG_OBJECT)) {
+            if (!sci.isInterface() && !sci.getClassName().equals(OBJECT_INTERNAL)) {
                 ciSet.add(sci);
             }
         }

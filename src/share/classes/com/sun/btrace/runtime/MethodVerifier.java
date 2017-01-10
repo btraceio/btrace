@@ -199,7 +199,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
                 Verifier.reportError("no.method.calls", owner + "." + name + desc);
                 break;
             case INVOKESPECIAL:
-                if (owner.equals(JAVA_LANG_OBJECT) && name.equals(CONSTRUCTOR)) {
+                if (owner.equals(OBJECT_INTERNAL) && name.equals(CONSTRUCTOR)) {
                     // allow object initializer
                 } else if (owner.equals(Type.getInternalName(StringBuilder.class))) {
                     // allow string concatenation via StringBuilder

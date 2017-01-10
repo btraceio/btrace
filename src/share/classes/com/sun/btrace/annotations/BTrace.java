@@ -45,5 +45,12 @@ public @interface BTrace {
     // description of this trace class.
     public String description() default "";
     // having "unsafe" set to true the script will be run in unsafe mode
+
+    @Deprecated
+    /**
+     * @deprecated use {@linkplain BTrace#trusted()} instead
+     */
     public boolean unsafe() default false;
+
+    public boolean trusted() default false;
 }

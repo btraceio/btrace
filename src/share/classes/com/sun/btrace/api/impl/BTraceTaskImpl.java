@@ -52,21 +52,21 @@ import java.util.concurrent.Executors;
 public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.StateListener {
     final private static Pattern NAMED_EVENT_PATTERN = Pattern.compile("@OnEvent\\s*\\(\\s*\\\"(\\w.*)\\\"\\s*\\)", Pattern.MULTILINE);
     final private static Pattern ANONYMOUS_EVENT_PATTERN = Pattern.compile("@OnEvent(?!\\s*\\()");
-    final private static Pattern UNSAFE_PATTERN = Pattern.compile("@BTrace\\s*\\(.*unsafe\\s*=\\s*(true|false).*\\)", Pattern.MULTILINE);
+    final private static Pattern TRUSTED_PATTERN = Pattern.compile("@BTrace\\s*\\(.*(unsafe|trusted)\\s*=\\s*(true|false).*\\)", Pattern.MULTILINE);
     final private static Pattern NAME_ANNOTATION_PATTERN = Pattern.compile("@BTrace\\s*\\(.*name\\s*=\\s*\"(.*)\".*\\)", Pattern.MULTILINE);
     final private static Pattern NAME_PATTERN = Pattern.compile("@BTrace.*?class\\s+(.*?)\\s+", Pattern.MULTILINE);
 
-    final private AtomicReference<State> currentState = new AtomicReference<State>(State.NEW);
-    final private Set<StateListener> stateListeners = new HashSet<StateListener>();
-    final private Set<MessageDispatcher> messageDispatchers = new HashSet<MessageDispatcher>();
+    final private AtomicReference<State> currentState = new AtomicReference<>(State.NEW);
+    final private Set<StateListener> stateListeners = new HashSet<>();
+    final private Set<MessageDispatcher> messageDispatchers = new HashSet<>();
 
     final private static ExecutorService dispatcher = Executors.newSingleThreadExecutor();
 
-    private PrintWriter consoleWriter = new PrintWriter(System.out, true);
+    private final PrintWriter consoleWriter = new PrintWriter(System.out, true);
 
     private String script;
     private int numInstrClasses;
-    private boolean unsafe;
+    private boolean trusted;
 
     final private BTraceEngineImpl engine;
 
@@ -100,9 +100,9 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     @Override
     public void setScript(String newValue) {
         script = newValue;
-        Matcher m = UNSAFE_PATTERN.matcher(getScript());
+        Matcher m = TRUSTED_PATTERN.matcher(getScript());
         if (m.find()) {
-            unsafe = Boolean.parseBoolean(m.group(1));
+            trusted = Boolean.parseBoolean(m.group(1));
         }
     }
 
@@ -254,8 +254,8 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     }
 
     @Override
-    public boolean isUnsafe() {
-        return unsafe;
+    public boolean isTrusted() {
+        return trusted;
     }
 
     void setState(State newValue) {

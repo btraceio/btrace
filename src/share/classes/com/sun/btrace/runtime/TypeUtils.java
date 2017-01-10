@@ -41,6 +41,23 @@ public final class TypeUtils {
     public static final Type anyTypeArray =
         Type.getType(AnyType[].class);
 
+    public static boolean isPrimitive(String typeDesc) {
+        if (typeDesc.length() == 1) {
+            switch (typeDesc.charAt(0)) {
+                case 'I':
+                case 'J':
+                case 'F':
+                case 'D':
+                case 'Z':
+                case 'C':
+                case 'B': {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static boolean isPrimitive(Type t) {
         return t == Type.BOOLEAN_TYPE ||
                t == Type.BYTE_TYPE ||

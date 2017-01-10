@@ -186,7 +186,7 @@ public abstract class InstrumentorTestBase {
     }
 
     protected void transform(String traceName, boolean unsafe) throws IOException {
-        settings.setUnsafe(unsafe);
+        settings.setTrusted(unsafe);
         BTraceClassReader cr = InstrumentUtils.newClassReader(cl, originalBC);
         BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
         BTraceProbe btrace = loadTrace(traceName, unsafe);

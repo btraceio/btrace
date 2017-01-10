@@ -26,10 +26,7 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.BTraceRuntime;
-import com.sun.btrace.annotations.Export;
-import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.Return;
-import com.sun.btrace.annotations.TLS;
 import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
 import com.sun.btrace.com.carrotsearch.hppcrt.maps.ObjectIntHashMap;
 import static com.sun.btrace.runtime.Constants.*;
@@ -50,7 +47,6 @@ import com.sun.btrace.org.objectweb.asm.tree.MethodNode;
 import com.sun.btrace.org.objectweb.asm.tree.TryCatchBlockNode;
 import com.sun.btrace.org.objectweb.asm.tree.TypeInsnNode;
 import com.sun.btrace.org.objectweb.asm.tree.VarInsnNode;
-import com.sun.btrace.services.api.Service;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -132,60 +128,46 @@ final class Preprocessor {
             return idx;
         }
     }
+    private static final String ANNOTATIONS_PREFIX = "com/sun/btrace/annotations/";
 
-    private static final Type TLS_TYPE = Type.getType(TLS.class);
-    private static final Type EXPORT_TYPE = Type.getType(Export.class);
-    private static final Type INJECTED_TYPE = Type.getType(Injected.class);
-    private static final Type SERVICE_TYPE = Type.getType(Service.class);
-    private static final String SERVICE_INTERNAL = SERVICE_TYPE.getInternalName();
+    private static final Type TLS_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "TLS;");
+    private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
+    private static final Type INJECTED_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Injected;");
+    private static final String SERVICE_INTERNAL = "com/sun/btrace/services/api/Service";
 
-    private static final String NEW_TLS_DESC = Type.getMethodDescriptor(THREAD_LOCAL_TYPE, OBJECT_TYPE);
-    private static final String TLS_SET_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, OBJECT_TYPE);
-    private static final String TLS_GET_DESC = Type.getMethodDescriptor(OBJECT_TYPE);
-    private static final String NEW_PERFCOUNTER_DESC = Type.getMethodDescriptor(
-        Type.VOID_TYPE,
-        OBJECT_TYPE,
-        STRING_TYPE,
-        STRING_TYPE
-    );
-    private static final String BTRACERT_FOR_CLASS_DESC = Type.getMethodDescriptor(BTRACERT_TYPE, CLASS_TYPE);
-    private static final String BTRACERT_ENTER_DESC = Type.getMethodDescriptor(Type.BOOLEAN_TYPE, BTRACERT_TYPE);
-    private static final String BTRACERT_HANDLE_EXCEPTION_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, THROWABLE_TYPE);
-    private static final String RT_SERVICE_CTR_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, BTRACERT_TYPE);
-    private static final String SERVICE_CTR_DESC = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class));
+    private static final String NEW_TLS_DESC = "(" + OBJECT_DESC + ")" + THREAD_LOCAL_DESC;
+    private static final String TLS_SET_DESC = "(" + OBJECT_DESC + ")" + VOID_DESC;
+    private static final String TLS_GET_DESC = "()" + OBJECT_DESC;
+    private static final String NEW_PERFCOUNTER_DESC = "(" + OBJECT_DESC + STRING_DESC + STRING_DESC + ")" + VOID_DESC;
+    private static final String BTRACERT_FOR_CLASS_DESC = "(" + CLASS_DESC + ")" + BTRACERT_DESC;
+    private static final String BTRACERT_ENTER_DESC = "(" + BTRACERT_DESC + ")" + BOOLEAN_DESC;
+    private static final String BTRACERT_HANDLE_EXCEPTION_DESC = "(" + THROWABLE_DESC + ")" + VOID_DESC;
+    private static final String RT_SERVICE_CTR_DESC = "(" + BTRACERT_DESC + ")V";
+    private static final String SERVICE_CTR_DESC = "(" + STRING_DESC + ")" + VOID_DESC;
 
-    private static final Map<String, Type> boxTypeMap = new HashMap<>();
-    private static final Set<String> guardedAnnots = new HashSet<>();
-    private static final Set<String> rtAwareAnnots = new HashSet<>();
-
-    private static final Type INTEGER_TYPE = Type.getType(Integer.class);
-    private static final Type SHORT_TYPE = Type.getType(Short.class);
-    private static final Type LONG_TYPE = Type.getType(Long.class);
-    private static final Type FLOAT_TYPE = Type.getType(Float.class);
-    private static final Type DOUBLE_TYPE = Type.getType(Double.class);
-    private static final Type BYTE_TYPE = Type.getType(Byte.class);
-    private static final Type BOOLEAN_TYPE = Type.getType(Boolean.class);
-    private static final Type CHARACTER_TYPE = Type.getType(Character.class);
+    private static final Map<String, String> BOX_TYPE_MAP = new HashMap<>();
+    private static final Set<String> GUARDED_ANNOTS = new HashSet<>();
+    private static final Set<String> RT_AWARE_ANNOTS = new HashSet<>();
 
     static {
-        boxTypeMap.put("I", INTEGER_TYPE);
-        boxTypeMap.put("S", SHORT_TYPE);
-        boxTypeMap.put("J", LONG_TYPE);
-        boxTypeMap.put("F", FLOAT_TYPE);
-        boxTypeMap.put("D", DOUBLE_TYPE);
-        boxTypeMap.put("B", BYTE_TYPE);
-        boxTypeMap.put("Z", BOOLEAN_TYPE);
-        boxTypeMap.put("C", CHARACTER_TYPE);
+        BOX_TYPE_MAP.put("I", INTEGER_BOXED_DESC);
+        BOX_TYPE_MAP.put("S", SHORT_BOXED_DESC);
+        BOX_TYPE_MAP.put("J", LONG_BOXED_DESC);
+        BOX_TYPE_MAP.put("F", FLOAT_BOXED_DESC);
+        BOX_TYPE_MAP.put("D", DOUBLE_BOXED_DESC);
+        BOX_TYPE_MAP.put("B", BYTE_BOXED_DESC);
+        BOX_TYPE_MAP.put("Z", BOOLEAN_BOXED_DESC);
+        BOX_TYPE_MAP.put("C", CHARACTER_BOXED_DESC);
 
-        rtAwareAnnots.add(ONMETHOD_DESC);
-        rtAwareAnnots.add(ONTIMER_DESC);
-        rtAwareAnnots.add(ONEVENT_DESC);
-        rtAwareAnnots.add(ONERROR_DESC);
-        rtAwareAnnots.add(ONPROBE_DESC);
-        guardedAnnots.addAll(rtAwareAnnots);
+        RT_AWARE_ANNOTS.add(ONMETHOD_DESC);
+        RT_AWARE_ANNOTS.add(ONTIMER_DESC);
+        RT_AWARE_ANNOTS.add(ONEVENT_DESC);
+        RT_AWARE_ANNOTS.add(ONERROR_DESC);
+        RT_AWARE_ANNOTS.add(ONPROBE_DESC);
+        GUARDED_ANNOTS.addAll(RT_AWARE_ANNOTS);
 
         // @OnExit is rtAware but not guarded
-        rtAwareAnnots.add(ONEXIT_DESC);
+        RT_AWARE_ANNOTS.add(ONEXIT_DESC);
     }
 
     public static interface MethodFilter {
@@ -276,7 +258,7 @@ final class Preprocessor {
             fn.desc = THREAD_LOCAL_DESC;
             fn.signature = fn.desc.substring(0, fn.desc.length() - 1) +
                            "<" + boxedDesc + ">;";
-            initTLS(cn, fn, Type.getType(origDesc));
+            initTLS(cn, fn, origDesc);
         }
     }
 
@@ -286,7 +268,7 @@ final class Preprocessor {
             fn.visibleAnnotations.remove(an);
             String origDesc = fn.desc;
 
-            initExport(cn, fn, Type.getType(origDesc));
+            initExport(cn, fn, origDesc);
         }
     }
 
@@ -302,13 +284,13 @@ final class Preprocessor {
         return fn;
     }
 
-    private void initTLS(ClassNode cn, FieldNode fn, Type t) {
+    private void initTLS(ClassNode cn, FieldNode fn, String typeDesc) {
         tlsFldNames.add(fn.name);
 
-        initAnnotatedField(fn, t, tlsInitSequence(cn, t, fn.name, fn.desc));
+        initAnnotatedField(fn, typeDesc, tlsInitSequence(cn, fn.name, fn.desc));
     }
 
-    private InsnList tlsInitSequence(ClassNode cn, Type t, String name, String desc) {
+    private InsnList tlsInitSequence(ClassNode cn, String name, String desc) {
         InsnList initList = new InsnList();
         initList.add(
             new MethodInsnNode(
@@ -323,12 +305,12 @@ final class Preprocessor {
         return initList;
     }
 
-    private void initExport(ClassNode cn, FieldNode fn, Type t) {
+    private void initExport(ClassNode cn, FieldNode fn, String typeDesc) {
         exportFldNames.add(fn.name);
-        initAnnotatedField(fn, t, exportInitSequence(cn, t, fn.name, fn.desc));
+        initAnnotatedField(fn, typeDesc, exportInitSequence(cn, fn.name, fn.desc));
     }
 
-    private InsnList exportInitSequence(ClassNode cn, Type t, String name, String desc) {
+    private InsnList exportInitSequence(ClassNode cn, String name, String desc) {
         InsnList init = new InsnList();
 
         init.add(new LdcInsnNode(perfCounterName(cn, name)));
@@ -345,7 +327,7 @@ final class Preprocessor {
         return init;
     }
 
-    private void initAnnotatedField(FieldNode fn, Type t, InsnList initList) {
+    private void initAnnotatedField(FieldNode fn, String typeDesc, InsnList initList) {
         Object initVal = fn.value;
         fn.value = null;
         fn.access |= Opcodes.ACC_FINAL;
@@ -353,8 +335,8 @@ final class Preprocessor {
         InsnList l = clinit.instructions;
 
         MethodInsnNode boxNode;
-        if (TypeUtils.isPrimitive(t)) {
-            boxNode = boxNode(t);
+        if (TypeUtils.isPrimitive(typeDesc)) {
+            boxNode = boxNode(typeDesc);
             initList.insert(boxNode);
         }
 
@@ -372,7 +354,7 @@ final class Preprocessor {
                 return;
             } else {
                 // no initialization done; use primitive defaults or NULL
-                addDefaultVal(t, initList);
+                addDefaultVal(Type.getType(typeDesc), initList);
             }
         }
         MethodInsnNode rtStart = findBTraceRuntimeStart();
@@ -676,8 +658,8 @@ final class Preprocessor {
         List<AnnotationNode> annots = getAnnotations(mn);
         if (!annots.isEmpty()) {
             for(AnnotationNode an : annots) {
-                if (rtAwareAnnots.contains(an.desc)) {
-                    if (guardedAnnots.contains(an.desc)) {
+                if (RT_AWARE_ANNOTS.contains(an.desc)) {
+                    if (GUARDED_ANNOTS.contains(an.desc)) {
                         return MethodClassifier.GUARDED;
                     } else {
                         return MethodClassifier.RT_AWARE;
@@ -716,16 +698,14 @@ final class Preprocessor {
     }
 
     private AbstractInsnNode updateTLSUsage(FieldInsnNode fin, InsnList l) {
-        String unboxed = fin.desc;
+        String unboxedDesc = fin.desc;
         int opcode = fin.getOpcode();
         // retrieve the TLS field
         fin.setOpcode(Opcodes.GETSTATIC);
         // change the desc from the contained type to TLS type
         fin.desc = THREAD_LOCAL_DESC;
 
-        String boxed = boxDesc(unboxed);
-        Type unboxedType = Type.getType(unboxed);
-        Type boxedType = Type.getType(boxed);
+        String boxedDesc = boxDesc(unboxedDesc);
 
         if (opcode == Opcodes.GETSTATIC) {
             InsnList toInsert = new InsnList();
@@ -736,10 +716,11 @@ final class Preprocessor {
                 false
             );
             toInsert.add(getNode);
-            toInsert.add(new TypeInsnNode(Opcodes.CHECKCAST, boxedType.getInternalName()));
-            if (!boxed.equals(unboxed)) {
+            String boxedInternal = boxedDesc.substring(1, boxedDesc.length() - 1);
+            toInsert.add(new TypeInsnNode(Opcodes.CHECKCAST, boxedInternal));
+            if (!boxedDesc.equals(unboxedDesc)) {
                 // must unbox
-                MethodInsnNode unboxNode = unboxNode(boxedType, unboxedType);
+                MethodInsnNode unboxNode = unboxNode(boxedDesc, boxedInternal, unboxedDesc);
                 if (unboxNode != null) {
                     toInsert.add(unboxNode);
                 }
@@ -747,9 +728,9 @@ final class Preprocessor {
             l.insert(fin, toInsert);
         } else if (opcode == Opcodes.PUTSTATIC) {
             MethodInsnNode boxNode = null;
-            if (!boxed.equals(unboxed)) {
+            if (!boxedDesc.equals(unboxedDesc)) {
                 // must box
-                boxNode = boxNode(unboxedType, boxedType);
+                boxNode = boxNode(unboxedDesc, boxedDesc);
                 l.insert(fin.getPrevious(), boxNode);
             }
             MethodInsnNode setNode = new MethodInsnNode(
@@ -1080,52 +1061,67 @@ final class Preprocessor {
     }
 
     private String boxDesc(String desc) {
-        Type boxed = boxTypeMap.get(desc);
-        return boxed != null ? boxed.getDescriptor() : desc;
+        String boxed_desc = BOX_TYPE_MAP.get(desc);
+        return boxed_desc != null ? boxed_desc : desc;
     }
 
-    private MethodInsnNode boxNode(Type unboxed) {
-        String boxedDesc = boxDesc(unboxed.getDescriptor());
+    private MethodInsnNode boxNode(String unboxedDesc) {
+        String boxedDesc = boxDesc(unboxedDesc);
         if (boxedDesc != null) {
-            return boxNode(unboxed, Type.getType(boxedDesc));
+            return boxNode(unboxedDesc, boxedDesc);
         }
         return null;
     }
 
-    private MethodInsnNode boxNode(Type unboxed, Type boxed) {
+    private MethodInsnNode boxNode(String unboxedDesc, String boxedDesc) {
         return new MethodInsnNode(
             Opcodes.INVOKESTATIC,
-            boxed.getInternalName(),
+            boxedDesc.substring(1, boxedDesc.length() - 1),
             "valueOf",
-            Type.getMethodDescriptor(boxed, unboxed),
+            "(" + unboxedDesc + ")" + boxedDesc,
             false
         );
     }
 
-    private MethodInsnNode unboxNode(Type boxed, Type unboxed) {
+    private MethodInsnNode unboxNode(String boxedDesc, String boxedInternal, String unboxedDesc) {
         String mName = null;
-        if (boxed.equals(INTEGER_TYPE)) {
-            mName = "intValue";
-        } else if (boxed.equals(SHORT_TYPE)) {
-            mName = "shortValue";
-        } else if (boxed.equals(LONG_TYPE)) {
-            mName = "longValue";
-        } else if (boxed.equals(FLOAT_TYPE)) {
-            mName = "floatValue";
-        } else if (boxed.equals(DOUBLE_TYPE)) {
-            mName = "doubleValue";
-        } else if (boxed.equals(BOOLEAN_TYPE)) {
-            mName = "booleanValue";
-        } else if (boxed.equals(CHARACTER_TYPE)) {
-            mName = "charValue";
+        switch (boxedDesc) {
+            case INTEGER_BOXED_DESC: {
+                mName = "intValue";
+                break;
+            }
+            case SHORT_BOXED_DESC: {
+                mName = "shortValue";
+                break;
+            }
+            case LONG_BOXED_DESC: {
+                mName = "longValue";
+                break;
+            }
+            case FLOAT_BOXED_DESC: {
+                mName = "floatValue";
+                break;
+            }
+            case DOUBLE_BOXED_DESC: {
+                mName = "doubleValue";
+                break;
+            }
+            case BOOLEAN_BOXED_DESC: {
+                mName = "booleanValue";
+                break;
+            }
+            case CHARACTER_BOXED_DESC: {
+                mName = "charValue";
+                break;
+            }
         }
 
         if (mName != null) {
             return new MethodInsnNode(
                 Opcodes.INVOKEVIRTUAL,
-                boxed.getInternalName(),
+                boxedInternal,
                 mName,
-                Type.getMethodDescriptor(unboxed),
+                "()" + unboxedDesc,
                 false
             );
         }

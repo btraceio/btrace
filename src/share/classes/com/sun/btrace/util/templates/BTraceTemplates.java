@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.regex.Pattern;
 
 /**
  * A central place for bytecode templates
@@ -47,6 +46,10 @@ public final class BTraceTemplates {
 
     public static Template getTemplate(String owner, String name, String sig) {
         Template t;
+
+        if (!owner.equals(Template.OWNER)) {
+            return null;
+        }
 
         int idx = name.indexOf(':');
         if (idx > -1) {

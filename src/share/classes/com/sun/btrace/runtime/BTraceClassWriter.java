@@ -97,7 +97,7 @@ final class BTraceClassWriter extends ClassWriter {
             String common = iter.next();
             return common;
         }
-        return Constants.JAVA_LANG_OBJECT;
+        return Constants.OBJECT_INTERNAL;
     }
 
 }
