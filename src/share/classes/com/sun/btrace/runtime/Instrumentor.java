@@ -114,7 +114,8 @@ public class Instrumentor extends ClassVisitor {
         List<OnMethod> appliedOnMethods = new LinkedList<>();
 
         if (applicableOnMethods.isEmpty() ||
-            (access & ACC_ABSTRACT) != 0) {
+            (access & ACC_ABSTRACT) != 0 ||
+            name.startsWith(BTRACE_METHOD_PREFIX)) {
             return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
@@ -161,10 +162,6 @@ public class Instrumentor extends ClassVisitor {
         TemplateExpanderVisitor tse = new TemplateExpanderVisitor(
             lvs, className, name, desc
         );
-
-        if (name.startsWith(BTRACE_METHOD_PREFIX)) {
-            return tse;
-        }
 
         LocalVariableHelper visitor = tse;
 

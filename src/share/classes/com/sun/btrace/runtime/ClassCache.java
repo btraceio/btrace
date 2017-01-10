@@ -24,8 +24,10 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.runtime.ClassInfo.ClassName;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * A simple class cache holding {@linkplain ClassInfo} instances and being
@@ -38,20 +40,15 @@ public final class ClassCache {
         private static final ClassCache INSTANCE = new ClassCache();
     }
 
-    private final Map<String, ClassInfo> classMap = new HashMap<>();
+    private final Map<ClassLoader, Map<ClassName, ClassInfo>> cacheMap = new WeakHashMap<>();
+    private final Map<ClassName, ClassInfo> bootstrapInfos = new HashMap<>(500);
 
     public static ClassCache getInstance() {
         return Singleton.INSTANCE;
     }
 
     public ClassInfo get(Class clz) {
-        String id = getId(clz);
-        ClassInfo ci = classMap.get(id);
-        if (ci == null) {
-            ci = new ClassInfo(this, clz);
-            classMap.put(id, ci);
-        }
-        return ci;
+        return get(clz.getClassLoader(), clz.getName());
     }
 
     /**
@@ -63,20 +60,29 @@ public final class ClassCache {
      * @return
      */
     public ClassInfo get(ClassLoader cl, String className) {
-        String id = getId(cl, className);
-        ClassInfo ci = classMap.get(id);
+        return get(cl, new ClassName(className));
+    }
+
+    ClassInfo get(ClassLoader cl, ClassName className) {
+        Map<ClassName, ClassInfo> infos = getInfos(cl);
+
+        ClassInfo ci = infos.get(className);
         if (ci == null) {
             ci = new ClassInfo(this, cl, className);
-            classMap.put(id, ci);
+            infos.put(className, ci);
         }
         return ci;
     }
 
-    private static String getId(Class clz) {
-        return getId(clz.getClassLoader(), clz.getName());
-    }
-
-    private static String getId(ClassLoader cl, String className) {
-        return (cl != null ? cl.toString() : "<null>") + className.replace("/", ".");
+    private Map<ClassName, ClassInfo> getInfos(ClassLoader cl) {
+        if (cl == null) {
+            return bootstrapInfos;
+        }
+        Map<ClassName, ClassInfo> infos = cacheMap.get(cl);
+        if (infos == null) {
+            infos = new HashMap<>(500);
+            cacheMap.put(cl, infos);
+        }
+        return infos;
     }
 }

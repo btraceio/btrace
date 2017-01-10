@@ -310,13 +310,15 @@ public class LocalVariableHelperImpl extends MethodVisitor implements LocalVaria
     }
 
     private int remap(final int var, final Type type) {
-        if (var >= 0 && var + type.getSize() <= firstLocal) {
+        int tSize = type.getSize();
+
+        if (var >= 0 && var + tSize <= firstLocal) {
             return var;
         }
 
         int sVar = Math.abs(var);
 
-        int key = 2 * sVar + type.getSize() - 1;
+        int key = 2 * sVar + tSize - 1;
         int size = mapping.length;
         if (key >= size) {
             int[] newMapping = new int[Math.max(2 * size, key + 1)];
@@ -325,7 +327,7 @@ public class LocalVariableHelperImpl extends MethodVisitor implements LocalVaria
         }
         int value = mapping[key];
         if (value == 0) {
-            value = newLocalMapping(type);
+            value = newLocalMapping(tSize);
             mapping[key] = value + 1;
         } else {
             value--;
@@ -337,8 +339,12 @@ public class LocalVariableHelperImpl extends MethodVisitor implements LocalVaria
     }
 
     protected int newLocalMapping(final Type type) {
+        return newLocalMapping(type.getSize());
+    }
+
+    private int newLocalMapping(final int size) {
         int local = nextLocal;
-        nextLocal += type.getSize();
+        nextLocal += size;
         return local;
     }
 }

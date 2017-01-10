@@ -365,7 +365,7 @@ abstract class Client implements CommandListener {
         if (c.isInterface() || c.isPrimitive() || c.isArray()) {
             return false;
         }
-        if (ClassFilter.isBTraceClass(cname) || ClassFilter.isSensitiveClass(cname)) {
+        if (ClassFilter.isSensitiveClass(cname)) {
             return false;
         } else {
             return probe.willInstrument(c);
@@ -411,12 +411,14 @@ abstract class Client implements CommandListener {
     private static PerfReader createPerfReaderImpl() {
         // see if we can access any jvmstat class
         try {
-            Class.forName("sun.jvmstat.monitor.MonitoredHost");
-            return (PerfReader) Class.forName("com.sun.btrace.agent.PerfReaderImpl").newInstance();
+            if (Client.class.getResource("sun/jvmstat/monitor/MonitoredHost.class") != null) {
+                return (PerfReader) Class.forName("com.sun.btrace.agent.PerfReaderImpl").newInstance();
+            }
         } catch (Exception exp) {
-            // no luck, create null implementation
-            return new NullPerfReaderImpl();
+            // can happen if jvmstat is not available
         }
+        // no luck, create null implementation
+        return new NullPerfReaderImpl();
     }
 
     void retransformLoaded() throws UnmodifiableClassException {

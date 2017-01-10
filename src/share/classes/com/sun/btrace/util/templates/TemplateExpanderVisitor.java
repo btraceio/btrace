@@ -51,6 +51,7 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
     final private Collection<TemplateExpander> expanders = new ArrayList<>();
     final private String className, methodName, desc;
     final private Assembler asm;
+    private TemplateExpander.Result lastResult = TemplateExpander.Result.IGNORED;
 
     public TemplateExpanderVisitor(LocalVariableHelper lvs,
                              String className, String methodName,
@@ -308,14 +309,21 @@ public class TemplateExpanderVisitor extends MethodVisitor implements LocalVaria
     private boolean expanding = false;
 
     private TemplateExpander.Result expandTemplate(Template newTemplate) {
-        if (expanding) return TemplateExpander.Result.IGNORED;
+        if (expanding) {
+            return TemplateExpander.Result.IGNORED;
+        }
+        if (newTemplate == null && lastResult == TemplateExpander.Result.IGNORED) {
+            return TemplateExpander.Result.IGNORED;
+        }
 
         for(TemplateExpander exp : expanders) {
             TemplateExpander.Result r = exp.expand(this, newTemplate);
             if (r != TemplateExpander.Result.IGNORED) {
+                lastResult = r;
                 return r;
             }
         }
+        lastResult = TemplateExpander.Result.IGNORED;
         return TemplateExpander.Result.IGNORED;
     }
 

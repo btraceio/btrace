@@ -41,7 +41,7 @@ import java.util.Set;
  * @since 1.3
  */
 public final class Template {
-    private final String owner = "com/sun/btrace/Templates";
+    final static String OWNER = "#";
     private final String name;
     private final String sig;
     private final Set<String> tags = new HashSet<>();
@@ -51,18 +51,18 @@ public final class Template {
     public Template(String name, String sig) {
         this.name = name;
         this.sig = sig;
-        this.id = getId(owner, name, sig);
+        this.id = getId(OWNER, name, sig);
     }
 
     public Template(String name, String sig, String ... tags) {
         this.name = name;
         this.sig = sig;
         this.tags.addAll(Arrays.asList(tags));
-        this.id = getId(owner, name, sig);
+        this.id = getId(OWNER, name, sig);
     }
 
     public String getOwner() {
-        return owner;
+        return OWNER;
     }
 
     public String getName() {
@@ -93,7 +93,7 @@ public final class Template {
             }
             sb.append(t);
         }
-        mv.visitMethodInsn(Opcodes.INVOKESTATIC, owner, sb.toString(), sig, false);
+        mv.visitMethodInsn(Opcodes.INVOKESTATIC, OWNER, sb.toString(), sig, false);
     }
 
     public Set<String> getTags() {

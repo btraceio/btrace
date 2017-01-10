@@ -24,7 +24,6 @@
  */
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.DebugSupport;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +34,7 @@ import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.FieldVisitor;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.util.PrefixMap;
 import java.lang.ref.Reference;
 import java.util.*;
 import java.util.regex.PatternSyntaxException;
@@ -48,6 +48,7 @@ import java.util.regex.PatternSyntaxException;
  */
 public class ClassFilter {
     private static final Class<?> REFERENCE_CLASS = Reference.class;
+    private static final PrefixMap SENSITIVE_CLASSES = new PrefixMap();
 
     private Set<String> sourceClasses;
     private Pattern[] sourceClassPatterns;
@@ -66,6 +67,19 @@ public class ClassFilter {
         FieldVisitor.class.getClassLoader();
         MethodVisitor.class.getClassLoader();
         Attribute.class.getClassLoader();
+
+        SENSITIVE_CLASSES.add("java/lang/Object");
+        SENSITIVE_CLASSES.add("java/lang/String");
+        SENSITIVE_CLASSES.add("java/lang/ThreadLocal");
+        SENSITIVE_CLASSES.add("java/lang/VerifyError");
+        SENSITIVE_CLASSES.add("java/lang/instrument/");
+        SENSITIVE_CLASSES.add("java/lang/invoke/");
+        SENSITIVE_CLASSES.add("java/lang/ref/");
+        SENSITIVE_CLASSES.add("java/lang/concurrent/");
+        SENSITIVE_CLASSES.add("sun/reflect");
+        SENSITIVE_CLASSES.add("sun/misc/Unsafe");
+        SENSITIVE_CLASSES.add("sun/security/");
+        SENSITIVE_CLASSES.add("com/sun/btrace/");
     }
 
     public ClassFilter(List<OnMethod> onMethods) {
@@ -229,7 +243,7 @@ public class ClassFilter {
      * @param types any requested supertypes
      **/
     public static boolean isSubTypeOf(String typeA, ClassLoader loader, String ... types) {
-        if (typeA == null || typeA.equals(Constants.JAVA_LANG_OBJECT)) {
+        if (typeA == null || typeA.equals(Constants.OBJECT_INTERNAL)) {
             return false;
         }
         if (types.length == 0) {
@@ -269,27 +283,7 @@ public class ClassFilter {
      * For now, we avoid such classes till we find a solution.
      */
     public static boolean isSensitiveClass(String name) {
-        if (name.startsWith("java/lang/")) {
-            return name.equals("java/lang/Object") || // NOI18N
-                   name.equals("java/lang/String") ||
-                   name.startsWith("java/lang/ThreadLocal") || // NOI18N
-                   name.equals("java/lang/VerifyError") ||
-                   name.startsWith("java/lang/instrument/") ||
-                   name.startsWith("java/lang/invoke/") ||
-                   name.startsWith("java/lang/ref/");
-
-        } else if (name.startsWith("java/util/")) {
-            return name.startsWith("java/lang/concurrent/");
-        } else if (name.startsWith("sun/")) {
-            return name.startsWith("sun/reflect") || // NOI18N
-                   name.equals("sun/misc/Unsafe")  || // NOI18N
-                   name.startsWith("sun/security/"); // NOI18N
-        }
-        return false;
-    }
-
-    public static boolean isBTraceClass(String name) {
-        return name.startsWith("com/sun/btrace/");
+        return SENSITIVE_CLASSES.contains(name);
     }
 
     private void init() {

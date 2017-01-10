@@ -28,12 +28,13 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.DebugSupport;
 import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
 import com.sun.btrace.com.carrotsearch.hppcrt.cursors.ObjectCursor;
-import com.sun.btrace.com.carrotsearch.hppcrt.maps.ObjectIntHashMap;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -56,8 +57,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
         private boolean isRegex = false;
 
 
-        private final ObjectIntMap<String> nameMap = new ObjectIntHashMap<>();
-        private final ObjectIntMap<Pattern> nameRegexMap = new ObjectIntHashMap<>();
+        private final Map<String, Integer> nameMap = new HashMap<>();
+        private final Map<Pattern, Integer> nameRegexMap = new HashMap<>();
 
         void add(OnMethod om) {
             if (om.isSubtypeMatcher() || om.isClassAnnotationMatcher()) {
@@ -86,15 +87,24 @@ public final class BTraceTransformer implements ClassFileTransformer {
             }
         }
 
-        private static <K> void addToMap(ObjectIntMap<K> map, K name) {
+        private static <K> void addToMap(Map<K, Integer> map, K name) {
             synchronized(map) {
-                map.putOrAdd(name, 1, 1);
+                Integer i = map.get(name);
+                if (i == null) {
+                    map.put(name, 1);
+                } else {
+                    map.put(name, i + 1);
+                }
             }
         }
 
-        private static <K> void removeFromMap(ObjectIntMap<K> map, K name) {
+        private static <K> void removeFromMap(Map<K, Integer> map, K name) {
             synchronized(map) {
-                int freq = map.addTo(name, -1);
+                Integer i = map.get(name);
+                if (i == null) {
+                    return;
+                }
+                int freq = i - 1;
                 if (freq == 0) {
                     map.remove(name);
                 }
@@ -110,8 +120,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
                 }
                 if (isRegex) {
                     synchronized(nameRegexMap) {
-                        for(ObjectCursor<Pattern> p : nameRegexMap.keys()) {
-                            if (p.value.matcher(className).matches()) {
+                        for(Pattern p : nameRegexMap.keySet()) {
+                            if (p.matcher(className).matches()) {
                                 return Result.TRUE;
                             }
                         }
@@ -154,7 +164,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
         className = className != null ? className : "<anonymous>";
 
-        if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader())) && (isBTraceClass(className) || isSensitiveClass(className))) {
+        if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader())) && isSensitiveClass(className)) {
             if (isDebug()) {
                 debugPrint("skipping transform for BTrace class " + className); // NOI18N
             }
@@ -195,10 +205,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
                 BTraceRuntime.leave();
             }
         }
-    }
-
-    private static boolean isBTraceClass(String name) {
-        return ClassFilter.isBTraceClass(name);
     }
 
     /*

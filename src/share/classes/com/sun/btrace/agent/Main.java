@@ -43,13 +43,13 @@ import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.util.Messages;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.Enumeration;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.regex.Pattern;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -62,6 +62,8 @@ public final class Main {
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
     private static volatile Long fileRollMilliseconds;
+
+    private static final Pattern KV_PATTERN = Pattern.compile(",");
 
     private static final SharedSettings settings = SharedSettings.GLOBAL;
     private static final DebugSupport debug = new DebugSupport(settings);
@@ -144,6 +146,7 @@ public final class Main {
             if (is != null) {
                 Properties ps = new Properties();
                 ps.load(is);
+                StringBuilder log = new StringBuilder();
                 for (Map.Entry<Object, Object> entry : ps.entrySet()) {
                     String keyConfig = "";
                     String argKey = (String) entry.getKey();
@@ -169,13 +172,18 @@ public final class Main {
                                     } else {
                                         replace = true;
                                     }
-                                    System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
+                                    log.append("augmenting default agent argument '").append(argKey)
+                                        .append("':'").append(argMap.get(argKey)).append("' with '")
+                                        .append(argVal).append("'\n");
 
                                 }
                                 if (replace) {
-                                    System.err.println("setting default agent argument '" + argKey + "' with '" + scriptVal + "'");
+                                    log.append("setting default agent argument '").append(argKey)
+                                        .append("' with '").append(scriptVal).append("'\n");
                                 } else {
-                                    System.err.println("augmenting default agent argument '" + argKey + "':'" + argMap.get(argKey) + "' with '" + argVal + "'");
+                                    log.append("augmenting default agent argument '").append(argKey)
+                                        .append("':'").append(argMap.get(argKey)).append("' with '").append(argVal)
+                                        .append("'\n");
                                 }
 
                                 argMap.put(argKey, scriptVal);
@@ -183,17 +191,21 @@ public final class Main {
                             case "systemClassPath":
                             case "bootClassPath":
                             case "config": {
-                                System.err.println("argument '" + argKey + "' is not overridable");
+                                log.append("argument '").append(argKey).append("' is not overridable\n");
                                 break;
                             }
                             default: {
                                 if (!argMap.containsKey(argKey)) {
-                                    System.err.println("applying default agent argument '" + argKey + "'='" + argVal + "'");
+                                    log.append("applying default agent argument '").append(argKey)
+                                        .append("'='").append(argVal).append("'\n");
                                     argMap.put(argKey, argVal);
                                 }
                             }
                         }
                     }
+                }
+                if (argMap.containsKey("debug")) {
+                    DebugSupport.info(log.toString());
                 }
             }
         } catch (IOException e) {
@@ -245,7 +257,7 @@ public final class Main {
         if (args == null) {
             args = "";
         }
-        String[] pairs = args.split(",");
+        String[] pairs = KV_PATTERN.split(args);
         argMap = new HashMap<>();
         for (String s : pairs) {
             int i = s.indexOf('=');

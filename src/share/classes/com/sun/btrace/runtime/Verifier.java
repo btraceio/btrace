@@ -92,7 +92,7 @@ public class Verifier extends ClassVisitor {
                 reportSafetyError("class.should.be.public", name);
             }
 
-            if (! superName.equals(JAVA_LANG_OBJECT)) {
+            if (! superName.equals(OBJECT_INTERNAL)) {
                 reportSafetyError("object.superclass.required", superName);
             }
             if (interfaces != null && interfaces.length > 0) {
