@@ -29,6 +29,7 @@ junit*
 !/lib/btrace-asm-*.jar
 !/lib/btrace-jctools-core-*.jar
 !/lib/btrace-hppcrt-*.jar
+!/test-lib/*.jar
 CHANGELOG.md
 gradle.properties
 /.nb-gradle/
