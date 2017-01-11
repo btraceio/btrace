@@ -28,13 +28,7 @@ import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.DebugSupport;
 import com.sun.btrace.VerifierException;
 import com.sun.btrace.comm.RetransformClassNotification;
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.FieldVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
+import com.sun.btrace.org.objectweb.asm.*;
 import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
 import com.sun.btrace.org.objectweb.asm.tree.MethodNode;
 import static com.sun.btrace.runtime.Constants.INJECTED_DESC;
@@ -59,7 +53,7 @@ import static com.sun.btrace.runtime.ClassFilter.isSubTypeOf;
 public final class BTraceProbe extends ClassNode {
     private final List<OnMethod> onMethods;
     private final List<OnProbe> onProbes;
-    private boolean unsafeScript = false;
+    private boolean trustedScript = false;
     private boolean classRenamed = false;
     private final CallGraph graph;
     protected final Set<String> injectedFields;
@@ -115,7 +109,7 @@ public final class BTraceProbe extends ClassNode {
         BTraceMethodNode bmn = new BTraceMethodNode(mn, this);
         methods.add(bmn);
         idmap.put(CallGraph.methodId(name, desc), bmn);
-        return isUnsafe() ? bmn : new MethodVerifier(bmn, access, this.origName, name, desc);
+        return isTrusted() ? bmn : new MethodVerifier(bmn, access, this.origName, name, desc);
     }
 
     @Override
@@ -309,12 +303,12 @@ public final class BTraceProbe extends ClassNode {
         onProbes.add(op);
     }
 
-    void setUnsafe() {
-        unsafeScript = true;
+    void setTrusted() {
+        trustedScript = true;
     }
 
-    boolean isUnsafe() {
-        return unsafeScript;
+    boolean isTrusted() {
+        return trustedScript;
     }
 
     CallGraph getGraph() {
@@ -395,7 +389,7 @@ public final class BTraceProbe extends ClassNode {
 
     private void initialize(ClassReader cr) {
         try {
-            Verifier v = new Verifier(this, factory.getSettings().isUnsafe());
+            Verifier v = new Verifier(this, factory.getSettings().isTrusted());
             if (debug.isDebug()) {
                 debug.debug("verifying BTrace class ...");
             }
@@ -456,6 +450,6 @@ public final class BTraceProbe extends ClassNode {
 
     @Override
     public String toString() {
-        return "BTraceProbe{" + "onMethods=" + onMethods + ", onProbes=" + onProbes + ", unsafeScript=" + unsafeScript + ", classRenamed=" + classRenamed + ", injectedFields=" + injectedFields + ", className=" + className + '}';
+        return "BTraceProbe{" + "onMethods=" + onMethods + ", onProbes=" + onProbes + ", trustedScript=" + trustedScript + ", classRenamed=" + classRenamed + ", injectedFields=" + injectedFields + ", className=" + className + '}';
     }
 }

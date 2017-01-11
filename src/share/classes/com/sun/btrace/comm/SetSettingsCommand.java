@@ -33,7 +33,7 @@ import java.util.Map;
 
 /**
  * This command is used to remotely set custom settings
- * (unsafe mode, debug, etc.)
+ * (trusted mode, debug, etc.)
  *
  * @author Jaroslav Bachorik
  */

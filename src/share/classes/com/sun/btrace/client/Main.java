@@ -49,7 +49,7 @@ import com.sun.btrace.util.Messages;
 public final class Main {
     public static volatile boolean exiting;
     private static boolean DEBUG;
-    private static boolean UNSAFE;
+    private static boolean TRUSTED;
     private static  boolean DUMP_CLASSES;
     private static String OUTPUT_FILE;
     private static String DUMP_DIR;
@@ -64,8 +64,9 @@ public final class Main {
         if (isDebug()) debugPrint("btrace debug mode is set");
         TRACK_RETRANSFORM = Boolean.getBoolean("com.sun.btrace.trackRetransforms");
         if (isDebug() && TRACK_RETRANSFORM) debugPrint("trackRetransforms flag is set");
-        UNSAFE = Boolean.getBoolean("com.sun.btrace.unsafe");
-        if (isDebug() && UNSAFE) debugPrint("btrace unsafe mode is set");
+        TRUSTED = Boolean.getBoolean("com.sun.btrace.unsafe");
+        TRUSTED |= Boolean.getBoolean("com.sun.btrace.trusted");
+        if (isDebug() && TRUSTED) debugPrint("btrace trusted mode is set");
         DUMP_CLASSES = Boolean.getBoolean("com.sun.btrace.dumpClasses");
         if (isDebug() && DUMP_CLASSES) debugPrint("dumpClasses flag is set");
         DUMP_DIR = System.getProperty("com.sun.btrace.dumpDir", ".");
@@ -118,8 +119,8 @@ public final class Main {
                     }
                     portDefined = true;
                 } else if (args[count].equals("-u")) {
-                    UNSAFE = true;
-                    if (isDebug()) debugPrint("btrace unsafe mode is set");
+                    TRUSTED = true;
+                    if (isDebug()) debugPrint("btrace trusted mode is set");
                 } else if (args[count].equals("-o")) {
                     OUTPUT_FILE = args[++count];
                     if (isDebug()) debugPrint("outputFile is " + OUTPUT_FILE);
@@ -177,7 +178,7 @@ public final class Main {
 
         try {
             Client client = new Client(port, OUTPUT_FILE, PROBE_DESC_PATH,
-                DEBUG, TRACK_RETRANSFORM, UNSAFE, DUMP_CLASSES, DUMP_DIR, statsdDef);
+                DEBUG, TRACK_RETRANSFORM, TRUSTED, DUMP_CLASSES, DUMP_DIR, statsdDef);
             if (! new File(fileName).exists()) {
                 errorExit("File not found: " + fileName, 1);
             }
@@ -242,27 +243,34 @@ public final class Main {
                 public void handle(Signal sig) {
                     try {
                         con.printf("Please enter your option:\n");
-                        con.printf("\t1. exit\n\t2. send an event\n\t3. send a named event\n");
+                        con.printf("\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n");
                         con.flush();
                         String option = con.readLine();
                         option = option.trim();
                         if (option == null) {
                             return;
                         }
-                        if (option.equals("1")) {
-                            System.exit(0);
-                        } else if (option.equals("2")) {
-                            if (isDebug()) debugPrint("sending event command");
-                            client.sendEvent();
-                        } else if (option.equals("3")) {
-                            con.printf("Please enter the event name: ");
-                            String name = con.readLine();
-                            if (name != null) {
+                        switch (option) {
+                            case "1":
+                                System.exit(0);
+                            case "2":
                                 if (isDebug()) debugPrint("sending event command");
-                                client.sendEvent(name);
-                            }
-                        } else {
-                            con.printf("invalid option!\n");
+                                client.sendEvent();
+                                break;
+                            case "3":
+                                con.printf("Please enter the event name: ");
+                                String name = con.readLine();
+                                if (name != null) {
+                                    if (isDebug()) debugPrint("sending event command");
+                                    client.sendEvent(name);
+                                }
+                                break;
+                            case "4":
+                                out.flush();
+                                break;
+                            default:
+                                con.printf("invalid option!\n");
+                                break;
                         }
                     } catch (IOException ioexp) {
                         if (isDebug()) debugPrint(ioexp.toString());
@@ -281,7 +289,7 @@ public final class Main {
     }
 
     private static boolean isUnsafe() {
-        return UNSAFE;
+        return TRUSTED;
     }
 
     private static void debugPrint(String msg) {

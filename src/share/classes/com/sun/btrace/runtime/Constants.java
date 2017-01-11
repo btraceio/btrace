@@ -49,38 +49,41 @@ public abstract class Constants {
     public static final String BTRACE_METHOD_PREFIX =
         "$btrace$";
 
-    public static final String JAVA_LANG_OBJECT =
-        Type.getInternalName(Object.class);
-    public static final String JAVA_LANG_THROWABLE =
-        Type.getInternalName(Throwable.class);
     public static final String CONSTRUCTOR = "<init>";
     public static final String CLASS_INITIALIZER = "<clinit>";
 
-    public static final Type VOIDREF_TYPE = Type.getType(Void.class);
+    public static final Type VOIDREF_TYPE = Type.getType("Ljava/lang/Void;");
 
-    public static final Type OBJECT_TYPE = Type.getType(Object.class);
-    public static final String OBJECT_DESC = OBJECT_TYPE.getDescriptor();
+    public static final String OBJECT_INTERNAL = "java/lang/Object";
+    public static final String OBJECT_DESC = "L" + OBJECT_INTERNAL + ";";
+    public static final Type OBJECT_TYPE = Type.getType(OBJECT_DESC);
 
-    public static final Type ANYTYPE_TYPE = Type.getType(AnyType.class);
-    public static final String ANYTYPE = ANYTYPE_TYPE.getInternalName();
-    public static final String ANYTYPE_DESC = ANYTYPE_TYPE.getDescriptor();
+    public static final String ANYTYPE_INTERNAL = "com/sun/btrace/AnyType";
+    public static final String ANYTYPE_DESC = "L" + ANYTYPE_INTERNAL + ";";
+    public static final Type ANYTYPE_TYPE = Type.getType(ANYTYPE_DESC);
 
-    public static final Type STRING_TYPE = Type.getType(String.class);
+    public static final String CLASS_DESC = "Ljava/lang/Class;";
+    public static final Type CLASS_TYPE = Type.getType(CLASS_DESC);
 
-    public static final Type CLASS_TYPE = Type.getType(Class.class);
+    public static final String STRING_INTERNAL = "java/lang/String";
+    public static final String STRING_DESC = "L" + STRING_INTERNAL + ";";
+    public static final Type STRING_TYPE = Type.getType(STRING_DESC);
 
-    public static final String INT_DESC = Type.INT_TYPE.getDescriptor();
+    public static final String VOID_DESC = "V";
+    public static final String BOOLEAN_DESC = "Z";
+    public static final String INT_DESC = "I";
 
-    public static final Type THROWABLE_TYPE = Type.getType(Throwable.class);
-    public static final String THROWABLE_INTERNAL = THROWABLE_TYPE.getInternalName();
+    public static final String THROWABLE_INTERNAL = "java/lang/Throwable";
+    public static final String THROWABLE_DESC = "L" + THROWABLE_INTERNAL + ";";
+    public static final Type THROWABLE_TYPE = Type.getType(THROWABLE_DESC);
 
-    public static final Type BTRACERT_TYPE = Type.getType(BTraceRuntime.class);
-    public static final String BTRACERT_INTERNAL = BTRACERT_TYPE.getInternalName();
-    public static final String BTRACERT_DESC = BTRACERT_TYPE.getDescriptor();
+    public static final String BTRACERT_INTERNAL = "com/sun/btrace/BTraceRuntime";
+    public static final String BTRACERT_DESC = "L" + BTRACERT_INTERNAL + ";";
+    public static final Type BTRACERT_TYPE = Type.getType(BTRACERT_DESC);
 
+    public static final String THREAD_LOCAL_INTERNAL = "java/lang/ThreadLocal";
+    public static final String THREAD_LOCAL_DESC = "L" + THREAD_LOCAL_INTERNAL + ";";
     public static final Type THREAD_LOCAL_TYPE = Type.getType(ThreadLocal.class);
-    public static final String THREAD_LOCAL_DESC = THREAD_LOCAL_TYPE.getDescriptor();
-    public static final String THREAD_LOCAL_INTERNAL = THREAD_LOCAL_TYPE.getInternalName();
 
     // BTrace specific stuff
     public static final String BTRACE_UTILS =
@@ -159,30 +162,27 @@ public abstract class Constants {
     public static final String JAVA_LANG_THREAD_LOCAL_SET = "set";
     public static final String JAVA_LANG_THREAD_LOCAL_SET_DESC = "(Ljava/lang/Object;)V";
 
-    public static final String JAVA_LANG_STRING = STRING_TYPE.getInternalName();
-    public static final String JAVA_LANG_STRING_DESC = STRING_TYPE.getDescriptor();
 
-    public static final String JAVA_LANG_NUMBER =
-        Type.getInternalName(Number.class);
-    public static final String JAVA_LANG_BOOLEAN =
-        Type.getInternalName(Boolean.class);
-    public static final String JAVA_LANG_CHARACTER =
-        Type.getInternalName(Character.class);
-    public static final String JAVA_LANG_BYTE =
-        Type.getInternalName(Byte.class);
-    public static final String JAVA_LANG_SHORT =
-        Type.getInternalName(Short.class);
-    public static final String JAVA_LANG_INTEGER =
-        Type.getInternalName(Integer.class);
-    public static final String JAVA_LANG_LONG =
-        Type.getInternalName(Long.class);
-    public static final String JAVA_LANG_FLOAT =
-        Type.getInternalName(Float.class);
-    public static final String JAVA_LANG_DOUBLE =
-        Type.getInternalName(Double.class);
+    public static final String NUMBER_INTERNAL = "java/lang/Number";
+    public static final String INTEGER_BOXED_INTERNAL = "java/lang/Integer";
+    public static final String INTEGER_BOXED_DESC = "L" + INTEGER_BOXED_INTERNAL + ";";
+    public static final String SHORT_BOXED_INTERNAL = "java/lang/Short";
+    public static final String SHORT_BOXED_DESC = "L" + SHORT_BOXED_INTERNAL + ";";
+    public static final String LONG_BOXED_INTERNAL = "java/lang/Long";
+    public static final String LONG_BOXED_DESC = "L" + LONG_BOXED_INTERNAL + ";";
+    public static final String FLOAT_BOXED_INTERNAL = "java/lang/Float";
+    public static final String FLOAT_BOXED_DESC = "L" + FLOAT_BOXED_INTERNAL + ";";
+    public static final String DOUBLE_BOXED_INTERNAL = "java/lang/Double";
+    public static final String DOUBLE_BOXED_DESC = "L" + DOUBLE_BOXED_INTERNAL + ";";
+    public static final String BYTE_BOXED_INTERNAL = "java/lang/Byte";
+    public static final String BYTE_BOXED_DESC = "L" + BYTE_BOXED_INTERNAL + ";";
+    public static final String BOOLEAN_BOXED_INTERNAL = "java/lang/Boolean";
+    public static final String BOOLEAN_BOXED_DESC = "L" + BOOLEAN_BOXED_INTERNAL + ";";
+    public static final String CHARACTER_BOXED_INTERNAL = "java/lang/Character";
+    public static final String CHARACTER_BOXED_DESC = "L" + CHARACTER_BOXED_INTERNAL + ";";
 
     public static final String BOX_VALUEOF = "valueOf";
-    public static final String BOX_BOOLEAN_DESC = "(Z)Ljava/lang/Boolean;";
+    public static final String BOX_BOOLEAN_DESC = "(" + BOOLEAN_DESC + ")" + BOOLEAN_BOXED_DESC;
     public static final String BOX_CHARACTER_DESC = "(C)Ljava/lang/Character;";
     public static final String BOX_BYTE_DESC = "(B)Ljava/lang/Byte;";
     public static final String BOX_SHORT_DESC = "(S)Ljava/lang/Short;";

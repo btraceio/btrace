@@ -111,8 +111,8 @@ public class Client {
     private final boolean debug;
     // do we need to track retransforming single classes? (will impose additional overhead)
     private final boolean trackRetransforms;
-    // are we running in unsafe mode?
-    private final boolean unsafe;
+    // are we running in trusted mode?
+    private final boolean trusted;
     // are we dumping .class files of
     // the instrumented classes?
     private final boolean dumpClasses;
@@ -136,13 +136,13 @@ public class Client {
 
     public Client(int port, String outputFile, String probeDescPath,
             boolean debug, boolean trackRetransforms,
-            boolean unsafe, boolean dumpClasses,
+            boolean trusted, boolean dumpClasses,
             String dumpDir, String statsdDef) {
         this.port = port;
         this.outputFile = outputFile;
         this.probeDescPath = probeDescPath;
         this.debug = debug;
-        this.unsafe = unsafe;
+        this.trusted = trusted;
         this.dumpClasses = dumpClasses;
         this.dumpDir = dumpDir;
         this.trackRetransforms = trackRetransforms;
@@ -293,8 +293,8 @@ public class Client {
             if (debug) {
                 agentArgs += ",debug=true";
             }
-            if (unsafe) {
-                agentArgs += ",unsafe=true";
+            if (trusted) {
+                agentArgs += ",trusted=true";
             }
             if (dumpClasses) {
                 agentArgs += ",dumpClasses=true";
@@ -372,7 +372,7 @@ public class Client {
             settings.put(SharedSettings.DEBUG_KEY, debug);
             settings.put(SharedSettings.DUMP_DIR_KEY, dumpClasses ? dumpDir : "");
             settings.put(SharedSettings.TRACK_RETRANSFORMS_KEY, trackRetransforms);
-            settings.put(SharedSettings.UNSAFE_KEY, unsafe);
+            settings.put(SharedSettings.TRUSTED_KEY, trusted);
             settings.put(SharedSettings.PROBE_DESC_PATH_KEY, probeDescPath);
             settings.put(SharedSettings.OUTPUT_FILE_KEY, outputFile);
 

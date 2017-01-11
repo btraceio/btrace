@@ -55,6 +55,7 @@ import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.lang.management.ManagementFactory;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -62,6 +63,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
 
@@ -182,14 +185,45 @@ abstract class Client implements CommandListener {
             fName = fName
                         .replace("${client}", clientName != null ? clientName : "")
                         .replace("${ts}", String.valueOf(System.currentTimeMillis()))
+                        .replace("${pid}", pid())
                         .replace("${agent}", agentName != null ? "." + agentName : "")
                         .replace("[default]", "");
 
+            fName = replaceSysProps(fName);
             if (dflt && settings.isDebug()) {
                 debugPrint("scriptOutputFile not specified. defaulting to " + fName);
             }
         }
         return fName;
+    }
+
+    private static final Pattern SYSPROP_PTN = Pattern.compile("\\$\\{(.+?)\\}");
+
+    private String replaceSysProps(String str) {
+        int replaced = 0;
+        do {
+            StringBuffer sb = new StringBuffer();
+            replaced = replaceSysProps(str, sb);
+            str = sb.toString();
+        } while (replaced > 0);
+        return str;
+    }
+
+    private int replaceSysProps(String str, StringBuffer sb) {
+        int cnt = 0;
+        Matcher m = SYSPROP_PTN.matcher(str);
+        while (m.find()) {
+            String key = m.group(1);
+            String val = System.getProperty(key);
+            if (val != null) {
+                cnt++;
+                m.appendReplacement(sb, val);
+            } else {
+                m.appendReplacement(sb, m.group(0));
+            }
+        }
+        m.appendTail(sb);
+        return cnt;
     }
 
     protected synchronized void onExit(int exitCode) {
@@ -331,7 +365,7 @@ abstract class Client implements CommandListener {
         if (c.isInterface() || c.isPrimitive() || c.isArray()) {
             return false;
         }
-        if (ClassFilter.isBTraceClass(cname) || ClassFilter.isSensitiveClass(cname)) {
+        if (ClassFilter.isSensitiveClass(cname)) {
             return false;
         } else {
             return probe.willInstrument(c);
@@ -377,48 +411,65 @@ abstract class Client implements CommandListener {
     private static PerfReader createPerfReaderImpl() {
         // see if we can access any jvmstat class
         try {
-            Class.forName("sun.jvmstat.monitor.MonitoredHost");
-            return (PerfReader) Class.forName("com.sun.btrace.agent.PerfReaderImpl").newInstance();
+            if (Client.class.getResource("sun/jvmstat/monitor/MonitoredHost.class") != null) {
+                return (PerfReader) Class.forName("com.sun.btrace.agent.PerfReaderImpl").newInstance();
+            }
         } catch (Exception exp) {
-            // no luck, create null implementation
-            return new NullPerfReaderImpl();
+            // can happen if jvmstat is not available
         }
+        // no luck, create null implementation
+        return new NullPerfReaderImpl();
     }
 
     void retransformLoaded() throws UnmodifiableClassException {
-        if (probe.isTransforming() && settings.isRetransformStartup()) {
-            ArrayList<Class> list = new ArrayList<>();
-            debugPrint("retransforming loaded classes");
-            debugPrint("filtering loaded classes");
-            ClassCache cc = ClassCache.getInstance();
-            for (Class c : inst.getAllLoadedClasses()) {
-                if (c != null) {
-                    cc.get(c);
-                    if (inst.isModifiableClass(c) &&  isCandidate(c)) {
-                        debugPrint("candidate " + c + " added");
-                        list.add(c);
-                    }
-                }
-            }
-            list.trimToSize();
-            int size = list.size();
-            if (size > 0) {
-                Class[] classes = new Class[size];
-                list.toArray(classes);
-                startRetransformClasses(size);
-                if (isDebug()) {
-                    for(Class c : classes) {
-                        try {
-                            inst.retransformClasses(c);
-                        } catch (VerifyError e) {
-                            debugPrint("verification error: " + c.getName());
+        if (runtime != null) {
+            if (probe.isTransforming() && settings.isRetransformStartup()) {
+                ArrayList<Class> list = new ArrayList<>();
+                debugPrint("retransforming loaded classes");
+                debugPrint("filtering loaded classes");
+                ClassCache cc = ClassCache.getInstance();
+                for (Class c : inst.getAllLoadedClasses()) {
+                    if (c != null) {
+                        cc.get(c);
+                        if (inst.isModifiableClass(c) &&  isCandidate(c)) {
+                            debugPrint("candidate " + c + " added");
+                            list.add(c);
                         }
                     }
-                } else {
-                    inst.retransformClasses(classes);
+                }
+                list.trimToSize();
+                int size = list.size();
+                if (size > 0) {
+                    Class[] classes = new Class[size];
+                    list.toArray(classes);
+                    startRetransformClasses(size);
+                    if (isDebug()) {
+                        for(Class c : classes) {
+                            try {
+                                debugPrint("Attempting to retransform class: " + c.getName());
+                                inst.retransformClasses(c);
+                            } catch (VerifyError e) {
+                                debugPrint("verification error: " + c.getName());
+                            }
+                        }
+                    } else {
+                        inst.retransformClasses(classes);
+                    }
                 }
             }
+            runtime.send(new OkayCommand());
         }
-        runtime.send(new OkayCommand());
+    }
+
+    private static String pid() {
+        String pName = ManagementFactory.getRuntimeMXBean().getName();
+        if (pName != null && pName.length() > 0) {
+            String[] parts = pName.split("@");
+            if (parts.length == 2) {
+                return parts[0];
+            }
+        }
+
+        return "-1";
     }
 }

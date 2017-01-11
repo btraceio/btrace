@@ -34,6 +34,7 @@ public class BTRACE106 {
         System.out.println("A Method");
     }
 
+    @Deprecated
     private void bMethod() {
         System.out.println("B Method");
     }

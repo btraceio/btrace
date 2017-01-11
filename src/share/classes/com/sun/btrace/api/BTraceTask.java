@@ -155,16 +155,24 @@ public abstract class BTraceTask {
     abstract public void setScript(String newValue);
 
     /**
-     * 
+     *
      * @return Returns the complete classpath for the task
      */
     abstract public String getClassPath();
 
     /**
      * Checks whether the task requires to be run in BTrace <b>Unsafe</b> mode
+     * @deprecated Use {@linkplain BTraceTask#isTrusted() } instead
      * @return Returns true if the BTrace task requires to be run in BTrace <b>Unsafe</b> mode
      */
-    abstract public boolean isUnsafe();
+    @Deprecated
+    public boolean isUnsafe() {
+        return false;
+    };
+
+    public boolean isTrusted() {
+        return isUnsafe();
+    }
 
     /**
      * Sends a named event to the script server side

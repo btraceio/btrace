@@ -72,10 +72,10 @@ class Quantize implements AggregationValue {
      * @param the
      *            value for which to calculate the log, must be positive
      */
-    private static int logBase2(long value) {
+    static int logBase2(long value) {
         int pos = 0;
-        for (int off = ZERO_INDEX; off > 0; off >>= 1) {
-            if (value >= 1 << off) {
+        for (int off = (ZERO_INDEX >> 1); off > 0; off >>= 1) {
+            if (value >= 1L << off) {
                 value >>= off;
                 pos += off;
             }

@@ -135,7 +135,9 @@ public final class BTraceRuntime  {
        private BTraceRuntime rt = null;
 
         boolean set(BTraceRuntime other) {
-            if (rt != null && other != null) return false;
+            if (rt != null && other != null) {
+                return false;
+            }
             rt = other;
             return true;
         }

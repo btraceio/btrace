@@ -58,7 +58,7 @@ public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
         visitLabel(end);
-        visitTryCatchBlock(start, end, end, JAVA_LANG_THROWABLE);
+        visitTryCatchBlock(start, end, end, THROWABLE_INTERNAL);
         onErrorReturn();
         visitInsn(ATHROW);
         super.visitMaxs(maxStack, maxLocals);
