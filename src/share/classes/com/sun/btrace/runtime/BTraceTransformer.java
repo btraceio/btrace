@@ -26,8 +26,6 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.DebugSupport;
-import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
-import com.sun.btrace.com.carrotsearch.hppcrt.cursors.ObjectCursor;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;

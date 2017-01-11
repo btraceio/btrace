@@ -26,8 +26,8 @@
 
 package com.sun.btrace.util;
 
-import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
-import com.sun.btrace.com.carrotsearch.hppcrt.maps.ObjectIntHashMap;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Jaroslav Bachorik
  */
 public class MethodID {
-    private static final ObjectIntMap<String> methodIds = new ObjectIntHashMap<>();
+    private static final Map<String, Integer> methodIds = new HashMap<>();
     static final AtomicInteger lastMehodId = new AtomicInteger(1);
 
     /**

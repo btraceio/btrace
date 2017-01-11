@@ -40,14 +40,14 @@ import com.sun.btrace.annotations.OnError;
 import com.sun.btrace.annotations.OnExit;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Sampled;
-import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
-import com.sun.btrace.com.carrotsearch.hppcrt.maps.ObjectIntHashMap;
 import com.sun.btrace.util.Messages;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.tree.JCTree;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -284,13 +284,18 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                     }
                 }
 
-                final ObjectIntMap<String> annotationHisto = new ObjectIntHashMap<>();
+                final Map<String, Integer> annotationHisto = new HashMap<>();
                 for(VariableTree vt : node.getParameters()) {
                     vt.accept(new TreeScanner<Void, Void>() {
                         @Override
                         public Void visitAnnotation(AnnotationTree at, Void p) {
                             String annType = at.getAnnotationType().toString();
-                            annotationHisto.putOrAdd(annType, 0, 1);
+                            Integer i = annotationHisto.get(annType);
+                            if (i == null) {
+                                annotationHisto.put(annType, 0);
+                            } else {
+                                annotationHisto.put(annType, i + 1);
+                            }
                             return super.visitAnnotation(at, p);
                         }
                     }, null);
