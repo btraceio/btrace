@@ -12,23 +12,3 @@ zap org.jctools.queues.atomic.**
 zap org.jctools.queues.Spmc**
 zap org.jctools.queues.Spsc**
 zap org.jctools.queues.MpscLinkedQueue**
-
-# hpcc subset
-rule com.carrotsearch.** com.sun.btrace.@0
-keep com.carrotsearch.hppcrt.IntObjectMap
-keep com.carrotsearch.hppcrt.ObjectIntMap
-keep com.carrotsearch.hppcrt.IntObjectAssociativeContainer
-keep com.carrotsearch.hppcrt.IntObjectCursor
-keep com.carrotsearch.hppcrt.ObjectIntAssociativeContainer
-keep com.carrotsearch.hppcrt.ObjectIntCursor
-keep com.carrotsearch.hppcrt.cursors.IntCursor
-keep com.carrotsearch.hppcrt.cursors.ObjectCursor
-keep com.carrotsearch.hppcrt.maps.IntObjectHashMap
-keep com.carrotsearch.hppcrt.predicates.IntObjectPredicate
-keep com.carrotsearch.hppcrt.predicates.IntPredicate
-keep com.carrotsearch.hppcrt.predicates.ObjectPredicate
-keep com.carrotsearch.hppcrt.procedures.IntObjectProcedure
-keep com.carrotsearch.hppcrt.procedures.IntProcedure
-keep com.carrotsearch.hppcrt.procedures.ObjectProcedure
-keep com.carrotsearch.hppcrt.maps.ObjectIntHashMap
-keep com.carrotsearch.hppcrt.maps.IntObjectHashMap

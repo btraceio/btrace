@@ -27,8 +27,6 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.annotations.Return;
-import com.sun.btrace.com.carrotsearch.hppcrt.ObjectIntMap;
-import com.sun.btrace.com.carrotsearch.hppcrt.maps.ObjectIntHashMap;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
@@ -187,7 +185,7 @@ final class Preprocessor {
     private final Set<String> tlsFldNames = new HashSet<>();
     private final Set<String> exportFldNames = new HashSet<>();
     private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
-    private final ObjectIntMap<String> serviceLocals = new ObjectIntHashMap<>();
+    private final Map<String, Integer> serviceLocals = new HashMap<>();
 
     public void process(ClassNode cn) {
         addLevelField(cn);

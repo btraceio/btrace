@@ -1,7 +1,7 @@
 This directory contains 3rd party libraries: btrace-asm-5.0.4.jar and
 btrace-jctools-core-1.2.jar.
 
-These files were generated from "asm-all-5.0.4.jar" and "jctools-core-1.2.jar"
+These files were generated from "asm-all-5.2.jar" and "jctools-core-2.0.1.jar"
 files respectively using the "JarJar" tool (please see
 http://code.google.com/p/jarjar/) using the following rules:
 

@@ -26,8 +26,6 @@
 package com.sun.btrace.runtime.instr;
 
 import com.sun.btrace.annotations.Where;
-import com.sun.btrace.com.carrotsearch.hppcrt.IntObjectMap;
-import com.sun.btrace.com.carrotsearch.hppcrt.maps.IntObjectHashMap;
 import com.sun.btrace.org.objectweb.asm.Label;
 import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
@@ -43,6 +41,8 @@ import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.Interval;
 import com.sun.btrace.util.LocalVariableHelper;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Base class for all out method instrumenting classes.
@@ -243,7 +243,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     private final String desc;
     private Type returnType;
     private Type[] argumentTypes;
-    private IntObjectMap<Type> extraTypes;
+    private Map<Integer, Type> extraTypes;
     private Label skipLabel;
     private boolean prologueVisited = false;
 
@@ -264,7 +264,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         this.desc = desc;
         this.returnType = Type.getReturnType(desc);
         this.argumentTypes = Type.getArgumentTypes(desc);
-        extraTypes = new IntObjectHashMap<>();
+        extraTypes = new HashMap<>();
         this.lvt = lvt;
         if (lvt instanceof MethodInstrumentor) {
             ((MethodInstrumentor)lvt).parent = this;

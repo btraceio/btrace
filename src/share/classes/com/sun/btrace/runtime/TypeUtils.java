@@ -312,10 +312,17 @@ public final class TypeUtils {
     }
 
     public static String descriptorToSimplified(String desc, String owner, String name) {
-        Type retType = Type.getReturnType(desc);
-        Type[] args = desc.contains("(") ? Type.getArgumentTypes(desc) : new Type[0];
+        String retTypeDesc = null;
+        Type[] args = null;
+        if (desc.contains("(")) {
+            retTypeDesc = Type.getReturnType(desc).getDescriptor();
+            args = Type.getArgumentTypes(desc);
+        } else {
+            retTypeDesc = isPrimitive(desc) ? desc : Type.getType(desc).getDescriptor();
+            args = new Type[0];
+        }
         StringBuilder sb = new StringBuilder();
-        sb.append(getJavaType(retType.getDescriptor())).append(' ')
+        sb.append(getJavaType(retTypeDesc)).append(' ')
           .append(owner.replace('/', '.')).append('#').append(name);
         if (args.length > 0) {
             sb.append("(");
@@ -335,7 +342,7 @@ public final class TypeUtils {
 
     public static String getJavaType(String desc) {
         int arrIndex = desc.lastIndexOf("[") + 1;
-        desc = desc.substring(arrIndex);
+        desc = arrIndex > 0 ? desc.substring(arrIndex) : desc;
         if (desc.startsWith("L")) {
             desc = desc.substring(1, desc.length() - 1).replace('/', '.');
         } else {
