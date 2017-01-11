@@ -113,7 +113,8 @@ def props = System.getProperties()
 def osFamily = props['os.family']
 def osName = props['os.name']
 
-def asmVersion = '5.0.4'
+def asmVersion = '5.2'
+def jcToolsVersion = '2.0.1'
 def junitVersion = '4.6'
 
 def agentExcludes = ['**/dtrace/*', '**/btrace/*.class', '**/asm/signature/**', \
@@ -203,8 +204,7 @@ task unjar(type: Copy) {
 
     from([
             zipTree("lib/btrace-asm-${asmVersion}.jar"),
-            zipTree("lib/btrace-jctools-core-1.2.jar"),
-            zipTree("lib/btrace-hppcrt-0.7.4.jar")
+            zipTree("lib/btrace-jctools-core-${jcToolsVersion}.jar")
         ])
     into compileJava.destinationDir
 }
@@ -402,8 +402,7 @@ test {
 
 dependencies {
     compile files("lib/btrace-asm-${asmVersion}.jar",
-                  "lib/btrace-jctools-core-1.2.jar",
-                  "lib/btrace-hppcrt-0.7.4.jar",
+                  "lib/btrace-jctools-core-${jcToolsVersion}.jar",
                   "${javaHome}/lib/tools.jar",  // ATTENTION: build.xml uses "${javaHome}/../lib/tools.jar"
         files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs()),
               "/usr/share/lib/java/dtrace.jar")
