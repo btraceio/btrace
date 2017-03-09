@@ -28,7 +28,6 @@ package com.sun.btrace.runtime;
 import com.sun.btrace.runtime.instr.LineNumberInstrumentor;
 import com.sun.btrace.runtime.instr.MethodReturnInstrumentor;
 import com.sun.btrace.runtime.instr.SynchronizedInstrumentor;
-import com.sun.btrace.runtime.instr.SynchronizedInstrumentor_exit;
 import com.sun.btrace.runtime.instr.MethodCallInstrumentor;
 import com.sun.btrace.runtime.instr.CatchInstrumentor;
 import com.sun.btrace.runtime.instr.ErrorReturnInstrumentor;
@@ -1531,7 +1530,7 @@ public class Instrumentor extends ClassVisitor {
 
             case SYNC_EXIT:
                 // <editor-fold defaultstate="collapsed" desc="SyncExit Instrumentor">
-                return new SynchronizedInstrumentor_exit(mv, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(mv, className, superName, access, name, desc) {
                     int storedObjIdx = -1;
 
                     @Override
