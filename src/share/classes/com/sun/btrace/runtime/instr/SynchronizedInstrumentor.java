@@ -74,6 +74,18 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
         } else if (opcode == MONITOREXIT) {
             onBeforeSyncExit();
         }
+        switch (opcode) {
+		case IRETURN:
+		case ARETURN:
+		case FRETURN:
+		case LRETURN:
+		case DRETURN:
+		case RETURN:
+			onMethodReturn(opcode);
+			break;
+		default:
+			break;
+		}
         super.visitInsn(opcode);
         if (opcode == MONITORENTER) {
             onAfterSyncEntry();
