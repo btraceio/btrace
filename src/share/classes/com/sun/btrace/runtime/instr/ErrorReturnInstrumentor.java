@@ -40,7 +40,7 @@ import com.sun.btrace.util.LocalVariableHelper;
  *
  * @author A. Sundararajan
  */
-public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
+public class ErrorReturnInstrumentor extends MethodReturnInstrumentor {
     private final Label start = new Label();
     private final Label end = new Label();
 
@@ -66,6 +66,9 @@ public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
 
     @Override
     protected void onMethodEntry() {}
+    
+    @Override
+	protected void onMethodReturn(int opcode) {}
 
     protected void onErrorReturn() {
         asm.println("error return from " + getName() + getDescriptor());
