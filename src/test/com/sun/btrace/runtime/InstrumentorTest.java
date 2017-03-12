@@ -1344,7 +1344,6 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "L2\n" +
             "L3\n" +
             "LINENUMBER 144 L3\n" +
-            "RETURN\n" +
             "L4\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0\n" +
             "MAXSTACK = 7\n" +
@@ -1439,7 +1438,6 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "L1\n" +
             "L2\n" +
             "LINENUMBER 144 L2\n" +
-            "RETURN\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "MAXSTACK = 7\n" +
@@ -1533,7 +1531,6 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldSetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
             "L2\n" +
             "LINENUMBER 144 L2\n" +
-            "RETURN\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "MAXSTACK = 5\n" +
