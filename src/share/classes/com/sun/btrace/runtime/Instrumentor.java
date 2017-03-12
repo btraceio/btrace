@@ -125,7 +125,7 @@ public class Instrumentor extends ClassVisitor {
             } else {
                 String methodName = om.getMethod();
                 boolean regexMatch = om.isMethodRegexMatcher();
-                if (methodName.equals("")) {
+                if (methodName.isEmpty()) {
                     methodName = ".*"; // match all the methods
                     regexMatch = true;
                 }
@@ -615,7 +615,7 @@ public class Instrumentor extends ClassVisitor {
                                     Label l = levelCheckAfter(om, bcn.name);
 
                                     String method = getMethodOrFieldName(om.isTargetMethodOrFieldFqn(), opcode, cOwner, cName, cDesc);;
-                                    boolean withReturn = om.getReturnParameter() != -1 && returnType != Type.VOID_TYPE;
+                                    boolean withReturn = om.getReturnParameter() != -1 && !returnType.equals(Type.VOID_TYPE);
                                     if (withReturn) {
                                         // store the return value to a local variable
                                         int index = storeNewLocal(returnType);
@@ -1352,7 +1352,7 @@ public class Instrumentor extends ClassVisitor {
                             Type probeRetType = getReturnType();
                             if (om.getReturnParameter() != -1) {
                                 Type retType = Type.getArgumentTypes(om.getTargetDescriptor())[om.getReturnParameter()];
-                                if (probeRetType == Type.VOID_TYPE) {
+                                if (probeRetType.equals(Type.VOID_TYPE)) {
                                     if (TypeUtils.isAnyType(retType)) {
                                         // no return value but still tracking
                                         // let's push a synthetic AnyType value on stack
@@ -1532,51 +1532,88 @@ public class Instrumentor extends ClassVisitor {
                 // <editor-fold defaultstate="collapsed" desc="SyncExit Instrumentor">
                 return new SynchronizedInstrumentor(mv, className, superName, access, name, desc) {
                     int storedObjIdx = -1;
+                    ValidationResult vr;
+
+                    {
+                        addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                        addExtraTypeInfo(om.getTargetInstanceParameter(), OBJECT_TYPE);
+                        vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+                    }
 
                     @Override
                     protected void onBeforeSyncExit() {
-                        addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        MethodInstrumentor.ValidationResult vr = validateArguments(om, actionArgTypes, new Type[]{OBJECT_TYPE});
-                        if (vr.isValid()) {
-                            Label l = levelCheckBefore(om, bcn.name);
-                            if (!vr.isAny()) {
+                        if (!vr.isValid()) {
+                            return;
+                        }
+                        Label l = levelCheckBefore(om, bcn.name);
+
+                        if (om.getTargetInstanceParameter() != -1) {
+                            if (isSyncMethod) {
+                                if (!isStatic) {
+                                    storedObjIdx = 0;
+                                } else {
+                                    asm.ldc(Type.getObjectType(className));
+                                    storedObjIdx = storeNewLocal(OBJECT_TYPE);
+                                }
+                            } else {
                                 asm.dup();
                                 storedObjIdx = storeNewLocal(OBJECT_TYPE);
                             }
+                        }
+                        if (where == Where.BEFORE) {
+                            ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 4];
+                            int ptr = isStatic() ? 0 : 1;
+                            for(int i = 0; i < vr.getArgCnt(); i++) {
+                                int index = vr.getArgIdx(i);
+                                Type t = actionArgTypes[index];
+                                if (TypeUtils.isAnyTypeArray(t)) {
+                                    actionArgs[i] = anytypeArg(i, ptr);
+                                    ptr++;
+                                } else {
+                                    actionArgs[i] = localVarArg(index, t, ptr);
+                                    ptr += actionArgTypes[index].getSize();
+                                }
+                            }
+                            actionArgs[actionArgTypes.length] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
+                            actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace("/", "."));
+                            actionArgs[actionArgTypes.length + 2] = localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, storedObjIdx);
+                            actionArgs[actionArgTypes.length + 3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
 
-                            if (where == Where.BEFORE) {
-                                loadArguments(
-                                    localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
-                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
-                                invokeBTraceAction(asm, om);
-                            }
-                            if (l != null) {
-                                mv.visitLabel(l);
-                            }
+                            loadArguments(actionArgs);
+                            invokeBTraceAction(asm, om);
+                        }
+                        if (l != null) {
+                            mv.visitLabel(l);
                         }
                     }
 
 
                     @Override
                     protected void onAfterSyncExit() {
+                        if (!vr.isValid()) {
+                            return;
+                        }
                         if (where == Where.AFTER) {
-                            addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                            MethodInstrumentor.ValidationResult vr = validateArguments(om, actionArgTypes, new Type[]{OBJECT_TYPE});
-                            if (vr.isValid()) {
-                                Label l = levelCheckAfter(om, bcn.name);
-
-                                loadArguments(
-                                    localVarArg(vr.getArgIdx(0), OBJECT_TYPE, storedObjIdx),
-                                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
-                                invokeBTraceAction(asm, om);
-                                if (l != null) {
-                                    mv.visitLabel(l);
+                            ArgumentProvider[] actionArgs = new ArgumentProvider[actionArgTypes.length + 4];
+                            int ptr = isStatic() ? 0 : 1;
+                            for(int i = 0; i < vr.getArgCnt(); i++) {
+                                int index = vr.getArgIdx(i);
+                                Type t = actionArgTypes[index];
+                                if (TypeUtils.isAnyTypeArray(t)) {
+                                    actionArgs[i] = anytypeArg(i, ptr);
+                                    ptr++;
+                                } else {
+                                    actionArgs[i] = localVarArg(index, t, ptr);
+                                    ptr += actionArgTypes[index].getSize();
                                 }
                             }
+                            actionArgs[actionArgTypes.length] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
+                            actionArgs[actionArgTypes.length + 1] = constArg(om.getClassNameParameter(), className.replace("/", "."));
+                            actionArgs[actionArgTypes.length + 2] = localVarArg(om.getTargetInstanceParameter(), OBJECT_TYPE, storedObjIdx);
+                            actionArgs[actionArgTypes.length + 3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
+
+                            loadArguments(actionArgs);
+                            invokeBTraceAction(asm, om);
                         }
                     }
 

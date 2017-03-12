@@ -39,7 +39,7 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class SyncEntry {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="sync",
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="/sync.*/",
               location=@Location(value=Kind.SYNC_ENTRY))
     public static void args(@Self Object self, @ProbeMethodName String pmn, Object lock) {
         println("args");
