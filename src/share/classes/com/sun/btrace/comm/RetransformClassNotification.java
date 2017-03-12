@@ -47,10 +47,12 @@ public class RetransformClassNotification extends Command implements PrintableCo
         super(RETRANSFORM_CLASS);
     }
 
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeObject(className);
     }
 
+    @Override
     protected void read(ObjectInput in)
         throws IOException, ClassNotFoundException {
         className = (String)in.readObject();

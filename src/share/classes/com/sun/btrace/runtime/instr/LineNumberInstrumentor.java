@@ -45,6 +45,7 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitLineNumber(int line, Label start) {
         if (lastLine != 0) {
             onAfterLine(line - 1);

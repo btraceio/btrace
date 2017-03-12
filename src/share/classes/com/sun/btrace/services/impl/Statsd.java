@@ -83,6 +83,7 @@ final public class Statsd extends SimpleService {
         return Singleton.INSTANCE;
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private Statsd() {
         e.submit(new Runnable() {
             @Override

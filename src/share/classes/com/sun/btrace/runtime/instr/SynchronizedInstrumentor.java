@@ -38,8 +38,8 @@ import com.sun.btrace.util.LocalVariableHelper;
  */
 public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
 
-    private final boolean isStatic;
-    private final boolean isSyncMethod;
+    protected final boolean isStatic;
+    protected final boolean isSyncMethod;
 
     public SynchronizedInstrumentor(
             LocalVariableHelper mv, String parentClz, String superClz, int access, String name, String desc) {
@@ -68,6 +68,7 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
         }
     }
 
+    @Override
     public void visitInsn(int opcode) {
         if (opcode == MONITORENTER) {
             onBeforeSyncEntry();

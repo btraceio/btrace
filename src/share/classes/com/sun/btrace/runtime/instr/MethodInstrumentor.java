@@ -96,10 +96,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             if (this.isValid != other.isValid) {
                 return false;
             }
-            if (!Arrays.equals(this.argsIndex, other.argsIndex)) {
-                return false;
-            }
-            return true;
+            return Arrays.equals(this.argsIndex, other.argsIndex);
         }
 
         @Override
@@ -513,7 +510,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             specialArgsCount++;
         }
         if (om.getDurationParameter() != -1) {
-            if (actionArgTypes[om.getDurationParameter()] != Type.LONG_TYPE) {
+            if (!actionArgTypes[om.getDurationParameter()].equals(Type.LONG_TYPE)) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;

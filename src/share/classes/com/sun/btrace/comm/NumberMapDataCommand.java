@@ -53,8 +53,9 @@ public class NumberMapDataCommand extends DataCommand {
         return data;
     }
 
+    @Override
     public void print(PrintWriter out) {
-        if (name != null && !name.equals("")) {
+        if (name != null && !name.isEmpty()) {
             out.println(name);
         }
         if (data != null) {
@@ -66,6 +67,7 @@ public class NumberMapDataCommand extends DataCommand {
         }
     }
     
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeUTF(name != null ? name : "");
         if (data != null) {
@@ -79,6 +81,7 @@ public class NumberMapDataCommand extends DataCommand {
         }
     }
 
+    @Override
     protected void read(ObjectInput in)
             throws IOException, ClassNotFoundException {
         this.name = in.readUTF();

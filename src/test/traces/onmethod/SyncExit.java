@@ -32,6 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.TargetInstance;
 
 /**
  *
@@ -39,9 +40,9 @@ import static com.sun.btrace.BTraceUtils.*;
  */
 @BTrace
 public class SyncExit {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="sync",
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="/sync.*/",
               location=@Location(value=Kind.SYNC_EXIT))
-    public static void args(@Self Object self, @ProbeClassName String pcn, Object lock) {
+    public static void args(@Self Object self, @ProbeClassName String pcn, @TargetInstance Object lock) {
         println("args");
     }
 }

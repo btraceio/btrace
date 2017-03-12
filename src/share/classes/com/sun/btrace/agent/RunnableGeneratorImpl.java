@@ -126,7 +126,7 @@ public class RunnableGeneratorImpl implements RunnableGenerator {
                             throw new ClassNotFoundException(name);
                         }
                     };
-                    Runnable r = (Runnable) loader.loadClass(className).newInstance();
+                    Runnable r = (Runnable) loader.loadClass(className).getDeclaredConstructor().newInstance();
                     new Thread(r).start();
                 } catch (Exception exp) {
                     exp.printStackTrace();

@@ -42,6 +42,7 @@ public class InstrumentCommand extends Command {
         this(null, null);
     }
 
+    @Override
     protected void write(ObjectOutput out) throws IOException {       
         out.writeInt(code.length);
         out.write(code);
@@ -51,6 +52,7 @@ public class InstrumentCommand extends Command {
         }
     }
 
+    @Override
     protected void read(ObjectInput in) throws IOException {
         int len = in.readInt();
         code = new byte[len];

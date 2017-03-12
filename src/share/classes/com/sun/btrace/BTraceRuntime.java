@@ -71,7 +71,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
@@ -109,6 +108,10 @@ import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1720,8 +1723,8 @@ public final class BTraceRuntime  {
 
     static void writeXML(Object obj, String fileName) {
         try {
-            try (BufferedWriter bw = new BufferedWriter(
-                    new FileWriter(resolveFileName(fileName)))) {
+            Path p = FileSystems.getDefault().getPath(resolveFileName(fileName));
+            try (BufferedWriter bw = Files.newBufferedWriter(p, StandardCharsets.UTF_8)) {
                 XMLSerializer.write(obj, bw);
             }
         } catch (RuntimeException re) {
@@ -2050,6 +2053,7 @@ public final class BTraceRuntime  {
         initThreadPool();
         memoryListener = new NotificationListener() {
                 @Override
+                @SuppressWarnings("FutureReturnValueIgnored")
                 public void handleNotification(Notification notif, Object handback)  {
                     boolean entered = BTraceRuntime.enter();
                     try {
@@ -2117,6 +2121,7 @@ public final class BTraceRuntime  {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<RuntimeMXBean>() {
+                    @Override
                     public RuntimeMXBean run() throws Exception {
                         return ManagementFactory.getRuntimeMXBean();
                    }
@@ -2340,7 +2345,7 @@ public final class BTraceRuntime  {
                              return loader.loadClass(clzName.replace('/', '.'), buf);
                         }
                     });
-                runnables[index] = (Runnable) cls.newInstance();
+                runnables[index] = (Runnable) cls.getDeclaredConstructor().newInstance();
             } catch (RuntimeException re) {
                 throw re;
             } catch (Exception exp) {
@@ -2545,7 +2550,7 @@ public final class BTraceRuntime  {
                     return;
                 }
                 String path = loader.getResource("com/sun/btrace").toString();
-                int archSeparator = path.indexOf("!");
+                int archSeparator = path.indexOf('!');
                 if (archSeparator != -1) {
                     path = path.substring(0, archSeparator);
                     path = path.substring("jar:".length(), path.lastIndexOf('/'));

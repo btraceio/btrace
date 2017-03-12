@@ -40,6 +40,7 @@ public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     protected void onMethodReturn(int opcode) {
         asm.println("on method return");
     }

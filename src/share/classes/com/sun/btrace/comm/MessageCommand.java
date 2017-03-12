@@ -33,7 +33,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MessageCommand extends DataCommand {
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("HH:mm:ss:SSS");
+    private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat("HH:mm:ss:SSS");
+        }
+    };
+
     private long time;
     private String msg;
 
@@ -51,6 +57,7 @@ public class MessageCommand extends DataCommand {
         this(0L, null);
     }
 
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeLong(time);
         byte[] bytes = msg != null ? msg.getBytes("utf-8") : new byte[0];
@@ -60,6 +67,7 @@ public class MessageCommand extends DataCommand {
         }
     }
 
+    @Override
     protected void read(ObjectInput in)
                    throws ClassNotFoundException, IOException {
         time = in.readLong();
@@ -82,9 +90,10 @@ public class MessageCommand extends DataCommand {
         return msg;
     }
 
+    @Override
     public void print(PrintWriter out) {
         if (time != 0L) {
-            out.print(DATE_FORMAT.format(new Date(time)));
+            out.print(DATE_FORMAT.get().format(new Date(time)));
             out.print(" : ");
         }
         if (msg != null) {

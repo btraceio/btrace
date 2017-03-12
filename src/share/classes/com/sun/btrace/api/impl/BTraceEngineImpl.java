@@ -211,6 +211,7 @@ public class BTraceEngineImpl extends BTraceEngine {
         }
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private boolean doStart(BTraceTask task) {
         final AtomicBoolean result = new AtomicBoolean(false);
         final BTraceTaskImpl btrace = (BTraceTaskImpl) task;
@@ -228,6 +229,7 @@ public class BTraceEngineImpl extends BTraceEngine {
             LOGGER.log(Level.FINEST, "Compiled the trace: {0} bytes", bytecode.length);
             commQueue.submit(new Runnable() {
 
+                @Override
                 public void run() {
                     int  port = portLocator.getTaskPort(btrace);
                     LOGGER.log(Level.FINEST, "BTrace agent listening on port {0}", port);
@@ -243,6 +245,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                         client.attach(String.valueOf(btrace.getPid()), compiler.getAgentJarPath(), compiler.getToolsJarPath(), null);
                         Thread.sleep(200); // give the server side time to initialize and open the port
                         client.submit(bytecode, new String[]{}, new CommandListener() {
+                            @Override
                             public void onCommand(Command cmd) throws IOException {
                                 LOGGER.log(Level.FINEST, "Received command: {0}", cmd.toString());
                                 switch (cmd.getType()) {

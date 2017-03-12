@@ -91,9 +91,6 @@ public final class AggregationKey {
             return false;
         }
         final AggregationKey other = (AggregationKey) obj;
-        if (!Arrays.equals(elements, other.elements)) {
-            return false;
-        }
-        return true;
+        return Arrays.equals(elements, other.elements);
     }
 }

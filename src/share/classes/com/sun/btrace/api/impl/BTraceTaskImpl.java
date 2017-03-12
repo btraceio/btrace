@@ -62,8 +62,6 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
 
     final private static ExecutorService dispatcher = Executors.newSingleThreadExecutor();
 
-    private final PrintWriter consoleWriter = new PrintWriter(System.out, true);
-
     private String script;
     private int numInstrClasses;
     private boolean trusted;
@@ -137,6 +135,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
         return getScript() != null && getScript().contains("@OnEvent");
     }
 
+    @Override
     public int getPid() {
         return pid;
     }
@@ -278,6 +277,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
         }
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     void dispatchCommand(final Command cmd) {
         final Set<MessageDispatcher> dispatchingSet = new HashSet<BTraceTask.MessageDispatcher>();
         synchronized(messageDispatchers) {
@@ -328,6 +328,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     }
 
     @Override
+    @SuppressWarnings("ReferenceEquality")
     public boolean equals(Object obj) {
         if (obj == null) {
             return false;

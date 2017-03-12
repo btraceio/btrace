@@ -58,6 +58,7 @@ public class StackTrackingMethodVisitorTest extends InstrumentorTestBase {
     }
 
     @After
+    @Override
     public void tearDown() {
     }
 

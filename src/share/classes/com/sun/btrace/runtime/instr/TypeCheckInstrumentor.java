@@ -42,6 +42,7 @@ public class TypeCheckInstrumentor extends MethodInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitTypeInsn(int opcode, String desc) {
         boolean typeCheck = (opcode == CHECKCAST || opcode == INSTANCEOF);
         if (typeCheck) {

@@ -41,6 +41,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
 import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
@@ -72,10 +73,12 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
         return classBytes;
     }
 
+    @Override
     public void close() throws IOException {
         classBytes = new HashMap<String, byte[]>();
     }
 
+    @Override
     public void flush() throws IOException {
     }
 
@@ -91,6 +94,7 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
             this.code = code;
         }
 
+        @Override
         public CharBuffer getCharContent(boolean ignoreEncodingErrors) {
             return CharBuffer.wrap(code);
         }
@@ -112,9 +116,11 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
             this.name = name;
         }
 
+        @Override
         public OutputStream openOutputStream() {
             return new FilterOutputStream(new ByteArrayOutputStream()) {
 
+                @Override
                 public void close() throws IOException {
                     out.close();
                     ByteArrayOutputStream bos = (ByteArrayOutputStream) out;
@@ -124,6 +130,7 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
         }
     }
 
+    @Override
     public JavaFileObject getJavaFileForOutput(JavaFileManager.Location location,
             String className,
             Kind kind,
@@ -135,6 +142,7 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
         }
     }
 
+    @Override
     public JavaFileObject getJavaFileForInput(JavaFileManager.Location location,
             String className,
             Kind kind)
@@ -153,7 +161,7 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
             PCPP pcpp = new PCPP(includeDirs);
             StringWriter out = new StringWriter();
             pcpp.setOut(out);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(fo.openInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(fo.openInputStream(), StandardCharsets.UTF_8));
             pcpp.run(reader, fo.getName());
             return new StringInputBuffer(fo.getName(), out.toString());
         } else {

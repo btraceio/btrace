@@ -26,6 +26,8 @@ package com.sun.btrace.compiler;
 
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
+import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
 import javax.annotation.processing.Processor;
 import com.sun.source.util.JavacTask;
 import com.sun.btrace.util.Messages;
@@ -93,6 +95,7 @@ public class Compiler {
     }
 
     // simple test main
+    @SuppressWarnings("DefaultCharset")
     public static void main(String[] args) throws Exception {
         if (args.length == 0) {
             usage();

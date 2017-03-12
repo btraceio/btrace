@@ -60,6 +60,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
             "traces/OSMBeanTest.java",
             2,
             new ResultValidator() {
+                @Override
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
@@ -75,6 +76,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
             "traces/OnProbeTest.java",
             5,
             new ResultValidator() {
+                @Override
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
@@ -92,6 +94,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
             "traces/OnTimerTest.java",
             5,
             new ResultValidator() {
+                @Override
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
@@ -110,6 +113,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
             "traces/OnExitTest.java",
             1,
             new ResultValidator() {
+                @Override
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
@@ -126,6 +130,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
             "traces/OnMethodTest.java",
             5,
             new ResultValidator() {
+                @Override
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
@@ -145,6 +150,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
             "traces/OnMethodTest.java",
             2,
             new ResultValidator() {
+                @Override
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
@@ -161,6 +167,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
             "traces/OnMethodReturnTest.java",
             5,
             new ResultValidator() {
+                @Override
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
@@ -174,11 +181,14 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
     @Test
     public void testOnMethodSubclass() throws Exception {
+        debugBTrace = true;
+        debugTestApp = true;
         test(
             "resources.Main",
             "traces/OnMethodSubclassTest.java",
             5,
             new ResultValidator() {
+                @Override
                 public void validate(String stdout, String stderr, int retcode) {
                     Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
                     Assert.assertTrue("Non-empty stderr", stderr.isEmpty());

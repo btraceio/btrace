@@ -149,6 +149,7 @@ public class Client {
         this.statsdDef = statsdDef;
     }
 
+    @SuppressWarnings("DefaultCharset")
     public byte[] compile(String fileName, String classPath) {
         return compile(fileName, classPath, new PrintWriter(System.err), null);
     }
@@ -156,6 +157,7 @@ public class Client {
     /**
      * Compiles given BTrace program using given classpath.
      */
+    @SuppressWarnings("DefaultCharset")
     public byte[] compile(String fileName, String classPath, String includePath) {
         return compile(fileName, classPath, new PrintWriter(System.err), includePath);
     }
@@ -237,8 +239,8 @@ public class Client {
         try {
             String agentPath = "/btrace-agent.jar";
             String tmp = Client.class.getClassLoader().getResource("com/sun/btrace").toString();
-            tmp = tmp.substring(0, tmp.indexOf("!"));
-            tmp = tmp.substring("jar:".length(), tmp.lastIndexOf("/"));
+            tmp = tmp.substring(0, tmp.indexOf('!'));
+            tmp = tmp.substring("jar:".length(), tmp.lastIndexOf('/'));
             agentPath = tmp + agentPath;
             agentPath = new File(new URI(agentPath)).getAbsolutePath();
             attach(pid, agentPath, sysCp, bootCp);

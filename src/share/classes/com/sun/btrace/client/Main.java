@@ -59,6 +59,7 @@ public final class Main {
 
     private static final Console con;
     private static final PrintWriter out;
+
     static {
         DEBUG = Boolean.getBoolean("com.sun.btrace.debug");
         if (isDebug()) debugPrint("btrace debug mode is set");
@@ -75,7 +76,12 @@ public final class Main {
         }
         PROBE_DESC_PATH = System.getProperty("com.sun.btrace.probeDescPath", ".");
         con = System.console();
-        out = (con != null)? con.writer() : new PrintWriter(System.out);
+        out = getOutWriter(con);
+    }
+
+    @SuppressWarnings("DefaultCharset")
+    private static PrintWriter getOutWriter(Console con) {
+        return (con != null)? con.writer() : new PrintWriter(System.out);
     }
 
     public static void main(String[] args) {

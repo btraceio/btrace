@@ -4328,7 +4328,7 @@ public class BTraceUtils {
          * @return a <tt>Boolean</tt> instance representing <tt>b</tt>.
          */
         public static Boolean box(boolean b) {
-            return Boolean.valueOf(b);
+            return b;
         }
 
         /**
@@ -4339,7 +4339,7 @@ public class BTraceUtils {
          * @return a <tt>Character</tt> instance representing <tt>c</tt>.
          */
         public static Character box(char c) {
-            return Character.valueOf(c);
+            return c;
         }
 
         /**
@@ -4350,7 +4350,7 @@ public class BTraceUtils {
          * @return a <tt>Byte</tt> instance representing <tt>b</tt>.
          */
         public static Byte box(byte b) {
-            return Byte.valueOf(b);
+            return b;
         }
 
         /**
@@ -4361,7 +4361,7 @@ public class BTraceUtils {
          * @return a <tt>Short</tt> instance representing <tt>s</tt>.
          */
         public static Short box(short s) {
-            return Short.valueOf(s);
+            return s;
         }
 
         /**
@@ -4372,7 +4372,7 @@ public class BTraceUtils {
          * @return a <tt>Integer</tt> instance representing <tt>i</tt>.
          */
         public static Integer box(int i) {
-            return Integer.valueOf(i);
+            return i;
         }
 
         /**
@@ -4383,7 +4383,7 @@ public class BTraceUtils {
          * @return a <tt>Long</tt> instance representing <tt>l</tt>.
          */
         public static Long box(long l) {
-            return Long.valueOf(l);
+            return l;
         }
 
         /**
@@ -4394,7 +4394,7 @@ public class BTraceUtils {
          * @return a <tt>Float</tt> instance representing <tt>f</tt>.
          */
         public static Float box(float f) {
-            return Float.valueOf(f);
+            return f;
         }
 
         /**
@@ -4405,7 +4405,7 @@ public class BTraceUtils {
          * @return a <tt>Double</tt> instance representing <tt>d</tt>.
          */
         public static Double box(double d) {
-            return Double.valueOf(d);
+            return d;
         }
 
         // unboxing methods
@@ -4418,7 +4418,7 @@ public class BTraceUtils {
          * @return  the primitive <code>boolean</code> value of the object.
          */
         public static boolean unbox(Boolean b) {
-            return b.booleanValue();
+            return b;
         }
 
         /**
@@ -4429,7 +4429,7 @@ public class BTraceUtils {
          * @return  the primitive <code>char</code> value of the object.
          */
         public static char unbox(Character ch) {
-            return ch.charValue();
+            return ch;
         }
 
         /**
@@ -4439,7 +4439,7 @@ public class BTraceUtils {
          * @return  the byte value represented by the <code>Byte</code>.
          */
         public static byte unbox(Byte b) {
-            return b.byteValue();
+            return b;
         }
 
         /**
@@ -4449,7 +4449,7 @@ public class BTraceUtils {
          * @return  the short value represented by the <code>Short</code>.
          */
         public static short unbox(Short s) {
-            return s.shortValue();
+            return s;
         }
 
         /**
@@ -4459,7 +4459,7 @@ public class BTraceUtils {
          * @return  the int value represented by the <code>Integer</code>.
          */
         public static int unbox(Integer i) {
-            return i.intValue();
+            return i;
         }
 
         /**
@@ -4469,7 +4469,7 @@ public class BTraceUtils {
          * @return  the long value represented by the <code>Long</code>.
          */
         public static long unbox(Long l) {
-            return l.longValue();
+            return l;
         }
 
         /**
@@ -4479,7 +4479,7 @@ public class BTraceUtils {
          * @return  the float value represented by the <code>Float</code>.
          */
         public static float unbox(Float f) {
-            return f.floatValue();
+            return f;
         }
 
         /**
@@ -4488,7 +4488,7 @@ public class BTraceUtils {
          * @param d Double to be unboxed.
          */
         public static double unbox(Double d) {
-            return d.doubleValue();
+            return d;
         }
     }
 
@@ -6783,6 +6783,7 @@ public class BTraceUtils {
     private static Field getField(final Class clazz, final String name,
             final boolean throwError) {
         return AccessController.doPrivileged(new PrivilegedAction<Field>() {
+            @Override
             public Field run() {
                 try {
                     Field field = clazz.getDeclaredField(name);
@@ -6801,6 +6802,7 @@ public class BTraceUtils {
 
     private static Field[] getAllFields(final Class clazz) {
         return AccessController.doPrivileged(new PrivilegedAction<Field[]>() {
+            @Override
             public Field[] run() {
                 try {
                     Field[] fields = clazz.getDeclaredFields();

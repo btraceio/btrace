@@ -150,7 +150,7 @@ public final class Main {
                 for (Map.Entry<Object, Object> entry : ps.entrySet()) {
                     String keyConfig = "";
                     String argKey = (String) entry.getKey();
-                    int configPos = argKey.lastIndexOf("#");
+                    int configPos = argKey.lastIndexOf('#');
                     if (configPos > -1) {
                         keyConfig = argKey.substring(0, configPos);
                         argKey = argKey.substring(configPos + 1);
@@ -173,23 +173,24 @@ public final class Main {
                                         replace = true;
                                     }
                                     log.append("augmenting default agent argument '").append(argKey)
-                                        .append("':'").append(argMap.get(argKey)).append("' with '")
-                                        .append(argVal).append("'\n");
+                                            .append("':'").append(argMap.get(argKey)).append("' with '")
+                                            .append(argVal).append("'\n");
 
                                 }
                                 if (replace) {
                                     log.append("setting default agent argument '").append(argKey)
-                                        .append("' with '").append(scriptVal).append("'\n");
+                                            .append("' with '").append(scriptVal).append("'\n");
                                 } else {
                                     log.append("augmenting default agent argument '").append(argKey)
-                                        .append("':'").append(argMap.get(argKey)).append("' with '").append(argVal)
-                                        .append("'\n");
+                                            .append("':'").append(argMap.get(argKey)).append("' with '").append(argVal)
+                                            .append("'\n");
                                 }
 
                                 argMap.put(argKey, scriptVal);
+                                break;
                             }
-                            case "systemClassPath":
-                            case "bootClassPath":
+                            case "systemClassPath": // fall through
+                            case "bootClassPath": // fall through
                             case "config": {
                                 log.append("argument '").append(argKey).append("' is not overridable\n");
                                 break;
@@ -197,7 +198,7 @@ public final class Main {
                             default: {
                                 if (!argMap.containsKey(argKey)) {
                                     log.append("applying default agent argument '").append(argKey)
-                                        .append("'='").append(argVal).append("'\n");
+                                            .append("'='").append(argVal).append("'\n");
                                     argMap.put(argKey, argVal);
                                 }
                             }
@@ -470,7 +471,8 @@ public final class Main {
                         if (f.getName().toLowerCase().endsWith(".jar")) {
                             try {
                                 inst.appendToBootstrapClassLoaderSearch(new JarFile(f));
-                            } catch (IOException e) {}
+                            } catch (IOException e) {
+                            }
                         }
                     }
                 }
@@ -479,7 +481,8 @@ public final class Main {
                         if (f.getName().toLowerCase().endsWith(".jar")) {
                             try {
                                 inst.appendToSystemClassLoaderSearch(new JarFile(f));
-                            } catch (IOException e) {}
+                            } catch (IOException e) {
+                            }
                         }
                     }
                 }

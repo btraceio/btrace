@@ -540,7 +540,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         if (variable.getKind() != Tree.Kind.IDENTIFIER) {
             if (className != null) {
                 String name = variable.toString();
-                name = name.substring(0, name.lastIndexOf("."));
+                name = name.substring(0, name.lastIndexOf('.'));
                 if (! className.equals(name)) {
                     reportError("no.assignment", variable);
                     return false;
@@ -606,6 +606,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                         allLiterals = false;
                         break outer;
                     }
+                    break;
                 }
                 case STRING_LITERAL: {
                     // allowed parameters

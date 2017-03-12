@@ -21,6 +21,7 @@ import java.util.logging.Logger;
 final public class PortLocatorImpl implements PortLocator {
     final private static Logger LOGGER = Logger.getLogger(PortLocator.class.getName());
 
+    @Override
     public int getTaskPort(BTraceTask task) {
         VirtualMachine vm = null;
         try {

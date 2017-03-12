@@ -30,7 +30,7 @@ package resources;
  */
 public class Main extends TestApp {
     private String id = "xxx";
-    
+
     public static void main(String[] args) throws Exception {
         Main i = new Main();
         i.start();
@@ -57,6 +57,7 @@ public class Main extends TestApp {
         return i + 1;
     }
 
+    @Override
     public void print(String msg) {
         System.out.println(msg);
         System.out.flush();

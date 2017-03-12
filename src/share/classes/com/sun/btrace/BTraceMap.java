@@ -49,38 +49,47 @@ final class BTraceMap<K,V> implements Map<K,V>, Cloneable {
         isWeak = (m instanceof WeakHashMap);
     }
 
+    @Override
     public synchronized int size() {
         return m.size();
     }
 
+    @Override
     public synchronized boolean isEmpty(){
         return m.isEmpty();
     }
 
+    @Override
     public synchronized boolean containsKey(Object key) {
         return m.containsKey(key);
     }
 
+    @Override
     public synchronized boolean containsValue(Object value){
         return m.containsValue(value);
     }
 
+    @Override
     public synchronized V get(Object key) {
         return m.get(key);
     }
 
+    @Override
     public synchronized V put(K key, V value) {
         return m.put(key, value);
     }
 
+    @Override
     public synchronized V remove(Object key) {
         return m.remove(key);
     }
 
+    @Override
     public synchronized void putAll(Map<? extends K, ? extends V> map) {
         m.putAll(map);
     }
 
+    @Override
     public synchronized void clear() {
         m.clear();
     }
@@ -89,6 +98,7 @@ final class BTraceMap<K,V> implements Map<K,V>, Cloneable {
     private transient Set<Map.Entry<K,V>> entrySet = null;
     private transient Collection<V> values = null;
 
+    @Override
     public synchronized Set<K> keySet() {
         if (keySet == null) {
             keySet = m.keySet();
@@ -96,6 +106,7 @@ final class BTraceMap<K,V> implements Map<K,V>, Cloneable {
         return keySet;
     }
  
+    @Override
     public synchronized Set<Map.Entry<K,V>> entrySet() {
         if (entrySet == null) {
             entrySet = m.entrySet();
@@ -103,6 +114,7 @@ final class BTraceMap<K,V> implements Map<K,V>, Cloneable {
         return entrySet;
     }
 
+    @Override
     public synchronized Collection<V> values() {
         if (values == null) {
             values = m.values();
@@ -110,14 +122,17 @@ final class BTraceMap<K,V> implements Map<K,V>, Cloneable {
         return values;
     }
 
+    @Override
     public synchronized boolean equals(Object o) {
         return m.equals(o);
     }
 
+    @Override
     public synchronized int hashCode() {
         return m.hashCode();
     }
 
+    @Override
     public synchronized String toString() {
         return m.toString();
     }

@@ -101,7 +101,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
             if ((access & ACC_PUBLIC) == 0 && !methodName.equals(CLASS_INITIALIZER)) {
                 Verifier.reportError("method.should.be.public", methodName + methodDesc);
             }
-            if (Type.getReturnType(methodDesc) != Type.VOID_TYPE) {
+            if (!Type.getReturnType(methodDesc).equals(Type.VOID_TYPE)) {
                 Verifier.reportError("return.type.should.be.void", methodName + methodDesc);
             }
         }

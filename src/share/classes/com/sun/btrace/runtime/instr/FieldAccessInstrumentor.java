@@ -44,6 +44,7 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitFieldInsn(int opcode, String owner,
         String name, String desc) {
         boolean get;
@@ -53,11 +54,7 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
             return;
         }
 
-        if (opcode == GETFIELD || opcode == GETSTATIC) {
-            get = true;
-        } else {
-            get = false;
-        }
+        get = opcode == GETFIELD || opcode == GETSTATIC;
         isStaticAccess = (opcode == GETSTATIC || opcode == PUTSTATIC);
 
         if (get) {

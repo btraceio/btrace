@@ -46,6 +46,7 @@ public class CatchInstrumentor extends MethodInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitLabel(Label label) {
         super.visitLabel(label);
         String catchType = handlers.get(label);
@@ -54,6 +55,7 @@ public class CatchInstrumentor extends MethodInstrumentor {
         }
     }
 
+    @Override
     public void visitTryCatchBlock(Label start, Label end,
         Label handler, String type) {
         if (type != null) {

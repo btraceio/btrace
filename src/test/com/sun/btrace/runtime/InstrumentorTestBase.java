@@ -289,6 +289,9 @@ public abstract class InstrumentorTestBase {
             System.err.println(asmify(originalTrace));
         }
         BTraceProbe bcn = factory.createProbe(originalTrace);
+        if (!bcn.isVerified()) {
+            throw bcn.getVerifierException();
+        }
 //        Trace t =  new Trace(bcn.getBytecode(), bcn.getOnMethods(), verifier.getReachableCalls(), bcn.name);
         transformedTrace = extractBytecode(bcn);
         if (DEBUG) {

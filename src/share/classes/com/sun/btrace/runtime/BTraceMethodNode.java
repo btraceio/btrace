@@ -371,7 +371,9 @@ public class BTraceMethodNode extends MethodNode {
                 loc.getValue() == Kind.ARRAY_GET ||
                 loc.getValue() == Kind.ARRAY_SET ||
                 loc.getValue() == Kind.INSTANCEOF ||
-                loc.getValue() == Kind.CHECKCAST)) {
+                loc.getValue() == Kind.CHECKCAST ||
+                loc.getValue() == Kind.SYNC_ENTRY ||
+                loc.getValue() == Kind.SYNC_EXIT)) {
                 Verifier.reportError("target-instance.desc.invalid", om.getTargetName() + om.getTargetDescriptor() + "(" + om.getTargetInstanceParameter() + ")");
             }
         }

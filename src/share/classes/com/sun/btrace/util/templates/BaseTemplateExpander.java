@@ -44,6 +44,7 @@ abstract public class BaseTemplateExpander implements TemplateExpander {
     }
 
 
+    @Override
     final public Result expand(TemplateExpanderVisitor v, Template t) {
         if (lastTemplate == null) {
             if (t == null || !supportedTemplates.contains(t)) {

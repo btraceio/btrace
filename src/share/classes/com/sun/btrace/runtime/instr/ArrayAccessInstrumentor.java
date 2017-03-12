@@ -44,6 +44,7 @@ public class ArrayAccessInstrumentor extends MethodInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitInsn(int opcode) {
         boolean arrayload = false;
         boolean arraystore = false;

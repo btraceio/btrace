@@ -121,6 +121,7 @@ final class CallGraph {
         }
 
         @Override
+        @SuppressWarnings("ReferenceEquality")
         public boolean equals(Object obj) {
             if (obj == null) {
                 return false;

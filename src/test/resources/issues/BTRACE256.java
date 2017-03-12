@@ -6,6 +6,7 @@ public class BTRACE256 {
     public static void main(String[] args) throws Exception {
 
         Thread t = new Thread(new Runnable() {
+            @Override
             public void run() {
                 BTRACE256 test = new BTRACE256();
                 try {
@@ -13,7 +14,7 @@ public class BTRACE256 {
                         test.doStuff();
                     }
                 } catch (Exception e) {
-                };
+                }
             }
         });
 

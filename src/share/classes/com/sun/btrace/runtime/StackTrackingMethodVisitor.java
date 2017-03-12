@@ -172,6 +172,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
         }
 
         @Override
+        @SuppressWarnings("ReferenceEquality")
         public boolean equals(Object obj) {
             if (obj == null) {
                 return false;
@@ -319,7 +320,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
             }
             for(Type t : args) {
                 argMap.put(index++, new InstanceItem(t));
-                if (t == Type.LONG_TYPE || t == Type.DOUBLE_TYPE) {
+                if (t.equals(Type.LONG_TYPE) || t.equals(Type.DOUBLE_TYPE)) {
                     index++;
                 }
             }
@@ -499,11 +500,12 @@ class StackTrackingMethodVisitor extends MethodVisitor {
         Type ret = Type.getReturnType(desc);
 
         for(int i=args.length-1;i>=0;i--) {
-            if (args[i] != Type.VOID_TYPE) {
+            if (!args[i].equals(Type.VOID_TYPE)) {
                 switch(args[i].getSort()) {
                     case Type.LONG:
                     case Type.DOUBLE: {
                         state.pop();
+                        // fall through
                     }
                     case Type.INT:
                     case Type.FLOAT:
@@ -525,12 +527,13 @@ class StackTrackingMethodVisitor extends MethodVisitor {
             poppedArgs.add(state.pop());
         }
 
-        if (ret != Type.VOID_TYPE) {
+        if (!ret.equals(Type.VOID_TYPE)) {
             StackItem sl = new ResultItem(owner, name, desc, ResultItem.Origin.METHOD, poppedArgs.toArray(new StackItem[poppedArgs.size()]));
             switch (ret.getSort()) {
                 case Type.LONG:
                 case Type.DOUBLE: {
                     state.push(sl);
+                    // fall through
                 }
                 case Type.INT:
                 case Type.FLOAT:
@@ -559,6 +562,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
                 case Type.LONG:
                 case Type.DOUBLE: {
                     state.pop();
+                    // fall through
                 }
                 case Type.INT:
                 case Type.FLOAT:
@@ -583,6 +587,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
                 case Type.LONG:
                 case Type.DOUBLE: {
                     state.push(sl);
+                    // fall through
                 }
                 case Type.INT:
                 case Type.FLOAT:
@@ -1186,8 +1191,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
         while (it.hasNext() && idx >= 0) {
             Type t = argTypes[idx];
             items.add(0, it.next());
-            if (t == Type.LONG_TYPE ||
-                t == Type.DOUBLE_TYPE) {
+            if (t.equals(Type.LONG_TYPE) || t.equals(Type.DOUBLE_TYPE)) {
                 it.next();
             }
             idx--;

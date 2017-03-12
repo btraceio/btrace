@@ -31,6 +31,7 @@ final public class BTraceSettingsProviderImpl implements BTraceSettingsProvider 
         }
     };
 
+    @Override
     public BTraceSettings getSettings() {
         return bs;
     }

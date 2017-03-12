@@ -42,6 +42,7 @@ public class MethodReturnInstrumentor extends MethodEntryInstrumentor {
         super(mv, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitInsn(int opcode) {
         switch (opcode) {
             case IRETURN:

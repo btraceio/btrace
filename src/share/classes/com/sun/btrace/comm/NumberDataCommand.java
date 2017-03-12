@@ -47,8 +47,9 @@ public class NumberDataCommand extends DataCommand {
         this.value = value;
     }
     
+    @Override
     public void print(PrintWriter out) {
-        if (name != null && !name.equals("")) {
+        if (name != null && !name.isEmpty()) {
             out.print(name);
             out.print(" = ");
         }
@@ -59,11 +60,13 @@ public class NumberDataCommand extends DataCommand {
         return value;
     }
     
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeUTF(name != null ? name : "");
         out.writeObject(value);
     }
 
+    @Override
     protected void read(ObjectInput in)
             throws IOException, ClassNotFoundException {
         this.name = in.readUTF();

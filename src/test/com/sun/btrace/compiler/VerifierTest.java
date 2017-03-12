@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +25,7 @@ public class VerifierTest {
     @Test
     public void testVerifier() throws Exception {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(bos));
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(bos, StandardCharsets.UTF_8));
         Compiler c = new Compiler();
         File f = new File(sourcePath + File.separator + "traces" + File.separator +
                           "verifier" + File.separator + "VerifierScript.java");

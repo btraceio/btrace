@@ -236,9 +236,7 @@ final class Preprocessor {
         Iterator<FieldNode> iter = getFields(cn).iterator();
         while (iter.hasNext()) {
             FieldNode fn = iter.next();
-            fn.access = fn.access &
-                            ~(Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)
-                            | Opcodes.ACC_PUBLIC;
+            fn.access = (fn.access & ~(Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) | Opcodes.ACC_PUBLIC;
             tryProcessTLS(cn, fn);
             tryProcessExport(cn, fn);
             if (tryProcessInjected(fn) == null) {
@@ -996,7 +994,7 @@ final class Preprocessor {
     private InsnList getReturnSequence(MethodNode mn, boolean addRuntimeExit) {
         InsnList l = new InsnList();
         Type retType = Type.getReturnType(mn.desc);
-        if (retType != Type.VOID_TYPE) {
+        if (!retType.equals(Type.VOID_TYPE)) {
             int retIndex = -1;
             if (mn.visibleParameterAnnotations != null) {
                 int offset = 0;

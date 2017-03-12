@@ -136,6 +136,7 @@ public class MethodInvocationRecorderTest {
             final AtomicReference<Profiler.Record[]> recRef = new AtomicReference<>();
 
             Thread getter = new Thread(new Runnable() {
+                @Override
                 public void run() {
                     try {
                         p.arriveAndAwaitAdvance();

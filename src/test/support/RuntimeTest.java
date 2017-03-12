@@ -31,6 +31,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.StringTokenizer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +81,7 @@ abstract public class RuntimeTest {
         if (toolsjar == null) {
             URL rturl = String.class.getResource("/java/lang/String.class");
             toolsjar = rturl.toString().replace("jar:file:", "").replace("jre/lib/rt.jar", "lib/tools.jar");
-            toolsjar = toolsjar.substring(0, toolsjar.indexOf("!"));
+            toolsjar = toolsjar.substring(0, toolsjar.indexOf('!'));
             System.err.println(toolsjar);
         }
         btraceExtPath = btraceExtPath + File.pathSeparator + toolsjar;
@@ -115,6 +116,7 @@ abstract public class RuntimeTest {
         timeout = 10000L;
     }
 
+    @SuppressWarnings("DefaultCharset")
     public void test(String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
         ProcessBuilder pb = new ProcessBuilder(
             java + "/bin/java",
@@ -231,7 +233,7 @@ abstract public class RuntimeTest {
             @Override
             public void run() {
                 try {
-                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
 
                     String line = null;
                     while ((line = br.readLine()) != null) {
@@ -256,7 +258,7 @@ abstract public class RuntimeTest {
             @Override
             public void run() {
                 try {
-                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
                     String line = null;
                     while ((line = br.readLine()) != null) {
                         stdout.append(line).append('\n');

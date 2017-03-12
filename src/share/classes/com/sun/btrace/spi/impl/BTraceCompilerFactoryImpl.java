@@ -15,6 +15,7 @@ import com.sun.btrace.spi.BaseBTraceCompiler;
  * @author Jaroslav Bachorik <yardus@netbeans.org>
  */
 final public class BTraceCompilerFactoryImpl implements BTraceCompilerFactory {
+    @Override
     public BTraceCompiler newCompiler(final BTraceTask task) {
         return new BaseBTraceCompiler(task);
     }

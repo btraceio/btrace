@@ -35,7 +35,6 @@ import java.io.IOException;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.BTraceRuntime;
-import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
@@ -122,6 +121,7 @@ abstract class Client implements CommandListener {
         setupWriter();
     }
 
+    @SuppressWarnings("DefaultCharset")
     protected final void setupWriter() {
         String outputFile = settings.getOutputFile();
         if (outputFile == null || outputFile.equals("::null")) return;
@@ -408,11 +408,12 @@ abstract class Client implements CommandListener {
         return cn;
     }
 
+    @SuppressWarnings("LiteralClassName")
     private static PerfReader createPerfReaderImpl() {
         // see if we can access any jvmstat class
         try {
             if (Client.class.getResource("sun/jvmstat/monitor/MonitoredHost.class") != null) {
-                return (PerfReader) Class.forName("com.sun.btrace.agent.PerfReaderImpl").newInstance();
+                return (PerfReader) Class.forName("com.sun.btrace.agent.PerfReaderImpl").getDeclaredConstructor().newInstance();
             }
         } catch (Exception exp) {
             // can happen if jvmstat is not available

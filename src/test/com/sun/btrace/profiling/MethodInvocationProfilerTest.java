@@ -133,6 +133,7 @@ public class MethodInvocationProfilerTest {
 
         final Phaser ph = new Phaser(2);
         Thread t1 = new Thread(new Runnable() {
+            @Override
             public void run() {
                 ph.arriveAndAwaitAdvance();
                 for (int i = 0; i < 20; i++) {
@@ -143,6 +144,7 @@ public class MethodInvocationProfilerTest {
         });
 
         Thread t2 = new Thread(new Runnable() {
+            @Override
             public void run() {
                 ph.arriveAndAwaitAdvance();
                 for (int i = 0; i < 20; i++) {
@@ -214,6 +216,7 @@ public class MethodInvocationProfilerTest {
 
         final Phaser ph = new Phaser(2);
         Thread t1 = new Thread(new Runnable() {
+            @Override
             public void run() {
                 ph.arriveAndAwaitAdvance();
                 for (int i = 0; i < 200; i++) {
@@ -224,6 +227,7 @@ public class MethodInvocationProfilerTest {
         });
 
         Thread t2 = new Thread(new Runnable() {
+            @Override
             public void run() {
                 ph.arriveAndAwaitAdvance();
                 for (int i = 0; i < 200; i++) {
@@ -406,6 +410,7 @@ public class MethodInvocationProfilerTest {
         final AtomicBoolean finished = new AtomicBoolean(false);
 
         Thread t = new Thread(new Runnable() {
+            @Override
             public void run() {
                 try {
                     while (!finished.get()) {

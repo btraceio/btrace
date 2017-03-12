@@ -34,36 +34,42 @@ public enum AggregationFunction {
 
     COUNT {
 
+        @Override
         public Count newValue() {
             return new Count();
         }
     },
     SUM {
 
+        @Override
         public Sum newValue() {
             return new Sum();
         }
     },
     MINIMUM {
 
+        @Override
         public Minimum newValue() {
             return new Minimum();
         }
     },
     MAXIMUM {
 
+        @Override
         public Maximum newValue() {
             return new Maximum();
         }
     },
     AVERAGE {
 
+        @Override
         public Average newValue() {
             return new Average();
         }
     },
     QUANTIZE {
 
+        @Override
         public Quantize newValue() {
             return new Quantize();
         }

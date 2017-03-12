@@ -46,11 +46,13 @@ class Maximum implements AggregationValue {
         }
     }
 
+    @Override
     public synchronized long getValue() {
         return max;
     }
 
+    @Override
     public Object getData() {
-        return Long.valueOf(getValue());
+        return getValue();
     }
 }

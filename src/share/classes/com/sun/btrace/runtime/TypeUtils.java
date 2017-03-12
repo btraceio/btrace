@@ -58,6 +58,7 @@ public final class TypeUtils {
         return false;
     }
 
+    @SuppressWarnings("ReferenceEquality")
     public static boolean isPrimitive(Type t) {
         return t == Type.BOOLEAN_TYPE ||
                t == Type.BYTE_TYPE ||
@@ -98,7 +99,7 @@ public final class TypeUtils {
     }
 
     public static boolean isVoid(Type t) {
-        return t == Type.VOID_TYPE || VOIDREF_TYPE.equals(t);
+        return Type.VOID_TYPE.equals(t) || VOIDREF_TYPE.equals(t);
     }
 
     /**
@@ -341,7 +342,7 @@ public final class TypeUtils {
     }
 
     public static String getJavaType(String desc) {
-        int arrIndex = desc.lastIndexOf("[") + 1;
+        int arrIndex = desc.lastIndexOf('[') + 1;
         desc = arrIndex > 0 ? desc.substring(arrIndex) : desc;
         if (desc.startsWith("L")) {
             desc = desc.substring(1, desc.length() - 1).replace('/', '.');

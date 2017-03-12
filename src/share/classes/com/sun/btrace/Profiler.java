@@ -48,6 +48,7 @@ public abstract class Profiler {
      */
     final public static class Record {
         final public static Comparator<Record> COMPARATOR = new Comparator<Record>() {
+            @Override
             public int compare(Record o1, Record o2) {
                 if (o1 == null && o2 != null) return 1;
                 if (o1 != null && o2 == null) return -1;
@@ -97,10 +98,7 @@ public abstract class Profiler {
             if (this.selfTime != other.selfTime) {
                 return false;
             }
-            if (this.invocations != other.invocations) {
-                return false;
-            }
-            return true;
+            return this.invocations == other.invocations;
         }
 
         @Override

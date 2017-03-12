@@ -32,6 +32,7 @@ import com.sun.btrace.instr.random.ThreadLocalRandomIntProvider;
  *
  * @author Jaroslav Bachorik
  */
+@SuppressWarnings("LiteralClassName")
 abstract public class RandomIntProvider {
     // for the testability purposes; BTraceRuntime initializes Unsafe instance
     // and fails under JUnit

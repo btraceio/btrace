@@ -66,9 +66,9 @@ public class ErrorReturnInstrumentor extends MethodReturnInstrumentor {
 
     @Override
     protected void onMethodEntry() {}
-    
+
     @Override
-	protected void onMethodReturn(int opcode) {}
+    protected void onMethodReturn(int opcode) {}
 
     protected void onErrorReturn() {
         asm.println("error return from " + getName() + getDescriptor());

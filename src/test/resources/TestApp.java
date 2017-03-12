@@ -26,6 +26,7 @@ package resources;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 /**
  *
@@ -34,6 +35,7 @@ import java.io.InputStreamReader;
 abstract public class TestApp implements TestPrinter {
     final public void start() throws Exception {
         Thread t = new Thread(new Runnable() {
+            @Override
             public void run() {
                 startWork();
             }
@@ -43,7 +45,7 @@ abstract public class TestApp implements TestPrinter {
         t.setDaemon(true);
         t.start();
 
-        String resp = new BufferedReader(new InputStreamReader(System.in)).readLine();
+        String resp = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)).readLine();
         System.out.println("Received " + resp + " - " + "done".equals(resp));
         if ("done".equals(resp)) {
             System.out.flush();

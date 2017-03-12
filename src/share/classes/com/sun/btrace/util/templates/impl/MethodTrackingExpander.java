@@ -309,6 +309,8 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                         );
                         break;
                     }
+                    default:
+                        // do nothing
                 }
 
                 asm.dup2();
@@ -369,6 +371,8 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                         );
                         break;
                     }
+                    default:
+                        // do nothing
                 }
                 if (sHitVar == Integer.MIN_VALUE) {
                     sHitVar = e.storeNewLocal(Type.INT_TYPE);
