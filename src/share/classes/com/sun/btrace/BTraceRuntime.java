@@ -2370,29 +2370,40 @@ public final class BTraceRuntime  {
     }
 
     private synchronized void exitImpl(int exitCode) {
-        if (exitHandler != null) {
-            try {
-                exitHandler.invoke(null, exitCode);
-            } catch (Throwable ignored) {
+        try {
+            if (timer != null) {
+                timer.cancel();
             }
-        }
-        disabled = true;
-        if (timer != null) {
-            timer.cancel();
-        }
 
-        if (memoryListener != null && memoryMBean != null) {
-            NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
-            try {
-                emitter.removeNotificationListener(memoryListener);
-            } catch (ListenerNotFoundException lnfe) {}
-        }
+            if (memoryListener != null && memoryMBean != null) {
+                NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
+                try {
+                    emitter.removeNotificationListener(memoryListener);
+                } catch (ListenerNotFoundException lnfe) {}
+            }
 
-        if (threadPool != null) {
-            threadPool.shutdownNow();
-        }
+            if (threadPool != null) {
+                threadPool.shutdownNow();
+            }
 
-        send(new ExitCommand(exitCode));
+            if (exitHandler != null) {
+                boolean entered = false;
+                try {
+                    entered = BTraceRuntime.enter(this);
+                    exitHandler.invoke(null, exitCode);
+                } catch (Throwable ignored) {
+                } finally {
+                    exitHandler = null;
+                    if (entered) {
+                        BTraceRuntime.leave();
+                    }
+                }
+            }
+
+            send(new ExitCommand(exitCode));
+        } finally {
+            disabled = true;
+        }
     }
 
     private static Perf getPerf() {
