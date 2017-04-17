@@ -36,8 +36,8 @@ import java.util.Map;
 public class OnMethodTest {
     private int field;
 
-    public OnMethodTest() {}
-    private OnMethodTest(String a) {}
+    public OnMethodTest() {syncLock = new Object();}
+    private OnMethodTest(String a) {syncLock = new Object();}
 
     public void noargs() {};
     static public void noargs$static() {};
@@ -143,7 +143,11 @@ public class OnMethodTest {
         OnMethodTest.sField += 1;
     }
 
-    public synchronized void syncM() {
-        System.err.println("ho hey");
+    public void syncM() {
+        synchronized(syncLock) {
+            System.err.println("ho hey");
+        }
     }
+
+    private final Object syncLock;
 }

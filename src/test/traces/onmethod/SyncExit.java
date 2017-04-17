@@ -40,7 +40,7 @@ import com.sun.btrace.annotations.TargetInstance;
  */
 @BTrace
 public class SyncExit {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="/sync.*/",
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="sync",
               location=@Location(value=Kind.SYNC_EXIT))
     public static void args(@Self Object self, @ProbeClassName String pcn, @TargetInstance Object lock) {
         println("args");

@@ -41,7 +41,10 @@ import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.Interval;
 import com.sun.btrace.util.LocalVariableHelper;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -366,6 +369,33 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
 
         for(ArgumentProvider provider : argumentProviders) {
             if (provider != null) provider.provide();
+        }
+    }
+
+    protected void loadArguments(ValidationResult vr, Type[] actionArgTypes, boolean isStatic, ArgumentProvider ... argumentProviders) {
+        int ptr = isStatic ? 0 : 1;
+        List<ArgumentProvider> argProvidersList = new ArrayList<>(argumentProviders.length + vr.getArgCnt());
+        argProvidersList.addAll(Arrays.asList(argumentProviders));
+        for(int i=0;i<vr.getArgCnt();i++) {
+            int index = vr.getArgIdx(i);
+            Type t = actionArgTypes[index];
+            if (TypeUtils.isAnyTypeArray(t)) {
+                argProvidersList.add(anytypeArg(index, ptr));
+                ptr++;
+            } else {
+                argProvidersList.add(localVarArg(index, t, ptr));
+                ptr += actionArgTypes[index].getSize();
+            }
+        }
+        loadArguments(argProvidersList);
+    }
+
+    private void loadArguments(List<ArgumentProvider> argumentProviders) {
+        Collections.sort(argumentProviders, ArgumentProvider.COMPARATOR);
+        for (ArgumentProvider ap : argumentProviders) {
+            if (ap != null) {
+                ap.provide();
+            }
         }
     }
 
