@@ -520,9 +520,27 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/SyncEntry");
 
-        checkTransformation("TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n"
-                + "DUP\nASTORE 2\nALOAD 0\nLDC \"sync\"\nALOAD 2\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V");
+        checkTransformation(
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "DUP\n" +
+            "ASTORE 2\n" +
+            "ALOAD 0\n" +
+            "LDC \"sync\"\n" +
+            "ALOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L6\n" +
+            "LINENUMBER 110 L6\n" +
+            "GOTO L7\n" +
+            "ASTORE 3\n" +
+            "ALOAD 3\n" +
+            "L7\n" +
+            "LINENUMBER 111 L7\n" +
+            "L5\n" +
+            "ATHROW\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 4"
+        );
 
         resetClassLoader();
 
@@ -549,6 +567,66 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LINENUMBER 111 L8\n" +
             "L5\n" +
             "ATHROW\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 4"
+        );
+    }
+
+    @Test
+    public void methodEntrySyncMEntry() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/SyncMEntry");
+
+        checkTransformation(
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "DUP\n" +
+            "ASTORE 2\n" +
+            "ALOAD 0\n" +
+            "LDC \"syncM\"\n" +
+            "ALOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L6\n" +
+            "LINENUMBER 149 L6\n" +
+            "GOTO L7\n" +
+            "ASTORE 3\n" +
+            "ALOAD 3\n" +
+            "ATHROW\n" +
+            "L7\n" +
+            "LINENUMBER 150 L7\n" +
+            "RETURN\n" +
+            "L5\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 4\n"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/SyncMEntry");
+
+        checkTransformation(
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "GETSTATIC traces/onmethod/leveled/SyncMEntry.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L6\n" +
+            "DUP\n" +
+            "ASTORE 2\n" +
+            "ALOAD 0\n" +
+            "LDC \"syncM\"\n" +
+            "ALOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L6\n" +
+            "L7\n" +
+            "LINENUMBER 149 L7\n" +
+            "GOTO L8\n" +
+            "ASTORE 3\n" +
+            "ALOAD 3\n" +
+            "ATHROW\n" +
+            "L8\n" +
+            "LINENUMBER 150 L8\n" +
+            "RETURN\n" +
+            "L5\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
@@ -623,6 +701,82 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LINENUMBER 111 L8\n" +
             "L5\n" +
             "ATHROW\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 5"
+        );
+    }
+
+    @Test
+    public void methodEntrySyncMExit() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/SyncMExit");
+
+        checkTransformation(
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "L6\n" +
+            "LINENUMBER 149 L6\n" +
+            "DUP\n" +
+            "ASTORE 2\n" +
+            "ALOAD 0\n" +
+            "LDC \"resources.OnMethodTest\"\n" +
+            "ALOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "GOTO L7\n" +
+            "ASTORE 3\n" +
+            "DUP\n" +
+            "ASTORE 4\n" +
+            "ALOAD 0\n" +
+            "LDC \"resources.OnMethodTest\"\n" +
+            "ALOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "ALOAD 3\n" +
+            "ATHROW\n" +
+            "L7\n" +
+            "LINENUMBER 150 L7\n" +
+            "RETURN\n" +
+            "L5\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 5"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/SyncMExit");
+
+        checkTransformation(
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "L6\n" +
+            "LINENUMBER 149 L6\n" +
+            "GETSTATIC traces/onmethod/leveled/SyncMExit.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L7\n" +
+            "DUP\n" +
+            "ASTORE 2\n" +
+            "ALOAD 0\n" +
+            "LDC \"resources.OnMethodTest\"\n" +
+            "ALOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L7\n" +
+            "GOTO L8\n" +
+            "ASTORE 3\n" +
+            "GETSTATIC traces/onmethod/leveled/SyncMExit.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L9\n" +
+            "DUP\n" +
+            "ASTORE 4\n" +
+            "ALOAD 0\n" +
+            "LDC \"resources.OnMethodTest\"\n" +
+            "ALOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L9\n" +
+            "ALOAD 3\n" +
+            "ATHROW\n" +
+            "L8\n" +
+            "LINENUMBER 150 L8\n" +
+            "RETURN\n" +
+            "L5\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 5"

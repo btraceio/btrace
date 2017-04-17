@@ -32,7 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.Level;
+import com.sun.btrace.annotations.*;
 
 /**
  *
@@ -42,7 +42,7 @@ import com.sun.btrace.annotations.Level;
 public class SyncEntry {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="sync",
               location=@Location(value=Kind.SYNC_ENTRY), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeMethodName String pmn, Object lock) {
+    public static void args(@Self Object self, @ProbeMethodName String pmn, @TargetInstance Object lock) {
         println("args");
     }
 }
