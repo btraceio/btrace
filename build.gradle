@@ -12,6 +12,7 @@ buildscript {
 
 plugins {
     id 'java'
+    id 'java-library'
     id 'maven'
     id 'maven-publish'
     id "nebula.ospackage" version "4.3.0"
@@ -28,7 +29,7 @@ if (!currentJvm.toString().startsWith("1.7")) {
 }
 
 group 'com.sun.tools.btrace'
-version = '1.4-SNAPSHOT'
+version = '1.3.9-unravel-1705'
 description = 'BTrace - a safe, dynamic tracing tool for the Java platform'
 
 sourceCompatibility = 7
@@ -61,7 +62,7 @@ bintray {
     publish = true
 
     pkg {
-        repo = 'maven'
+        repo = 'btrace-custom'
         name = 'btrace'
         desc = 'BTrace'
         userOrg = 'btraceio'

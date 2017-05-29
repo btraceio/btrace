@@ -154,7 +154,10 @@ abstract class Client implements CommandListener {
 
     private void startFlusher() {
         int flushInterval;
-        String flushIntervalStr = System.getProperty("com.sun.btrace.FileClient.flush", "5");
+        String flushIntervalStr = System.getProperty("io.btrace.FileClient.flush");
+        if (flushIntervalStr == null) {
+            flushIntervalStr = System.getProperty("com.sun.btrace.FileClient.flush", "5");
+        }
         try {
             flushInterval = Integer.parseInt(flushIntervalStr);
         } catch (NumberFormatException e) {
