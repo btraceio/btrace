@@ -64,7 +64,6 @@ public class BTRACE189Test extends InstrumentorTestBase {
             "RETURN\n" +
             "MAXSTACK = 1\n" +
             "MAXLOCALS = 0\n" +
-            "\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
             "GETSTATIC traces/issues/BTRACE189.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +

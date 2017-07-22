@@ -26,6 +26,8 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.instr.RandomIntProvider;
 import java.lang.reflect.Field;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -4620,38 +4622,6 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXSTACK = 5\n" +
             "\n" +
             "// access flags 0xA\n" +
-            "private static $btrace$traces$ServicesTest$testFieldInjection(Ljava/lang/String;)V\n" +
-            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"noargs$static\")\n" +
-            "@Lcom/sun/btrace/annotations/ProbeClassName;() // parameter 0\n" +
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
-            "IFNE L0\n" +
-            "RETURN\n" +
-            "L0\n" +
-            "NEW resources/services/DummyRuntimService\n" +
-            "DUP\n" +
-            "DUP\n" +
-            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
-            "ASTORE 1\n" +
-            "BIPUSH 10\n" +
-            "LDC \"hey\"\n" +
-            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
-            "ALOAD 1\n" +
-            "BIPUSH 20\n" +
-            "LDC \"ho\"\n" +
-            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "L1\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "MAXSTACK = 4\n" +
-            "MAXLOCALS = 2\n" +
-            "\n" +
-            "// access flags 0xA\n" +
             "private static $btrace$traces$ServicesTest$testRuntimeService(Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"args\")\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
@@ -4660,15 +4630,15 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "NEW resources/services/DummyRuntimService\n" +
+            "NEW services/DummyRuntimService\n" +
             "DUP\n" +
             "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
+            "INVOKESPECIAL services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
             "ASTORE 5\n" +
             "ALOAD 5\n" +
             "BIPUSH 10\n" +
             "LDC \"hello\"\n" +
-            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "INVOKEVIRTUAL services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
@@ -4687,14 +4657,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "NEW resources/services/DummySimpleService\n" +
+            "NEW services/DummySimpleService\n" +
             "DUP\n" +
-            "INVOKESPECIAL resources/services/DummySimpleService.<init> ()V\n" +
+            "INVOKESPECIAL services/DummySimpleService.<init> ()V\n" +
             "ASTORE 0\n" +
             "ALOAD 0\n" +
             "LDC \"hello\"\n" +
             "BIPUSH 10\n" +
-            "INVOKEVIRTUAL resources/services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
+            "INVOKEVIRTUAL services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
@@ -4713,15 +4683,15 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "NEW resources/services/DummySimpleService\n" +
+            "NEW services/DummySimpleService\n" +
             "DUP\n" +
             "LDC \"getInstance\"\n" +
-            "INVOKESPECIAL resources/services/DummySimpleService.<init> (Ljava/lang/String;)V\n" +
+            "INVOKESPECIAL services/DummySimpleService.<init> (Ljava/lang/String;)V\n" +
             "ASTORE 5\n" +
             "ALOAD 5\n" +
             "LDC \"hello\"\n" +
             "BIPUSH 10\n" +
-            "INVOKEVIRTUAL resources/services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
+            "INVOKEVIRTUAL services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
@@ -4729,7 +4699,39 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "MAXSTACK = 3\n" +
-            "MAXLOCALS = 6"
+            "MAXLOCALS = 6\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$ServicesTest$testFieldInjection(Ljava/lang/String;)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"noargs$static\")\n" +
+            "@Lcom/sun/btrace/annotations/ProbeClassName;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "NEW services/DummyRuntimService\n" +
+            "DUP\n" +
+            "DUP\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESPECIAL services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
+            "ASTORE 1\n" +
+            "BIPUSH 10\n" +
+            "LDC \"hey\"\n" +
+            "INVOKEVIRTUAL services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "ALOAD 1\n" +
+            "BIPUSH 20\n" +
+            "LDC \"ho\"\n" +
+            "INVOKEVIRTUAL services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 2"
         );
     }
 
@@ -4758,38 +4760,6 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "MAXSTACK = 5\n" +
             "\n" +
             "// access flags 0xA\n" +
-            "private static $btrace$traces$ServicesTest$testFieldInjection(Ljava/lang/String;)V\n" +
-            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"noargs$static\")\n" +
-            "@Lcom/sun/btrace/annotations/ProbeClassName;() // parameter 0\n" +
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
-            "IFNE L0\n" +
-            "RETURN\n" +
-            "L0\n" +
-            "NEW resources/services/DummyRuntimService\n" +
-            "DUP\n" +
-            "DUP\n" +
-            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
-            "ASTORE 1\n" +
-            "BIPUSH 10\n" +
-            "LDC \"hey\"\n" +
-            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
-            "ALOAD 1\n" +
-            "BIPUSH 20\n" +
-            "LDC \"ho\"\n" +
-            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "L1\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "MAXSTACK = 4\n" +
-            "MAXLOCALS = 2\n" +
-            "\n" +
-            "// access flags 0xA\n" +
             "private static $btrace$traces$ServicesTest$testRuntimeService(Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"args\")\n" +
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
@@ -4798,15 +4768,15 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "NEW resources/services/DummyRuntimService\n" +
+            "NEW services/DummyRuntimService\n" +
             "DUP\n" +
             "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESPECIAL resources/services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
+            "INVOKESPECIAL services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
             "ASTORE 5\n" +
             "ALOAD 5\n" +
             "BIPUSH 10\n" +
             "LDC \"hello\"\n" +
-            "INVOKEVIRTUAL resources/services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "INVOKEVIRTUAL services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
@@ -4825,14 +4795,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "NEW resources/services/DummySimpleService\n" +
+            "NEW services/DummySimpleService\n" +
             "DUP\n" +
-            "INVOKESPECIAL resources/services/DummySimpleService.<init> ()V\n" +
+            "INVOKESPECIAL services/DummySimpleService.<init> ()V\n" +
             "ASTORE 0\n" +
             "ALOAD 0\n" +
             "LDC \"hello\"\n" +
             "BIPUSH 10\n" +
-            "INVOKEVIRTUAL resources/services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
+            "INVOKEVIRTUAL services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
@@ -4851,15 +4821,15 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
-            "NEW resources/services/DummySimpleService\n" +
+            "NEW services/DummySimpleService\n" +
             "DUP\n" +
             "LDC \"getInstance\"\n" +
-            "INVOKESPECIAL resources/services/DummySimpleService.<init> (Ljava/lang/String;)V\n" +
+            "INVOKESPECIAL services/DummySimpleService.<init> (Ljava/lang/String;)V\n" +
             "ASTORE 5\n" +
             "ALOAD 5\n" +
             "LDC \"hello\"\n" +
             "BIPUSH 10\n" +
-            "INVOKEVIRTUAL resources/services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
+            "INVOKEVIRTUAL services/DummySimpleService.doit (Ljava/lang/String;I)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
@@ -4867,7 +4837,39 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "MAXSTACK = 3\n" +
-            "MAXLOCALS = 6"
+            "MAXLOCALS = 6\n" +
+            "\n" +
+            "// access flags 0xA\n" +
+            "private static $btrace$traces$ServicesTest$testFieldInjection(Ljava/lang/String;)V\n" +
+            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"resources.OnMethodTest\", method=\"noargs$static\")\n" +
+            "@Lcom/sun/btrace/annotations/ProbeClassName;() // parameter 0\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
+            "IFNE L0\n" +
+            "RETURN\n" +
+            "L0\n" +
+            "NEW services/DummyRuntimService\n" +
+            "DUP\n" +
+            "DUP\n" +
+            "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
+            "INVOKESPECIAL services/DummyRuntimService.<init> (Lcom/sun/btrace/BTraceRuntime;)V\n" +
+            "ASTORE 1\n" +
+            "BIPUSH 10\n" +
+            "LDC \"hey\"\n" +
+            "INVOKEVIRTUAL services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "ALOAD 1\n" +
+            "BIPUSH 20\n" +
+            "LDC \"ho\"\n" +
+            "INVOKEVIRTUAL services/DummyRuntimService.doit (ILjava/lang/String;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "L1\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
+            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
+            "RETURN\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 2"
         );
     }
 
@@ -4883,6 +4885,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void tlsTest() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("TLSTest");
+
+        Files.write(FileSystems.getDefault().getPath("/tmp/TLSTest.class"), traceCode);
 
         checkTrace(
             "public static Lcom/sun/btrace/BTraceRuntime; runtime\n" +

@@ -59,6 +59,8 @@ public final class OnMethod extends SpecialParameterHolder {
 
     private com.sun.btrace.runtime.Level level = null;
 
+    private boolean isCalled = false;
+
     private BTraceMethodNode bmn;
 
     public OnMethod() {
@@ -202,6 +204,14 @@ public final class OnMethod extends SpecialParameterHolder {
 
     public boolean isSubtypeMatcher() {
         return subtypeMatcher;
+    }
+
+    public boolean isCalled() {
+        return isCalled;
+    }
+
+    public void setCalled() {
+        isCalled = true;
     }
 
     @Override

@@ -26,7 +26,7 @@
 package com.sun.btrace.samples;
 
 import com.sun.btrace.annotations.*;
-import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.services.impl.Printer;
 
 /**
  * This script traces method entry into every method of
@@ -34,13 +34,16 @@ import static com.sun.btrace.BTraceUtils.*;
  * this script -- this will slow down your app significantly!!
  */
 @BTrace public class AllMethods {
+    @Injected(ServiceType.RUNTIME)
+    private static Printer printer;
+
     @OnMethod(
         clazz="/javax\\.swing\\..*/",
         method="/.*/"
     )
     public static void m(@Self Object o, @ProbeClassName String probeClass, @ProbeMethodName String probeMethod) {
-        println("this = " + o);
-        print("entered " + probeClass);
-        println("." + probeMethod);
+        printer.println("this = " + o);
+        printer.print("entered " + probeClass);
+        printer.println("." + probeMethod);
     }
 }

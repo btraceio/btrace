@@ -43,7 +43,6 @@ import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
 import com.sun.btrace.comm.RetransformationStartNotification;
-import com.sun.btrace.runtime.BTraceProbe;
 import com.sun.btrace.runtime.ClassFilter;
 import com.sun.btrace.runtime.Instrumentor;
 import com.sun.btrace.runtime.InstrumentUtils;
@@ -66,6 +65,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
+import com.sun.btrace.runtime.BTraceProbe;
 
 
 /**
@@ -106,7 +106,7 @@ abstract class Client implements CommandListener {
         ClassCache.class.getClassLoader();
         ClassInfo.class.getClassLoader();
 
-        BTraceRuntime.init(createPerfReaderImpl(), new RunnableGeneratorImpl());
+        BTraceRuntime.init(createPerfReaderImpl());
     }
 
     Client(ClientContext ctx) {
@@ -118,13 +118,14 @@ abstract class Client implements CommandListener {
         this.settings = s != null ? s : SharedSettings.GLOBAL;
         this.transformer = t;
         this.debug = new DebugSupport(settings);
+
         setupWriter();
     }
 
     @SuppressWarnings("DefaultCharset")
     protected final void setupWriter() {
         String outputFile = settings.getOutputFile();
-        if (outputFile == null || outputFile.equals("::null")) return;
+        if (outputFile == null || outputFile.equals("::null") || outputFile.equals("/dev/null")) return;
 
         if (!outputFile.equals("::stdout")) {
             String outputDir = settings.getOutputDir();
@@ -259,12 +260,20 @@ abstract class Client implements CommandListener {
     }
 
     protected final Class loadClass(InstrumentCommand instr) throws IOException {
+        return loadClass(instr, true);
+    }
+
+    protected final Class loadClass(InstrumentCommand instr, boolean canLoadPack) throws IOException {
         String[] args = instr.getArguments();
         this.btraceCode = instr.getCode();
         try {
-            probe = load(btraceCode);
-            if (!probe.isVerified()) {
-                throw probe.getVerifierException();
+            probe = load(btraceCode, canLoadPack);
+            if (probe == null) {
+                return null;
+            }
+
+            if (!settings.isTrusted()) {
+                probe.checkVerified();
             }
         } catch (Throwable th) {
             debugPrint(th);
@@ -396,16 +405,19 @@ abstract class Client implements CommandListener {
     }
 
     // Internals only below this point
-    private BTraceProbe load(byte[] buf) {
-        BTraceProbeFactory f = new BTraceProbeFactory(settings);
+    private BTraceProbe load(byte[] buf, boolean canLoadPack) {
+        BTraceProbeFactory f = new BTraceProbeFactory(settings, canLoadPack);
         debugPrint("loading BTrace class");
         BTraceProbe cn = f.createProbe(buf);
 
-        if (isDebug()) {
-            if (cn.isVerified()) {
-                debugPrint("loaded '" + cn.getClassName() + "' successfully");
-            } else {
-                debugPrint(cn.getClassName() + " failed verification");
+        if (cn != null) {
+            if (isDebug()) {
+                if (cn.isVerified()) {
+                    debugPrint("loaded '" + cn.getClassName() + "' successfully");
+                } else {
+                    debugPrint(cn.getClassName() + " failed verification");
+                    return null;
+                }
             }
         }
         return cn;

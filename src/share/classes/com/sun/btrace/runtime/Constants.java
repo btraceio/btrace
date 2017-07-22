@@ -69,6 +69,10 @@ public abstract class Constants {
     public static final String STRING_DESC = "L" + STRING_INTERNAL + ";";
     public static final Type STRING_TYPE = Type.getType(STRING_DESC);
 
+    public static final String STRING_BUILDER_INTERNAL = "java/lang/StringBuilder";
+    public static final String STRING_BUILDER_DESC = "L" + STRING_BUILDER_INTERNAL + ";";
+    public static final Type STRING_BUILDER_TYPE = Type.getType(STRING_BUILDER_DESC);
+
     public static final String VOID_DESC = "V";
     public static final String BOOLEAN_DESC = "Z";
     public static final String INT_DESC = "I";
@@ -112,6 +116,8 @@ public abstract class Constants {
         Type.getDescriptor(OnExit.class);
     public static final String ONERROR_DESC =
         Type.getDescriptor(OnError.class);
+    public static final String ONLOWMEMORY_DESC =
+        Type.getDescriptor(OnLowMemory.class);
 
     public static final String SAMPLED_DESC =
         Type.getDescriptor(Sampled.class);

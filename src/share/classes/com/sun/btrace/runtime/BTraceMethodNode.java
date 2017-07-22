@@ -52,12 +52,12 @@ public class BTraceMethodNode extends MethodNode {
     private OnProbe op;
     private Location loc;
     private boolean sampled;
-    private final BTraceProbe cn;
+    private final BTraceProbeNode cn;
     private boolean isBTraceHandler;
     private final CallGraph graph;
     private final String methodId;
 
-    BTraceMethodNode(MethodNode from, BTraceProbe cn) {
+    BTraceMethodNode(MethodNode from, BTraceProbeNode cn) {
         super(Opcodes.ASM5, from.access, from.name, from.desc, from.signature, ((List<String>)from.exceptions).toArray(new String[0]));
         this.cn = cn;
         this.graph = cn.getGraph();

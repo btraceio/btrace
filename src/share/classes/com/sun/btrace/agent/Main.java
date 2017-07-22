@@ -58,6 +58,7 @@ import java.util.regex.Pattern;
  * @author Joachim Skeie (rolling output)
  */
 public final class Main {
+    private static long ts = System.nanoTime();
 
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
@@ -70,18 +71,16 @@ public final class Main {
     private static final BTraceTransformer transformer = new BTraceTransformer(debug);
 
     // #BTRACE-42: Non-daemon thread prevents traced application from exiting
-    private static final ThreadFactory daemonizedThreadFactory = new ThreadFactory() {
-        ThreadFactory delegate = Executors.defaultThreadFactory();
-
+    private static final ThreadFactory qProcessorThreadFactory = new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
-            Thread result = delegate.newThread(r);
+            Thread result = new Thread(r, "BTrace Command Queue Processor");
             result.setDaemon(true);
             return result;
         }
     };
 
-    private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(daemonizedThreadFactory);
+    private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(qProcessorThreadFactory);
 
     public static void premain(String args, Instrumentation inst) {
         main(args, inst);
@@ -98,44 +97,48 @@ public final class Main {
             Main.inst = inst;
         }
 
-        loadArgs(args);
-        if (argMap.containsKey("debug")) {
-            debugPrint("parsed command line arguments");
-        }
-        parseArgs();
-
-        inst.addTransformer(transformer, true);
-        startScripts();
-
-        String tmp = argMap.get("noServer");
-        boolean noServer = tmp != null && !"false".equals(tmp);
-        if (noServer) {
-            if (isDebug()) {
-                debugPrint("noServer is true, server not started");
-            }
-            return;
-        }
-        Thread agentThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                BTraceRuntime.enter();
-                try {
-                    startServer();
-                } finally {
-                    BTraceRuntime.leave();
-                }
-            }
-        });
-        BTraceRuntime.initUnsafe();
-        BTraceRuntime.enter();
         try {
-            agentThread.setDaemon(true);
-            if (isDebug()) {
-                debugPrint("starting agent thread");
+            loadArgs(args);
+            if (argMap.containsKey("debug")) {
+                debugPrint("parsed command line arguments");
             }
-            agentThread.start();
+            parseArgs();
+
+            startScripts();
+
+            String tmp = argMap.get("noServer");
+            boolean noServer = tmp != null && !"false".equals(tmp);
+            if (noServer) {
+                if (isDebug()) {
+                    debugPrint("noServer is true, server not started");
+                }
+                return;
+            }
+            Thread agentThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    BTraceRuntime.enter();
+                    try {
+                        startServer();
+                    } finally {
+                        BTraceRuntime.leave();
+                    }
+                }
+            });
+            BTraceRuntime.initUnsafe();
+            BTraceRuntime.enter();
+            try {
+                agentThread.setDaemon(true);
+                if (isDebug()) {
+                    debugPrint("starting agent thread");
+                }
+                agentThread.start();
+            } finally {
+                BTraceRuntime.leave();
+            }
         } finally {
-            BTraceRuntime.leave();
+            inst.addTransformer(transformer, true);
+            Main.debugPrint("Agent init took: " + (System.nanoTime() - ts) + "ns");
         }
     }
 
@@ -201,7 +204,7 @@ public final class Main {
                         }
                     }
                 }
-                if (argMap.containsKey("debug")) {
+                if (argMap.containsKey("debug") && argMap.get("debug").equalsIgnoreCase("true")) {
                     DebugSupport.info(log.toString());
                 }
             }

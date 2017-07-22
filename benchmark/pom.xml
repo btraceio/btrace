@@ -53,17 +53,17 @@ questions.
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-client</artifactId>
-            <version>1.4-SNAPSHOT</version>
+            <version>1.3.9-unravel-1705</version>
         </dependency>
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-agent</artifactId>
-            <version>1.4-SNAPSHOT</version>
+            <version>1.3.9-unravel-1705</version>
         </dependency>
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-boot</artifactId>
-            <version>1.4-SNAPSHOT</version>
+            <version>1.3.9-unravel-1705</version>
         </dependency>
         <dependency>
             <groupId>sun.jdk</groupId>

@@ -34,7 +34,17 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.net.URLDecoder;
+import java.security.CodeSigner;
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * Represents a local client communicated by trace file.
@@ -45,21 +55,20 @@ import java.util.Arrays;
  * @author J.Bachorik
  */
 class FileClient extends Client {
-    FileClient(ClientContext ctx, byte[] code) throws IOException {
-        super(ctx);
-        init(code);
-    }
+    private final AtomicBoolean noOutputNotified = new AtomicBoolean(false);
 
-    private void init(byte[] code) throws IOException {
+    private boolean canLoadPack = true;
+
+    private boolean init(byte[] code) throws IOException {
         InstrumentCommand cmd = new InstrumentCommand(code, new String[0]);
-        Class btraceClazz = loadClass(cmd);
-        if (btraceClazz == null) {
-            throw new RuntimeException("can not load BTrace class");
-        }
+        return loadClass(cmd, canLoadPack) != null;
     }
 
     FileClient(ClientContext ctx, File scriptFile) throws IOException {
-        this(ctx, readAll(scriptFile));
+        super(ctx);
+        if (!init(readScript(scriptFile))) {
+            debug.warning("Unable to load BTrace script " + scriptFile);
+        }
     }
 
     @Override
@@ -74,7 +83,9 @@ class FileClient extends Client {
             default:
                 if (cmd instanceof PrintableCommand) {
                     if (out == null) {
-                        DebugSupport.warning("No output stream. Received DataCommand.");
+                        if (noOutputNotified.compareAndSet(false, true)) {
+                            DebugSupport.warning("No output stream. DataCommand output is ignored.");
+                        }
                     } else {
                         ((PrintableCommand) cmd).print(out);
                     }
@@ -83,12 +94,10 @@ class FileClient extends Client {
         }
     }
 
-    private static byte[] readAll(File file) throws IOException {
+    private byte[] readScript(File file) throws IOException {
         String path = file.getPath();
         if (path.startsWith(Constants.EMBEDDED_BTRACE_SECTION_HEADER)) {
-            try (InputStream is = ClassLoader.getSystemResourceAsStream(path)) {
-                return readAll(is, -1);
-            }
+            return settings.isTrusted() ? loadQuick(path) : loadWithSecurity(path);
         } else {
             int size = (int) file.length();
             try (FileInputStream fis = new FileInputStream(file)) {
@@ -97,10 +106,39 @@ class FileClient extends Client {
         }
     }
 
-    private static byte[] readAll(InputStream is, int size) throws IOException {
+    private byte[] loadQuick(String path) throws IOException {
+        try (InputStream is = ClassLoader.getSystemResourceAsStream(path)) {
+            return readAll(is, -1);
+        }
+    }
+
+    private byte[] loadWithSecurity(String path) throws IOException {
+        URL scriptUrl = URLClassLoader.getSystemResource(path);
+        if (scriptUrl.getProtocol().equals("jar")) {
+            String jarPath = scriptUrl.getPath().substring(5, scriptUrl.getPath().indexOf("!"));
+            JarFile jar = new JarFile(URLDecoder.decode(jarPath, "UTF-8"));
+            Enumeration<JarEntry> ens = jar.entries();
+
+            while (ens.hasMoreElements()) {
+                JarEntry en = ens.nextElement();
+
+                if (!en.isDirectory()) {
+                    if (en.toString().equals(path)) {
+                        byte[] data = readAll(jar.getInputStream(en), en.getSize());
+                        CodeSigner[] signers = en.getCodeSigners();
+                        canLoadPack = signers != null && signers.length != 0;
+                        return data;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static byte[] readAll(InputStream is, long size) throws IOException {
         if (is == null) throw new NullPointerException();
 
-        byte[] buf = new byte[size != -1 ? size : 8192];
+        byte[] buf = new byte[size != -1 ? Math.min((int)size, 512*1024*1024) : 8192];
         int bufsize = buf.length;
         int off = 0;
         int read;

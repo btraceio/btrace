@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  * This class allows building an arbitrary graph caller-callee relationship
  * @author Jaroslav Bachorik
  */
-final class CallGraph {
+public final class CallGraph {
     private static final Pattern MID_SPLIT_PTN = Pattern.compile("\\:\\:");
 
     public static class Node {
@@ -158,7 +158,7 @@ final class CallGraph {
         }
         return new String[0];
     }
-
+    
     public void addEdge(String fromId, String toId) {
         Node fromNode = null;
         Node toNode = null;

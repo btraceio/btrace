@@ -33,6 +33,8 @@ import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
 import com.sun.btrace.util.MethodID;
+import java.io.File;
+import java.io.FileInputStream;
 import org.junit.After;
 import org.junit.Before;
 import org.objectweb.asm.util.CheckClassAdapter;
@@ -44,6 +46,8 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.BeforeClass;
@@ -70,12 +74,11 @@ public abstract class InstrumentorTestBase {
 
     protected byte[] originalBC;
     protected byte[] transformedBC;
-    protected byte[] originalTrace;
-    protected byte[] transformedTrace;
+    protected byte[] traceCode;
 
     private ClassLoader cl;
-    private final SharedSettings settings = SharedSettings.GLOBAL;
-    private final BTraceProbeFactory factory = new BTraceProbeFactory(settings);
+    private final static SharedSettings settings = SharedSettings.GLOBAL;
+    private final static BTraceProbeFactory factory = new BTraceProbeFactory(settings);
 
     protected final void enableUniqueClientClassNameCheck() throws Exception {
         uccn.set(null, true);
@@ -90,6 +93,7 @@ public abstract class InstrumentorTestBase {
         uccn = BTraceRuntime.class.getDeclaredField("uniqueClientClassNames");
         uccn.setAccessible(true);
         uccn.set(null, true);
+        settings.setTrusted(true);
     }
 
     @After
@@ -102,8 +106,7 @@ public abstract class InstrumentorTestBase {
         try {
             originalBC = null;
             transformedBC = null;
-            originalTrace = null;
-            transformedTrace = null;
+            traceCode = null;
             resetClassLoader();
 
             Field lastFld = MethodID.class.getDeclaredField("lastMehodId");
@@ -130,15 +133,31 @@ public abstract class InstrumentorTestBase {
     protected void cleanup() {
         originalBC = null;
         transformedBC = null;
-        originalTrace = null;
-        transformedTrace = null;
+        traceCode = null;
     }
 
-    protected void load() {
-        String clzName = new ClassReader(transformedBC).getClassName().replace('.', '/');
-        String traceName = new ClassReader(transformedTrace).getClassName().replace('.', '/');
-        unsafe.defineClass(clzName, transformedBC, 0, transformedBC.length, cl, null);
-        unsafe.defineClass(traceName, transformedTrace, 0, transformedTrace.length, cl, null);
+    protected void load(String traceName, String clzName) {
+        loadTraceCode(traceName);
+        loadClass(clzName);
+    }
+
+    protected void loadClass(String origName) {
+        if (transformedBC != null) {
+            String clzName = new ClassReader(transformedBC).getClassName().replace('.', '/');
+            unsafe.defineClass(clzName, transformedBC, 0, transformedBC.length, cl, null);
+        } else {
+            System.err.println("Unable to instrument class " + origName);
+            transformedBC = originalBC;
+        }
+    }
+
+    protected void loadTraceCode(String origName) {
+        if (traceCode == null) {
+            String traceName = new ClassReader(traceCode).getClassName().replace('.', '/');
+            unsafe.defineClass(traceName, traceCode, 0, traceCode.length, cl, null);
+        } else {
+            System.err.println("Unable to process trace " + origName);
+        }
     }
 
     protected void checkTransformation(String expected) throws IOException {
@@ -160,7 +179,7 @@ public abstract class InstrumentorTestBase {
     }
 
     protected void checkTrace(String expected) throws IOException {
-        org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(transformedTrace);
+        org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(traceCode);
 
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
@@ -169,16 +188,6 @@ public abstract class InstrumentorTestBase {
             System.err.println(sw.toString());
             fail();
         }
-
-        System.err.println("=== HERE");
-        System.err.println(asmify(transformedTrace));
-        System.err.println("========");
-
-        String diff = diffTrace();
-        if (DEBUG) {
-            System.err.println(diff);
-        }
-        assertEquals(expected, diff.substring(0, diff.length() > expected.length() ? expected.length() : diff.length()));
     }
 
     protected void transform(String traceName) throws IOException {
@@ -195,12 +204,8 @@ public abstract class InstrumentorTestBase {
 
         transformedBC = cw.instrument();
 
-        if (transformedBC != null) {
-            load();
-        } else {
-            System.err.println("Unable to instrument class " + cr.getJavaClassName());
-            transformedBC = originalBC;
-        }
+        load(traceName, cr.getJavaClassName());
+
         System.err.println("==== " + traceName);
     }
 
@@ -215,12 +220,6 @@ public abstract class InstrumentorTestBase {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cn.accept(cw);
         return asmify(cw.toByteArray());
-    }
-
-    private String diffTrace() throws IOException {
-        String origCode = asmify(originalTrace);
-        String transCode = asmify(transformedTrace);
-        return diff(transCode, origCode);
     }
 
     private String diff() throws IOException {
@@ -283,42 +282,45 @@ public abstract class InstrumentorTestBase {
     }
 
     protected BTraceProbe loadTrace(String name, boolean unsafe) throws IOException {
-        originalTrace = loadFile("traces/" + name + ".class");
+        byte[] traceData = loadFile("traces/" + name + ".class");
+
+        BTraceProbe bcn = factory.createProbe(traceData);
+        this.traceCode = bcn.getFullBytecode();
+
         if (DEBUG) {
-            System.err.println("=== Loaded Trace: " + name + "\n");
-            System.err.println(asmify(originalTrace));
+            System.err.println("=== Loaded Trace: " + bcn + "\n");
+            System.err.println(asmify(this.traceCode));
+            Files.write(FileSystems.getDefault().getPath("/tmp/jingle.class"), traceCode);
         }
-        BTraceProbe bcn = factory.createProbe(originalTrace);
-        if (!bcn.isVerified()) {
-            throw bcn.getVerifierException();
-        }
-//        Trace t =  new Trace(bcn.getBytecode(), bcn.getOnMethods(), verifier.getReachableCalls(), bcn.name);
-        transformedTrace = extractBytecode(bcn);
-        if (DEBUG) {
-//            writer = InstrumentUtils.newClassWriter();
-//            InstrumentUtils.accept(new ClassReader(originalTrace), new Preprocessor1(writer));
-            System.err.println("=== Preprocessed Trace ===");
-//            System.err.println(asmify(writer.toByteArray()));
-            System.err.println(asmify(transformedTrace));
-        }
+
+        bcn.checkVerified();
+
         return bcn;
     }
 
     protected byte[] loadTargetClass(String name) throws IOException {
-        originalBC = loadFile("resources/" + name + ".class");
+        originalBC = loadResource("resources/" + name + ".class");
         return originalBC;
     }
 
-    private byte[] loadFile(String path) throws IOException {
+    private byte[] loadResource(String path) throws IOException {
         InputStream is = ClassLoader.getSystemResourceAsStream(path);
         try {
             return loadFile(is);
         } finally {
             if (is == null) {
-                System.err.println("Unable to load file: " + path);
+                System.err.println("Unable to load resource: " + path);
             } else {
                 is.close();
             }
+        }
+    }
+
+    private byte[] loadFile(String path) throws IOException {
+        File f = new File("./build/classes/" + path);
+        try (InputStream is = new FileInputStream(f)) {
+            byte[] data = loadFile(is);
+            return data;
         }
     }
 
@@ -335,11 +337,5 @@ public abstract class InstrumentorTestBase {
             result = newresult;
         }
         return result;
-    }
-
-    private byte[] extractBytecode(BTraceProbe bp) {
-        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-        bp.accept(cw);
-        return cw.toByteArray();
     }
 }

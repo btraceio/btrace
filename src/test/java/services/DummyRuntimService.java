@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
+ * particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -22,22 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package services;
 
-package com.sun.btrace.instr;
+import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.services.spi.RuntimeService;
 
-import java.lang.reflect.Method;
+final public class DummyRuntimService extends RuntimeService {
+    public DummyRuntimService(BTraceRuntime rt) {
+        super(rt);
+    }
 
-/**
- * This interface is used to generate .class bytes
- * for a Runnable interface implementor that calls
- * given (static public, no-arg) method.
- *
- * @author A. Sundararajan
- */
-public interface RunnableGenerator {
-    /**
-     * Generate class bytes for java.lang.Runnable
-     * implementation and return the same.
-     */
-    public byte[] generate(Method method, String className);
+    public void doit(int x, String b) {
+        System.out.println("doit");
+    }
 }

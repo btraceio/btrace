@@ -133,11 +133,24 @@ final class Preprocessor {
     private static final Type INJECTED_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Injected;");
     private static final String SERVICE_INTERNAL = "com/sun/btrace/services/api/Service";
 
+    private static final String TIMERHANDLER_INTERNAL = "com/sun/btrace/shared/TimerHandler";
+    private static final String TIMERHANDLER_DESC = "L" + TIMERHANDLER_INTERNAL + ";";
+    private static final String EVENTHANDLER_INTERNAL = "com/sun/btrace/shared/EventHandler";
+    private static final String EVENTHANDLER_DESC = "L" + EVENTHANDLER_INTERNAL + ";";
+    private static final String ERRORHANDLER_INTERNAL = "com/sun/btrace/shared/ErrorHandler";
+    private static final String ERRORHANDLER_DESC = "L" + ERRORHANDLER_INTERNAL + ";";
+    private static final String EXITHANDLER_INTERNAL = "com/sun/btrace/shared/ExitHandler";
+    private static final String EXITHANDLER_DESC = "L" + EXITHANDLER_INTERNAL + ";";
+    private static final String LOWMEMORYHANDLER_INTERNAL = "com/sun/btrace/shared/LowMemoryHandler";
+    private static final String LOWMEMORYHANDLER_DESC = "L" + LOWMEMORYHANDLER_INTERNAL + ";";
+
     private static final String NEW_TLS_DESC = "(" + OBJECT_DESC + ")" + THREAD_LOCAL_DESC;
     private static final String TLS_SET_DESC = "(" + OBJECT_DESC + ")" + VOID_DESC;
     private static final String TLS_GET_DESC = "()" + OBJECT_DESC;
     private static final String NEW_PERFCOUNTER_DESC = "(" + OBJECT_DESC + STRING_DESC + STRING_DESC + ")" + VOID_DESC;
-    private static final String BTRACERT_FOR_CLASS_DESC = "(" + CLASS_DESC + ")" + BTRACERT_DESC;
+    private static final String BTRACERT_FOR_CLASS_DESC = "(" + CLASS_DESC + "[" + TIMERHANDLER_DESC + "[" + EVENTHANDLER_DESC +
+                                                            "[" + ERRORHANDLER_DESC +"[" + EXITHANDLER_DESC + "[" + LOWMEMORYHANDLER_DESC +
+                                                            ")" + BTRACERT_DESC;
     private static final String BTRACERT_ENTER_DESC = "(" + BTRACERT_DESC + ")" + BOOLEAN_DESC;
     private static final String BTRACERT_HANDLE_EXCEPTION_DESC = "(" + THROWABLE_DESC + ")" + VOID_DESC;
     private static final String RT_SERVICE_CTR_DESC = "(" + BTRACERT_DESC + ")V";
@@ -491,6 +504,11 @@ final class Preprocessor {
         addRuntimeNode(cn);
         InsnList l = new InsnList();
         l.add(new LdcInsnNode(Type.getObjectType(cn.name)));
+        l.add(loadTimerHandlers(cn));
+        l.add(loadEventHandlers(cn));
+        l.add(loadErrorHandlers(cn));
+        l.add(loadExitHandlers(cn));
+        l.add(loadLowMemoryHandlers(cn));
         l.add(new MethodInsnNode(
             Opcodes.INVOKESTATIC,
             BTRACERT_INTERNAL,
@@ -514,6 +532,197 @@ final class Preprocessor {
         clinit.instructions.insert(l);
 
         startRuntime(clinit);
+    }
+
+    private InsnList loadTimerHandlers(ClassNode cn) {
+        InsnList il = new InsnList();
+        int cnt = 0;
+        for (MethodNode mn : (List<MethodNode>)cn.methods) {
+            if (mn.visibleAnnotations != null) {
+                AnnotationNode an = (AnnotationNode)mn.visibleAnnotations.get(0);
+                if (an.desc.equals(ONTIMER_DESC)) {
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(cnt++));
+                    il.add(new TypeInsnNode(Opcodes.NEW, TIMERHANDLER_INTERNAL));
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(mn.name));
+                    il.add(new LdcInsnNode(an.values.get(1)));
+                    il.add(new MethodInsnNode(
+                            Opcodes.INVOKESPECIAL,
+                            TIMERHANDLER_INTERNAL,
+                            "<init>",
+                            "(Ljava/lang/String;J)V",
+                            false)
+                    );
+                    il.add(new InsnNode(Opcodes.AASTORE));
+                }
+            }
+        }
+        if (cnt > 0) {
+            InsnList newArray = new InsnList();
+            newArray.add(new LdcInsnNode(cnt));
+            newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, TIMERHANDLER_INTERNAL));
+            il.insert(newArray);
+        } else {
+            il.insert(new InsnNode(Opcodes.ACONST_NULL));
+        }
+
+        return il;
+    }
+
+    private InsnList loadEventHandlers(ClassNode cn) {
+        InsnList il = new InsnList();
+        int cnt = 0;
+        for (MethodNode mn : (List<MethodNode>)cn.methods) {
+            if (mn.visibleAnnotations != null) {
+                AnnotationNode an = (AnnotationNode)mn.visibleAnnotations.get(0);
+                if (an.desc.equals(ONEVENT_DESC)) {
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(cnt++));
+                    il.add(new TypeInsnNode(Opcodes.NEW, EVENTHANDLER_INTERNAL));
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(mn.name));
+                    il.add(new LdcInsnNode(an.values.get(1)));
+                    il.add(new MethodInsnNode(
+                            Opcodes.INVOKESPECIAL,
+                            EVENTHANDLER_INTERNAL,
+                            "<init>",
+                            "(Ljava/lang/String;Ljava/lang/String;)V",
+                            false)
+                    );
+                    il.add(new InsnNode(Opcodes.AASTORE));
+                }
+            }
+        }
+        if (cnt > 0) {
+            InsnList newArray = new InsnList();
+            newArray.add(new LdcInsnNode(cnt));
+            newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, EVENTHANDLER_INTERNAL));
+            il.insert(newArray);
+        } else {
+            il.insert(new InsnNode(Opcodes.ACONST_NULL));
+        }
+
+        return il;
+    }
+
+    private InsnList loadErrorHandlers(ClassNode cn) {
+        InsnList il = new InsnList();
+        int cnt = 0;
+        for (MethodNode mn : (List<MethodNode>)cn.methods) {
+            if (mn.visibleAnnotations != null) {
+                AnnotationNode an = (AnnotationNode)mn.visibleAnnotations.get(0);
+                if (an.desc.equals(ONERROR_DESC)) {
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(cnt++));
+                    il.add(new TypeInsnNode(Opcodes.NEW, ERRORHANDLER_INTERNAL));
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(mn.name));
+                    il.add(new MethodInsnNode(
+                            Opcodes.INVOKESPECIAL,
+                            ERRORHANDLER_INTERNAL,
+                            "<init>",
+                            "(Ljava/lang/String;)V",
+                            false)
+                    );
+                    il.add(new InsnNode(Opcodes.AASTORE));
+                }
+            }
+        }
+        if (cnt > 0) {
+            InsnList newArray = new InsnList();
+            newArray.add(new LdcInsnNode(cnt));
+            newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, ERRORHANDLER_INTERNAL));
+            il.insert(newArray);
+        } else {
+            il.insert(new InsnNode(Opcodes.ACONST_NULL));
+        }
+
+        return il;
+    }
+
+    private InsnList loadExitHandlers(ClassNode cn) {
+        InsnList il = new InsnList();
+        int cnt = 0;
+        for (MethodNode mn : (List<MethodNode>)cn.methods) {
+            if (mn.visibleAnnotations != null) {
+                AnnotationNode an = (AnnotationNode)mn.visibleAnnotations.get(0);
+                if (an.desc.equals(ONEXIT_DESC)) {
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(cnt++));
+                    il.add(new TypeInsnNode(Opcodes.NEW, EXITHANDLER_INTERNAL));
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(mn.name));
+                    il.add(new MethodInsnNode(
+                            Opcodes.INVOKESPECIAL,
+                            EXITHANDLER_INTERNAL,
+                            "<init>",
+                            "(Ljava/lang/String;)V",
+                            false)
+                    );
+                    il.add(new InsnNode(Opcodes.AASTORE));
+                }
+            }
+        }
+        if (cnt > 0) {
+            InsnList newArray = new InsnList();
+            newArray.add(new LdcInsnNode(cnt));
+            newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, EXITHANDLER_INTERNAL));
+            il.insert(newArray);
+        } else {
+            il.insert(new InsnNode(Opcodes.ACONST_NULL));
+        }
+
+        return il;
+    }
+
+    private InsnList loadLowMemoryHandlers(ClassNode cn) {
+        InsnList il = new InsnList();
+        int cnt = 0;
+        for (MethodNode mn : (List<MethodNode>)cn.methods) {
+            if (mn.visibleAnnotations != null) {
+                AnnotationNode an = (AnnotationNode)mn.visibleAnnotations.get(0);
+                if (an.desc.equals(ONLOWMEMORY_DESC)) {
+                    String pool = "";
+                    long threshold = Long.MAX_VALUE;
+
+                    for (int i = 0; i < an.values.size(); i += 2) {
+                        String key = (String)an.values.get(i);
+                        Object val = an.values.get(i + 1);
+                        if (key.equals("pool")) {
+                            pool = (String)val;
+                        } else if (key.equals("threshold")) {
+                            threshold = (long)val;
+                        }
+                    }
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(cnt++));
+                    il.add(new TypeInsnNode(Opcodes.NEW, LOWMEMORYHANDLER_INTERNAL));
+                    il.add(new InsnNode(Opcodes.DUP));
+                    il.add(new LdcInsnNode(mn.name));
+                    il.add(new LdcInsnNode(pool));
+                    il.add(new LdcInsnNode(threshold));
+                    il.add(new MethodInsnNode(
+                            Opcodes.INVOKESPECIAL,
+                            LOWMEMORYHANDLER_INTERNAL,
+                            "<init>",
+                            "(Ljava/lang/String;Ljava/lang/String;J)V",
+                            false)
+                    );
+                    il.add(new InsnNode(Opcodes.AASTORE));
+                }
+            }
+        }
+        if (cnt > 0) {
+            InsnList newArray = new InsnList();
+            newArray.add(new LdcInsnNode(cnt));
+            newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, EXITHANDLER_INTERNAL));
+            il.insert(newArray);
+        } else {
+            il.insert(new InsnNode(Opcodes.ACONST_NULL));
+        }
+
+        return il;
     }
 
     private void startRuntime(MethodNode clinit1) {

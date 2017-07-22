@@ -24,22 +24,23 @@
  */
 package com.sun.btrace.compiler;
 
+import com.sun.btrace.SharedSettings;
 import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
-import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
+import com.sun.btrace.runtime.BTraceProbeFactory;
+import com.sun.btrace.runtime.BTraceProbeNode;
+import com.sun.btrace.runtime.BTraceProbePersisted;
 import javax.annotation.processing.Processor;
 import com.sun.source.util.JavacTask;
 import com.sun.btrace.util.Messages;
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,7 +49,6 @@ import java.util.Map;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.DiagnosticCollector;
-import javax.tools.FileObject;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -70,8 +70,9 @@ public class Compiler {
     private StandardJavaFileManager stdManager;
     // null means no preprocessing isf done.
     public List<String> includeDirs;
+    private boolean generatePack = false;
 
-    public Compiler(String includePath) {
+    public Compiler(String includePath, boolean generatePack) {
         if (includePath != null) {
             includeDirs = new ArrayList<>();
             String[] paths = includePath.split(File.pathSeparator);
@@ -79,6 +80,15 @@ public class Compiler {
         }
         this.compiler = ToolProvider.getSystemJavaCompiler();
         this.stdManager = compiler.getStandardFileManager(null, null, null);
+        this.generatePack = generatePack;
+    }
+
+    public Compiler(String includePath) {
+        this(includePath, false);
+    }
+
+    public Compiler(boolean generatePack) {
+        this(null, generatePack);
     }
 
     public Compiler() {
@@ -105,6 +115,7 @@ public class Compiler {
         String outputDir = ".";
         String includePath = null;
         boolean trusted = false;
+        boolean generatePack = false;
         int count = 0;
         boolean classPathDefined = false;
         boolean outputDirDefined = false;
@@ -129,6 +140,8 @@ public class Compiler {
                 } else if ((args[count].equals("-unsafe") || args[count].equals("-trusted")) && !trustedDefined) {
                     trusted = true;
                     trustedDefined = true;
+                } else if (args[count].equals("--pack")) {
+                    generatePack = true;
                 } else {
                     usage();
                 }
@@ -153,7 +166,7 @@ public class Compiler {
             }
         }
 
-        Compiler compiler = new Compiler(includePath);
+        Compiler compiler = new Compiler(includePath, generatePack);
         classPath += File.pathSeparator + System.getProperty("java.class.path");
         Map<String, byte[]> classes = compiler.compile(files,
                 new PrintWriter(System.err), ".", classPath);
@@ -278,27 +291,43 @@ public class Compiler {
         }
 
         // collect .class bytes of all compiled classes
+        Map<String, byte[]> result = new HashMap<>();
         try {
             Map<String, byte[]> classBytes = manager.getClassBytes();
             List<String> classNames = btraceVerifier.getClassNames();
-            Map<String, byte[]> result = new HashMap<>();
             for (String name : classNames) {
                 if (classBytes.containsKey(name)) {
                     dump(name + "_before", classBytes.get(name));
                     ClassReader cr = new ClassReader(classBytes.get(name));
                     ClassWriter cw = new CompilerClassWriter(classPath, perr);
                     cr.accept(new Postprocessor(cw), ClassReader.EXPAND_FRAMES + ClassReader.SKIP_DEBUG);
-                    result.put(name, cw.toByteArray());
-                    dump(name + "_after", cw.toByteArray());
+                    byte[] classData = cw.toByteArray();
+                    dump(name + "_after", classData);
+                    if (generatePack) {
+                        // temp hack; need turn off verifier
+                        SharedSettings.GLOBAL.setTrusted(true);
+
+                        BTraceProbeNode bpn = (BTraceProbeNode)new BTraceProbeFactory(SharedSettings.GLOBAL).createProbe(classData);
+                        ByteOutputStream bos = new ByteOutputStream();
+                        try (DataOutputStream dos = new DataOutputStream(bos)) {
+                            BTraceProbePersisted bpp = BTraceProbePersisted.from(bpn);
+                            bpp.write(dos);
+                        }
+
+                        classData = bos.getBytes();
+                    }
+                    result.put(name, classData);
                 }
             }
-            return result;
+        } catch (IOException e) {
+            e.printStackTrace(perr);
         } finally {
             try {
                 manager.close();
             } catch (IOException exp) {
             }
         }
+        return result;
     }
 
     private void printDiagnostic(Diagnostic diagnostic, final PrintWriter perr) {
@@ -318,23 +347,23 @@ public class Compiler {
     }
 
     private void dump(String name, byte[] code) {
-//        OutputStream os = null;
-//        try {
-//            name = name.replace(".", "/") + ".class";
-//            File f = new File("/tmp/" + name);
-//            if (!f.exists()) {
-//                f.getParentFile().createNewFile();
-//            }
-//            os = new FileOutputStream(f);
-//            os.write(code);
-//        } catch (IOException e) {
-//
-//        } finally {
-//            if (os != null) {
-//                try {
-//                    os.close();
-//                } catch (IOException e) {}
-//            }
-//        }
+        OutputStream os = null;
+        try {
+            name = name.replace(".", "_") + ".class";
+            File f = new File("/tmp/" + name);
+            if (!f.exists()) {
+                f.getParentFile().createNewFile();
+            }
+            os = new FileOutputStream(f);
+            os.write(code);
+        } catch (IOException e) {
+
+        } finally {
+            if (os != null) {
+                try {
+                    os.close();
+                } catch (IOException e) {}
+            }
+        }
     }
 }

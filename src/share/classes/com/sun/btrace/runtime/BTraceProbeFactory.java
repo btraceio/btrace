@@ -26,20 +26,29 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.DebugSupport;
 import com.sun.btrace.SharedSettings;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 
 /**
- * A factory class for {@linkplain BTraceProbe} instances
+ * A factory class for {@link BTraceProbeNode} instances
  * @author Jaroslav Bachorik
  */
 public final class BTraceProbeFactory {
     private final SharedSettings settings;
     private final DebugSupport debug;
+    private final boolean canLoadPack;
 
     public BTraceProbeFactory(SharedSettings settings) {
+        this(settings, true);
+    }
+
+    public BTraceProbeFactory(SharedSettings settings, boolean canLoadPack) {
         this.settings = settings;
         this.debug = new DebugSupport(settings);
+        this.canLoadPack = canLoadPack;
     }
 
     SharedSettings getSettings() {
@@ -47,12 +56,35 @@ public final class BTraceProbeFactory {
     }
 
     public BTraceProbe createProbe(byte[] code) {
-        return new BTraceProbe(this, code);
+        int mgc = ((code[0] & 0xff) << 24) | ((code[1] & 0xff) << 16) | ((code[2] & 0xff) << 8) | ((code[3] & 0xff));
+        if (mgc == BTraceProbePersisted.MAGIC) {
+            if (canLoadPack) {
+                BTraceProbePersisted bpp = new BTraceProbePersisted(this);
+                try (DataInputStream dis = new DataInputStream(new ByteArrayInputStream(Arrays.copyOfRange(code, 4, code.length)))) {
+                    bpp.read(dis);
+                    return bpp;
+                } catch (IOException e) {
+                    debug.debug(e);
+                }
+            }
+            return null;
+        } else {
+            return new BTraceProbeNode(this, code);
+        }
     }
 
     public BTraceProbe createProbe(InputStream code) {
-        try {
-            return new BTraceProbe(this, code);
+        try (DataInputStream dis = new DataInputStream(code)) {
+            dis.mark(0);
+            int mgc = dis.readInt();
+            if (mgc == BTraceProbePersisted.MAGIC) {
+                BTraceProbePersisted bpp = new BTraceProbePersisted(this);
+                bpp.read(dis);
+                return bpp;
+            } else {
+                code.reset();
+                return new BTraceProbeNode(this, code);
+            }
         } catch (IOException e) {
             if (debug.isDebug()) {
                 debug.debug(e);

@@ -25,14 +25,14 @@
 
 package traces;
 
-import resources.services.DummyRuntimService;
+import services.DummyRuntimService;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Injected;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ServiceType;
 import com.sun.btrace.services.api.Service;
-import resources.services.DummySimpleService;
+import services.DummySimpleService;
 
 /**
  * Sanity test to make sure the injected services are properly initialized

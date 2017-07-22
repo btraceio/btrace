@@ -49,16 +49,16 @@ public class Verifier extends ClassVisitor {
     private boolean classRenamed;
     private final boolean trustedAllowed;
 
-    private final BTraceProbe cn;
+    private final BTraceProbeNode cn;
 
-    public Verifier(BTraceProbe cv, boolean trusted) {
+    public Verifier(BTraceProbeNode cv, boolean trusted) {
         super(Opcodes.ASM5, cv);
         this.trustedAllowed = trusted;
         this.cn = cv;
     }
 
 
-    public Verifier(BTraceProbe cv) {
+    public Verifier(BTraceProbeNode cv) {
         this(cv, false);
     }
 

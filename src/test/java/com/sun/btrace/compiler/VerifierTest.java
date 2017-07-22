@@ -19,7 +19,7 @@ public class VerifierTest {
                         "src" + File.separator + "test";
         classPath = System.getProperty("user.dir") + File.separator +
                         "build" + File.separator + "classes" + File.separator +
-                        "main";
+                        "java" + File.separator + "main";
     }
 
     @Test

@@ -82,8 +82,11 @@ public class ClassFilter {
         SENSITIVE_CLASSES.add("com/sun/btrace/");
     }
 
-    public ClassFilter(List<OnMethod> onMethods) {
-        this.onMethods = new ArrayList<>(onMethods);
+    public ClassFilter(Iterable<OnMethod> onMethods) {
+        this.onMethods = new ArrayList<>();
+        for (OnMethod om : onMethods) {
+            this.onMethods.add(om);
+        }
         init();
     }
 
