@@ -117,10 +117,16 @@ public class Instrumentor extends ClassVisitor {
             return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
+        final Set<OnMethod> annotationMatchers = new HashSet<>();
+
         for (OnMethod om : applicableOnMethods) {
             if (om.getLocation().getValue() == Kind.LINE) {
                 appliedOnMethods.add(om);
             } else {
+                if (om.isMethodAnnotationMatcher()) {
+                    annotationMatchers.add(om);
+                    continue;
+                }
                 String methodName = om.getMethod();
                 boolean regexMatch = om.isMethodRegexMatcher();
                 if (methodName.isEmpty()) {
@@ -147,7 +153,7 @@ public class Instrumentor extends ClassVisitor {
             }
         }
 
-        if (appliedOnMethods.isEmpty()) {
+        if (annotationMatchers.isEmpty() && appliedOnMethods.isEmpty()) {
             return super.visitMethod(access, name, desc, signature, exceptions);
         }
 
@@ -170,24 +176,21 @@ public class Instrumentor extends ClassVisitor {
         final int mAccess = access;
         return new MethodVisitor(Opcodes.ASM5, (MethodVisitor)visitor) {
             @Override
-            public AnnotationVisitor visitAnnotation(String annoDesc,
-                                  boolean visible) {
+            public AnnotationVisitor visitAnnotation(String annoDesc, boolean visible) {
                 LocalVariableHelper visitor = (LocalVariableHelper)mv;
-                for (OnMethod om : applicableOnMethods) {
+                for (OnMethod om : annotationMatchers) {
                     String extAnnoName = Type.getType(annoDesc).getClassName();
                     String annoName = om.getMethod();
-                    if (om.isMethodAnnotationMatcher()) {
-                        if (om.isMethodRegexMatcher()) {
-                            try {
-                                if (extAnnoName.matches(annoName)) {
-                                    visitor = instrumentorFor(om, visitor, mAccess, name, desc);
-                                }
-                            } catch (PatternSyntaxException pse) {
-                                reportPatternSyntaxException(extAnnoName);
+                    if (om.isMethodRegexMatcher()) {
+                        try {
+                            if (extAnnoName.matches(annoName)) {
+                                visitor = instrumentorFor(om, visitor, mAccess, name, desc);
                             }
-                        } else if (annoName.equals(extAnnoName)) {
-                            visitor = instrumentorFor(om, visitor, mAccess, name, desc);
+                        } catch (PatternSyntaxException pse) {
+                            reportPatternSyntaxException(extAnnoName);
                         }
+                    } else if (annoName.equals(extAnnoName)) {
+                        visitor = instrumentorFor(om, visitor, mAccess, name, desc);
                     }
                 }
                 mv = (MethodVisitor)visitor;

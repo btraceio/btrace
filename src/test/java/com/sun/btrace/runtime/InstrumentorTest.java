@@ -57,6 +57,30 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void matchAnnotatedClass() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/MatchAnnotated");
+
+        checkTransformation(
+            "ALOAD 0\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MatchAnnotated$args (Ljava/lang/Object;)V\n" +
+            "MAXSTACK = 1"
+        );
+    }
+
+    @Test
+    public void matchAnnotatedRegexClass() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/MatchAnnotatedRegex");
+
+        checkTransformation(
+                "ALOAD 0\n" +
+                        "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MatchAnnotatedRegex$args (Ljava/lang/Object;)V\n" +
+                        "MAXSTACK = 1"
+        );
+    }
+
+    @Test
     public void methodEntryCheckcastBefore() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/CheckcastBefore");

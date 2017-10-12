@@ -33,13 +33,13 @@ import java.util.Map;
  * !!! Only append the new methods; line numbers need to be kept intact !!!
  * @author Jaroslav Bachorik
  */
-public class OnMethodTest {
+@com.sun.btrace.annotations.BTrace public class OnMethodTest {
     private int field;
 
     public OnMethodTest() {syncLock = new Object();}
     private OnMethodTest(String a) {syncLock = new Object();}
 
-    public void noargs() {};
+    @com.sun.btrace.annotations.Level public void noargs() {};
     static public void noargs$static() {};
     public long args(String a, long b, String[] c, int[] d) {return 0L;}
     static public long args$static(String a, long b, String[] c, int[] d) {return 0L;}

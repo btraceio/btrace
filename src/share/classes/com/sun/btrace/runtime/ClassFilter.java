@@ -157,54 +157,6 @@ public class ClassFilter {
         return false;
     }
 
-    Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr) {
-        final Collection<OnMethod> applicables = new ArrayList<>(onMethods.size());
-        final String targetName = cr.getClassName().replace('/', '.');
-
-        outer:
-        for(OnMethod om : onMethods) {
-            String probeClass = om.getClazz();
-            if (probeClass == null || probeClass.isEmpty()) continue;
-
-            if (probeClass.equals(targetName)) {
-                applicables.add(om);
-                continue;
-            }
-            // Check regex match
-            if (om.isClassRegexMatcher() && !om.isClassAnnotationMatcher()) {
-                if (Pattern.matches(probeClass, targetName)) {
-                    applicables.add(om);
-                    continue;
-                }
-            }
-            if (om.isClassAnnotationMatcher()) {
-                Collection<String> annoTypes = cr.getAnnotationTypes();
-                if (om.isClassRegexMatcher()) {
-                    Pattern annoCheck = Pattern.compile(probeClass);
-                    for(String annoType : annoTypes) {
-                        if (annoCheck.matcher(annoType).matches()) {
-                            applicables.add(om);
-                            continue outer;
-                        }
-                    }
-                } else {
-                    if (annoTypes.contains(probeClass)) {
-                        applicables.add(om);
-                        continue;
-                    }
-                }
-            }
-            // And, finally, check the class hierarchy
-            if (om.isSubtypeMatcher()) {
-                // internal name of super type.
-                if (isSubTypeOf(cr.getClassName(), cr.getClassLoader(), probeClass)) {
-                    applicables.add(om);
-                }
-            }
-        }
-        return applicables;
-    }
-
     public boolean isNameMatching(String clzName) {
         if (sourceClasses.contains(clzName))  {
             return true;
