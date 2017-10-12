@@ -61,7 +61,11 @@ class FileClient extends Client {
 
     private boolean init(byte[] code) throws IOException {
         InstrumentCommand cmd = new InstrumentCommand(code, new String[0]);
-        return loadClass(cmd, canLoadPack) != null;
+        boolean ret = loadClass(cmd, canLoadPack) != null;
+        if (ret) {
+            super.initialize();
+        }
+        return ret;
     }
 
     FileClient(ClientContext ctx, File scriptFile) throws IOException {

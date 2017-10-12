@@ -99,15 +99,18 @@ public final class Main {
 
         try {
             loadArgs(args);
-            if (argMap.containsKey("debug")) {
+            // set the debug level based on cmdline config
+            settings.setDebug(Boolean.parseBoolean(argMap.get("debug")));
+            if (isDebug()) {
                 debugPrint("parsed command line arguments");
             }
             parseArgs();
 
-            startScripts();
+            int startedScripts = startScripts();
 
             String tmp = argMap.get("noServer");
-            boolean noServer = tmp != null && !"false".equals(tmp);
+            // noServer is defaulting to true if startup scripts are defined
+            boolean noServer = tmp != null ? Boolean.parseBoolean(tmp) : hasScripts();
             if (noServer) {
                 if (isDebug()) {
                     debugPrint("noServer is true, server not started");
@@ -140,6 +143,10 @@ public final class Main {
             inst.addTransformer(transformer, true);
             Main.debugPrint("Agent init took: " + (System.nanoTime() - ts) + "ns");
         }
+    }
+
+    private static boolean hasScripts() {
+        return argMap.containsKey("script") || argMap.containsKey("scriptDir");
     }
 
     private static void loadDefaultArguments(String config) {
@@ -213,7 +220,9 @@ public final class Main {
         }
     }
 
-    private static void startScripts() {
+    private static int startScripts() {
+        int scriptCount = 0;
+
         String p = argMap.get("stdout");
         boolean traceToStdOut = p != null && !"false".equals(p);
         if (isDebug()) {
@@ -229,7 +238,9 @@ public final class Main {
                 debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are ") + script);
             }
             while (tokenizer.hasMoreTokens()) {
-                loadBTraceScript(tokenizer.nextToken(), traceToStdOut);
+                if (loadBTraceScript(tokenizer.nextToken(), traceToStdOut)) {
+                    scriptCount++;
+                }
             }
         }
         if (scriptDir != null) {
@@ -241,11 +252,14 @@ public final class Main {
                 File[] files = dir.listFiles();
                 if (files != null) {
                     for (File file : files) {
-                        loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
+                        if (loadBTraceScript(file.getAbsolutePath(), traceToStdOut)) {
+                            scriptCount++;
+                        }
                     }
                 }
             }
         }
+        return scriptCount;
     }
 
     private static void usage() {
@@ -453,12 +467,16 @@ public final class Main {
                 while (tokenizer.hasMoreTokens()) {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
-                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        JarFile jf = new JarFile(f);
-                        inst.appendToBootstrapClassLoaderSearch(jf);
+                    if (f.exists()) {
+                        debug.warning("BTrace bootstrap classpath resource [ " + path + "] does not exist");
                     } else {
-                        debugPrint("ignoring boot classpath element '" + path
-                                + "' - only jar files allowed");
+                        if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+                            JarFile jf = new JarFile(f);
+                            inst.appendToBootstrapClassLoaderSearch(jf);
+                        } else {
+                            debugPrint("ignoring boot classpath element '" + path
+                                    + "' - only jar files allowed");
+                        }
                     }
                 }
             } catch (IOException ex) {
@@ -478,12 +496,16 @@ public final class Main {
                 while (tokenizer.hasMoreTokens()) {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
-                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        JarFile jf = new JarFile(f);
-                        inst.appendToSystemClassLoaderSearch(jf);
+                    if (!f.exists()) {
+                        debug.warning("BTrace system classpath resource [" + path + "] does not exist.");
                     } else {
-                        debugPrint("ignoring system classpath element '" + path
-                                + "' - only jar files allowed");
+                        if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+                            JarFile jf = new JarFile(f);
+                            inst.appendToSystemClassLoaderSearch(jf);
+                        } else {
+                            debugPrint("ignoring system classpath element '" + path
+                                    + "' - only jar files allowed");
+                        }
                     }
                 }
             } catch (IOException ex) {
@@ -555,7 +577,7 @@ public final class Main {
         }
     }
 
-    private static void loadBTraceScript(String filePath, boolean traceToStdOut) {
+    private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
         try {
             String scriptName = "";
             String scriptParent = "";
@@ -571,7 +593,7 @@ public final class Main {
                 if (isDebug()) {
                     debugPrint("refusing " + filePath + " - script should be a pre-compiled .class file");
                 }
-                return;
+                return false;
             }
 
             SharedSettings clientSettings = new SharedSettings();
@@ -591,8 +613,10 @@ public final class Main {
             }
             ClientContext ctx = new ClientContext(inst, transformer, clientSettings);
             Client client = new FileClient(ctx, traceScript);
-
-            handleNewClient(client).get();
+            if (client.isInitialized()) {
+                handleNewClient(client).get();
+                return true;
+            }
         } catch (NullPointerException e) {
             if (isDebug()) {
                 debugPrint("script " + filePath + " does not exist!");
@@ -604,6 +628,7 @@ public final class Main {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        return false;
     }
 
     public static final int BTRACE_DEFAULT_PORT = 2020;

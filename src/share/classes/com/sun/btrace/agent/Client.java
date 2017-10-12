@@ -91,6 +91,7 @@ abstract class Client implements CommandListener {
     protected final DebugSupport debug;
     private final BTraceTransformer transformer;
 
+    private volatile boolean initialized = false;
     private volatile boolean shuttingDown = false;
 
     static {
@@ -120,6 +121,10 @@ abstract class Client implements CommandListener {
         this.debug = new DebugSupport(settings);
 
         setupWriter();
+    }
+
+    protected final void initialize() {
+        initialized = true;
     }
 
     @SuppressWarnings("DefaultCharset")
@@ -232,6 +237,8 @@ abstract class Client implements CommandListener {
 
     protected synchronized void onExit(int exitCode) {
         if (!shuttingDown) {
+            out.flush();
+
             BTraceRuntime.leave();
             try {
                 debugPrint("onExit:");
@@ -348,6 +355,10 @@ abstract class Client implements CommandListener {
     }
 
     // package privates below this point
+    final boolean isInitialized() {
+        return initialized;
+    }
+
     final void infoPrint(String msg) {
         DebugSupport.info(msg);
     }
