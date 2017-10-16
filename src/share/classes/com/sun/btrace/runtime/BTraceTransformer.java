@@ -192,6 +192,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
                 }
                 if (debug.isDumpClasses()) {
                     debug.dumpClass(className.replace('.', '/'), transformed);
+                    debug.dumpClass(className.replace('.', '/') + "_orig", classfileBuffer);
                 }
             }
             return transformed;

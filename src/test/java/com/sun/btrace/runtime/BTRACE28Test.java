@@ -36,10 +36,26 @@ public class BTRACE28Test extends InstrumentorTestBase {
     public void bytecodeValidation() throws Exception {
         originalBC = loadTargetClass("issues/BTRACE28");
         transform("issues/BTRACE28");
-        checkTransformation("LDC \"resources.issues.BTRACE28\"\nLDC \"<init>\"\n" +
-                            "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V\n" +
-                            "MAXSTACK = 2\nASTORE 5\nASTORE 6\nASTORE 7\nALOAD 7\nASTORE 8\nALOAD 8\n" +
-                            "LDC \"resources.issues.BTRACE28\"\nLDC \"serveResource\"\n" +
-                            "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V");
+        checkTransformation(
+            "LDC \"resources.issues.BTRACE28\"\n" +
+            "LDC \"<init>\"\n" +
+            "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "MAXSTACK = 2\n" +
+            "ASTORE 5\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
+            "ALOAD 7\n" +
+            "FRAME FULL [resources/issues/BTRACE28 java/lang/String java/lang/String java/lang/String java/lang/String [B [B java/lang/StringBuilder] [java/lang/Throwable]\n" +
+            "ASTORE 8\n" +
+            "ALOAD 8\n" +
+            "LDC \"resources.issues.BTRACE28\"\n" +
+            "LDC \"serveResource\"\n" +
+            "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "LOCALVARIABLE e Ljava/lang/Throwable; L10 L9 8\n" +
+            "LOCALVARIABLE mainArr [B L6 L11 5\n" +
+            "LOCALVARIABLE byteArr [B L7 L11 6\n" +
+            "LOCALVARIABLE sb Ljava/lang/StringBuilder; L0 L11 7\n" +
+            "MAXLOCALS = 9"
+        );
     }
 }

@@ -38,12 +38,14 @@ public class BTRACE256Test extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/issues/BTRACE256.swingProfiler : Lcom/sun/btrace/Profiler;\n" +
             "ALOAD 0\n" +
             "INVOKESTATIC com/sun/btrace/BTraceUtils$Profiling.recordEntry (Lcom/sun/btrace/Profiler;Ljava/lang/String;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -59,6 +61,7 @@ public class BTRACE256Test extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/issues/BTRACE256.swingProfiler : Lcom/sun/btrace/Profiler;\n" +
             "ALOAD 0\n" +
             "LLOAD 1\n" +
@@ -72,6 +75,7 @@ public class BTRACE256Test extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +

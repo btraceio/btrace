@@ -32,6 +32,9 @@ import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -109,6 +112,8 @@ abstract public class RuntimeTest {
      */
     protected boolean trackRetransforms = false;
 
+    protected boolean attachDebugger = false;
+
     protected void reset() {
         debugTestApp = false;
         debugBTrace = false;
@@ -118,12 +123,17 @@ abstract public class RuntimeTest {
 
     @SuppressWarnings("DefaultCharset")
     public void test(String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder(
-            java + "/bin/java",
-            "-cp",
-            cp,
-            testApp
-        );
+        List<String> args = new ArrayList<>(Arrays.asList(
+                java + "/bin/java",
+                "-cp",
+                cp
+        ));
+        if (attachDebugger) {
+            args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
+        }
+        args.add(testApp);
+
+        ProcessBuilder pb = new ProcessBuilder(args);
         pb.environment().remove("JAVA_TOOL_OPTIONS");
 
         Process p = pb.start();

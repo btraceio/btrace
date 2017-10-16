@@ -25,7 +25,6 @@
 
 package com.sun.btrace.runtime;
 
-import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
@@ -40,6 +39,8 @@ import static com.sun.btrace.runtime.Constants.OBJECT_INTERNAL;
  * @author J. Bachorik
  */
 public final class InstrumentUtils {
+    private static final int CW_FLAGS = 0; // ClassWriter.COMPUTE_MAXS;
+    
     /**
     * Collects the type hierarchy into the provided list, sorted from the actual type to root.
     * Common superclasses may be present multiple times (eg. {@code java.lang.Object})
@@ -94,11 +95,11 @@ public final class InstrumentUtils {
         }
     }
 
-    public static void accept(ClassReader reader, ClassVisitor visitor) {
-        accept(reader, visitor, ClassReader.SKIP_FRAMES);
+    public static void accept(BTraceClassReader reader, ClassVisitor visitor) {
+        accept(reader, visitor, 0);
     }
 
-    public static void accept(ClassReader reader, ClassVisitor visitor, int flags) {
+    public static void accept(BTraceClassReader reader, ClassVisitor visitor, int flags) {
         if (reader == null || visitor == null) return;
 
         reader.accept(visitor, flags);
@@ -128,24 +129,26 @@ public final class InstrumentUtils {
     }
 
     public static ClassWriter newClassWriter() {
-        return newClassWriter(null, ClassWriter.COMPUTE_FRAMES);
+        return newClassWriter(false);
+    }
+
+    public static ClassWriter newClassWriter(boolean computeFrames) {
+        return newClassWriter(null, CW_FLAGS | ClassWriter.COMPUTE_FRAMES);
     }
 
     static BTraceClassWriter newClassWriter(ClassLoader cl, byte[] code) {
-        int flags = ClassWriter.COMPUTE_MAXS;
-        if (isJDK16OrAbove(code)) {
-            flags = ClassWriter.COMPUTE_FRAMES;
-        }
-        return newClassWriter(new BTraceClassReader(cl, code), flags);
+//        if (isJDK16OrAbove(code)) {
+//            flags = ClassWriter.COMPUTE_FRAMES;
+//        }
+        return newClassWriter(new BTraceClassReader(cl, code), CW_FLAGS);
     }
 
     static BTraceClassWriter newClassWriter(BTraceClassReader cr) {
-        int flags = ClassWriter.COMPUTE_MAXS;
 
-        if (isJDK16OrAbove(cr)) {
-            flags = ClassWriter.COMPUTE_FRAMES;
-        }
-        return newClassWriter(cr, flags);
+//        if (isJDK16OrAbove(cr)) {
+//            flags = ClassWriter.COMPUTE_FRAMES;
+//        }
+        return newClassWriter(cr, CW_FLAGS);
     }
 
     static BTraceClassWriter newClassWriter(BTraceClassReader reader, int flags) {

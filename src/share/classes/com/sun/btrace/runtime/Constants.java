@@ -33,8 +33,6 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.OnProbe;
 import com.sun.btrace.annotations.Where;
-import com.sun.btrace.AnyType;
-import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.*;
 import com.sun.btrace.org.objectweb.asm.Type;
@@ -51,6 +49,9 @@ public abstract class Constants {
 
     public static final String CONSTRUCTOR = "<init>";
     public static final String CLASS_INITIALIZER = "<clinit>";
+
+    public static final Type NULL_TYPE = Type.getType("null");
+    public static final Type TOP_TYPE = Type.getType("top");
 
     public static final Type VOIDREF_TYPE = Type.getType("Ljava/lang/Void;");
 

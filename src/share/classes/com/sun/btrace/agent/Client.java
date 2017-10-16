@@ -43,9 +43,7 @@ import com.sun.btrace.comm.OkayCommand;
 import com.sun.btrace.comm.RenameCommand;
 import com.sun.btrace.PerfReader;
 import com.sun.btrace.comm.RetransformationStartNotification;
-import com.sun.btrace.runtime.ClassFilter;
-import com.sun.btrace.runtime.Instrumentor;
-import com.sun.btrace.runtime.InstrumentUtils;
+import com.sun.btrace.runtime.*;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -65,7 +63,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import sun.reflect.annotation.AnnotationParser;
 import sun.reflect.annotation.AnnotationType;
-import com.sun.btrace.runtime.BTraceProbe;
 
 
 /**
@@ -431,7 +428,7 @@ abstract class Client implements CommandListener {
                 }
             }
         }
-        return cn;
+        return BTraceProbePersisted.from(cn);
     }
 
     @SuppressWarnings("LiteralClassName")

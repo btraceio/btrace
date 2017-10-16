@@ -94,6 +94,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "ASTORE 3\n" +
+            "FRAME APPEND [java/util/Map java/util/HashMap java/util/HashMap]\n" +
             "LOCALVARIABLE d Ljava/util/HashMap; L2 L5 3\n" +
             "MAXSTACK = 5\n" +
             "MAXLOCALS = 4"
@@ -113,6 +114,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"java.util.HashMap\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$CheckcastBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/HashMap T] [java/util/HashMap]\n" +
             "CHECKCAST java/util/HashMap\n" +
             "ASTORE 3\n" +
             "L3\n" +
@@ -122,6 +124,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LINENUMBER 103 L5\n" +
             "L4\n" +
             "LINENUMBER 105 L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/Map T java/util/HashMap] []\n" +
             "L6\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
@@ -144,6 +147,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"java.util.HashMap\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;)V\n" +
             "ASTORE 3\n" +
+            "FRAME APPEND [java/util/Map java/util/HashMap java/util/HashMap]\n" +
             "LOCALVARIABLE d Ljava/util/HashMap; L2 L5 3\n" +
             "MAXSTACK = 5\n" +
             "MAXLOCALS = 4"
@@ -163,6 +167,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"java.util.HashMap\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/HashMap T] [java/util/HashMap]\n" +
             "ASTORE 3\n" +
             "L3\n" +
             "LINENUMBER 102 L3\n" +
@@ -171,6 +176,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LINENUMBER 103 L5\n" +
             "L4\n" +
             "LINENUMBER 105 L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/Map T java/util/HashMap] []\n" +
             "L6\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
@@ -193,6 +199,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"java.util.HashMap\"\n" +
             "ALOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "FRAME APPEND [java/util/Map java/util/HashMap java/util/HashMap]\n" +
             "MAXSTACK = 5\n" +
             "MAXLOCALS = 4"
         );
@@ -213,11 +220,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$InstanceofBefore$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/HashMap java/util/HashMap java/util/HashMap] [java/util/HashMap]\n" +
             "IFEQ L4\n" +
             "L5\n" +
             "LINENUMBER 103 L5\n" +
             "L4\n" +
             "LINENUMBER 105 L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap java/util/HashMap] []\n" +
             "L6\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
@@ -240,6 +249,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"java.util.HashMap\"\n" +
             "ALOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "FRAME APPEND [java/util/Map java/util/HashMap java/util/HashMap]\n" +
             "MAXSTACK = 5\n" +
             "MAXLOCALS = 4"
         );
@@ -260,11 +270,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/HashMap java/util/HashMap java/util/HashMap] [I]\n" +
             "IFEQ L4\n" +
             "L5\n" +
             "LINENUMBER 103 L5\n" +
             "L4\n" +
             "LINENUMBER 105 L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap java/util/HashMap] []\n" +
             "L6\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
@@ -279,9 +291,23 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/Catch");
 
-        checkTransformation("DUP\nALOAD 0\nALOAD 1\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Catch$args (Ljava/lang/Object;Ljava/io/IOException;)V\n"
-                + "ASTORE 2");
+        checkTransformation(
+            "DUP\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Catch$args (Ljava/lang/Object;Ljava/io/IOException;)V\n" +
+            "FRAME FULL [resources/OnMethodTest java/io/IOException] [java/io/IOException]\n" +
+            "ASTORE 2\n" +
+            "L3\n" +
+            "LINENUMBER 68 L3\n" +
+            "ALOAD 2\n" +
+            "L4\n" +
+            "LINENUMBER 70 L4\n" +
+            "L5\n" +
+            "LOCALVARIABLE e Ljava/io/IOException; L3 L4 2\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0\n" +
+            "MAXLOCALS = 3"
+        );
 
         resetClassLoader();
 
@@ -295,6 +321,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 0\n" +
             "ALOAD 1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Catch$args (Ljava/lang/Object;Ljava/io/IOException;)V\n" +
+            "FRAME FULL [resources/OnMethodTest T] [java/io/IOException]\n" +
             "ASTORE 2\n" +
             "L3\n" +
             "LINENUMBER 68 L3\n" +
@@ -313,8 +340,16 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/Throw");
 
-        checkTransformation("DUP\nASTORE 1\nALOAD 0\nLDC \"resources.OnMethodTest\"\nLDC \"exception\"\nALOAD 1\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Throw$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V");
+        checkTransformation(
+            "DUP\n" +
+            "ASTORE 1\n" +
+            "ALOAD 0\n" +
+            "LDC \"resources.OnMethodTest\"\n" +
+            "LDC \"exception\"\n" +
+            "ALOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Throw$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V\n" +
+            "MAXSTACK = 5"
+        );
 
         resetClassLoader();
 
@@ -332,17 +367,16 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Throw$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V\n" +
             "L2\n" +
-            "ASTORE 2\n" +
+            "FRAME FULL [resources/OnMethodTest T] [java/io/IOException]\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/io/IOException]\n" +
             "L3\n" +
             "LINENUMBER 68 L3\n" +
-            "ALOAD 2\n" +
             "L4\n" +
             "LINENUMBER 70 L4\n" +
             "L5\n" +
-            "LOCALVARIABLE e Ljava/io/IOException; L3 L4 2\n" +
+            "LOCALVARIABLE e Ljava/io/IOException; L3 L4 1\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0\n" +
-            "MAXSTACK = 5\n" +
-            "MAXLOCALS = 3"
+            "MAXSTACK = 5"
         );
     }
 
@@ -351,9 +385,19 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/Error");
 
-        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n"
-                + "DUP\nASTORE 1\nALOAD 0\nLDC \"uncaught\"\nALOAD 1\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Error$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V");
+        checkTransformation(
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
+            "DUP\n" +
+            "ASTORE 1\n" +
+            "ALOAD 0\n" +
+            "LDC \"uncaught\"\n" +
+            "ALOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Error$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V\n" +
+            "ATHROW\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 2"
+        );
 
         resetClassLoader();
 
@@ -361,6 +405,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
 
         checkTransformation(
             "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 1\n" +
             "GETSTATIC traces/onmethod/leveled/Error.$btrace$$level : I\n" +
@@ -371,6 +416,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Error$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/Throwable] [java/lang/Throwable]\n" +
             "ATHROW\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 2"
@@ -388,6 +434,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSTORE 1\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 3\n" +
+            "FRAME FULL [resources/OnMethodTest J J] [java/lang/Throwable]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 3\n" +
             "LSUB\n" +
@@ -401,7 +448,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ErrorDuration$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Throwable;)V\n" +
             "ATHROW\n" +
             "MAXSTACK = 6\n" +
-            "MAXLOCALS = 6");
+            "MAXLOCALS = 6"
+        );
 
         resetClassLoader();
 
@@ -419,6 +467,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFLE L0\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 3\n" +
+            "FRAME APPEND [J J I]\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "ILOAD 5\n" +
             "IFLE L2\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -426,6 +476,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 1\n" +
             "L2\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 6\n" +
             "GETSTATIC traces/onmethod/leveled/ErrorDuration.$btrace$$level : I\n" +
@@ -437,6 +488,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 6\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ErrorDuration$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Throwable;)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest J J I java/lang/Throwable] [java/lang/Throwable]\n" +
             "ATHROW\n" +
             "MAXSTACK = 6\n" +
             "MAXLOCALS = 7"
@@ -448,9 +500,12 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/Line");
 
-        checkTransformation("LDC \"field\"\nLDC 84\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V\n"
-                + "ALOAD 0");
+        checkTransformation(
+            "LDC \"field\"\n" +
+            "LDC 84\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
+            "ALOAD 0"
+        );
 
         resetClassLoader();
 
@@ -464,6 +519,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC 84\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
             "L1\n" +
+            "FRAME SAME\n" +
             "ALOAD 0\n" +
             "L2\n" +
             "LINENUMBER 85 L2\n" +
@@ -477,8 +533,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/NewBefore");
 
-        checkTransformation("ALOAD 0\nLDC \"java.util.HashMap\"\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewBefore$args (Ljava/lang/Object;Ljava/lang/String;)V");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "LDC \"java.util.HashMap\"\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewBefore$args (Ljava/lang/Object;Ljava/lang/String;)V"
+        );
 
         resetClassLoader();
 
@@ -492,6 +551,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"java.util.HashMap\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewBefore$args (Ljava/lang/Object;Ljava/lang/String;)V\n" +
             "L1\n" +
+            "FRAME SAME\n" +
             "L2\n" +
             "LINENUMBER 89 L2\n" +
             "L3\n" +
@@ -530,6 +590,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 1\n" +
             "LDC \"java.util.HashMap\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewAfter$args (Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V\n" +
+            "FRAME FULL [resources/OnMethodTest T] [java/util/HashMap]\n" +
             "ASTORE 2\n" +
             "L2\n" +
             "LINENUMBER 89 L2\n" +
@@ -547,23 +608,35 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/SyncEntry");
 
         checkTransformation(
-            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L2 L3 L4 null\n" +
+            "TRYCATCHBLOCK L4 L5 L4 null\n" +
+            "L0\n" +
+            "LINENUMBER 108 L0\n" +
             "DUP\n" +
             "ASTORE 2\n" +
             "ALOAD 0\n" +
             "LDC \"sync\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L2\n" +
+            "LINENUMBER 109 L2\n" +
             "L6\n" +
             "LINENUMBER 110 L6\n" +
+            "L3\n" +
             "GOTO L7\n" +
+            "L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ASTORE 3\n" +
+            "L5\n" +
             "ALOAD 3\n" +
             "L7\n" +
             "LINENUMBER 111 L7\n" +
-            "L5\n" +
+            "FRAME FULL [resources/OnMethodTest resources/OnMethodTest] []\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
         );
@@ -573,7 +646,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/SyncEntry");
 
         checkTransformation(
-            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L2 L3 L4 null\n" +
+            "TRYCATCHBLOCK L4 L5 L4 null\n" +
+            "L0\n" +
+            "LINENUMBER 108 L0\n" +
             "GETSTATIC traces/onmethod/leveled/SyncEntry.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L6\n" +
@@ -584,16 +661,25 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L6\n" +
+            "FRAME FULL [resources/OnMethodTest resources/OnMethodTest T] [resources/OnMethodTest]\n" +
+            "L2\n" +
+            "LINENUMBER 109 L2\n" +
             "L7\n" +
             "LINENUMBER 110 L7\n" +
+            "L3\n" +
             "GOTO L8\n" +
+            "L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/Object T] [java/lang/Throwable]\n" +
             "ASTORE 3\n" +
+            "L5\n" +
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
-            "L5\n" +
+            "FRAME FULL [resources/OnMethodTest T] []\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
         );
@@ -605,26 +691,36 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/SyncMEntry");
 
         checkTransformation(
-            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L2 L3 L4 null\n" +
+            "TRYCATCHBLOCK L4 L5 L4 null\n" +
+            "L0\n" +
+            "LINENUMBER 147 L0\n" +
             "DUP\n" +
             "ASTORE 2\n" +
             "ALOAD 0\n" +
             "LDC \"syncM\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L2\n" +
+            "LINENUMBER 148 L2\n" +
             "L6\n" +
             "LINENUMBER 149 L6\n" +
+            "L3\n" +
             "GOTO L7\n" +
+            "L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/Object java/lang/Object] [java/lang/Throwable]\n" +
             "ASTORE 3\n" +
+            "L5\n" +
             "ALOAD 3\n" +
-            "ATHROW\n" +
             "L7\n" +
             "LINENUMBER 150 L7\n" +
-            "RETURN\n" +
-            "L5\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
+            "ATHROW\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
-            "MAXLOCALS = 4\n"
+            "MAXLOCALS = 4"
         );
 
         resetClassLoader();
@@ -632,7 +728,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/SyncMEntry");
 
         checkTransformation(
-            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L2 L3 L4 null\n" +
+            "TRYCATCHBLOCK L4 L5 L4 null\n" +
+            "L0\n" +
+            "LINENUMBER 147 L0\n" +
             "GETSTATIC traces/onmethod/leveled/SyncMEntry.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L6\n" +
@@ -643,17 +743,26 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L6\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/Object T] [java/lang/Object]\n" +
+            "L2\n" +
+            "LINENUMBER 148 L2\n" +
             "L7\n" +
             "LINENUMBER 149 L7\n" +
+            "L3\n" +
             "GOTO L8\n" +
+            "L4\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "ASTORE 3\n" +
+            "L5\n" +
             "ALOAD 3\n" +
             "ATHROW\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
+            "FRAME FULL [resources/OnMethodTest T] []\n" +
             "RETURN\n" +
-            "L5\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
         );
@@ -665,7 +774,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/SyncExit");
 
         checkTransformation(
-            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L2 L3 L4 null\n" +
+            "TRYCATCHBLOCK L4 L5 L4 null\n" +
+            "L0\n" +
+            "LINENUMBER 108 L0\n" +
+            "L2\n" +
+            "LINENUMBER 109 L2\n" +
             "L6\n" +
             "LINENUMBER 110 L6\n" +
             "DUP\n" +
@@ -674,22 +789,25 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"resources.OnMethodTest\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L3\n" +
             "GOTO L7\n" +
-            "ASTORE 3\n" +
+            "L4\n" +
             "DUP\n" +
-            "ASTORE 4\n" +
+            "ASTORE 3\n" +
             "ALOAD 0\n" +
             "LDC \"resources.OnMethodTest\"\n" +
-            "ALOAD 4\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "ALOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L5\n" +
             "L7\n" +
             "LINENUMBER 111 L7\n" +
-            "L5\n" +
+            "FRAME FULL [resources/OnMethodTest resources/OnMethodTest] []\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
-            "MAXLOCALS = 5"
+            "MAXLOCALS = 4"
         );
 
         resetClassLoader();
@@ -697,7 +815,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/SyncExit");
 
         checkTransformation(
-            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L2 L3 L4 null\n" +
+            "TRYCATCHBLOCK L4 L5 L4 null\n" +
+            "L0\n" +
+            "LINENUMBER 108 L0\n" +
+            "L2\n" +
+            "LINENUMBER 109 L2\n" +
             "L6\n" +
             "LINENUMBER 110 L6\n" +
             "GETSTATIC traces/onmethod/leveled/SyncExit.$btrace$$level : I\n" +
@@ -710,26 +834,31 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L7\n" +
+            "FRAME FULL [resources/OnMethodTest resources/OnMethodTest T] [resources/OnMethodTest]\n" +
+            "L3\n" +
             "GOTO L8\n" +
-            "ASTORE 3\n" +
+            "L4\n" +
             "GETSTATIC traces/onmethod/leveled/SyncExit.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L9\n" +
             "DUP\n" +
-            "ASTORE 4\n" +
+            "ASTORE 3\n" +
             "ALOAD 0\n" +
             "LDC \"resources.OnMethodTest\"\n" +
-            "ALOAD 4\n" +
+            "ALOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L9\n" +
-            "ALOAD 3\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/Object java/lang/Throwable T] [java/lang/Object]\n" +
+            "L5\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
-            "L5\n" +
+            "FRAME FULL [resources/OnMethodTest T] []\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
-            "MAXLOCALS = 5"
+            "MAXLOCALS = 4"
         );
     }
 
@@ -739,7 +868,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/SyncMExit");
 
         checkTransformation(
-            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L2 L3 L4 null\n" +
+            "TRYCATCHBLOCK L4 L5 L4 null\n" +
+            "L0\n" +
+            "LINENUMBER 147 L0\n" +
+            "L2\n" +
+            "LINENUMBER 148 L2\n" +
             "L6\n" +
             "LINENUMBER 149 L6\n" +
             "DUP\n" +
@@ -748,23 +883,26 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"resources.OnMethodTest\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L3\n" +
             "GOTO L7\n" +
-            "ASTORE 3\n" +
+            "L4\n" +
             "DUP\n" +
-            "ASTORE 4\n" +
+            "ASTORE 3\n" +
             "ALOAD 0\n" +
             "LDC \"resources.OnMethodTest\"\n" +
-            "ALOAD 4\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "ALOAD 3\n" +
-            "ATHROW\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
+            "L5\n" +
             "L7\n" +
             "LINENUMBER 150 L7\n" +
+            "FRAME SAME\n" +
             "RETURN\n" +
-            "L5\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
+            "ATHROW\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
-            "MAXLOCALS = 5"
+            "MAXLOCALS = 4"
         );
 
         resetClassLoader();
@@ -772,7 +910,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/SyncMExit");
 
         checkTransformation(
-            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L2 L3 L4 null\n" +
+            "TRYCATCHBLOCK L4 L5 L4 null\n" +
+            "L0\n" +
+            "LINENUMBER 147 L0\n" +
+            "L2\n" +
+            "LINENUMBER 148 L2\n" +
             "L6\n" +
             "LINENUMBER 149 L6\n" +
             "GETSTATIC traces/onmethod/leveled/SyncMExit.$btrace$$level : I\n" +
@@ -785,27 +929,32 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L7\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/Object T] [java/lang/Object]\n" +
+            "L3\n" +
             "GOTO L8\n" +
-            "ASTORE 3\n" +
+            "L4\n" +
             "GETSTATIC traces/onmethod/leveled/SyncMExit.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L9\n" +
             "DUP\n" +
-            "ASTORE 4\n" +
+            "ASTORE 3\n" +
             "ALOAD 0\n" +
             "LDC \"resources.OnMethodTest\"\n" +
-            "ALOAD 4\n" +
+            "ALOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L9\n" +
-            "ALOAD 3\n" +
-            "ATHROW\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/Object java/lang/Throwable T] [java/lang/Object]\n" +
+            "L5\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
+            "FRAME FULL [resources/OnMethodTest T] []\n" +
             "RETURN\n" +
-            "L5\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
+            "ATHROW\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
-            "MAXLOCALS = 5"
+            "MAXLOCALS = 4"
         );
     }
 
@@ -814,8 +963,17 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/NewArrayIntBefore");
 
-        checkTransformation("ALOAD 0\nLDC \"int\"\nICONST_1\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "LDC \"int\"\n" +
+            "ICONST_1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
+            "ALOAD 0\n" +
+            "LDC \"int\"\n" +
+            "ICONST_2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
+            "MAXSTACK = 5"
+        );
 
         resetClassLoader();
 
@@ -830,6 +988,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
             "L1\n" +
+            "FRAME SAME1 I\n" +
             "L2\n" +
             "LINENUMBER 93 L2\n" +
             "ICONST_1\n" +
@@ -840,6 +999,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest [I] [I I]\n" +
             "L4\n" +
             "LINENUMBER 94 L4\n" +
             "L5\n" +
@@ -861,8 +1021,17 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/NewArrayStringBefore");
 
-        checkTransformation("ALOAD 0\nLDC \"java.lang.String\"\nICONST_1\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "LDC \"java.lang.String\"\n" +
+            "ICONST_1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
+            "ALOAD 0\n" +
+            "LDC \"java.lang.String\"\n" +
+            "ICONST_2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
+            "MAXSTACK = 5"
+        );
 
         resetClassLoader();
 
@@ -877,6 +1046,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest [I [[I] [I]\n" +
             "L4\n" +
             "LINENUMBER 95 L4\n" +
             "ICONST_1\n" +
@@ -887,6 +1057,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V\n" +
             "L5\n" +
+            "FRAME FULL [resources/OnMethodTest [I [[I [Ljava/lang/String;] [I I]\n" +
             "L6\n" +
             "LINENUMBER 96 L6\n" +
             "L7\n" +
@@ -904,8 +1075,22 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/NewArrayIntAfter");
 
-        checkTransformation("DUP\nALOAD 0\nALOAD 1\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntAfter$args (Ljava/lang/Object;[I)V");
+        checkTransformation(
+            "DUP\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayIntAfter$args (Ljava/lang/Object;[I)V\n" +
+            "ASTORE 2\n" +
+            "ASTORE 3\n" +
+            "ASTORE 4\n" +
+            "ASTORE 5\n" +
+            "LOCALVARIABLE a [I L1 L5 2\n" +
+            "LOCALVARIABLE b [[I L2 L5 3\n" +
+            "LOCALVARIABLE c [Ljava/lang/String; L3 L5 4\n" +
+            "LOCALVARIABLE d [[Ljava/lang/String; L4 L5 5\n" +
+            "MAXSTACK = 3\n" +
+            "MAXLOCALS = 6"
+        );
 
         resetClassLoader();
 
@@ -919,6 +1104,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 0\n" +
             "ALOAD 1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewArrayIntAfter$args (Ljava/lang/Object;[I)V\n" +
+            "FRAME FULL [resources/OnMethodTest T] [[I]\n" +
             "ASTORE 2\n" +
             "L2\n" +
             "LINENUMBER 93 L2\n" +
@@ -947,8 +1133,18 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/NewArrayStringAfter");
 
-        checkTransformation("DUP\nALOAD 0\nALOAD 3\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringAfter$args (Ljava/lang/Object;[Ljava/lang/String;)V");
+        checkTransformation(
+            "DUP\n" +
+            "ALOAD 0\n" +
+            "ALOAD 3\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$NewArrayStringAfter$args (Ljava/lang/Object;[Ljava/lang/String;)V\n" +
+            "ASTORE 4\n" +
+            "ASTORE 5\n" +
+            "LOCALVARIABLE c [Ljava/lang/String; L3 L5 4\n" +
+            "LOCALVARIABLE d [[Ljava/lang/String; L4 L5 5\n" +
+            "MAXSTACK = 3\n" +
+            "MAXLOCALS = 6"
+        );
 
         resetClassLoader();
 
@@ -962,6 +1158,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 0\n" +
             "ALOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NewArrayStringAfter$args (Ljava/lang/Object;[Ljava/lang/String;)V\n" +
+            "FRAME FULL [resources/OnMethodTest [I [[I T] [[Ljava/lang/String;]\n" +
             "ASTORE 4\n" +
             "L4\n" +
             "LINENUMBER 95 L4\n" +
@@ -1012,6 +1209,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ILOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArrayGetBefore$args (Ljava/lang/Object;[II)V\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I [I] [[I I]\n" +
             "IALOAD\n" +
             "ISTORE 5\n" +
             "L3\n" +
@@ -1063,6 +1261,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "DUP\n" +
             "ISTORE 5\n" +
             "IFLT L2\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I [I I] [[I I]\n" +
             "IALOAD\n" +
             "ILOAD 5\n" +
             "IFLT L3\n" +
@@ -1074,6 +1273,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArrayGetAfter$args (Ljava/lang/Object;I[II)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I [I I T] [I]\n" +
             "ISTORE 7\n" +
             "L4\n" +
             "LINENUMBER 80 L4\n" +
@@ -1128,6 +1328,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArraySetBefore$args (Ljava/lang/Object;[III)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I I I [I] [[I I I]\n" +
             "L4\n" +
             "LINENUMBER 81 L4\n" +
             "L5\n" +
@@ -1177,6 +1378,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ISTORE 7\n" +
             "IFLT L3\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I I I [I I] [[I I I]\n" +
             "ILOAD 7\n" +
             "IFLT L4\n" +
             "ALOAD 0\n" +
@@ -1186,6 +1388,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArraySetAfter$args (Ljava/lang/Object;[III)V\n" +
             "L4\n" +
             "LINENUMBER 81 L4\n" +
+            "FRAME SAME\n" +
             "L5\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0\n" +
             "LOCALVARIABLE a I L0 L5 1\n" +
@@ -1229,6 +1432,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ILOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArrayGetBeforeAny$args (Ljava/lang/Object;Ljava/lang/Object;I)V\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I [I] [[I I]\n" +
             "IALOAD\n" +
             "ISTORE 5\n" +
             "L3\n" +
@@ -1281,6 +1485,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "DUP\n" +
             "ISTORE 5\n" +
             "IFLT L2\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I [I I] [[I I]\n" +
             "IALOAD\n" +
             "ILOAD 5\n" +
             "IFLT L3\n" +
@@ -1293,6 +1498,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArrayGetAfterAny$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I [I I T] [I]\n" +
             "ISTORE 7\n" +
             "L4\n" +
             "LINENUMBER 80 L4\n" +
@@ -1349,6 +1555,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArraySetBeforeAny$args (Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I I I [I] [[I I I]\n" +
             "L4\n" +
             "LINENUMBER 81 L4\n" +
             "L5\n" +
@@ -1399,6 +1606,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ISTORE 7\n" +
             "IFLT L3\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest I [I I I I [I I] [[I I I]\n" +
             "ILOAD 7\n" +
             "IFLT L4\n" +
             "ALOAD 0\n" +
@@ -1409,6 +1617,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArraySetAfterAny$args (Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)V\n" +
             "L4\n" +
             "LINENUMBER 81 L4\n" +
+            "FRAME SAME\n" +
             "L5\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0\n" +
             "LOCALVARIABLE a I L0 L5 1\n" +
@@ -1444,6 +1653,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"sField\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldGetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V\n" +
             "L1\n" +
+            "FRAME SAME\n" +
             "L2\n" +
             "LINENUMBER 144 L2\n" +
             "L3\n" +
@@ -1474,6 +1684,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"field\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldGetBefore$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest resources/OnMethodTest]\n" +
             "L2\n" +
             "LINENUMBER 85 L2\n" +
             "L3\n" +
@@ -1512,6 +1723,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ISTORE 1\n" +
             "IFLT L1\n" +
             "L1\n" +
+            "FRAME APPEND [I]\n" +
             "ILOAD 1\n" +
             "IFLT L2\n" +
             "DUP2\n" +
@@ -1522,6 +1734,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldGetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest I T T] [J]\n" +
             "L3\n" +
             "LINENUMBER 144 L3\n" +
             "L4\n" +
@@ -1564,6 +1777,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ISTORE 2\n" +
             "IFLT L1\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest resources/OnMethodTest I] [resources/OnMethodTest resources/OnMethodTest]\n" +
             "ILOAD 2\n" +
             "IFLT L2\n" +
             "DUP\n" +
@@ -1574,6 +1788,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldGetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest resources/OnMethodTest I T] [resources/OnMethodTest I]\n" +
             "L3\n" +
             "LINENUMBER 85 L3\n" +
             "L4\n" +
@@ -1616,6 +1831,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldSetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest J] [J]\n" +
             "L2\n" +
             "LINENUMBER 144 L2\n" +
             "L3\n" +
@@ -1662,6 +1878,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ILOAD 1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldSetBefore$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest I resources/OnMethodTest] [resources/OnMethodTest I]\n" +
             "L2\n" +
             "LINENUMBER 85 L2\n" +
             "L3\n" +
@@ -1702,6 +1919,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ISTORE 3\n" +
             "IFLT L1\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest J I] [J]\n" +
             "ILOAD 3\n" +
             "IFLT L2\n" +
             "ALOAD 0\n" +
@@ -1711,6 +1929,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldSetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V\n" +
             "L2\n" +
             "LINENUMBER 144 L2\n" +
+            "FRAME SAME\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "MAXSTACK = 5\n" +
@@ -1730,7 +1949,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
 
         transform("onmethod/leveled/FieldSetAfter");
 
-        checkTransformation("ISTORE 1\n" +
+        checkTransformation(
+            "ISTORE 1\n" +
             "DUP\n" +
             "ASTORE 2\n" +
             "ILOAD 1\n" +
@@ -1741,6 +1961,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ISTORE 3\n" +
             "IFLT L1\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest I resources/OnMethodTest I] [resources/OnMethodTest I]\n" +
             "ILOAD 3\n" +
             "IFLT L2\n" +
             "ALOAD 0\n" +
@@ -1750,6 +1971,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$FieldSetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V\n" +
             "L2\n" +
             "LINENUMBER 85 L2\n" +
+            "FRAME SAME\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "MAXSTACK = 4\n" +
@@ -1769,28 +1991,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsNoSelf$argsNoSelf (Ljava/lang/String;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
-            "MAXSTACK = 6\n" +
-            "\n" +
-            "// access flags 0xA\n" +
-            "private static $btrace$traces$onmethod$ArgsNoSelf$argsNoSelf(Ljava/lang/String;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
-            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"args\")\n" +
-            "@Lcom/sun/btrace/annotations/ProbeMethodName;(fqn=true) // parameter 0\n" +
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "GETSTATIC traces/onmethod/ArgsNoSelf.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
-            "IFNE L0\n" +
-            "RETURN\n" +
-            "L0\n" +
-            "LDC \"args no self\"\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "L1\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "MAXSTACK = 1\n" +
-            "MAXLOCALS = 6"
+            "MAXSTACK = 6"
         );
 
         resetClassLoader();
@@ -1807,28 +2008,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsNoSelf$argsNoSelf (Ljava/lang/String;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
-            "MAXSTACK = 6\n" +
-            "\n" +
-            "// access flags 0xA\n" +
-            "private static $btrace$traces$onmethod$leveled$ArgsNoSelf$argsNoSelf(Ljava/lang/String;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
-            "@Lcom/sun/btrace/annotations/OnMethod;(clazz=\"/.*\\\\.OnMethodTest/\", method=\"args\", enableAt=@Lcom/sun/btrace/annotations/Level;(value=\">=1\"))\n" +
-            "@Lcom/sun/btrace/annotations/ProbeMethodName;(fqn=true) // parameter 0\n" +
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "GETSTATIC traces/onmethod/leveled/ArgsNoSelf.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.enter (Lcom/sun/btrace/BTraceRuntime;)Z\n" +
-            "IFNE L0\n" +
-            "RETURN\n" +
-            "L0\n" +
-            "LDC \"args no self\"\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "L1\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-            "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
-            "RETURN\n" +
-            "MAXSTACK = 1\n" +
-            "MAXLOCALS = 6"
+            "FRAME SAME\n" +
+            "MAXSTACK = 6"
         );
     }
 
@@ -1869,7 +2050,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         resetClassLoader();
 
         transform("onmethod/leveled/Args");
-        checkTransformation("GETSTATIC traces/onmethod/leveled/Args.$btrace$$level : I\n" +
+        checkTransformation(
+            "GETSTATIC traces/onmethod/leveled/Args.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L0\n" +
             "ALOAD 0\n" +
@@ -1878,6 +2060,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Args$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME SAME\n" +
             "MAXSTACK = 6"
         );
     }
@@ -1902,7 +2085,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
 
         loadTrace("onmethod/leveled/Args");
         transform("onmethod/leveled/Args");
-        checkTransformation("GETSTATIC traces/onmethod/leveled/Args$1.$btrace$$level : I\n" +
+        checkTransformation(
+            "GETSTATIC traces/onmethod/leveled/Args$1.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L0\n" +
             "ALOAD 0\n" +
@@ -1911,6 +2095,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Args$1$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME SAME\n" +
             "MAXSTACK = 6"
         );
     }
@@ -1919,7 +2104,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsShared() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsShared");
-        checkTransformation("ALOAD 0\n" +
+        checkTransformation(
+            "ALOAD 0\n" +
             "ALOAD 1\n" +
             "LLOAD 2\n" +
             "ALOAD 4\n" +
@@ -1937,6 +2123,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW java/lang/StringBuilder\n" +
             "DUP\n" +
             "INVOKESPECIAL java/lang/StringBuilder.<init> ()V\n" +
@@ -1968,6 +2155,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -2011,6 +2199,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsShared$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME SAME\n" +
             "MAXSTACK = 6\n" +
             "\n" +
             "// access flags 0xA\n" +
@@ -2023,6 +2212,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW java/lang/StringBuilder\n" +
             "DUP\n" +
             "INVOKESPECIAL java/lang/StringBuilder.<init> ()V\n" +
@@ -2054,6 +2244,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -2101,6 +2292,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsSampledNoSampling$argsSampled (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME APPEND [I]\n" +
             "ALOAD 0\n" +
             "ALOAD 1\n" +
             "LLOAD 2\n" +
@@ -2132,11 +2324,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
+            "FRAME APPEND [I I]\n" +
             "ILOAD 7\n" +
             "IFLE L1\n" +
             "ILOAD 6\n" +
             "IFEQ L2\n" +
             "L1\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsSampledNoSampling.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L2\n" +
@@ -2147,6 +2341,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsSampledNoSampling$argsSampled (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsSampledNoSampling.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L3\n" +
@@ -2158,6 +2353,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsSampledNoSampling$argsNoSampling (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L3\n" +
             "LINENUMBER 44 L3\n" +
+            "FRAME SAME\n" +
             "L4\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L3 L4 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L3 L4 1\n" +
@@ -2173,7 +2369,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsSampled() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsSampled");
-        checkTransformation("ICONST_1\n" +
+        checkTransformation(
+            "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
             "ILOAD 6\n" +
@@ -2184,6 +2381,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsSampled$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME APPEND [I]\n" +
             "MAXSTACK = 6\n" +
             "MAXLOCALS = 7"
         );
@@ -2203,11 +2401,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
+            "FRAME APPEND [I I]\n" +
             "ILOAD 7\n" +
             "IFLE L1\n" +
             "ILOAD 6\n" +
             "IFEQ L2\n" +
             "L1\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsSampled.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L2\n" +
@@ -2219,6 +2419,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsSampled$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
             "LINENUMBER 44 L2\n" +
+            "FRAME SAME\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L2 L3 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L2 L3 1\n" +
@@ -2246,6 +2447,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Args2Sampled$args2 (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME APPEND [I]\n" +
             "ILOAD 6\n" +
             "IFEQ L1\n" +
             "ALOAD 0\n" +
@@ -2256,6 +2458,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$Args2Sampled$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L1\n" +
             "LINENUMBER 44 L1\n" +
+            "FRAME SAME\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L1 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L1 L2 1\n" +
@@ -2281,11 +2484,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
+            "FRAME APPEND [I I]\n" +
             "ILOAD 7\n" +
             "IFLE L1\n" +
             "ILOAD 6\n" +
             "IFEQ L2\n" +
             "L1\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/Args2Sampled.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L2\n" +
@@ -2296,11 +2501,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Args2Sampled$args2 (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
+            "FRAME SAME\n" +
             "ILOAD 7\n" +
             "IFLE L3\n" +
             "ILOAD 6\n" +
             "IFEQ L4\n" +
             "L3\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/Args2Sampled.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L4\n" +
@@ -2312,6 +2519,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Args2Sampled$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L4\n" +
             "LINENUMBER 44 L4\n" +
+            "FRAME SAME\n" +
             "L5\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L4 L5 1\n" +
@@ -2327,7 +2535,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsSampledAdaptive() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsSampledAdaptive");
-        checkTransformation("ICONST_1\n" +
+        checkTransformation(
+            "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitAdaptive (I)Z\n" +
             "ISTORE 6\n" +
             "ILOAD 6\n" +
@@ -2338,12 +2547,21 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsSampledAdaptive$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME APPEND [I]\n" +
             "ILOAD 6\n" +
             "IFEQ L1\n" +
             "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.updateEndTs (I)V\n" +
             "L1\n" +
-            "L2"
+            "FRAME SAME1 J\n" +
+            "L2\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
+            "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
+            "LOCALVARIABLE b J L0 L2 2\n" +
+            "LOCALVARIABLE c [Ljava/lang/String; L0 L2 4\n" +
+            "LOCALVARIABLE d [I L0 L2 5\n" +
+            "MAXSTACK = 6\n" +
+            "MAXLOCALS = 7"
         );
     }
 
@@ -2361,11 +2579,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitAdaptive (I)Z\n" +
             "ISTORE 6\n" +
+            "FRAME APPEND [I I]\n" +
             "ILOAD 7\n" +
             "IFLE L1\n" +
             "ILOAD 6\n" +
             "IFEQ L2\n" +
             "L1\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsSampledAdaptive.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L2\n" +
@@ -2377,11 +2597,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsSampledAdaptive$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
             "LINENUMBER 44 L2\n" +
+            "FRAME SAME\n" +
             "ILOAD 6\n" +
             "IFEQ L3\n" +
             "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.updateEndTs (I)V\n" +
             "L3\n" +
+            "FRAME SAME1 J\n" +
             "L4\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L2 L4 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L2 L4 1\n" +
@@ -2424,11 +2646,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "LDC \"args\"\n" +
             "INVOKESTATIC com/sun/btrace/BTraceUtils.println (Ljava/lang/Object;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -2455,6 +2679,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsReturn$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I T T] [J]\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
@@ -2490,7 +2715,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsReturnAugmented() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsReturnAugmented", true);
-        checkTransformation("LSTORE 6\n" +
+        checkTransformation(
+            "LSTORE 6\n" +
             "ALOAD 0\n" +
             "ALOAD 1\n" +
             "LLOAD 2\n" +
@@ -2520,6 +2746,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 6\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsReturnAugmented$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[IJ)J\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I T T] [J]\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
@@ -2565,6 +2792,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsReturnAugmented1$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)J\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I T T] [J]\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
@@ -2596,7 +2824,15 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsReturnSampled$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L1\n" +
-            "L2"
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I I T T] [J]\n" +
+            "L2\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
+            "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
+            "LOCALVARIABLE b J L0 L2 2\n" +
+            "LOCALVARIABLE c [Ljava/lang/String; L0 L2 4\n" +
+            "LOCALVARIABLE d [I L0 L2 5\n" +
+            "MAXSTACK = 10\n" +
+            "MAXLOCALS = 9"
         );
 
         resetClassLoader();
@@ -2612,11 +2848,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
             "ISTORE 6\n" +
+            "FRAME APPEND [I I]\n" +
             "ILOAD 7\n" +
             "IFLE L1\n" +
             "ILOAD 6\n" +
             "IFEQ L2\n" +
             "L1\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsReturnSampled.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L2\n" +
@@ -2630,6 +2868,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsReturnSampled$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I I I T T] [J]\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L3 1\n" +
@@ -2645,13 +2884,28 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsDuration() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDuration");
-        checkTransformation("LCONST_0\nLSTORE 6\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 8\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\nLLOAD 8\n"
-                + "LSUB\nLSTORE 6\nDUP2\nLSTORE 10\nALOAD 0\nLLOAD 10\nLLOAD 6\n"
-                + "ALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n"
-                + "MAXSTACK");
+        checkTransformation(
+            "LCONST_0\n" +
+            "LSTORE 6\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 8\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LLOAD 8\n" +
+            "LSUB\n" +
+            "LSTORE 6\n" +
+            "DUP2\n" +
+            "LSTORE 10\n" +
+            "ALOAD 0\n" +
+            "LLOAD 10\n" +
+            "LLOAD 6\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 12\n" +
+            "MAXLOCALS = 12"
+        );
     }
 
     @Test
@@ -2669,6 +2923,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFLE L0\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 8\n" +
+            "FRAME APPEND [J J I]\n" +
             "ILOAD 10\n" +
             "IFLE L1\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -2676,6 +2931,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L1\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDuration.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L2\n" +
@@ -2690,6 +2946,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDuration$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L3 1\n" +
@@ -2724,6 +2981,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME APPEND [J J T]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 8\n" +
             "LSUB\n" +
@@ -2738,6 +2996,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME APPEND [T]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 8\n" +
             "LSUB\n" +
@@ -2753,7 +3012,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "MAXSTACK = 12\n" +
-            "MAXLOCALS = 16");
+            "MAXLOCALS = 16"
+        );
     }
 
     @Test
@@ -2771,6 +3031,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFLE L0\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 8\n" +
+            "FRAME APPEND [J J I]\n" +
             "ILOAD 10\n" +
             "IFLE L3\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -2778,6 +3039,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L3\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDurationMultiReturn.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L4\n" +
@@ -2792,6 +3054,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]\n" +
+            "FRAME CHOP 1\n" +
             "IFLE L5\n" +
             "L6\n" +
             "LINENUMBER 128 L6\n" +
@@ -2802,6 +3066,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L7\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDurationMultiReturn.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L8\n" +
@@ -2816,8 +3081,10 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L8\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T T] [J]\n" +
             "L5\n" +
             "LINENUMBER 132 L5\n" +
+            "FRAME CHOP 2\n" +
             "L9\n" +
             "LINENUMBER 133 L9\n" +
             "ILOAD 10\n" +
@@ -2827,6 +3094,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L10\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDurationMultiReturn.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L11\n" +
@@ -2841,6 +3109,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L11\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T T T T] [J]\n" +
             "L12\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L12 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L12 1\n" +
@@ -2857,13 +3126,41 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDurationSampled");
         checkTransformation(
-            "LCONST_0\nLSTORE 6\nICONST_1\nINVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
-            "DUP2\nLSTORE 8\nL2I\nISTORE 10\nILOAD 10\nIFEQ L1\n" +
-            "ICONST_1\nINVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
-            "LLOAD 8\nLSUB\nLSTORE 6\nDUP2\nLSTORE 11\n" +
-            "ALOAD 0\nLLOAD 11\nLLOAD 6\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\n" +
+            "LCONST_0\n" +
+            "LSTORE 6\n" +
+            "ICONST_1\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
+            "DUP2\n" +
+            "LSTORE 8\n" +
+            "L2I\n" +
+            "ISTORE 10\n" +
+            "ILOAD 10\n" +
+            "IFEQ L1\n" +
+            "ICONST_1\n" +
+            "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
+            "LLOAD 8\n" +
+            "LSUB\n" +
+            "LSTORE 6\n" +
+            "DUP2\n" +
+            "LSTORE 11\n" +
+            "ALOAD 0\n" +
+            "LLOAD 11\n" +
+            "LLOAD 6\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationSampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
-            "L1\nL2\n"
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]\n" +
+            "L2\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
+            "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
+            "LOCALVARIABLE b J L0 L2 2\n" +
+            "LOCALVARIABLE c [Ljava/lang/String; L0 L2 4\n" +
+            "LOCALVARIABLE d [I L0 L2 5\n" +
+            "MAXSTACK = 12\n" +
+            "MAXLOCALS = 13"
         );
     }
 
@@ -2888,6 +3185,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSTORE 8\n" +
             "L2I\n" +
             "ISTORE 10\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I I] []\n" +
             "ILOAD 11\n" +
             "IFLE L1\n" +
             "ILOAD 10\n" +
@@ -2898,6 +3196,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L1\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDurationSampled.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L2\n" +
@@ -2912,6 +3211,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationSampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I I T T] [J]\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L3 1\n" +
@@ -2934,13 +3234,22 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsDurationConstructor() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDurationConstructor");
-        checkTransformation("LCONST_0\nLSTORE 2\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\nLSTORE 4\n"
-                + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
-                + "LLOAD 4\nLSUB\nLSTORE 2\n"
-                + "ALOAD 0\nLLOAD 2\nALOAD 1\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationConstructor$args (Ljava/lang/Object;JLjava/lang/String;)V\n"
-                + "MAXSTACK");
+        checkTransformation(
+            "LCONST_0\n" +
+            "LSTORE 2\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LSTORE 4\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LLOAD 4\n" +
+            "LSUB\n" +
+            "LSTORE 2\n" +
+            "ALOAD 0\n" +
+            "LLOAD 2\n" +
+            "ALOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationConstructor$args (Ljava/lang/Object;JLjava/lang/String;)V\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 6"
+        );
     }
 
     @Test
@@ -2959,6 +3268,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 4\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J I] []\n" +
             "ILOAD 6\n" +
             "IFLE L2\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -2966,6 +3276,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 2\n" +
             "L2\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDurationConstructor.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L3\n" +
@@ -2974,6 +3285,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationConstructor$args (Ljava/lang/Object;JLjava/lang/String;)V\n" +
             "L3\n" +
+            "FRAME SAME\n" +
             "L4\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L4 1\n" +
@@ -3035,6 +3347,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFLE L0\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 8\n" +
+            "FRAME APPEND [J J I]\n" +
             "ILOAD 10\n" +
             "IFLE L1\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -3042,6 +3355,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L1\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDuration2.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L2\n" +
@@ -3056,6 +3370,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDuration2.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L3\n" +
@@ -3070,6 +3385,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDuration2$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T T] [J]\n" +
             "L4\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L4 1\n" +
@@ -3086,7 +3402,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsDuration2Sampled() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDuration2Sampled");
-        checkTransformation("LCONST_0\n" +
+        checkTransformation(
+            "LCONST_0\n" +
             "LSTORE 6\n" +
             "ICONST_1\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
@@ -3112,6 +3429,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2Sampled$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]\n" +
             "ILOAD 10\n" +
             "IFEQ L2\n" +
             "DUP2\n" +
@@ -3125,6 +3443,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2Sampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T T] [J]\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L3 1\n" +
@@ -3168,6 +3487,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDuration2Sampled$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]\n" +
             "ILOAD 10\n" +
             "IFEQ L2\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDuration2Sampled.$btrace$$level : I\n" +
@@ -3184,6 +3504,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDuration2Sampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T T] [J]\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L3 1\n" +
@@ -3200,11 +3521,13 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDurationErr");
 
-        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+        checkTransformation(
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
             "LCONST_0\n" +
             "LSTORE 6\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 8\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J] [java/lang/Throwable]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 8\n" +
             "LSUB\n" +
@@ -3236,6 +3559,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFLE L0\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 8\n" +
+            "FRAME APPEND [J J I]\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "ILOAD 10\n" +
             "IFLE L2\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -3243,6 +3568,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L2\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 11\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDurationErr.$btrace$$level : I\n" +
@@ -3253,6 +3579,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 11\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I java/lang/Throwable] [java/lang/Throwable]\n" +
             "ATHROW\n" +
             "MAXSTACK = 5\n" +
             "MAXLOCALS = 12"
@@ -3270,7 +3597,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryArgsDurationConstructorErr() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ArgsDurationConstructorErr");
-        checkTransformation("TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
+        checkTransformation(
+            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
             "L2\n" +
             "LINENUMBER 39 L2\n" +
             "LCONST_0\n" +
@@ -3278,6 +3606,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 3\n" +
             "L0\n" +
+            "FRAME FULL [resources/OnMethodTest J J] [java/lang/Throwable]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 3\n" +
             "LSUB\n" +
@@ -3300,6 +3629,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 4\n" +
             "L0\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J] [java/lang/Throwable]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 4\n" +
             "LSUB\n" +
@@ -3335,6 +3665,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 3\n" +
             "L0\n" +
+            "FRAME FULL [resources/OnMethodTest J J I] []\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "ILOAD 5\n" +
             "IFLE L3\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -3342,6 +3674,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 1\n" +
             "L3\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 6\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDurationConstructorErr.$btrace$$level : I\n" +
@@ -3352,6 +3685,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 6\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationConstructorErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V\n" +
             "L4\n" +
+            "FRAME FULL [resources/OnMethodTest J J I java/lang/Throwable] [java/lang/Throwable]\n" +
             "ATHROW\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0\n" +
             "MAXSTACK = 5\n" +
@@ -3370,6 +3704,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 4\n" +
             "L0\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J I] []\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "ILOAD 6\n" +
             "IFLE L3\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -3377,6 +3713,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 2\n" +
             "L3\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 7\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDurationConstructorErr.$btrace$$level : I\n" +
@@ -3387,6 +3724,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 7\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationConstructorErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V\n" +
             "L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J I java/lang/Throwable] [java/lang/Throwable]\n" +
             "ATHROW\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L2 L1 1\n" +
@@ -3407,6 +3745,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSTORE 6\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 8\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J] [java/lang/Throwable]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 8\n" +
             "LSUB\n" +
@@ -3419,19 +3758,20 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2Err$args2 (Ljava/lang/Object;JLjava/lang/Throwable;)V\n" +
             "ATHROW\n" +
             "L2\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 8\n" +
             "LSUB\n" +
             "LSTORE 6\n" +
             "DUP\n" +
-            "ASTORE 11\n" +
+            "ASTORE 10\n" +
             "ALOAD 0\n" +
             "LLOAD 6\n" +
-            "ALOAD 11\n" +
+            "ALOAD 10\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDuration2Err$args (Ljava/lang/Object;JLjava/lang/Throwable;)V\n" +
             "ATHROW\n" +
             "MAXSTACK = 5\n" +
-            "MAXLOCALS = 12"
+            "MAXLOCALS = 11"
         );
 
         resetClassLoader();
@@ -3450,6 +3790,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFLE L0\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LSTORE 8\n" +
+            "FRAME APPEND [J J I]\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "ILOAD 10\n" +
             "IFLE L3\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -3457,6 +3799,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L3\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 11\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDuration2Err.$btrace$$level : I\n" +
@@ -3467,8 +3810,10 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 11\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDuration2Err$args2 (Ljava/lang/Object;JLjava/lang/Throwable;)V\n" +
             "L4\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I java/lang/Throwable] [java/lang/Throwable]\n" +
             "ATHROW\n" +
             "L2\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I] [java/lang/Throwable]\n" +
             "ILOAD 10\n" +
             "IFLE L5\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
@@ -3476,19 +3821,21 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LSUB\n" +
             "LSTORE 6\n" +
             "L5\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "DUP\n" +
-            "ASTORE 12\n" +
+            "ASTORE 11\n" +
             "GETSTATIC traces/onmethod/leveled/ArgsDuration2Err.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L6\n" +
             "ALOAD 0\n" +
             "LLOAD 6\n" +
-            "ALOAD 12\n" +
+            "ALOAD 11\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDuration2Err$args (Ljava/lang/Object;JLjava/lang/Throwable;)V\n" +
             "L6\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I java/lang/Throwable] [java/lang/Throwable]\n" +
             "ATHROW\n" +
             "MAXSTACK = 5\n" +
-            "MAXLOCALS = 13"
+            "MAXLOCALS = 12"
         );
     }
 
@@ -3496,11 +3843,30 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryAnytypeArgs() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/AnytypeArgs");
-        checkTransformation("ALOAD 0\nICONST_4\nANEWARRAY java/lang/Object\nDUP\n"
-                + "ICONST_0\nALOAD 1\nAASTORE\nDUP\n"
-                + "ICONST_1\nLLOAD 2\nINVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\nAASTORE\nDUP\n"
-                + "ICONST_2\nALOAD 4\nAASTORE\nDUP\n"
-                + "ICONST_3\nALOAD 5\nAASTORE\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$AnytypeArgs$args (Ljava/lang/Object;[Ljava/lang/Object;)V");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "ICONST_4\n" +
+            "ANEWARRAY java/lang/Object\n" +
+            "DUP\n" +
+            "ICONST_0\n" +
+            "ALOAD 1\n" +
+            "AASTORE\n" +
+            "DUP\n" +
+            "ICONST_1\n" +
+            "LLOAD 2\n" +
+            "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
+            "AASTORE\n" +
+            "DUP\n" +
+            "ICONST_2\n" +
+            "ALOAD 4\n" +
+            "AASTORE\n" +
+            "DUP\n" +
+            "ICONST_3\n" +
+            "ALOAD 5\n" +
+            "AASTORE\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$AnytypeArgs$args (Ljava/lang/Object;[Ljava/lang/Object;)V\n" +
+            "MAXSTACK = 6"
+        );
 
         resetClassLoader();
 
@@ -3530,6 +3896,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "AASTORE\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$AnytypeArgs$args (Ljava/lang/Object;[Ljava/lang/Object;)V\n" +
+            "FRAME SAME\n" +
             "MAXSTACK = 6"
         );
     }
@@ -3538,10 +3905,29 @@ public class InstrumentorTest extends InstrumentorTestBase {
     public void methodEntryAnytypeArgsNoSelf() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/AnytypeArgsNoSelf");
-        checkTransformation("ICONST_4\nANEWARRAY java/lang/Object\nDUP\nICONST_0\nALOAD 1\nAASTORE\n"
-                + "DUP\nICONST_1\nLLOAD 2\nINVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\nAASTORE\n"
-                + "DUP\nICONST_2\nALOAD 4\nAASTORE\nDUP\nICONST_3\nALOAD 5\nAASTORE\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$AnytypeArgsNoSelf$argsNoSelf ([Ljava/lang/Object;)V");
+        checkTransformation(
+            "ICONST_4\n" +
+            "ANEWARRAY java/lang/Object\n" +
+            "DUP\n" +
+            "ICONST_0\n" +
+            "ALOAD 1\n" +
+            "AASTORE\n" +
+            "DUP\n" +
+            "ICONST_1\n" +
+            "LLOAD 2\n" +
+            "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
+            "AASTORE\n" +
+            "DUP\n" +
+            "ICONST_2\n" +
+            "ALOAD 4\n" +
+            "AASTORE\n" +
+            "DUP\n" +
+            "ICONST_3\n" +
+            "ALOAD 5\n" +
+            "AASTORE\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$AnytypeArgsNoSelf$argsNoSelf ([Ljava/lang/Object;)V\n" +
+            "MAXSTACK = 5"
+        );
 
         resetClassLoader();
 
@@ -3570,6 +3956,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "AASTORE\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$AnytypeArgsNoSelf$argsNoSelf ([Ljava/lang/Object;)V\n" +
+            "FRAME SAME\n" +
             "MAXSTACK = 5"
         );
     }
@@ -3579,7 +3966,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/StaticArgs");
 
-        checkTransformation("ALOAD 0\nLLOAD 1\nALOAD 3\nALOAD 4\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticArgs$args (Ljava/lang/String;J[Ljava/lang/String;[I)V");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "LLOAD 1\n" +
+            "ALOAD 3\n" +
+            "ALOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticArgs$args (Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 5"
+        );
 
         resetClassLoader();
 
@@ -3594,6 +3988,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "ALOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$StaticArgs$args (Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME SAME\n" +
             "MAXSTACK = 5"
         );
     }
@@ -3603,7 +3998,18 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/StaticArgsReturn");
 
-        checkTransformation("DUP2\nLSTORE 5\nALOAD 0\nLLOAD 5\nLLOAD 1\nALOAD 3\nALOAD 4\nINVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticArgsReturn$args (Ljava/lang/String;JJ[Ljava/lang/String;[I)V");
+        checkTransformation(
+            "DUP2\n" +
+            "LSTORE 5\n" +
+            "ALOAD 0\n" +
+            "LLOAD 5\n" +
+            "LLOAD 1\n" +
+            "ALOAD 3\n" +
+            "ALOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticArgsReturn$args (Ljava/lang/String;JJ[Ljava/lang/String;[I)V\n" +
+            "MAXSTACK = 9\n" +
+            "MAXLOCALS = 7"
+        );
 
         resetClassLoader();
 
@@ -3622,6 +4028,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$StaticArgsReturn$args (Ljava/lang/String;JJ[Ljava/lang/String;[I)V\n" +
             "L1\n" +
+            "FRAME FULL [java/lang/String J [Ljava/lang/String; [I T T] [J]\n" +
             "L2\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 0\n" +
             "LOCALVARIABLE b J L0 L2 1\n" +
@@ -3645,7 +4052,9 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/StaticNoArgs");
 
-        checkTransformation("INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticNoArgs$argsEmpty ()V");
+        checkTransformation(
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$StaticNoArgs$argsEmpty ()V\n"
+        );
 
         resetClassLoader();
 
@@ -3656,6 +4065,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ICONST_1\n" +
             "IF_ICMPLT L0\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$StaticNoArgs$argsEmpty ()V\n" +
+            "FRAME SAME\n" +
             "MAXSTACK = 2"
         );
     }
@@ -3677,7 +4087,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCall");
 
-        checkTransformation("LSTORE 4\n" +
+        checkTransformation(
+            "LSTORE 4\n" +
             "ASTORE 6\n" +
             "ASTORE 7\n" +
             "ALOAD 0\n" +
@@ -3715,6 +4126,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"callTopLevel\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCall$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
             "L1\n" +
+            "FRAME APPEND [J java/lang/String resources/OnMethodTest]\n" +
             "ALOAD 7\n" +
             "ALOAD 6\n" +
             "LLOAD 4\n" +
@@ -3733,26 +4145,27 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/MethodCallSampled");
 
         checkTransformation(
+            "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
-            "ISTORE 4\n" +
-            "LSTORE 5\n" +
-            "ASTORE 7\n" +
-            "ASTORE 8\n" +
-            "ILOAD 4\n" +
+            "ISTORE 8\n" +
+            "ILOAD 8\n" +
             "IFEQ L1\n" +
             "ALOAD 0\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
             "ALOAD 7\n" +
-            "LLOAD 5\n" +
-            "ALOAD 8\n" +
             "LDC \"special long resources.OnMethodTest#callTarget(java.lang.String, long)\"\n" +
             "LDC \"resources.OnMethodTest\"\n" +
             "LDC \"callTopLevel\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallSampled$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
             "L1\n" +
-            "ALOAD 8\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest I] []\n" +
             "ALOAD 7\n" +
-            "LLOAD 5\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
@@ -3766,39 +4179,42 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/MethodCallSampled");
 
         checkTransformation(
+            "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
             "ICONST_0\n" +
-            "ISTORE 4\n" +
+            "ISTORE 8\n" +
             "GETSTATIC resources/OnMethodTest.$btrace$$level : I\n" +
             "DUP\n" +
-            "ISTORE 5\n" +
+            "ISTORE 9\n" +
             "IFLE L1\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hit (I)Z\n" +
-            "ISTORE 4\n" +
+            "ISTORE 8\n" +
             "L1\n" +
-            "LSTORE 6\n" +
-            "ASTORE 8\n" +
-            "ASTORE 9\n" +
-            "ILOAD 5\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest I I] []\n" +
+            "ILOAD 9\n" +
             "IFLE L2\n" +
-            "ILOAD 4\n" +
+            "ILOAD 8\n" +
             "IFEQ L3\n" +
             "L2\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/MethodCallSampled.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L3\n" +
             "ALOAD 0\n" +
-            "ALOAD 8\n" +
-            "LLOAD 6\n" +
-            "ALOAD 9\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ALOAD 7\n" +
             "LDC \"special long resources.OnMethodTest#callTarget(java.lang.String, long)\"\n" +
             "LDC \"resources.OnMethodTest\"\n" +
             "LDC \"callTopLevel\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallSampled$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
             "L3\n" +
-            "ALOAD 9\n" +
-            "ALOAD 8\n" +
-            "LLOAD 6\n" +
+            "FRAME SAME\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
             "L4\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L4 1\n" +
@@ -3814,31 +4230,33 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/MethodCallSampledAdaptive");
 
         checkTransformation(
+            "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitAdaptive (I)Z\n" +
-            "ISTORE 4\n" +
-            "LSTORE 5\n" +
-            "ASTORE 7\n" +
-            "ASTORE 8\n" +
-            "ILOAD 4\n" +
+            "ISTORE 8\n" +
+            "ILOAD 8\n" +
             "IFEQ L1\n" +
             "ALOAD 0\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
             "ALOAD 7\n" +
-            "LLOAD 5\n" +
-            "ALOAD 8\n" +
             "LDC \"special long resources.OnMethodTest#callTarget(java.lang.String, long)\"\n" +
             "LDC \"resources.OnMethodTest\"\n" +
             "LDC \"callTopLevel\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallSampledAdaptive$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
             "L1\n" +
-            "ALOAD 8\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest I] []\n" +
             "ALOAD 7\n" +
-            "LLOAD 5\n" +
-            "ILOAD 4\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ILOAD 8\n" +
             "IFEQ L2\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.updateEndTs (I)V\n" +
             "L2\n" +
+            "FRAME SAME1 J\n" +
             "L3\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L3 1\n" +
@@ -3852,44 +4270,48 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/MethodCallSampledAdaptive");
 
         checkTransformation(
+            "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
             "ICONST_0\n" +
-            "ISTORE 4\n" +
+            "ISTORE 8\n" +
             "GETSTATIC resources/OnMethodTest.$btrace$$level : I\n" +
             "DUP\n" +
-            "ISTORE 5\n" +
+            "ISTORE 9\n" +
             "IFLE L1\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitAdaptive (I)Z\n" +
-            "ISTORE 4\n" +
+            "ISTORE 8\n" +
             "L1\n" +
-            "LSTORE 6\n" +
-            "ASTORE 8\n" +
-            "ASTORE 9\n" +
-            "ILOAD 5\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest I I] []\n" +
+            "ILOAD 9\n" +
             "IFLE L2\n" +
-            "ILOAD 4\n" +
+            "ILOAD 8\n" +
             "IFEQ L3\n" +
             "L2\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/MethodCallSampledAdaptive.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L3\n" +
             "ALOAD 0\n" +
-            "ALOAD 8\n" +
-            "LLOAD 6\n" +
-            "ALOAD 9\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ALOAD 7\n" +
             "LDC \"special long resources.OnMethodTest#callTarget(java.lang.String, long)\"\n" +
             "LDC \"resources.OnMethodTest\"\n" +
             "LDC \"callTopLevel\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallSampledAdaptive$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
             "L3\n" +
-            "ALOAD 9\n" +
-            "ALOAD 8\n" +
-            "LLOAD 6\n" +
-            "ILOAD 4\n" +
+            "FRAME SAME\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ILOAD 8\n" +
             "IFEQ L4\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.updateEndTs (I)V\n" +
             "L4\n" +
+            "FRAME SAME1 J\n" +
             "L5\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L5 1\n" +
@@ -3916,6 +4338,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IF_ICMPLT L1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallNoArgs$args ()V\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J] [resources/OnMethodTest java/lang/String J]\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
@@ -3929,10 +4352,22 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallReturn");
 
-        checkTransformation("LSTORE 4\nASTORE 6\nASTORE 7\nALOAD 7\nALOAD 6\nLLOAD 4\n"
-                + "LSTORE 8\nLLOAD 8\nALOAD 6\nLLOAD 4\n"
-                + "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallReturn$args (JLjava/lang/String;J)V\n"
-                + "LLOAD 8");
+        checkTransformation(
+            "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "DUP2\n" +
+            "LSTORE 8\n" +
+            "LLOAD 8\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallReturn$args (JLjava/lang/String;J)V\n" +
+            "MAXSTACK = 7\n" +
+            "MAXLOCALS = 10"
+        );
 
         resetClassLoader();
 
@@ -3948,17 +4383,19 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "GETSTATIC traces/onmethod/leveled/MethodCallReturn.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L1\n" +
+            "DUP2\n" +
             "LSTORE 8\n" +
             "LLOAD 8\n" +
             "ALOAD 6\n" +
             "LLOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallReturn$args (JLjava/lang/String;J)V\n" +
-            "LLOAD 8\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest T T] [J]\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
             "LOCALVARIABLE b J L0 L2 2\n" +
+            "MAXSTACK = 7\n" +
             "MAXLOCALS = 10"
         );
     }
@@ -3968,7 +4405,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallReturnAugmented", true);
 
-        checkTransformation("LSTORE 4\n" +
+        checkTransformation(
+            "LSTORE 4\n" +
             "ASTORE 6\n" +
             "ASTORE 7\n" +
             "ALOAD 7\n" +
@@ -4002,6 +4440,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 8\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallReturnAugmented$args (Ljava/lang/String;JJ)J\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest T T] [J]\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
@@ -4015,7 +4454,8 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallReturnAugmented1", true);
 
-        checkTransformation("LSTORE 4\n" +
+        checkTransformation(
+            "LSTORE 4\n" +
             "ASTORE 6\n" +
             "ASTORE 7\n" +
             "ALOAD 7\n" +
@@ -4049,6 +4489,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LLOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallReturnAugmented1$args (JLjava/lang/String;J)J\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest T T] [J]\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
@@ -4063,28 +4504,28 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/MethodCallDuration");
 
         checkTransformation(
+            "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
             "LCONST_0\n" +
-            "LSTORE 4\n" +
-            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
-            "LSTORE 6\n" +
             "LSTORE 8\n" +
-            "ASTORE 10\n" +
-            "ASTORE 11\n" +
-            "ALOAD 11\n" +
-            "ALOAD 10\n" +
-            "LLOAD 8\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
-            "LLOAD 6\n" +
+            "LSTORE 10\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
+            "LLOAD 10\n" +
             "LSUB\n" +
-            "LSTORE 4\n" +
+            "LSTORE 8\n" +
+            "DUP2\n" +
             "LSTORE 12\n" +
             "LLOAD 12\n" +
-            "LLOAD 4\n" +
-            "ALOAD 10\n" +
             "LLOAD 8\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDuration$args (JJLjava/lang/String;J)V\n" +
-            "LLOAD 12\n" +
-            "MAXSTACK = 7\n" +
+            "MAXSTACK = 9\n" +
             "MAXLOCALS = 14"
         );
 
@@ -4093,46 +4534,49 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/MethodCallDuration");
 
         checkTransformation(
-            "LCONST_0\n" +
             "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
             "LCONST_0\n" +
-            "LSTORE 6\n" +
+            "LSTORE 8\n" +
+            "LCONST_0\n" +
+            "LSTORE 10\n" +
             "GETSTATIC resources/OnMethodTest.$btrace$$level : I\n" +
             "DUP\n" +
-            "ISTORE 8\n" +
+            "ISTORE 12\n" +
             "IFLE L1\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
-            "LSTORE 6\n" +
+            "LSTORE 10\n" +
             "L1\n" +
-            "LSTORE 9\n" +
-            "ASTORE 11\n" +
-            "ASTORE 12\n" +
-            "ALOAD 12\n" +
-            "ALOAD 11\n" +
-            "LLOAD 9\n" +
-            "ILOAD 8\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I] []\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ILOAD 12\n" +
             "IFLE L2\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
-            "LLOAD 6\n" +
+            "LLOAD 10\n" +
             "LSUB\n" +
-            "LSTORE 4\n" +
+            "LSTORE 8\n" +
             "L2\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/MethodCallDuration.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L3\n" +
+            "DUP2\n" +
             "LSTORE 13\n" +
             "LLOAD 13\n" +
+            "LLOAD 8\n" +
+            "ALOAD 6\n" +
             "LLOAD 4\n" +
-            "ALOAD 11\n" +
-            "LLOAD 9\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallDuration$args (JJLjava/lang/String;J)V\n" +
-            "LLOAD 13\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I T T] [J]\n" +
             "L4\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L4 1\n" +
             "LOCALVARIABLE b J L0 L4 2\n" +
-            "MAXSTACK = 7\n" +
+            "MAXSTACK = 9\n" +
             "MAXLOCALS = 15"
         );
     }
@@ -4142,91 +4586,102 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallDurationSampled");
 
-        checkTransformation("LCONST_0\n" +
+        checkTransformation(
             "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
+            "LCONST_0\n" +
+            "LSTORE 8\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
-            "LSTORE 6\n" +
+            "LSTORE 10\n" +
             "L2I\n" +
-            "ISTORE 8\n" +
-            "LSTORE 9\n" +
-            "ASTORE 11\n" +
-            "ASTORE 12\n" +
-            "ALOAD 12\n" +
-            "ALOAD 11\n" +
-            "LLOAD 9\n" +
-            "ILOAD 8\n" +
+            "ISTORE 12\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ILOAD 12\n" +
             "IFEQ L1\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
-            "LLOAD 6\n" +
+            "LLOAD 10\n" +
             "LSUB\n" +
-            "LSTORE 4\n" +
+            "LSTORE 8\n" +
+            "DUP2\n" +
             "LSTORE 13\n" +
             "LLOAD 13\n" +
+            "LLOAD 8\n" +
+            "ALOAD 6\n" +
             "LLOAD 4\n" +
-            "ALOAD 11\n" +
-            "LLOAD 9\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDurationSampled$args (JJLjava/lang/String;J)V\n" +
-            "LLOAD 13\n" +
             "L1\n" +
-            "L2");
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I T T] [J]\n" +
+            "L2\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
+            "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
+            "LOCALVARIABLE b J L0 L2 2\n" +
+            "MAXSTACK = 9\n" +
+            "MAXLOCALS = 15"
+        );
 
         resetClassLoader();
 
         transform("onmethod/leveled/MethodCallDurationSampled");
 
         checkTransformation(
-            "LCONST_0\n" +
             "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
             "LCONST_0\n" +
-            "LSTORE 6\n" +
+            "LSTORE 8\n" +
+            "LCONST_0\n" +
+            "LSTORE 10\n" +
             "ICONST_0\n" +
-            "ISTORE 8\n" +
+            "ISTORE 12\n" +
             "GETSTATIC resources/OnMethodTest.$btrace$$level : I\n" +
             "DUP\n" +
-            "ISTORE 9\n" +
+            "ISTORE 13\n" +
             "IFLE L1\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
-            "LSTORE 6\n" +
-            "L2I\n" +
-            "ISTORE 8\n" +
-            "L1\n" +
             "LSTORE 10\n" +
-            "ASTORE 12\n" +
-            "ASTORE 13\n" +
-            "ALOAD 13\n" +
-            "ALOAD 12\n" +
-            "LLOAD 10\n" +
-            "ILOAD 9\n" +
+            "L2I\n" +
+            "ISTORE 12\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I] []\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ILOAD 13\n" +
             "IFLE L2\n" +
-            "ILOAD 8\n" +
+            "ILOAD 12\n" +
             "IFEQ L3\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
-            "LLOAD 6\n" +
+            "LLOAD 10\n" +
             "LSUB\n" +
-            "LSTORE 4\n" +
+            "LSTORE 8\n" +
             "L2\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/MethodCallDurationSampled.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L3\n" +
+            "DUP2\n" +
             "LSTORE 14\n" +
             "LLOAD 14\n" +
+            "LLOAD 8\n" +
+            "ALOAD 6\n" +
             "LLOAD 4\n" +
-            "ALOAD 12\n" +
-            "LLOAD 10\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallDurationSampled$args (JJLjava/lang/String;J)V\n" +
-            "LLOAD 14\n" +
             "L3\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I T T] [J]\n" +
             "L4\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L4 1\n" +
             "LOCALVARIABLE b J L0 L4 2\n" +
-            "MAXSTACK = 8\n" +
+            "MAXSTACK = 9\n" +
             "MAXLOCALS = 16"
         );
     }
@@ -4236,153 +4691,171 @@ public class InstrumentorTest extends InstrumentorTestBase {
         loadTargetClass("OnMethodTest");
         transform("onmethod/MethodCallDurationSampledMulti");
 
-        checkTransformation("LCONST_0\n" +
+        checkTransformation(
             "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
+            "LCONST_0\n" +
+            "LSTORE 8\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
-            "LSTORE 6\n" +
+            "LSTORE 10\n" +
             "L2I\n" +
-            "ISTORE 8\n" +
-            "LSTORE 9\n" +
-            "ASTORE 11\n" +
-            "ASTORE 12\n" +
-            "ALOAD 12\n" +
-            "ALOAD 11\n" +
-            "LLOAD 9\n" +
-            "ILOAD 8\n" +
+            "ISTORE 12\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ILOAD 12\n" +
             "IFEQ L1\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
-            "LLOAD 6\n" +
+            "LLOAD 10\n" +
             "LSUB\n" +
-            "LSTORE 4\n" +
+            "LSTORE 8\n" +
+            "DUP2\n" +
             "LSTORE 13\n" +
             "LLOAD 13\n" +
+            "LLOAD 8\n" +
+            "ALOAD 6\n" +
             "LLOAD 4\n" +
-            "ALOAD 11\n" +
-            "LLOAD 9\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V\n" +
-            "LLOAD 13\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I T T] [J]\n" +
+            "LSTORE 15\n" +
+            "ASTORE 17\n" +
             "ICONST_3\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
-            "LSTORE 15\n" +
-            "L2I\n" +
-            "ISTORE 17\n" +
             "LSTORE 18\n" +
-            "ASTORE 20\n" +
-            "ALOAD 20\n" +
-            "LLOAD 18\n" +
-            "ILOAD 17\n" +
+            "L2I\n" +
+            "ISTORE 20\n" +
+            "ALOAD 17\n" +
+            "LLOAD 15\n" +
+            "ILOAD 20\n" +
             "IFEQ L2\n" +
             "ICONST_3\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
-            "LLOAD 15\n" +
+            "LLOAD 18\n" +
             "LSUB\n" +
+            "LSTORE 8\n" +
+            "DUP2\n" +
             "LSTORE 21\n" +
             "LLOAD 21\n" +
-            "ALOAD 20\n" +
-            "LLOAD 18\n" +
+            "LLOAD 8\n" +
+            "ALOAD 17\n" +
+            "LLOAD 15\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V\n" +
-            "LLOAD 21\n" +
             "L2\n" +
-            "LADD\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I T T J java/lang/String J I T T] [J J]\n" +
             "LSTORE 23\n" +
             "L3\n" +
             "LINENUMBER 115 L3\n" +
             "LLOAD 23\n" +
-            "L4");
+            "L4\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0\n" +
+            "LOCALVARIABLE a Ljava/lang/String; L0 L4 1\n" +
+            "LOCALVARIABLE b J L0 L4 2\n" +
+            "LOCALVARIABLE i J L3 L4 23\n" +
+            "MAXSTACK = 11\n" +
+            "MAXLOCALS = 25"
+        );
 
         resetClassLoader();
 
         transform("onmethod/leveled/MethodCallDurationSampledMulti");
 
         checkTransformation(
-            "LCONST_0\n" +
             "LSTORE 4\n" +
+            "ASTORE 6\n" +
+            "ASTORE 7\n" +
             "LCONST_0\n" +
-            "LSTORE 6\n" +
+            "LSTORE 8\n" +
+            "LCONST_0\n" +
+            "LSTORE 10\n" +
             "ICONST_0\n" +
-            "ISTORE 8\n" +
+            "ISTORE 12\n" +
             "GETSTATIC resources/OnMethodTest.$btrace$$level : I\n" +
             "DUP\n" +
-            "ISTORE 9\n" +
+            "ISTORE 13\n" +
             "IFLE L1\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
-            "LSTORE 6\n" +
-            "L2I\n" +
-            "ISTORE 8\n" +
-            "L1\n" +
             "LSTORE 10\n" +
-            "ASTORE 12\n" +
-            "ASTORE 13\n" +
-            "ALOAD 13\n" +
-            "ALOAD 12\n" +
-            "LLOAD 10\n" +
-            "ILOAD 9\n" +
+            "L2I\n" +
+            "ISTORE 12\n" +
+            "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I] []\n" +
+            "ALOAD 7\n" +
+            "ALOAD 6\n" +
+            "LLOAD 4\n" +
+            "ILOAD 13\n" +
             "IFLE L2\n" +
-            "ILOAD 8\n" +
+            "ILOAD 12\n" +
             "IFEQ L3\n" +
             "ICONST_2\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
-            "LLOAD 6\n" +
+            "LLOAD 10\n" +
             "LSUB\n" +
-            "LSTORE 4\n" +
+            "LSTORE 8\n" +
             "L2\n" +
+            "FRAME SAME1 J\n" +
             "GETSTATIC traces/onmethod/leveled/MethodCallDurationSampledMulti.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L3\n" +
+            "DUP2\n" +
             "LSTORE 14\n" +
             "LLOAD 14\n" +
+            "LLOAD 8\n" +
+            "ALOAD 6\n" +
             "LLOAD 4\n" +
-            "ALOAD 12\n" +
-            "LLOAD 10\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V\n" +
-            "LLOAD 14\n" +
             "L3\n" +
-            "LCONST_0\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I T T] [J]\n" +
             "LSTORE 16\n" +
+            "ASTORE 18\n" +
+            "LCONST_0\n" +
+            "LSTORE 19\n" +
             "ICONST_0\n" +
-            "ISTORE 18\n" +
+            "ISTORE 21\n" +
             "GETSTATIC resources/OnMethodTest.$btrace$$level : I\n" +
             "DUP\n" +
-            "ISTORE 19\n" +
+            "ISTORE 22\n" +
             "IFLE L4\n" +
             "ICONST_3\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.hitTimed (I)J\n" +
             "DUP2\n" +
-            "LSTORE 16\n" +
+            "LSTORE 19\n" +
             "L2I\n" +
-            "ISTORE 18\n" +
+            "ISTORE 21\n" +
             "L4\n" +
-            "LSTORE 20\n" +
-            "ASTORE 22\n" +
-            "ALOAD 22\n" +
-            "LLOAD 20\n" +
-            "ILOAD 19\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I T T J java/lang/String J I I] [J]\n" +
+            "ALOAD 18\n" +
+            "LLOAD 16\n" +
+            "ILOAD 22\n" +
             "IFLE L5\n" +
-            "ILOAD 18\n" +
+            "ILOAD 21\n" +
             "IFEQ L6\n" +
             "ICONST_3\n" +
             "INVOKESTATIC com/sun/btrace/instr/MethodTracker.getEndTs (I)J\n" +
-            "LLOAD 16\n" +
+            "LLOAD 19\n" +
             "LSUB\n" +
+            "LSTORE 8\n" +
             "L5\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I T T J java/lang/String J I I] [J J]\n" +
             "GETSTATIC traces/onmethod/leveled/MethodCallDurationSampledMulti.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L6\n" +
+            "DUP2\n" +
             "LSTORE 23\n" +
             "LLOAD 23\n" +
-            "ALOAD 22\n" +
-            "LLOAD 20\n" +
+            "LLOAD 8\n" +
+            "ALOAD 18\n" +
+            "LLOAD 16\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V\n" +
-            "LLOAD 23\n" +
             "L6\n" +
-            "LADD\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I T T J java/lang/String J I I T T] [J J]\n" +
             "LSTORE 25\n" +
             "L7\n" +
             "LINENUMBER 115 L7\n" +
@@ -4392,7 +4865,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LOCALVARIABLE a Ljava/lang/String; L0 L8 1\n" +
             "LOCALVARIABLE b J L0 L8 2\n" +
             "LOCALVARIABLE i J L7 L8 25\n" +
-            "MAXSTACK = 9\n" +
+            "MAXSTACK = 11\n" +
             "MAXLOCALS = 27"
         );
     }
@@ -4454,6 +4927,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"callTopLevel\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$MethodCallStatic$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
             "L1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String] [J]\n" +
             "ALOAD 6\n" +
             "LLOAD 4\n" +
             "L2\n" +
@@ -4507,6 +4981,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"callTopLevelStatic\"\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$StaticMethodCall$args (Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
             "L2\n" +
+            "FRAME FULL [java/lang/String J resources/OnMethodTest J java/lang/String resources/OnMethodTest] [J]\n" +
             "ALOAD 7\n" +
             "ALOAD 6\n" +
             "LLOAD 4\n" +
@@ -4544,24 +5019,25 @@ public class InstrumentorTest extends InstrumentorTestBase {
 
         checkTransformation(
             "LSTORE 4\n" +
-            "ASTORE 6\n" +
-            "GETSTATIC traces/onmethod/leveled/StaticMethodCallStatic.$btrace$$level : I\n" +
-            "ICONST_1\n" +
-            "IF_ICMPLT L2\n" +
-            "ALOAD 6\n" +
-            "LLOAD 4\n" +
-            "LDC \"static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)\"\n" +
-            "LDC \"resources.OnMethodTest\"\n" +
-            "LDC \"callTopLevelStatic\"\n" +
-            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$StaticMethodCallStatic$args (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
-            "L2\n" +
-            "ALOAD 6\n" +
-            "LLOAD 4\n" +
-            "L3\n" +
-            "LOCALVARIABLE a Ljava/lang/String; L0 L3 0\n" +
-            "LOCALVARIABLE b J L0 L3 1\n" +
-            "LOCALVARIABLE instance Lresources/OnMethodTest; L1 L3 3\n" +
-            "MAXLOCALS = 7"
+                "ASTORE 6\n" +
+                "GETSTATIC traces/onmethod/leveled/StaticMethodCallStatic.$btrace$$level : I\n" +
+                "ICONST_1\n" +
+                "IF_ICMPLT L2\n" +
+                "ALOAD 6\n" +
+                "LLOAD 4\n" +
+                "LDC \"static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)\"\n" +
+                "LDC \"resources.OnMethodTest\"\n" +
+                "LDC \"callTopLevelStatic\"\n" +
+                "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$StaticMethodCallStatic$args (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
+                "L2\n" +
+                "FRAME APPEND [resources/OnMethodTest J java/lang/String]\n" +
+                "ALOAD 6\n" +
+                "LLOAD 4\n" +
+                "L3\n" +
+                "LOCALVARIABLE a Ljava/lang/String; L0 L3 0\n" +
+                "LOCALVARIABLE b J L0 L3 1\n" +
+                "LOCALVARIABLE instance Lresources/OnMethodTest; L1 L3 3\n" +
+                "MAXLOCALS = 7"
         );
     }
 
@@ -4592,12 +5068,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IF_ICMPLT L0\n" +
             "ALOAD 0\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NoArgsEntryReturn$argsEmptyEntry (Ljava/lang/Object;)V\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/onmethod/leveled/NoArgsEntryReturn.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L1\n" +
             "ALOAD 0\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$NoArgsEntryReturn$argsEmptyReturn (Ljava/lang/Object;)V\n" +
             "L1\n" +
+            "FRAME SAME1 J\n" +
             "L2\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L2 1\n" +
@@ -4654,6 +5132,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW services/DummyRuntimService\n" +
             "DUP\n" +
             "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
@@ -4666,6 +5145,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -4681,6 +5161,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW services/DummySimpleService\n" +
             "DUP\n" +
             "INVOKESPECIAL services/DummySimpleService.<init> ()V\n" +
@@ -4692,6 +5173,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -4707,6 +5189,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW services/DummySimpleService\n" +
             "DUP\n" +
             "LDC \"getInstance\"\n" +
@@ -4719,6 +5202,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -4735,6 +5219,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW services/DummyRuntimService\n" +
             "DUP\n" +
             "DUP\n" +
@@ -4751,6 +5236,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -4792,6 +5278,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW services/DummyRuntimService\n" +
             "DUP\n" +
             "GETSTATIC traces/ServicesTest.runtime : Lcom/sun/btrace/BTraceRuntime;\n" +
@@ -4804,6 +5291,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -4819,6 +5307,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW services/DummySimpleService\n" +
             "DUP\n" +
             "INVOKESPECIAL services/DummySimpleService.<init> ()V\n" +
@@ -4830,6 +5319,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -4845,6 +5335,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW services/DummySimpleService\n" +
             "DUP\n" +
             "LDC \"getInstance\"\n" +
@@ -4857,6 +5348,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -4873,6 +5365,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "NEW services/DummyRuntimService\n" +
             "DUP\n" +
             "DUP\n" +
@@ -4889,6 +5382,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -5005,6 +5499,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "GETSTATIC traces/TLSTest.entryTimes : Ljava/lang/ThreadLocal;\n" +
             "INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;\n" +
             "CHECKCAST java/util/Deque\n" +
@@ -5018,6 +5513,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
@@ -5116,6 +5612,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "IFNE L0\n" +
             "RETURN\n" +
             "L0\n" +
+            "FRAME SAME\n" +
             "ACONST_NULL\n" +
             "LLOAD 1\n" +
             "INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;\n" +
@@ -5126,6 +5623,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +
             "L1\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN\n" +

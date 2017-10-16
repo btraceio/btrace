@@ -181,7 +181,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     }
 
     private byte[] getBytecode(boolean onlyBcpMethods) {
-        ClassWriter cw = InstrumentUtils.newClassWriter();
+        ClassWriter cw = InstrumentUtils.newClassWriter(true);
         ClassVisitor cv = cw;
         if (onlyBcpMethods) {
             cv = new ClassVisitor(Opcodes.ASM5, cw) {
@@ -387,7 +387,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
             if (debug.isDebug()) {
                 debug.debug("verifying BTrace class ...");
             }
-            cr.accept(v, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
+            cr.accept(v, ClassReader.SKIP_DEBUG);
             if (debug.isDebug()) {
                 debug.debug("BTrace class " + getClassName() + " verified");
                 debug.debug("preprocessing BTrace class " + getClassName() + " ...");

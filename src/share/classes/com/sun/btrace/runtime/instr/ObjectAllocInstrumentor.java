@@ -25,9 +25,10 @@
 
 package com.sun.btrace.runtime.instr;
 
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.runtime.Constants;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 
 /**
  * This visitor helps in inserting code whenever an object
@@ -41,14 +42,14 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
     private final boolean needsInitialization;
     private boolean instanceCreated = false;
 
-    public ObjectAllocInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
+    public ObjectAllocInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
         int access, String name, String desc) {
-        this(mv, parentClz, superClz, access, name, desc, false);
+        this(mv, mHelper, parentClz, superClz, access, name, desc, false);
     }
 
-    public ObjectAllocInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
+    public ObjectAllocInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
         int access, String name, String desc, boolean needsInitialization) {
-        super(mv, parentClz, superClz, access, name, desc);
+        super(mv, mHelper, parentClz, superClz, access, name, desc);
         this.needsInitialization = needsInitialization;
     }
 

@@ -28,7 +28,9 @@ package com.sun.btrace.runtime.instr;
 import java.util.Map;
 import java.util.HashMap;
 import com.sun.btrace.org.objectweb.asm.Label;
-import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.org.objectweb.asm.Type;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 
 /**
  * This visitor helps in inserting code whenever an exception
@@ -41,9 +43,9 @@ import com.sun.btrace.util.LocalVariableHelper;
 public class CatchInstrumentor extends MethodInstrumentor {
     private Map<Label, String> handlers = new HashMap<Label, String>();
 
-    public CatchInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
+    public CatchInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv, parentClz, superClz, access, name, desc);
+        super(mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override
@@ -51,6 +53,7 @@ public class CatchInstrumentor extends MethodInstrumentor {
         super.visitLabel(label);
         String catchType = handlers.get(label);
         if (catchType != null) {
+            insertFrameReplaceStack(label, Type.getObjectType(catchType));
             onCatch(catchType);
         }
     }

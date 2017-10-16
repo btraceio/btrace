@@ -33,18 +33,13 @@ import com.sun.btrace.org.objectweb.asm.ClassReader;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import com.sun.btrace.org.objectweb.asm.tree.ClassNode;
 import com.sun.btrace.util.MethodID;
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.*;
 import org.junit.After;
 import org.junit.Before;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
 import sun.misc.Unsafe;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -136,25 +131,33 @@ public abstract class InstrumentorTestBase {
         traceCode = null;
     }
 
-    protected void load(String traceName, String clzName) {
+    protected void load(String traceName, String clzName) throws Exception {
         loadTraceCode(traceName);
         loadClass(clzName);
     }
 
-    protected void loadClass(String origName) {
+    @SuppressWarnings("ClassNewInstance")
+    protected void loadClass(String origName) throws Exception {
         if (transformedBC != null) {
             String clzName = new ClassReader(transformedBC).getClassName().replace('.', '/');
-            unsafe.defineClass(clzName, transformedBC, 0, transformedBC.length, cl, null);
+            Class<?> clz = unsafe.defineClass(clzName, transformedBC, 0, transformedBC.length, cl, null);
+            try {
+                clz.newInstance();
+            } catch (NoSuchFieldError | NoClassDefFoundError e) {
+                // expected; ignore
+            }
         } else {
             System.err.println("Unable to instrument class " + origName);
             transformedBC = originalBC;
         }
     }
 
-    protected void loadTraceCode(String origName) {
+    @SuppressWarnings("ClassNewInstance")
+    protected void loadTraceCode(String origName) throws Exception {
         if (traceCode == null) {
             String traceName = new ClassReader(traceCode).getClassName().replace('.', '/');
-            unsafe.defineClass(traceName, traceCode, 0, traceCode.length, cl, null);
+            Class<?> clz  = unsafe.defineClass(traceName, traceCode, 0, traceCode.length, cl, null);
+            clz.newInstance();
         } else {
             System.err.println("Unable to process trace " + origName);
         }
@@ -165,7 +168,7 @@ public abstract class InstrumentorTestBase {
 
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
-        CheckClassAdapter.verify(cr, false, pw);
+        CheckClassAdapter.verify(cr, true, pw);
         if (sw.toString().contains("AnalyzerException")) {
             System.err.println(sw.toString());
             fail();
@@ -190,11 +193,11 @@ public abstract class InstrumentorTestBase {
         }
     }
 
-    protected void transform(String traceName) throws IOException {
+    protected void transform(String traceName) throws Exception {
         transform(traceName, false);
     }
 
-    protected void transform(String traceName, boolean unsafe) throws IOException {
+    protected void transform(String traceName, boolean unsafe) throws Exception {
         settings.setTrusted(unsafe);
         BTraceClassReader cr = InstrumentUtils.newClassReader(cl, originalBC);
         BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
@@ -204,6 +207,12 @@ public abstract class InstrumentorTestBase {
 
         transformedBC = cw.instrument();
 
+        if (transformedBC != null) {
+            try (OutputStream os = new FileOutputStream("/tmp/dummy.class")) {
+                os.write(transformedBC);
+            }
+        }
+
         load(traceName, cr.getJavaClassName());
 
         System.err.println("==== " + traceName);
@@ -212,12 +221,12 @@ public abstract class InstrumentorTestBase {
     protected String asmify(byte[] bytecode) {
         StringWriter sw = new StringWriter();
         TraceClassVisitor acv = new TraceClassVisitor(new PrintWriter(sw));
-        new org.objectweb.asm.ClassReader(bytecode).accept(acv, ClassReader.SKIP_FRAMES);
+        new org.objectweb.asm.ClassReader(bytecode).accept(acv, 0);
         return sw.toString();
     }
 
     protected String asmify(ClassNode cn) {
-        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        ClassWriter cw = new ClassWriter(0);
         cn.accept(cw);
         return asmify(cw.toByteArray());
     }

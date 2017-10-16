@@ -50,7 +50,7 @@ public class DerivedClass extends AbstractClass {
         defaultString = "value4";
     }
     
-    protected DerivedClass() {
+    public DerivedClass() {
         super(new ArrayList());
     }
 

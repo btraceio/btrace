@@ -25,21 +25,22 @@
 
 package com.sun.btrace.runtime.instr;
 
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 
 /**
  * This class helps in inserting code whenever a type check
- * (instanceof or checkcact) is done. The code to insert on
+ * (instanceof or checkcast) is done. The code to insert on
  * type check may be decided by  derived class. By default,
  * this class inserts code to print message.
  *
  * @author A. Sundararajan
  */
 public class TypeCheckInstrumentor extends MethodInstrumentor {
-    public TypeCheckInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
+    public TypeCheckInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
         int access, String name, String desc) {
-        super(mv, parentClz, superClz, access, name, desc);
+        super(mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override

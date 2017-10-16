@@ -34,7 +34,7 @@ import java.util.Set;
  * @author Jaroslav Bachorik
  */
 abstract public class BaseTemplateExpander implements TemplateExpander {
-    private final Set<Template> supportedTemplates = new HashSet<Template>();
+    private final Set<Template> supportedTemplates = new HashSet<>();
 
     private Template lastTemplate = null;
 

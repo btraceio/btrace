@@ -29,13 +29,14 @@ public class BTraceProbePersisted implements BTraceProbe {
     private volatile BTraceRuntime rt = null;
     private BTraceTransformer transformer;
 
-    private boolean transforming;
     private final AtomicBoolean triedVerify = new AtomicBoolean(false);
 
     private byte[] fullData = null;
     private byte[] dataHolder = null;
 
     private final Map<String, Set<String>> calleeMap = new HashMap<>();
+
+    private boolean preverified;
 
     BTraceProbePersisted(BTraceProbeFactory f) {
         this(f, null);
@@ -45,6 +46,7 @@ public class BTraceProbePersisted implements BTraceProbe {
         this.debug = new DebugSupport(f.getSettings());
         this.delegate = delegate != null ? delegate : new BTraceProbeSupport(debug);
         this.factory = f;
+        this.preverified = false;
     }
 
     private BTraceProbePersisted(BTraceProbeNode bpn) {
@@ -52,6 +54,7 @@ public class BTraceProbePersisted implements BTraceProbe {
         this.fullData = bpn.getFullBytecode();
         this.dataHolder = bpn.getDataHolderBytecode();
         loadCalleeMap(bpn, calleeMap);
+        this.preverified = true;
     }
 
     private static final class Handler {
@@ -94,8 +97,8 @@ public class BTraceProbePersisted implements BTraceProbe {
 
     }
 
-    public static BTraceProbePersisted from(BTraceProbeNode bpn) {
-        return new BTraceProbePersisted(bpn);
+    public static BTraceProbePersisted from(BTraceProbe bp) {
+        return bp instanceof BTraceProbePersisted ? (BTraceProbePersisted)bp : new BTraceProbePersisted((BTraceProbeNode)bp);
     }
 
     public void read(DataInputStream dis) throws IOException {
@@ -372,7 +375,7 @@ public class BTraceProbePersisted implements BTraceProbe {
 
     @Override
     public boolean isTransforming() {
-        return transforming;
+        return delegate.isTransforming();
     }
 
     @Override
@@ -443,7 +446,9 @@ public class BTraceProbePersisted implements BTraceProbe {
 
     @Override
     public void checkVerified() {
-        isVerified();
+        if (!preverified) {
+            isVerified();
+        }
     }
 
     @Override
@@ -658,6 +663,8 @@ public class BTraceProbePersisted implements BTraceProbe {
                                     // and can't be caught by source AST analyzer as well.
                                 } else if (owner.equals(STRING_BUILDER_INTERNAL)) {
                                     // allow string concatenation via StringBuilder
+                                } else if (owner.equals(THREAD_LOCAL_INTERNAL)) {
+                                    // allow ThreadLocal methods
                                 } else {
                                     if (!delegate.isServiceType(owner)) {
                                         Verifier.reportError("no.method.calls", owner + "." + name + desc);
@@ -672,6 +679,8 @@ public class BTraceProbePersisted implements BTraceProbe {
                                     // allow object initializer
                                 } else if (owner.equals(STRING_BUILDER_INTERNAL)) {
                                     // allow string concatenation via StringBuilder
+                                } else if (owner.equals(THREAD_LOCAL_INTERNAL)) {
+                                    // allow ThreadLocal methods
                                 } else if (delegate.isServiceType(owner)) {
                                     // allow services invocations
                                 } else {

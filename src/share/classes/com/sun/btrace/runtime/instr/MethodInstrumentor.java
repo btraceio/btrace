@@ -34,12 +34,14 @@ import com.sun.btrace.runtime.Assembler;
 import com.sun.btrace.runtime.Level;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.TypeUtils;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.runtime.BTraceMethodVisitor;
 import static com.sun.btrace.runtime.Constants.*;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 import com.sun.btrace.util.Interval;
-import com.sun.btrace.util.LocalVariableHelper;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,7 +54,7 @@ import java.util.Map;
  *
  * @author A. Sundararajan
  */
-public class MethodInstrumentor extends MethodVisitor implements LocalVariableHelper {
+public class MethodInstrumentor extends BTraceMethodVisitor {
     protected int levelCheckVar = Integer.MIN_VALUE;
     protected void visitMethodPrologue() {
     }
@@ -247,16 +249,15 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     private Label skipLabel;
     private boolean prologueVisited = false;
 
-    private final LocalVariableHelper lvt;
     protected final Assembler asm;
 
     protected MethodInstrumentor parent = null;
 
     public MethodInstrumentor(
-        LocalVariableHelper lvt, String parentClz,
+        MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz,
         String superClz, int access, String name, String desc
     ) {
-        super(ASM5, (MethodVisitor)lvt);
+        super(mv, mHelper);
         this.parentClz = parentClz;
         this.superClz = superClz;
         this.access = access;
@@ -265,11 +266,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         this.returnType = Type.getReturnType(desc);
         this.argumentTypes = Type.getArgumentTypes(desc);
         extraTypes = new HashMap<>();
-        this.lvt = lvt;
-        if (lvt instanceof MethodInstrumentor) {
-            ((MethodInstrumentor)lvt).parent = this;
-        }
-        this.asm = new Assembler(this);
+        this.asm = new Assembler(this, mHelper);
     }
 
     @Override
@@ -335,11 +332,6 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             sb.append(name);
         }
         return sb.toString();
-    }
-
-    @Override
-    public int storeNewLocal(Type type) {
-        return lvt.storeNewLocal(type);
     }
 
     public final Label getSkipLabel() {
@@ -410,13 +402,14 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         int[] backupArgsIndexes = new int[methodArgTypes.length + 1];
         int upper = methodArgTypes.length - 1;
 
-            for (int i = 0; i < methodArgTypes.length; i++) {
-                int index = lvt.storeNewLocal(methodArgTypes[upper - i]);
-                backupArgsIndexes[upper -  i + 1] = index;
-            }
+        for (int i = 0; i < methodArgTypes.length; i++) {
+            Type t = methodArgTypes[upper -i];
+            int index = storeAsNew();
+            backupArgsIndexes[upper -  i + 1] = index;
+        }
 
         if (!isStatic) {
-            int index = lvt.storeNewLocal(OBJECT_TYPE); // store *callee*
+            int index = storeAsNew(); // store *callee*
             backupArgsIndexes[0] = index;
         }
         return backupArgsIndexes;
@@ -596,7 +589,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             if (saveResult) {
                 // must store the level in a local var to be consistent
                 asm.compareLevel(className, level).dup();
-                levelCheckVar = storeNewLocal(Type.INT_TYPE);
+                levelCheckVar = storeAsNew();
                 asm.jump(Opcodes.IFLT, l);
             } else {
                 asm.addLevelCheck(className, level, l);
