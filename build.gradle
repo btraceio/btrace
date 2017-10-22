@@ -12,7 +12,6 @@ buildscript {
 
 plugins {
     id 'java'
-    id 'java-library'
     id 'maven'
     id 'maven-publish'
     id "nebula.ospackage" version "4.3.0"
@@ -403,7 +402,7 @@ test {
     dependsOn cleanTest
     inputs.files buildTraces.outputs
     inputs.files buildDTrace.outputs
-    testLogging.showStandardStreams = false
+    testLogging.showStandardStreams = true
 }
 
 dependencies {
