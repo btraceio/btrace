@@ -127,6 +127,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
     public void testOnMethod() throws Exception {
         debugBTrace = true;
         debugTestApp = true;
+        System.err.println("*** JAVA_HOME: " + System.getenv("JAVA_HOME"));
+        System.err.println("*** PATH: " + System.getenv("PATH"));
         test(
             "resources.Main",
             "traces/OnMethodTest.java",
