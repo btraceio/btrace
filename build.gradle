@@ -62,7 +62,7 @@ bintray {
     publish = true
 
     pkg {
-        repo = 'btrace-custom'
+        repo = 'maven'
         name = 'btrace'
         desc = 'BTrace'
         userOrg = 'btraceio'
@@ -403,7 +403,7 @@ test {
     dependsOn cleanTest
     inputs.files buildTraces.outputs
     inputs.files buildDTrace.outputs
-    testLogging.showStandardStreams = true
+    testLogging.showStandardStreams = false
 }
 
 dependencies {
