@@ -277,7 +277,6 @@ task buildTraces(type: Exec) {
     outputs.dir "${buildDir}/classes/traces"
 
     workingDir "$projectDir"
-    environment('JAVA_HOME', "/opt/java/default")
     environment('BTRACE_HOME', "$projectDir")
     def btracec = (osFamily == 'windows') ? 'btracec.bat' : 'btracec'
     executable "bin/${btracec}"
