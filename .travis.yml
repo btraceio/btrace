@@ -10,7 +10,6 @@ language: java
 jdk:
 - oraclejdk8
 - openjdk7
-- oraclejdk9
 notifications:
   webhooks:
     urls: https://webhooks.gitter.im/e/31a671345ecfdce18046
