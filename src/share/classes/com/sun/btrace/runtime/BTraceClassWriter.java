@@ -58,11 +58,15 @@ final class BTraceClassWriter extends ClassWriter {
     }
 
     public void addInstrumentor(BTraceProbe bp) {
+        addInstrumentor(bp, null);
+    }
+    
+    public void addInstrumentor(BTraceProbe bp, ClassLoader cl) {
         if (cr != null && bp != null) {
             synchronized(instrumentors) {
                 Instrumentor top = instrumentors.peekLast();
                 ClassVisitor parent = top != null ? top : this;
-                Instrumentor i = Instrumentor.create(cr, bp, parent);
+                Instrumentor i = Instrumentor.create(cr, bp, parent, cl);
                 if (i != null) {
                     instrumentors.add(i);
                 }

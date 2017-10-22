@@ -42,14 +42,15 @@ public class ObjectAllocInstrumentor extends MethodInstrumentor {
     private final boolean needsInitialization;
     private boolean instanceCreated = false;
 
-    public ObjectAllocInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc) {
-        this(mv, mHelper, parentClz, superClz, access, name, desc, false);
+    public ObjectAllocInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        this(cl, mv, mHelper, parentClz, superClz, access, name, desc, false);
     }
 
-    public ObjectAllocInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc, boolean needsInitialization) {
-        super(mv, mHelper, parentClz, superClz, access, name, desc);
+    public ObjectAllocInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc,
+                                    boolean needsInitialization) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
         this.needsInitialization = needsInitialization;
     }
 

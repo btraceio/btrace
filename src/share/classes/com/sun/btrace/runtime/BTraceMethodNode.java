@@ -105,6 +105,10 @@ public class BTraceMethodNode extends MethodNode {
                         case "type":
                             om.setType((String)value);
                             break;
+                        case "exactTypeMatch": {
+                            om.setExactTypeMatch((boolean)value);
+                            break;
+                        }
                         default:
                             System.err.println("btrace WARNING: Unsupported @OnMethod attribute: " + name);
                     }

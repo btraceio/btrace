@@ -40,6 +40,7 @@ import java.util.Comparator;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import com.sun.btrace.runtime.BTraceMethodVisitor;
 import static com.sun.btrace.runtime.Constants.*;
+import com.sun.btrace.runtime.InstrumentUtils;
 import com.sun.btrace.runtime.MethodInstrumentorHelper;
 import com.sun.btrace.util.Interval;
 import java.lang.reflect.Modifier;
@@ -243,6 +244,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     private final String superClz;
     private final String name;
     private final String desc;
+    private final ClassLoader cl;
     private Type returnType;
     private Type[] argumentTypes;
     private Map<Integer, Type> extraTypes;
@@ -254,8 +256,8 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     protected MethodInstrumentor parent = null;
 
     public MethodInstrumentor(
-        MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz,
-        String superClz, int access, String name, String desc
+        ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+        String parentClz, String superClz, int access, String name, String desc
     ) {
         super(mv, mHelper);
         this.parentClz = parentClz;
@@ -267,6 +269,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
         this.argumentTypes = Type.getArgumentTypes(desc);
         extraTypes = new HashMap<>();
         this.asm = new Assembler(this, mHelper);
+        this.cl = cl;
     }
 
     @Override
@@ -485,7 +488,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
                     return ValidationResult.INVALID;
                 }
             } else {
-                if (!TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter()], selfType)) {
+                if (!InstrumentUtils.isAssignable(actionArgTypes[om.getSelfParameter()], selfType, cl, om.isExactTypeMatch())) {
                     report("Invalid @Self parameter. @Self parameter is not compatible. Expected " + selfType + ", Received " + actionArgTypes[om.getSelfParameter()]);
                     return ValidationResult.INVALID;
                 }
@@ -503,7 +506,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
                     return ValidationResult.INVALID;
                 }
             } else {
-                if (!TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter()], type)) {
+                if (!InstrumentUtils.isAssignable(actionArgTypes[om.getReturnParameter()], type, cl, om.isExactTypeMatch())) {
                     report("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
                     return ValidationResult.INVALID;
                 }
@@ -511,7 +514,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
             specialArgsCount++;
         }
         if (om.getTargetMethodOrFieldParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], STRING_TYPE))) {
+            if (!(InstrumentUtils.isAssignable(actionArgTypes[om.getTargetMethodOrFieldParameter()], STRING_TYPE, cl, om.isExactTypeMatch()))) {
                 report("Invalid @TargetMethodOrField parameter. Expected " + STRING_TYPE + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
                 return ValidationResult.INVALID;
             }
@@ -525,7 +528,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
                     return ValidationResult.INVALID;
                 }
             } else {
-                if (!TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)) {
+                if (!InstrumentUtils.isAssignable(actionArgTypes[om.getTargetInstanceParameter()], calledType, cl, om.isExactTypeMatch())) {
                     report("Invalid @TargetInstance parameter. Expected " + OBJECT_TYPE + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
                     return ValidationResult.INVALID;
                 }
@@ -539,13 +542,13 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
             specialArgsCount++;
         }
         if (om.getClassNameParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], STRING_TYPE))) {
+            if (!(InstrumentUtils.isAssignable(actionArgTypes[om.getClassNameParameter()], STRING_TYPE, cl, om.isExactTypeMatch()))) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
         if (om.getMethodParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], STRING_TYPE))) {
+            if (!(InstrumentUtils.isAssignable(actionArgTypes[om.getMethodParameter()], STRING_TYPE, cl, om.isExactTypeMatch()))) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
@@ -573,7 +576,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
         } else {
             if (cleansedArgArray.length > 0) {
                 if (!TypeUtils.isAnyTypeArray(cleansedArgArray[0]) &&
-                    !TypeUtils.isCompatible(cleansedArgArray, methodArgTypes)) {
+                    !InstrumentUtils.isAssignable(cleansedArgArray, methodArgTypes, cl, om.isExactTypeMatch())) {
                     return ValidationResult.INVALID;
                 }
             }

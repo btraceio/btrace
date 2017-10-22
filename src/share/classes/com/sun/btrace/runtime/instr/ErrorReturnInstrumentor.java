@@ -45,9 +45,9 @@ public class ErrorReturnInstrumentor extends MethodReturnInstrumentor {
     private final Label start = new Label();
     private final Label end = new Label();
 
-    public ErrorReturnInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, mHelper, parentClz, superClz, access, name, desc);
+    public ErrorReturnInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override

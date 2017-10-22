@@ -177,7 +177,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
             BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
             for(BTraceProbe p : probes) {
                 p.notifyTransform(className);
-                cw.addInstrumentor(p);
+                cw.addInstrumentor(p, loader);
             }
             byte[] transformed = cw.instrument();
             if (transformed == null) {

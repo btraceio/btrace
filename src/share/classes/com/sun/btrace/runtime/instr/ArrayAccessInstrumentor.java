@@ -40,9 +40,9 @@ import com.sun.btrace.runtime.MethodInstrumentorHelper;
  * @author A. Sundararajan
  */
 public class ArrayAccessInstrumentor extends MethodInstrumentor {
-    public ArrayAccessInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, mHelper, parentClz, superClz, access, name, desc);
+    public ArrayAccessInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override

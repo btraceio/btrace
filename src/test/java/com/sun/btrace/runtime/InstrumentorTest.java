@@ -755,13 +755,12 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ASTORE 3\n" +
             "L5\n" +
             "ALOAD 3\n" +
-            "ATHROW\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
             "FRAME FULL [resources/OnMethodTest T] []\n" +
-            "RETURN\n" +
             "L1\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
+            "ATHROW\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
@@ -896,7 +895,6 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "L7\n" +
             "LINENUMBER 150 L7\n" +
             "FRAME SAME\n" +
-            "RETURN\n" +
             "L1\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -948,7 +946,6 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "L8\n" +
             "LINENUMBER 150 L8\n" +
             "FRAME FULL [resources/OnMethodTest T] []\n" +
-            "RETURN\n" +
             "L1\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -5679,6 +5676,39 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
             "INVOKESTATIC com/sun/btrace/BTraceRuntime.leave ()V\n" +
             "RETURN"
+        );
+    }
+
+    @Test
+    public void methodEntryArgsSigMatch() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ArgsSigMatch");
+        checkTransformation(
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsSigMatch$m3 (Ljava/lang/Object;Ljava/util/ArrayList;)V\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsSigMatch$m1 (Ljava/lang/Object;Ljava/util/List;)V\n" +
+            "MAXSTACK = 2\n" +
+            "MAXLOCALS = 2"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/Args");
+        checkTransformation(
+            "GETSTATIC traces/onmethod/leveled/Args.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L0\n" +
+            "ALOAD 0\n" +
+            "ALOAD 1\n" +
+            "LLOAD 2\n" +
+            "ALOAD 4\n" +
+            "ALOAD 5\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$Args$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n" +
+            "FRAME SAME\n" +
+            "MAXSTACK = 6"
         );
     }
 }

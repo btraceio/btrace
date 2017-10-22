@@ -42,9 +42,9 @@ public class SynchronizedInstrumentor extends MethodEntryExitInstrumentor {
     protected final boolean isStatic;
     protected final boolean isSyncMethod;
 
-    public SynchronizedInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, mHelper, parentClz, superClz, access, name, desc);
+    public SynchronizedInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
 
         isStatic = (access & ACC_STATIC) != 0;
         isSyncMethod = (access & ACC_SYNCHRONIZED) != 0;

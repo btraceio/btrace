@@ -40,9 +40,9 @@ import com.sun.btrace.runtime.MethodInstrumentorHelper;
 public class FieldAccessInstrumentor extends MethodInstrumentor {
     protected boolean isStaticAccess = false;
 
-    public FieldAccessInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, mHelper, parentClz, superClz, access, name, desc);
+    public FieldAccessInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override

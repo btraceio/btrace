@@ -28,11 +28,15 @@ package com.sun.btrace.runtime;
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.org.objectweb.asm.Type;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import static com.sun.btrace.runtime.Constants.OBJECT_INTERNAL;
+import static com.sun.btrace.runtime.TypeUtils.isAnyType;
+import static com.sun.btrace.runtime.TypeUtils.isPrimitive;
+import java.util.HashSet;
 
 /**
  * @author A. Sundararajan
@@ -52,6 +56,19 @@ public final class InstrumentUtils {
     */
     public static void collectHierarchyClosure(ClassLoader cl, String type,
                                                Set<String> closure, boolean useInternal) {
+        collectHierarchyClosure(cl, type, closure, useInternal, false);
+    }
+    /**
+    * Collects the type hierarchy into the provided list, sorted from the actual type to root.
+    * Common superclasses may be present multiple times (eg. {@code java.lang.Object})
+    * It will use the associated classloader to locate the class file resources.
+    * @param cl the associated classloader
+    * @param type the type to compute the hierarchy closure for (either Java or internal name format)
+    * @param closure the ordered set to store the closure in
+    * @param useInternal should internal types names be used in the closure
+    */
+    public static void collectHierarchyClosure(ClassLoader cl, String type,
+                                               Set<String> closure, boolean useInternal, boolean ifcs) {
         if (type == null || type.equals(OBJECT_INTERNAL)) {
            return;
         }
@@ -62,7 +79,7 @@ public final class InstrumentUtils {
         // add self
         ciSet.add(ci);
         for(ClassInfo sci : ci.getSupertypes(false)) {
-            if (!sci.isInterface() && !sci.getClassName().equals(OBJECT_INTERNAL)) {
+            if ((ifcs || !sci.isInterface()) && !sci.getClassName().equals(OBJECT_INTERNAL)) {
                 ciSet.add(sci);
             }
         }
@@ -70,6 +87,61 @@ public final class InstrumentUtils {
         for (ClassInfo sci : ciSet) {
             closure.add(useInternal ? sci.getClassName() : sci.getJavaClassName());
         }
+    }
+
+    public static boolean isAssignable(Type left, Type right, ClassLoader cl, boolean exactTypeCheck) {
+        boolean isSame = left.equals(right);
+
+        if (isSame) {
+            return true;
+        }
+
+        if (TypeUtils.isObjectOrAnyType(left)) {
+            return true;
+        }
+
+        if (TypeUtils.isPrimitive(left)) {
+            return left.equals(right);
+        }
+
+        if (TypeUtils.isVoid(left)) {
+            return TypeUtils.isVoid(right);
+        }
+
+        if (exactTypeCheck) {
+            return isSame;
+        }
+
+        if (TypeUtils.isObject(left)) {
+            return true;
+        }
+
+        Set<String> closure = new HashSet<>();
+        collectHierarchyClosure(cl, right.getInternalName(), closure, true, true);
+        return closure.contains(left.getInternalName());
+
+    }
+
+    public static boolean isAssignable(Type[] args1, Type[] args2, ClassLoader cl, boolean exactTypeCheck) {
+        if (args1.length != args2.length) {
+            return false;
+        }
+        for (int i = 0; i < args1.length; i++) {
+            if (! args1[i].equals(args2[i])) {
+                int sort2 = args2[i].getSort();
+                /*
+                 * if destination is AnyType and right side is
+                 * Object or Array (i.e., any reference type)
+                 * then we allow it - because AnyType is mapped to
+                 * java.lang.Object.
+                 */
+                if (!(isAnyType(args1[i]) &&
+                        (sort2 == Type.OBJECT || sort2 == Type.ARRAY || isPrimitive(args2[i])))) {
+                    return isAssignable(args1[i], args2[i], cl, exactTypeCheck);
+                }
+            }
+        }
+        return true;
     }
 
     public static String arrayDescriptorFor(int typeCode) {

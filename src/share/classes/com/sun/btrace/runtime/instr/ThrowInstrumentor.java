@@ -39,9 +39,9 @@ import com.sun.btrace.runtime.MethodInstrumentorHelper;
  * @author A. Sundararajan
  */
 public class ThrowInstrumentor extends MethodInstrumentor {
-    public ThrowInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, mHelper, parentClz, superClz, access, name, desc);
+    public ThrowInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,31 +23,34 @@
  * questions.
  */
 
-package com.sun.btrace.runtime.instr;
+package traces.onmethod;
 
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import com.sun.btrace.runtime.MethodInstrumentorHelper;
+import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.Self;
+import static com.sun.btrace.BTraceUtils.*;
+import com.sun.btrace.annotations.TLS;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * This visitor helps in inserting code whenever a method
- * is entered. The code to insert on method entry may be
- * decided by derived class. By default, this class inserts
- * code to print name and signature of the method entered.
  *
- * @author A. Sundararajan
+ * @author Jaroslav Bachorik
  */
-public class MethodEntryInstrumentor extends MethodInstrumentor {
-    public MethodEntryInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
-                                    String parentClz, String superClz, int access, String name, String desc) {
-        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
+@BTrace
+public class ArgsSigMatch {
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="argsTypeMatch")
+    public static void m1(@Self Object self, List<String> a) {
+        println("m1");
     }
 
-    @Override
-    protected void visitMethodPrologue() {
-        onMethodEntry();
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="argsTypeMatch", exactTypeMatch = true)
+    public static void m2(@Self Object self, List<String> a) {
+        println("m2");
     }
 
-    protected void onMethodEntry() {
-        asm.println("entering " + getName() + getDescriptor());
+    @OnMethod(clazz="/.*\\.OnMethodTest/", method="argsTypeMatch", exactTypeMatch = true)
+    public static void m3(@Self Object self, ArrayList<String> a) {
+        println("m3");
     }
 }

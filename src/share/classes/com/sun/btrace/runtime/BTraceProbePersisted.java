@@ -158,6 +158,7 @@ public class BTraceProbePersisted implements BTraceProbe {
             OnMethod om = new OnMethod();
             om.setClazz(dis.readUTF());
             om.setMethod(dis.readUTF());
+            om.setExactTypeMatch(dis.readBoolean());
             om.setTargetDescriptor(dis.readUTF());
             om.setTargetName(dis.readUTF());
             om.setType(dis.readUTF());
@@ -252,6 +253,7 @@ public class BTraceProbePersisted implements BTraceProbe {
         for (OnMethod om : onMethods) {
             dos.writeUTF(getClazz(om));
             dos.writeUTF(getMethod(om));
+            dos.writeBoolean(om.isExactTypeMatch());
             dos.writeUTF(om.getTargetDescriptor());
             dos.writeUTF(om.getTargetName());
             dos.writeUTF(om.getType());

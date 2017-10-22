@@ -150,4 +150,8 @@ import java.util.Map;
     }
 
     private final Object syncLock;
+
+    public String argsTypeMatch(java.util.ArrayList<String> l) {
+        return "x";
+    }
 }

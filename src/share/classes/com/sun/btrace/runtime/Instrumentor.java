@@ -68,12 +68,13 @@ import java.util.LinkedList;
  */
 public class Instrumentor extends ClassVisitor {
     private final BTraceProbe bcn;
+    private final ClassLoader cl;
     private final Collection<OnMethod> applicableOnMethods;
     private final Set<OnMethod> calledOnMethods = new HashSet<>();
 
     private String className, superName;
 
-    static final Instrumentor create(BTraceClassReader cr, BTraceProbe bcn, ClassVisitor cv) {
+    static final Instrumentor create(BTraceClassReader cr, BTraceProbe bcn, ClassVisitor cv, ClassLoader cl) {
         if (cr.isInterface()) {
             // do not instrument interfaces
             return null;
@@ -81,13 +82,14 @@ public class Instrumentor extends ClassVisitor {
 
         Collection<OnMethod> applicables = bcn.getApplicableHandlers(cr);
         if (applicables != null && !applicables.isEmpty()) {
-            return new Instrumentor(bcn, applicables, cv);
+            return new Instrumentor(cl, bcn, applicables, cv);
         }
         return null;
     }
 
-    private Instrumentor(BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
+    private Instrumentor(ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
         super(ASM5, cv);
+        this.cl = cl;
         this.bcn = bcn;
         this.applicableOnMethods = applicables;
     }
@@ -137,12 +139,12 @@ public class Instrumentor extends ClassVisitor {
                 }
 
                 if (methodName.equals(name) &&
-                    typeMatches(om.getType(), desc)) {
+                    typeMatches(om.getType(), desc, om.isExactTypeMatch())) {
                     appliedOnMethods.add(om);
                 } else if (regexMatch) {
                     try {
                         if (name.matches(methodName) &&
-                            typeMatches(om.getType(), desc)) {
+                            typeMatches(om.getType(), desc, om.isExactTypeMatch())) {
                             appliedOnMethods.add(om);
                         }
                     } catch (PatternSyntaxException pse) {
@@ -251,7 +253,7 @@ public class Instrumentor extends ClassVisitor {
         switch (loc.getValue()) {
             case ARRAY_GET:
                 // <editor-fold defaultstate="collapsed" desc="Array Get Instrumentor">
-                return new ArrayAccessInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new ArrayAccessInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     int[] argsIndex = new int[]{Integer.MIN_VALUE, Integer.MIN_VALUE};
                     final private int INDEX_PTR = 0;
                     final private int INSTANCE_PTR = 1;
@@ -338,7 +340,7 @@ public class Instrumentor extends ClassVisitor {
 
             case ARRAY_SET:
                 // <editor-fold defaultstate="collapsed" desc="Array Set Instrumentor">
-                return new ArrayAccessInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new ArrayAccessInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     int[] argsIndex = new int[]{-1, -1, -1, -1};
                     final private int INDEX_PTR = 0, VALUE_PTR = 1, INSTANCE_PTR = 2;
 
@@ -429,7 +431,7 @@ public class Instrumentor extends ClassVisitor {
 
             case CALL:
                 // <editor-fold defaultstate="collapsed" desc="Method Call Instrumentor">
-                return new MethodCallInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new MethodCallInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
 
                     private final String localClassName = loc.getClazz();
                     private final String localMethodName = loc.getMethod();
@@ -483,7 +485,7 @@ public class Instrumentor extends ClassVisitor {
                     protected void onBeforeCallMethod(int opcode, String cOwner, String cName, String cDesc) {
                         if (matches(localClassName, cOwner.replace('/', '.'))
                                 && matches(localMethodName, cName)
-                                && typeMatches(loc.getType(), cDesc)) {
+                                && typeMatches(loc.getType(), cDesc, om.isExactTypeMatch())) {
 
                             /*
                             * Generate a synthetic method id for the method call.
@@ -582,7 +584,7 @@ public class Instrumentor extends ClassVisitor {
                             String cOwner, String cName, String cDesc) {
                         if (matches(localClassName, cOwner.replace('/', '.'))
                             && matches(localMethodName, cName)
-                            && typeMatches(loc.getType(), cDesc)) {
+                            && typeMatches(loc.getType(), cDesc, om.isExactTypeMatch())) {
 
                             int parentMid = MethodID.getMethodId(className, name, desc);
                             int mid = MethodID.getMethodId("c$" + parentMid + "$" + cOwner, cName, cDesc);
@@ -651,7 +653,7 @@ public class Instrumentor extends ClassVisitor {
 
             case CATCH:
                 // <editor-fold defaultstate="collapsed" desc="Catch Instrumentor">
-                return new CatchInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new CatchInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     @Override
                     protected void onCatch(String type) {
                         Type exctype = Type.getObjectType(type);
@@ -682,7 +684,7 @@ public class Instrumentor extends ClassVisitor {
 
             case CHECKCAST:
                 // <editor-fold defaultstate="collapsed" desc="CheckCast Instrumentor">
-                return new TypeCheckInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new TypeCheckInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
 
                     private void callAction(int opcode, String desc) {
                         if (opcode == Opcodes.CHECKCAST) {
@@ -731,7 +733,7 @@ public class Instrumentor extends ClassVisitor {
 
             case ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="Method Entry Instrumentor">
-                return new MethodReturnInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new MethodReturnInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     private final ValidationResult vr;
 
                     {
@@ -803,7 +805,7 @@ public class Instrumentor extends ClassVisitor {
 
             case ERROR:
                 // <editor-fold defaultstate="collapsed" desc="Error Instrumentor">
-                ErrorReturnInstrumentor eri = new ErrorReturnInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                ErrorReturnInstrumentor eri = new ErrorReturnInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     ValidationResult vr;
                     {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
@@ -893,7 +895,7 @@ public class Instrumentor extends ClassVisitor {
 
             case FIELD_GET:
                 // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">
-                return new FieldAccessInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new FieldAccessInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
 
                     int calledInstanceIndex = Integer.MIN_VALUE;
                     private final String targetClassName = loc.getClazz();
@@ -993,7 +995,7 @@ public class Instrumentor extends ClassVisitor {
 
             case FIELD_SET:
                 // <editor-fold defaultstate="collapsed" desc="Field Set Instrumentor">
-                return new FieldAccessInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new FieldAccessInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     private final String targetClassName = loc.getClazz();
                     private final String targetFieldName = loc.getField();
                     private int calledInstanceIndex = Integer.MIN_VALUE;
@@ -1097,7 +1099,7 @@ public class Instrumentor extends ClassVisitor {
 
             case INSTANCEOF:
                 // <editor-fold defaultstate="collapsed" desc="InstanceOf Instrumentor">
-                return new TypeCheckInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new TypeCheckInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     ValidationResult vr;
                     Type castType = OBJECT_TYPE;
                     int castTypeIndex = -1;
@@ -1159,7 +1161,7 @@ public class Instrumentor extends ClassVisitor {
 
             case LINE:
                 // <editor-fold defaultstate="collapsed" desc="Line Instrumentor">
-                return new LineNumberInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new LineNumberInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
 
                     private final int onLine = loc.getLine();
 
@@ -1201,7 +1203,7 @@ public class Instrumentor extends ClassVisitor {
 
             case NEW:
                 // <editor-fold defaultstate="collapsed" desc="New Instance Instrumentor">
-                return new ObjectAllocInstrumentor(mv, mHelper, className, superName, access, name, desc, om.getReturnParameter() != -1) {
+                return new ObjectAllocInstrumentor(cl, mv, mHelper, className, superName, access, name, desc, om.getReturnParameter() != -1) {
 
                     @Override
                     protected void beforeObjectNew(String desc) {
@@ -1265,7 +1267,7 @@ public class Instrumentor extends ClassVisitor {
 
             case NEWARRAY:
                 // <editor-fold defaultstate="collapsed" desc="New Array Instrumentor">
-                return new ArrayAllocInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new ArrayAllocInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
 
                     @Override
                     protected void onBeforeArrayNew(String desc, int dims) {
@@ -1340,7 +1342,7 @@ public class Instrumentor extends ClassVisitor {
                 if (where != Where.BEFORE) {
                     return mv;
                 }
-                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                MethodReturnInstrumentor mri = new MethodReturnInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     int retValIndex;
 
                     ValidationResult vr;
@@ -1462,7 +1464,7 @@ public class Instrumentor extends ClassVisitor {
 
             case SYNC_ENTRY:
                 // <editor-fold defaultstate="collapsed" desc="SyncEntry Instrumentor">
-                return new SynchronizedInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     int storedObjIdx = -1;
                     ValidationResult vr;
 
@@ -1543,7 +1545,7 @@ public class Instrumentor extends ClassVisitor {
 
             case SYNC_EXIT:
                 // <editor-fold defaultstate="collapsed" desc="SyncExit Instrumentor">
-                return new SynchronizedInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new SynchronizedInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     int storedObjIdx = -1;
                     ValidationResult vr;
 
@@ -1627,7 +1629,7 @@ public class Instrumentor extends ClassVisitor {
 
             case THROW:
                 // <editor-fold defaultstate="collapsed" desc="Throw Instrumentor">
-                return new ThrowInstrumentor(mv, mHelper, className, superName, access, name, desc) {
+                return new ThrowInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
 
                     @Override
                     protected void onThrow() {
@@ -1714,7 +1716,7 @@ public class Instrumentor extends ClassVisitor {
         }
     }
 
-    private boolean typeMatches(String decl, String desc) {
+    private boolean typeMatches(String decl, String desc, boolean exactTypeMatch) {
         // empty type declaration matches any method signature
         if (decl.isEmpty()) {
             return true;
@@ -1722,7 +1724,7 @@ public class Instrumentor extends ClassVisitor {
             String d = TypeUtils.declarationToDescriptor(decl);
             Type[] args1 = Type.getArgumentTypes(d);
             Type[] args2 = Type.getArgumentTypes(desc);
-            return TypeUtils.isCompatible(args1, args2);
+            return InstrumentUtils.isAssignable(args1, args2, cl, exactTypeMatch);
         }
     }
 

@@ -39,9 +39,9 @@ import com.sun.btrace.runtime.MethodInstrumentorHelper;
 public class MethodCallInstrumentor extends MethodInstrumentor {
     private int callId = 0;
 
-    public MethodCallInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, mHelper, parentClz, superClz, access, name, desc);
+    public MethodCallInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override

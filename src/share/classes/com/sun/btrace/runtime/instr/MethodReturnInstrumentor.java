@@ -38,9 +38,9 @@ import com.sun.btrace.runtime.MethodInstrumentorHelper;
  * @author A. Sundararajan
  */
 public class MethodReturnInstrumentor extends MethodEntryInstrumentor {
-    public MethodReturnInstrumentor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, mHelper, parentClz, superClz, access, name, desc);
+    public MethodReturnInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override
