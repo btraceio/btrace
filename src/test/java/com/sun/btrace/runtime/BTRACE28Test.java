@@ -48,6 +48,7 @@ public class BTRACE28Test extends InstrumentorTestBase {
             "FRAME FULL [resources/issues/BTRACE28 java/lang/String java/lang/String java/lang/String java/lang/String [B [B java/lang/StringBuilder] [java/lang/Throwable]\n" +
             "ASTORE 8\n" +
             "ALOAD 8\n" +
+            "FRAME APPEND [T]\n" +
             "LDC \"resources.issues.BTRACE28\"\n" +
             "LDC \"serveResource\"\n" +
             "INVOKESTATIC resources/issues/BTRACE28.$btrace$traces$issues$BTRACE28$tracker (Ljava/lang/String;Ljava/lang/String;)V\n" +

@@ -21,6 +21,9 @@ public class VarRenumberingTest extends InstrumentorTestBase {
             "ALOAD 1\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/InterestingVarsClass.$btrace$traces$issues$InterestingVarsTest$entry (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +
+            "FRAME FULL [java/lang/String java/lang/String java/lang/String java/util/Collection T T] []\n" +
+            "FRAME FULL [java/lang/String java/lang/String java/lang/String java/util/Collection java/lang/StringBuilder java/util/Iterator] []\n" +
+            "FRAME APPEND [T]\n" +
             "\n" +
             "// access flags 0xA\n" +
             "private static $btrace$traces$issues$InterestingVarsTest$entry(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V\n" +

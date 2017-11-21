@@ -50,8 +50,8 @@ public abstract class Constants {
     public static final String CONSTRUCTOR = "<init>";
     public static final String CLASS_INITIALIZER = "<clinit>";
 
-    public static final Type NULL_TYPE = Type.getType("null");
-    public static final Type TOP_TYPE = Type.getType("top");
+    public static final Type NULL_TYPE = Type.getType("$$null");
+    public static final Type TOP_TYPE = Type.getType("$$top");
 
     public static final Type VOIDREF_TYPE = Type.getType("Ljava/lang/Void;");
 

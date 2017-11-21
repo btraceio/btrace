@@ -60,23 +60,23 @@ public class BTRACE69Test extends InstrumentorTestBase {
             "L4\n" +
             "GOTO L8\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]\n" +
-            "ASTORE 3\n" +
-            "DUP\n" +
             "ASTORE 4\n" +
-            "ALOAD 4\n" +
+            "DUP\n" +
+            "ASTORE 5\n" +
+            "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
             "L6\n" +
-            "ALOAD 3\n" +
+            "ALOAD 4\n" +
             "ATHROW\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
-            "FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest] []\n" +
+            "FRAME FULL [resources/OnMethodTest T resources/OnMethodTest resources/OnMethodTest T] []\n" +
             "RETURN\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
             "FRAME SAME1 java/lang/Throwable\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
-            "MAXLOCALS = 5"
+            "MAXLOCALS = 6"
         );
     }
 }
