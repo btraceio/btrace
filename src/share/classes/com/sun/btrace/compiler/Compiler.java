@@ -115,7 +115,7 @@ public class Compiler {
         String outputDir = ".";
         String includePath = null;
         boolean trusted = false;
-        boolean generatePack = false;
+        boolean generatePack = true;
         int count = 0;
         boolean classPathDefined = false;
         boolean outputDirDefined = false;
@@ -140,8 +140,8 @@ public class Compiler {
                 } else if ((args[count].equals("-unsafe") || args[count].equals("-trusted")) && !trustedDefined) {
                     trusted = true;
                     trustedDefined = true;
-                } else if (args[count].equals("--pack")) {
-                    generatePack = true;
+                } else if (args[count].equals("-nopack")) {
+                    generatePack = false;
                 } else {
                     usage();
                 }
