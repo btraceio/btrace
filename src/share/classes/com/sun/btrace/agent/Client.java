@@ -234,7 +234,9 @@ abstract class Client implements CommandListener {
 
     protected synchronized void onExit(int exitCode) {
         if (!shuttingDown) {
-            out.flush();
+            if (out != null) {
+                out.flush();
+            }
 
             BTraceRuntime.leave();
             try {
@@ -298,16 +300,8 @@ abstract class Client implements CommandListener {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
-                boolean entered = BTraceRuntime.enter(runtime);
-                try {
-                    shuttingDown = true;
-                    if (runtime != null) {
-                        runtime.handleExit(0);
-                    }
-                } finally {
-                    if (entered) {
-                        BTraceRuntime.leave();
-                    }
+                if (runtime != null) {
+                    runtime.handleExit(0);
                 }
             }
         }));
