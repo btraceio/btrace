@@ -61,7 +61,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
-import scripts.TraceScript;
 
 @State(Scope.Thread)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -355,7 +354,7 @@ public class BTraceBench {
         Path targetPath = Files.copy(agentPath, tmpDir.resolve("btrace-agent.jar"), StandardCopyOption.REPLACE_EXISTING);
         Files.copy(bootPath, tmpDir.resolve("btrace-boot.jar"), StandardCopyOption.REPLACE_EXISTING);
 
-        URL traceLoc = BTraceBench.class.getResource("/" + TraceScript.class.getName().replace('.', '/') + ".class");
+        URL traceLoc = BTraceBench.class.getResource("/scripts/TraceScript.class");
         String trace = traceLoc.getPath();
 
         return new BTraceConfig(tmpDir, targetPath.toString(), trace);
