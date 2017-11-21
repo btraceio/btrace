@@ -400,6 +400,7 @@ public final class BTraceRuntime  {
                     Thread.sleep(500);
                 }
             } catch (InterruptedException e) {
+                return 0;
             }
             return i+1;
         }
