@@ -25,11 +25,9 @@
 
 package com.sun.btrace;
 
-import com.sun.btrace.instr.RunnableGenerator;
 import java.lang.management.ManagementFactory;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -44,11 +42,6 @@ import com.sun.management.HotSpotDiagnosticMXBean;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationKey;
 import com.sun.btrace.aggregation.AggregationFunction;
-import com.sun.btrace.annotations.OnError;
-import com.sun.btrace.annotations.OnExit;
-import com.sun.btrace.annotations.OnTimer;
-import com.sun.btrace.annotations.OnEvent;
-import com.sun.btrace.annotations.OnLowMemory;
 import com.sun.btrace.comm.Command;
 import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.EventCommand;
@@ -62,6 +55,11 @@ import com.sun.btrace.org.jctools.queues.MessagePassingQueue;
 import com.sun.btrace.org.jctools.queues.MpmcArrayQueue;
 import com.sun.btrace.org.jctools.queues.MpscChunkedArrayQueue;
 import com.sun.btrace.profiling.MethodInvocationProfiler;
+import com.sun.btrace.shared.ErrorHandler;
+import com.sun.btrace.shared.EventHandler;
+import com.sun.btrace.shared.ExitHandler;
+import com.sun.btrace.shared.LowMemoryHandler;
+import com.sun.btrace.shared.TimerHandler;
 
 import java.lang.management.GarbageCollectorMXBean;
 
@@ -71,7 +69,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
@@ -109,6 +106,10 @@ import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -250,9 +251,6 @@ public final class BTraceRuntime  {
     private static volatile List<MemoryPoolMXBean> memPoolList;
     private static volatile OperatingSystemMXBean operatingSystemMXBean;
 
-    // bytecode generator that generates Runnable implementations
-    private static RunnableGenerator runnableGenerator;
-
     // Per-client state starts here.
 
     private final DebugSupport debug;
@@ -275,20 +273,16 @@ public final class BTraceRuntime  {
     // instrumentation level field for each runtime
     private Field level;
 
-    // does the client have exit action?
-    private Method exitHandler;
-
-    // does the client have exception handler action?
-    private Method exceptionHandler;
-
     // array of timer callback methods
-    private Method[] timerHandlers;
+    private TimerHandler[] timerHandlers;
+    private EventHandler[] eventHandlers;
+    private ErrorHandler[] errorHandlers;
+    private ExitHandler[] exitHandlers;
+    private LowMemoryHandler[] lowMemoryHandlers;
 
     // map of client event handling methods
-    private Map<String, Method> eventHandlers;
-
-    // low memory handlers
-    private Map<String, Method> lowMemHandlers;
+    private Map<String, Method> eventHandlerMap;
+    private Map<String, LowMemoryHandler> lowMemoryHandlerMap;
 
     // timer to run profile provider actions
     private volatile Timer timer;
@@ -499,7 +493,7 @@ public final class BTraceRuntime  {
     }
 
     @CallerSensitive
-    public static void init(PerfReader perfRead, RunnableGenerator runGen) {
+    public static void init(PerfReader perfRead) {
         initUnsafe();
 
         Class caller = isNewerThan8 ? Reflection.getCallerClass() : Reflection.getCallerClass(2);
@@ -507,7 +501,6 @@ public final class BTraceRuntime  {
             throw new SecurityException("unsafe init");
         }
         perfReader = perfRead;
-        runnableGenerator = runGen;
         loadLibrary(perfRead.getClass().getClassLoader());
     }
 
@@ -577,8 +570,16 @@ public final class BTraceRuntime  {
 
     public void handleEvent(EventCommand ecmd) {
         if (eventHandlers != null) {
+            if (eventHandlerMap == null) {
+                eventHandlerMap = new HashMap<>();
+                for (EventHandler eh : eventHandlers) {
+                    try {
+                       eventHandlerMap.put(eh.event, eh.getMethod(clazz));
+                    } catch (NoSuchMethodException e) {}
+                }
+            }
             String event = ecmd.getEvent();
-            final Method eventHandler = eventHandlers.get(event);
+            final Method eventHandler = eventHandlerMap.get(event);
             if (eventHandler != null) {
                 rt.get().escape(new Callable<Void>() {
                     @Override
@@ -596,9 +597,10 @@ public final class BTraceRuntime  {
      * This forClass method creates it. Class passed is the
      * preprocessed BTrace program of the client.
      */
-    public static BTraceRuntime forClass(Class cl) {
+    public static BTraceRuntime forClass(Class cl, TimerHandler[] tHandlers, EventHandler[] evHandlers, ErrorHandler[] errHandlers,
+                                            ExitHandler[] eHandlers, LowMemoryHandler[] lmHandlers) {
         BTraceRuntime runtime = runtimes.get(cl.getName());
-        runtime.init(cl);
+        runtime.init(cl, tHandlers, evHandlers, errHandlers, eHandlers, lmHandlers);
         return runtime;
     }
 
@@ -1720,8 +1722,8 @@ public final class BTraceRuntime  {
 
     static void writeXML(Object obj, String fileName) {
         try {
-            try (BufferedWriter bw = new BufferedWriter(
-                    new FileWriter(resolveFileName(fileName)))) {
+            Path p = FileSystems.getDefault().getPath(resolveFileName(fileName));
+            try (BufferedWriter bw = Files.newBufferedWriter(p, StandardCharsets.UTF_8)) {
                 XMLSerializer.write(obj, bw);
             }
         } catch (RuntimeException re) {
@@ -2050,25 +2052,26 @@ public final class BTraceRuntime  {
         initThreadPool();
         memoryListener = new NotificationListener() {
                 @Override
+                @SuppressWarnings("FutureReturnValueIgnored")
                 public void handleNotification(Notification notif, Object handback)  {
-                    boolean entered = BTraceRuntime.enter();
+                    boolean entered = BTraceRuntime.enter(BTraceRuntime.this);
                     try {
                         String notifType = notif.getType();
                         if (notifType.equals(MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED)) {
                             CompositeData cd = (CompositeData) notif.getUserData();
                             final MemoryNotificationInfo info = MemoryNotificationInfo.from(cd);
                             String name = info.getPoolName();
-                            final Method handler = lowMemHandlers.get(name);
+                            final LowMemoryHandler handler = lowMemoryHandlerMap.get(name);
                             if (handler != null) {
                                 threadPool.submit(new Runnable() {
                                     @Override
                                     public void run() {
-                                        boolean entered = BTraceRuntime.enter();
+                                        boolean entered = BTraceRuntime.enter(BTraceRuntime.this);
                                         try {
-                                            if (handler.getParameterTypes().length == 1) {
-                                                handler.invoke(null, info.getUsage());
+                                            if (handler.trackUsage) {
+                                                handler.invoke(clazz, null, info.getUsage());
                                             } else {
-                                                handler.invoke(null, (Object[])null);
+                                                handler.invoke(clazz, null, (Object[])null);
                                             }
                                         } catch (Throwable th) {
                                         } finally {
@@ -2117,6 +2120,7 @@ public final class BTraceRuntime  {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<RuntimeMXBean>() {
+                    @Override
                     public RuntimeMXBean run() throws Exception {
                         return ManagementFactory.getRuntimeMXBean();
                    }
@@ -2229,10 +2233,6 @@ public final class BTraceRuntime  {
         return perfReader;
     }
 
-    private static RunnableGenerator getRunnableGenerator() {
-        return runnableGenerator;
-    }
-
     private void send(String msg) {
         send(new MessageCommand(messageTimestamp? System.nanoTime() : 0L,
                                msg));
@@ -2265,16 +2265,19 @@ public final class BTraceRuntime  {
         if (currentException.get() != null) {
             return;
         }
-        leave();
-        currentException.set(th);
+        boolean entered = enter(this);
         try {
+            currentException.set(th);
+
             if (th instanceof ExitException) {
                 exitImpl(((ExitException)th).exitCode());
             } else {
-                if (exceptionHandler != null) {
-                    try {
-                        exceptionHandler.invoke(null, th);
-                    } catch (Throwable ignored) {
+                if (errorHandlers != null) {
+                    for (ErrorHandler eh : errorHandlers) {
+                        try {
+                            eh.getMethod(clazz).invoke(null, th);
+                        } catch (Throwable ignored) {
+                        }
                     }
                 } else {
                     // Do not call send(Command). Exception messages should not
@@ -2284,34 +2287,40 @@ public final class BTraceRuntime  {
             }
         } finally {
             currentException.set(null);
+            if (entered) {
+                leave();
+            }
         }
     }
 
     private void startImpl() {
-        if (timerHandlers != null && timerHandlers.length != 0) {
+        if (timerHandlers != null) {
             timer = new Timer(true);
-            RunnableGenerator gen = getRunnableGenerator();
-            Runnable[] runnables = new Runnable[timerHandlers.length];
-            if (gen != null) {
-                generateRunnables(gen, runnables);
-            } else {
-                wrapToRunnables(runnables);
-            }
+            TimerTask[] timerTasks = new TimerTask[timerHandlers.length];
+            wrapToTimerTasks(timerTasks);
             for (int index = 0; index < timerHandlers.length; index++) {
-                Method m = timerHandlers[index];
-                OnTimer tp = m.getAnnotation(OnTimer.class);
-                long period = tp.value();
-                final Runnable r = runnables[index];
-                timer.schedule(new TimerTask() {
-                    @Override
-                    public void run() { r.run(); }
-                }, period, period);
+                final TimerHandler th = timerHandlers[index];
+                timer.schedule(timerTasks[index], th.period, th.period);
             }
         }
 
-        if (! lowMemHandlers.isEmpty()) {
+        if (lowMemoryHandlers != null) {
             initMemoryMBean();
             initMemoryListener();
+            initMemoryPoolList();
+            lowMemoryHandlerMap = new HashMap<>();
+            for (LowMemoryHandler lmh : lowMemoryHandlers) {
+                lowMemoryHandlerMap.put(lmh.pool, lmh);
+            }
+            for (MemoryPoolMXBean mpoolBean : memPoolList) {
+                String name = mpoolBean.getName();
+                LowMemoryHandler lmh = lowMemoryHandlerMap.get(name);
+                if (lmh != null) {
+                    if (mpoolBean.isUsageThresholdSupported()) {
+                        mpoolBean.setUsageThreshold(lmh.threshold);
+                    }
+                }
+            }
             NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
             emitter.addNotificationListener(memoryListener, null, null);
         }
@@ -2319,45 +2328,26 @@ public final class BTraceRuntime  {
         leave();
     }
 
-    private void generateRunnables(RunnableGenerator gen, Runnable[] runnables) {
-        final MemoryClassLoader loader = AccessController.doPrivileged(
-            new PrivilegedAction<MemoryClassLoader>() {
-                @Override
-                public MemoryClassLoader run() {
-                    return new MemoryClassLoader(clazz.getClassLoader());
+    private void wrapToTimerTasks(TimerTask[] tasks) {
+        for (int index = 0; index < timerHandlers.length; index++) {
+            final TimerHandler th = timerHandlers[index];
+            tasks[index] = new TimerTask() {
+                final Method mthd;
+                {
+                    Method m = null;
+                    try {
+                        m = th.getMethod(clazz);
+                    } catch (NoSuchMethodException e) {
+                    }
+                    mthd = m;
                 }
-            });
-
-        for (int index = 0; index < timerHandlers.length; index++) {
-            Method m = timerHandlers[index];
-            try {
-                final String clzName = "com/sun/btrace/BTraceRunnable$" + index;
-                final byte[] buf = gen.generate(m, clzName);
-                Class cls = AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<Class>() {
-                        @Override
-                        public Class run() throws Exception {
-                             return loader.loadClass(clzName.replace('/', '.'), buf);
-                        }
-                    });
-                runnables[index] = (Runnable) cls.newInstance();
-            } catch (RuntimeException re) {
-                throw re;
-            } catch (Exception exp) {
-                throw new RuntimeException(exp);
-            }
-        }
-    }
-
-    private void wrapToRunnables(Runnable[] runnables) {
-        for (int index = 0; index < timerHandlers.length; index++) {
-            final Method m = timerHandlers[index];
-            runnables[index] = new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        m.invoke(null, (Object[])null);
-                    } catch (Throwable th) {
+                    if (mthd != null) {
+                        try {
+                            mthd.invoke(null, (Object[])null);
+                        } catch (Throwable th) {
+                        }
                     }
                 }
             };
@@ -2365,29 +2355,39 @@ public final class BTraceRuntime  {
     }
 
     private synchronized void exitImpl(int exitCode) {
-        if (exitHandler != null) {
-            try {
-                exitHandler.invoke(null, exitCode);
-            } catch (Throwable ignored) {
+        boolean entered = enter(this);
+        try {
+            if (timer != null) {
+                timer.cancel();
+            }
+
+            if (memoryListener != null && memoryMBean != null) {
+                NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
+                try {
+                    emitter.removeNotificationListener(memoryListener);
+                } catch (ListenerNotFoundException lnfe) {}
+            }
+
+            if (threadPool != null) {
+                threadPool.shutdownNow();
+            }
+
+            if (exitHandlers != null) {
+                for (ExitHandler eh : exitHandlers) {
+                    try {
+                        eh.getMethod(clazz).invoke(null, exitCode);
+                    } catch (Throwable ignored) {}
+                }
+                exitHandlers = null;
+            }
+
+            send(new ExitCommand(exitCode));
+        } finally {
+            disabled = true;
+            if (entered) {
+                BTraceRuntime.leave();
             }
         }
-        disabled = true;
-        if (timer != null) {
-            timer.cancel();
-        }
-
-        if (memoryListener != null && memoryMBean != null) {
-            NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
-            try {
-                emitter.removeNotificationListener(memoryListener);
-            } catch (ListenerNotFoundException lnfe) {}
-        }
-
-        if (threadPool != null) {
-            threadPool.shutdownNow();
-        }
-
-        send(new ExitCommand(exitCode));
     }
 
     private static Perf getPerf() {
@@ -2424,73 +2424,76 @@ public final class BTraceRuntime  {
         return cl;
     }
 
-    private void init(Class cl) {
+    private void init(Class cl, TimerHandler[] tHandlers, EventHandler[] evHandlers, ErrorHandler[] errHandlers,
+                        ExitHandler[] eHandlers, LowMemoryHandler[] lmHandlers) {
         if (this.clazz != null) {
             return;
         }
 
         this.clazz = cl;
-        List<Method> timersList = new ArrayList<>();
-        this.eventHandlers = new HashMap<>();
-        this.lowMemHandlers = new HashMap<>();
 
-        Method[] methods = clazz.getMethods();
-        for (Method m : methods) {
-            int modifiers = m.getModifiers();
-            if (! Modifier.isStatic(modifiers)) {
-                continue;
-            }
+        this.timerHandlers = tHandlers;
+        this.eventHandlers = evHandlers;
+        this.errorHandlers = errHandlers;
+        this.exitHandlers = eHandlers;
+        this.lowMemoryHandlers = lmHandlers;
 
-            OnEvent oev = m.getAnnotation(OnEvent.class);
-            if (oev != null && m.getParameterTypes().length == 0) {
-                eventHandlers.put(oev.value(), m);
-            }
-
-            OnError oer = m.getAnnotation(OnError.class);
-            if (oer != null) {
-                Class[] argTypes = m.getParameterTypes();
-                if (argTypes.length == 1 && argTypes[0] == Throwable.class) {
-                    this.exceptionHandler = m;
-                }
-            }
-
-            OnExit oex = m.getAnnotation(OnExit.class);
-            if (oex != null) {
-                Class[] argTypes = m.getParameterTypes();
-                if (argTypes.length == 1 && argTypes[0] == int.class) {
-                    this.exitHandler = m;
-                }
-            }
-
-            OnTimer ot = m.getAnnotation(OnTimer.class);
-            if (ot != null && m.getParameterTypes().length == 0) {
-                timersList.add(m);
-            }
-
-            OnLowMemory olm = m.getAnnotation(OnLowMemory.class);
-            if (olm != null) {
-                Class[] argTypes = m.getParameterTypes();
-                if ((argTypes.length == 0) ||
-                    (argTypes.length == 1 && argTypes[0] == MemoryUsage.class)) {
-                    lowMemHandlers.put(olm.pool(), m);
-                }
-            }
-        }
-
-        initMemoryPoolList();
-        for (MemoryPoolMXBean mpoolBean : memPoolList) {
-            String name = mpoolBean.getName();
-            if (lowMemHandlers.containsKey(name)) {
-                Method m = lowMemHandlers.get(name);
-                OnLowMemory olm = m.getAnnotation(OnLowMemory.class);
-                if (mpoolBean.isUsageThresholdSupported()) {
-                    mpoolBean.setUsageThreshold(olm.threshold());
-                }
-            }
-        }
-
-        timerHandlers = new Method[timersList.size()];
-        timersList.toArray(timerHandlers);
+//        Method[] methods = clazz.getMethods();
+//        for (Method m : methods) {
+//
+//            int modifiers = m.getModifiers();
+//            if (! Modifier.isStatic(modifiers)) {
+//                continue;
+//            }
+//
+//            for (Annotation an : m.getAnnotations()) {
+//                if (an instanceof OnEvent) {
+//                    OnEvent oev = (OnEvent)an;
+//                    if (m.getParameterTypes().length == 0) {
+//                        eventHandlers.put(oev.value(), m);
+//                    }
+//                } else if (an instanceof OnError) {
+//                    Class[] argTypes = m.getParameterTypes();
+//                    if (argTypes.length == 1 && argTypes[0] == Throwable.class) {
+//                        this.exceptionHandler = m;
+//                    }
+//                } else if (an instanceof OnExit) {
+//                    Class[] argTypes = m.getParameterTypes();
+//                    if (argTypes.length == 1 && argTypes[0] == int.class) {
+//                        this.exitHandler = m;
+//                    }
+//                } else if (an instanceof OnTimer) {
+//                    OnTimer ot = (OnTimer)an;
+//                    if (m.getParameterTypes().length == 0) {
+//                        timersList.add(new TimerHandler(m, ot.value()));
+//                    }
+//                } else if (an instanceof OnLowMemory) {
+//                    OnLowMemory olm = (OnLowMemory)an;
+//                    Class[] argTypes = m.getParameterTypes();
+//                    if ((argTypes.length == 0) ||
+//                        (argTypes.length == 1 && argTypes[0] == MemoryUsage.class)) {
+//                        lowMemHandlers.put(olm.pool(), m);
+//                    }
+//                }
+//            }
+//        }
+//
+//        if (!lowMemHandlers.isEmpty()) {
+//            initMemoryPoolList();
+//            for (MemoryPoolMXBean mpoolBean : memPoolList) {
+//                String name = mpoolBean.getName();
+//                if (lowMemHandlers.containsKey(name)) {
+//                    Method m = lowMemHandlers.get(name);
+//                    OnLowMemory olm = m.getAnnotation(OnLowMemory.class);
+//                    if (mpoolBean.isUsageThresholdSupported()) {
+//                        mpoolBean.setUsageThreshold(olm.threshold());
+//                    }
+//                }
+//            }
+//        }
+//
+//        timerHandlers = new TimerHandler[timersList.size()];
+//        timersList.toArray(timerHandlers);
 
         try {
             level = cl.getDeclaredField("$btrace$$level");
@@ -2545,7 +2548,7 @@ public final class BTraceRuntime  {
                     return;
                 }
                 String path = loader.getResource("com/sun/btrace").toString();
-                int archSeparator = path.indexOf("!");
+                int archSeparator = path.indexOf('!');
                 if (archSeparator != -1) {
                     path = path.substring(0, archSeparator);
                     path = path.substring("jar:".length(), path.lastIndexOf('/'));

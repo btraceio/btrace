@@ -112,7 +112,7 @@ public class JdbcQueries {
     public static void onExecute(@Self Statement currentStatement, AnyType[] args) {
         if (args.length == 0) {
             // No SQL argument; lookup the SQL from the prepared statement
-            executingStatement = Collections.get(preparedStatementDescriptions, currentStatement);
+            executingStatement = Collections.get(preparedStatementDescriptions, (Statement) currentStatement);
         } else {
             // Direct SQL in the first argument
             executingStatement = useStackTrace ? Threads.jstackStr() : str(args[0]);

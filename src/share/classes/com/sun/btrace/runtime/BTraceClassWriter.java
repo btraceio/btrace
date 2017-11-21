@@ -26,6 +26,8 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
+import com.sun.btrace.org.objectweb.asm.Opcodes;
+
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -41,6 +43,7 @@ final class BTraceClassWriter extends ClassWriter {
     private final Deque<Instrumentor> instrumentors = new LinkedList<>();
     private final ClassLoader targetCL;
     private final BTraceClassReader cr;
+    private InstrumentingClassVisitor iClassVisitor = null;
 
     BTraceClassWriter(ClassLoader cl, int flags) {
         super(flags);
@@ -55,11 +58,15 @@ final class BTraceClassWriter extends ClassWriter {
     }
 
     public void addInstrumentor(BTraceProbe bp) {
+        addInstrumentor(bp, null);
+    }
+    
+    public void addInstrumentor(BTraceProbe bp, ClassLoader cl) {
         if (cr != null && bp != null) {
             synchronized(instrumentors) {
                 Instrumentor top = instrumentors.peekLast();
                 ClassVisitor parent = top != null ? top : this;
-                Instrumentor i = Instrumentor.create(cr, bp, parent);
+                Instrumentor i = Instrumentor.create(cr, bp, parent, cl);
                 if (i != null) {
                     instrumentors.add(i);
                 }

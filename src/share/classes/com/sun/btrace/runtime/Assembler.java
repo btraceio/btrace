@@ -40,8 +40,10 @@ import com.sun.btrace.util.Interval;
  */
 final public class Assembler {
     private final MethodVisitor mv;
-    public Assembler(MethodVisitor mv) {
+    private final MethodInstrumentorHelper mHelper;
+    public Assembler(MethodVisitor mv, MethodInstrumentorHelper mHelper) {
         this.mv = mv;
+        this.mHelper = mHelper;
     }
 
     public Assembler push(int value) {
@@ -585,10 +587,15 @@ final public class Assembler {
                 ldc(itv.getB());
                 jump(Opcodes.IF_ICMPGT, l1);
                 ldc(0);
+                Label l3 = new Label();
+                label(l3);
+                mHelper.insertFrameSameStack(l3);
                 jump(Opcodes.GOTO, l2);
                 label(l1);
+                mHelper.insertFrameSameStack(l1);
                 ldc(-1);
                 label(l2);
+                mHelper.insertFrameSameStack(l2);
             }
         }
         return this;

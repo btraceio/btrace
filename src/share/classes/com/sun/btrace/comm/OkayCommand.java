@@ -34,9 +34,11 @@ public class OkayCommand extends Command {
         super(SUCCESS);
     }
 
+    @Override
     protected void write(ObjectOutput out) throws IOException {     
     }
 
+    @Override
     protected void read(ObjectInput in)
         throws IOException, ClassNotFoundException {
     }

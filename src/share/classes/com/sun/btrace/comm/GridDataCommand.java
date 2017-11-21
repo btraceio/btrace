@@ -113,10 +113,11 @@ public class GridDataCommand extends DataCommand {
         return columnWidth;
     }
 
+    @Override
     public void print(PrintWriter out) {
 
         if (data != null) {
-            if (name != null && !name.equals("")) {
+            if (name != null && !name.isEmpty()) {
                 out.println(name);
             }
             Map<Integer, Integer> columnWidth = getColumnWidth(data);
@@ -209,6 +210,7 @@ public class GridDataCommand extends DataCommand {
         return result.toString();
     }
 
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeUTF(name != null ? name : "");
         if (data != null) {
@@ -225,6 +227,7 @@ public class GridDataCommand extends DataCommand {
         }
     }
 
+    @Override
     protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
         name = in.readUTF();
         format = in.readUTF();

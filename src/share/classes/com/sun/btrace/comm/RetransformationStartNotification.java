@@ -48,10 +48,12 @@ public class RetransformationStartNotification extends Command {
         this.numClasses = numClasses;
     }
 
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeInt(numClasses);
     }
 
+    @Override
     protected void read(ObjectInput in)
         throws IOException, ClassNotFoundException {
         numClasses = in.readInt();

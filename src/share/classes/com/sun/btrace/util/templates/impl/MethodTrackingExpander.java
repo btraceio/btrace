@@ -32,6 +32,7 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
 import com.sun.btrace.org.objectweb.asm.Type;
 import com.sun.btrace.runtime.Assembler;
 import static com.sun.btrace.runtime.Constants.*;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.BaseTemplateExpander;
 import com.sun.btrace.util.templates.Template;
@@ -113,10 +114,12 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
 
     private Label elseLabel = null;
     private Label samplerLabel = null;
+    private final MethodInstrumentorHelper mHelper;
 
-    public MethodTrackingExpander(int methodId) {
+    public MethodTrackingExpander(int methodId, MethodInstrumentorHelper mHelper) {
         super(ENTRY, DURATION, TEST_SAMPLE, ELSE_SAMPLE, EXIT, RESET);
         this.methodId = methodId;
+        this.mHelper = mHelper;
     }
 
     @Override
@@ -203,17 +206,23 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
         if (TEST_SAMPLE.equals(t)) {
             samplerLabel = new Label();
             boolean collectTime = t.getTagMap().containsKey($TIMED);
+            boolean expanded = false;
             if (isSampled) {
                 v.expand(new SamplerTest());
                 if (isTimed && collectTime) {
                     v.expand(new TimingSamplerTest(mid));
                 }
+                expanded = true;
             } else {
                 if (isTimed && collectTime) {
                     v.expand(new TimingTest());
+                    expanded = true;
                 }
             }
-            v.asm().label(samplerLabel);
+            if (expanded) {
+                v.asm().label(samplerLabel);
+                mHelper.insertFrameSameStack(samplerLabel);
+            }
             samplerLabel = null;
             return true;
         }
@@ -275,7 +284,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
             // initialize variables used in the coniditional code
             if (durationVar == Integer.MIN_VALUE) {
                 asm.ldc(0L);
-                durationVar = e.storeNewLocal(Type.LONG_TYPE);
+                durationVar = e.storeAsNew();
             }
 
             if (sHitVar == Integer.MIN_VALUE && entryTsVar == Integer.MIN_VALUE) {
@@ -285,11 +294,11 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                     public void run() {
                         if (entryTsVar == Integer.MIN_VALUE) {
                             asm.ldc(0L);
-                            entryTsVar = e.storeNewLocal(Type.LONG_TYPE);
+                            entryTsVar = e.storeAsNew();
                         }
                         if (sHitVar == Integer.MIN_VALUE) {
                             asm.ldc(0);
-                            sHitVar = e.storeNewLocal(Type.INT_TYPE);
+                            sHitVar = e.storeAsNew();
                         }
                     }
                 });
@@ -309,22 +318,25 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                         );
                         break;
                     }
+                    default:
+                        // do nothing
                 }
 
                 asm.dup2();
                 if (entryTsVar == Integer.MIN_VALUE) {
-                    entryTsVar = e.storeNewLocal(Type.LONG_TYPE);
+                    entryTsVar = e.storeAsNew();
                 } else {
                     asm.storeLocal(Type.LONG_TYPE, entryTsVar);
                 }
                 e.visitInsn(Opcodes.L2I);
                 if (sHitVar == Integer.MIN_VALUE) {
-                    sHitVar = e.storeNewLocal(Type.INT_TYPE);
+                    sHitVar = e.storeAsNew();
                 } else {
                     asm.storeLocal(Type.INT_TYPE, sHitVar);
                 }
                 if (skipTarget != null) {
                     asm.label(skipTarget);
+                    mHelper.insertFrameSameStack(skipTarget);
                 }
             }
         }
@@ -348,7 +360,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                     public void run() {
                         if (sHitVar == Integer.MIN_VALUE) {
                             asm.ldc(0);
-                            sHitVar = e.storeNewLocal(Type.INT_TYPE);
+                            sHitVar = e.storeAsNew();
                         }
 
                     }
@@ -369,14 +381,17 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                         );
                         break;
                     }
+                    default:
+                        // do nothing
                 }
                 if (sHitVar == Integer.MIN_VALUE) {
-                    sHitVar = e.storeNewLocal(Type.INT_TYPE);
+                    sHitVar = e.storeAsNew();
                 } else {
                     asm.storeLocal(Type.INT_TYPE, sHitVar);
                 }
                 if (skipTarget != null) {
                     asm.label(skipTarget);
+                    mHelper.insertFrameSameStack(skipTarget);
                 }
             }
         }
@@ -389,13 +404,13 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
             if (entryTsVar == Integer.MIN_VALUE) {
                 if (durationVar == Integer.MIN_VALUE) {
                     asm.ldc(0L);
-                    durationVar = e.storeNewLocal(Type.LONG_TYPE);
+                    durationVar = e.storeAsNew();
                 }
                 Label skipTarget = addLevelChecks(e, new Runnable() {
                     @Override
                     public void run() {
                         asm.ldc(0L);
-                        entryTsVar = e.storeNewLocal(Type.LONG_TYPE);
+                        entryTsVar = e.storeAsNew();
                     }
                 });
 
@@ -404,12 +419,13 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                     "nanoTime", "()J"
                 );
                 if (entryTsVar == Integer.MIN_VALUE) {
-                    entryTsVar = e.storeNewLocal(Type.LONG_TYPE);
+                    entryTsVar = e.storeAsNew();
                 } else {
                     asm.storeLocal(Type.LONG_TYPE, entryTsVar);
                 }
                 if (skipTarget != null) {
                     asm.label(skipTarget);
+                    mHelper.insertFrameSameStack(skipTarget);
                 }
             }
         }
@@ -483,6 +499,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
         public void consume(TemplateExpanderVisitor e) {
             if (elseLabel != null) {
                 e.asm().label(elseLabel);
+                mHelper.insertFrameSameStack(elseLabel);
                 elseLabel = null;
             }
         }
@@ -507,6 +524,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                         METHOD_COUNTER_CLASS,
                         "updateEndTs", "(I)V")
                     .label(l);
+                mHelper.insertFrameSameStack(l);
             }
         }
     }
@@ -537,7 +555,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     private Label addLevelChecks(TemplateExpanderVisitor e, Label skip, Runnable initializer) {
         Label skipTarget = null;
         if (!levelIntervals.isEmpty()) {
-            Assembler asm = new Assembler(e);
+            Assembler asm = new Assembler(e, mHelper);
             List<Interval> optimized = Interval.invert(levelIntervals);
             boolean generateBranch = true;
             if (optimized.size() == 1) {
@@ -560,7 +578,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                     if (globalLevelVar == Integer.MIN_VALUE) {
                         asm.getStatic(e.getClassName(), BTRACE_LEVEL_FLD, INT_DESC)
                            .dup();
-                        globalLevelVar = e.storeNewLocal(Type.INT_TYPE);
+                        globalLevelVar = e.storeAsNew();
                     } else {
                        asm.loadLocal(Type.INT_TYPE, globalLevelVar);
                     }
@@ -585,9 +603,13 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
                               .jump(Opcodes.IF_ICMPLE, skipTarget);
                         }
                     } else {
+                        Label l = new Label();
+                        asm.label(l);
+                        mHelper.insertFrameSameStack(l);
                         asm.jump(Opcodes.GOTO, skipTarget);
                     }
                     asm.label(nextCheck);
+                    mHelper.insertFrameSameStack(nextCheck);
                 }
             }
         }

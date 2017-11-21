@@ -33,13 +33,7 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StreamTokenizer;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A minimal pseudo-C-preprocessor derived from PCPP of the GlueGen project.
@@ -102,6 +96,7 @@ public class PCPP {
         }
     }
 
+    @SuppressWarnings("DefaultCharset")
     public static void main(String[] args) {
         try {
             Reader reader = null;
@@ -117,9 +112,7 @@ public class PCPP {
                     String arg = args[i];
                     if (arg.startsWith("-I")) {
                         String[] paths = arg.substring(2).split(System.getProperty("path.separator"));
-                        for (int j = 0; j < paths.length; j++) {
-                            includePaths.add(paths[j]);
-                        }
+                        includePaths.addAll(Arrays.asList(paths));
                     } else {
                         usage();
                     }
@@ -302,7 +295,7 @@ public class PCPP {
         }
         char c = (char) t;
         if (c == '"' || c == '\'') {
-            StringBuffer buf = new StringBuffer();
+            StringBuilder buf = new StringBuilder();
             buf.append(c);
             buf.append(state.tok().sval);
             buf.append(c);
@@ -368,29 +361,40 @@ public class PCPP {
     private void preprocessorDirective() throws IOException {
         String w = nextWord();
         boolean shouldPrint = true;
-        if (w.equals("define")) {
-            handleDefine();
-            shouldPrint = false;
-        } else if (w.equals("undef")) {
-            handleUndefine();
-            shouldPrint = false;
-        } else if (w.equals("if") || w.equals("elif")) {
-            handleIf(w.equals("if"));
-            shouldPrint = false;
-        } else if (w.equals("ifdef") || w.equals("ifndef")) {
-            handleIfdef(w.equals("ifdef"));
-            shouldPrint = false;
-        } else if (w.equals("else")) {
-            handleElse();
-            shouldPrint = false;
-        } else if (w.equals("endif")) {
-            handleEndif();
-            shouldPrint = false;
-        } else if (w.equals("include")) {
-            handleInclude();
-            shouldPrint = false;
-        } else {
+        switch (w) {
+            case "define":
+                handleDefine();
+                shouldPrint = false;
+                break;
+            case "undef":
+                handleUndefine();
+                shouldPrint = false;
+                break;
+            case "if":
+            case "elif":
+                handleIf(w.equals("if"));
+                shouldPrint = false;
+                break;
+            case "ifdef":
+            case "ifndef":
+                handleIfdef(w.equals("ifdef"));
+                shouldPrint = false;
+                break;
+            case "else":
+                handleElse();
+                shouldPrint = false;
+                break;
+            case "endif":
+                handleEndif();
+                shouldPrint = false;
+                break;
+            case "include":
+                handleInclude();
+                shouldPrint = false;
+                break;
         // Unknown preprocessor directive (#pragma?) -- ignore
+            default:
+                break;
         }
         if (shouldPrint) {
             print("# ");
@@ -491,7 +495,7 @@ public class PCPP {
                 // Non-constant define; try to do reasonable textual substitution anyway
                 // (FIXME: should identify some of these, like (-1), as constants)
                 emitDefine = false;
-                StringBuffer val = new StringBuffer();
+                StringBuilder val = new StringBuilder();
                 for (int i = 0; i < sz; i++) {
                     if (i != 0) {
                         val.append(" ");
@@ -739,7 +743,7 @@ public class PCPP {
                                     } catch (NumberFormatException nfe2) {
                                         try {
                                             // ok, it's not a valid hex/octal value, try boolean
-                                            return Boolean.valueOf(word) == Boolean.TRUE;
+                                            return Boolean.valueOf(word);
                                         } catch (NumberFormatException nfe3) {
                                             // give up; the symbol isn't a numeric or boolean value
                                             return false;
@@ -773,6 +777,7 @@ public class PCPP {
     /////////////////////////////////////
     // Handling of #include directives //
     /////////////////////////////////////
+    @SuppressWarnings("DefaultCharset")
     private void handleInclude() throws IOException {
         // Two kinds of #includes: one with quoted string for argument,
         // one with angle brackets surrounding argument
@@ -783,7 +788,7 @@ public class PCPP {
         } else if (t == '<') {
             // Components of path name are coming in as separate tokens;
             // concatenate them
-            StringBuffer buf = new StringBuffer();
+            StringBuilder buf = new StringBuilder();
             while ((t = nextToken()) != '>' && (t != StreamTokenizer.TT_EOF)) {
                 buf.append(curTokenAsString());
             }
@@ -833,13 +838,13 @@ public class PCPP {
     }
 
     private void pushEnableBit(boolean enabled) {
-        enabledBits.add(Boolean.valueOf(enabled));
+        enabledBits.add(enabled);
         ++debugPrintIndentLevel;
     //debugPrint(false, "PUSH_ENABLED, NOW: " + enabled());
     }
 
     private void popEnableBit() {
-        if (enabledBits.size() == 0) {
+        if (enabledBits.isEmpty()) {
             System.err.println("WARNING: mismatched #ifdef/endif pairs");
             return;
         }
@@ -849,8 +854,8 @@ public class PCPP {
     }
 
     private boolean enabled() {
-        return (enabledBits.size() == 0 ||
-                ((Boolean) enabledBits.get(enabledBits.size() - 1)).booleanValue());
+        return (enabledBits.isEmpty() ||
+                ((Boolean) enabledBits.get(enabledBits.size() - 1)));
     }
 
     private void print(String s) {

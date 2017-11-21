@@ -16,6 +16,7 @@ import java.util.Collections;
 public interface ClasspathProvider {
     public static final ClasspathProvider EMPTY = new ClasspathProvider() {
 
+        @Override
         public Collection<String> getClasspath(BTraceTask task) {
             return Collections.EMPTY_LIST;
         }

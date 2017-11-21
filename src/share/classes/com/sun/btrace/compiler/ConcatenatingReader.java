@@ -70,6 +70,7 @@ public class ConcatenatingReader extends FilterReader {
         this.in = in;
     }
 
+    @Override
     public int read() throws IOException {
         char[] tmp = new char[1];
         int num = read(tmp, 0, 1);
@@ -80,25 +81,27 @@ public class ConcatenatingReader extends FilterReader {
     }
 
     // It's easier not to support mark/reset since we don't need it
+    @Override
     public boolean markSupported() {
         return false;
     }
 
+    @Override
     public void mark(int readAheadLimit) throws IOException {
         throw new IOException("mark/reset not supported");
     }
 
+    @Override
     public void reset() throws IOException {
         throw new IOException("mark/reset not supported");
     }
 
+    @Override
     public boolean ready() throws IOException {
-        if (curBuf != null || in.ready()) {
-            return true;
-        }
-        return false;
+        return curBuf != null || in.ready();
     }
 
+    @Override
     public int read(char[] cbuf, int off, int len) throws IOException {
         if (curBuf == null) {
             nextLine();
@@ -124,6 +127,7 @@ public class ConcatenatingReader extends FilterReader {
         return numRead;
     }
 
+    @Override
     public long skip(long n) throws IOException {
         long numSkipped = 0;
 

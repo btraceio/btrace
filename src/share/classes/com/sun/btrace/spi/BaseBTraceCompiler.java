@@ -49,15 +49,16 @@ public class BaseBTraceCompiler extends BTraceCompiler {
     final private static Logger LOGGER = Logger.getLogger(BTraceCompiler.class.getName());
 
     final private static Pattern classNamePattern = Pattern.compile("@BTrace\\s*.+?\\s*class\\s*(.*?)\\s+\\{", Pattern.MULTILINE | Pattern.DOTALL | Pattern.UNIX_LINES);
-    
+
     final private com.sun.btrace.compiler.Compiler c;
     final private BTraceTask task;
     public BaseBTraceCompiler(BTraceTask task) {
         c = new com.sun.btrace.compiler.Compiler(null);
         this.task = task;
     }
-    
+
     @Override
+    @SuppressWarnings("DefaultCharset")
     public byte[] compile(String source, String classPath, Writer errorWriter) {
         try {
             Matcher matcher = classNamePattern.matcher(source);
@@ -77,7 +78,7 @@ public class BaseBTraceCompiler extends BTraceCompiler {
         }
         return new byte[0];
     }
-    
+
     @Override
     public String getAgentJarPath() {
         return getJarBaseDir() + File.separatorChar + "btrace-agent.jar";
@@ -153,7 +154,7 @@ public class BaseBTraceCompiler extends BTraceCompiler {
             if (index >= 0) {
                 try {
                     String jarPath = path.substring(0, index);
-                    if (jarPath.indexOf("file://") > -1 && jarPath.indexOf("file:////") == -1) {  //NOI18N
+                    if (jarPath.contains("file://") && !jarPath.contains("file:////")) {  //NOI18N
                         /* Replace because JDK application classloader wrongly recognizes UNC paths. */
                         jarPath = jarPath.replaceFirst("file://", "file:////");  //NOI18N
                     }

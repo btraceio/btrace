@@ -41,10 +41,12 @@ public class ErrorCommand extends Command implements PrintableCommand {
         this(null);
     }
 
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeObject(cause);
     }
 
+    @Override
     protected void read(ObjectInput in)
         throws IOException, ClassNotFoundException {
         cause = (Throwable) in.readObject();

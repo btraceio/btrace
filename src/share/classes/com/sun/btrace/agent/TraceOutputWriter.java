@@ -50,6 +50,7 @@ abstract class TraceOutputWriter extends Writer {
     static private class SimpleFileOutput extends TraceOutputWriter {
         final private FileWriter delegate;
 
+        @SuppressWarnings("DefaultCharset")
         public SimpleFileOutput(File output, SharedSettings settings) throws IOException {
             super(settings);
             try {
@@ -79,6 +80,7 @@ abstract class TraceOutputWriter extends Writer {
         }
     }
 
+    @SuppressWarnings("DefaultCharset")
     static abstract private class RollingFileWriter extends TraceOutputWriter {
         final private ReentrantReadWriteLock writerLock = new ReentrantReadWriteLock();
         // @GuardedBy writerLock
@@ -221,11 +223,9 @@ abstract class TraceOutputWriter extends Writer {
         if (f == null || f.exists()) return;
 
         ensurePathExists(f.getParentFile());
-        System.err.println("continuing");
 
         if (!f.getName().endsWith(".btrace")) { // not creating the actual file
             try {
-                System.err.println("creating new folder " + f.toString());
                 f.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();

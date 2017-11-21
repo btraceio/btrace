@@ -58,6 +58,7 @@ import java.util.regex.Pattern;
  * @author Joachim Skeie (rolling output)
  */
 public final class Main {
+    private static long ts = System.nanoTime();
 
     private static volatile Map<String, String> argMap;
     private static volatile Instrumentation inst;
@@ -70,18 +71,16 @@ public final class Main {
     private static final BTraceTransformer transformer = new BTraceTransformer(debug);
 
     // #BTRACE-42: Non-daemon thread prevents traced application from exiting
-    private static final ThreadFactory daemonizedThreadFactory = new ThreadFactory() {
-        ThreadFactory delegate = Executors.defaultThreadFactory();
-
+    private static final ThreadFactory qProcessorThreadFactory = new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
-            Thread result = delegate.newThread(r);
+            Thread result = new Thread(r, "BTrace Command Queue Processor");
             result.setDaemon(true);
             return result;
         }
     };
 
-    private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(daemonizedThreadFactory);
+    private static final ExecutorService serializedExecutor = Executors.newSingleThreadExecutor(qProcessorThreadFactory);
 
     public static void premain(String args, Instrumentation inst) {
         main(args, inst);
@@ -98,45 +97,56 @@ public final class Main {
             Main.inst = inst;
         }
 
-        loadArgs(args);
-        if (argMap.containsKey("debug")) {
-            debugPrint("parsed command line arguments");
-        }
-        parseArgs();
-
-        inst.addTransformer(transformer, true);
-        startScripts();
-
-        String tmp = argMap.get("noServer");
-        boolean noServer = tmp != null && !"false".equals(tmp);
-        if (noServer) {
-            if (isDebug()) {
-                debugPrint("noServer is true, server not started");
-            }
-            return;
-        }
-        Thread agentThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                BTraceRuntime.enter();
-                try {
-                    startServer();
-                } finally {
-                    BTraceRuntime.leave();
-                }
-            }
-        });
-        BTraceRuntime.initUnsafe();
-        BTraceRuntime.enter();
         try {
-            agentThread.setDaemon(true);
+            loadArgs(args);
+            // set the debug level based on cmdline config
+            settings.setDebug(Boolean.parseBoolean(argMap.get("debug")));
             if (isDebug()) {
-                debugPrint("starting agent thread");
+                debugPrint("parsed command line arguments");
             }
-            agentThread.start();
+            parseArgs();
+
+            int startedScripts = startScripts();
+
+            String tmp = argMap.get("noServer");
+            // noServer is defaulting to true if startup scripts are defined
+            boolean noServer = tmp != null ? Boolean.parseBoolean(tmp) : hasScripts();
+            if (noServer) {
+                if (isDebug()) {
+                    debugPrint("noServer is true, server not started");
+                }
+                return;
+            }
+            Thread agentThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    BTraceRuntime.enter();
+                    try {
+                        startServer();
+                    } finally {
+                        BTraceRuntime.leave();
+                    }
+                }
+            });
+            BTraceRuntime.initUnsafe();
+            BTraceRuntime.enter();
+            try {
+                agentThread.setDaemon(true);
+                if (isDebug()) {
+                    debugPrint("starting agent thread");
+                }
+                agentThread.start();
+            } finally {
+                BTraceRuntime.leave();
+            }
         } finally {
-            BTraceRuntime.leave();
+            inst.addTransformer(transformer, true);
+            Main.debugPrint("Agent init took: " + (System.nanoTime() - ts) + "ns");
         }
+    }
+
+    private static boolean hasScripts() {
+        return argMap.containsKey("script") || argMap.containsKey("scriptDir");
     }
 
     private static void loadDefaultArguments(String config) {
@@ -150,12 +160,12 @@ public final class Main {
                 for (Map.Entry<Object, Object> entry : ps.entrySet()) {
                     String keyConfig = "";
                     String argKey = (String) entry.getKey();
-                    int configPos = argKey.lastIndexOf("#");
+                    int configPos = argKey.lastIndexOf('#');
                     if (configPos > -1) {
                         keyConfig = argKey.substring(0, configPos);
                         argKey = argKey.substring(configPos + 1);
                     }
-                    if (config == null || config.equals(keyConfig)) {
+                    if (config == null || keyConfig.isEmpty() || config.equals(keyConfig)) {
                         String argVal = (String) entry.getValue();
                         switch (argKey) {
                             case "script": {
@@ -172,24 +182,21 @@ public final class Main {
                                     } else {
                                         replace = true;
                                     }
-                                    log.append("augmenting default agent argument '").append(argKey)
-                                        .append("':'").append(argMap.get(argKey)).append("' with '")
-                                        .append(argVal).append("'\n");
-
                                 }
                                 if (replace) {
                                     log.append("setting default agent argument '").append(argKey)
-                                        .append("' with '").append(scriptVal).append("'\n");
+                                            .append("' to '").append(scriptVal).append("'\n");
                                 } else {
                                     log.append("augmenting default agent argument '").append(argKey)
-                                        .append("':'").append(argMap.get(argKey)).append("' with '").append(argVal)
-                                        .append("'\n");
+                                            .append("':'").append(argMap.get(argKey)).append("' with '").append(argVal)
+                                            .append("'\n");
                                 }
 
                                 argMap.put(argKey, scriptVal);
+                                break;
                             }
-                            case "systemClassPath":
-                            case "bootClassPath":
+                            case "systemClassPath": // fall through
+                            case "bootClassPath": // fall through
                             case "config": {
                                 log.append("argument '").append(argKey).append("' is not overridable\n");
                                 break;
@@ -197,14 +204,14 @@ public final class Main {
                             default: {
                                 if (!argMap.containsKey(argKey)) {
                                     log.append("applying default agent argument '").append(argKey)
-                                        .append("'='").append(argVal).append("'\n");
+                                            .append("'='").append(argVal).append("'\n");
                                     argMap.put(argKey, argVal);
                                 }
                             }
                         }
                     }
                 }
-                if (argMap.containsKey("debug")) {
+                if (argMap.containsKey("debug") && argMap.get("debug").equalsIgnoreCase("true")) {
                     DebugSupport.info(log.toString());
                 }
             }
@@ -213,7 +220,9 @@ public final class Main {
         }
     }
 
-    private static void startScripts() {
+    private static int startScripts() {
+        int scriptCount = 0;
+
         String p = argMap.get("stdout");
         boolean traceToStdOut = p != null && !"false".equals(p);
         if (isDebug()) {
@@ -229,7 +238,9 @@ public final class Main {
                 debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are ") + script);
             }
             while (tokenizer.hasMoreTokens()) {
-                loadBTraceScript(tokenizer.nextToken(), traceToStdOut);
+                if (loadBTraceScript(tokenizer.nextToken(), traceToStdOut)) {
+                    scriptCount++;
+                }
             }
         }
         if (scriptDir != null) {
@@ -241,11 +252,14 @@ public final class Main {
                 File[] files = dir.listFiles();
                 if (files != null) {
                     for (File file : files) {
-                        loadBTraceScript(file.getAbsolutePath(), traceToStdOut);
+                        if (loadBTraceScript(file.getAbsolutePath(), traceToStdOut)) {
+                            scriptCount++;
+                        }
                     }
                 }
             }
         }
+        return scriptCount;
     }
 
     private static void usage() {
@@ -280,8 +294,11 @@ public final class Main {
             usage();
         }
 
-        processClasspaths();
-        loadDefaultArguments(argMap.get("config"));
+        String libs = argMap.get("libs");
+        String config = argMap.get("config");
+        processClasspaths(libs);
+        loadDefaultArguments(config);
+
 
         p = argMap.get("debug");
         settings.setDebug(p != null && !"false".equals(p));
@@ -289,118 +306,157 @@ public final class Main {
             debugPrint("debugMode is " + settings.isDebug());
         }
 
-        p = argMap.get("startupRetransform");
-        settings.setRetransformStartup(p == null || !"false".equals(p));
-        if (isDebug()) {
-            debugPrint("startupRetransform is " + settings.isRetransformStartup());
-        }
+        for (Map.Entry<String, String> e : argMap.entrySet()) {
+            String key = e.getKey();
+            p = e.getValue();
+            switch (key) {
+                case "startupRetransform": {
+                    if (!p.isEmpty()) {
+                        settings.setRetransformStartup(p.isEmpty() ? false : Boolean.parseBoolean(p));
+                        if (isDebug()) {
+                            debugPrint("startupRetransform is " + settings.isRetransformStartup());
+                        }
+                    }
+                    break;
+                }
+                case "dumpDir": {
+                    String dumpClassesVal = argMap.get("dumpClasses");
+                    if (dumpClassesVal != null) {
+                        boolean dumpClasses = Boolean.parseBoolean(dumpClassesVal);
+                        if (isDebug()) {
+                            debugPrint("dumpClasses is " + dumpClasses);
+                        }
+                        if (dumpClasses) {
+                            String dumpDir = argMap.get("dumpDir");
+                            settings.setDumpDir(dumpDir != null ? dumpDir : ".");
+                            if (isDebug()) {
+                                debugPrint("dumpDir is " + dumpDir);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case "cmdQueueLimit": {
+                    if (!p.isEmpty()) {
+                        System.setProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, p);
+                        if (isDebug()) {
+                           debugPrint("cmdQueueLimit provided: " + p);
+                        }
+                    }
 
-        p = argMap.get("dumpClasses");
-        boolean dumpClasses = p != null && !"false".equals(p);
-        if (isDebug()) {
-            debugPrint("dumpClasses is " + dumpClasses);
-        }
-        if (dumpClasses) {
-            String dumpDir = argMap.get("dumpDir");
-            settings.setDumpDir(dumpDir != null ? dumpDir : ".");
-            if (isDebug()) {
-                debugPrint("dumpDir is " + dumpDir);
-            }
-        }
+                    break;
+                }
+                case "trackRetransforms": {
+                    if (!p.isEmpty()) {
+                        settings.setTrackRetransforms(Boolean.parseBoolean(p));
+                        if (settings.isTrackRetransforms()) {
+                            debugPrint("trackRetransforms is " + settings.isTrackRetransforms());
+                        }
+                    }
+                    break;
+                }
+                case "scriptOutputFile": {
+                    if (!p.isEmpty()) {
+                        settings.setOutputFile(p);
+                        if (isDebug()) {
+                            debugPrint("scriptOutputFile is " + p);
+                        }
+                    }
+                    break;
+                }
+                case "scriptOutputDir": {
+                    if (!p.isEmpty()) {
+                        settings.setOutputDir(p);
+                        if (isDebug()) {
+                            debugPrint("scriptOutputDir is " + p);
+                        }
+                    }
+                    break;
+                }
+                case "fileRollMilliseconds": {
+                    if (!p.isEmpty()) {
+                        Long msParsed = null;
+                        try {
+                            msParsed = Long.parseLong(p);
+                            fileRollMilliseconds = msParsed;
+                        } catch (NumberFormatException nfe) {
+                            fileRollMilliseconds = null;
+                        }
+                        if (fileRollMilliseconds != null) {
+                            settings.setFileRollMilliseconds(fileRollMilliseconds.intValue());
+                            if (isDebug()) {
+                                debugPrint("fileRollMilliseconds is " + fileRollMilliseconds);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case "fileRollMaxRolls": {
+                    if (!p.isEmpty()) {
+                        Integer rolls = null;
+                        try {
+                            rolls = Integer.parseInt(p);
+                        } catch (NumberFormatException nfe) {
+                            rolls = null;
+                        }
 
-        p = argMap.get("cmdQueueLimit");
-        if (p != null) {
-            debugPrint("cmdQueueLimit provided: " + p);
-            System.setProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, p);
-        }
+                        if (rolls != null) {
+                            settings.setFileRollMaxRolls(rolls);
+                        }
+                    }
+                    break;
+                }
+                case "unsafe": // fallthrough
+                case "trusted": {
+                    if (!p.isEmpty()) {
+                        settings.setTrusted(Boolean.parseBoolean(p));
+                        if (isDebug()) {
+                            debugPrint("trustedMode is " + settings.isTrusted());
+                        }
+                    }
+                    break;
+                }
+                case "statsd": {
+                    if (!p.isEmpty()) {
+                        String[] parts = p.split(":");
+                        if (parts.length == 2) {
+                            settings.setStatsdHost(parts[0].trim());
+                            try {
+                                settings.setStatsdPort(Integer.parseInt(parts[1].trim()));
+                            } catch (NumberFormatException ex) {
+                                DebugSupport.warning("Invalid statsd port number: " + parts[1]);
+                                // leave the port unconfigured
+                            }
+                        } else if (parts.length == 1) {
+                            settings.setStatsdHost(parts[0].trim());
+                        }
+                    }
+                    break;
+                }
+                case "probeDescPath": {
+                    if (!p.isEmpty()) {
+                        settings.setProbeDescPath(!p.isEmpty() ? p : ".");
+                        if (isDebug()) {
+                            debugPrint("probe descriptor path is " + settings.getProbeDescPath());
+                        }
+                    }
+                    break;
+                }
 
-        p = argMap.get("trackRetransforms");
-        settings.setTrackRetransforms(p != null && !"false".equals(p));
-        if (settings.isTrackRetransforms()) {
-            debugPrint("trackRetransforms is " + settings.isTrackRetransforms());
-        }
-
-        p = argMap.get("scriptOutputFile");
-        if (p != null && p.length() > 0) {
-            settings.setOutputFile(p);
-            if (isDebug()) {
-                debugPrint("scriptOutputFile is " + p);
-            }
-        }
-
-        p = argMap.get("scriptOutputDir");
-        if (p != null && p.length() > 0) {
-            settings.setOutputDir(p);
-            if (isDebug()) {
-                debugPrint("scriptOutputDir is " + p);
-            }
-        }
-
-        p = argMap.get("fileRollMilliseconds");
-        if (p != null && p.length() > 0) {
-            Long msParsed = null;
-            try {
-                msParsed = Long.parseLong(p);
-                fileRollMilliseconds = msParsed;
-            } catch (NumberFormatException nfe) {
-                fileRollMilliseconds = null;
-            }
-            if (fileRollMilliseconds != null) {
-                settings.setFileRollMilliseconds(fileRollMilliseconds.intValue());
-                if (isDebug()) {
-                    debugPrint("fileRollMilliseconds is " + fileRollMilliseconds);
+                default: {
+                    if (key.startsWith("$")) {
+                        String pKey = key.substring(1);
+                        System.setProperty(pKey, p);
+                        if (isDebug()) {
+                            debugPrint("Setting system property: " + pKey + "=" + p);
+                        }
+                    }
                 }
             }
-        }
-
-        p = argMap.get("fileRollMaxRolls");
-        if (p != null && p.length() > 0) {
-            Integer rolls = null;
-            try {
-                rolls = Integer.parseInt(p);
-            } catch (NumberFormatException nfe) {
-                rolls = null;
-            }
-
-            if (rolls != null) {
-                settings.setFileRollMaxRolls(rolls);
-            }
-        }
-        boolean trusted = false;
-        p = argMap.get("unsafe");
-        trusted |= (p != null && "true".equals(p));
-        p = argMap.get("trusted");
-        trusted |= (p != null && "true".equals(p));
-
-        settings.setTrusted(trusted);
-        if (isDebug()) {
-            debugPrint("trustedMode is " + settings.isTrusted());
-        }
-
-        String statsdDef = argMap.get("statsd");
-        if (statsdDef != null) {
-            String[] parts = statsdDef.split(":");
-            if (parts.length == 2) {
-                settings.setStatsdHost(parts[0].trim());
-                try {
-                    settings.setStatsdPort(Integer.parseInt(parts[1].trim()));
-                } catch (NumberFormatException e) {
-                    DebugSupport.warning("Invalid statsd port number: " + parts[1]);
-                    // leave the port unconfigured
-                }
-            } else if (parts.length == 1) {
-                settings.setStatsdHost(parts[0].trim());
-            }
-        }
-
-        String probeDescPath = argMap.get("probeDescPath");
-        settings.setProbeDescPath(probeDescPath != null ? probeDescPath : ".");
-        if (isDebug()) {
-            debugPrint("probe descriptor path is " + settings.getProbeDescPath());
         }
     }
 
-    private static void processClasspaths() {
+    private static void processClasspaths(String libs) {
         String bootClassPath = argMap.get("bootClassPath");
         if (bootClassPath != null) {
             if (isDebug()) {
@@ -411,12 +467,16 @@ public final class Main {
                 while (tokenizer.hasMoreTokens()) {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
-                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        JarFile jf = new JarFile(f);
-                        inst.appendToBootstrapClassLoaderSearch(jf);
+                    if (f.exists()) {
+                        debug.warning("BTrace bootstrap classpath resource [ " + path + "] does not exist");
                     } else {
-                        debugPrint("ignoring boot classpath element '" + path
-                                + "' - only jar files allowed");
+                        if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+                            JarFile jf = new JarFile(f);
+                            inst.appendToBootstrapClassLoaderSearch(jf);
+                        } else {
+                            debugPrint("ignoring boot classpath element '" + path
+                                    + "' - only jar files allowed");
+                        }
                     }
                 }
             } catch (IOException ex) {
@@ -436,12 +496,16 @@ public final class Main {
                 while (tokenizer.hasMoreTokens()) {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
-                    if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-                        JarFile jf = new JarFile(f);
-                        inst.appendToSystemClassLoaderSearch(jf);
+                    if (!f.exists()) {
+                        debug.warning("BTrace system classpath resource [" + path + "] does not exist.");
                     } else {
-                        debugPrint("ignoring system classpath element '" + path
-                                + "' - only jar files allowed");
+                        if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+                            JarFile jf = new JarFile(f);
+                            inst.appendToSystemClassLoaderSearch(jf);
+                        } else {
+                            debugPrint("ignoring system classpath element '" + path
+                                    + "' - only jar files allowed");
+                        }
                     }
                 }
             } catch (IOException ex) {
@@ -451,10 +515,10 @@ public final class Main {
             }
         }
 
-        addPreconfLibs();
+        addPreconfLibs(libs);
     }
 
-    private static void addPreconfLibs() {
+    private static void addPreconfLibs(String libs) {
         URL u = Main.class.getClassLoader().getResource(Main.class.getName().replace('.', '/') + ".class");
         if (u != null) {
             String path = u.toString();
@@ -463,31 +527,57 @@ public final class Main {
                 String jar = path.substring(9, delimiterPos);
                 File jarFile = new File(jar);
                 String libPath = new File(jarFile.getParent() + File.separator + "btrace-libs").getAbsolutePath();
-                File bootLibs = new File(libPath + File.separator + "boot");
-                File sysLibs = new File(libPath + File.separator + "system");
-                if (bootLibs.exists()) {
-                    for (File f : bootLibs.listFiles()) {
-                        if (f.getName().toLowerCase().endsWith(".jar")) {
-                            try {
-                                inst.appendToBootstrapClassLoaderSearch(new JarFile(f));
-                            } catch (IOException e) {}
+                appendToBootClassPath(libPath);
+                appendToSysClassPath(libPath);
+                appendToBootClassPath(libPath, libs);
+                appendToSysClassPath(libPath, libs);
+            }
+        }
+    }
+
+    private static void appendToBootClassPath(String libPath) {
+        appendToBootClassPath(libPath, null);
+    }
+
+    private static void appendToBootClassPath(String libPath, String libs) {
+        File libFolder = new File(libPath + (libs != null ? File.separator + libs : "") + File.separator + "boot");
+        if (libFolder.exists()) {
+            for (File f : libFolder.listFiles()) {
+                if (f.getName().toLowerCase().endsWith(".jar")) {
+                    try {
+                        if (isDebug()) {
+                            debugPrint("Adding " + f.getAbsolutePath() + " to bootstrap classpath");
                         }
-                    }
-                }
-                if (sysLibs.exists()) {
-                    for (File f : sysLibs.listFiles()) {
-                        if (f.getName().toLowerCase().endsWith(".jar")) {
-                            try {
-                                inst.appendToSystemClassLoaderSearch(new JarFile(f));
-                            } catch (IOException e) {}
-                        }
+                        inst.appendToBootstrapClassLoaderSearch(new JarFile(f));
+                    } catch (IOException e) {
                     }
                 }
             }
         }
     }
 
-    private static void loadBTraceScript(String filePath, boolean traceToStdOut) {
+    private static void appendToSysClassPath(String libPath) {
+        appendToSysClassPath(libPath, null);
+    }
+
+    private static void appendToSysClassPath(String libPath, String libs) {
+        File libFolder = new File(libPath + (libs != null ? File.separator + libs : "") + File.separator + "system");
+        if (libFolder.exists()) {
+            for (File f : libFolder.listFiles()) {
+                if (f.getName().toLowerCase().endsWith(".jar")) {
+                    try {
+                        if (isDebug()) {
+                            debugPrint("Adding " + f.getAbsolutePath() + " to system classpath");
+                        }
+                        inst.appendToSystemClassLoaderSearch(new JarFile(f));
+                    } catch (IOException e) {
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
         try {
             String scriptName = "";
             String scriptParent = "";
@@ -503,7 +593,7 @@ public final class Main {
                 if (isDebug()) {
                     debugPrint("refusing " + filePath + " - script should be a pre-compiled .class file");
                 }
-                return;
+                return false;
             }
 
             SharedSettings clientSettings = new SharedSettings();
@@ -523,8 +613,10 @@ public final class Main {
             }
             ClientContext ctx = new ClientContext(inst, transformer, clientSettings);
             Client client = new FileClient(ctx, traceScript);
-
-            handleNewClient(client).get();
+            if (client.isInitialized()) {
+                handleNewClient(client).get();
+                return true;
+            }
         } catch (NullPointerException e) {
             if (isDebug()) {
                 debugPrint("script " + filePath + " does not exist!");
@@ -536,6 +628,7 @@ public final class Main {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        return false;
     }
 
     public static final int BTRACE_DEFAULT_PORT = 2020;

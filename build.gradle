@@ -6,7 +6,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "net.ltgt.gradle:gradle-errorprone-plugin:0.0.8"
+        classpath "net.ltgt.gradle:gradle-errorprone-plugin:0.0.12"
     }
 }
 
@@ -129,7 +129,7 @@ def bootExcludes = ['**/dtrace/**', '**/agent/**', '**/compiler/**', '**/client/
                     '**/asm/**', 'com/sun/btrace/api/**', 'com/sun/btrace/spi/**',
                     '**/org/jctools/queues/atomic/**',
                     '**/org/jctools/queues/spec/**', '**/META-INF/**']
-def clientExcludes = ['**/org/jctools/**', '**/runtime/**', '**/agent/**', \
+def clientExcludes = ['**/agent/**', \
                       '**/util/TimeStamp*', '**/util/MethodId', \
                       '**/util/SamplingSupport', '**/util/templates/**', \
                       '**/instr/**', '**/META-INF/*']
@@ -155,7 +155,7 @@ sourceSets {
 
     test {
         java {
-            srcDir 'src/test'
+            srcDir 'src/test/java'
         }
 
         resources {
@@ -189,6 +189,8 @@ processTestResources {
     destinationDir compileTestJava.destinationDir
     include 'traces/**/*.java'
     include 'traces/**/*.xml'
+    include 'resources/classdata/**/*.clazz'
+    include 'resources/classdata/**/*.btrc'
 }
 
 test {
@@ -271,14 +273,15 @@ task buildTraces(type: Exec) {
     inputs.files clientJar.outputs
     inputs.files testClasses.outputs
     inputs.dir "src/test/traces"
-    outputs.dir "${buildDir}/classes/test/traces"
+    outputs.dir "${buildDir}/classes/traces"
 
     workingDir "$projectDir"
     environment('BTRACE_HOME', "$projectDir")
     def btracec = (osFamily == 'windows') ? 'btracec.bat' : 'btracec'
     executable "bin/${btracec}"
-    args "-cp ${buildDir}/classes/test"
-    args "-d ${buildDir}/classes/test"
+    args "-cp ${buildDir}/classes/java/test"
+    args "-d ${buildDir}/classes/"
+    args "--pack"
     args fileTree(dir: "src/test/traces", include: '**/*.java', exclude: 'verifier/**/*.java')
 }
 
@@ -396,8 +399,10 @@ task buildDistributions {
 }
 
 test {
+    dependsOn cleanTest
     inputs.files buildTraces.outputs
     inputs.files buildDTrace.outputs
+    testLogging.showStandardStreams = true
 }
 
 dependencies {

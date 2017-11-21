@@ -77,7 +77,7 @@ public class Verifier extends AbstractProcessor
     private final AttributionTaskListener listener = new AttributionTaskListener();
 
     @Override
-    public void init(ProcessingEnvironment pe) {
+    public synchronized void init(ProcessingEnvironment pe) {
         super.init(pe);
         treeUtils = Trees.instance(pe);
         prepareContext(((JavacProcessingEnvironment)pe).getContext());
@@ -259,7 +259,7 @@ public class Verifier extends AbstractProcessor
      * A task listener multiplexer.
      */
     private static class TaskListeners implements TaskListener {
-        private final List<TaskListener> listeners = new ArrayList<TaskListener>();
+        private final List<TaskListener> listeners = new ArrayList<>();
 
         public void add(TaskListener listener) {
             listeners.add(listener);

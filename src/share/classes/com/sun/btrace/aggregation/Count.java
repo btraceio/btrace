@@ -54,11 +54,13 @@ class Count implements AggregationValue {
     	}
     }
 
+    @Override
     public long getValue() {
         return value.get();
     }
 
+    @Override
     public Object getData() {
-        return Long.valueOf(getValue());
+        return getValue();
     }
 }

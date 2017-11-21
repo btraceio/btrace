@@ -363,6 +363,7 @@ public class Postprocessor extends ClassVisitor {
                     }
                     simulatedStack.push(vals[1]);
                     simulatedStack.push(vals[0]);
+                    break;
                 }
                 // zero operand instructions
                 case Opcodes.LCONST_0:
@@ -370,6 +371,8 @@ public class Postprocessor extends ClassVisitor {
                 case Opcodes.DCONST_0:
                 case Opcodes.DCONST_1: {
                     simulatedStack.push(Boolean.FALSE);
+                    // the value occupies 2 slots on stack
+                    // fall through
                 }
                 case Opcodes.ICONST_0:
                 case Opcodes.ICONST_1:
@@ -477,11 +480,12 @@ public class Postprocessor extends ClassVisitor {
                 case Opcodes.DASTORE: {
                     simulatedStack.pop();
                     // LASTORE, DSTORE occupy one more slot compared to BASTORE etc.; falling through
+                    // fall through
                 }
-                case Opcodes.BASTORE:
-                case Opcodes.CASTORE:
-                case Opcodes.SASTORE:
-                case Opcodes.IASTORE:
+                case Opcodes.BASTORE: // fall through
+                case Opcodes.CASTORE: // fall through
+                case Opcodes.SASTORE: // fall through
+                case Opcodes.IASTORE: // fall through
                 case Opcodes.FASTORE: {
                     simulatedStack.pop();
                     simulatedStack.pop();

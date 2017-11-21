@@ -339,6 +339,7 @@ final class XMLSerializer {
         
         private static Field[] getAllFields(final Class clazz) {
             return AccessController.doPrivileged(new PrivilegedAction<Field[]>() {
+                @Override
                 public Field[] run() {
                     try {
                         Field[] fields = clazz.getDeclaredFields();

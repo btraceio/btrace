@@ -26,9 +26,10 @@
 package com.sun.btrace.runtime.instr;
 
 import com.sun.btrace.org.objectweb.asm.Label;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 
 /**
  * This visitor helps in inserting code whenever a method
@@ -40,17 +41,18 @@ import com.sun.btrace.util.LocalVariableHelper;
  *
  * @author A. Sundararajan
  */
-public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
+public class ErrorReturnInstrumentor extends MethodReturnInstrumentor {
     private final Label start = new Label();
     private final Label end = new Label();
 
-    public ErrorReturnInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, parentClz, superClz, access, name, desc);
+    public ErrorReturnInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
     @Override
     protected void visitMethodPrologue() {
+        visitTryCatchBlock(start, end, end, THROWABLE_INTERNAL);
         visitLabel(start);
         super.visitMethodPrologue();
     }
@@ -58,7 +60,7 @@ public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
         visitLabel(end);
-        visitTryCatchBlock(start, end, end, THROWABLE_INTERNAL);
+        insertFrameReplaceStack(end, THROWABLE_TYPE);
         onErrorReturn();
         visitInsn(ATHROW);
         super.visitMaxs(maxStack, maxLocals);
@@ -66,6 +68,9 @@ public class ErrorReturnInstrumentor extends MethodEntryInstrumentor {
 
     @Override
     protected void onMethodEntry() {}
+
+    @Override
+    protected void onMethodReturn(int opcode) {}
 
     protected void onErrorReturn() {
         asm.println("error return from " + getName() + getDescriptor());

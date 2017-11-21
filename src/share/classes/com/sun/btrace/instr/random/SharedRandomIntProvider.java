@@ -34,6 +34,7 @@ import java.util.Random;
 final public class SharedRandomIntProvider extends RandomIntProvider {
     private final Random rnd = new Random(System.nanoTime());
 
+    @Override
     public int nextInt(int bound) {
         return rnd.nextInt(bound);
     }

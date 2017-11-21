@@ -46,11 +46,13 @@ class Sum implements AggregationValue {
         value.addAndGet(delta);
     }
 
+    @Override
     public long getValue() {
         return value.get();
     }
 
+    @Override
     public Object getData() {
-        return Long.valueOf(getValue());
+        return getValue();
     }
 }

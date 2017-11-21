@@ -46,11 +46,13 @@ class Minimum implements AggregationValue {
         }
     }
 
+    @Override
     public synchronized long getValue() {
         return min;
     }
 
+    @Override
     public Object getData() {
-        return Long.valueOf(getValue());
+        return getValue();
     }
 }

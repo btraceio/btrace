@@ -18,6 +18,9 @@ notifications:
     on_start: never
 before_install:
 - pip install --user codecov
+- sudo dpkg --purge --force-depends ca-certificates-java
+- sudo apt-get install ca-certificates-java
+- sudo update-ca-certificates -f
 install: "./gradlew assemble -DexcludeBenchmark"
 script: "./gradlew check -DexcludeBenchmark"
 after_success:

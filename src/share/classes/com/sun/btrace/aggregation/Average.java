@@ -47,6 +47,7 @@ class Average implements AggregationValue {
         count++;
     }
 
+    @Override
     public synchronized long getValue() {
         if (count == 0) {
             return 0; // Avoid division by zero
@@ -54,7 +55,8 @@ class Average implements AggregationValue {
         return (int) (sum / count);
     }
 
+    @Override
     public Object getData() {
-        return Long.valueOf(getValue());
+        return getValue();
     }
 }

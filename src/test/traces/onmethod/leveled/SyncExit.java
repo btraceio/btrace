@@ -25,7 +25,6 @@
 
 package traces.onmethod.leveled;
 
-import traces.onmethod.*;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
@@ -33,7 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.Level;
+import com.sun.btrace.annotations.*;
 
 /**
  *
@@ -43,7 +42,7 @@ import com.sun.btrace.annotations.Level;
 public class SyncExit {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="sync",
               location=@Location(value=Kind.SYNC_EXIT), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeClassName String pcn, Object lock) {
+    public static void args(@Self Object self, @ProbeClassName String pcn, @TargetInstance Object lock) {
         println("args");
     }
 }

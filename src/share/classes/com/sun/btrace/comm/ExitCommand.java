@@ -40,10 +40,12 @@ public class ExitCommand extends Command {
         this(0);
     }
 
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeInt(exitCode);
     }
 
+    @Override
     protected void read(ObjectInput in) throws IOException {
         exitCode = in.readInt();
     }

@@ -173,11 +173,14 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
         boolean entered = BTraceRuntime.enter();
         try {
+            if (isDebug()) {
+                debug.dumpClass(className.replace('.', '/') + "_orig", classfileBuffer);
+            }
             BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
             BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
             for(BTraceProbe p : probes) {
                 p.notifyTransform(className);
-                cw.addInstrumentor(p);
+                cw.addInstrumentor(p, loader);
             }
             byte[] transformed = cw.instrument();
             if (transformed == null) {

@@ -32,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * @author Jaroslav Bachorik
  */
 final public class ThreadLocalRandomIntProvider extends RandomIntProvider {
+    @Override
     public int nextInt(int bound) {
         return ThreadLocalRandom.current().nextInt(0, bound);
     }

@@ -25,16 +25,10 @@
 
 package com.sun.btrace.util.templates;
 
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.Attribute;
-import com.sun.btrace.org.objectweb.asm.Handle;
-import com.sun.btrace.org.objectweb.asm.Label;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
-import com.sun.btrace.org.objectweb.asm.Type;
-import com.sun.btrace.org.objectweb.asm.TypePath;
+import com.sun.btrace.org.objectweb.asm.*;
 import com.sun.btrace.runtime.Assembler;
-import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.runtime.BTraceMethodVisitor;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
 import java.util.ArrayList;
@@ -45,35 +39,24 @@ import java.util.Collection;
  * @author Jaroslav Bachorik
  * @since 1.3
  */
-public class TemplateExpanderVisitor extends MethodVisitor implements LocalVariableHelper {
-    final private LocalVariableHelper lvs;
-
+public class TemplateExpanderVisitor extends BTraceMethodVisitor {
     final private Collection<TemplateExpander> expanders = new ArrayList<>();
     final private String className, methodName, desc;
     final private Assembler asm;
     private TemplateExpander.Result lastResult = TemplateExpander.Result.IGNORED;
 
-    public TemplateExpanderVisitor(LocalVariableHelper lvs,
-                             String className, String methodName,
-                             String desc) {
-        super(Opcodes.ASM5, (MethodVisitor)lvs);
-        this.lvs = lvs;
+    public TemplateExpanderVisitor(MethodVisitor mv, MethodInstrumentorHelper mHelper, String className, String methodName, String desc) {
+        super(mv, mHelper);
 
-        this.expanders.add(new MethodTrackingExpander(MethodID.getMethodId(className, methodName, desc)));
+        this.expanders.add(new MethodTrackingExpander(MethodID.getMethodId(className, methodName, desc), mHelper));
         this.className = className;
         this.methodName = methodName;
         this.desc = desc;
-        this.asm = new Assembler((MethodVisitor)lvs);
+        this.asm = new Assembler(mv, mHelper);
     }
 
     public Assembler asm() {
         return asm;
-    }
-
-    @Override
-    public int storeNewLocal(Type type) {
-        expandTemplate(null);
-        return lvs.storeNewLocal(type);
     }
 
     @Override

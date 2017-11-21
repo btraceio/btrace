@@ -25,9 +25,10 @@
 
 package com.sun.btrace.runtime.instr;
 
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import com.sun.btrace.runtime.InstrumentUtils;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 
 /**
  * This visitor helps in inserting code whenever an array
@@ -38,11 +39,12 @@ import com.sun.btrace.util.LocalVariableHelper;
  * @author A. Sundararajan
  */
 public class ArrayAllocInstrumentor extends MethodInstrumentor {
-    public ArrayAllocInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, parentClz, superClz, access, name, desc);
+    public ArrayAllocInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitIntInsn(int opcode, int operand) {
         String desc = null;
         if (opcode == NEWARRAY) {
@@ -55,6 +57,7 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
         }
     }
 
+    @Override
     public void visitTypeInsn(int opcode, String desc) {
         if (opcode == ANEWARRAY) {
             onBeforeArrayNew("L" + desc + ";", 1);
@@ -65,6 +68,7 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
         }
     }
 
+    @Override
     public void visitMultiANewArrayInsn(String desc, int dims) {
         String type = getPlainType(desc);
         onBeforeArrayNew(type, dims);
@@ -82,7 +86,7 @@ public class ArrayAllocInstrumentor extends MethodInstrumentor {
     }
 
     private String getPlainType(String desc) {
-        int index = desc.lastIndexOf("[") + 1;
+        int index = desc.lastIndexOf('[') + 1;
         if (index > 0) {
             return desc.substring(index);
         }

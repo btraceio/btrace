@@ -41,10 +41,12 @@ public class EventCommand extends Command {
         this(null);
     }
     
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeUTF(event);
     }
 
+    @Override
     protected void read(ObjectInput in) 
                    throws ClassNotFoundException, IOException {
         event = in.readUTF();

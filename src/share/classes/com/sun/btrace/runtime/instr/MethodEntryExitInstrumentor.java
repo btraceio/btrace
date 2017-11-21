@@ -25,7 +25,8 @@
 
 package com.sun.btrace.runtime.instr;
 
-import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 
 /**
  * Instruments method entry and exit points. For exit, both normal and abnormal
@@ -35,11 +36,12 @@ import com.sun.btrace.util.LocalVariableHelper;
  * @author A. Sundararajan
  */
 public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
-    public MethodEntryExitInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, parentClz, superClz, access, name, desc);
+    public MethodEntryExitInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                        String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     protected void onMethodReturn(int opcode) {
         asm.println("on method return");
     }

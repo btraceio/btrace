@@ -41,6 +41,7 @@ import com.sun.btrace.annotations.Sampled;
 public final class OnMethod extends SpecialParameterHolder {
     private String clazz;
     private String method = "";
+    private boolean exactTypeMatch;
     private String type = "";
     private Location loc = new Location();
     // target method name on which this annotation is specified
@@ -59,6 +60,8 @@ public final class OnMethod extends SpecialParameterHolder {
 
     private com.sun.btrace.runtime.Level level = null;
 
+    private boolean isCalled = false;
+
     private BTraceMethodNode bmn;
 
     public OnMethod() {
@@ -73,6 +76,7 @@ public final class OnMethod extends SpecialParameterHolder {
         super.copyFrom(other);
         setClazz(other.getClazz());
         setMethod(other.getMethod());
+        setExactTypeMatch(other.isExactTypeMatch());
         setType(other.getType());
         setLocation(other.getLocation());
         setLevel(other.getLevel());
@@ -122,6 +126,14 @@ public final class OnMethod extends SpecialParameterHolder {
             this.methodRegexMatcher = false;
         }
         this.method = method;
+    }
+
+    public boolean isExactTypeMatch() {
+        return exactTypeMatch;
+    }
+
+    public void setExactTypeMatch(boolean exactTypeMatch) {
+        this.exactTypeMatch = exactTypeMatch;
     }
 
     public String getType() {
@@ -202,6 +214,14 @@ public final class OnMethod extends SpecialParameterHolder {
 
     public boolean isSubtypeMatcher() {
         return subtypeMatcher;
+    }
+
+    public boolean isCalled() {
+        return isCalled;
+    }
+
+    public void setCalled() {
+        isCalled = true;
     }
 
     @Override

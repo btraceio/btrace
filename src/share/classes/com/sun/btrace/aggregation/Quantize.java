@@ -111,6 +111,7 @@ class Quantize implements AggregationValue {
         }
     }
 
+    @Override
     public HistogramData getData() {
         int minIndex = buckets.length;
         int maxIndex = -1;

@@ -25,8 +25,9 @@
 
 package com.sun.btrace.runtime.instr;
 
+import com.sun.btrace.org.objectweb.asm.MethodVisitor;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
-import com.sun.btrace.util.LocalVariableHelper;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 
 /**
  * This visitor helps in inserting code whenever an field access
@@ -39,11 +40,12 @@ import com.sun.btrace.util.LocalVariableHelper;
 public class FieldAccessInstrumentor extends MethodInstrumentor {
     protected boolean isStaticAccess = false;
 
-    public FieldAccessInstrumentor(LocalVariableHelper mv, String parentClz, String superClz,
-        int access, String name, String desc) {
-        super(mv, parentClz, superClz, access, name, desc);
+    public FieldAccessInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+                                    String parentClz, String superClz, int access, String name, String desc) {
+        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
     }
 
+    @Override
     public void visitFieldInsn(int opcode, String owner,
         String name, String desc) {
         boolean get;
@@ -53,11 +55,7 @@ public class FieldAccessInstrumentor extends MethodInstrumentor {
             return;
         }
 
-        if (opcode == GETFIELD || opcode == GETSTATIC) {
-            get = true;
-        } else {
-            get = false;
-        }
+        get = opcode == GETFIELD || opcode == GETSTATIC;
         isStaticAccess = (opcode == GETSTATIC || opcode == PUTSTATIC);
 
         if (get) {

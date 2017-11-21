@@ -33,8 +33,6 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.OnProbe;
 import com.sun.btrace.annotations.Where;
-import com.sun.btrace.AnyType;
-import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.*;
 import com.sun.btrace.org.objectweb.asm.Type;
@@ -52,6 +50,9 @@ public abstract class Constants {
     public static final String CONSTRUCTOR = "<init>";
     public static final String CLASS_INITIALIZER = "<clinit>";
 
+    public static final Type NULL_TYPE = Type.getType("$$null");
+    public static final Type TOP_TYPE = Type.getType("$$top");
+
     public static final Type VOIDREF_TYPE = Type.getType("Ljava/lang/Void;");
 
     public static final String OBJECT_INTERNAL = "java/lang/Object";
@@ -68,6 +69,10 @@ public abstract class Constants {
     public static final String STRING_INTERNAL = "java/lang/String";
     public static final String STRING_DESC = "L" + STRING_INTERNAL + ";";
     public static final Type STRING_TYPE = Type.getType(STRING_DESC);
+
+    public static final String STRING_BUILDER_INTERNAL = "java/lang/StringBuilder";
+    public static final String STRING_BUILDER_DESC = "L" + STRING_BUILDER_INTERNAL + ";";
+    public static final Type STRING_BUILDER_TYPE = Type.getType(STRING_BUILDER_DESC);
 
     public static final String VOID_DESC = "V";
     public static final String BOOLEAN_DESC = "Z";
@@ -112,6 +117,8 @@ public abstract class Constants {
         Type.getDescriptor(OnExit.class);
     public static final String ONERROR_DESC =
         Type.getDescriptor(OnError.class);
+    public static final String ONLOWMEMORY_DESC =
+        Type.getDescriptor(OnLowMemory.class);
 
     public static final String SAMPLED_DESC =
         Type.getDescriptor(Sampled.class);

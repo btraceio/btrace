@@ -34,14 +34,20 @@ import com.sun.btrace.runtime.Assembler;
 import com.sun.btrace.runtime.Level;
 import com.sun.btrace.runtime.OnMethod;
 import com.sun.btrace.runtime.TypeUtils;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
+import com.sun.btrace.runtime.BTraceMethodVisitor;
 import static com.sun.btrace.runtime.Constants.*;
+import com.sun.btrace.runtime.InstrumentUtils;
+import com.sun.btrace.runtime.MethodInstrumentorHelper;
 import com.sun.btrace.util.Interval;
-import com.sun.btrace.util.LocalVariableHelper;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,7 +55,7 @@ import java.util.Map;
  *
  * @author A. Sundararajan
  */
-public class MethodInstrumentor extends MethodVisitor implements LocalVariableHelper {
+public class MethodInstrumentor extends BTraceMethodVisitor {
     protected int levelCheckVar = Integer.MIN_VALUE;
     protected void visitMethodPrologue() {
     }
@@ -96,10 +102,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             if (this.isValid != other.isValid) {
                 return false;
             }
-            if (!Arrays.equals(this.argsIndex, other.argsIndex)) {
-                return false;
-            }
-            return true;
+            return Arrays.equals(this.argsIndex, other.argsIndex);
         }
 
         @Override
@@ -241,22 +244,22 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
     private final String superClz;
     private final String name;
     private final String desc;
+    private final ClassLoader cl;
     private Type returnType;
     private Type[] argumentTypes;
     private Map<Integer, Type> extraTypes;
     private Label skipLabel;
     private boolean prologueVisited = false;
 
-    private final LocalVariableHelper lvt;
     protected final Assembler asm;
 
     protected MethodInstrumentor parent = null;
 
     public MethodInstrumentor(
-        LocalVariableHelper lvt, String parentClz,
-        String superClz, int access, String name, String desc
+        ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
+        String parentClz, String superClz, int access, String name, String desc
     ) {
-        super(ASM5, (MethodVisitor)lvt);
+        super(mv, mHelper);
         this.parentClz = parentClz;
         this.superClz = superClz;
         this.access = access;
@@ -265,11 +268,8 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         this.returnType = Type.getReturnType(desc);
         this.argumentTypes = Type.getArgumentTypes(desc);
         extraTypes = new HashMap<>();
-        this.lvt = lvt;
-        if (lvt instanceof MethodInstrumentor) {
-            ((MethodInstrumentor)lvt).parent = this;
-        }
-        this.asm = new Assembler(this);
+        this.asm = new Assembler(this, mHelper);
+        this.cl = cl;
     }
 
     @Override
@@ -337,11 +337,6 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         return sb.toString();
     }
 
-    @Override
-    public int storeNewLocal(Type type) {
-        return lvt.storeNewLocal(type);
-    }
-
     public final Label getSkipLabel() {
         return skipLabel;
     }
@@ -372,6 +367,33 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         }
     }
 
+    protected void loadArguments(ValidationResult vr, Type[] actionArgTypes, boolean isStatic, ArgumentProvider ... argumentProviders) {
+        int ptr = isStatic ? 0 : 1;
+        List<ArgumentProvider> argProvidersList = new ArrayList<>(argumentProviders.length + vr.getArgCnt());
+        argProvidersList.addAll(Arrays.asList(argumentProviders));
+        for(int i=0;i<vr.getArgCnt();i++) {
+            int index = vr.getArgIdx(i);
+            Type t = actionArgTypes[index];
+            if (TypeUtils.isAnyTypeArray(t)) {
+                argProvidersList.add(anytypeArg(index, ptr));
+                ptr++;
+            } else {
+                argProvidersList.add(localVarArg(index, t, ptr));
+                ptr += actionArgTypes[index].getSize();
+            }
+        }
+        loadArguments(argProvidersList);
+    }
+
+    private void loadArguments(List<ArgumentProvider> argumentProviders) {
+        Collections.sort(argumentProviders, ArgumentProvider.COMPARATOR);
+        for (ArgumentProvider ap : argumentProviders) {
+            if (ap != null) {
+                ap.provide();
+            }
+        }
+    }
+
     public void loadThis() {
         if ((access & ACC_STATIC) != 0) {
             throw new IllegalStateException("no 'this' inside static method");
@@ -383,13 +405,14 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         int[] backupArgsIndexes = new int[methodArgTypes.length + 1];
         int upper = methodArgTypes.length - 1;
 
-            for (int i = 0; i < methodArgTypes.length; i++) {
-                int index = lvt.storeNewLocal(methodArgTypes[upper - i]);
-                backupArgsIndexes[upper -  i + 1] = index;
-            }
+        for (int i = 0; i < methodArgTypes.length; i++) {
+            Type t = methodArgTypes[upper -i];
+            int index = storeAsNew();
+            backupArgsIndexes[upper -  i + 1] = index;
+        }
 
         if (!isStatic) {
-            int index = lvt.storeNewLocal(OBJECT_TYPE); // store *callee*
+            int index = storeAsNew(); // store *callee*
             backupArgsIndexes[0] = index;
         }
         return backupArgsIndexes;
@@ -465,7 +488,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
                     return ValidationResult.INVALID;
                 }
             } else {
-                if (!TypeUtils.isCompatible(actionArgTypes[om.getSelfParameter()], selfType)) {
+                if (!InstrumentUtils.isAssignable(actionArgTypes[om.getSelfParameter()], selfType, cl, om.isExactTypeMatch())) {
                     report("Invalid @Self parameter. @Self parameter is not compatible. Expected " + selfType + ", Received " + actionArgTypes[om.getSelfParameter()]);
                     return ValidationResult.INVALID;
                 }
@@ -483,7 +506,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
                     return ValidationResult.INVALID;
                 }
             } else {
-                if (!TypeUtils.isCompatible(actionArgTypes[om.getReturnParameter()], type)) {
+                if (!InstrumentUtils.isAssignable(actionArgTypes[om.getReturnParameter()], type, cl, om.isExactTypeMatch())) {
                     report("Invalid @Return parameter. Expected '" + returnType + ", received " + actionArgTypes[om.getReturnParameter()]);
                     return ValidationResult.INVALID;
                 }
@@ -491,7 +514,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             specialArgsCount++;
         }
         if (om.getTargetMethodOrFieldParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getTargetMethodOrFieldParameter()], STRING_TYPE))) {
+            if (!(InstrumentUtils.isAssignable(actionArgTypes[om.getTargetMethodOrFieldParameter()], STRING_TYPE, cl, om.isExactTypeMatch()))) {
                 report("Invalid @TargetMethodOrField parameter. Expected " + STRING_TYPE + ", received " + actionArgTypes[om.getTargetMethodOrFieldParameter()]);
                 return ValidationResult.INVALID;
             }
@@ -505,7 +528,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
                     return ValidationResult.INVALID;
                 }
             } else {
-                if (!TypeUtils.isCompatible(actionArgTypes[om.getTargetInstanceParameter()], calledType)) {
+                if (!InstrumentUtils.isAssignable(actionArgTypes[om.getTargetInstanceParameter()], calledType, cl, om.isExactTypeMatch())) {
                     report("Invalid @TargetInstance parameter. Expected " + OBJECT_TYPE + ", received " + actionArgTypes[om.getTargetInstanceParameter()]);
                     return ValidationResult.INVALID;
                 }
@@ -513,19 +536,19 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             specialArgsCount++;
         }
         if (om.getDurationParameter() != -1) {
-            if (actionArgTypes[om.getDurationParameter()] != Type.LONG_TYPE) {
+            if (!actionArgTypes[om.getDurationParameter()].equals(Type.LONG_TYPE)) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
         if (om.getClassNameParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getClassNameParameter()], STRING_TYPE))) {
+            if (!(InstrumentUtils.isAssignable(actionArgTypes[om.getClassNameParameter()], STRING_TYPE, cl, om.isExactTypeMatch()))) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
         }
         if (om.getMethodParameter() != -1) {
-            if (!(TypeUtils.isCompatible(actionArgTypes[om.getMethodParameter()], STRING_TYPE))) {
+            if (!(InstrumentUtils.isAssignable(actionArgTypes[om.getMethodParameter()], STRING_TYPE, cl, om.isExactTypeMatch()))) {
                 return ValidationResult.INVALID;
             }
             specialArgsCount++;
@@ -553,7 +576,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
         } else {
             if (cleansedArgArray.length > 0) {
                 if (!TypeUtils.isAnyTypeArray(cleansedArgArray[0]) &&
-                    !TypeUtils.isCompatible(cleansedArgArray, methodArgTypes)) {
+                    !InstrumentUtils.isAssignable(cleansedArgArray, methodArgTypes, cl, om.isExactTypeMatch())) {
                     return ValidationResult.INVALID;
                 }
             }
@@ -569,7 +592,7 @@ public class MethodInstrumentor extends MethodVisitor implements LocalVariableHe
             if (saveResult) {
                 // must store the level in a local var to be consistent
                 asm.compareLevel(className, level).dup();
-                levelCheckVar = storeNewLocal(Type.INT_TYPE);
+                levelCheckVar = storeAsNew();
                 asm.jump(Opcodes.IFLT, l);
             } else {
                 asm.addLevelCheck(className, level, l);

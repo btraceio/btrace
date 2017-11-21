@@ -63,7 +63,7 @@ public class HistogramData implements Serializable {
 
         p.println("          value  ------------- Distribution ------------- count");
         for (int i = 0; i < values.length; i++) {
-            p.print(String.format("%15d", Long.valueOf(values[i])));
+            p.print(String.format("%15d", values[i]));
             p.print(" |");
             long lineLength = (40 * counts[i]) / totalCount;
             for (int j = 0; j < 40; j++) {

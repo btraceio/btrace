@@ -41,10 +41,12 @@ public class RenameCommand extends Command {
         this(null);
     }
     
+    @Override
     protected void write(ObjectOutput out) throws IOException {
         out.writeUTF(newName);
     }
 
+    @Override
     protected void read(ObjectInput in) throws IOException {
         newName = in.readUTF();
     }
