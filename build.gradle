@@ -114,7 +114,7 @@ def osFamily = props['os.family']
 def osName = props['os.name']
 
 def asmVersion = '5.2'
-def jcToolsVersion = '2.0.1'
+def jcToolsVersion = '2.1.1'
 def junitVersion = '4.6'
 
 def agentExcludes = ['**/dtrace/*', '**/btrace/*.class', '**/asm/signature/**', \
@@ -281,7 +281,6 @@ task buildTraces(type: Exec) {
     executable "bin/${btracec}"
     args "-cp ${buildDir}/classes/java/test"
     args "-d ${buildDir}/classes/"
-    args "--pack"
     args fileTree(dir: "src/test/traces", include: '**/*.java', exclude: 'verifier/**/*.java')
 }
 
