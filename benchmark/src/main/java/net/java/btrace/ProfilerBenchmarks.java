@@ -125,7 +125,7 @@ public class ProfilerBenchmarks {
 
     public static void main(String[] args) throws Exception {
         Options opt = new OptionsBuilder()
-                .addProfiler("perfasm")
+                .addProfiler("stack")
                 .verbosity(VerboseMode.NORMAL)
                 .include(".*" + ProfilerBenchmarks.class.getSimpleName() + ".*test.*")
                 .build();
