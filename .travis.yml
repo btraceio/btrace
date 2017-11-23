@@ -9,7 +9,7 @@ cache:
 language: java
 jdk:
 - oraclejdk8
-- openjdk7
+
 notifications:
   webhooks:
     urls: https://webhooks.gitter.im/e/31a671345ecfdce18046
