@@ -467,7 +467,7 @@ public final class Main {
                 while (tokenizer.hasMoreTokens()) {
                     String path = tokenizer.nextToken();
                     File f = new File(path);
-                    if (f.exists()) {
+                    if (!f.exists()) {
                         debug.warning("BTrace bootstrap classpath resource [ " + path + "] does not exist");
                     } else {
                         if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
