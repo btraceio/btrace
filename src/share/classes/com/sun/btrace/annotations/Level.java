@@ -26,7 +26,8 @@ package com.sun.btrace.annotations;
 
 /**
  * Allows specifying a probe handler instrumentation level matching expression.
- * <p>See {@linkplain Level#value()} for the allowed expression syntax.</p>
+ * <p>
+ * See {@linkplain Level#value()} for the allowed expression syntax.
  *
  * @author Jaroslav Bachorik
  */
@@ -47,10 +48,7 @@ public @interface Level {
      * <li>{@code @Level("<=NUMBER")} - handler is enabled when instrumentation level
      *     is less than or equal to <b>NUMBER</b></li>
      * </ul>
-     * </p>
      * <p>Where <b>NUMBER</b> is a non-negative integer number.
-     *
-     * @return
      */
     String value() default "";
 }

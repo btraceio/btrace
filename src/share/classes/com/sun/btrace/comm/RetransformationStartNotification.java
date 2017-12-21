@@ -32,9 +32,9 @@ import java.lang.instrument.Instrumentation;
 
 /**
  * This command is sent out when the BTrace engine calls
- * {@linkplain Instrumentation#retransformClasses(java.lang.Class<?>[])} method.
+ * {@linkplain Instrumentation#retransformClasses(Class[])} method.
  * It is followed by {@linkplain OkayCommand} command when the retransformation ends.
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class RetransformationStartNotification extends Command {
     private int numClasses;

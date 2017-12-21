@@ -9,7 +9,7 @@ import com.sun.btrace.api.BTraceSettings;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 public interface BTraceSettingsProvider {
     BTraceSettings getSettings();

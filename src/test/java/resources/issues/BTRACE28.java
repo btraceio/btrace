@@ -27,7 +27,7 @@ package resources.issues;
 
 /**
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class BTRACE28 {
     private void serveResource(String param1, String param2) {

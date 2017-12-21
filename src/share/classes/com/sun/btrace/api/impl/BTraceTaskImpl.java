@@ -24,26 +24,19 @@
  */
 package com.sun.btrace.api.impl;
 
-import com.sun.btrace.comm.Command;
+import com.sun.btrace.api.BTraceEngine;
+import com.sun.btrace.api.BTraceTask;
+import com.sun.btrace.comm.*;
+
 import java.io.File;
-import java.io.PrintWriter;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import com.sun.btrace.api.BTraceEngine;
-import com.sun.btrace.api.BTraceTask;
-import com.sun.btrace.comm.ErrorCommand;
-import com.sun.btrace.comm.GridDataCommand;
-import com.sun.btrace.comm.MessageCommand;
-import com.sun.btrace.comm.NumberDataCommand;
-import com.sun.btrace.comm.NumberMapDataCommand;
-import com.sun.btrace.comm.RetransformClassNotification;
-import com.sun.btrace.comm.StringMapDataCommand;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  *
@@ -154,7 +147,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     }
 
     /**
-     * Listener management (can use {@linkplain WeakListeners} to create a new listener)
+     * Listener management
      * @param listener {@linkplain StateListener} instance to add
      */
     @Override
@@ -176,8 +169,8 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     }
 
     /**
-     * Dispatcher management (can use {@linkplain WeakListeners} to create a new listener)
-     * @param dispatcher {@linkplain StateListener} instance to add
+     * Dispatcher management
+     * @param dispatcher {@linkplain com.sun.btrace.api.BTraceTask.MessageDispatcher} instance to add
      */
     @Override
     public void addMessageDispatcher(MessageDispatcher dispatcher) {
@@ -188,7 +181,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
 
     /**
      * Dispatcher management
-     * @param dispatcher {@linkplain StateListener} instance to remove
+     * @param dispatcher {@linkplain com.sun.btrace.api.BTraceTask.MessageDispatcher} instance to remove
      */
     @Override
     public void removeMessageDispatcher(MessageDispatcher dispatcher) {
@@ -221,7 +214,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     }
 
     /**
-     * @see BTraceEngine.StateListener#onTaskStart(net.java.visualvm.btrace.api.BTraceTask)
+     * @see com.sun.btrace.api.impl.BTraceEngineImpl.StateListener#onTaskStart(BTraceTask)
      */
     @Override
     public void onTaskStart(BTraceTask task) {
@@ -231,7 +224,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     }
 
     /**
-     * @see BTraceEngine.StateListener#onTaskStop(net.java.visualvm.btrace.api.BTraceTask)
+     * @see com.sun.btrace.api.impl.BTraceEngineImpl.StateListener#onTaskStop(BTraceTask)
      */
     @Override
     public void onTaskStop(BTraceTask task) {

@@ -172,7 +172,6 @@ public class Aggregation implements Cloneable {
     /**
      * Returns a value for the given key if the key has a value associated with it. Returns zero if the key is not
      * valid for this Aggregation.
-     * @param key
      * @return the value for the given key, or zero.
      */
     public Long getValueForKey(AggregationKey key) {

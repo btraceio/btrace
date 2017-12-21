@@ -57,7 +57,6 @@ public final class ClassCache {
      * created and put into the cache.
      * @param cl The associated {@linkplain ClassLoader}
      * @param className The Java class name or internal class name
-     * @return
      */
     public ClassInfo get(ClassLoader cl, String className) {
         return get(cl, new ClassName(className));

@@ -10,7 +10,7 @@ import java.io.PrintWriter;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 public interface OutputProvider {
     @SuppressWarnings("DefaultCharset")

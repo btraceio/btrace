@@ -30,7 +30,7 @@ import java.util.Map;
 
 /**
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class DerivedClass extends AbstractClass {
     private static volatile String defaultString;

@@ -28,7 +28,7 @@ package com.sun.btrace.comm;
 /**
  * Command that carries arbitrary "result/output" data.
  *
- * @author A> Sundararajan
+ * @author Sundararajan
  */
 public abstract class DataCommand extends Command implements PrintableCommand {
     protected String name;

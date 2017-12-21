@@ -38,7 +38,6 @@ import java.lang.annotation.Target;
 public @interface Injected {
     /**
      * The injected service type
-     * @return
      */
     ServiceType value() default ServiceType.SIMPLE;
     /**

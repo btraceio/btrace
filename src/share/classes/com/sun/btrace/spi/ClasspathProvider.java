@@ -11,7 +11,7 @@ import java.util.Collections;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 public interface ClasspathProvider {
     public static final ClasspathProvider EMPTY = new ClasspathProvider() {

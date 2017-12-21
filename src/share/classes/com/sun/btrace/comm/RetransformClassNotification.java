@@ -33,7 +33,7 @@ import java.io.PrintWriter;
 /**
  * This command is sent out as a notification that a class
  * is going to be transformed
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class RetransformClassNotification extends Command implements PrintableCommand {
     private String className;

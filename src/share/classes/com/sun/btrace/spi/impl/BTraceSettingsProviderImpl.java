@@ -10,7 +10,7 @@ import com.sun.btrace.spi.BTraceSettingsProvider;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 final public class BTraceSettingsProviderImpl implements BTraceSettingsProvider {
     private final BTraceSettings bs = new BTraceSettings() {
