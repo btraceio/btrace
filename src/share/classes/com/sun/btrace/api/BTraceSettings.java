@@ -7,7 +7,7 @@ package com.sun.btrace.api;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 abstract public class BTraceSettings {
     abstract public boolean isDebugMode();

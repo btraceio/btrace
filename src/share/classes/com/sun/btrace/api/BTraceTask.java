@@ -38,7 +38,7 @@ import java.util.Set;
  * <pre>
  * BTraceEngine.sharedInstance().createTask(PID)
  * </pre>
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public abstract class BTraceTask {
     /**
@@ -109,7 +109,7 @@ public abstract class BTraceTask {
     }
 
     /**
-     * Listener management (can use {@linkplain WeakListeners} to create a new listener)
+     * Listener management
      * @param listener {@linkplain BTraceTask.StateListener} instance to add
      */
     abstract public void addStateListener(StateListener listener);

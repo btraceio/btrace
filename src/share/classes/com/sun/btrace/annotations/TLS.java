@@ -35,10 +35,10 @@ import java.lang.annotation.Target;
  * annotated with this annotation are stored in thread local
  * storage. Field get/set are transparently converted to
  * thread local get and set respectively.
- * <p><h3>Important!!!</h3>
+ *
+ * <h3>Important!!!</h3>
  * It is not possible to access the data stored in the thread local storage
  * from any other handler than {@linkplain OnMethod}
- * </p>
  *
  * @author A. Sundararajan
  */

@@ -251,8 +251,10 @@ task unjar(type: Copy) {
 
         title = "btrace-${name}"
         source = sourceSets.main.allJava
-        destinationDir = reporting.file(name)
+        destinationDir = file("${project.docsDir}/${name}/javadoc")
+        classpath = files(compileJava.destinationDir) + configurations.compile.asFileTree
         exclude excludes["${name}"]
+        options.addStringOption('Xdoclint:all,-missing', '-quiet')
         failOnError false
     }
 
@@ -265,6 +267,13 @@ task unjar(type: Copy) {
         classifier 'javadoc'
         from tasks["${name}Javadoc"].getOutputs()
     }
+}
+
+
+javadoc {
+    classpath = files(compileJava.destinationDir) + configurations.compile.asFileTree
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+    failOnError false
 }
 
 

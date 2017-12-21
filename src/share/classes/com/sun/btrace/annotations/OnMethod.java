@@ -93,10 +93,9 @@ public @interface OnMethod {
      * This is method type declaration. This is like Java method
      * declaration but not including method name, parameter
      * names and throws clause.
-     * * <p>
+     * <p>
      * Eg. <b>public void myMethod(java.lang.String param)</b> will become
      * <b><i>void (java.lang.String)</i></b>
-     * </p>
      */
     String type() default "";
 
@@ -113,12 +112,10 @@ public @interface OnMethod {
      * It is possible to define enable/disable the handler according to the
      * current instrumentation level. Eg. {@code @OnMethod(clazz="class",
      * method="method", enableAt=@Level(">1")}
-     * </p>
      * <p>
      * The developer must make sure that all the handlers which are interconnected
      * in any way (eg. method entry/exit) will be enabled/disabled at a compatible
      * instrumentation level.
-     * </p>
      *
      * @return The instrumentation level (default {@code @Level("0")})
      * @see Level

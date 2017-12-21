@@ -45,7 +45,6 @@ public interface TemplateExpander {
 
     /**
      * A knockoff of the java.util.function.Consumer interface for pre-8 usage
-     * @param <T>
      */
     public static interface Consumer<T> {
         void consume(T visitor);

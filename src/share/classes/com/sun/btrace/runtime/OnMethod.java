@@ -31,7 +31,7 @@ import com.sun.btrace.annotations.Sampled;
  * This class is used to store data of the annotation
  * com.sun.btrace.annotations.OnMethod. We can not read the
  * OnMethod annotation using reflection API [because we strip
- * @OnMethod annotated methods before defineClass]. Instead,
+ * {@code @OnMethod} annotated methods before defineClass]. Instead,
  * we read OnMethod annotation while parsing the BTrace class and
  * store the data in an instance of this class. Please note that
  * the get/set methods have to be in sync with OnMethod annotation.

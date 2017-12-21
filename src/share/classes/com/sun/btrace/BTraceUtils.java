@@ -25,34 +25,30 @@
 
 package com.sun.btrace;
 
-import com.sun.btrace.annotations.ProbeClassName;
-import com.sun.btrace.annotations.ProbeMethodName;
-import com.sun.btrace.annotations.Self;
-import java.lang.reflect.Modifier;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.regex.PatternSyntaxException;
-import sun.reflect.Reflection;
 import com.sun.btrace.aggregation.Aggregation;
 import com.sun.btrace.aggregation.AggregationFunction;
 import com.sun.btrace.aggregation.AggregationKey;
 import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.ProbeClassName;
+import com.sun.btrace.annotations.ProbeMethodName;
+import com.sun.btrace.annotations.Self;
+import sun.reflect.Reflection;
+
 import java.io.Serializable;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.lang.reflect.Modifier;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * This class is an all-in-one wrapper for BTrace DSL methods
@@ -395,7 +391,7 @@ public class BTraceUtils {
      * <cite>Note: this method can be rather CPU intensive, use with caution</cite>
      * @param obj the object to check
      * @param className the class name; as a special case {@code void} can be provided
-     *                  to check whether the instance is a void value wrapper - {@linkplain AnyType.VOID}
+     *                  to check whether the instance is a void value wrapper - {@linkplain AnyType#VOID}
      * @return {@code true} if the object can be assigned to an instance of 'className' type
      *
      * @since 1.3.5
@@ -1231,9 +1227,9 @@ public class BTraceUtils {
     }
 
     /**
-     * <p>Generates a string getTimestamp (current date&time)
+     * <p>Generates a string getTimestamp (current date&amp;time)
      * @param format The format to be used - see {@linkplain SimpleDateFormat}
-     * @return Returns a string representing current date&time
+     * @return Returns a string representing current date&amp;time
      * @since 1.1
      */
     public static String timestamp(String format) {
@@ -1241,8 +1237,8 @@ public class BTraceUtils {
     }
 
     /**
-     * <p>Generates a string getTimestamp (current date&time) in the default system format
-     * @return Returns a string representing current date&time
+     * <p>Generates a string getTimestamp (current date&amp;time) in the default system format
+     * @return Returns a string representing current date&amp;time
      * @since 1.1
      */
     public static String timestamp() {
@@ -1371,7 +1367,7 @@ public class BTraceUtils {
     // regular expression matching
 
     /**
-     * Compiles the given regular expression into a pattern.  </p>
+     * Compiles the given regular expression into a pattern.
      *
      * @param  regex
      *         The expression to be compiled
@@ -1394,7 +1390,7 @@ public class BTraceUtils {
 
     /**
      * Compiles the given regular expression into a pattern with the given
-     * flags.  </p>
+     * flags.
      *
      * @param  regex
      *         The expression to be compiled
@@ -1447,8 +1443,9 @@ public class BTraceUtils {
      * <blockquote><pre>
      * Pattern.compile(regex).matcher(input).matches()</pre></blockquote>
      *
-     * <p> If a pattern is to be used multiple times, compiling it once and reusing
-     * it will be more efficient than invoking this method each time.  </p>
+     * <p>
+     * If a pattern is to be used multiple times, compiling it once and reusing
+     * it will be more efficient than invoking this method each time.
      *
      * @param  regex
      *         The expression to be compiled
@@ -2271,8 +2268,10 @@ public class BTraceUtils {
 
     /**
      * Sets the current instrumentation level.
-     * <p>Instrumentation level is used in evaluating {@linkplain OnMethod#enableAt()}
-     * expressions to enable/disable the probe handler.</p>
+     * <p>
+     * Instrumentation level is used in evaluating {@linkplain OnMethod#enableAt()}
+     * expressions to enable/disable the probe handler.
+     *
      * @param level an arbitrary non negative integer number
      *
      * @since 1.3.4
@@ -2285,8 +2284,10 @@ public class BTraceUtils {
 
     /**
      * Returns the current instrumentation level.
-     * <p>Instrumentation level is used in evaluating {@linkplain OnMethod#enableAt()}
-     * expressions to enable/disable the probe handler.</p>
+     * <p>
+     * Instrumentation level is used in evaluating {@linkplain OnMethod#enableAt()}
+     * expressions to enable/disable the probe handler.
+     *
      * @return the instrumentation level (non negative integer)
      *
      * @since 1.3.4
@@ -2712,11 +2713,11 @@ public class BTraceUtils {
 
     /**
      * Returns the number of processors available to the Java virtual machine.
-     *
-     * <p> This value may change during a particular invocation of the virtual
+     * <p>
+     * This value may change during a particular invocation of the virtual
      * machine.  Applications that are sensitive to the number of available
      * processors should therefore occasionally poll this property and adjust
-     * their resource usage appropriately. </p>
+     * their resource usage appropriately.
      *
      * @return  the maximum number of processors available to the virtual
      *          machine; never smaller than one
@@ -2757,7 +2758,7 @@ public class BTraceUtils {
     /**
      * Returns the maximum amount of memory that the Java virtual machine will
      * attempt to use.  If there is no inherent limit then the value {@link
-     * java.lang.Long#MAX_VALUE} will be returned. </p>
+     * java.lang.Long#MAX_VALUE} will be returned.
      *
      * @return  the maximum amount of memory that the virtual machine will
      *          attempt to use, measured in bytes
@@ -3012,7 +3013,7 @@ public class BTraceUtils {
     /**
      * Dump the snapshot of the Java heap to a file in hprof
      * binary format. Only the live objects are dumped.
-     * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+     * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
      * directory is created. Under that directory, a file of given
      * fileName is created.
      *
@@ -3025,7 +3026,7 @@ public class BTraceUtils {
     /**
      * Dump the snapshot of the Java heap to a file in hprof
      * binary format.
-     * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+     * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
      * directory is created. Under that directory, a file of given
      * fileName is created.
      *
@@ -3046,7 +3047,6 @@ public class BTraceUtils {
      * When control returns from the method call, the Java Virtual
      * Machine has made a best effort to reclaim space from all discarded
      * objects. This method calls Sys.gc() to perform GC.
-     * </p>
      */
     public static void gc() {
         Sys.Memory.gc();
@@ -3062,7 +3062,6 @@ public class BTraceUtils {
      * method call, the Java Virtual Machine has made a best effort to
      * complete all outstanding finalizations. This method calls
      * Sys.runFinalization() to run finalization.
-     * </p>
      */
     public static void runFinalization() {
         Sys.Memory.runFinalization();
@@ -3070,7 +3069,7 @@ public class BTraceUtils {
 
     /**
      * Serialize a given object into the given file.
-     * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+     * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
      * directory is created. Under that directory, a file of given
      * fileName is created.
      *
@@ -3092,7 +3091,7 @@ public class BTraceUtils {
     /**
      * Writes an XML document to persist the tree of the all the
      * transitively reachable objects from the given "root" object.
-     * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+     * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
      * directory is created. Under that directory, a file of the given
      * fileName is created.
      */
@@ -3104,7 +3103,7 @@ public class BTraceUtils {
      * Writes a .dot document to persist the tree of the all the
      * transitively reachable objects from the given "root" object.
      * .dot documents can be viewed by Graphviz application (www.graphviz.org)
-     * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+     * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
      * directory is created. Under that directory, a file of the given
      * fileName is created.
      * @since 1.1
@@ -3665,7 +3664,7 @@ public class BTraceUtils {
         // regular expression matching
 
         /**
-         * Compiles the given regular expression into a pattern.  </p>
+         * Compiles the given regular expression into a pattern.
          *
          * @param  regex
          *         The expression to be compiled
@@ -3688,7 +3687,7 @@ public class BTraceUtils {
 
         /**
          * Compiles the given regular expression into a pattern with the given
-         * flags.  </p>
+         * flags.
          *
          * @param  regex
          *         The expression to be compiled
@@ -3741,8 +3740,9 @@ public class BTraceUtils {
          * <blockquote><pre>
          * Pattern.compile(regex).matcher(input).matches()</pre></blockquote>
          *
-         * <p> If a pattern is to be used multiple times, compiling it once and reusing
-         * it will be more efficient than invoking this method each time.  </p>
+         * <p>
+         * If a pattern is to be used multiple times, compiling it once and reusing
+         * it will be more efficient than invoking this method each time.
          *
          * @param  regex
          *         The expression to be compiled
@@ -4534,9 +4534,9 @@ public class BTraceUtils {
         }
 
         /**
-         * <p>Generates a string timestamp (current date&time)
+         * <p>Generates a string timestamp (current date&amp;time)
          * @param format The format to be used - see {@linkplain SimpleDateFormat}
-         * @return Returns a string representing current date&time
+         * @return Returns a string representing current date&amp;time
          * @since 1.1
          */
         public static String timestamp(String format) {
@@ -4544,8 +4544,8 @@ public class BTraceUtils {
         }
 
         /**
-         * <p>Generates a string timestamp (current date&time) in the default system format
-         * @return Returns a string representing current date&time
+         * <p>Generates a string timestamp (current date&amp;time) in the default system format
+         * @return Returns a string representing current date&amp;time
          * @since 1.1
          */
         public static String timestamp() {
@@ -5552,7 +5552,7 @@ public class BTraceUtils {
          * Gets the value of an instance <code>byte</code> field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the <code>byte</code> value
+         * @param instance the object to extract the <code>byte</code> value
          * from
          * @return the value of the <code>byte</code> field
          *
@@ -5613,7 +5613,7 @@ public class BTraceUtils {
          * Gets the value of an instance <code>short</code> field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the <code>short</code> value
+         * @param instance the object to extract the <code>short</code> value
          * from
          * @return the value of the <code>short</code> field
          *
@@ -5674,7 +5674,7 @@ public class BTraceUtils {
          * Gets the value of an instance <code>int</code> field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the <code>int</code> value
+         * @param instance the object to extract the <code>int</code> value
          * from
          * @return the value of the <code>int</code> field
          *
@@ -5735,7 +5735,7 @@ public class BTraceUtils {
          * Gets the value of an instance <code>long</code> field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the <code>long</code> value
+         * @param instance the object to extract the <code>long</code> value
          * from
          * @return the value of the <code>long</code> field
          *
@@ -5796,7 +5796,7 @@ public class BTraceUtils {
          * Gets the value of an instance <code>float</code> field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the <code>float</code> value
+         * @param instance the object to extract the <code>float</code> value
          * from
          * @return the value of the <code>float</code> field
          *
@@ -5857,7 +5857,7 @@ public class BTraceUtils {
          * Gets the value of an instance <code>double</code> field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the <code>double</code> value
+         * @param instance the object to extract the <code>double</code> value
          * from
          * @return the value of the <code>double</code> field
          *
@@ -5918,7 +5918,7 @@ public class BTraceUtils {
          * Gets the value of an instance <code>boolean</code> field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the <code>boolean</code> value
+         * @param instance the object to extract the <code>boolean</code> value
          * from
          * @return the value of the <code>boolean</code> field
          *
@@ -5979,7 +5979,7 @@ public class BTraceUtils {
          * Gets the value of an instance <code>char</code> field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the <code>char</code> value
+         * @param instance the object to extract the <code>char</code> value
          * from
          * @return the value of the <code>char</code> field
          *
@@ -6040,7 +6040,7 @@ public class BTraceUtils {
          * Gets the value of an instance reference field.
          *
          * @param name name of the field whose value is returned.
-         * @param obj the object to extract the reference value
+         * @param instance the object to extract the reference value
          * from
          * @return the value of the reference field
          *
@@ -6130,7 +6130,7 @@ public class BTraceUtils {
     public static class Export {
         /**
          * Serialize a given object into the given file.
-         * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+         * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
          * directory is created. Under that directory, a file of given
          * fileName is created.
          *
@@ -6152,7 +6152,7 @@ public class BTraceUtils {
         /**
          * Writes an XML document to persist the tree of the all the
          * transitively reachable objects from the given "root" object.
-         * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+         * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
          * directory is created. Under that directory, a file of the given
          * fileName is created.
          */
@@ -6164,7 +6164,7 @@ public class BTraceUtils {
          * Writes a .dot document to persist the tree of the all the
          * transitively reachable objects from the given "root" object.
          * .dot documents can be viewed by Graphviz application (www.graphviz.org)
-         * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+         * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
          * directory is created. Under that directory, a file of the given
          * fileName is created.
          * @since 1.1
@@ -6249,11 +6249,11 @@ public class BTraceUtils {
 
             /**
              * Returns the number of processors available to the Java virtual machine.
-             *
-             * <p> This value may change during a particular invocation of the virtual
+             * <p>
+             * This value may change during a particular invocation of the virtual
              * machine.  Applications that are sensitive to the number of available
              * processors should therefore occasionally poll this property and adjust
-             * their resource usage appropriately. </p>
+             * their resource usage appropriately.
              *
              * @return  the maximum number of processors available to the virtual
              *          machine; never smaller than one
@@ -6300,7 +6300,7 @@ public class BTraceUtils {
             /**
              * Returns the maximum amount of memory that the Java virtual machine will
              * attempt to use.  If there is no inherent limit then the value {@link
-             * java.lang.Long#MAX_VALUE} will be returned. </p>
+             * java.lang.Long#MAX_VALUE} will be returned.
              *
              * @return  the maximum amount of memory that the virtual machine will
              *          attempt to use, measured in bytes
@@ -6368,7 +6368,7 @@ public class BTraceUtils {
             /**
              * Dump the snapshot of the Java heap to a file in hprof
              * binary format. Only the live objects are dumped.
-             * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+             * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
              * directory is created. Under that directory, a file of given
              * fileName is created.
              *
@@ -6381,7 +6381,7 @@ public class BTraceUtils {
             /**
              * Dump the snapshot of the Java heap to a file in hprof
              * binary format.
-             * Under the current dir of traced app, ./btrace&lt;pid>/&lt;btrace-class>/
+             * Under the current dir of traced app, ./btrace&lt;pid&gt;/&lt;btrace-class&gt;/
              * directory is created. Under that directory, a file of given
              * fileName is created.
              *
@@ -6402,7 +6402,6 @@ public class BTraceUtils {
              * When control returns from the method call, the Java Virtual
              * Machine has made a best effort to reclaim space from all discarded
              * objects. This method calls Sys.gc() to perform GC.
-             * </p>
              */
             public static void gc() {
                 java.lang.System.gc();
@@ -6440,7 +6439,6 @@ public class BTraceUtils {
              * method call, the Java Virtual Machine has made a best effort to
              * complete all outstanding finalizations. This method calls
              * Sys.runFinalization() to run finalization.
-             * </p>
              */
             public static void runFinalization() {
                 java.lang.System.runFinalization();

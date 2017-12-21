@@ -10,7 +10,7 @@ import com.sun.btrace.api.BTraceTask;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 public interface BTraceCompilerFactory {
     BTraceCompiler newCompiler(BTraceTask task);

@@ -30,7 +30,7 @@ import java.util.Map;
 
 /**
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 abstract public class AbstractClass {
     protected AbstractClass(List lst) {
