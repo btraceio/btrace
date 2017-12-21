@@ -27,7 +27,7 @@ package resources.issues;
 
 /**
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class BTRACE22 {
     public double testDouble() {

@@ -80,7 +80,7 @@ public @interface Sampled {
      * <p>
      * For {@code Sampler.Const} it is the average number of events between samples.<br>
      * For {@code Sampler.Adaptive} it is the average time (in ns) between samples<br>
-     * </p>
+     *
      * @return The sampler mean
      */
     int mean() default MEAN_DEFAULT;

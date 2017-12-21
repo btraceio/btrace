@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 final public class PortLocatorImpl implements PortLocator {
     final private static Logger LOGGER = Logger.getLogger(PortLocator.class.getName());

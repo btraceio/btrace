@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A data command that hold data of type Map<String, Number>.
+ * A data command that hold data of type Map&lt;String, Number&gt;.
  * 
  * @author A. Sundararajan
  */

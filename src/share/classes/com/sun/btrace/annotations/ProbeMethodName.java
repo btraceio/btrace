@@ -34,7 +34,7 @@ import java.lang.annotation.Target;
  * It is used to mark a probe method argument as the receiver of the probe target class name<br>
  * Applicable only for {@linkplain OnMethod} annotation
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  * @since 1.1
  */
 @Target(ElementType.PARAMETER)

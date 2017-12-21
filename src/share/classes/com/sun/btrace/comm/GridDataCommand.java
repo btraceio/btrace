@@ -57,7 +57,7 @@ public class GridDataCommand extends DataCommand {
     private String format;
 
     /**
-     * Used when deserializing a {@linkplain GridDataCommand} instance.<br/>
+     * Used when deserializing a {@linkplain GridDataCommand} instance.<br>
      * The instance is then initialized by calling the {@linkplain GridDataCommand#read(java.io.ObjectInput) } method
      */
     public GridDataCommand() {

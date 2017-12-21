@@ -80,12 +80,11 @@ public enum Kind {
      * The order and number of unannotated parameters (if provided) must
      * fully match the called method signature. Instead of specific parameter
      * types one can use {@linkplain AnyType} to match any type.
-     * </p>
      * <p>
      * If the only unannotated parameter is of type {@link AnyType AnyType[]}
      * it will contain the called method parameters in the order defined by
      * its signature.
-     * </p>
+     *
      * <h3>Allowed probe handler parameter annotations:</h3>
      * <ul>
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
@@ -142,12 +141,11 @@ public enum Kind {
      * The order and number of unannotated parameters (if provided) must
      * fully match the probed method signature. Instead of specific parameter
      * types one can use {@linkplain AnyType} to match any type.
-     * </p>
      * <p>
      * If the only unannotated parameter is of type {@link AnyType AnyType[]}
      * it will contain the probed method parameters in the order defined by
      * its signature.
-     * </p>
+     *
      * <h3>Allowed probe handler parameter annotations:</h3>
      * <ul>
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
@@ -291,12 +289,11 @@ public enum Kind {
      * The order and number of unannotated probe handler parameters (if provided)
      * must fully match the probed method signature. Instead of specific parameter
      * types one can use {@linkplain AnyType} to match any type.
-     * </p>
      * <p>
      * If the only unannotated parameter is of type {@link AnyType AnyType[]}
      * it will contain the probed method parameters in the order defined by
      * its signature.
-     * </p>
+     *
      * <h3>Allowed probe handler parameter annotations:</h3>
      * <ul>
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>

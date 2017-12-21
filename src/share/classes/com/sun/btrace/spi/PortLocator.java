@@ -9,7 +9,7 @@ import com.sun.btrace.api.BTraceTask;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 public interface PortLocator {
     final public static String PORT_PROPERTY = "btrace.port";

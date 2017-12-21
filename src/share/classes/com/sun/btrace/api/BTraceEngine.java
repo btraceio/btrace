@@ -34,9 +34,8 @@ import com.sun.btrace.api.impl.BTraceEngineImpl;
  * <pre>
  * BTraceTask task = BTraceEngine.sharedInstance().createTask(PID)
  * </pre>
- * </p>
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public abstract class BTraceEngine {
     final public static BTraceEngine newInstance() {

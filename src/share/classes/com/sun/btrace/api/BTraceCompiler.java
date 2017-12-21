@@ -9,7 +9,7 @@ import java.io.Writer;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 public abstract class BTraceCompiler {
     public byte[] compile(String source, String classPath) {

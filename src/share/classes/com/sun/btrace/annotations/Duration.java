@@ -36,9 +36,8 @@ import java.lang.annotation.Target;
  * of {@linkplain Kind#RETURN} or {@linkplain Kind#ERROR}
  * <p>
  * The duration is reported in nanoseconds, using resolution available by OS
- * </p>
  *
- * @author Jaroslav Bachorik <jaroslav.bachorik@sun.com>
+ * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  * @since 1.1
  */
 @Target(ElementType.PARAMETER)

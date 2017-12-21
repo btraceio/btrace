@@ -41,7 +41,6 @@ import java.util.regex.Pattern;
  * When a class is to be transformed all the registered {@linkplain BTraceProbe} instances are
  * asked for the appropriate instrumentation. When there are no registered probes or none of
  * the registered probes is able to instrument the class it will not be transformed.
- * </p>
  *
  * @since 1.3.5
  * @author Jaroslav Bachorik

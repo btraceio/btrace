@@ -12,7 +12,7 @@ import com.sun.btrace.spi.BaseBTraceCompiler;
 
 /**
  *
- * @author Jaroslav Bachorik <yardus@netbeans.org>
+ * @author Jaroslav Bachorik yardus@netbeans.org
  */
 final public class BTraceCompilerFactoryImpl implements BTraceCompilerFactory {
     @Override

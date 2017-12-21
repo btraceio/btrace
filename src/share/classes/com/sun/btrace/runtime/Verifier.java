@@ -26,14 +26,11 @@
 package com.sun.btrace.runtime;
 
 import com.sun.btrace.VerifierException;
+import com.sun.btrace.org.objectweb.asm.*;
+import com.sun.btrace.util.Messages;
+
 import static com.sun.btrace.org.objectweb.asm.Opcodes.*;
 import static com.sun.btrace.runtime.Constants.*;
-import com.sun.btrace.util.Messages;
-import com.sun.btrace.org.objectweb.asm.AnnotationVisitor;
-import com.sun.btrace.org.objectweb.asm.ClassVisitor;
-import com.sun.btrace.org.objectweb.asm.FieldVisitor;
-import com.sun.btrace.org.objectweb.asm.MethodVisitor;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
 
 /**
  * This class verifies that a BTrace program is safe
@@ -42,7 +39,7 @@ import com.sun.btrace.org.objectweb.asm.Opcodes;
  * the annotations
  *
  * @author A. Sundararajan
- * @autohr J. Bachorik
+ * @author J. Bachorik
  */
 public class Verifier extends ClassVisitor {
     private boolean seenBTrace;

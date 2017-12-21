@@ -33,7 +33,7 @@ import java.nio.channels.SocketChannel;
 /**
  * This example tracks all server socket creations
  * and client socket accepts.
- * <br/>
+ * <br>
  * Also, it shows how to use shared methods.
  */
 @BTrace public class SocketTracker {
