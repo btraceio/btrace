@@ -804,7 +804,6 @@ public class Instrumentor extends ClassVisitor {
                 };// </editor-fold>
 
             case ERROR:
-                System.out.println("eid:" + Thread.currentThread().getId());
                 // <editor-fold defaultstate="collapsed" desc="Error Instrumentor">
                 ErrorReturnInstrumentor eri = new ErrorReturnInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
                     int retValIndex;
@@ -816,12 +815,14 @@ public class Instrumentor extends ClassVisitor {
                         vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
                     }
                     
-                    private void callWithArgs(){
+                    private void callWithArgs(int throwableIndex){
+                        boolean boxReturnValue = false;
+                        
                         loadArguments(
                                 vr, actionArgTypes, isStatic(),
                                 constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                                 constArg(om.getClassNameParameter(), className.replace("/", ".")),
-//                                    localVarArg(om.getReturnParameter(), probeRetType, retValIndex, boxReturnValue),
+                                localVarArg(-1, THROWABLE_TYPE, throwableIndex, boxReturnValue),
                                 selfArg(om.getSelfParameter(), Type.getObjectType(className)),
                                 new ArgumentProvider(asm, om.getDurationParameter()) {
                                     @Override
@@ -846,14 +847,11 @@ public class Instrumentor extends ClassVisitor {
                             }
                         };
     
-                        Label l = levelCheck(om, bcn.getClassName(true));
-    
                         loadArguments(actionArgs);
                     }
 
                     @Override
                     protected void onErrorReturn() {
-                        System.out.println("onErrorReturn...................................");
                         if (vr.isValid()) {
                             int throwableIndex = -1;
 
@@ -863,27 +861,14 @@ public class Instrumentor extends ClassVisitor {
                                 asm.dup();
                                 throwableIndex = storeAsNew();
                             }
-                            System.out.println("throwableIndex : " + throwableIndex);
-                            
                             
                             if (vr.isAny()){
-                                System.out.println("callWithoutArgs");
                                 callWithoutArgs(throwableIndex);
                             } else {
-                                System.out.println("callWithArgs");
-                                callWithArgs();
+                                callWithArgs(throwableIndex);
                             }
-    
-//                            System.out.println("retValIndex : " + retValIndex);
-//                            System.out.println("om.getReturnParameter() : " + om.getReturnParameter());
-//                            System.out.println("om.getDurationParameter() : " + om.getDurationParameter());
-//                            System.out.println("om.getClassNameParameter() : " + om.getClassNameParameter());
-//                            System.out.println("om.getMethodParameter() : " + om.getMethodParameter());
-//                            System.out.println("actionArgTypes : " + actionArgTypes.toString());
-//                            System.out.println("om.getSelfParameter() : " + om.getSelfParameter());
 
                             Label l = levelCheck(om, bcn.getClassName(true));
-
 //                            loadArguments(actionArgs);
 
                             invokeBTraceAction(asm, om);
@@ -1383,7 +1368,6 @@ public class Instrumentor extends ClassVisitor {
                 };// </editor-fold>
 
             case RETURN:
-                System.out.println("rid:" + Thread.currentThread().getId());
                 // <editor-fold defaultstate="collapsed" desc="Return Instrumentor">
                 if (where != Where.BEFORE) {
                     return mv;
@@ -1715,7 +1699,6 @@ public class Instrumentor extends ClassVisitor {
                     if (owner.equals(bcn.getClassName(true))) {
                         owner = className;
                         name = getActionMethodName(name);
-                        System.out.println("visitMethodInsnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn");
                     }
                     super.visitMethodInsn(opcode, owner, name, desc, itfc);
                 }
