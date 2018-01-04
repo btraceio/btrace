@@ -815,7 +815,7 @@ public class Instrumentor extends ClassVisitor {
                         vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
                     }
                     
-                    private void callWithArgs(int throwableIndex){
+                    private void loadWithArgs(int throwableIndex){
                         boolean boxReturnValue = false;
                         
                         loadArguments(
@@ -833,7 +833,7 @@ public class Instrumentor extends ClassVisitor {
                         );
                     }
                     
-                    private void callWithoutArgs(int throwableIndex){
+                    private ArgumentProvider[] callWithoutArgs(int throwableIndex){
                         ArgumentProvider[] actionArgs = new ArgumentProvider[5];
     
                         actionArgs[0] = localVarArg(vr.getArgIdx(0), THROWABLE_TYPE, throwableIndex);
@@ -846,8 +846,7 @@ public class Instrumentor extends ClassVisitor {
                                 MethodTrackingExpander.DURATION.insert(mv);
                             }
                         };
-    
-                        loadArguments(actionArgs);
+                        return actionArgs;
                     }
 
                     @Override
@@ -861,15 +860,15 @@ public class Instrumentor extends ClassVisitor {
                                 asm.dup();
                                 throwableIndex = storeAsNew();
                             }
-                            
+    
+                            Label l = null;
                             if (vr.isAny()){
-                                callWithoutArgs(throwableIndex);
+                                ArgumentProvider[] actionArgs = callWithoutArgs(throwableIndex);
+                                l = levelCheck(om, bcn.getClassName(true));
+                                loadArguments(actionArgs);
                             } else {
-                                callWithArgs(throwableIndex);
+                                loadWithArgs(throwableIndex);
                             }
-
-                            Label l = levelCheck(om, bcn.getClassName(true));
-//                            loadArguments(actionArgs);
 
                             invokeBTraceAction(asm, om);
                             if (l != null) {
