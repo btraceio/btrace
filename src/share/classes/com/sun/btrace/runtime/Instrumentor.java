@@ -811,7 +811,6 @@ public class Instrumentor extends ClassVisitor {
                     ValidationResult vr;
                     {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-//                        vr = validateArguments(om, actionArgTypes, new Type[]{THROWABLE_TYPE});
                         vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
                     }
                     
