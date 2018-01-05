@@ -806,10 +806,46 @@ public class Instrumentor extends ClassVisitor {
             case ERROR:
                 // <editor-fold defaultstate="collapsed" desc="Error Instrumentor">
                 ErrorReturnInstrumentor eri = new ErrorReturnInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
+                    int retValIndex;
+                    
                     ValidationResult vr;
                     {
                         addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                        vr = validateArguments(om, actionArgTypes, new Type[]{THROWABLE_TYPE});
+                        vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+                    }
+                    
+                    private void loadWithArgs(int throwableIndex){
+                        boolean boxReturnValue = false;
+                        
+                        loadArguments(
+                                vr, actionArgTypes, isStatic(),
+                                constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                                constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                                localVarArg(-1, THROWABLE_TYPE, throwableIndex, boxReturnValue),
+                                selfArg(om.getSelfParameter(), Type.getObjectType(className)),
+                                new ArgumentProvider(asm, om.getDurationParameter()) {
+                                    @Override
+                                    public void doProvide() {
+                                        MethodTrackingExpander.DURATION.insert(mv);
+                                    }
+                                }
+                        );
+                    }
+                    
+                    private ArgumentProvider[] callWithoutArgs(int throwableIndex){
+                        ArgumentProvider[] actionArgs = new ArgumentProvider[5];
+    
+                        actionArgs[0] = localVarArg(vr.getArgIdx(0), THROWABLE_TYPE, throwableIndex);
+                        actionArgs[1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
+                        actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
+                        actionArgs[3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
+                        actionArgs[4] = new ArgumentProvider(asm, om.getDurationParameter()) {
+                            @Override
+                            public void doProvide() {
+                                MethodTrackingExpander.DURATION.insert(mv);
+                            }
+                        };
+                        return actionArgs;
                     }
 
                     @Override
@@ -823,23 +859,15 @@ public class Instrumentor extends ClassVisitor {
                                 asm.dup();
                                 throwableIndex = storeAsNew();
                             }
-
-                            ArgumentProvider[] actionArgs = new ArgumentProvider[5];
-
-                            actionArgs[0] = localVarArg(vr.getArgIdx(0), THROWABLE_TYPE, throwableIndex);
-                            actionArgs[1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
-                            actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
-                            actionArgs[3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
-                            actionArgs[4] = new ArgumentProvider(asm, om.getDurationParameter()) {
-                                @Override
-                                public void doProvide() {
-                                    MethodTrackingExpander.DURATION.insert(mv);
-                                }
-                            };
-
-                            Label l = levelCheck(om, bcn.getClassName(true));
-
-                            loadArguments(actionArgs);
+    
+                            Label l = null;
+                            if (vr.isAny()){
+                                ArgumentProvider[] actionArgs = callWithoutArgs(throwableIndex);
+                                l = levelCheck(om, bcn.getClassName(true));
+                                loadArguments(actionArgs);
+                            } else {
+                                loadWithArgs(throwableIndex);
+                            }
 
                             invokeBTraceAction(asm, om);
                             if (l != null) {
