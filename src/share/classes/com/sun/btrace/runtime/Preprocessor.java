@@ -582,7 +582,7 @@ final class Preprocessor {
                     il.add(new TypeInsnNode(Opcodes.NEW, EVENTHANDLER_INTERNAL));
                     il.add(new InsnNode(Opcodes.DUP));
                     il.add(new LdcInsnNode(mn.name));
-                    il.add(new LdcInsnNode(an.values.get(1)));
+                    il.add(an.values != null ? new LdcInsnNode(an.values.get(1)) : new InsnNode(Opcodes.ACONST_NULL));
                     il.add(new MethodInsnNode(
                             Opcodes.INVOKESPECIAL,
                             EVENTHANDLER_INTERNAL,

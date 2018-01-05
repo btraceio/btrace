@@ -575,11 +575,13 @@ public final class BTraceRuntime  {
                 eventHandlerMap = new HashMap<>();
                 for (EventHandler eh : eventHandlers) {
                     try {
-                       eventHandlerMap.put(eh.event, eh.getMethod(clazz));
+                       eventHandlerMap.put(eh.getEvent(), eh.getMethod(clazz));
                     } catch (NoSuchMethodException e) {}
                 }
             }
             String event = ecmd.getEvent();
+            event = event != null ? event : EventHandler.ALL_EVENTS;
+
             final Method eventHandler = eventHandlerMap.get(event);
             if (eventHandler != null) {
                 rt.get().escape(new Callable<Void>() {
