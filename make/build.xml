@@ -36,7 +36,6 @@
         </condition>
     </target>
     <target name="initialize.maven" depends="prepare">
-        <setproxy proxyhost="emea-proxy.uk.oracle.com" proxyport="80"/>
        <get
           src="http://apache.petsads.us/maven/ant-tasks/2.1.3/binaries/maven-ant-tasks-2.1.3.jar"
           dest="${build.dir}/maven-ant-tasks-2.1.3.jar"
