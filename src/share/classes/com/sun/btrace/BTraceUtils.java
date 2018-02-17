@@ -1335,8 +1335,8 @@ public class BTraceUtils {
     /**
      * Substring
      */
-    public static String substr(String str,  int start, int length) {
-        return Strings.substr(str, start, length);
+    public static String substr(String str,  int start, int end) {
+        return Strings.substr(str, start, end);
     }
     public static String substr(String str, int start) {
         return Strings.substr(str, start);
@@ -3643,9 +3643,10 @@ public class BTraceUtils {
         /**
          * Substring
          */
-        public static String substr(String str,  int start, int length) {
-            return str.substring(start, length);
+        public static String substr(String str,  int start, int end) {
+            return str.substring(start, end);
         }
+        
         public static String substr(String str, int start) {
             return str.substring(start);
         }
