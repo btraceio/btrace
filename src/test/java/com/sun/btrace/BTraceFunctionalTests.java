@@ -195,4 +195,25 @@ public class BTraceFunctionalTests extends RuntimeTest {
             }
         );
     }
+
+    @Test
+    public void testProbeArgs() throws Exception {
+        isUnsafe = true;
+        test(
+            "resources.Main",
+            "traces/ProbeArgsTest.java",
+            new String[] {"arg1", "arg2=val2"},
+            5,
+            new ResultValidator() {
+                @Override
+                public void validate(String stdout, String stderr, int retcode) {
+                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+                    Assert.assertTrue(stdout.contains("arg#=2"));
+                    Assert.assertTrue(stdout.contains("arg1="));
+                    Assert.assertTrue(stdout.contains("arg2=val2"));
+                }
+            }
+        );
+    }
 }

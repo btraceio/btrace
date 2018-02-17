@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.agent;
 
+import com.sun.btrace.ArgsMap;
 import com.sun.btrace.runtime.BTraceTransformer;
 import com.sun.btrace.DebugSupport;
 import com.sun.btrace.SharedSettings;
@@ -60,7 +61,7 @@ import java.util.regex.Pattern;
 public final class Main {
     private static long ts = System.nanoTime();
 
-    private static volatile Map<String, String> argMap;
+    private static volatile ArgsMap argMap;
     private static volatile Instrumentation inst;
     private static volatile Long fileRollMilliseconds;
 
@@ -272,7 +273,7 @@ public final class Main {
             args = "";
         }
         String[] pairs = KV_PATTERN.split(args);
-        argMap = new HashMap<>();
+        argMap = new ArgsMap();
         for (String s : pairs) {
             int i = s.indexOf('=');
             String key, value = "";
@@ -306,7 +307,7 @@ public final class Main {
             debugPrint("debugMode is " + settings.isDebug());
         }
 
-        for (Map.Entry<String, String> e : argMap.entrySet()) {
+        for (Map.Entry<String, String> e : argMap) {
             String key = e.getKey();
             p = e.getValue();
             switch (key) {
@@ -611,7 +612,7 @@ public final class Main {
                     }
                 }
             }
-            ClientContext ctx = new ClientContext(inst, transformer, clientSettings);
+            ClientContext ctx = new ClientContext(inst, transformer, argMap, clientSettings);
             Client client = new FileClient(ctx, traceScript);
             if (client.isInitialized()) {
                 handleNewClient(client).get();
@@ -669,7 +670,7 @@ public final class Main {
                 if (isDebug()) {
                     debugPrint("client accepted " + sock);
                 }
-                ClientContext ctx = new ClientContext(inst, transformer, settings);
+                ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
                 Client client = new RemoteClient(ctx, sock);
                 handleNewClient(client).get();
             } catch (RuntimeException | IOException | ExecutionException re) {

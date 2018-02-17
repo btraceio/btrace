@@ -110,7 +110,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -259,7 +259,7 @@ public final class BTraceRuntime  {
     private ThreadLocal<Throwable> currentException = new ThreadLocal<>();
 
     // "command line" args supplied by client
-    private final String[] args;
+    private final ArgsMap args;
 
     // whether current runtime has been disabled?
     private volatile boolean disabled;
@@ -421,7 +421,7 @@ public final class BTraceRuntime  {
         instrumentation = null;
     }
 
-    public BTraceRuntime(final String className, String[] args,
+    public BTraceRuntime(final String className, ArgsMap args,
                          final CommandListener cmdListener,
                          DebugSupport ds, Instrumentation inst) {
         this.args = args;
@@ -1171,7 +1171,7 @@ public final class BTraceRuntime  {
     // BTrace command line argument functions
     static int $length() {
         BTraceRuntime runtime = getCurrent();
-        return runtime.args == null? 0 : runtime.args.length;
+        return runtime.args == null? 0 : runtime.args.size();
     }
 
     static String $(int n) {
@@ -1179,11 +1179,16 @@ public final class BTraceRuntime  {
         if (runtime.args == null) {
             return null;
         } else {
-            if (n >= 0 && n < runtime.args.length) {
-                return runtime.args[n];
-            } else {
-                return null;
-            }
+            return runtime.args.get(n);
+        }
+    }
+
+    static String $(String key) {
+        BTraceRuntime runtime = getCurrent();
+        if (runtime.args == null) {
+            return null;
+        } else {
+            return runtime.args.get(key);
         }
     }
 
@@ -2517,8 +2522,8 @@ public final class BTraceRuntime  {
         buf.append(File.separatorChar);
         BTraceRuntime runtime = getCurrent();
         buf.append("btrace");
-        if (runtime.args != null && runtime.args.length > 0) {
-            buf.append(runtime.args[0]);
+        if (runtime.args != null && runtime.args.size() > 0) {
+            buf.append(runtime.args.get(0));
         }
         buf.append(File.separatorChar);
         buf.append(runtime.className);

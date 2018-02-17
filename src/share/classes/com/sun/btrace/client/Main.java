@@ -33,8 +33,6 @@ import sun.misc.Signal;
 import sun.misc.SignalHandler;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.Command;
-import com.sun.btrace.comm.DataCommand;
-import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.comm.ExitCommand;
 import com.sun.btrace.comm.PrintableCommand;
 import com.sun.btrace.util.Messages;
@@ -177,9 +175,9 @@ public final class Main {
 
         String pid = args[count];
         String fileName = args[count + 1];
-        String[] btraceArgs = new String[args.length - count];
+        String[] btraceArgs = new String[args.length - count - 2];
         if (btraceArgs.length > 0) {
-            System.arraycopy(args, count, btraceArgs, 0, btraceArgs.length);
+            System.arraycopy(args, count + 2, btraceArgs, 0, btraceArgs.length);
         }
 
         try {

@@ -24,9 +24,12 @@
  */
 package com.sun.btrace.agent;
 
+import com.sun.btrace.ArgsMap;
 import com.sun.btrace.runtime.BTraceTransformer;
 import com.sun.btrace.SharedSettings;
 import java.lang.instrument.Instrumentation;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Client-context data class
@@ -35,11 +38,13 @@ import java.lang.instrument.Instrumentation;
 class ClientContext {
     private final Instrumentation instr;
     private final BTraceTransformer transformer;
+    private final ArgsMap args;
     private final SharedSettings settings;
 
-    ClientContext(Instrumentation instr, BTraceTransformer transformer, SharedSettings settings) {
+    ClientContext(Instrumentation instr, BTraceTransformer transformer, ArgsMap args, SharedSettings settings) {
         this.instr = instr;
         this.transformer = transformer;
+        this.args = args;
         this.settings = settings;
     }
 
@@ -53,6 +58,10 @@ class ClientContext {
 
     SharedSettings getSettings() {
         return settings;
+    }
+
+    ArgsMap getArguments() {
+        return args;
     }
 
 }

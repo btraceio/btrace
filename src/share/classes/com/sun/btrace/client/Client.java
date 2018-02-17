@@ -52,6 +52,7 @@ import com.sun.btrace.comm.WireIO;
 import com.sun.btrace.org.objectweb.asm.*;
 import com.sun.tools.attach.VirtualMachine;
 import java.net.ConnectException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -381,7 +382,7 @@ public class Client {
             WireIO.write(oos, new SetSettingsCommand(settings));
 
             if (debug) {
-                debugPrint("sending instrument command");
+                debugPrint("sending instrument command: " + Arrays.deepToString(args));
             }
             WireIO.write(oos, new InstrumentCommand(code, args));
             ois = new ObjectInputStream(sock.getInputStream());

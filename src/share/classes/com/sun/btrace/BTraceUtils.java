@@ -2307,6 +2307,17 @@ public class BTraceUtils {
     }
 
     /**
+     * Returns a command line argument value for the given key. {@code null} if not available.<br>
+     * In order to provide a key-value pair on the command line it must have the following syntax -
+     *  &lt;key&gt;=&lt;value&gt;
+     * @param key the argument key
+     * @return the corresponding value or {@code null}
+     */
+    public static String $(String key) {
+        return Sys.$(key);
+    }
+
+    /**
      * Returns the process id of the currently BTrace'd process.
      */
     public static int getpid() {
@@ -6656,10 +6667,21 @@ public class BTraceUtils {
          * Returns n'th command line argument. <code>null</code> if not available.
          *
          * @param n command line argument index
-         * @return n'th command line argument
+         * @return n'th command line argument or {@code null} if out-of-range
          */
         public static String $(int n) {
             return BTraceRuntime.$(n);
+        }
+
+        /**
+         * Returns a command line argument value for the given key. {@code null} if not available.<br>
+         * In order to provide a key-value pair on the command line it must have the following syntax -
+         *  &lt;key&gt;=&lt;value&gt;
+         * @param key the argument key
+         * @return the corresponding value or {@code null}
+         */
+        public static String $(String key) {
+            return BTraceRuntime.$(key);
         }
 
         /**

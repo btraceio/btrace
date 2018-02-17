@@ -123,6 +123,11 @@ abstract public class RuntimeTest {
 
     @SuppressWarnings("DefaultCharset")
     public void test(String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
+        test(testApp, testScript, null, checkLines, v);
+    }
+
+    @SuppressWarnings("DefaultCharset")
+    public void test(String testApp, final String testScript, String[] cmdArgs, int checkLines, ResultValidator v) throws Exception {
         List<String> args = new ArrayList<>(Arrays.asList(
                 java + "/bin/java",
                 "-cp",
@@ -200,7 +205,7 @@ abstract public class RuntimeTest {
         if (pid != null) {
             System.out.println("Target process ready: " + pid);
 
-            Process client = attach(pid, testScript, checkLines, stdout, stderr);
+            Process client = attach(pid, testScript, cmdArgs, checkLines, stdout, stderr);
 
             System.out.println("Detached.");
             pw.println("done");
@@ -215,12 +220,12 @@ abstract public class RuntimeTest {
         v.validate(stdout.toString(), stderr.toString(), ret.get());
     }
 
-    private Process attach(String pid, String trace, final int checkLines, final StringBuilder stdout, final StringBuilder stderr) throws Exception {
+    private Process attach(String pid, String trace, String[] cmdArgs, final int checkLines, final StringBuilder stdout, final StringBuilder stderr) throws Exception {
         URL u = ClassLoader.getSystemResource(trace);
         System.out.println(trace);
         File traceFile = new File(u.toURI());
         trace = traceFile.getAbsolutePath();
-        final ProcessBuilder pb = new ProcessBuilder(
+        List<String> argVals = new ArrayList<>(Arrays.asList(
             java + "/bin/java",
             "-Dcom.sun.btrace.unsafe=" + isUnsafe,
             "-Dcom.sun.btrace.debug=" + debugBTrace,
@@ -232,7 +237,11 @@ abstract public class RuntimeTest {
             "-pd", traceFile.getParentFile().getAbsolutePath(),
             pid,
             trace
-        );
+        ));
+        if (cmdArgs != null) {
+            argVals.addAll(Arrays.asList(cmdArgs));
+        }
+        final ProcessBuilder pb = new ProcessBuilder(argVals);
 
         pb.environment().remove("JAVA_TOOL_OPTIONS");
         final Process p = pb.start();

@@ -25,6 +25,7 @@
 package net.java.btrace;
 
 import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.ArgsMap;
 import com.sun.btrace.CommandListener;
 import com.sun.btrace.comm.DataCommand;
 import com.sun.btrace.comm.OkayCommand;
@@ -140,7 +141,7 @@ public class BTraceBench {
             cl = (c) -> {
             };
         }
-        br = new BTraceRuntime("BenchmarkClass", new String[0], cl, null, null);
+        br = new BTraceRuntime("BenchmarkClass", new ArgsMap(), cl, null, null);
     }
 
     @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
