@@ -45,15 +45,7 @@ import com.sun.btrace.org.objectweb.asm.tree.MethodNode;
 import com.sun.btrace.org.objectweb.asm.tree.TryCatchBlockNode;
 import com.sun.btrace.org.objectweb.asm.tree.TypeInsnNode;
 import com.sun.btrace.org.objectweb.asm.tree.VarInsnNode;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * This class preprocesses a compiled BTrace program.
@@ -212,7 +204,7 @@ final class Preprocessor {
 
     private void addLevelField(ClassNode cn) {
         if (cn.fields == null) {
-            cn.fields = new LinkedList();
+            cn.fields = new ArrayList();
         }
         cn.fields.add(new FieldNode(
                 Opcodes.ASM5,
@@ -414,7 +406,7 @@ final class Preprocessor {
                 args = Arrays.copyOf(args, args.length + 1);
                 args[args.length - 1] = retType;
 
-                List<AnnotationNode> annots = new LinkedList<>();
+                List<AnnotationNode> annots = new ArrayList<>();
                 AnnotationNode an = new AnnotationNode(Type.getDescriptor(Return.class));
                 annots.add(an);
                 mn.visibleParameterAnnotations = mn.visibleParameterAnnotations != null ?

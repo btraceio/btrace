@@ -60,14 +60,14 @@ public class ConcatenatingReader extends FilterReader {
     // Any leftover characters go here
     private char[] curBuf;
     private int curPos;
-    private BufferedReader in;
-    private static String newline = System.getProperty("line.separator");
+    private final BufferedReader inReader;
+    private static final String NEW_LINE = System.getProperty("line.separator");
 
     /** This class requires that the input reader be a BufferedReader so
     it can do line-oriented operations. */
     public ConcatenatingReader(BufferedReader in) {
         super(in);
-        this.in = in;
+        this.inReader = in;
     }
 
     @Override
@@ -98,7 +98,7 @@ public class ConcatenatingReader extends FilterReader {
 
     @Override
     public boolean ready() throws IOException {
-        return curBuf != null || in.ready();
+        return curBuf != null || inReader.ready();
     }
 
     @Override
@@ -145,7 +145,7 @@ public class ConcatenatingReader extends FilterReader {
     }
 
     private void nextLine() throws IOException {
-        String cur = in.readLine();
+        String cur = inReader.readLine();
         if (cur == null) {
             curBuf = null;
             return;
@@ -160,10 +160,10 @@ public class ConcatenatingReader extends FilterReader {
             --numChars;
             needNewline = false;
         }
-        char[] buf = new char[numChars + (needNewline ? newline.length() : 0)];
+        char[] buf = new char[numChars + (needNewline ? NEW_LINE.length() : 0)];
         cur.getChars(0, numChars, buf, 0);
         if (needNewline) {
-            newline.getChars(0, newline.length(), buf, numChars);
+            NEW_LINE.getChars(0, NEW_LINE.length(), buf, numChars);
         }
         curBuf = buf;
         curPos = 0;

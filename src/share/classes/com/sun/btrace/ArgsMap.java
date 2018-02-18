@@ -38,7 +38,7 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>>{
     public ArgsMap(String[] argLine) {
         this.map = new LinkedHashMap<>();
         if (argLine != null) {
-            for (String arg : argLine) {
+                for (String arg : argLine) {
                 String[] kv = arg.split("=");
                 if (kv.length != 2) {
                     this.map.put(arg, "");

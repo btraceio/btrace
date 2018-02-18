@@ -27,6 +27,7 @@ public final class InstrumentingClassVisitor extends ClassVisitor  implements Me
         return mv;
     }
 
+    @Override
     public MethodInstrumentorHelper methodHelper() {
         return helper;
     }

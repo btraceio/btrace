@@ -57,8 +57,8 @@ import java.util.regex.PatternSyntaxException;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.impl.MethodTrackingExpander;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 
 /**
  * This instruments a probed class with BTrace probe
@@ -110,7 +110,7 @@ public class Instrumentor extends ClassVisitor {
     public MethodVisitor visitMethod(int access, final String name,
         final String desc, String signature, String[] exceptions) {
 
-        List<OnMethod> appliedOnMethods = new LinkedList<>();
+        List<OnMethod> appliedOnMethods = new ArrayList<>();
 
         if (applicableOnMethods.isEmpty() ||
             (access & ACC_ABSTRACT) != 0 ||

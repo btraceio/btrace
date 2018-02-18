@@ -25,10 +25,10 @@
 package com.sun.btrace.profiling;
 
 import com.sun.btrace.Profiler;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
@@ -69,13 +69,13 @@ class MethodInvocationRecorder {
 
     private long carryOver = 0L;
     private final int defaultBufferSize;
-    private final Map<String, Integer> indexMap = new HashMap<String, Integer>();
+    private final Map<String, Integer> indexMap = new HashMap<>();
     private volatile int lastIndex = 0;
 
     // 0 - available; 1 - processing invocation; 2 - generating snapshot; 3 - resetting
     private final AtomicInteger writerStatus = new AtomicInteger(0);
 
-    private final Deque<DelayedRecord> delayedRecords = new LinkedList<DelayedRecord>();
+    private final Deque<DelayedRecord> delayedRecords = new ArrayDeque<>();
 
     public MethodInvocationRecorder(int expectedBlockCnt) {
         defaultBufferSize = expectedBlockCnt << 8;

@@ -33,9 +33,9 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Formatter;
-import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -104,7 +104,7 @@ final public class Statsd extends SimpleService {
                     dp.setPort(SharedSettings.GLOBAL.getStatsdPort());
 
                     while (true) {
-                        Collection<String> msgs = new LinkedList<>();
+                        Collection<String> msgs = new ArrayList<>();
                         msgs.add(q.take());
                         q.drainTo(msgs);
 

@@ -35,7 +35,7 @@ import java.util.*;
  * recomputing stackmap frames as necessary. It also provides an API for downstream
  * visitors to hint insertion of stackmap frames at required locations.
  */
-class InstrumentingMethodVisitor extends MethodVisitor implements MethodInstrumentorHelper {
+public final class InstrumentingMethodVisitor extends MethodVisitor implements MethodInstrumentorHelper {
     private static final Object TOP_EXT = -2;
 
     private static final class LocalVarSlot {

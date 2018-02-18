@@ -26,12 +26,11 @@ package com.sun.btrace.runtime;
 
 import com.sun.btrace.org.objectweb.asm.ClassVisitor;
 import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.org.objectweb.asm.Opcodes;
+import java.util.ArrayDeque;
 
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 
 /**
  * A hacked version of <a href="http://asm.ow2.org/asm50/javadoc/user/org/objectweb/asm/ClassWriter.html">ClassWriter</a>
@@ -40,7 +39,7 @@ import java.util.LinkedList;
  * @author Jaroslav Bachorik
  */
 final class BTraceClassWriter extends ClassWriter {
-    private final Deque<Instrumentor> instrumentors = new LinkedList<>();
+    private final Deque<Instrumentor> instrumentors = new ArrayDeque<>();
     private final ClassLoader targetCL;
     private final BTraceClassReader cr;
     private InstrumentingClassVisitor iClassVisitor = null;

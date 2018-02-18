@@ -24,13 +24,7 @@
  */
 package com.sun.btrace.util;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -112,13 +106,13 @@ public class Interval implements Comparable<Interval>{
                 previous = current;
             }
         }
-        return new LinkedList<>(itvSet);
+        return new ArrayList<>(itvSet);
     }
 
     public static List<Interval> invert(Collection<Interval> intervals) {
         Interval remainder = new Interval(Integer.MIN_VALUE, Integer.MAX_VALUE);
         Set<Interval> sorted = new TreeSet(union(intervals));
-        List<Interval> result = new LinkedList<>();
+        List<Interval> result = new ArrayList<>();
         for(Interval i : sorted) {
             if (i.isAll()) {
                 return Collections.singletonList(Interval.none());

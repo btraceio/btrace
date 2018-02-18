@@ -37,8 +37,8 @@ import com.sun.btrace.util.MethodID;
 import com.sun.btrace.util.templates.BaseTemplateExpander;
 import com.sun.btrace.util.templates.Template;
 import com.sun.btrace.util.templates.TemplateExpanderVisitor;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -110,7 +110,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     private int globalLevelVar = Integer.MIN_VALUE;
     private boolean durationComputed = false;
 
-    private final Collection<Interval> levelIntervals = new LinkedList<>();
+    private final Collection<Interval> levelIntervals = new ArrayList<>();
 
     private Label elseLabel = null;
     private Label samplerLabel = null;

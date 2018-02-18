@@ -220,12 +220,17 @@ public class ClassFilter {
             return true;
         }
         ClassInfo ci = ClassCache.getInstance().get(loader, typeA);
-        Collection<String> sTypes = new LinkedList<>();
-        for (ClassInfo sCi : ci.getSupertypes(false)) {
-            sTypes.add(internal ? sCi.getClassName() : sCi.getJavaClassName());
+        Collection<ClassInfo> sTypesInfo = ci.getSupertypes(false);
+        if (sTypesInfo != null) {
+            Collection<String> sTypes = new ArrayList<>(sTypesInfo.size());
+            for (ClassInfo sCi : sTypesInfo) {
+                sTypes.add(internal ? sCi.getClassName() : sCi.getJavaClassName());
+            }
+            sTypes.retainAll(typeSet);
+            return !sTypes.isEmpty();
+        } else {
+            return false;
         }
-        sTypes.retainAll(typeSet);
-        return !sTypes.isEmpty();
     }
 
     /*

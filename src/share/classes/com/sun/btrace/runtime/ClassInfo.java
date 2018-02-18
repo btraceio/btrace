@@ -28,9 +28,9 @@ import com.sun.btrace.DebugSupport;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Set;
 
@@ -187,7 +187,7 @@ public final class ClassInfo {
     private static final ClassLoader SYS_CL = ClassLoader.getSystemClassLoader();
     private final String cLoaderId;
     private final ClassName classId;
-    private final Collection<ClassInfo> supertypes = new LinkedList<>();
+    private final Collection<ClassInfo> supertypes = new ArrayList<>();
     private final ClassCache cache;
     private boolean isInterface = false;
 
