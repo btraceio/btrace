@@ -92,7 +92,7 @@ if [ "${JAVA_HOME}" != "" ]; then
     done
 
     if [ -f "${BTRACE_HOME}/build/btrace-agent.jar" ] ; then
-        ${JAVA_HOME}/bin/java -Xshare:off -javaagent:${BTRACE_HOME}/build/btrace-agent.jar=$OPTIONS,script=$1 $2 $3 $4 $5 $6 $7 $8 $9
+        ${JAVA_HOME}/bin/java -Xshare:off -javaagent:${BTRACE_HOME}/build/btrace-agent.jar=$OPTIONS,script="$@"
     else
         echo "Please set BTRACE_HOME before running this script"
     fi
