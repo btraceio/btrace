@@ -43,7 +43,18 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface OnEvent {
     /**
-     * The event name. 
+     * The event name.
+     *
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the handler will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnEvent(value = "${userEvent}")}
+     * </pre>
+     * </p>
      */
     String value() default "";
 }

@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.ArgsMap;
 import com.sun.btrace.BTraceRuntime;
 import com.sun.btrace.DebugSupport;
 import com.sun.btrace.VerifierException;
@@ -50,13 +51,15 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
     final BTraceProbeFactory factory;
 
+    final DebugSupport debug;
+
     private final CallGraph graph;
 
     private final Map<String, BTraceMethodNode> idmap;
-    private final Preprocessor prep = new Preprocessor();
+    private final Preprocessor prep;
 
     private volatile BTraceRuntime rt = null;
-    private final DebugSupport debug;
+    
     private BTraceTransformer transformer;
     private VerifierException verifierException = null;
 
@@ -67,6 +70,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         this.delegate = new BTraceProbeSupport(debug);
         this.idmap = new HashMap<>();
         this.graph = new CallGraph();
+        this.prep = new Preprocessor(debug);
     }
 
     BTraceProbeNode(BTraceProbeFactory factory, byte[] code) {
@@ -315,6 +319,11 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         }
     }
 
+    @Override
+    public void applyArgs(ArgsMap argsMap) {
+        delegate.applyArgs(argsMap);
+    }
+
     /**
      * Maps a list of @OnProbe's to a list @OnMethod's using
      * probe descriptor XML files.
@@ -346,7 +355,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
                  // Note that the probe descriptor cache is used
                  // across BTrace sessions. So, we should not update
                  // cached OnProbes (and their OnMethods).
-                 OnMethod omn = new OnMethod(op.getMethodNode());
+                 OnMethod omn = new OnMethod(op.getMethodNode(), debug);
                  omn.copyFrom(om);
                  omn.setTargetName(op.getTargetName());
                  omn.setTargetDescriptor(op.getTargetDescriptor());

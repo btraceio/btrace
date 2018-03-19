@@ -9,13 +9,15 @@ public final class LowMemoryHandler {
 
     public final String method;
     public final String pool;
+    public final String thresholdProperty;
     public final long threshold;
     public final boolean trackUsage;
 
-    public LowMemoryHandler(String method, String pool, long threshold, boolean trackUsage) {
+    public LowMemoryHandler(String method, String pool, long threshold, String thresholdProperty, boolean trackUsage) {
         this.method = method;
         this.pool = pool;
         this.threshold = threshold;
+        this.thresholdProperty = thresholdProperty;
         this.trackUsage = trackUsage;
     }
 

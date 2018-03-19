@@ -42,6 +42,17 @@ import java.lang.annotation.Target;
 public @interface OnLowMemory {
     /**
      * The memory pool name.
+     *
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the handler will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnLowMemory(pool = "${firstPool}")}
+     * </pre>
+     * </p>
      */
     String pool();
 
@@ -49,4 +60,12 @@ public @interface OnLowMemory {
      * The threashold size to watch for.
      */
     long threshold();
+
+    /**
+     * If specified the threshold will be taken from btrace arguments.
+     * The format is Ant-like property reference - eg. {@code thresholdFrom = "${threshold}"}
+     * @return btrace argument name holding the threshold
+     * @since 1.3.11
+     */
+    String thresholdFrom() default "";
 }

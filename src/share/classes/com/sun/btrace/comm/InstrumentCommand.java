@@ -26,6 +26,8 @@
 package com.sun.btrace.comm;
 
 import com.sun.btrace.ArgsMap;
+import com.sun.btrace.DebugSupport;
+import com.sun.btrace.SharedSettings;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.IOException;
@@ -34,23 +36,25 @@ import java.util.Map;
 public class InstrumentCommand extends Command {
     private byte[] code;
     private ArgsMap args;
+    private final DebugSupport debug;
 
-    public InstrumentCommand(byte[] code, ArgsMap args) {
+    public InstrumentCommand(byte[] code, ArgsMap args, DebugSupport debug) {
         super(INSTRUMENT);
         this.code = code;
         this.args = args;
+        this.debug = debug;
     }
 
-    public InstrumentCommand(byte[] code, String[] args) {
-        this(code, new ArgsMap(args));
+    public InstrumentCommand(byte[] code, String[] args, DebugSupport debug) {
+        this(code, new ArgsMap(args, debug), debug);
     }
 
-    public InstrumentCommand(byte[] code, Map<String, String> args) {
-        this(code, new ArgsMap(args));
+    public InstrumentCommand(byte[] code, Map<String, String> args, DebugSupport debug) {
+        this(code, new ArgsMap(args, debug), debug);
     }
 
     protected InstrumentCommand() {
-        this(null, (Map<String, String>)null);
+        this(null, (Map<String, String>)null, new DebugSupport(SharedSettings.GLOBAL));
     }
 
     @Override
@@ -71,7 +75,7 @@ public class InstrumentCommand extends Command {
         code = new byte[len];
         in.readFully(code);
         len = in.readInt();
-        args = new ArgsMap(len);
+        args = new ArgsMap(len, debug);
         for (int i = 0; i < len; i++) {
             String key = in.readUTF();
             String val = in.readUTF();
