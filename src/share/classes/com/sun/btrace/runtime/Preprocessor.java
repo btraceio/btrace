@@ -25,7 +25,9 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.ArgsMap;
 import com.sun.btrace.BTraceRuntime;
+import com.sun.btrace.DebugSupport;
 import com.sun.btrace.annotations.Return;
 import static com.sun.btrace.runtime.Constants.*;
 import com.sun.btrace.org.objectweb.asm.Opcodes;
@@ -192,6 +194,12 @@ final class Preprocessor {
     private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
     private final Map<String, Integer> serviceLocals = new HashMap<>();
 
+    private final DebugSupport debug;
+
+    public Preprocessor(DebugSupport debug) {
+        this.debug = debug;
+    }
+
     public void process(ClassNode cn) {
         addLevelField(cn);
         processClinit(cn);
@@ -208,7 +216,8 @@ final class Preprocessor {
         }
         cn.fields.add(new FieldNode(
                 Opcodes.ASM5,
-                Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_VOLATILE, BTRACE_LEVEL_FLD,
+                Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_VOLATILE,
+                BTRACE_LEVEL_FLD,
                 INT_DESC,
                 null,
                 0
@@ -249,7 +258,7 @@ final class Preprocessor {
             }
         }
     }
-
+    
     private void tryProcessTLS(ClassNode cn, FieldNode fn) {
         AnnotationNode an = null;
         if ((an = getAnnotation(fn, TLS_TYPE)) != null) {
@@ -533,20 +542,44 @@ final class Preprocessor {
             if (mn.visibleAnnotations != null) {
                 AnnotationNode an = (AnnotationNode)mn.visibleAnnotations.get(0);
                 if (an.desc.equals(ONTIMER_DESC)) {
-                    il.add(new InsnNode(Opcodes.DUP));
-                    il.add(new LdcInsnNode(cnt++));
-                    il.add(new TypeInsnNode(Opcodes.NEW, TIMERHANDLER_INTERNAL));
-                    il.add(new InsnNode(Opcodes.DUP));
-                    il.add(new LdcInsnNode(mn.name));
-                    il.add(new LdcInsnNode(an.values.get(1)));
-                    il.add(new MethodInsnNode(
-                            Opcodes.INVOKESPECIAL,
-                            TIMERHANDLER_INTERNAL,
-                            "<init>",
-                            "(Ljava/lang/String;J)V",
-                            false)
-                    );
-                    il.add(new InsnNode(Opcodes.AASTORE));
+                    Iterator anValueIterator = an.values != null ? an.values.iterator() : null;
+                    if (anValueIterator != null) {
+                        long period = -1;
+                        String property = null;
+
+                        while (anValueIterator.hasNext()) {
+                            String key = (String)anValueIterator.next();
+                            Object value = anValueIterator.next();
+
+                            if (value != null) {
+                                switch (key) {
+                                    case "value": {
+                                        period = (Long)value;
+                                        break;
+                                    }
+                                    case "from": {
+                                        property = (String)value;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        il.add(new InsnNode(Opcodes.DUP));
+                        il.add(new LdcInsnNode(cnt++));
+                        il.add(new TypeInsnNode(Opcodes.NEW, TIMERHANDLER_INTERNAL));
+                        il.add(new InsnNode(Opcodes.DUP));
+                        il.add(new LdcInsnNode(mn.name));
+                        il.add(new LdcInsnNode(period));
+                        il.add(property != null ? new LdcInsnNode(property) : new InsnNode(Opcodes.ACONST_NULL));
+                        il.add(new MethodInsnNode(
+                                Opcodes.INVOKESPECIAL,
+                                TIMERHANDLER_INTERNAL,
+                                "<init>",
+                                "(Ljava/lang/String;JLjava/lang/String;)V",
+                                false)
+                        );
+                        il.add(new InsnNode(Opcodes.AASTORE));
+                    }
                 }
             }
         }
@@ -677,14 +710,24 @@ final class Preprocessor {
                 if (an.desc.equals(ONLOWMEMORY_DESC)) {
                     String pool = "";
                     long threshold = Long.MAX_VALUE;
+                    String thresholdProp = null;
 
                     for (int i = 0; i < an.values.size(); i += 2) {
                         String key = (String)an.values.get(i);
                         Object val = an.values.get(i + 1);
-                        if (key.equals("pool")) {
-                            pool = (String)val;
-                        } else if (key.equals("threshold")) {
-                            threshold = (long)val;
+                        switch (key) {
+                            case "pool": {
+                                pool = (String)val;
+                                break;
+                            }
+                            case "threshold": {
+                                threshold = (long)val;
+                                break;
+                            }
+                            case "thresholdFrom": {
+                                thresholdProp = (String)val;
+                                break;
+                            }
                         }
                     }
                     il.add(new InsnNode(Opcodes.DUP));
@@ -694,11 +737,12 @@ final class Preprocessor {
                     il.add(new LdcInsnNode(mn.name));
                     il.add(new LdcInsnNode(pool));
                     il.add(new LdcInsnNode(threshold));
+                    il.add(new LdcInsnNode(thresholdProp));
                     il.add(new MethodInsnNode(
                             Opcodes.INVOKESPECIAL,
                             LOWMEMORYHANDLER_INTERNAL,
                             "<init>",
-                            "(Ljava/lang/String;Ljava/lang/String;J)V",
+                            "(Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;)V",
                             false)
                     );
                     il.add(new InsnNode(Opcodes.AASTORE));

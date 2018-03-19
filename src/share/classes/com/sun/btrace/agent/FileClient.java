@@ -58,7 +58,7 @@ class FileClient extends Client {
     private boolean canLoadPack = true;
 
     private boolean init(byte[] code) throws IOException {
-        InstrumentCommand cmd = new InstrumentCommand(code, this.argsMap);
+        InstrumentCommand cmd = new InstrumentCommand(code, this.argsMap, debug);
         boolean ret = loadClass(cmd, canLoadPack) != null;
         if (ret) {
             super.initialize();

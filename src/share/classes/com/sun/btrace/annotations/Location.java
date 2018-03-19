@@ -57,12 +57,34 @@ public @interface Location {
     /**
      * Specifies the fully qualified class name for
      * certain kind of probe locations.
+     *
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the whole probe point will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnMethod(clazz = "MyClass", method = "myMethod", location = @Location(clazz = "${package}.OtherClass"))}
+     * </pre>
+     * </p>
      */
     String clazz() default "";
 
     /**
      * Specifies the method name for
      * certain kind of probe locations.
+     *
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the whole probe point will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnMethod(clazz = "MyClass", method = "myMethod", location = @Location(clazz = "OtherClass", method = "${method}"))}
+     * </pre>
+     * </p>
      */
     String method() default "";
 
@@ -72,6 +94,17 @@ public @interface Location {
      *
      * @see Kind#FIELD_GET
      * @see Kind#FIELD_SET
+     *
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the whole probe point will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnMethod(clazz = "MyClass", method = "myMethod", location = @Location(clazz = "OtherClass", field = "${field}"))}
+     * </pre>
+     * </p>
      */
     String field() default "";
 
@@ -81,6 +114,17 @@ public @interface Location {
      * is specified like in Java source - except
      * the method or field name and parameter names
      * are not included.
+     *
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the whole probe point will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnMethod(clazz = "MyClass", method = "myMethod", location = @Location(clazz = "OtherClass", type = "${ret} ()"))}
+     * </pre>
+     * </p>
      */
     String type() default "";
 

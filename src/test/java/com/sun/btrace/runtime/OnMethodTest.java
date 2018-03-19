@@ -19,31 +19,29 @@
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+package com.sun.btrace.runtime;
 
-package traces;
+import com.sun.btrace.ArgsMap;
+import com.sun.btrace.DebugSupport;
+import com.sun.btrace.SharedSettings;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-import com.sun.btrace.annotations.BTrace;
-import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.OnMethod;
+public class OnMethodTest {
+    private ArgsMap instance;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
-@BTrace(trusted = true)
-public class ProbeArgsTest {
-    static {
-        println("arg#=" + Sys.$length());
-        for (int i = 0; i < Sys.$length(); i++) {
-            println("#" + i + "=" + Sys.$(i));
-        }
-        println("arg1=" + Sys.$("arg1"));
-        println("arg2=" + Sys.$("arg2"));
-        println("arg3=" + Sys.$("arg3"));
+    @Before
+    public void setUp() {
+        DebugSupport debug = new DebugSupport(SharedSettings.GLOBAL);
+        instance = new ArgsMap(new String[] {"className=ClassA", "methodName=methodA"}, debug);
     }
 
-    @OnMethod(clazz = "${clzParam}", method = "${mthdParam}")
-    public static void trace() {
-        println("matching probe");
+    @Test
+    public void testApplyArgsValid() {
+        assertEquals("/.*\\.ClassA/", instance.template("/.*\\.${className}/"));
+        assertEquals("methodA", instance.template("${methodName}"));
+        assertEquals("${undefined}", instance.template("${undefined}"));
     }
+
 }

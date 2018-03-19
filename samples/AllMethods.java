@@ -39,7 +39,7 @@ import com.sun.btrace.services.impl.Printer;
 
     @OnMethod(
         clazz="/javax\\.swing\\..*/",
-        method="/.*/"
+        method="${m}"
     )
     public static void m(@Self Object o, @ProbeClassName String probeClass, @ProbeMethodName String probeMethod) {
         printer.println("this = " + o);

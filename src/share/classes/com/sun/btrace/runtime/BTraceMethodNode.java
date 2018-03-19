@@ -24,6 +24,7 @@
  */
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.DebugSupport;
 import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Sampled;
 import com.sun.btrace.annotations.Where;
@@ -56,12 +57,14 @@ public class BTraceMethodNode extends MethodNode {
     private boolean isBTraceHandler;
     private final CallGraph graph;
     private final String methodId;
+    private final DebugSupport debug;
 
     BTraceMethodNode(MethodNode from, BTraceProbeNode cn) {
         super(Opcodes.ASM5, from.access, from.name, from.desc, from.signature, ((List<String>)from.exceptions).toArray(new String[0]));
         this.cn = cn;
         this.graph = cn.getGraph();
         this.methodId = CallGraph.methodId(name, desc);
+        this.debug = cn.debug;
     }
 
     @Override
@@ -87,7 +90,7 @@ public class BTraceMethodNode extends MethodNode {
             isBTraceHandler = true;
         }
         if (type.equals(ONMETHOD_DESC)) {
-            om = new OnMethod(this);
+            om = new OnMethod(this, debug);
             om.setTargetName(name);
             om.setTargetDescriptor(desc);
             return new AnnotationVisitor(Opcodes.ASM5, av) {

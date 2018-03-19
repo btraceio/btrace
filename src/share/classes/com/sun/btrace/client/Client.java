@@ -38,6 +38,7 @@ import java.net.UnknownHostException;
 import java.net.URI;
 import java.util.Map;
 import com.sun.btrace.CommandListener;
+import com.sun.btrace.DebugSupport;
 import com.sun.btrace.SharedSettings;
 import com.sun.btrace.compiler.Compiler;
 import com.sun.btrace.annotations.DTrace;
@@ -384,7 +385,9 @@ public class Client {
             if (debug) {
                 debugPrint("sending instrument command: " + Arrays.deepToString(args));
             }
-            WireIO.write(oos, new InstrumentCommand(code, args));
+            SharedSettings sSettings = new SharedSettings();
+            sSettings.from(settings);
+            WireIO.write(oos, new InstrumentCommand(code, args, new DebugSupport(sSettings)));
             ois = new ObjectInputStream(sock.getInputStream());
             if (debug) {
                 debugPrint("entering into command loop");

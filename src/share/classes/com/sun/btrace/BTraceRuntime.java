@@ -55,6 +55,7 @@ import com.sun.btrace.org.jctools.queues.MessagePassingQueue;
 import com.sun.btrace.org.jctools.queues.MpmcArrayQueue;
 import com.sun.btrace.org.jctools.queues.MpscChunkedArrayQueue;
 import com.sun.btrace.profiling.MethodInvocationProfiler;
+import com.sun.btrace.runtime.Constants;
 import com.sun.btrace.shared.ErrorHandler;
 import com.sun.btrace.shared.EventHandler;
 import com.sun.btrace.shared.ExitHandler;
@@ -106,6 +107,7 @@ import javax.management.openmbean.CompositeData;
 
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -454,6 +456,28 @@ public final class BTraceRuntime  {
         cmdThread.start();
     }
 
+    public static long parseLong(String value, long deflt) {
+        if (value == null) {
+            return deflt;
+        }
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return deflt;
+        }
+    }
+
+    public static int parseInt(String value, int deflt) {
+        if (value == null) {
+            return deflt;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return deflt;
+        }
+    }
+
     public static void initUnsafe() {
         if (unsafe == null) {
             unsafe = Unsafe.getUnsafe();
@@ -575,7 +599,8 @@ public final class BTraceRuntime  {
                 eventHandlerMap = new HashMap<>();
                 for (EventHandler eh : eventHandlers) {
                     try {
-                       eventHandlerMap.put(eh.getEvent(), eh.getMethod(clazz));
+                        String eventName = args.template(eh.getEvent());
+                        eventHandlerMap.put(eventName, eh.getMethod(clazz));
                     } catch (NoSuchMethodException e) {}
                 }
             }
@@ -2308,7 +2333,12 @@ public final class BTraceRuntime  {
             wrapToTimerTasks(timerTasks);
             for (int index = 0; index < timerHandlers.length; index++) {
                 final TimerHandler th = timerHandlers[index];
-                timer.schedule(timerTasks[index], th.period, th.period);
+                long period = th.period;
+                String periodArg = th.periodArg;
+                if (periodArg != null) {
+                    period = parseLong(args.template(periodArg), period);
+                }
+                timer.schedule(timerTasks[index], period, period);
             }
         }
 
@@ -2318,7 +2348,8 @@ public final class BTraceRuntime  {
             initMemoryPoolList();
             lowMemoryHandlerMap = new HashMap<>();
             for (LowMemoryHandler lmh : lowMemoryHandlers) {
-                lowMemoryHandlerMap.put(lmh.pool, lmh);
+                String poolName = args.template(lmh.pool);
+                lowMemoryHandlerMap.put(poolName, lmh);
             }
             for (MemoryPoolMXBean mpoolBean : memPoolList) {
                 String name = mpoolBean.getName();
@@ -2506,6 +2537,10 @@ public final class BTraceRuntime  {
         try {
             level = cl.getDeclaredField("$btrace$$level");
             level.setAccessible(true);
+            int levelVal = parseInt(args.get("level"), Integer.MIN_VALUE);
+            if (levelVal > Integer.MIN_VALUE) {
+                level.set(null, levelVal);
+            }
         } catch (Throwable e) {
             debugPrint("Instrumentation level setting not available");
         }
