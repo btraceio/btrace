@@ -24,26 +24,25 @@ package traces;
 
 import com.sun.btrace.annotations.BTrace;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.OnMethod;
+import com.sun.btrace.annotations.OnTimer;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
-@BTrace(trusted = true)
-public class ProbeArgsTest {
+@BTrace
+public class OnTimerArgTest {
     static {
-        println("arg#=" + Sys.$length());
-        for (int i = 0; i < Sys.$length(); i++) {
-            println("#" + i + "=" + Sys.$(i));
-        }
-        println("arg1=" + Sys.$("arg1"));
-        println("arg2=" + Sys.$("arg2"));
-        println("arg3=" + Sys.$("arg3"));
+        println("vm version " + Sys.VM.vmVersion());
+        println("vm starttime " + Sys.VM.vmStartTime());
     }
 
-    @OnMethod(clazz = "${clzParam}", method = "${mthdParam}")
-    public static void trace() {
-        println("matching probe");
+    @OnTimer(from = "${timer}")
+    public static void ontimer() {
+        dump("timer");
+    }
+
+    private static void dump(String s) {
+        println(s);
     }
 }

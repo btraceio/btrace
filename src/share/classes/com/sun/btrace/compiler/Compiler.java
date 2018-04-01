@@ -33,14 +33,7 @@ import com.sun.btrace.runtime.BTraceProbePersisted;
 import javax.annotation.processing.Processor;
 import com.sun.source.util.JavacTask;
 import com.sun.btrace.util.Messages;
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.Writer;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -308,13 +301,13 @@ public class Compiler {
                         SharedSettings.GLOBAL.setTrusted(true);
 
                         BTraceProbeNode bpn = (BTraceProbeNode)new BTraceProbeFactory(SharedSettings.GLOBAL).createProbe(classData);
-                        ByteOutputStream bos = new ByteOutputStream();
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
                         try (DataOutputStream dos = new DataOutputStream(bos)) {
                             BTraceProbePersisted bpp = BTraceProbePersisted.from(bpn);
                             bpp.write(dos);
                         }
 
-                        classData = bos.getBytes();
+                        classData = bos.toByteArray();
                     }
                     result.put(name, classData);
                 }

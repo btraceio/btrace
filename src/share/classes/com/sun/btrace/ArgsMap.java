@@ -30,12 +30,14 @@ import java.util.Map;
  */
 public final class ArgsMap implements Iterable<Map.Entry<String, String>>{
     private final LinkedHashMap<String, String> map;
+    private final DebugSupport debug;
 
-    public ArgsMap(Map<String, String> args) {
+    public ArgsMap(Map<String, String> args, DebugSupport debug) {
         this.map = args != null ? new LinkedHashMap<>(args) : new LinkedHashMap<String, String>();
+        this.debug = debug;
     }
 
-    public ArgsMap(String[] argLine) {
+    public ArgsMap(String[] argLine, DebugSupport debug) {
         this.map = new LinkedHashMap<>();
         if (argLine != null) {
                 for (String arg : argLine) {
@@ -47,14 +49,16 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>>{
                 }
             }
         }
+        this.debug = debug;
     }
 
     public ArgsMap() {
-        this((Map<String, String>)null);
+        this((Map<String, String>)null, new DebugSupport(SharedSettings.GLOBAL));
     }
 
-    public ArgsMap(int initialCapacity) {
+    public ArgsMap(int initialCapacity, DebugSupport debug) {
         this.map = new LinkedHashMap<>(initialCapacity);
+        this.debug = debug;
     }
 
     public String get(String key) {
@@ -107,5 +111,70 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>>{
     @Override
     public int hashCode() {
         return map.hashCode();
+    }
+
+    public String template(String value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.isEmpty()) {
+            return value;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        StringBuilder keySb = new StringBuilder();
+        int state = 0;
+
+        for (char c : value.toCharArray()) {
+            switch (c) {
+                case '$': {
+                    if (state == 0) {
+                        state = 1;
+                    }
+                    break;
+                }
+                case '{': {
+                    if (state == 1) {
+                        state = 2;
+                        keySb.setLength(0);
+                    }
+                    break;
+                }
+                case '}': {
+                    if (state == 2) {
+                        String key = keySb.toString();
+                        String val = get(key);
+                        if (val != null) {
+                            sb.append(val);
+                        } else {
+                            sb.append("${").append(key).append("}");
+                        }
+                        state = 0;
+                    }
+                    break;
+                }
+                default: {
+                    switch (state) {
+                        case 0: {
+                            sb.append(c);
+                            break;
+                        }
+                        case 2: {
+                            keySb.append(c);
+                            break;
+                        }
+                        default: {
+                            // other states are invalid; ignore input
+                        }
+                    }
+                }
+            }
+        }
+
+        String expanded = sb.toString();
+        if (debug.isDebug()) {
+            debug.debug("Template: " + value + " -> " + expanded);
+        }
+        return expanded;
     }
 }

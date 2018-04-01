@@ -53,17 +53,17 @@ questions.
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-client</artifactId>
-            <version>1.3.10</version>
+            <version>1.3.11-dev</version>
         </dependency>
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-agent</artifactId>
-            <version>1.3.10</version>
+            <version>1.3.11-dev</version>
         </dependency>
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-boot</artifactId>
-            <version>1.3.10</version>
+            <version>1.3.11-dev</version>
         </dependency>
         <dependency>
             <groupId>sun.jdk</groupId>
@@ -73,7 +73,7 @@ questions.
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jmh.version>1.14</jmh.version>
+        <jmh.version>1.20</jmh.version>
         <classes.jar>${java.home}/../Classes/classes.jar</classes.jar>
         <tools.jar>${java.home}/../lib/tools.jar</tools.jar>
     </properties>

@@ -107,6 +107,27 @@ public class BTraceFunctionalTests extends RuntimeTest {
     }
 
     @Test
+    public void testOnTimerArg() throws Exception {
+        debugTestApp = true;
+        test(
+            "resources.Main",
+            "traces/OnTimerArgTest.java",
+            new String[]{"timer=500"},
+            5,
+            new ResultValidator() {
+                @Override
+                public void validate(String stdout, String stderr, int retcode) {
+                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+                    Assert.assertTrue(stdout.contains("vm version"));
+                    Assert.assertTrue(stdout.contains("vm starttime"));
+                    Assert.assertTrue(stdout.contains("timer"));
+                }
+            }
+        );
+    }
+
+    @Test
     public void testOnExit() throws Exception {
         test(
             "resources.Main",
@@ -128,6 +149,26 @@ public class BTraceFunctionalTests extends RuntimeTest {
         test(
             "resources.Main",
             "traces/OnMethodTest.java",
+            5,
+            new ResultValidator() {
+                @Override
+                public void validate(String stdout, String stderr, int retcode) {
+                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+                    Assert.assertTrue(stdout.contains("[this, noargs]"));
+                    Assert.assertTrue(stdout.contains("[this, args]"));
+                    Assert.assertTrue(stdout.contains("{xxx}"));
+                }
+            }
+        );
+    }
+
+    @Test
+    public void testOnMethodLevel() throws Exception {
+        test(
+            "resources.Main",
+            "traces/OnMethodLevelTest.java",
+            new String[] {"level=200"},
             5,
             new ResultValidator() {
                 @Override
@@ -198,6 +239,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
     @Test
     public void testProbeArgs() throws Exception {
+        debugTestApp = true;
         isUnsafe = true;
         test(
             "resources.Main",
@@ -212,6 +254,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
                     Assert.assertTrue(stdout.contains("arg#=2"));
                     Assert.assertTrue(stdout.contains("arg1="));
                     Assert.assertTrue(stdout.contains("arg2=val2"));
+                    Assert.assertFalse(stdout.contains("matching probe"));
                 }
             }
         );

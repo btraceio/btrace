@@ -22,28 +22,47 @@
 
 package traces;
 
+import com.sun.btrace.AnyType;
+import com.sun.btrace.BTraceUtils;
 import com.sun.btrace.annotations.BTrace;
+import com.sun.btrace.annotations.Self;
 import static com.sun.btrace.BTraceUtils.*;
-import com.sun.btrace.annotations.OnMethod;
+import static com.sun.btrace.BTraceUtils.Reflective.*;
+import com.sun.btrace.annotations.Export;
+import com.sun.btrace.annotations.*;
 
 /**
  *
  * @author Jaroslav Bachorik
  */
-@BTrace(trusted = true)
-public class ProbeArgsTest {
-    static {
-        println("arg#=" + Sys.$length());
-        for (int i = 0; i < Sys.$length(); i++) {
-            println("#" + i + "=" + Sys.$(i));
-        }
-        println("arg1=" + Sys.$("arg1"));
-        println("arg2=" + Sys.$("arg2"));
-        println("arg3=" + Sys.$("arg3"));
+@BTrace
+public class OnMethodLevelTest {
+    @TLS
+    private static int tls = 10;
+
+    @Export
+    private static long ex = 1;
+
+    private static String var = "none";
+
+    @OnMethod(clazz = "resources.Main", method = "callA", enableAt = @Level("100"))
+    public static void noargs(@Self Object self) {
+        tls++;
+        ex += 1;
+        dump(var + " [this, noargs]");
+        dump("{" + get("id", self) + "}");
+        var = "A";
     }
 
-    @OnMethod(clazz = "${clzParam}", method = "${mthdParam}")
-    public static void trace() {
-        println("matching probe");
+    @OnMethod(clazz = "resources.Main", method = "callB", enableAt = @Level("150"))
+    public static void args(@Self Object self, int i, String s) {
+        tls -= 1;
+        ex--;
+        dump(var + " [this, args]");
+        var = "B";
+    }
+
+    private static void dump(String s) {
+        println(s);
     }
 }

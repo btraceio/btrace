@@ -21,10 +21,32 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
- */
+ * Copyright (c) 2017, 2018, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Copyright owner designates
+ * this particular file as subject to the "Classpath" exception as provided
+ * by the owner in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+  */
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.ArgsMap;
+import com.sun.btrace.DebugSupport;
+import com.sun.btrace.SharedSettings;
 import com.sun.btrace.annotations.Sampled;
 
 /**
@@ -63,13 +85,21 @@ public final class OnMethod extends SpecialParameterHolder {
     private boolean isCalled = false;
 
     private BTraceMethodNode bmn;
+    
+    private final DebugSupport debug;
 
     public OnMethod() {
-        // need this to deserialize from the probe descriptor
+        this(new DebugSupport(SharedSettings.GLOBAL));
     }
 
-    public OnMethod(BTraceMethodNode bmn) {
+    public OnMethod(DebugSupport debug) {
+        // need this to deserialize from the probe descriptor
+        this.debug = debug;
+    }
+
+    public OnMethod(BTraceMethodNode bmn, DebugSupport debug) {
         this.bmn = bmn;
+        this.debug = debug;
     }
 
     public void copyFrom(OnMethod other) {
@@ -227,5 +257,58 @@ public final class OnMethod extends SpecialParameterHolder {
     @Override
     public String toString() {
         return "OnMethod{" + "clazz=" + clazz + ", method=" + method + ", type=" + type + ", loc=" + loc + ", targetName=" + targetName + ", targetDescriptor=" + targetDescriptor + ", classRegexMatcher=" + classRegexMatcher + ", methodRegexMatcher=" + methodRegexMatcher + ", classAnnotationMatcher=" + classAnnotationMatcher + ", methodAnnotationMatcher=" + methodAnnotationMatcher + ", subtypeMatcher=" + subtypeMatcher + ", samplerMean=" + samplerMean + ", samplerKind=" + samplerKind + ", level=" + level + ", bmn=" + bmn + '}';
+    }
+
+    void applyArgs(ArgsMap argsMap) {
+        String value = getClazz();
+        if (!value.isEmpty()) {
+            String templated = argsMap.template(value);
+            if (!templated.equals(value)) {
+                this.setClazz(templated);
+            }
+        }
+        value = getMethod();
+        if (!value.isEmpty()) {
+            String templated = argsMap.template(value);
+            if (!templated.equals(value)) {
+                this.setMethod(templated);
+            }
+        }
+        value = getType();
+        if (!value.isEmpty()) {
+            String templated = argsMap.template(value);
+            if (!templated.equals(value)) {
+                this.setType(templated);
+            }
+        }
+        Location loc = getLocation();
+        value = loc.getClazz();
+        if (!value.isEmpty()) {
+            String templated = argsMap.template(value);
+            if (!templated.equals(value)) {
+                loc.setClazz(templated);
+            }
+        }
+        value = loc.getMethod();
+        if (!value.isEmpty()) {
+            String templated = argsMap.template(value);
+            if (!templated.equals(value)) {
+                loc.setMethod(templated);
+            }
+        }
+        value = loc.getField();
+        if (!value.isEmpty()) {
+            String templated = argsMap.template(value);
+            if (!templated.equals(value)) {
+                loc.setField(templated);
+            }
+        }
+        value = loc.getType();
+        if (!value.isEmpty()) {
+            String templated = argsMap.template(value);
+            if (!templated.equals(value)) {
+                loc.setType(templated);
+            }
+        }
     }
 }

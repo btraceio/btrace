@@ -25,6 +25,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.ArgsMap;
 import java.util.regex.Pattern;
 import com.sun.btrace.annotations.BTrace;
 import com.sun.btrace.annotations.Kind;
@@ -158,6 +159,9 @@ public abstract class Constants {
 
     public static final String DURATION_DESC =
         Type.getDescriptor(Duration.class);
+
+    public static final String ARGSMAP_DESC =
+        Type.getDescriptor(ArgsMap.class);
 
     // class name pattern is specified with this pattern
     public static final Pattern REGEX_SPECIFIER = Pattern.compile("/.+/");

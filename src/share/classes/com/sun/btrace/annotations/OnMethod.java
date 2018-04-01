@@ -69,6 +69,16 @@ public @interface OnMethod {
      * within two forward slash characters [like /java\\.awt\\..+/]
      * or @annotation_of_the_class. i.e., specify a class indirectly
      * as a class annotated by specified annotation.
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the whole probe point will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnMethod(clazz = "${package}.MyClass")}
+     * </pre>
+     * </p>
      */
     String clazz();
 
@@ -78,6 +88,16 @@ public @interface OnMethod {
      * within two forward slash characters [like /read.+/]
      * or @annotation_of_the_method. i.e., specify a method indirectly
      * as a method annotated by specified annotation.
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the whole probe point will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnMethod(clazz = "MyClass", method = "${method}")}
+     * </pre>
+     * </p>
      */
     String method() default "";
 
@@ -96,6 +116,17 @@ public @interface OnMethod {
      * <p>
      * Eg. <b>public void myMethod(java.lang.String param)</b> will become
      * <b><i>void (java.lang.String)</i></b>
+     *
+     * <p>
+     * <h3>Since 1.3.11</h3>
+     * The specification can contain references to user arguments.
+     * These references are using Ant style substitution patterns.
+     * If a reference is not resolvable the whole probe point will be effectively disabled.
+     * <br>
+     * <pre>
+     * {@code @OnMethod(clazz = "MyClass", method = "method", type = "${retType} ()")}
+     * </pre>
+     * </p>
      */
     String type() default "";
 
