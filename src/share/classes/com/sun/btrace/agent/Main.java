@@ -44,6 +44,8 @@ import com.sun.btrace.comm.ErrorCommand;
 import com.sun.btrace.util.Messages;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -527,23 +529,23 @@ public final class Main {
             if (delimiterPos > -1) {
                 String jar = path.substring(9, delimiterPos);
                 File jarFile = new File(jar);
-                String libPath = new File(jarFile.getParent() + File.separator + "btrace-libs").getAbsolutePath();
-                appendToBootClassPath(libPath);
-                appendToSysClassPath(libPath);
-                appendToBootClassPath(libPath, libs);
-                appendToSysClassPath(libPath, libs);
+                Path libRoot = new File(jarFile.getParent() + File.separator + "btrace-libs").toPath();
+                Path libFolder = libs != null ? libRoot.resolve(libs) : libRoot;
+                if (Files.exists(libFolder)) {
+                    appendToBootClassPath(libFolder);
+                    appendToSysClassPath(libFolder);
+                } else {
+                    DebugSupport.warning("Invalid 'libs' configuration [" + libs + "]. " +
+                                 "Path '" + libFolder.toAbsolutePath().toString() + "' does not exist.");
+                }
             }
         }
     }
 
-    private static void appendToBootClassPath(String libPath) {
-        appendToBootClassPath(libPath, null);
-    }
-
-    private static void appendToBootClassPath(String libPath, String libs) {
-        File libFolder = new File(libPath + (libs != null ? File.separator + libs : "") + File.separator + "boot");
-        if (libFolder.exists()) {
-            for (File f : libFolder.listFiles()) {
+    private static void appendToBootClassPath(Path libFolder) {
+        Path bootLibs = libFolder.resolve("boot");
+        if (Files.exists(bootLibs)) {
+            for (File f : bootLibs.toFile().listFiles()) {
                 if (f.getName().toLowerCase().endsWith(".jar")) {
                     try {
                         if (isDebug()) {
@@ -557,14 +559,10 @@ public final class Main {
         }
     }
 
-    private static void appendToSysClassPath(String libPath) {
-        appendToSysClassPath(libPath, null);
-    }
-
-    private static void appendToSysClassPath(String libPath, String libs) {
-        File libFolder = new File(libPath + (libs != null ? File.separator + libs : "") + File.separator + "system");
-        if (libFolder.exists()) {
-            for (File f : libFolder.listFiles()) {
+    private static void appendToSysClassPath(Path libFolder) {
+        Path sysLibs = libFolder.resolve("system");
+        if (Files.exists(sysLibs)) {
+            for (File f : sysLibs.toFile().listFiles()) {
                 if (f.getName().toLowerCase().endsWith(".jar")) {
                     try {
                         if (isDebug()) {
