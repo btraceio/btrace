@@ -31,6 +31,7 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
 import com.sun.btrace.annotations.Duration;
+import com.sun.btrace.annotations.TargetInstance;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -40,12 +41,12 @@ import static com.sun.btrace.BTraceUtils.*;
 @BTrace
 public class ArgsDuration2Err {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.ERROR))
-    public static void args(@Self Object self, @Duration long dur, Throwable err) {
+    public static void args(@Self Object self, @Duration long dur, @TargetInstance Throwable err) {
         println("args");
     }
 
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.ERROR))
-    public static void args2(@Self Object self, @Duration long dur, Throwable err) {
+    public static void args2(@Self Object self, @Duration long dur, @TargetInstance Throwable err) {
         println("args");
     }
 }

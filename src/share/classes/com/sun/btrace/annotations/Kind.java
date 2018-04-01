@@ -103,16 +103,21 @@ public enum Kind {
     /**
      * <h2>Exception catch</h2>
      *
-     * <h3>Unannotated probe handler parameters:</h3>
-     * <ol>
-     *   <li>{@link java.lang.Throwable Throwable} - caught throwable</li>
-     * </ol>
+     * <p>
+     * The order and number of unannotated parameters (if provided) must
+     * fully match the probed method signature. Instead of specific parameter
+     * types one can use {@linkplain AnyType} to match any type.
+     * <p>
+     * If the only unannotated parameter is of type {@link AnyType AnyType[]}
+     * it will contain the probed method parameters in the order defined by
+     * its signature.
      * <h3>Allowed probe handler parameter annotations:</h3>
      * <ul>
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
      *       if that method is static</li>
+     *   <li>{@linkplain TargetInstance} - the caught {@linkplain Throwable} (@since 1.3.11)</li>
      * </ul>
      */
     CATCH,
@@ -159,10 +164,14 @@ public enum Kind {
     /**
      * <h2>"return" because of no-catch</h2>
      *
-     * <h3>Unannotated probe handler parameters:</h3>
-     * <ol>
-     *   <li>{@link java.lang.Throwable Throwable} - the thrown throwable</li>
-     * </ol>
+     * <p>
+     * The order and number of unannotated parameters (if provided) must
+     * fully match the probed method signature. Instead of specific parameter
+     * types one can use {@linkplain AnyType} to match any type.
+     * <p>
+     * If the only unannotated parameter is of type {@link AnyType AnyType[]}
+     * it will contain the probed method parameters in the order defined by
+     * its signature.
      * <h3>Allowed probe handler parameter annotations:</h3>
      * <ul>
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
@@ -170,6 +179,7 @@ public enum Kind {
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
      *       if that method is static</li>
      *   <li>{@linkplain Duration} - the method call duration in nanoseconds (only for {@linkplain Where#AFTER}</li>
+     *   <li>{@linkplain TargetInstance} - the {@linkplain Throwable} instance (@since 1.3.11)</li>
      * </ul>
      */
     ERROR,
@@ -343,16 +353,21 @@ public enum Kind {
     /**
      * <h2>Throwing an exception</h2>
      *
-     * <h3>Unannotated probe handler parameters:</h3>
-     * <ol>
-     *   <li>{@linkplain java.lang.Throwable Throwable} - thrown exception</li>
-     * </ol>
+     * <p>
+     * The order and number of unannotated parameters (if provided) must
+     * fully match the probed method signature. Instead of specific parameter
+     * types one can use {@linkplain AnyType} to match any type.
+     * <p>
+     * If the only unannotated parameter is of type {@link AnyType AnyType[]}
+     * it will contain the probed method parameters in the order defined by
+     * its signature.
      * <h3>Allowed probe handler parameter annotations:</h3>
      * <ul>
      *   <li>{@linkplain ProbeClassName} - the name of the enclosing class</li>
      *   <li>{@linkplain ProbeMethodName} - the name of the enclosing method</li>
      *   <li>{@linkplain Self} - the instance enclosing the declaring method or null
      *       if that method is static</li>
+     *   <li>{@linkplain TargetInstance} - the thrown exception (@since 1.3.11)</li>
      * </ul>
      */
     THROW

@@ -31,6 +31,7 @@ import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.TargetInstance;
 import static com.sun.btrace.BTraceUtils.*;
 
 /**
@@ -41,7 +42,7 @@ import static com.sun.btrace.BTraceUtils.*;
 public class Error {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="uncaught",
               location=@Location(value=Kind.ERROR))
-    public static void args(@Self Object self, @ProbeMethodName String pmn, Throwable cause) {
+    public static void args(@Self Object self, @ProbeMethodName String pmn, @TargetInstance Throwable cause) {
         println("args");
     }
 }

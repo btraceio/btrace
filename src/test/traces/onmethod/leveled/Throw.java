@@ -32,6 +32,7 @@ import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.ProbeClassName;
 import com.sun.btrace.annotations.ProbeMethodName;
 import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.TargetInstance;
 import static com.sun.btrace.BTraceUtils.*;
 import com.sun.btrace.annotations.Level;
 
@@ -43,7 +44,7 @@ import com.sun.btrace.annotations.Level;
 public class Throw {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="exception",
               location=@Location(value=Kind.THROW), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeClassName String pcn, @ProbeMethodName String pmn, Throwable e) {
+    public static void args(@Self Object self, @ProbeClassName String pcn, @ProbeMethodName String pmn, @TargetInstance Throwable e) {
         println("args");
     }
 }

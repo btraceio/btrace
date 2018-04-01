@@ -30,6 +30,7 @@ import com.sun.btrace.annotations.Kind;
 import com.sun.btrace.annotations.Location;
 import com.sun.btrace.annotations.OnMethod;
 import com.sun.btrace.annotations.Self;
+import com.sun.btrace.annotations.TargetInstance;
 import java.io.IOException;
 import static com.sun.btrace.BTraceUtils.*;
 
@@ -41,7 +42,7 @@ import static com.sun.btrace.BTraceUtils.*;
 public class Catch {
     @OnMethod(clazz="/.*\\.OnMethodTest/", method="exception",
               location=@Location(value=Kind.CATCH))
-    public static void args(@Self Object self, IOException e) {
+    public static void args(@Self Object self, @TargetInstance IOException e) {
         println("args");
     }
 }
