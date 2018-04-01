@@ -97,11 +97,11 @@ final public class DebugSupport {
     }
 
     public static void warning(String msg) {
-        System.out.println("btrace WARNING: " + msg);
+        System.err.println("btrace WARNING: " + msg);
     }
 
     public static void warning(Throwable th) {
-        System.out.println("btrace WARNING: " + th);
+        System.err.println("btrace WARNING: " + th);
         th.printStackTrace(System.out);
     }
 }
