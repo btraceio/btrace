@@ -155,7 +155,7 @@ public class Compiler {
             usage();
         }
 
-        if (generatePack && packExtension != null) {
+        if (!generatePack && packExtension != null) {
             usage("Can not specify pack extension if not using packs (-nopack)");
         }
 

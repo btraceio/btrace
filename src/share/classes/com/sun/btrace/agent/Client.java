@@ -319,8 +319,6 @@ abstract class Client implements CommandListener {
         boolean entered = false;
         try {
             entered = BTraceRuntime.enter(runtime);
-            System.err.println("*** " + entered);
-            System.err.println("*** " + BTraceUtils.$("timer"));
             return probe.register(runtime, transformer);
         } catch (Throwable th) {
             debugPrint(th);

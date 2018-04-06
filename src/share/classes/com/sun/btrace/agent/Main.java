@@ -588,9 +588,9 @@ public final class Main {
                 traceScript = new File(Constants.EMBEDDED_BTRACE_SECTION_HEADER + filePath);
             }
 
-            if (!scriptName.endsWith(".class")) {
+            if (scriptName.endsWith(".java")) {
                 if (isDebug()) {
-                    debugPrint("refusing " + filePath + " - script should be a pre-compiled .class file");
+                    debugPrint("refusing " + filePath + " - script should be a pre-compiled class file");
                 }
                 return false;
             }
