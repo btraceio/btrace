@@ -53,17 +53,17 @@ questions.
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-client</artifactId>
-            <version>1.3.11-dev</version>
+            <version>1.3.11</version>
         </dependency>
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-agent</artifactId>
-            <version>1.3.11-dev</version>
+            <version>1.3.11</version>
         </dependency>
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-boot</artifactId>
-            <version>1.3.11-dev</version>
+            <version>1.3.11</version>
         </dependency>
         <dependency>
             <groupId>sun.jdk</groupId>
@@ -219,5 +219,5 @@ questions.
             </dependencyManagement>
         </profile>
     </profiles>
-    <description>A JMH benchmar to assert the overhead imposed by various types of BTrace instrumentation</description>
+    <description>A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation</description>
 </project>
