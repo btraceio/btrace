@@ -187,7 +187,7 @@ public class Compiler {
                 } else {
                     file = name;
                 }
-                file += "." + (packExtension != null ? packExtension : ".class");
+                file += "." + (packExtension != null ? packExtension : "class");
                 File out = new File(dir, file);
                 try (FileOutputStream fos = new FileOutputStream(out)) {
                     fos.write(c.getValue());
