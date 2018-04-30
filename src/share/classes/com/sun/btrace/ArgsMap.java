@@ -113,6 +113,23 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>>{
         return map.hashCode();
     }
 
+    @Override
+    public String toString() {
+        return "ArgsMap{" + "map=" + map + ", debug=" + debug + '}';
+    }
+
+    public static ArgsMap merge(ArgsMap ... maps) {
+        DebugSupport debug = null;
+        Map<String, String> propMap = new LinkedHashMap<>();
+        for (ArgsMap map : maps) {
+            if (debug == null) {
+                debug = map.debug;
+            }
+            propMap.putAll(map.map);
+        }
+        return new ArgsMap(propMap, debug);
+    }
+
     public String template(String value) {
         if (value == null) {
             return null;
