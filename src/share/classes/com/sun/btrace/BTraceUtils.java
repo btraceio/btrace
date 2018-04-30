@@ -965,7 +965,7 @@ public class BTraceUtils {
      * @since 1.3.11
      */
     public static void printArray(int[] array) {
-        Arrays.toString(array);
+        println(Arrays.toString(array));
     }
 
     /**
@@ -974,7 +974,7 @@ public class BTraceUtils {
      * @since 1.3.11
      */
     public static void printArray(long[] array) {
-        Arrays.toString(array);
+        println(Arrays.toString(array));
     }
 
     /**
@@ -983,7 +983,7 @@ public class BTraceUtils {
      * @since 1.3.11
      */
     public static void printArray(float[] array) {
-        Arrays.toString(array);
+        println(Arrays.toString(array));
     }
 
     /**
@@ -992,7 +992,7 @@ public class BTraceUtils {
      * @since 1.3.11
      */
     public static void printArray(double[] array) {
-        Arrays.toString(array);
+        println(Arrays.toString(array));
     }
 
     /**
@@ -1001,7 +1001,7 @@ public class BTraceUtils {
      * @since 1.3.11
      */
     public static void printArray(boolean[] array) {
-        Arrays.toString(array);
+        println(Arrays.toString(array));
     }
 
     /**
@@ -1010,7 +1010,7 @@ public class BTraceUtils {
      * @since 1.3.11
      */
     public static void printArray(char[] array) {
-        Arrays.toString(array);
+        println(Arrays.toString(array));
     }
 
     /**
@@ -1019,7 +1019,7 @@ public class BTraceUtils {
      * @since 1.3.11
      */
     public static void printArray(byte[] array) {
-        Arrays.toString(array);
+        println(Arrays.toString(array));
     }
 
     /**
@@ -1028,7 +1028,7 @@ public class BTraceUtils {
      * @since 1.3.11
      */
     public static void printArray(short[] array) {
-        Arrays.toString(array);
+        println(Arrays.toString(array));
     }
 
     /**
