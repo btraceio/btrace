@@ -1179,7 +1179,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     @Override
     public void visitTryCatchBlock(Label start, Label end, Label handler, String exception) {
-        tryCatchHandlerMap.put(start, handler);
+        addTryCatchHandler(start, handler);
         super.visitTryCatchBlock(start, end, handler, exception);
     }
 
@@ -1277,6 +1277,11 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
         Object[] stackSlots = stack.toArray(true);
 
         super.visitFrame(F_NEW, localsArr.length, localsArr, stackSlots.length, stackSlots);
+    }
+
+    @Override
+    public void addTryCatchHandler(Label start, Label handler) {
+        tryCatchHandlerMap.put(start, handler);
     }
 
     @Override

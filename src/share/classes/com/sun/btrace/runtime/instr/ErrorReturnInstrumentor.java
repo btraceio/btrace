@@ -52,13 +52,14 @@ public class ErrorReturnInstrumentor extends MethodReturnInstrumentor {
 
     @Override
     protected void visitMethodPrologue() {
-        visitTryCatchBlock(start, end, end, THROWABLE_INTERNAL);
+        addTryCatchHandler(start, end);
         visitLabel(start);
         super.visitMethodPrologue();
     }
 
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
+        visitTryCatchBlock(start, end, end, THROWABLE_INTERNAL);
         visitLabel(end);
         insertFrameReplaceStack(end, THROWABLE_TYPE);
         onErrorReturn();

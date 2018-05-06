@@ -154,4 +154,12 @@ import java.util.Map;
     public String argsTypeMatch(java.util.ArrayList<String> l) {
         return "x";
     }
+
+    public void caught() {
+        try {
+            throw new RuntimeException("ho-hey");
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+        }
+    }
 }
