@@ -431,6 +431,65 @@ public class InstrumentorTest extends InstrumentorTestBase {
     }
 
     @Test
+    public void methodEntryErrorCaught() throws Exception {
+        loadTargetClass("OnMethodTest");
+        transform("onmethod/ErrorCaught");
+
+        checkTransformation(
+            "TRYCATCHBLOCK L0 L2 L2 java/lang/Throwable\n" +
+            "L3\n" +
+            "LINENUMBER 162 L3\n" +
+            "L4\n" +
+            "LINENUMBER 164 L4\n" +
+            "RETURN\n" +
+            "L2\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
+            "DUP\n" +
+            "ASTORE 2\n" +
+            "ALOAD 0\n" +
+            "LDC \"caught\"\n" +
+            "ALOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ErrorCaught$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V\n" +
+            "ATHROW\n" +
+            "LOCALVARIABLE e Ljava/lang/RuntimeException; L3 L4 1\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 3"
+        );
+
+        resetClassLoader();
+
+        transform("onmethod/leveled/ErrorCaught");
+
+        checkTransformation(
+            "TRYCATCHBLOCK L0 L2 L2 java/lang/Throwable\n" +
+            "L3\n" +
+            "LINENUMBER 162 L3\n" +
+            "L4\n" +
+            "LINENUMBER 164 L4\n" +
+            "RETURN\n" +
+            "L2\n" +
+            "FRAME SAME1 java/lang/Throwable\n" +
+            "DUP\n" +
+            "ASTORE 2\n" +
+            "GETSTATIC traces/onmethod/leveled/ErrorCaught.$btrace$$level : I\n" +
+            "ICONST_1\n" +
+            "IF_ICMPLT L5\n" +
+            "ALOAD 0\n" +
+            "LDC \"caught\"\n" +
+            "ALOAD 2\n" +
+            "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ErrorCaught$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V\n" +
+            "L5\n" +
+            "FRAME FULL [resources/OnMethodTest T java/lang/Throwable] [java/lang/Throwable]\n" +
+            "ATHROW\n" +
+            "LOCALVARIABLE e Ljava/lang/RuntimeException; L3 L4 1\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0\n" +
+            "MAXSTACK = 4\n" +
+            "MAXLOCALS = 3"
+        );
+    }
+
+    @Test
     public void methodEntryErrorDuration() throws Exception {
         loadTargetClass("OnMethodTest");
         transform("onmethod/ErrorDuration");
@@ -615,35 +674,26 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/SyncEntry");
 
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L2 L3 L4 null\n" +
-            "TRYCATCHBLOCK L4 L5 L4 null\n" +
-            "L0\n" +
-            "LINENUMBER 108 L0\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 2\n" +
             "ALOAD 0\n" +
             "LDC \"sync\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
-            "L2\n" +
-            "LINENUMBER 109 L2\n" +
             "L6\n" +
             "LINENUMBER 110 L6\n" +
-            "L3\n" +
             "GOTO L7\n" +
-            "L4\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ASTORE 3\n" +
-            "L5\n" +
             "ALOAD 3\n" +
             "L7\n" +
             "LINENUMBER 111 L7\n" +
             "FRAME FULL [resources/OnMethodTest T resources/OnMethodTest T] []\n" +
-            "L1\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
         );
@@ -653,11 +703,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/SyncEntry");
 
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L2 L3 L4 null\n" +
-            "TRYCATCHBLOCK L4 L5 L4 null\n" +
-            "L0\n" +
-            "LINENUMBER 108 L0\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
             "GETSTATIC traces/onmethod/leveled/SyncEntry.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L6\n" +
@@ -669,24 +715,19 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L6\n" +
             "FRAME FULL [resources/OnMethodTest resources/OnMethodTest T] [resources/OnMethodTest]\n" +
-            "L2\n" +
-            "LINENUMBER 109 L2\n" +
             "L7\n" +
             "LINENUMBER 110 L7\n" +
-            "L3\n" +
             "GOTO L8\n" +
-            "L4\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object T] [java/lang/Throwable]\n" +
             "ASTORE 3\n" +
-            "L5\n" +
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
             "FRAME FULL [resources/OnMethodTest T T T] []\n" +
-            "L1\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
         );
@@ -698,35 +739,26 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/SyncMEntry");
 
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L2 L3 L4 null\n" +
-            "TRYCATCHBLOCK L4 L5 L4 null\n" +
-            "L0\n" +
-            "LINENUMBER 147 L0\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 2\n" +
             "ALOAD 0\n" +
             "LDC \"syncM\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
-            "L2\n" +
-            "LINENUMBER 148 L2\n" +
             "L6\n" +
             "LINENUMBER 149 L6\n" +
-            "L3\n" +
             "GOTO L7\n" +
-            "L4\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object java/lang/Object] [java/lang/Throwable]\n" +
             "ASTORE 3\n" +
-            "L5\n" +
             "ALOAD 3\n" +
             "L7\n" +
             "LINENUMBER 150 L7\n" +
             "FRAME FULL [resources/OnMethodTest T java/lang/Object T] []\n" +
-            "L1\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
         );
@@ -736,11 +768,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/SyncMEntry");
 
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L2 L3 L4 null\n" +
-            "TRYCATCHBLOCK L4 L5 L4 null\n" +
-            "L0\n" +
-            "LINENUMBER 147 L0\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
             "GETSTATIC traces/onmethod/leveled/SyncMEntry.$btrace$$level : I\n" +
             "ICONST_1\n" +
             "IF_ICMPLT L6\n" +
@@ -752,24 +780,19 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L6\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object T] [java/lang/Object]\n" +
-            "L2\n" +
-            "LINENUMBER 148 L2\n" +
             "L7\n" +
             "LINENUMBER 149 L7\n" +
-            "L3\n" +
             "GOTO L8\n" +
-            "L4\n" +
             "FRAME SAME1 java/lang/Throwable\n" +
             "ASTORE 3\n" +
-            "L5\n" +
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
             "FRAME FULL [resources/OnMethodTest T T T] []\n" +
-            "L1\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 4"
         );
@@ -781,13 +804,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/SyncExit");
 
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L2 L3 L4 null\n" +
-            "TRYCATCHBLOCK L4 L5 L4 null\n" +
-            "L0\n" +
-            "LINENUMBER 108 L0\n" +
-            "L2\n" +
-            "LINENUMBER 109 L2\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
             "L6\n" +
             "LINENUMBER 110 L6\n" +
             "DUP\n" +
@@ -796,9 +813,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"resources.OnMethodTest\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
-            "L3\n" +
             "GOTO L7\n" +
-            "L4\n" +
             "ASTORE 3\n" +
             "DUP\n" +
             "ASTORE 4\n" +
@@ -806,15 +821,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"resources.OnMethodTest\"\n" +
             "ALOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
-            "L5\n" +
             "ALOAD 3\n" +
             "L7\n" +
             "LINENUMBER 111 L7\n" +
             "FRAME FULL [resources/OnMethodTest T resources/OnMethodTest T] []\n" +
-            "L1\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 5"
         );
@@ -824,13 +838,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/SyncExit");
 
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L2 L3 L4 null\n" +
-            "TRYCATCHBLOCK L4 L5 L4 null\n" +
-            "L0\n" +
-            "LINENUMBER 108 L0\n" +
-            "L2\n" +
-            "LINENUMBER 109 L2\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
             "L6\n" +
             "LINENUMBER 110 L6\n" +
             "GETSTATIC traces/onmethod/leveled/SyncExit.$btrace$$level : I\n" +
@@ -844,9 +852,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L7\n" +
             "FRAME FULL [resources/OnMethodTest resources/OnMethodTest T] [resources/OnMethodTest]\n" +
-            "L3\n" +
             "GOTO L8\n" +
-            "L4\n" +
             "ASTORE 3\n" +
             "GETSTATIC traces/onmethod/leveled/SyncExit.$btrace$$level : I\n" +
             "ICONST_1\n" +
@@ -859,15 +865,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L9\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object T java/lang/Throwable T] [java/lang/Object]\n" +
-            "L5\n" +
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
             "FRAME FULL [resources/OnMethodTest T T T] []\n" +
-            "L1\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 5"
         );
@@ -879,13 +884,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/SyncMExit");
 
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L2 L3 L4 null\n" +
-            "TRYCATCHBLOCK L4 L5 L4 null\n" +
-            "L0\n" +
-            "LINENUMBER 147 L0\n" +
-            "L2\n" +
-            "LINENUMBER 148 L2\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
             "L6\n" +
             "LINENUMBER 149 L6\n" +
             "DUP\n" +
@@ -894,9 +893,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"resources.OnMethodTest\"\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
-            "L3\n" +
             "GOTO L7\n" +
-            "L4\n" +
             "ASTORE 3\n" +
             "DUP\n" +
             "ASTORE 4\n" +
@@ -904,15 +901,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LDC \"resources.OnMethodTest\"\n" +
             "ALOAD 4\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
-            "L5\n" +
             "ALOAD 3\n" +
             "L7\n" +
             "LINENUMBER 150 L7\n" +
             "FRAME FULL [resources/OnMethodTest T java/lang/Object T] []\n" +
-            "L1\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 5"
         );
@@ -922,13 +918,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
         transform("onmethod/leveled/SyncMExit");
 
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L2 L3 L4 null\n" +
-            "TRYCATCHBLOCK L4 L5 L4 null\n" +
-            "L0\n" +
-            "LINENUMBER 147 L0\n" +
-            "L2\n" +
-            "LINENUMBER 148 L2\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
             "L6\n" +
             "LINENUMBER 149 L6\n" +
             "GETSTATIC traces/onmethod/leveled/SyncMExit.$btrace$$level : I\n" +
@@ -942,9 +932,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L7\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object T] [java/lang/Object]\n" +
-            "L3\n" +
             "GOTO L8\n" +
-            "L4\n" +
             "ASTORE 3\n" +
             "GETSTATIC traces/onmethod/leveled/SyncMExit.$btrace$$level : I\n" +
             "ICONST_1\n" +
@@ -957,15 +945,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$SyncMExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V\n" +
             "L9\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object T java/lang/Throwable T] [java/lang/Object]\n" +
-            "L5\n" +
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
             "FRAME FULL [resources/OnMethodTest T T T] []\n" +
-            "L1\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXSTACK = 4\n" +
             "MAXLOCALS = 5"
         );
@@ -5706,8 +5693,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 0\n" +
             "ALOAD 1\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsSigMatch$m1 (Ljava/lang/Object;Ljava/util/List;)V\n" +
-            "MAXSTACK = 2\n" +
-            "MAXLOCALS = 2"
+            "MAXSTACK = 2"
         );
 
         resetClassLoader();

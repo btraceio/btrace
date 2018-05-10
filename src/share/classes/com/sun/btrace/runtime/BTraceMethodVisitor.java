@@ -24,6 +24,10 @@ public class BTraceMethodVisitor extends MethodVisitor {
         return index;
     }
 
+    public final void addTryCatchHandler(Label start, Label handler) {
+        mHelper.addTryCatchHandler(start, handler);
+    }
+
     public void insertFrameReplaceStack(Label l, Type... stack) {
         mHelper.insertFrameReplaceStack(l, stack);
     }

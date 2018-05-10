@@ -37,27 +37,18 @@ public class BTRACE69Test extends InstrumentorTestBase {
         originalBC = loadTargetClass("OnMethodTest");
         transform("issues/BTRACE69");
         checkTransformation(
-            "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L0 L2 L2 java/lang/Throwable\n" +
-            "TRYCATCHBLOCK L3 L4 L5 null\n" +
-            "TRYCATCHBLOCK L5 L6 L5 null\n" +
-            "L0\n" +
-            "LINENUMBER 108 L0\n" +
+            "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
+            "TRYCATCHBLOCK L4 L6 L6 java/lang/Throwable\n" +
             "DUP\n" +
             "ASTORE 2\n" +
             "ALOAD 2\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncEntry (Ljava/lang/Object;)V\n" +
-            "L3\n" +
-            "LINENUMBER 109 L3\n" +
             "L7\n" +
             "LINENUMBER 110 L7\n" +
-            "ALOAD 1\n" +
             "DUP\n" +
             "ASTORE 3\n" +
             "ALOAD 3\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
-            "MONITOREXIT\n" +
-            "L4\n" +
             "GOTO L8\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ASTORE 4\n" +
@@ -65,17 +56,17 @@ public class BTRACE69Test extends InstrumentorTestBase {
             "ASTORE 5\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$issues$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
-            "L6\n" +
             "ALOAD 4\n" +
             "ATHROW\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
             "FRAME FULL [resources/OnMethodTest T resources/OnMethodTest resources/OnMethodTest T] []\n" +
             "RETURN\n" +
+            "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
-            "ATHROW\n" +
             "FRAME SAME1 java/lang/Throwable\n" +
-            "LOCALVARIABLE this Lresources/OnMethodTest; L0 L1 0\n" +
+            "ATHROW\n" +
+            "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
             "MAXLOCALS = 6"
         );
     }
