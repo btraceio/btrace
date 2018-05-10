@@ -164,14 +164,20 @@ public abstract class InstrumentorTestBase {
     }
 
     protected void checkTransformation(String expected) throws IOException {
+        checkTransformation(expected, true);
+    }
+
+    protected void checkTransformation(String expected, boolean verify) throws IOException {
         org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(transformedBC);
 
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        CheckClassAdapter.verify(cr, true, pw);
-        if (sw.toString().contains("AnalyzerException")) {
-            System.err.println(sw.toString());
-            fail();
+        if (verify) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            CheckClassAdapter.verify(cr, true, pw);
+            if (sw.toString().contains("AnalyzerException")) {
+                System.err.println(sw.toString());
+                fail();
+            }
         }
 
         String diff = diff();

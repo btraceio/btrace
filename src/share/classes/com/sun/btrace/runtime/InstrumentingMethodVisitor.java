@@ -642,6 +642,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     @Override
     public void visitVarInsn(int opcode, int var) {
+        if (var == 37) {
+            System.err.println("*** stop here");
+        }
         int size = 1;
 
         switch (opcode) {
@@ -1345,6 +1348,8 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
                             localsArr[off] = TOP_EXT;
                             idx++;
                         }
+                    } else {
+                        System.err.println("***");
                     }
                 }
                 idx++;
@@ -1395,10 +1400,10 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     private int remap(int var, int size) {
         int mappedVar = map(var);
-        if (mappedVar == 0) {
+        if (mappedVar >= 0) {
             int offset = var - argsSize;
-            var = newVarIdx(size);
-            setMapping(offset, var, size -1);
+            var = (mappedVar == 0) ? newVarIdx(size) : -mappedVar;
+            setMapping(offset, var, size - 1);
             mappedVar = var;
         }
         var = mappedVar == Integer.MIN_VALUE ? 0 : Math.abs(mappedVar);
@@ -1419,7 +1424,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
             }
             return mapping[idx];
         }
-        return var == 0 ? Integer.MIN_VALUE : var;
+        return var == 0 ? Integer.MIN_VALUE : -var;
     }
 
     private Object peekFromStack() {

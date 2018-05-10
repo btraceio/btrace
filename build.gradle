@@ -190,6 +190,7 @@ processTestResources {
     include 'traces/**/*.java'
     include 'traces/**/*.xml'
     include 'resources/classdata/**/*.clazz'
+    include 'resources/classdata/**/*.class'
     include 'resources/classdata/**/*.btrc'
 }
 
