@@ -35,9 +35,6 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Formatter;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -56,6 +53,8 @@ import java.util.concurrent.ThreadFactory;
  */
 final public class Statsd extends SimpleService {
     private static final Charset CHARSET = Charset.forName("ascii");
+    private final QManager QManager = new QManager();
+
     public static enum Priority {
         NORMAL, LOW
     }
@@ -67,7 +66,6 @@ final public class Statsd extends SimpleService {
         private final static Statsd INSTANCE = new Statsd();
     }
 
-    private final BlockingQueue<String> q = new ArrayBlockingQueue<>(120000);
     private final ExecutorService e = Executors.newSingleThreadExecutor(
         new ThreadFactory() {
             @Override
@@ -105,8 +103,8 @@ final public class Statsd extends SimpleService {
 
                     while (true) {
                         Collection<String> msgs = new ArrayList<>();
-                        msgs.add(q.take());
-                        q.drainTo(msgs);
+                        msgs.add(QManager.getQ().take());
+                        QManager.getQ().drainTo(msgs);
 
                         StringBuilder sb = new StringBuilder();
                         for(String m : msgs) {
@@ -139,7 +137,7 @@ final public class Statsd extends SimpleService {
      * @param name the counter name
      */
     public void increment(String name) {
-        delta(name, 1, 0.0d, null);
+        QManager.delta(name, 1, 0.0d, null);
     }
 
     /**
@@ -150,7 +148,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void increment(String name, String tags) {
-        delta(name, 1, 0.0d, tags);
+        QManager.delta(name, 1, 0.0d, tags);
     }
 
     /**
@@ -162,7 +160,7 @@ final public class Statsd extends SimpleService {
      *     sampled every 1/10th of the time.
      */
     public void increment(String name, double sampleRate) {
-        delta(name, 1, sampleRate, null);
+        QManager.delta(name, 1, sampleRate, null);
     }
 
     /**
@@ -177,7 +175,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void increment(String name, double sampleRate, String tags) {
-        delta(name, 1, sampleRate, tags);
+        QManager.delta(name, 1, sampleRate, tags);
     }
 
     /**
@@ -185,7 +183,7 @@ final public class Statsd extends SimpleService {
      * @param name the counter name
      */
     public void decrement(String name) {
-        delta(name, -1, 0.0d, null);
+        QManager.decrement(name);
     }
 
     /**
@@ -196,7 +194,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void decrement(String name, String tags) {
-        delta(name, -1, 0.0d, tags);
+        QManager.delta(name, -1, 0.0d, tags);
     }
 
     /**
@@ -208,7 +206,7 @@ final public class Statsd extends SimpleService {
      *     sampled every 1/10th of the time.
      */
     public void decrement(String name, double sampleRate) {
-        delta(name, -1, sampleRate, null);
+        QManager.delta(name, -1, sampleRate, null);
     }
 
     /**
@@ -223,7 +221,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void decrement(String name, double sampleRate, String tags) {
-        delta(name, -1, sampleRate, tags);
+        QManager.delta(name, -1, sampleRate, tags);
     }
 
     /**
@@ -285,7 +283,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void count(String name, long count, double sampleRate, String tags) {
-        submit(name, count, sampleRate, "c", tags);
+        QManager.submit(name, count, sampleRate, "c", tags);
     }
 
     /**
@@ -312,7 +310,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void gauge(String name, long value, String tags) {
-        submit(name, value, 0d, "g", tags);
+        QManager.submit(name, value, 0d, "g", tags);
     }
 
     /**
@@ -374,7 +372,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void time(String name, long value, double sampleRate, String tags) {
-        submit(name, value, sampleRate, "ms", tags);
+        QManager.submit(name, value, sampleRate, "ms", tags);
     }
 
     /**
@@ -436,7 +434,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void histo(String name, long value, double sampleRate, String tags) {
-        submit(name, value, sampleRate, "h", tags);
+        QManager.submit(name, value, sampleRate, "h", tags);
     }
 
     /**
@@ -452,7 +450,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void unique(String name, String id, String tags) {
-        submit(name, id, "s", tags);
+        QManager.submit(name, id, "s", tags);
     }
 
     /**
@@ -475,7 +473,7 @@ final public class Statsd extends SimpleService {
      * @param text event text
      */
     public void event(String title, String text) {
-        event(title, text, 0, null, null, null, null, null, null);
+        QManager.event(title, text, 0, null, null, null, null, null, null);
     }
 
     /**
@@ -487,7 +485,7 @@ final public class Statsd extends SimpleService {
      *     Assigned comma delimited tags. A tag value is delimited by colon.
      */
     public void event(String title, String text, String tags) {
-        event(title, text, 0, null, null, null, null, null, tags);
+        QManager.event(title, text, 0, null, null, null, null, null, tags);
     }
 
     /**
@@ -517,79 +515,7 @@ final public class Statsd extends SimpleService {
     public void event(String title, String text, long timestamp, String host,
                       String group, String sourceType, Priority priority,
                       AlertType alertType, String tags) {
-        StringBuilder sb = new StringBuilder("_e{");
-        sb.append(title.length()).append(',')
-          .append(text.length()).append('}');
 
-        sb.append(':').append(title).append('|').append(text);
-
-        if (timestamp >= 0) {
-            sb.append("|d:").append(timestamp == 0 ? System.currentTimeMillis() : timestamp);
-        }
-        if (host != null) {
-            sb.append("|h:").append(host);
-        }
-        if (group != null) {
-            sb.append("|k:").append(group);
-        }
-        if (sourceType != null) {
-            sb.append("|s:").append(sourceType);
-        }
-        if (priority != null) {
-            sb.append("|p:").append(priority);
-        }
-        if (alertType != null) {
-            sb.append("|t:").append(alertType);
-        }
-        appendTags(tags, sb);
-
-        q.offer(sb.toString());
-    }
-
-    private void delta(String name, long value, double sampleRate, String tags) {
-        StringBuilder sb = new StringBuilder(name);
-        Formatter fmt = new Formatter(sb);
-
-        sb.append(':');
-        if (value > 0) {
-            sb.append('+');
-        } else if (value < 0) {
-            sb.append('-');
-        }
-        sb.append(value).append('|').append('g');
-        appendSampleRate(sampleRate, sb, fmt);
-        appendTags(tags, sb);
-        q.offer(sb.toString());
-    }
-
-    private void submit(String name, long value, double sampleRate, String type, String tags) {
-        StringBuilder sb = new StringBuilder(name);
-        Formatter fmt = new Formatter(sb);
-
-        sb.append(':').append(value).append('|').append(type);
-        appendSampleRate(sampleRate, sb, fmt);
-        appendTags(tags, sb);
-        q.offer(sb.toString());
-    }
-
-    private void submit(String name, String value, String type, String tags) {
-        StringBuilder sb = new StringBuilder(name);
-
-        sb.append(':').append(value).append('|').append(type);
-        appendTags(tags, sb);
-        q.offer(sb.toString());
-    }
-
-    private void appendTags(String tags, StringBuilder sb) {
-        if (tags != null && !tags.isEmpty()) {
-            sb.append("|#").append(tags);
-        }
-    }
-
-    private void appendSampleRate(double sampleRate, StringBuilder sb, Formatter fmt) {
-        if (sampleRate > 0) {
-            sb.append("|@");
-            fmt.format("%.3f", sampleRate);
-        }
+        QManager.event(title, text, timestamp, host, group, sourceType, priority, alertType, tags);
     }
 }
