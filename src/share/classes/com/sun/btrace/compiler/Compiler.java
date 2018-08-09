@@ -245,19 +245,4 @@ public class Compiler {
         // collect .class bytes of all compiled classes
         return compilerHelper.compile(manager, compUnits, err, sourcePath, classPath);
     }
-
-    private void printDiagnostic(Diagnostic diagnostic, final PrintWriter perr) {
-        compilerHelper.printDiagnostic(diagnostic, perr);
-    }
-
-    /** Checks if the list of diagnostic messages contains at least one error. Certain
-     * {@link JavacTask} implementations may return success error code even though errors were
-     * reported. */
-    private boolean containsErrors(DiagnosticCollector<?> diagnostics) {
-        return compilerHelper.containsErrors(diagnostics);
-    }
-
-    private void dump(String name, byte[] code) {
-        compilerHelper.dump(name, code);
-    }
 }
