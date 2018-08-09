@@ -830,34 +830,8 @@ public class PCPP {
         }
     }
 
-    private void pushEnableBit(boolean enabled) {
-        //debugPrint(false, "PUSH_ENABLED, NOW: " + enabled());
-        printer.pushEnableBit(enabled);
-    }
-
-    private void popEnableBit() {
-        //debugPrint(false, "POP_ENABLED, NOW: " + enabled());
-        printer.popEnableBit();
-    }
-
-    private boolean enabled() {
-        return printer.enabled();
-    }
-
-    private void print(String s) {
-        printer.print(s);
-    }
-
-    private void println() {
-        printer.println();
-    }
-
     private void printToken() {
         printer.print(curTokenAsString());
-    }
-
-    private void flush() {
-        printer.flush();
     }
 
     private void lineDirective() {
