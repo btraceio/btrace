@@ -24,23 +24,14 @@
  */
 package com.sun.btrace.compiler;
 
-import com.sun.btrace.SharedSettings;
-import com.sun.btrace.org.objectweb.asm.ClassReader;
-import com.sun.btrace.org.objectweb.asm.ClassWriter;
-import com.sun.btrace.runtime.BTraceProbeFactory;
-import com.sun.btrace.runtime.BTraceProbeNode;
-import com.sun.btrace.runtime.BTraceProbePersisted;
-import javax.annotation.processing.Processor;
 import com.sun.source.util.JavacTask;
 import com.sun.btrace.util.Messages;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.tools.Diagnostic;
-import javax.tools.Diagnostic.Kind;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -58,12 +49,10 @@ import javax.tools.ToolProvider;
  * @author A. Sundararajan
  */
 public class Compiler {
-    // JSR 199 compiler
-    private JavaCompiler compiler;
+    private final CompilerHelper compilerHelper;
     private StandardJavaFileManager stdManager;
     // null means no preprocessing isf done.
     public List<String> includeDirs;
-    private boolean generatePack = false;
     private String packExtension = "class";
 
     public Compiler(String includePath, boolean generatePack) {
@@ -72,9 +61,9 @@ public class Compiler {
             String[] paths = includePath.split(File.pathSeparator);
             includeDirs.addAll(Arrays.asList(paths));
         }
-        this.compiler = ToolProvider.getSystemJavaCompiler();
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         this.stdManager = compiler.getStandardFileManager(null, null, null);
-        this.generatePack = generatePack;
+        compilerHelper = new CompilerHelper(compiler, generatePack);
     }
 
     public Compiler(String includePath) {
@@ -237,134 +226,38 @@ public class Compiler {
             Writer err, String sourcePath, String classPath) {
         // create a new memory JavaFileManager
         MemoryJavaFileManager manager = new MemoryJavaFileManager(stdManager, includeDirs);
-        return compile(manager, compUnits, err, sourcePath, classPath);
+        return compilerHelper.compile(manager, compUnits, err, sourcePath, classPath);
     }
 
     private Map<String, byte[]> compile(MemoryJavaFileManager manager,
             Iterable<? extends JavaFileObject> compUnits,
             Writer err, String sourcePath, final String classPath) {
         // to collect errors, warnings etc.
-        DiagnosticCollector<JavaFileObject> diagnostics =
-                new DiagnosticCollector<>();
 
         // javac options
-        List<String> options = new ArrayList<>();
-        options.add("-Xlint:all");
-        options.add("-g:lines");
-        options.add("-deprecation");
-        options.add("-source");
-        options.add("1.7");
-        options.add("-target");
-        options.add("1.7");
-        if (sourcePath != null) {
-            options.add("-sourcepath");
-            options.add(sourcePath);
-        }
-
-        if (classPath != null) {
-            options.add("-classpath");
-            options.add(classPath);
-        }
 
         // create a compilation task
-        JavacTask task =
-                (JavacTask) compiler.getTask(err, manager, diagnostics,
-                options, null, compUnits);
-        Verifier btraceVerifier = new Verifier();
-        task.setTaskListener(btraceVerifier);
 
         // we add BTrace Verifier as a (JSR 269) Processor
-        List<Processor> processors = new ArrayList<>(1);
-        processors.add(btraceVerifier);
-        task.setProcessors(processors);
-
-        final PrintWriter perr = (err instanceof PrintWriter) ?
-                                    (PrintWriter) err :
-                                    new PrintWriter(err);
 
         // print dignostics messages in case of failures.
-        if (task.call() == false || containsErrors(diagnostics)) {
-            for (Diagnostic diagnostic : diagnostics.getDiagnostics()) {
-                printDiagnostic(diagnostic, perr);
-            }
-            perr.flush();
-            return null;
-        }
 
         // collect .class bytes of all compiled classes
-        Map<String, byte[]> result = new HashMap<>();
-        try {
-            Map<String, byte[]> classBytes = manager.getClassBytes();
-            List<String> classNames = btraceVerifier.getClassNames();
-            for (String name : classNames) {
-                if (classBytes.containsKey(name)) {
-                    dump(name + "_before", classBytes.get(name));
-                    ClassReader cr = new ClassReader(classBytes.get(name));
-                    ClassWriter cw = new CompilerClassWriter(classPath, perr);
-                    cr.accept(new Postprocessor(cw), ClassReader.EXPAND_FRAMES + ClassReader.SKIP_DEBUG);
-                    byte[] classData = cw.toByteArray();
-                    dump(name + "_after", classData);
-                    if (generatePack) {
-                        // temp hack; need turn off verifier
-                        SharedSettings.GLOBAL.setTrusted(true);
-
-                        BTraceProbeNode bpn = (BTraceProbeNode)new BTraceProbeFactory(SharedSettings.GLOBAL).createProbe(classData);
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        try (DataOutputStream dos = new DataOutputStream(bos)) {
-                            BTraceProbePersisted bpp = BTraceProbePersisted.from(bpn);
-                            bpp.write(dos);
-                        }
-
-                        classData = bos.toByteArray();
-                    }
-                    result.put(name, classData);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace(perr);
-        } finally {
-            try {
-                manager.close();
-            } catch (IOException exp) {
-            }
-        }
-        return result;
+        return compilerHelper.compile(manager, compUnits, err, sourcePath, classPath);
     }
 
     private void printDiagnostic(Diagnostic diagnostic, final PrintWriter perr) {
-        perr.println(diagnostic);
+        compilerHelper.printDiagnostic(diagnostic, perr);
     }
 
     /** Checks if the list of diagnostic messages contains at least one error. Certain
      * {@link JavacTask} implementations may return success error code even though errors were
      * reported. */
     private boolean containsErrors(DiagnosticCollector<?> diagnostics) {
-        for (Diagnostic<?> diagnostic : diagnostics.getDiagnostics()) {
-            if (diagnostic.getKind() == Kind.ERROR) {
-                return true;
-            }
-        }
-        return false;
+        return compilerHelper.containsErrors(diagnostics);
     }
 
     private void dump(String name, byte[] code) {
-        OutputStream os = null;
-        try {
-            name = name.replace(".", "_") + ".class";
-            File f = new File("/tmp/" + name);
-            if (!f.exists()) {
-                f.getParentFile().createNewFile();
-            }
-            os = new FileOutputStream(f);
-            os.write(code);
-        } catch (IOException e) {
-
-        } finally {
-            if (os != null) {
-                try {
-                    os.close();
-                } catch (IOException e) {}
-            }
-        }
+        compilerHelper.dump(name, code);
     }
 }
