@@ -24,16 +24,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CompilerHelper {
-    boolean generatePack = false;
+class CompilerHelper {
+    private final boolean generatePack;
+    // JSR 199 compiler
+    private final JavaCompiler compiler;
 
-    public CompilerHelper(JavaCompiler compiler, boolean generatePack) {
+    CompilerHelper(JavaCompiler compiler, boolean generatePack) {
         this.compiler = compiler;
         this.generatePack = generatePack;
     }
-
-    // JSR 199 compiler
-    JavaCompiler compiler;
 
     Map<String, byte[]> compile(MemoryJavaFileManager manager,
                                 Iterable<? extends JavaFileObject> compUnits,
@@ -126,7 +125,7 @@ public class CompilerHelper {
         return result;
     }
 
-    void dump(String name, byte[] code) {
+    private void dump(String name, byte[] code) {
         OutputStream os = null;
         try {
             name = name.replace(".", "_") + ".class";
@@ -148,7 +147,7 @@ public class CompilerHelper {
         }
     }
 
-    void printDiagnostic(Diagnostic diagnostic, final PrintWriter perr) {
+    private void printDiagnostic(Diagnostic diagnostic, final PrintWriter perr) {
         perr.println(diagnostic);
     }
 
@@ -157,7 +156,7 @@ public class CompilerHelper {
      * {@link JavacTask} implementations may return success error code even though errors were
      * reported.
      */
-    boolean containsErrors(DiagnosticCollector<?> diagnostics) {
+    private boolean containsErrors(DiagnosticCollector<?> diagnostics) {
         for (Diagnostic<?> diagnostic : diagnostics.getDiagnostics()) {
             if (diagnostic.getKind() == Kind.ERROR) {
                 return true;
