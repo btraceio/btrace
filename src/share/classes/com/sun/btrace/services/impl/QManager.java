@@ -1,35 +1,20 @@
 package com.sun.btrace.services.impl;
 
-import com.sun.btrace.BTraceRuntime;
-import com.sun.btrace.SharedSettings;
-import com.sun.btrace.services.spi.SimpleService;
-
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Formatter;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
-public class QManager {
+class QManager {
     final BlockingQueue<String> q = new ArrayBlockingQueue<>(120000);
 
-    public BlockingQueue<String> getQ() {
+    QManager() {
+    }
+
+    BlockingQueue<String> getQ() {
         return q;
     }
 
-    public QManager() {
-    }
-
-    void appendSampleRate(double sampleRate, StringBuilder sb, Formatter fmt) {
+    private void appendSampleRate(double sampleRate, StringBuilder sb, Formatter fmt) {
         if (sampleRate > 0) {
             sb.append("|@");
             fmt.format("%.3f", sampleRate);
@@ -109,7 +94,7 @@ public class QManager {
         q.offer(sb.toString());
     }
 
-    void appendTags(String tags, StringBuilder sb) {
+    private void appendTags(String tags, StringBuilder sb) {
         if (tags != null && !tags.isEmpty()) {
             sb.append("|#").append(tags);
         }
@@ -130,7 +115,7 @@ public class QManager {
      *
      * @param name the counter name
      */
-    public void decrement(String name) {
+    void decrement(String name) {
         delta(name, -1, 0.0d, null);
     }
 }
