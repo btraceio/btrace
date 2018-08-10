@@ -1,30 +1,27 @@
 package com.sun.btrace.compiler;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.Reader;
-import java.io.StreamTokenizer;
 import java.io.Writer;
-import java.util.*;
+import java.util.ArrayList;
 
-public class Printer {
-    ArrayList enabledBits = new ArrayList();
+class Printer {
     static int debugPrintIndentLevel = 0;
-
-    public static int getDebugPrintIndentLevel() {
-        return debugPrintIndentLevel;
-    }
-
     ////////////
     // Output //
     ////////////
-    PrintWriter writer;
+    private final PrintWriter writer;
+    private ArrayList enabledBits = new ArrayList();
 
-    public Printer() {
+    Printer() {
+        writer = null;
+    }
+
+    Printer(Writer out) {
+        writer = (out instanceof PrintWriter) ? (PrintWriter) out : new PrintWriter(out);
+    }
+
+    public static int getDebugPrintIndentLevel() {
+        return debugPrintIndentLevel;
     }
 
     void println() {
@@ -37,10 +34,6 @@ public class Printer {
     boolean enabled() {
         return (enabledBits.isEmpty() ||
                 ((Boolean) enabledBits.get(enabledBits.size() - 1)));
-    }
-
-    public void setOut(Writer out) {
-        writer = (out instanceof PrintWriter) ? (PrintWriter) out : new PrintWriter(out);
     }
 
     void pushEnableBit(boolean enabled) {

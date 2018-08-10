@@ -53,14 +53,16 @@ import java.util.*;
 public class PCPP {
 
     private static final boolean disableDebugPrint = true;
-    private final Printer printer = new Printer();
+    private final Printer printer;
 
     public PCPP(List/*<String>*/ includePaths) {
         this.includePaths = includePaths;
+        printer = new Printer();
     }
 
-    public void setOut(Writer out) {
-        printer.setOut(out);
+    public PCPP(List/*<String>*/ includePaths, Writer out) {
+        this.includePaths = includePaths;
+        printer = new Printer(out);
     }
 
     public void run(Reader reader, String filename) throws IOException {
