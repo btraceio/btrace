@@ -26,6 +26,7 @@ import java.util.Map;
 
 class CompilerHelper {
     private final boolean generatePack;
+
     // JSR 199 compiler
     private final JavaCompiler compiler;
 
