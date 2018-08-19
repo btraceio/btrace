@@ -14,7 +14,7 @@ plugins {
     id 'java'
     id 'maven'
     id 'maven-publish'
-    id "nebula.ospackage" version "4.3.0"
+    id "nebula.ospackage" version "4.9.3"
     id "com.jfrog.bintray" version "1.7"
     id "jacoco"
 }
