@@ -32,8 +32,6 @@ import java.io.File;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,7 +50,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
     final private AtomicReference<State> currentState = new AtomicReference<>(State.NEW);
     final private Set<StateListener> stateListeners = new HashSet<>();
 
-    private final ExtractedBTraceTaskImpl extractedBTraceTaskImpl = new ExtractedBTraceTaskImpl();
+    private final BTraceTaskDispatcher taskDispatcher = new BTraceTaskDispatcher();
 
     private String script;
     private int numInstrClasses;
@@ -173,7 +171,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
      */
     @Override
     public void addMessageDispatcher(MessageDispatcher dispatcher) {
-        extractedBTraceTaskImpl.addMessageDispatcher(dispatcher);
+        taskDispatcher.addMessageDispatcher(dispatcher);
     }
 
     /**
@@ -182,7 +180,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
      */
     @Override
     public void removeMessageDispatcher(MessageDispatcher dispatcher) {
-        extractedBTraceTaskImpl.removeMessageDispatcher(dispatcher);
+        taskDispatcher.removeMessageDispatcher(dispatcher);
     }
 
     /**
@@ -267,7 +265,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
 
     @SuppressWarnings("FutureReturnValueIgnored")
     void dispatchCommand(final Command cmd) {
-        extractedBTraceTaskImpl.dispatchCommand(cmd);
+        taskDispatcher.dispatchCommand(cmd);
     }
 
     @Override

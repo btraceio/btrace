@@ -8,11 +8,11 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-class ExtractedBTraceTaskImpl {
+class BTraceTaskDispatcher {
     private final static ExecutorService dispatcher = Executors.newSingleThreadExecutor();
-    private final Set<MessageDispatcher> messageDispatchers = new HashSet<>();
+    private final Set<BTraceTask.MessageDispatcher> messageDispatchers = new HashSet<>();
 
-    ExtractedBTraceTaskImpl() {
+    BTraceTaskDispatcher() {
     }
 
     /**
@@ -39,7 +39,7 @@ class ExtractedBTraceTaskImpl {
 
     @SuppressWarnings("FutureReturnValueIgnored")
     void dispatchCommand(final Command cmd) {
-        final Set<MessageDispatcher> dispatchingSet = new HashSet<BTraceTask.MessageDispatcher>();
+        final Set<BTraceTask.MessageDispatcher> dispatchingSet = new HashSet<BTraceTask.MessageDispatcher>();
         synchronized (messageDispatchers) {
             dispatchingSet.addAll(messageDispatchers);
         }
