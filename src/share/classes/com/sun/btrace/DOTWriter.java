@@ -229,7 +229,7 @@ public class DOTWriter {
 
     // Style of inter dependency edge.
     final static String INTEREDGESTYLE = "style=dashed, color=darkGrey";
-    private final ExtractedDOTWriter extractedDOTWriter = new ExtractedDOTWriter();
+    private final DotWriterFormatter dotWriterFormatter = new DotWriterFormatter();
 
     // Maximum number of objects displayed.
     private int objectLimit = 256;
@@ -422,13 +422,13 @@ public class DOTWriter {
                 isSimple = false;
             } else if (value instanceof String) {
                 // Strings in double quotes.
-                string = extractedDOTWriter.formatString((String) value, "\"");
+                string = dotWriterFormatter.formatString((String) value, "\"");
             } else if (value instanceof char[]) {
                 // char arrays as single quote strings.
-                string = extractedDOTWriter.formatString(new String((char[]) value), "\'");
+                string = dotWriterFormatter.formatString(new String((char[]) value), "\'");
             } else if (value instanceof byte[] && allASCII((byte[])value)) {
                 // byte arrays of ascii characters as single quote strings.
-                string = extractedDOTWriter.formatString(new String((byte[]) value, StandardCharsets.UTF_8), "\'");
+                string = dotWriterFormatter.formatString(new String((byte[]) value, StandardCharsets.UTF_8), "\'");
             } else if (value instanceof Character) {
                 // Quote characters.
                 Character character = (Character)value;
@@ -484,7 +484,7 @@ public class DOTWriter {
         }
         prop = props.getProperty(DOTWRITER_PREFIX + "stringLimit");
         if (prop != null) {
-            extractedDOTWriter.stringLimit(Integer.parseInt(prop));
+            dotWriterFormatter.stringLimit(Integer.parseInt(prop));
         }
         prop = props.getProperty(DOTWRITER_PREFIX + "arrayLimit");
         if (prop != null) {
@@ -626,7 +626,7 @@ public class DOTWriter {
     }
 
     public void stringLimit(int stringLimit) {
-        extractedDOTWriter.stringLimit(stringLimit);
+        dotWriterFormatter.stringLimit(stringLimit);
     }
 
     // Control the switching of collections from detail to expanded.

@@ -2,12 +2,12 @@ package com.sun.btrace;
 
 import java.util.*;
 
-class ExtractedDOTWriter {
+class DotWriterFormatter {
     // Maximum number of string characters displayed.
     private
     int stringLimit = 32;
 
-    ExtractedDOTWriter() {
+    DotWriterFormatter() {
     }
 
     // Set maximum number of string characters displayed.
