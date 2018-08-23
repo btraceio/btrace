@@ -7,22 +7,22 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-class ExtractedBTraceEngineImpl {
-    private final Set<WeakReference<StateListener>> listeners = new HashSet<WeakReference<StateListener>>();
+class BTraceEngineListeners {
+    private final Set<WeakReference<BTraceEngineImpl.StateListener>> listeners = new HashSet<WeakReference<BTraceEngineImpl.StateListener>>();
 
-    ExtractedBTraceEngineImpl() {
+    BTraceEngineListeners() {
     }
 
     void addListener(BTraceEngineImpl.StateListener listener) {
         synchronized (listeners) {
-            listeners.add(new WeakReference<StateListener>(listener));
+            listeners.add(new WeakReference<BTraceEngineImpl.StateListener>(listener));
         }
     }
 
     void removeListener(BTraceEngineImpl.StateListener listener) {
         synchronized (listeners) {
-            for (Iterator<WeakReference<StateListener>> iter = listeners.iterator(); iter.hasNext(); ) {
-                WeakReference<StateListener> ref = iter.next();
+            for (Iterator<WeakReference<BTraceEngineImpl.StateListener>> iter = listeners.iterator(); iter.hasNext(); ) {
+                WeakReference<BTraceEngineImpl.StateListener> ref = iter.next();
                 BTraceEngineImpl.StateListener l = ref.get();
                 if (l == null || l.equals(listener)) {
                     iter.remove();
@@ -33,7 +33,7 @@ class ExtractedBTraceEngineImpl {
 
     void fireOnTaskStart(BTraceTask task) {
         synchronized (listeners) {
-            for (WeakReference<StateListener> ref : listeners) {
+            for (WeakReference<BTraceEngineImpl.StateListener> ref : listeners) {
                 BTraceEngineImpl.StateListener l = ref.get();
                 if (l != null) l.onTaskStart(task);
             }
@@ -42,7 +42,7 @@ class ExtractedBTraceEngineImpl {
 
     void fireOnTaskStop(BTraceTask task) {
         synchronized (listeners) {
-            for (WeakReference<StateListener> ref : listeners) {
+            for (WeakReference<BTraceEngineImpl.StateListener> ref : listeners) {
                 BTraceEngineImpl.StateListener l = ref.get();
                 if (l != null) l.onTaskStop(task);
             }

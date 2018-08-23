@@ -32,9 +32,7 @@ import com.sun.btrace.comm.RetransformationStartNotification;
 import java.io.IOException;
 import java.util.EventListener;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -51,7 +49,7 @@ import com.sun.btrace.spi.impl.BTraceCompilerFactoryImpl;
 import com.sun.btrace.spi.impl.BTraceSettingsProviderImpl;
 import com.sun.btrace.spi.OutputProvider;
 import com.sun.btrace.spi.impl.PortLocatorImpl;
-import java.lang.ref.WeakReference;
+
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.ServiceLoader;
@@ -64,7 +62,7 @@ import java.util.concurrent.Executors;
  */
 public class BTraceEngineImpl extends BTraceEngine {
     final private static Logger LOGGER = Logger.getLogger(BTraceEngineImpl.class.getName());
-    private final ExtractedBTraceEngineImpl extractedBTraceEngineImpl = new ExtractedBTraceEngineImpl();
+    private final BTraceEngineListeners listeners = new BTraceEngineListeners();
 
     /**
      * Basic state listener<br>
@@ -163,7 +161,7 @@ public class BTraceEngineImpl extends BTraceEngine {
     }
 
     void addListener(StateListener listener) {
-        extractedBTraceEngineImpl.addListener(listener);
+        listeners.addListener(listener);
     }
 
     boolean start(final BTraceTask task) {
@@ -172,7 +170,7 @@ public class BTraceEngineImpl extends BTraceEngine {
         boolean result = doStart(task);
         LOGGER.log(Level.FINEST, "BTrace task {0}", result ? "started successfuly" : "failed");
         if (result) {
-            extractedBTraceEngineImpl.fireOnTaskStart(task);
+            listeners.fireOnTaskStart(task);
         }
         return result;
     }
@@ -187,7 +185,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                 boolean result = doStop(task);
                 LOGGER.log(Level.FINEST, "BTrace task {0}", result ? "stopped successfuly" : "not stopped");
                 if (result) {
-                    extractedBTraceEngineImpl.fireOnTaskStop(task);
+                    listeners.fireOnTaskStop(task);
                 }
                 return result;
             }
