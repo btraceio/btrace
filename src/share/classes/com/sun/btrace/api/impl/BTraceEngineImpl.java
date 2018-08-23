@@ -64,6 +64,7 @@ import java.util.concurrent.Executors;
  */
 public class BTraceEngineImpl extends BTraceEngine {
     final private static Logger LOGGER = Logger.getLogger(BTraceEngineImpl.class.getName());
+    private final ExtractedBTraceEngineImpl extractedBTraceEngineImpl = new ExtractedBTraceEngineImpl();
 
     /**
      * Basic state listener<br>
@@ -90,7 +91,6 @@ public class BTraceEngineImpl extends BTraceEngine {
 
     private Map<BTraceTask, Client> clientMap = new HashMap<BTraceTask, Client>();
 
-    final private Set<WeakReference<StateListener>> listeners = new HashSet<WeakReference<StateListener>>();
     final private ExecutorService commQueue = Executors.newCachedThreadPool();
 
     public BTraceEngineImpl() {
@@ -163,21 +163,7 @@ public class BTraceEngineImpl extends BTraceEngine {
     }
 
     void addListener(StateListener listener) {
-        synchronized(listeners) {
-            listeners.add(new WeakReference<StateListener>(listener));
-        }
-    }
-
-    void removeListener(StateListener listener) {
-        synchronized(listeners) {
-            for(Iterator<WeakReference<StateListener>> iter=listeners.iterator();iter.hasNext();) {
-                WeakReference<StateListener> ref = iter.next();
-                StateListener l = ref.get();
-                if (l == null || l.equals(listener)) {
-                    iter.remove();
-                }
-            }
-        }
+        extractedBTraceEngineImpl.addListener(listener);
     }
 
     boolean start(final BTraceTask task) {
@@ -186,7 +172,7 @@ public class BTraceEngineImpl extends BTraceEngine {
         boolean result = doStart(task);
         LOGGER.log(Level.FINEST, "BTrace task {0}", result ? "started successfuly" : "failed");
         if (result) {
-            fireOnTaskStart(task);
+            extractedBTraceEngineImpl.fireOnTaskStart(task);
         }
         return result;
     }
@@ -201,7 +187,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                 boolean result = doStop(task);
                 LOGGER.log(Level.FINEST, "BTrace task {0}", result ? "stopped successfuly" : "not stopped");
                 if (result) {
-                    fireOnTaskStop(task);
+                    extractedBTraceEngineImpl.fireOnTaskStop(task);
                 }
                 return result;
             }
@@ -340,21 +326,4 @@ public class BTraceEngineImpl extends BTraceEngine {
         return cpProvider;
     }
 
-    private void fireOnTaskStart(BTraceTask task) {
-        synchronized(listeners) {
-            for(WeakReference<StateListener> ref : listeners) {
-                StateListener l = ref.get();
-                if (l != null) l.onTaskStart(task);
-            }
-        }
-    }
-
-    private void fireOnTaskStop(BTraceTask task) {
-        synchronized(listeners) {
-            for(WeakReference<StateListener> ref : listeners) {
-                StateListener l = ref.get();
-                if (l != null) l.onTaskStop(task);
-            }
-        }
-    }
 }
