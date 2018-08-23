@@ -229,6 +229,7 @@ public class DOTWriter {
 
     // Style of inter dependency edge.
     final static String INTEREDGESTYLE = "style=dashed, color=darkGrey";
+    private final ExtractedDOTWriter extractedDOTWriter = new ExtractedDOTWriter();
 
     // Maximum number of objects displayed.
     private int objectLimit = 256;
@@ -238,9 +239,6 @@ public class DOTWriter {
 
     // Maximum number of array entries displayed.
     private int arrayLimit = 32;
-
-    // Maximum number of string characters displayed.
-    private int stringLimit = 32;
 
     // Map of visited objects.
     private Map<Object, Node> visited = new IdentityHashMap<Object, Node>();
@@ -424,13 +422,13 @@ public class DOTWriter {
                 isSimple = false;
             } else if (value instanceof String) {
                 // Strings in double quotes.
-                string = formatString((String)value, "\"");
+                string = extractedDOTWriter.formatString((String) value, "\"");
             } else if (value instanceof char[]) {
                 // char arrays as single quote strings.
-                string = formatString(new String((char[])value), "\'");
+                string = extractedDOTWriter.formatString(new String((char[]) value), "\'");
             } else if (value instanceof byte[] && allASCII((byte[])value)) {
                 // byte arrays of ascii characters as single quote strings.
-                string = formatString(new String((byte[])value, StandardCharsets.UTF_8), "\'");
+                string = extractedDOTWriter.formatString(new String((byte[]) value, StandardCharsets.UTF_8), "\'");
             } else if (value instanceof Character) {
                 // Quote characters.
                 Character character = (Character)value;
@@ -486,7 +484,7 @@ public class DOTWriter {
         }
         prop = props.getProperty(DOTWRITER_PREFIX + "stringLimit");
         if (prop != null) {
-            this.stringLimit(Integer.parseInt(prop));
+            extractedDOTWriter.stringLimit(Integer.parseInt(prop));
         }
         prop = props.getProperty(DOTWRITER_PREFIX + "arrayLimit");
         if (prop != null) {
@@ -627,9 +625,8 @@ public class DOTWriter {
         this.arrayLimit = arrayLimit;
     }
 
-    // Set maximum number of string characters displayed.
     public void stringLimit(int stringLimit) {
-        this.stringLimit = stringLimit;
+        extractedDOTWriter.stringLimit(stringLimit);
     }
 
     // Control the switching of collections from detail to expanded.
@@ -1009,15 +1006,6 @@ public class DOTWriter {
         labelString += valueString;
         // Add to record description.
         node.extendProperty("label", labelString);
-    }
-
-    // Formats a string value, truncating if needed.
-    private String formatString(String string, String quote) {
-        boolean isLong = string.length() > stringLimit;
-        if (isLong) string = string.substring(0, stringLimit - 1);
-        string = quote + string + quote;
-        if (isLong) string += "...";
-        return string;
     }
 
     // Escape a quoted value string for output.
