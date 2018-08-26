@@ -32,9 +32,7 @@ import com.sun.btrace.comm.RetransformationStartNotification;
 import java.io.IOException;
 import java.util.EventListener;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -51,7 +49,7 @@ import com.sun.btrace.spi.impl.BTraceCompilerFactoryImpl;
 import com.sun.btrace.spi.impl.BTraceSettingsProviderImpl;
 import com.sun.btrace.spi.OutputProvider;
 import com.sun.btrace.spi.impl.PortLocatorImpl;
-import java.lang.ref.WeakReference;
+
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.ServiceLoader;
@@ -64,6 +62,7 @@ import java.util.concurrent.Executors;
  */
 public class BTraceEngineImpl extends BTraceEngine {
     final private static Logger LOGGER = Logger.getLogger(BTraceEngineImpl.class.getName());
+    private final BTraceEngineListeners listeners = new BTraceEngineListeners();
 
     /**
      * Basic state listener<br>
@@ -90,7 +89,6 @@ public class BTraceEngineImpl extends BTraceEngine {
 
     private Map<BTraceTask, Client> clientMap = new HashMap<BTraceTask, Client>();
 
-    final private Set<WeakReference<StateListener>> listeners = new HashSet<WeakReference<StateListener>>();
     final private ExecutorService commQueue = Executors.newCachedThreadPool();
 
     public BTraceEngineImpl() {
@@ -163,21 +161,7 @@ public class BTraceEngineImpl extends BTraceEngine {
     }
 
     void addListener(StateListener listener) {
-        synchronized(listeners) {
-            listeners.add(new WeakReference<StateListener>(listener));
-        }
-    }
-
-    void removeListener(StateListener listener) {
-        synchronized(listeners) {
-            for(Iterator<WeakReference<StateListener>> iter=listeners.iterator();iter.hasNext();) {
-                WeakReference<StateListener> ref = iter.next();
-                StateListener l = ref.get();
-                if (l == null || l.equals(listener)) {
-                    iter.remove();
-                }
-            }
-        }
+        listeners.addListener(listener);
     }
 
     boolean start(final BTraceTask task) {
@@ -186,7 +170,7 @@ public class BTraceEngineImpl extends BTraceEngine {
         boolean result = doStart(task);
         LOGGER.log(Level.FINEST, "BTrace task {0}", result ? "started successfuly" : "failed");
         if (result) {
-            fireOnTaskStart(task);
+            listeners.fireOnTaskStart(task);
         }
         return result;
     }
@@ -201,7 +185,7 @@ public class BTraceEngineImpl extends BTraceEngine {
                 boolean result = doStop(task);
                 LOGGER.log(Level.FINEST, "BTrace task {0}", result ? "stopped successfuly" : "not stopped");
                 if (result) {
-                    fireOnTaskStop(task);
+                    listeners.fireOnTaskStop(task);
                 }
                 return result;
             }
@@ -340,21 +324,4 @@ public class BTraceEngineImpl extends BTraceEngine {
         return cpProvider;
     }
 
-    private void fireOnTaskStart(BTraceTask task) {
-        synchronized(listeners) {
-            for(WeakReference<StateListener> ref : listeners) {
-                StateListener l = ref.get();
-                if (l != null) l.onTaskStart(task);
-            }
-        }
-    }
-
-    private void fireOnTaskStop(BTraceTask task) {
-        synchronized(listeners) {
-            for(WeakReference<StateListener> ref : listeners) {
-                StateListener l = ref.get();
-                if (l != null) l.onTaskStop(task);
-            }
-        }
-    }
 }
