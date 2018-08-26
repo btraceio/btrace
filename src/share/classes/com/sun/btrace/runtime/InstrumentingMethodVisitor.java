@@ -22,6 +22,7 @@
 
 package com.sun.btrace.runtime;
 
+import com.sun.btrace.DebugSupport;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -642,9 +643,6 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     @Override
     public void visitVarInsn(int opcode, int var) {
-        if (var == 37) {
-            System.err.println("*** stop here");
-        }
         int size = 1;
 
         switch (opcode) {
@@ -1470,6 +1468,10 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
         }
         if (slotType == TOP) {
             return Constants.TOP_TYPE;
+        }
+        if (slotType instanceof Integer) {
+            DebugSupport.warning("Unknown slot type: " + slotType);
+            return Constants.OBJECT_TYPE;
         }
         return slotType != null ? Type.getObjectType((String)slotType) : Constants.OBJECT_TYPE;
     }
