@@ -143,13 +143,14 @@ public final class OnMethod extends SpecialParameterHolder {
     }
 
     public void setMethod(String method) {
-        if (method.charAt(0) == '@') {
+        char firstChar = method.isEmpty() ? 0 : method.charAt(0);
+        if (firstChar == '@') {
             this.methodAnnotationMatcher = true;
             method = method.substring(1);
         } else {
             this.methodAnnotationMatcher = false;
         }
-        if (method.charAt(0) == '/' && Constants.REGEX_SPECIFIER.matcher(method).matches()) {
+        if (firstChar == '/' && Constants.REGEX_SPECIFIER.matcher(method).matches()) {
             this.methodRegexMatcher = true;
             method = method.substring(1, method.length() - 1);
         } else {

@@ -534,7 +534,8 @@ public final class Main {
                 if (Files.exists(libFolder)) {
                     appendToBootClassPath(libFolder);
                     appendToSysClassPath(libFolder);
-                } else {
+                } else if (libs != null) {
+                    // for user provided libs config report error if the location does not exist
                     DebugSupport.warning("Invalid 'libs' configuration [" + libs + "]. " +
                                  "Path '" + libFolder.toAbsolutePath().toString() + "' does not exist.");
                 }
