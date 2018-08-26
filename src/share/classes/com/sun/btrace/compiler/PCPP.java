@@ -29,7 +29,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StreamTokenizer;
 import java.io.Writer;
@@ -54,13 +53,16 @@ import java.util.*;
 public class PCPP {
 
     private static final boolean disableDebugPrint = true;
+    private final Printer printer;
 
     public PCPP(List/*<String>*/ includePaths) {
         this.includePaths = includePaths;
+        printer = new Printer();
     }
 
-    public void setOut(Writer out) {
-        writer = (out instanceof PrintWriter)? (PrintWriter)out : new PrintWriter(out);
+    public PCPP(List/*<String>*/ includePaths, Writer out) {
+        this.includePaths = includePaths;
+        printer = new Printer(out);
     }
 
     public void run(Reader reader, String filename) throws IOException {
@@ -245,7 +247,7 @@ public class PCPP {
                     // Consume and return next token, setting state appropriately
                     val = state.tok().nextToken();
                     state.setStartOfLine(true);
-                    println();
+                    printer.println();
                 } while (val == StreamTokenizer.TT_EOL);
             }
         }
@@ -345,17 +347,17 @@ public class PCPP {
                 // !!HACK!! - print space only for word tokens. This way multicharacter
                 // operators such as ==, != etc. are property printed.
                 if (tok == StreamTokenizer.TT_WORD) {
-                    print(" ");
+                    printer.print(" ");
                 }
                 String s = curTokenAsString();
                 String newS = (String) defineMap.get(s);
                 if (newS == null) {
                     newS = s;
                 }
-                print(newS);
+                printer.print(newS);
             }
         }
-        flush();
+        printer.flush();
     }
 
     private void preprocessorDirective() throws IOException {
@@ -397,7 +399,7 @@ public class PCPP {
                 break;
         }
         if (shouldPrint) {
-            print("# ");
+            printer.print("# ");
             printToken();
         }
     }
@@ -417,7 +419,7 @@ public class PCPP {
             values.add(curTokenAsString());
         }
 
-        if (enabled()) {
+        if (printer.enabled()) {
             String oldDef = (String) defineMap.remove(name);
             if (oldDef == null) {
                 System.err.println("WARNING: ignoring redundant \"#undef " +
@@ -445,7 +447,7 @@ public class PCPP {
         // FOO" where FOO isn't defined), then don't actually alter the definition
         // map.
         debugPrint(true, "#define " + name);
-        if (enabled()) {
+        if (printer.enabled()) {
             boolean emitDefine = true;
 
             // Handle #definitions to nothing or to a constant value
@@ -514,15 +516,15 @@ public class PCPP {
 
             if (emitDefine) {
                 // commenting out the #define in output
-                print("// ");
+                printer.print("// ");
                 // Print name and value
-                print("# define ");
-                print(name);
+                printer.print("# define ");
+                printer.print(name);
                 for (Iterator iter = values.iterator(); iter.hasNext();) {
-                    print(" ");
-                    print((String) iter.next());
+                    printer.print(" ");
+                    printer.print((String) iter.next());
                 }
-                println();
+                printer.println();
             }
 
         } // end if (enabled())
@@ -591,20 +593,20 @@ public class PCPP {
         debugPrint(true, (isIfdef ? "#ifdef " : "#ifndef ") + symbolName);
         boolean symbolIsDefined = defineMap.get(symbolName) != null;
         //debugPrint(true, "HANDLE_IFDEF: ifdef(" + symbolName + ") = " + symbolIsDefined );
-        pushEnableBit(enabled() && symbolIsDefined == isIfdef);
+        printer.pushEnableBit(printer.enabled() && symbolIsDefined == isIfdef);
     }
 
     /** Handles #else directives */
     private void handleElse() throws IOException {
-        boolean enabledStatusBeforeElse = enabled();
-        popEnableBit();
-        pushEnableBit(enabled() && !enabledStatusBeforeElse);
+        boolean enabledStatusBeforeElse = printer.enabled();
+        printer.popEnableBit();
+        printer.pushEnableBit(printer.enabled() && !enabledStatusBeforeElse);
         debugPrint(true, "#else ");
     }
 
     private void handleEndif() {
-        boolean enabledBeforePopping = enabled();
-        popEnableBit();
+        boolean enabledBeforePopping = printer.enabled();
+        printer.popEnableBit();
 
         // print the endif if we were enabled prior to popEnableBit() (sending
         // false to debugPrint means "print regardless of current enabled() state).
@@ -620,9 +622,9 @@ public class PCPP {
         debugPrint(true, (isIf ? "#if" : "#elif"));
         boolean defineEvaluatedToTrue = handleIfRecursive(true);
         if (!isIf) {
-            popEnableBit();
+            printer.popEnableBit();
         }
-        pushEnableBit(enabled() && defineEvaluatedToTrue == isIf);
+        printer.pushEnableBit(printer.enabled() && defineEvaluatedToTrue == isIf);
     //System.out.println("OUT HANDLE_" + (isIf ? "IF" : "ELIF") +" (evaluated to " + defineEvaluatedToTrue + ")");
     }
 
@@ -801,7 +803,7 @@ public class PCPP {
         // FOO" where FOO isn't defined), then don't actually process the
         // #included file.
         debugPrint(true, "#include [" + filename + "]");
-        if (enabled()) {
+        if (printer.enabled()) {
             // Look up file in known #include path
             String fullname = findFile(filename);
             //System.out.println("ACTIVE BLOCK, LOADING " + filename);
@@ -817,70 +819,21 @@ public class PCPP {
         }
     }
 
-    ////////////
-    // Output //
-    ////////////
-    private PrintWriter writer;
-    private ArrayList enabledBits = new ArrayList();
-    private static int debugPrintIndentLevel = 0;
-
     private void debugPrint(boolean onlyPrintIfEnabled, String msg) {
         if (disableDebugPrint) {
             return;
         }
 
-        if (!onlyPrintIfEnabled || (onlyPrintIfEnabled && enabled())) {
-            for (int i = debugPrintIndentLevel; --i > 0;) {
+        if (!onlyPrintIfEnabled || (onlyPrintIfEnabled && printer.enabled())) {
+            for (int i = Printer.debugPrintIndentLevel; --i > 0;) {
                 System.out.print("  ");
             }
             System.out.println(msg + "  (line " + lineNumber() + " file " + filename() + ")");
         }
     }
 
-    private void pushEnableBit(boolean enabled) {
-        enabledBits.add(enabled);
-        ++debugPrintIndentLevel;
-    //debugPrint(false, "PUSH_ENABLED, NOW: " + enabled());
-    }
-
-    private void popEnableBit() {
-        if (enabledBits.isEmpty()) {
-            System.err.println("WARNING: mismatched #ifdef/endif pairs");
-            return;
-        }
-        enabledBits.remove(enabledBits.size() - 1);
-        --debugPrintIndentLevel;
-    //debugPrint(false, "POP_ENABLED, NOW: " + enabled());
-    }
-
-    private boolean enabled() {
-        return (enabledBits.isEmpty() ||
-                ((Boolean) enabledBits.get(enabledBits.size() - 1)));
-    }
-
-    private void print(String s) {
-        if (enabled()) {
-            writer.print(s);
-        //System.out.print(s);//debug
-        }
-    }
-
-    private void println() {
-        if (enabled()) {
-            writer.println();
-        //System.err.println();//debug
-        }
-    }
-
     private void printToken() {
-        print(curTokenAsString());
-    }
-
-    private void flush() {
-        if (enabled()) {
-            writer.flush();
-        //System.err.flush(); //debug
-        }
+        printer.print(curTokenAsString());
     }
 
     private void lineDirective() {

@@ -158,9 +158,8 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
     static JavaFileObject preprocessedFileObject(JavaFileObject fo, List<String> includeDirs)
             throws IOException {
         if (includeDirs != null) {
-            PCPP pcpp = new PCPP(includeDirs);
             StringWriter out = new StringWriter();
-            pcpp.setOut(out);
+            PCPP pcpp = new PCPP(includeDirs, out);
             BufferedReader reader = new BufferedReader(new InputStreamReader(fo.openInputStream(), StandardCharsets.UTF_8));
             pcpp.run(reader, fo.getName());
             return new StringInputBuffer(fo.getName(), out.toString());
@@ -171,9 +170,8 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
 
     static JavaFileObject makeStringSource(String name, String code, List<String> includeDirs) {
         if (includeDirs != null) {
-            PCPP pcpp = new PCPP(includeDirs);
             StringWriter out = new StringWriter();
-            pcpp.setOut(out);
+            PCPP pcpp = new PCPP(includeDirs, out);
             try {
                 pcpp.run(new StringReader(code), name);
             } catch (IOException exp) {
