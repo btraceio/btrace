@@ -281,7 +281,8 @@ public final class ClassInfo {
                             }
                         }
                     }
-                } catch (IOException e) {
+                } catch (IllegalArgumentException | IOException e) {
+                    DebugSupport.warning("Unable to load class: " + className);
                     DebugSupport.warning(e);
                 }
             }
