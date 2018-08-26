@@ -150,6 +150,7 @@ public final class OnMethod extends SpecialParameterHolder {
         } else {
             this.methodAnnotationMatcher = false;
         }
+        firstChar = method.isEmpty() ? 0 : method.charAt(0);
         if (firstChar == '/' && Constants.REGEX_SPECIFIER.matcher(method).matches()) {
             this.methodRegexMatcher = true;
             method = method.substring(1, method.length() - 1);
