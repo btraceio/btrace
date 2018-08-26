@@ -259,30 +259,35 @@ public final class ClassInfo {
     private void loadExternalClass(final ClassLoader cl, final ClassName className) {
         String resourcePath = className.getResourcePath();
 
-        InputStream typeIs = cl == null ? SYS_CL.getResourceAsStream(resourcePath) : cl.getResourceAsStream(resourcePath);
-        if (typeIs != null) {
-            try {
-                BTraceClassReader cr = new BTraceClassReader(cl, typeIs);
+        try {
+            InputStream typeIs = cl == null ? SYS_CL.getResourceAsStream(resourcePath) : cl.getResourceAsStream(resourcePath);
+            if (typeIs != null) {
+                try {
+                    BTraceClassReader cr = new BTraceClassReader(cl, typeIs);
 
-                this.isInterface = cr.isInterface();
-                String[] info = cr.readClassSupers();
-                String superName = info[0];
-                if (superName != null) {
-                    ClassName superClassName = new ClassName(superName);
-                    supertypes.add(cache.get(inferClassLoader(cl, superClassName), superClassName));
-                }
-                if (info.length > 1) {
-                    for(int i = 1; i < info.length; i++) {
-                        String ifc = info[i];
-                        if (ifc != null) {
-                            ClassName ifcClassName = new ClassName(ifc);
-                            supertypes.add(cache.get(inferClassLoader(cl, ifcClassName), ifcClassName));
+                    this.isInterface = cr.isInterface();
+                    String[] info = cr.readClassSupers();
+                    String superName = info[0];
+                    if (superName != null) {
+                        ClassName superClassName = new ClassName(superName);
+                        supertypes.add(cache.get(inferClassLoader(cl, superClassName), superClassName));
+                    }
+                    if (info.length > 1) {
+                        for(int i = 1; i < info.length; i++) {
+                            String ifc = info[i];
+                            if (ifc != null) {
+                                ClassName ifcClassName = new ClassName(ifc);
+                                supertypes.add(cache.get(inferClassLoader(cl, ifcClassName), ifcClassName));
+                            }
                         }
                     }
+                } catch (IOException e) {
+                    DebugSupport.warning(e);
                 }
-            } catch (IOException e) {
-                DebugSupport.warning(e);
             }
+        } catch (Throwable t) {
+            // some containers can impose additional restrictions on classloaders throwing exceptions when not in expected state
+            DebugSupport.warning(t);
         }
     }
 
@@ -299,8 +304,13 @@ public final class ClassInfo {
             ClassLoader cl = initiating;
             ClassLoader prev = initiating;
             while (cl != null) {
-                if (cl.getResource(rsrcName) == null) {
-                    return prev;
+                try {
+                    if (cl.getResource(rsrcName) == null) {
+                        return prev;
+                    }
+                } catch (Throwable t) {
+                    // some containers can impose additional restrictions on loading resources and error on unexpected state
+                    DebugSupport.warning(t);
                 }
                 prev = cl;
                 cl = cl.getParent();
