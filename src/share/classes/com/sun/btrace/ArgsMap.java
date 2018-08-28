@@ -24,11 +24,18 @@ package com.sun.btrace;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A simple argument map wrapper allowing indexed access
  */
-public final class ArgsMap implements Iterable<Map.Entry<String, String>>{
+public final class ArgsMap implements Iterable<Map.Entry<String, String>> {
+    private static final class PatternSingleton {
+        // lazy initialization trick
+        // do not compile the pattern until it is actually requested
+        private static final Pattern INSTANCE = Pattern.compile("\\$\\{(.*?)\\}");
+    }
     private final LinkedHashMap<String, String> map;
     private final DebugSupport debug;
 
@@ -138,60 +145,15 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>>{
             return value;
         }
 
-        StringBuilder sb = new StringBuilder();
-        StringBuilder keySb = new StringBuilder();
-        int state = 0;
+        Matcher matcher = PatternSingleton.INSTANCE.matcher(value);
+        StringBuffer buffer = new StringBuffer(value.length());
 
-        for (char c : value.toCharArray()) {
-            switch (c) {
-                case '$': {
-                    if (state == 0) {
-                        state = 1;
-                    }
-                    break;
-                }
-                case '{': {
-                    if (state == 1) {
-                        state = 2;
-                        keySb.setLength(0);
-                    }
-                    break;
-                }
-                case '}': {
-                    if (state == 2) {
-                        String key = keySb.toString();
-                        String val = get(key);
-                        if (val != null) {
-                            sb.append(val);
-                        } else {
-                            sb.append("${").append(key).append("}");
-                        }
-                        state = 0;
-                    }
-                    break;
-                }
-                default: {
-                    switch (state) {
-                        case 0: {
-                            sb.append(c);
-                            break;
-                        }
-                        case 2: {
-                            keySb.append(c);
-                            break;
-                        }
-                        default: {
-                            // other states are invalid; ignore input
-                        }
-                    }
-                }
-            }
+        while (matcher.find()) {
+            String val = get(matcher.group(1));
+            matcher.appendReplacement(buffer, val != null ? val : "$0");
         }
+        matcher.appendTail(buffer);
 
-        String expanded = sb.toString();
-        if (debug.isDebug()) {
-            debug.debug("Template: " + value + " -> " + expanded);
-        }
-        return expanded;
+        return buffer.toString();
     }
 }

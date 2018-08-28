@@ -32,8 +32,6 @@ import java.io.File;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,9 +49,8 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
 
     final private AtomicReference<State> currentState = new AtomicReference<>(State.NEW);
     final private Set<StateListener> stateListeners = new HashSet<>();
-    final private Set<MessageDispatcher> messageDispatchers = new HashSet<>();
 
-    final private static ExecutorService dispatcher = Executors.newSingleThreadExecutor();
+    private final BTraceTaskDispatcher taskDispatcher = new BTraceTaskDispatcher();
 
     private String script;
     private int numInstrClasses;
@@ -174,9 +171,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
      */
     @Override
     public void addMessageDispatcher(MessageDispatcher dispatcher) {
-        synchronized (messageDispatchers) {
-            messageDispatchers.add(dispatcher);
-        }
+        taskDispatcher.addMessageDispatcher(dispatcher);
     }
 
     /**
@@ -185,9 +180,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
      */
     @Override
     public void removeMessageDispatcher(MessageDispatcher dispatcher) {
-        synchronized (messageDispatchers) {
-            messageDispatchers.remove(dispatcher);
-        }
+        taskDispatcher.removeMessageDispatcher(dispatcher);
     }
 
     /**
@@ -272,52 +265,7 @@ public class BTraceTaskImpl extends BTraceTask implements BTraceEngineImpl.State
 
     @SuppressWarnings("FutureReturnValueIgnored")
     void dispatchCommand(final Command cmd) {
-        final Set<MessageDispatcher> dispatchingSet = new HashSet<BTraceTask.MessageDispatcher>();
-        synchronized(messageDispatchers) {
-            dispatchingSet.addAll(messageDispatchers);
-        }
-        dispatcher.submit(new Runnable() {
-            @Override
-            public void run() {
-                for(MessageDispatcher listener : dispatchingSet) {
-                    switch (cmd.getType()) {
-                        case Command.MESSAGE: {
-                            listener.onPrintMessage(((MessageCommand)cmd).getMessage());
-                            break;
-                        }
-                        case Command.RETRANSFORM_CLASS: {
-                            listener.onClassInstrumented(((RetransformClassNotification)cmd).getClassName());
-                            break;
-                        }
-                        case Command.NUMBER: {
-                            NumberDataCommand ndc = (NumberDataCommand)cmd;
-                            listener.onNumberMessage(ndc.getName(), ndc.getValue());
-                            break;
-                        }
-                        case Command.NUMBER_MAP: {
-                            NumberMapDataCommand nmdc = (NumberMapDataCommand)cmd;
-                            listener.onNumberMap(nmdc.getName(), nmdc.getData());
-                            break;
-                        }
-                        case Command.STRING_MAP: {
-                            StringMapDataCommand smdc = (StringMapDataCommand)cmd;
-                            listener.onStringMap(smdc.getName(), smdc.getData());
-                            break;
-                        }
-                        case Command.GRID_DATA: {
-                            GridDataCommand gdc = (GridDataCommand)cmd;
-                            listener.onGrid(gdc.getName(), gdc.getData());
-                            break;
-                        }
-                        case Command.ERROR: {
-                            ErrorCommand ec = (ErrorCommand)cmd;
-                            listener.onError(ec.getCause());
-                            break;
-                        }
-                    }
-                }
-            }
-        });
+        taskDispatcher.dispatchCommand(cmd);
     }
 
     @Override

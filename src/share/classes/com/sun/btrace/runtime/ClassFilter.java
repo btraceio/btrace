@@ -70,6 +70,7 @@ public class ClassFilter {
 
         SENSITIVE_CLASSES.add("java/lang/Object");
         SENSITIVE_CLASSES.add("java/lang/String");
+        SENSITIVE_CLASSES.add("java/lang/Shutdown");
         SENSITIVE_CLASSES.add("java/lang/ThreadLocal");
         SENSITIVE_CLASSES.add("java/lang/VerifyError");
         SENSITIVE_CLASSES.add("java/lang/instrument/");
