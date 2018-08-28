@@ -4,8 +4,7 @@ import java.util.*;
 
 class DotWriterFormatter {
     // Maximum number of string characters displayed.
-    private
-    int stringLimit = 32;
+    private int stringLimit = 32;
 
     DotWriterFormatter() {
     }

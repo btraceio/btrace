@@ -625,6 +625,7 @@ public class DOTWriter {
         this.arrayLimit = arrayLimit;
     }
 
+    // Set maximum number of string characters displayed
     public void stringLimit(int stringLimit) {
         dotWriterFormatter.stringLimit(stringLimit);
     }
