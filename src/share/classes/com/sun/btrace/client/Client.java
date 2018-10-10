@@ -358,7 +358,7 @@ public class Client {
      * Receives commands from the traced JVM and sends those
      * to the command listener provided.
      */
-    public void submit(String ip,String fileName, byte[] code, String[] args,
+    public void submit(String host, String fileName, byte[] code, String[] args,
                        CommandListener listener) throws IOException {
         if (sock != null) {
             throw new IllegalStateException();

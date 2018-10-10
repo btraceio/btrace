@@ -54,7 +54,7 @@ public final class Main {
     private static String PROBE_DESC_PATH;
     public static final boolean TRACK_RETRANSFORM;
     public static final int BTRACE_DEFAULT_PORT = 2020;
-    public static final String BTRACE_DEFAULT_IP = "localhost";
+    public static final String BTRACE_DEFAULT_HOST = "localhost";
 
     private static final Console con;
     private static final PrintWriter out;
