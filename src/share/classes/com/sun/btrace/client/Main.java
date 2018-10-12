@@ -85,12 +85,12 @@ public final class Main {
 
     public static void main(String[] args) {
         int port = BTRACE_DEFAULT_PORT;
-        String ip = BTRACE_DEFAULT_HOST;
+        String host = BTRACE_DEFAULT_HOST;
         String classPath = ".";
         String includePath = null;
 
         int count = 0;
-        boolean ipDefined = false;
+        boolean hostDefined = false;
         boolean portDefined = false;
         boolean classpathDefined = false;
         boolean includePathDefined = false;
@@ -152,12 +152,12 @@ public final class Main {
                     statsdDef = args[++count];
                 } else if (args[count].equals("-v")) {
                     // already processed
-                } else if (args[count].equals("-host") && !ipDefined) {
-                    ip = args[++count];
-                    if (!ip.matches("((25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))\\.){3}(25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))")) {
+                } else if (args[count].equals("-host") && !hostDefined) {
+                    host = args[++count];
+                    if (!host.matches("((25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))\\.){3}(25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))")) {
                         usage();
                     }
-                    ipDefined = true;
+                    hostDefined = true;
                 } else {
                     usage();
                 }
@@ -199,14 +199,14 @@ public final class Main {
             if (code == null) {
                 errorExit("BTrace compilation failed", 1);
             }
-            if (!ipDefined)
+            if (!hostDefined)
                 client.attach(pid, null, classPath);
             registerExitHook(client);
             if (con != null) {
                 registerSignalHandler(client);
             }
             if (isDebug()) debugPrint("submitting the BTrace program");
-            client.submit(ip, fileName, code, btraceArgs, createCommandListener(client));
+            client.submit(host, fileName, code, btraceArgs, createCommandListener(client));
         } catch (IOException exp) {
             errorExit(exp.getMessage(), 1);
         }

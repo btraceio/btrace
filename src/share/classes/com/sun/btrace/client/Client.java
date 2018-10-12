@@ -371,7 +371,7 @@ public class Client {
             long timeout = System.currentTimeMillis() + 5000;
             while (sock == null && System.currentTimeMillis() <= timeout) {
                 try {
-                    sock = new Socket(ip, port);
+                    sock = new Socket(host, port);
                 } catch (ConnectException e) {
                     if (debug) {
                         debugPrint("server not yet available; retrying ...");
