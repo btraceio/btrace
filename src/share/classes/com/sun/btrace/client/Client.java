@@ -348,7 +348,18 @@ public class Client {
      * to the command listener provided.
      */
     public void submit(String fileName, byte[] code, String[] args,
-            CommandListener listener) throws IOException {
+                       CommandListener listener) throws IOException {
+        submit("localhost", fileName,code,  args, listener);
+    }
+
+    /**
+     * Submits the compiled BTrace .class to the VM
+     * attached and passes given command line arguments.
+     * Receives commands from the traced JVM and sends those
+     * to the command listener provided.
+     */
+    public void submit(String host, String fileName, byte[] code, String[] args,
+                       CommandListener listener) throws IOException {
         if (sock != null) {
             throw new IllegalStateException();
         }
@@ -360,7 +371,7 @@ public class Client {
             long timeout = System.currentTimeMillis() + 5000;
             while (sock == null && System.currentTimeMillis() <= timeout) {
                 try {
-                    sock = new Socket("localhost", port);
+                    sock = new Socket(ip, port);
                 } catch (ConnectException e) {
                     if (debug) {
                         debugPrint("server not yet available; retrying ...");
