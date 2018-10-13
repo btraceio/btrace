@@ -154,9 +154,6 @@ public final class Main {
                     // already processed
                 } else if (args[count].equals("-host") && !hostDefined) {
                     host = args[++count];
-                    if (!host.matches("((25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))\\.){3}(25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))")) {
-                        usage();
-                    }
                     hostDefined = true;
                 } else {
                     usage();
@@ -199,8 +196,7 @@ public final class Main {
             if (code == null) {
                 errorExit("BTrace compilation failed", 1);
             }
-            if (!hostDefined)
-                client.attach(pid, null, classPath);
+            client.attach(pid, null, classPath);
             registerExitHook(client);
             if (con != null) {
                 registerSignalHandler(client);
