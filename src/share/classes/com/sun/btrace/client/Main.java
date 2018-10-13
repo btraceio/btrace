@@ -196,7 +196,8 @@ public final class Main {
             if (code == null) {
                 errorExit("BTrace compilation failed", 1);
             }
-            client.attach(pid, null, classPath);
+            if (!hostDefined)
+                client.attach(pid, null, classPath);
             registerExitHook(client);
             if (con != null) {
                 registerSignalHandler(client);
