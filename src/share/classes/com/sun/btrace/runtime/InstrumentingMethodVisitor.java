@@ -321,16 +321,18 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
         static final int UNCONDITIONAL = 1;
         static final int EXCEPTION = 2;
 
+        private final VariableMapper mapper;
         private final LocalVarTypes lvTypes;
         private final SimulatedStack sStack;
         private final Collection<LocalVarSlot> newLocals;
         private final int kind;
 
-        SavedState(LocalVarTypes lvTypes, SimulatedStack sStack, Collection<LocalVarSlot> newLocals) {
-            this(lvTypes, sStack, newLocals, CONDITIONAL);
+        SavedState(VariableMapper mapper, LocalVarTypes lvTypes, SimulatedStack sStack, Collection<LocalVarSlot> newLocals) {
+            this(mapper, lvTypes, sStack, newLocals, CONDITIONAL);
         }
 
-        SavedState(LocalVarTypes lvTypes, SimulatedStack sStack, Collection<LocalVarSlot> newLocals, int kind) {
+        SavedState(VariableMapper mapper,LocalVarTypes lvTypes, SimulatedStack sStack, Collection<LocalVarSlot> newLocals, int kind) {
+            this.mapper = mapper.mirror();
             this.lvTypes = new LocalVarTypes(lvTypes.toArray());
             this.sStack = new SimulatedStack(sStack.toArray());
             this.newLocals = new HashSet<>(newLocals);
@@ -339,9 +341,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
         
     }
 
-    private int nextMappedVar = 0;
-    private int[] mapping = new int[8];
-
+    private final VariableMapper variableMapper;
     private final SimulatedStack stack = new SimulatedStack();
     private final List<Object> locals = new ArrayList<>();
     private final Set<LocalVarSlot> newLocals = new HashSet<>(3);
@@ -364,6 +364,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
         this.desc = desc;
 
         initLocals((access & ACC_STATIC) == 0);
+        this.variableMapper = new VariableMapper(argsSize);
     }
 
     @Override
@@ -542,7 +543,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
             }
         }
         jumpTargetStates.put(label, new SavedState(
-                        localTypes, stack, newLocals,
+                        variableMapper, localTypes, stack, newLocals,
                         opcode == Opcodes.GOTO || opcode == Opcodes.JSR ?
                             SavedState.UNCONDITIONAL : SavedState.CONDITIONAL
                 )
@@ -654,7 +655,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
                 break;
             }
         }
-        var = remap(var, size);
+        var = variableMapper.remap(var, size);
 
         boolean isPush = false;
         Type opType = null;
@@ -1150,7 +1151,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     @Override
     public void visitIincInsn(final int var, final int increment) {
-        super.visitIincInsn(remap(var, 1), increment);
+        super.visitIincInsn(variableMapper.remap(var, 1), increment);
         pc++;
     }
 
@@ -1158,9 +1159,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
     public void visitLocalVariable(final String name, final String desc,
             final String signature, final Label start, final Label end,
             final int index) {
-        int newIndex = map(index);
-        if (newIndex != 0) {
-            super.visitLocalVariable(name, desc, signature, start, end, newIndex == Integer.MIN_VALUE ? 0 : Math.abs(newIndex));
+        int newIndex = variableMapper.map(index);
+        if (newIndex != 0xFFFFFFFF) {
+            super.visitLocalVariable(name, desc, signature, start, end, newIndex == Integer.MIN_VALUE ? 0 : newIndex);
         }
     }
 
@@ -1170,9 +1171,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
         int cnt = 0;
         int[] newIndex = new int[index.length];
         for (int i = 0; i < newIndex.length; ++i) {
-            int idx = map(index[i]);
-            if (idx != 0) {
-                newIndex[cnt++] = idx == Integer.MIN_VALUE ? 0 : Math.abs(idx);
+            int idx = variableMapper.map(index[i]);
+            if (idx != 0xFFFFFFFF) {
+                newIndex[cnt++] = idx;
             }
         }
         return super.visitLocalVariableAnnotation(typeRef, typePath, start, end, Arrays.copyOf(newIndex, cnt), desc, visible);
@@ -1201,12 +1202,13 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
                     lvs.expire();
                 }
             }
+            newLocals.clear();
             newLocals.addAll(ss.newLocals);
         }
         Label handler = tryCatchHandlerMap.get(label);
         if (handler != null) {
             if (!jumpTargetStates.containsKey(handler)) {
-                jumpTargetStates.put(handler, new SavedState(localTypes, stack, newLocals, SavedState.EXCEPTION));
+                jumpTargetStates.put(handler, new SavedState(variableMapper, localTypes, stack, newLocals, SavedState.EXCEPTION));
             }
         }
         super.visitLabel(label);
@@ -1295,16 +1297,18 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     @Override
     public final int newVar(Type t) {
-        int idx = newVarIdx(t.getSize());
+        int idx = variableMapper.newVarIdx(t.getSize());
 
-        newLocals.add(new LocalVarSlot(idx, toSlotType(t)));
-        int var = idx == Integer.MIN_VALUE ? 0 : Math.abs(idx);
+        int var = VariableMapper.unmask(idx == Integer.MIN_VALUE ? 0 : idx);
+        newLocals.add(new LocalVarSlot(var, toSlotType(t)));
+        
         localTypes.setType(var, t);
         
         return idx;
     }
 
     private void initLocals(boolean isInstance) {
+        int nextMappedVar = 0;
         if (isInstance) {
             locals.add(owner);
             nextMappedVar++;
@@ -1321,6 +1325,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     private Object[] computeFrameLocals() {
         Object[] localsArr;
+        int nextMappedVar = variableMapper.getNextMappedVar();
         if (nextMappedVar > argsSize) {
             int arrSize = Math.max(locals.size(), nextMappedVar);
             localsArr = new Object[arrSize];
@@ -1334,9 +1339,8 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
                         localsArr[++idx] = TOP_EXT;
                     }
                 } else {
-                    int var = mapping[idx - argsSize];
-                    if (var < 0) {
-                        var = var == Integer.MIN_VALUE ? 0 : -var;
+                    int var = variableMapper.map(idx);
+                    if (var != 0xFFFFFFFF) {
                         localsArr[var] = e;
                         if (e == LONG || e == DOUBLE) {
                             int off = var + 1;
@@ -1346,8 +1350,6 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
                             localsArr[off] = TOP_EXT;
                             idx++;
                         }
-                    } else {
-                        System.err.println("***");
                     }
                 }
                 idx++;
@@ -1362,9 +1364,8 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
         } else {
             localsArr = locals.toArray(new Object[0]);
         }
-        for (int m : mapping) {
+        for (int m : variableMapper.mappings()) {
             if (m != 0) {
-                m = m == Integer.MIN_VALUE ? 0 : Math.abs(m);
                 if (localsArr[m] == null) {
                     localsArr[m] = TOP;
                 }
@@ -1386,45 +1387,6 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
         newLocals.clear();
     }
 
-    private void setMapping(int from, int to, int padding) {
-        if (mapping.length <= from + padding) {
-            mapping = Arrays.copyOf(mapping, Math.max(mapping.length * 2, from + padding + 1));
-        }
-        mapping[from] = to;
-        if (padding > 0) {
-            mapping[from + padding] = Math.abs(to) + padding; // padding
-        }
-    }
-
-    private int remap(int var, int size) {
-        int mappedVar = map(var);
-        if (mappedVar >= 0) {
-            int offset = var - argsSize;
-            var = (mappedVar == 0) ? newVarIdx(size) : -mappedVar;
-            setMapping(offset, var, size - 1);
-            mappedVar = var;
-        }
-        var = mappedVar == Integer.MIN_VALUE ? 0 : Math.abs(mappedVar);
-        // adjust the mapping pointer if remapping with variable occupying 2 slots
-        nextMappedVar = Math.max(var + size, nextMappedVar);
-        return var;
-    }
-
-    private int map(int var) {
-        if (var < 0) {
-            return var;
-        }
-        int idx = (var - argsSize);
-        if (idx >= 0) {
-            if (mapping.length <= idx) {
-                mapping = Arrays.copyOf(mapping, mapping.length * 2);
-                return 0;
-            }
-            return mapping[idx];
-        }
-        return var == 0 ? Integer.MIN_VALUE : -var;
-    }
-
     private Object peekFromStack() {
         Object o = stack.peek();
         if (o == null || o == TOP_EXT) {
@@ -1439,12 +1401,6 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     private void pushToStack(Type t) {
         stack.push(toSlotType(t));
-    }
-
-    private int newVarIdx(int size) {
-        int var = -nextMappedVar;
-        nextMappedVar += size;
-        return var == 0 ? Integer.MIN_VALUE : var;
     }
 
     private Type fromSlotType(Object slotType) {

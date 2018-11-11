@@ -45,7 +45,7 @@ public class BTRACE28Test extends InstrumentorTestBase {
             "ASTORE 6\n" +
             "ASTORE 7\n" +
             "ALOAD 7\n" +
-            "FRAME FULL [resources/issues/BTRACE28 java/lang/String java/lang/String java/lang/String java/lang/String [B [B java/lang/StringBuilder] [java/lang/Throwable]\n" +
+            "FRAME FULL [T java/lang/String java/lang/String java/lang/String java/lang/String [B [B java/lang/StringBuilder] [java/lang/Throwable]\n" +
             "ASTORE 8\n" +
             "ALOAD 8\n" +
             "FRAME APPEND [T]\n" +

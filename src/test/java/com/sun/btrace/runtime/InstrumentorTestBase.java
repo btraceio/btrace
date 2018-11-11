@@ -168,6 +168,13 @@ public abstract class InstrumentorTestBase {
     }
 
     protected void checkTransformation(String expected, boolean verify) throws IOException {
+        if (transformedBC == null) {
+            if (expected != null && !expected.isEmpty()) {
+                fail();
+            } else {
+                return;
+            }
+        }
         org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(transformedBC);
 
         if (verify) {
@@ -182,7 +189,17 @@ public abstract class InstrumentorTestBase {
 
         String diff = diff();
         if (DEBUG) {
+            System.err.println("+++ DEBUG +++");
+            System.err.println("--- original ---");
+            System.err.println(asmify(originalBC));
+            System.err.println("--- original ---");
+            System.err.println("--- transformed ---");
+            System.err.println(asmify(transformedBC));
+            System.err.println("--- transformed ---");
+            System.err.println("--- diff ---");
             System.err.println(diff);
+            System.err.println("--- diff ---");
+            System.err.println("+++ DEBUG +++");
         }
         assertEquals(expected, diff.substring(0, diff.length() > expected.length() ? expected.length() : diff.length()));
     }
@@ -219,12 +236,15 @@ public abstract class InstrumentorTestBase {
             }
         }
 
-        load(traceName, cr.getJavaClassName());
+//        load(traceName, cr.getJavaClassName());
 
         System.err.println("==== " + traceName);
     }
 
     protected String asmify(byte[] bytecode) {
+        if (bytecode == null) {
+            return "";
+        }
         StringWriter sw = new StringWriter();
         TraceClassVisitor acv = new TraceClassVisitor(new PrintWriter(sw));
         new org.objectweb.asm.ClassReader(bytecode).accept(acv, 0);

@@ -124,7 +124,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LINENUMBER 103 L5\n" +
             "L4\n" +
             "LINENUMBER 105 L4\n" +
-            "FRAME FULL [resources/OnMethodTest java/util/Map T java/util/HashMap] []\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap] []\n" +
             "L6\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
@@ -176,7 +176,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LINENUMBER 103 L5\n" +
             "L4\n" +
             "LINENUMBER 105 L4\n" +
-            "FRAME FULL [resources/OnMethodTest java/util/Map T java/util/HashMap] []\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap] []\n" +
             "L6\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
@@ -718,12 +718,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "L7\n" +
             "LINENUMBER 110 L7\n" +
             "GOTO L8\n" +
-            "FRAME FULL [resources/OnMethodTest java/lang/Object T] [java/lang/Throwable]\n" +
             "ASTORE 3\n" +
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
-            "FRAME FULL [resources/OnMethodTest T T T] []\n" +
+            "FRAME FULL [resources/OnMethodTest T T] []\n" +
             "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -783,12 +782,11 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "L7\n" +
             "LINENUMBER 149 L7\n" +
             "GOTO L8\n" +
-            "FRAME SAME1 java/lang/Throwable\n" +
             "ASTORE 3\n" +
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
-            "FRAME FULL [resources/OnMethodTest T T T] []\n" +
+            "FRAME FULL [resources/OnMethodTest T T] []\n" +
             "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -868,7 +866,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
-            "FRAME FULL [resources/OnMethodTest T T T] []\n" +
+            "FRAME FULL [resources/OnMethodTest T T] []\n" +
             "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -948,7 +946,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
-            "FRAME FULL [resources/OnMethodTest T T T] []\n" +
+            "FRAME FULL [resources/OnMethodTest T T] []\n" +
             "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -2981,7 +2979,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
-            "FRAME APPEND [J J T]\n" +
+            "FRAME APPEND [J J]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 8\n" +
             "LSUB\n" +
@@ -2996,7 +2994,6 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 4\n" +
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
-            "FRAME APPEND [T]\n" +
             "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
             "LLOAD 8\n" +
             "LSUB\n" +
@@ -3055,7 +3052,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L4\n" +
             "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]\n" +
-            "FRAME CHOP 1\n" +
+            "FRAME CHOP 2\n" +
             "IFLE L5\n" +
             "L6\n" +
             "LINENUMBER 128 L6\n" +
@@ -3081,10 +3078,10 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L8\n" +
-            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T] [J]\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T T] [J]\n" +
             "L5\n" +
             "LINENUMBER 132 L5\n" +
-            "FRAME CHOP 1\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I] []\n" +
             "L9\n" +
             "LINENUMBER 133 L9\n" +
             "ILOAD 10\n" +
@@ -3109,7 +3106,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 5\n" +
             "INVOKESTATIC resources/OnMethodTest.$btrace$traces$onmethod$leveled$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V\n" +
             "L11\n" +
-            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T T] [J]\n" +
+            "FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T T T T T] [J]\n" +
             "L12\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L12 0\n" +
             "LOCALVARIABLE a Ljava/lang/String; L0 L12 1\n" +
