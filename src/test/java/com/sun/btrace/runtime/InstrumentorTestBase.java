@@ -52,7 +52,7 @@ import org.junit.BeforeClass;
  * @author Jaroslav Bachorik
  */
 public abstract class InstrumentorTestBase {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private static Unsafe unsafe;
 
