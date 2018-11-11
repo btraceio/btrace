@@ -335,6 +335,9 @@ public abstract class InstrumentorTestBase {
 
     protected byte[] loadTargetClass(String name) throws IOException {
         originalBC = loadResource("resources/" + name + ".class");
+        if (originalBC == null) {
+            System.err.println("!!! Unable to load resource class " + name);
+        }
         return originalBC;
     }
 
