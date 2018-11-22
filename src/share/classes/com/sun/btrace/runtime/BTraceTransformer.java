@@ -218,7 +218,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
                 if (entered) {
                     BTraceRuntime.leave();
                 }
-                System.err.println("*** <<< Thread: " + Thread.currentThread().getName());
             }
         } finally {
             setupLock.readLock().unlock();
