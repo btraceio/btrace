@@ -5,7 +5,7 @@
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
-1.3.11.1 ([Release Page](https://github.com/jbachorik/btrace/releases/latest))
+1.3.11.2 ([Release Page](https://github.com/btraceio/btrace/releases/latest))
 
 _! NOTE: For the latest develop changes head to ['develop' branch](https://github.com/btraceio/btrace/tree/develop)_
 

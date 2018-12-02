@@ -48,12 +48,13 @@ public final class Main {
     public static volatile boolean exiting;
     private static boolean DEBUG;
     private static boolean TRUSTED;
-    private static  boolean DUMP_CLASSES;
+    private static boolean DUMP_CLASSES;
     private static String OUTPUT_FILE;
     private static String DUMP_DIR;
     private static String PROBE_DESC_PATH;
     public static final boolean TRACK_RETRANSFORM;
     public static final int BTRACE_DEFAULT_PORT = 2020;
+    public static final String BTRACE_DEFAULT_HOST = "localhost";
 
     private static final Console con;
     private static final PrintWriter out;
@@ -84,10 +85,12 @@ public final class Main {
 
     public static void main(String[] args) {
         int port = BTRACE_DEFAULT_PORT;
+        String host = BTRACE_DEFAULT_HOST;
         String classPath = ".";
         String includePath = null;
 
         int count = 0;
+        boolean hostDefined = false;
         boolean portDefined = false;
         boolean classpathDefined = false;
         boolean includePathDefined = false;
@@ -149,6 +152,9 @@ public final class Main {
                     statsdDef = args[++count];
                 } else if (args[count].equals("-v")) {
                     // already processed
+                } else if (args[count].equals("-host") && !hostDefined) {
+                    host = args[++count];
+                    hostDefined = true;
                 } else {
                     usage();
                 }
@@ -190,14 +196,14 @@ public final class Main {
             if (code == null) {
                 errorExit("BTrace compilation failed", 1);
             }
-            client.attach(pid, null, classPath);
+            if (!hostDefined)
+                client.attach(pid, null, classPath);
             registerExitHook(client);
             if (con != null) {
                 registerSignalHandler(client);
             }
             if (isDebug()) debugPrint("submitting the BTrace program");
-            client.submit(fileName, code, btraceArgs,
-                createCommandListener(client));
+            client.submit(host, fileName, code, btraceArgs, createCommandListener(client));
         } catch (IOException exp) {
             errorExit(exp.getMessage(), 1);
         }
