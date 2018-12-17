@@ -33,5 +33,9 @@ import static com.sun.btrace.BTraceUtils.*;
     @OnMethod(clazz = "org.apache.hadoop.mapred.split.TezMapredSplitsGrouper", method = "getGroupedSplits")
     public static void getGroupedSplitsHook(AnyType[] args) {
         println("here");
+//        Object[] vals = (Object[])(Object)args[1];
+//        for (Object o : vals) {
+//            println(o);
+//        }
     }
 }

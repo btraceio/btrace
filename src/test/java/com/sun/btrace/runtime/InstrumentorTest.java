@@ -124,7 +124,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LINENUMBER 103 L5\n" +
             "L4\n" +
             "LINENUMBER 105 L4\n" +
-            "FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap] []\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/Map T java/util/HashMap] []\n" +
             "L6\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
@@ -176,7 +176,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "LINENUMBER 103 L5\n" +
             "L4\n" +
             "LINENUMBER 105 L4\n" +
-            "FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap] []\n" +
+            "FRAME FULL [resources/OnMethodTest java/util/Map T java/util/HashMap] []\n" +
             "L6\n" +
             "LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0\n" +
             "LOCALVARIABLE c Ljava/util/Map; L1 L6 1\n" +
@@ -722,7 +722,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
-            "FRAME FULL [resources/OnMethodTest T T] []\n" +
+            "FRAME FULL [resources/OnMethodTest T T T] []\n" +
             "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -786,7 +786,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
-            "FRAME FULL [resources/OnMethodTest T T] []\n" +
+            "FRAME FULL [resources/OnMethodTest T T T] []\n" +
             "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -866,7 +866,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 111 L8\n" +
-            "FRAME FULL [resources/OnMethodTest T T] []\n" +
+            "FRAME FULL [resources/OnMethodTest T T T T] []\n" +
             "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +
@@ -946,7 +946,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
             "ALOAD 3\n" +
             "L8\n" +
             "LINENUMBER 150 L8\n" +
-            "FRAME FULL [resources/OnMethodTest T T] []\n" +
+            "FRAME FULL [resources/OnMethodTest T T T T] []\n" +
             "L5\n" +
             "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
             "ATHROW\n" +

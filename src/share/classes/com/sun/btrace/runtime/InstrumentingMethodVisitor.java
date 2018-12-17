@@ -1230,7 +1230,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
             return;
         }
 
-        Object[] localsArr = localTypes.toArray(true);
+        Object[] localsArr = trimLocalVars(localTypes.toArray(true));
 
         stack.reset();
         for (Type t : stackTypes) {
@@ -1253,7 +1253,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
             return;
         }
 
-        Object[] localsArr = localTypes.toArray(true);
+        Object[] localsArr = trimLocalVars(localTypes.toArray(true));
 
         for (Type t : stackTypes) {
             stack.push(toSlotType(t));
@@ -1276,7 +1276,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
         lastFramePc = pc;
         
-        Object[] localsArr = localTypes.toArray(true);
+        Object[] localsArr = trimLocalVars(localTypes.toArray(true));
         Object[] stackSlots = stack.toArray(true);
 
         super.visitFrame(F_NEW, localsArr.length, localsArr, stackSlots.length, stackSlots);
@@ -1371,14 +1371,31 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
                 }
             }
         }
-        Object[] tmp = new Object[localsArr.length];
+        return trimLocalVars(localsArr);
+    }
+
+    private Object[] trimLocalVars(Object[] localsArr) {
+                Object[] tmp = new Object[localsArr.length];
         int idx = 0;
+        int firstEmpty = -1, emptyRunLen = 0;
         for (Object o : localsArr) {
-            if (o != null) {
+            if (o == null) {
+                if (firstEmpty == -1) {
+                    firstEmpty = idx;
+                }
+                emptyRunLen++;
+                tmp[idx++] = TOP;
+            } else {
+                emptyRunLen = 0;
                 tmp[idx++] = o;
             }
         }
-        return Arrays.copyOf(tmp, idx);
+        if (firstEmpty > -1 && (firstEmpty + emptyRunLen) == localsArr.length) {
+            // the frame locals are ending with uninterrupted run of TOP slots; safe to cut them
+            return Arrays.copyOf(tmp, firstEmpty);
+        } else {
+            return Arrays.copyOf(tmp, idx);
+        }
     }
 
     private void reset() {

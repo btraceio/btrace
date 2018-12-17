@@ -48,7 +48,7 @@ public class VariableMapper {
         if ((var & REMAP_FLAG) != 0) {
             return var & UNMASK;
         }
-        
+
         int offset = var - argsSize;
         if (offset < 0) {
             // self projection for method arguments
