@@ -28,7 +28,7 @@ if (!currentJvm.toString().startsWith("1.7")) {
 }
 
 group 'com.sun.tools.btrace'
-version = '1.3.11.3-SNAPSHOT'
+version = '1.3.11.3'
 description = 'BTrace - a safe, dynamic tracing tool for the Java platform'
 
 sourceCompatibility = 7
