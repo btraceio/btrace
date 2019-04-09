@@ -34,7 +34,8 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.net.Socket;
 import java.net.ServerSocket;
-import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
@@ -100,6 +101,8 @@ public final class Main {
             Main.inst = inst;
         }
 
+        List<Client> scriptClients = new ArrayList<>();
+
         try {
             loadArgs(args);
             // set the debug level based on cmdline config
@@ -109,7 +112,7 @@ public final class Main {
             }
             parseArgs();
 
-            int startedScripts = startScripts();
+            int startedScripts = collectScriptClients(scriptClients);
 
             String tmp = argMap.get("noServer");
             // noServer is defaulting to true if startup scripts are defined
@@ -144,7 +147,22 @@ public final class Main {
             }
         } finally {
             inst.addTransformer(transformer, true);
+            startClients(scriptClients);
             Main.debugPrint("Agent init took: " + (System.nanoTime() - ts) + "ns");
+        }
+    }
+
+    private static void startClients(List<Client> scriptClients) {
+        for (Client client : scriptClients) {
+            try {
+                handleNewClient(client).get();
+            } catch (ExecutionException e) {
+                if (isDebug()) {
+                    debugPrint(e);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -223,7 +241,7 @@ public final class Main {
         }
     }
 
-    private static int startScripts() {
+    private static int collectScriptClients(List<Client> scriptClients) {
         int scriptCount = 0;
 
         String p = argMap.get("stdout");
@@ -241,7 +259,7 @@ public final class Main {
                 debugPrint(((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are ") + script);
             }
             while (tokenizer.hasMoreTokens()) {
-                if (loadBTraceScript(tokenizer.nextToken(), traceToStdOut)) {
+                if (loadBTraceScript(tokenizer.nextToken(), traceToStdOut, scriptClients)) {
                     scriptCount++;
                 }
             }
@@ -255,7 +273,7 @@ public final class Main {
                 File[] files = dir.listFiles();
                 if (files != null) {
                     for (File file : files) {
-                        if (loadBTraceScript(file.getAbsolutePath(), traceToStdOut)) {
+                        if (loadBTraceScript(file.getAbsolutePath(), traceToStdOut, scriptClients)) {
                             scriptCount++;
                         }
                     }
@@ -577,7 +595,7 @@ public final class Main {
         }
     }
 
-    private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
+    private static boolean loadBTraceScript(String filePath, boolean traceToStdOut, List<Client> scriptClients) {
         try {
             String scriptName = "";
             String scriptParent = "";
@@ -614,19 +632,17 @@ public final class Main {
             ClientContext ctx = new ClientContext(inst, transformer, argMap, clientSettings);
             Client client = new FileClient(ctx, traceScript);
             if (client.isInitialized()) {
-                handleNewClient(client).get();
+                scriptClients.add(client);
                 return true;
             }
         } catch (NullPointerException e) {
             if (isDebug()) {
                 debugPrint("script " + filePath + " does not exist!");
             }
-        } catch (RuntimeException | IOException | ExecutionException re) {
+        } catch (RuntimeException | IOException re) {
             if (isDebug()) {
                 debugPrint(re);
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
         }
         return false;
     }
