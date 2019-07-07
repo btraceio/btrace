@@ -374,7 +374,9 @@ public class HelloWorldTrace {
 14. Tracing methods invoked from inside a particular method
 
 __Note:__ 'class', 'method' etc. directly in the @OnMethod annotation will determine where we should look for the invocation of the methods defined by 'class', 'method' etc. parameters in the @Location annotation.
+
 __Note:__ @ProbeMethodName and @ProbeClassName refer to the context method and class; @TargetMethodOrField refers to the traced method invocation
+
 __Note:__ You can use the 'type' annotation parameter in @OnMethod annotation to restrict the context methods and in @Location to restrict the traced method invocations
 
 ``` java
@@ -422,6 +424,7 @@ public class HelloWorldTrace {
 16. Tracing methods invoked from inside a particular method and capturing their parameters
 
 __Note:__ The captured parameters pertain to the invoked method rather than the context method
+
 __Note:__ The @Self annotated parameter captures the context instance and @TargetInstance annotated parameter captures the instance the method is invoked on
 
 ``` java
@@ -494,6 +497,7 @@ public class HelloWorldTrace {
 Allows to register a handler to be invoked periodically at defined intervals.
 
 __Note:__ The annotation parameter takes the interval value in milliseconds
+
 __Note:__ The signature of the handler method __MUST__ be 'void ()'
 
 ``` java
@@ -569,8 +573,10 @@ public class HelloWorldTrace {
 
 2. Let the sampler mean parameter be adjusted dynamically by keeping to the overhead target
 
-__Note:__ In this case the 'mean' parameter actually specify the lowest number of nanoseconds the average interval between interception should be.
-__Note:__ Because the adaptive sampling needs to collect timestamps in order to maintain the overhead target the lowest value for the 'mean' parameter is 180 (cca. 60ns for gettint start/stop timestamp pair multiplied by the safety margin of 3) 
+__Note:__ In this case the 'mean' parameter actually specify the lowest number of nanoseconds the average interval between interception should be
+
+__Note:__ Because the adaptive sampling needs to collect timestamps in order to maintain the overhead target the lowest value for the 'mean' parameter is 180 (cca. 60ns for getting start/stop timestamp pair multiplied by the safety margin of 3) 
+
 __Note:__ The 'callD' method is very short and the number of iteration is rather limited - we will most probably get only one hit here
 
 ``` java
