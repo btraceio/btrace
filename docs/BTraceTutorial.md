@@ -104,7 +104,7 @@ The agent takes a list of comma separated arguments.
 * **bootClassPath** - boot classpath to be used
 * **systemClassPath** - system classpath to be used
 * **debug** - turns on verbose debug messages (true/false)
-* **unsafe** - do not check for btrace restrictions violations (true/false)
+* **trusted** - do not check for btrace restrictions violations (true/false)
 * **dumpClasses** - dump the transformed bytecode to files (true/false)
 * **dumpDir** - specifies the folder where the transformed classes will be dumped to
 * **stdout** - redirect the btrace output to stdout instead of writing it to an arbitrary file (true/false)
