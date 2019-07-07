@@ -9,7 +9,7 @@ Demonstrates the BTrace ability to instrument a class.
 
 #### HelloWorld Class
 
-```
+``` java
 package extra;
 
 abstract public class HelloWorld extends HelloWorldBase {
@@ -143,7 +143,7 @@ Rather than regular *javac* the BTrace compiler is used - causing the script to 
 This is the main purpose of BTrace - inject a custom code to custom locations to give the insights about the internal state and dynamics of the application.
 
 1. Getting just the information that any method is being executed
-```
+``` java
 package helloworld;
 import ...;
 
@@ -157,7 +157,7 @@ public class HelloWorldTrace {
 ```
 
 2. Get the method names
-```
+``` java
 package helloworld;
 import ...;
 
@@ -171,7 +171,7 @@ public class HelloWorldTrace {
 ```
 
 3. Intercept only a particular method
-```
+``` java
 package helloworld;
 import ...;
 
@@ -185,7 +185,7 @@ public class HelloWorldTrace {
 ```
 
 4. Intercept only a particular method with name matching the handler name
-```
+``` java
 package helloworld;
 import ...;
 
@@ -201,7 +201,7 @@ public class HelloWorldTrace {
 5. Intercept methods with names matching certain patterns
 __Note:__ you can use pattern matching for the class names, too
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -216,7 +216,7 @@ public class HelloWorldTrace {
 
 6. Intercept methods with names matching certain patterns and inspect their parameters
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -232,7 +232,7 @@ public class HelloWorldTrace {
 ```
 
 7. Intercept method with names matching certain patterns and discover their signatures
-```
+``` java
 package helloworld;
 import ...;
 
@@ -249,7 +249,7 @@ public class HelloWorldTrace {
 
 __Note:__ 'extra.HelloWorldBase.callD()' doesn't show up - it is defined in the superclass of 'extra.HelloWorld' and therefore not intercepted.
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -266,7 +266,7 @@ public class HelloWorldTrace {
 
 __Note:__ The order of the un-annotated parameters must correspond to the order of the traced method parameters. Annotated parameters may be placed anywhere.
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -286,7 +286,7 @@ Eg. having the VM method signature in form of (Ljava/lang/String;I)V will transl
 
 __Note:__ We are using overloaded method here and specifying the signature helps BTrace determine which method should be instrumented
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -302,7 +302,7 @@ public class HelloWorldTrace {
 11. Intercept method with a particular name and capture its return value
 `location=@Location(Kind.RETURN)` sets up the instrumentation to be inserted just before the method exits
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -317,7 +317,7 @@ public class HelloWorldTrace {
 
 12. Inspect the content of an instance variable in the method declaring class
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -333,7 +333,7 @@ public class HelloWorldTrace {
 
 Or retrieve the `java.lang.Field` instance first and perform a check before trying to retrieve the field value.
 
-```
+``` java
 package helloworld;
 import java.lang.Class;
 import java.lang.reflect.Field;
@@ -357,7 +357,7 @@ public class HelloWorldTrace {
 
 __Note:__ Need to use @Location(Kind.RETURN) to be able to capture the execution duration
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -377,7 +377,7 @@ __Note:__ 'class', 'method' etc. directly in the @OnMethod annotation will deter
 __Note:__ @ProbeMethodName and @ProbeClassName refer to the context method and class; @TargetMethodOrField refers to the traced method invocation
 __Note:__ You can use the 'type' annotation parameter in @OnMethod annotation to restrict the context methods and in @Location to restrict the traced method invocations
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -399,7 +399,7 @@ public class HelloWorldTrace {
 
 15. Measuring the duration of methods invoked from inside a particular method
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -424,7 +424,7 @@ public class HelloWorldTrace {
 __Note:__ The captured parameters pertain to the invoked method rather than the context method
 __Note:__ The @Self annotated parameter captures the context instance and @TargetInstance annotated parameter captures the instance the method is invoked on
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -457,7 +457,7 @@ Called when the traced application is about to exit. Allows to capture the exit 
 
 __Note:__ The signature of the handler method __MUST__ be 'void (int)'
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -476,7 +476,7 @@ Called whenever an exception is thrown from anywhere in the BTrace handlers.
 
 __Note:__ The signature of the handler method __MUST__ be 'void (java.lang.Throwable)'
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -496,7 +496,7 @@ Allows to register a handler to be invoked periodically at defined intervals.
 __Note:__ The annotation parameter takes the interval value in milliseconds
 __Note:__ The signature of the handler method __MUST__ be 'void ()'
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -513,7 +513,7 @@ public class HelloWorldTrace {
 
 Used to raise events from external clients (eg. the command line client). The annotation takes a String parameter which is the event name. When not provided the event is considered to be 'unnamed'.
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -527,7 +527,7 @@ public class HelloWorldTrace {
 ```
 or
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -552,7 +552,7 @@ The sampling implementation in BTrace guarantees that at least one invocation of
 
 __Note:__ Even though the 'callD' method is executed 100 times we will get only ~10 hits - as dictated by the 'mean' parameter.
 
-```
+``` java
 package helloworld;
 import ...;
 
@@ -573,7 +573,7 @@ __Note:__ In this case the 'mean' parameter actually specify the lowest number o
 __Note:__ Because the adaptive sampling needs to collect timestamps in order to maintain the overhead target the lowest value for the 'mean' parameter is 180 (cca. 60ns for gettint start/stop timestamp pair multiplied by the safety margin of 3) 
 __Note:__ The 'callD' method is very short and the number of iteration is rather limited - we will most probably get only one hit here
 
-```
+``` java
 package helloworld;
 import ...;
 
