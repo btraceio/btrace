@@ -1,0 +1,208 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "5.1.0"
+    id "nebula.ospackage" version "4.9.3"
+    id "java"
+}
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+repositories {
+    mavenCentral()
+}
+
+def libsDir = new File("${project.buildDir}/resources/main/libs")
+
+jar {
+    onlyIf { false }
+}
+
+sourcesJar {
+    onlyIf { false }
+}
+
+artifacts {
+    archives file("$buildDir/resources/main/libs/btrace-agent.jar")
+}
+
+task agentJar(type: ShadowJar) {
+    group 'Build'
+    baseName = 'btrace-agent'
+    version = null
+    classifier = null
+    destinationDir = libsDir
+
+    manifest {
+        attributes(
+                "Premain-Class": "org.openjdk.btrace.agent.Main",
+                "Agent-Class": "org.openjdk.btrace.agent.Main",
+                "Can-Redefine-Classes": true,
+                "Can-Retransform-Classes": true,
+                "Boot-Class-Path": "btrace-boot.jar"
+        )
+    }
+
+    exclude 'afu/**'
+    exclude 'javax/**'
+    exclude 'com/**'
+    exclude 'sun/**'
+    exclude 'org/relaxng/**'
+    exclude 'org/checkerframework/**'
+    exclude 'org/codehaus/**'
+
+    exclude 'org/jctools/**'
+    exclude 'org/objectweb/asm/**'
+    exclude 'META-INF/services/**'
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/versions/**'
+
+    exclude 'org/openjdk/btrace/compiler/**'
+    exclude 'org/openjdk/btrace/core/**'
+    exclude 'org/openjdk/btrace/runtime/**'
+    exclude 'org/openjdk/btrace/services/**'
+    exclude 'org/openjdk/btrace/statsd/*'
+
+    configurations = [project.configurations.compile]
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+}
+
+task bootJar(type: ShadowJar) {
+    group 'Build'
+    baseName = 'btrace-boot'
+    version = null
+    classifier = null
+    destinationDir = libsDir
+
+    exclude 'afu/**'
+    exclude 'javax/**'
+    exclude 'com/**'
+    exclude 'sun/**'
+    exclude 'org/relaxng/**'
+    exclude 'org/checkerframework/**'
+    exclude 'org/codehaus/**'
+
+    exclude 'org/jctools/maps/**'
+    exclude 'META-INF/services/**'
+    exclude 'META-INF/maven/**'
+
+    exclude 'org/objectweb/asm/commons/**'
+    exclude 'org/objectweb/asm/util/**'
+    exclude 'org/objectweb/asm/xml/**'
+
+    exclude 'org/openjdk/btrace/agent/**'
+    exclude 'org/openjdk/btrace/client/**'
+
+    configurations = [project.configurations.compile]
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+
+    manifest {
+        attributes('Multi-Release' : 'true')
+    }
+}
+
+task clientJar(type: ShadowJar) {
+    group 'Build'
+    baseName = 'btrace-client'
+    version = null
+    classifier = null
+    destinationDir = libsDir
+
+    exclude 'afu/**'
+    exclude 'javax/**'
+    exclude 'com/**'
+    exclude 'sun/**'
+    exclude 'org/relaxng/**'
+    exclude 'org/checkerframework/**'
+    exclude 'org/codehaus/**'
+
+    exclude 'org/jctools/maps/**'
+    exclude 'org/jctools/util/**'
+    exclude 'META-INF/**'
+
+    exclude 'org/objectweb/asm/commons/**'
+    exclude 'org/objectweb/asm/util/**'
+    exclude 'org/objectweb/asm/xml/**'
+
+    exclude 'org/openjdk/btrace/agent/**'
+
+    configurations = [project.configurations.compile]
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+}
+
+task fixPermissions(type: Exec) {
+    commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btrace"
+    commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btracec"
+    commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btracer"
+}
+
+task copyDtraceLib(type: Copy) {
+    from "${projectDir}/../btrace-dtrace/build/dtrace/libs"
+    into "${project.buildDir}/resources/main/libs/"
+}
+
+task buildZip(type: Zip) {
+    from "$project.buildDir/resources/main"
+    include "**/*"
+    archiveName "btrace-bin.zip"
+    destinationDir(file("$project.buildDir/distributions"))
+}
+
+task buildTgz(type: Tar) {
+    archiveName = 'btrace-bin.tar.gz'
+    into ('/'){
+        from "$project.buildDir/resources/main"
+        include '**/*'
+    }
+
+    destinationDir file("$project.buildDir/distributions")
+    extension 'tar.gz'
+    compression = Compression.GZIP
+}
+
+ospackage {
+    packageName = 'btrace'
+    release = 1
+    os = LINUX
+
+    into '/opt/btrace'
+
+    from("$project.buildDir/resources/main/bin") {
+        into 'bin'
+        fileMode 0550
+    }
+
+    from("$project.buildDir/resources/main/libs") {
+        into 'libs'
+    }
+
+    from("$project.buildDir/resources/main/docs") {
+        into 'docs'
+    }
+
+    from("$project.buildDir/resources/main/samples") {
+        into 'samples'
+    }
+
+    link('/usr/local/bin/btrace', '/opt/btrace/bin/btrace')
+    link('/usr/local/bin/btracer', '/opt/btrace/bin/btracer')
+    link('/usr/local/bin/btracec', '/opt/btrace/bin/btracec')
+}
+
+buildDeb {
+    requires('openjdk-8-jdk')
+}
+
+copyDtraceLib.dependsOn project(':btrace-dtrace').build
+buildTgz.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
+buildZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
+buildDeb.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
+buildRpm.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
+build.dependsOn buildZip, buildTgz, buildDeb, buildRpm
+
+test {
+    doLast {
+        project(':btrace-instr').tasks.test.execute()
+    }
+}

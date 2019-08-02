@@ -1,0 +1,45 @@
+plugins {
+  id 'java'
+  id("me.champeau.gradle.jmh") version "0.5.0-rc-2"
+}
+
+description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
+
+sourceCompatibility = 8
+targetCompatibility = 8
+
+def env = System.getenv()
+def javaHome = env['JAVA_HOME']
+
+dependencies {
+  compile project(":btrace-dist")
+  compile project(":btrace-compiler")
+  jmh project(":btrace-instr")
+  jmh project(":btrace-runtime")
+  jmh project(":btrace-statsd")
+  jmh("org.openjdk.jmh:jmh-core:1.21")
+  jmh("org.openjdk.jmh:jmh-generator-annprocess:1.21")
+}
+
+task btracec(type: JavaExec) {
+  group 'Build'
+  inputs.files 'src/main/resources/scripts'
+  outputs.dir "${buildDir}/classes/main"
+
+  environment('BTRACE_HOME', "$projectDir")
+  classpath configurations.compile
+  main 'org.openjdk.btrace.compiler.Compiler'
+  args '-d'
+  args "${buildDir}/classes/btrace"
+  args fileTree(dir: "src/jmh/btrace", include: 'TraceScript.java')
+}
+jmhClasses.dependsOn btracec
+
+jmh {
+  def agent = "-javaagent:${project.buildDir}/../../../btrace-dist/build/resources/main/libs/btrace-agent.jar=stdout=false,noServer=true,script=${project.buildDir}/classes/btrace/TraceScript.class"
+  println(agent)
+  duplicateClassesStrategy = 'warn'
+//  jvmArgsAppend = []
+  jvmArgs = ["-Xmx128m", agent.toString()]
+}
+

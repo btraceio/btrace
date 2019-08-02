@@ -1,0 +1,178 @@
+/*
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package org.openjdk.btrace.agent;
+
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.EventCommand;
+import org.openjdk.btrace.core.comm.ExitCommand;
+import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.PrintableCommand;
+import org.openjdk.btrace.core.comm.SetSettingsCommand;
+import org.openjdk.btrace.core.comm.WireIO;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.net.SocketException;
+
+/**
+ * Represents a remote client communicated by socket.
+ *
+ * @author A. Sundararajan
+ */
+class RemoteClient extends Client {
+    private volatile Socket sock;
+    private volatile ObjectInputStream ois;
+    private volatile ObjectOutputStream oos;
+
+    RemoteClient(ClientContext ctx, Socket sock) throws IOException {
+        super(ctx);
+        this.sock = sock;
+        this.ois = new ObjectInputStream(sock.getInputStream());
+        this.oos = new ObjectOutputStream(sock.getOutputStream());
+        boolean hasInstrument = false;
+        while (!hasInstrument) {
+            Command cmd = WireIO.read(ois);
+            switch (cmd.getType()) {
+                case Command.INSTRUMENT: {
+                    debugPrint("got instrument command");
+                    Class<?> btraceClazz = loadClass((InstrumentCommand) cmd);
+                    if (btraceClazz == null) {
+                        throw new RuntimeException("can not load BTrace class");
+                    }
+                    hasInstrument = true;
+                    initialize();
+                    break;
+                }
+                case Command.SET_PARAMS: {
+                    settings.from(((SetSettingsCommand) cmd).getParams());
+                    setupWriter();
+                    break;
+                }
+                default: {
+                    errorExit(new IllegalArgumentException("expecting instrument or settings command!"));
+                    throw new IOException("expecting instrument or settings command!");
+                }
+            }
+        }
+
+        BTraceRuntime.initUnsafe();
+        Thread cmdHandler = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    BTraceRuntime.enter();
+                    while (true) {
+                        try {
+                            Command cmd = WireIO.read(ois);
+                            switch (cmd.getType()) {
+                                case Command.EXIT: {
+                                    ExitCommand ecmd = (ExitCommand) cmd;
+                                    debugPrint("received exit command");
+                                    onCommand(ecmd);
+
+                                    return;
+                                }
+                                case Command.EVENT: {
+                                    getRuntime().handleEvent((EventCommand) cmd);
+                                    break;
+                                }
+                                default:
+                                    if (isDebug()) {
+                                        debugPrint("received " + cmd);
+                                    }
+                                    // ignore any other command
+                            }
+                        } catch (Exception exp) {
+                            debugPrint(exp);
+                            break;
+                        }
+                    }
+                } finally {
+                    BTraceRuntime.leave();
+                }
+            }
+        });
+        cmdHandler.setDaemon(true);
+        debugPrint("starting client command handler thread");
+        cmdHandler.start();
+    }
+
+    @Override
+    public void onCommand(Command cmd) throws IOException {
+        if (oos == null) {
+            throw new IOException("no output stream");
+        }
+        if (isDebug()) {
+            debugPrint("client " + getClassName() + ": got " + cmd);
+        }
+        boolean isConnected = true;
+        try {
+            oos.reset();
+        } catch (SocketException e) {
+            isConnected = false;
+        }
+
+        switch (cmd.getType()) {
+            case Command.EXIT:
+                if (isConnected) {
+                    WireIO.write(oos, cmd);
+                }
+                onExit(((ExitCommand) cmd).getExitCode());
+                break;
+            default:
+                if (out != null) {
+                    if (cmd instanceof PrintableCommand) {
+                        ((PrintableCommand) cmd).print(out);
+                        return;
+                    }
+                }
+                if (isConnected) {
+                    WireIO.write(oos, cmd);
+                }
+        }
+    }
+
+    @Override
+    protected synchronized void closeAll() throws IOException {
+        super.closeAll();
+
+        if (oos != null) {
+            oos.close();
+            oos = null;
+        }
+        if (ois != null) {
+            ois.close();
+            ois = null;
+        }
+        if (sock != null) {
+            sock.close();
+            sock = null;
+        }
+    }
+}

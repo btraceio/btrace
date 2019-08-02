@@ -1,7 +1,0 @@
-Package: btrace
-Version: @VERSION@
-Section: tools
-Architecture: all
-Maintainer: Jaroslav Bachorik
-Description: BTrace - a safe, dynamic tracing tool for the Java platform
-Depends: openjdk-7-jdk

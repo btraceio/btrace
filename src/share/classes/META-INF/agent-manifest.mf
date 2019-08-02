@@ -1,5 +1,0 @@
-Premain-Class: com.sun.btrace.agent.Main
-Agent-Class: com.sun.btrace.agent.Main
-Boot-Class-Path: btrace-boot.jar
-Can-Redefine-Classes: true
-Can-Retransform-Classes: true
