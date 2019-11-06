@@ -3,6 +3,7 @@ env:
   - secure: EIQ8VWbg8LRnX7n6PIP9HjXLg4nIKOsJk0xnMunbMZ475Z+pTd73awLu6VCbjO5DVAd9R7W36snIlGVv92j3dai6e0jOO+WtSTQ7gd1cEq+4swEXg7Qvc1oyqsXVL+FoO+j1InZxxUx93ObLRGvFZiUeBhnPNdqsM794EkUScN4=
   - secure: HLMEzx4NuU+oXU5yGViN8pAfFvhVeib5zvfH21nVbOC1Rg57HUKQTRCg5S/acr5C8At4BfHORt7p3MHztGB/GXylzm1kFRnKliJ50S9BkEW+/852f2gbGmnIEe7aMz4nFOheRpLgk7zcZrbYbztoRAFL+HREBiEaAZu8bti4gpU=
 sudo: false
+dist: trusty
 cache:
   directories:
   - "$HOME/.gradle"
