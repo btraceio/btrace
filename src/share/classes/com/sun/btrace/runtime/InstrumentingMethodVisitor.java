@@ -348,7 +348,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
     private final LocalVarTypes localTypes = new LocalVarTypes();
     private final Set<Integer> frameOffsets = new HashSet<>();
     private final Map<Label, SavedState> jumpTargetStates = new HashMap<>();
-    private final Map<Label, Label> tryCatchHandlerMap = new HashMap<>();
+    private final Map<Label, Set<Label>> tryCatchHandlerMap = new HashMap<>();
 
     private int argsSize = 0;
     private int localsTailPtr = 0;
@@ -1205,10 +1205,12 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
             newLocals.clear();
             newLocals.addAll(ss.newLocals);
         }
-        Label handler = tryCatchHandlerMap.get(label);
-        if (handler != null) {
-            if (!jumpTargetStates.containsKey(handler)) {
-                jumpTargetStates.put(handler, new SavedState(variableMapper, localTypes, stack, newLocals, SavedState.EXCEPTION));
+        Set<Label> handlers = tryCatchHandlerMap.get(label);
+        if (handlers != null) {
+            for (Label handler:handlers){
+                if (!jumpTargetStates.containsKey(handler)) {
+                    jumpTargetStates.put(handler, new SavedState(variableMapper, localTypes, stack, newLocals, SavedState.EXCEPTION));
+                }
             }
         }
         super.visitLabel(label);
@@ -1284,7 +1286,12 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
 
     @Override
     public void addTryCatchHandler(Label start, Label handler) {
-        tryCatchHandlerMap.put(start, handler);
+        Set<Label> handlers = tryCatchHandlerMap.get(start);
+        if (handlers == null){
+            handlers = new HashSet<>();
+        }
+        handlers.add(handler);
+        tryCatchHandlerMap.put(start,handlers);
     }
 
     @Override
