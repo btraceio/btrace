@@ -46,25 +46,29 @@ public final class ClassInfo {
     private static volatile Method BSTRP_CHECK_MTD;
     private final String cLoaderId;
     private final ClassName classId;
+
+    // @ThreadSafe
     private final Collection<ClassInfo> supertypes = new ArrayList<>();
     private final ClassCache cache;
     private boolean isInterface = false;
-    ClassInfo(ClassCache cache, Class clz) {
+
+    ClassInfo(ClassCache cache, Class<?> clz) {
         this.cache = cache;
         ClassLoader cl = clz.getClassLoader();
         cLoaderId = (cl != null ? cl.toString() : "<null>");
         classId = new ClassName(clz.getName());
-        Class supr = clz.getSuperclass();
+        Class<?> supr = clz.getSuperclass();
         if (supr != null) {
             supertypes.add(cache.get(supr));
         }
-        for (Class itfc : clz.getInterfaces()) {
+        for (Class<?> itfc : clz.getInterfaces()) {
             if (itfc != null) {
                 supertypes.add(cache.get(itfc));
             }
         }
         isInterface = clz.isInterface();
     }
+
     ClassInfo(ClassCache cache, ClassLoader cl, ClassName cName) {
         this.cache = cache;
         cLoaderId = (cl != null ? cl.toString() : "<null>");
@@ -170,6 +174,7 @@ public final class ClassInfo {
         return isInterface;
     }
 
+    // not thread safe - must be called only from the constructor
     private void loadExternalClass(ClassLoader cl, ClassName className) {
         String resourcePath = className.getResourcePath();
 

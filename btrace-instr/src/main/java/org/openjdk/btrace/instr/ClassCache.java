@@ -29,6 +29,7 @@ import org.openjdk.btrace.instr.ClassInfo.ClassName;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A simple class cache holding {@linkplain ClassInfo} instances and being
@@ -38,7 +39,7 @@ import java.util.WeakHashMap;
  */
 public final class ClassCache {
     private final Map<ClassLoader, Map<ClassName, ClassInfo>> cacheMap = new WeakHashMap<>();
-    private final Map<ClassName, ClassInfo> bootstrapInfos = new HashMap<>(500);
+    private final Map<ClassName, ClassInfo> bootstrapInfos = new ConcurrentHashMap<>(500);
 
     public static ClassCache getInstance() {
         return Singleton.INSTANCE;
@@ -60,7 +61,7 @@ public final class ClassCache {
         return get(cl, new ClassName(className));
     }
 
-    ClassInfo get(ClassLoader cl, ClassName className) {
+    synchronized ClassInfo get(ClassLoader cl, ClassName className) {
         Map<ClassName, ClassInfo> infos = getInfos(cl);
 
         ClassInfo ci = infos.get(className);
