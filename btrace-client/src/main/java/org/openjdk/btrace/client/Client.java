@@ -89,13 +89,13 @@ public class Client {
              * either /usr/lib/share/java/dtrace.jar is not in CLASSPATH
              * or we are not running on Solaris 11+.
              */
-            Class dtraceConsumerClass = Class.forName("org.opensolaris.os.dtrace.Consumer");
+            Class<?> dtraceConsumerClass = Class.forName("org.opensolaris.os.dtrace.Consumer");
             /*
              * Check for BTrace's DTrace support class -- if that is available
              * may be the user didn't build BTrace on Solaris 11. S/he built
              * it on Solaris 10 or below or some other OS.
              */
-            Class dtraceClass = Class.forName("com.sun.btrace.dtrace.DTrace");
+            Class<?> dtraceClass = Class.forName("com.sun.btrace.dtrace.DTrace");
             dtraceEnabled = true;
             submitFile = dtraceClass.getMethod("submit",
                     File.class, String[].class,
@@ -612,6 +612,10 @@ public class Client {
     }
 
     private Object getDTraceSource(final String fileName, byte[] code) {
+        if (isPersistedProbe(code)) {
+            return null;
+        }
+
         ClassReader reader = new ClassReader(code);
         final Object[] result = new Object[1];
         reader.accept(new ClassVisitor(Opcodes.ASM5) {
@@ -657,5 +661,14 @@ public class Client {
             }
         }, ClassReader.SKIP_CODE);
         return result[0];
+    }
+
+    private static final int MAGIC = 0xbacecaca;
+    private static boolean isPersistedProbe(byte[] code) {
+        int num = 0;
+        for (int i = 0; i < 4; i++) {
+            num += (256 * num) + code[i];
+        }
+        return MAGIC == num;
     }
 }
