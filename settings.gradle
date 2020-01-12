@@ -1,7 +1,25 @@
-// the project name must stay 'btrace' because of hard dependencies on this name
-// in 'btrace*' commands
-rootProject.name = 'btrace'
-def excludeBenchmark = (System.properties['excludeBenchmark'] != null)
-if (!excludeBenchmark) {
-  include 'benchmark'
+rootProject.name = 'btrace-ng'
+
+// Find the directories containing a "build.gradle" file in the root directory
+// of the project. That is, every directory containing a "build.gradle" will
+// be automatically the subproject of this project.
+def subDirs = rootDir.listFiles(new FileFilter() {
+    public boolean accept(File file) {
+        if (!file.isDirectory()) {
+            return false
+        }
+        if (file.name == 'buildSrc') {
+            return false
+        }
+        return new File(file, 'build.gradle').isFile()
+    }
+});
+
+subDirs.each { File dir ->
+    if (dir.name.startsWith("btrace-")) {
+        include dir.name
+    }
+    include "benchmarks:agent-benchmark"
+    include "benchmarks:runtime-benchmarks"
 }
+

@@ -1,0 +1,5 @@
+Premain-Class: org.openjdk.btrace.agent.Main
+Agent-Class: org.openjdk.btrace.agent.Main
+Can-Redefine-Classes: true
+Can-Retransform-Classes: true
+Boot-Class-Path: btrace-boot.jar

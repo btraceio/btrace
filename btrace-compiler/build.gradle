@@ -1,0 +1,3 @@
+dependencies {
+    compile files("${JAVA_8_HOME}/lib/tools.jar")
+}

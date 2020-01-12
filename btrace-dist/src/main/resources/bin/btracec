@@ -1,0 +1,44 @@
+#! /bin/sh
+
+if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ] ; then
+  # resolve links - $0 could be a link to btrace's home
+  PRG="$0"
+  progname=`basename "$0"`
+  PRG=$(readlink "$PRG")
+
+  if [ -z "$PRG" ]; then
+    PRG=$0
+  fi
+  BTRACE_HOME=`dirname "$PRG"`/..
+  BTRACE_HOME=`cd "$BTRACE_HOME" && pwd`
+fi
+
+if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ] ; then
+    if [ "${JAVA_HOME}" != "" ]; then
+        if [ "$1" = "--version" ]
+        then
+          ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/libs/btrace-client.jar org.openjdk.btrace.client.Main --version
+          exit 0
+        fi
+        case "`uname`" in
+          Darwin*)
+              if [ -f /System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar ]; then
+                TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
+              else
+                TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
+              fi
+          ;;
+          *)
+              TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
+          ;;
+       esac
+
+        ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/libs/btrace-client.jar:${TOOLS_JAR} org.openjdk.btrace.compiler.Compiler $*
+    else
+        echo "Please set JAVA_HOME before running this script"
+        exit 1
+    fi
+else
+    echo "Please set BTRACE_HOME before running this script"
+    exit 1
+fi

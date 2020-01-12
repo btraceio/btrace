@@ -1,0 +1,47 @@
+apply plugin: 'java'
+
+buildscript {
+    dependencies {
+        classpath files('../btrace-compiler/build/classes/main/java')
+    }
+}
+
+compileTestJava {
+    sourceCompatibility = 7
+    targetCompatibility = 7
+    options.fork = true
+    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
+}
+
+task compileTestProbes {
+    dependsOn compileTestJava
+    doLast {
+        def path = project(':btrace-instr').sourceSets.main.runtimeClasspath
+
+        def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
+        def compiler = loader.loadClass('org.openjdk.btrace.compiler.Compiler')
+        def rtCp = sourceSets.main.runtimeClasspath.collect { it.absolutePath }.join(':')
+
+        def args = ["-cp", "${buildDir}/classes/java/test:${rtCp}", "-d", "${buildDir}/classes"]
+
+        def files = fileTree(dir: "src/test/btrace", include: '**/*.java', exclude: 'verifier/**/*.java').findAll {
+            it != null
+        }.collect { it }
+
+        args.addAll(files)
+
+        compiler.main(args as String[])
+    }
+}
+
+test {
+    onlyIf {
+        new File("${projectDir}/../btrace-dist/build/resources/main/libs/btrace-client.jar").exists()
+    }
+    dependsOn cleanTest
+    inputs.files compileTestProbes.outputs
+    //inputs.files buildDTrace.outputs
+    testLogging.showStandardStreams = true
+
+    jvmArgs '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED'
+}

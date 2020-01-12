@@ -1,0 +1,20 @@
+import org.apache.tools.ant.filters.*
+
+plugins {
+    id 'net.nemerosa.versioning' version '2.6.1'
+//    id "nebula.java-cross-compile" version "4.0.1"
+}
+
+compileJava {
+    sourceCompatibility = 7
+    targetCompatibility = 7
+    options.fork = true
+    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
+}
+
+processResources {
+    filter ReplaceTokens, tokens: [
+        "btrace.version": project.version,
+        "hash"          : versioning.info.commit
+    ]
+}

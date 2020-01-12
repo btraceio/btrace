@@ -1,0 +1,80 @@
+//
+// This file is to be applied to every subproject.
+//
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'idea'
+
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
+
+if (!project.hasProperty("JAVA_8_HOME")) {
+    project.ext.setProperty("JAVA_8_HOME", System.getenv("JAVA_8_HOME"));
+}
+if (!project.hasProperty("JAVA_9_HOME")) {
+    project.ext.setProperty("JAVA_9_HOME", System.getenv("JAVA_9_HOME"));
+}
+if (!project.hasProperty("JAVA_11_HOME")) {
+    project.ext.setProperty("JAVA_11_HOME", System.getenv("JAVA_11_HOME"));
+}
+
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+compileJava {
+    options.fork = true
+    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
+}
+
+repositories {
+    mavenCentral();
+    // You may define additional repositories, or even remove "mavenCentral()".
+    // Read more about repositories here:
+    //   http://www.gradle.org/docs/current/userguide/dependency_management.html#sec:repositories
+}
+
+dependencies {
+    // Adding dependencies here will add the dependencies to each subproject.
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+String mavenArtifactId = name
+
+javadoc {
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+    executable = "${JAVA_8_HOME}/bin/javadoc"
+    failOnError true
+}
+
+task sourcesJar(type: Jar, dependsOn: classes, description: 'Creates a jar from the source files.') {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives jar
+    archives sourcesJar
+    archives javadocJar
+}
+
+configure(install.repositories.mavenInstaller) {
+    pom.project {
+        groupId = group ?: "org.openjdk.btrace"
+        artifactId = mavenArtifactId
+        version = version ?: "0"
+    }
+}
+
+task createFolders(description: 'Creates the source folders if they do not exist.') doLast {
+    sourceSets*.allSource*.srcDirs*.each { File srcDir ->
+        if (!srcDir.isDirectory()) {
+            println "Creating source folder: ${srcDir}"
+            srcDir.mkdirs()
+        }
+    }
+}

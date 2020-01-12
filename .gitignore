@@ -18,8 +18,8 @@ make/netbeans/nbproject/private
 TEST-*
 make/junit*
 make/private.properties
-benchmark/target
-benchmark/build
+btrace-benchmark/target
+btrace-benchmark/build
 benchmark/*.iml
 junit*
 /btrace-statsd/target/
@@ -35,3 +35,5 @@ gradle.properties
 /.nb-gradle/
 /.nb-gradle-properties
 .github_changelog_generator
+**/out/*
+gradle-wrapper.properties
