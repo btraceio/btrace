@@ -15,6 +15,7 @@ fi
 
 if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ] ; then
     if [ "${JAVA_HOME}" != "" ]; then
+      if [ -f "${JAVA_HOME}/jre" ]; then
          TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
          if [ ! -f ${TOOLS_JAR} ] ; then
            case "`uname`" in
@@ -41,6 +42,7 @@ if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ] ; then
                ;;
            esac
          fi
+       fi
        ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/libs/btrace-client.jar:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar org.openjdk.btrace.client.Main $*
     else
        echo "Please set JAVA_HOME before running this script"
