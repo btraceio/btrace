@@ -618,12 +618,12 @@ public class Client {
 
         ClassReader reader = new ClassReader(code);
         final Object[] result = new Object[1];
-        reader.accept(new ClassVisitor(Opcodes.ASM5) {
+        reader.accept(new ClassVisitor(Opcodes.ASM7) {
 
             @Override
             public AnnotationVisitor visitAnnotation(String desc, boolean vis) {
                 if (desc.equals(DTRACE_DESC)) {
-                    return new AnnotationVisitor(Opcodes.ASM5) {
+                    return new AnnotationVisitor(Opcodes.ASM7) {
 
                         @Override
                         public void visit(String name, Object value) {
@@ -633,7 +633,7 @@ public class Client {
                         }
                     };
                 } else if (desc.equals(DTRACE_REF_DESC)) {
-                    return new AnnotationVisitor(Opcodes.ASM5) {
+                    return new AnnotationVisitor(Opcodes.ASM7) {
 
                         @Override
                         public void visit(String name, Object value) {

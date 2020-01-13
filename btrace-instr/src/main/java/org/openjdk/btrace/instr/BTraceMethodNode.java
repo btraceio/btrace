@@ -57,7 +57,7 @@ public class BTraceMethodNode extends MethodNode {
     private boolean isBTraceHandler;
 
     BTraceMethodNode(MethodNode from, BTraceProbeNode cn) {
-        super(Opcodes.ASM5, from.access, from.name, from.desc, from.signature, ((List<String>) from.exceptions).toArray(new String[0]));
+        super(Opcodes.ASM7, from.access, from.name, from.desc, from.signature, ((List<String>) from.exceptions).toArray(new String[0]));
         this.cn = cn;
         graph = cn.getGraph();
         methodId = CallGraph.methodId(name, desc);
@@ -90,7 +90,7 @@ public class BTraceMethodNode extends MethodNode {
             om = new OnMethod(this, debug);
             om.setTargetName(name);
             om.setTargetDescriptor(desc);
-            return new AnnotationVisitor(Opcodes.ASM5, av) {
+            return new AnnotationVisitor(Opcodes.ASM7, av) {
                 @Override
                 public void visit(String name, Object value) {
                     super.visit(name, value);
@@ -119,7 +119,7 @@ public class BTraceMethodNode extends MethodNode {
                     AnnotationVisitor av1 = super.visitAnnotation(name, desc);
                     if (desc.equals(Constants.LOCATION_DESC)) {
                         loc = new Location();
-                        return new AnnotationVisitor(Opcodes.ASM5, av1) {
+                        return new AnnotationVisitor(Opcodes.ASM7, av1) {
                             @Override
                             public void visitEnum(String name, String desc, String value) {
                                 super.visitEnum(name, desc, value);
@@ -163,7 +163,7 @@ public class BTraceMethodNode extends MethodNode {
                             }
                         };
                     } else if (desc.equals(Constants.LEVEL_DESC)) {
-                        return new AnnotationVisitor(Opcodes.ASM5, av1) {
+                        return new AnnotationVisitor(Opcodes.ASM7, av1) {
                             @Override
                             public void visit(String name, Object value) {
                                 super.visit(name, value);
@@ -181,7 +181,7 @@ public class BTraceMethodNode extends MethodNode {
             op = new OnProbe(this);
             op.setTargetName(name);
             op.setTargetDescriptor(desc);
-            return new AnnotationVisitor(Opcodes.ASM5, av) {
+            return new AnnotationVisitor(Opcodes.ASM7, av) {
                 @Override
                 public void visit(String name, Object value) {
                     super.visit(name, value);
@@ -199,7 +199,7 @@ public class BTraceMethodNode extends MethodNode {
         } else if (type.equals(Constants.SAMPLED_DESC)) {
             if (om != null) {
                 om.setSamplerKind(Sampled.Sampler.Adaptive);
-                return new AnnotationVisitor(Opcodes.ASM5, av) {
+                return new AnnotationVisitor(Opcodes.ASM7, av) {
                     private boolean meanSet = false;
 
                     @Override
@@ -315,7 +315,7 @@ public class BTraceMethodNode extends MethodNode {
             ph.setClassNameParameter(parameter);
         } else if (desc.equals(Constants.BTRACE_PROBEMETHODNAME_DESC)) {
             ph.setMethodParameter(parameter);
-            av = new AnnotationVisitor(Opcodes.ASM5, av) {
+            av = new AnnotationVisitor(Opcodes.ASM7, av) {
                 @Override
                 public void visit(String name, Object val) {
                     if (name.equals("fqn")) {
@@ -330,7 +330,7 @@ public class BTraceMethodNode extends MethodNode {
         } else if (desc.equals(Constants.TARGETMETHOD_DESC)) {
             ph.setTargetMethodOrFieldParameter(parameter);
 
-            av = new AnnotationVisitor(Opcodes.ASM5, av) {
+            av = new AnnotationVisitor(Opcodes.ASM7, av) {
                 @Override
                 public void visit(String name, Object val) {
                     if (name.equals("fqn")) {

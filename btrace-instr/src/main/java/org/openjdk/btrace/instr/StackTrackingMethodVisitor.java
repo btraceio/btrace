@@ -59,7 +59,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
     private final Set<Label> visitedLabels = new HashSet<>();
 
     public StackTrackingMethodVisitor(MethodVisitor mv, String className, String desc, boolean isStatic) {
-        super(Opcodes.ASM5, mv);
+        super(Opcodes.ASM7, mv);
         Type[] args = Type.getArgumentTypes(desc);
         state = new State(isStatic ? null : new InstanceItem(Type.getObjectType(className)), args);
     }

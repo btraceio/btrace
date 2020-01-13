@@ -66,7 +66,7 @@ public class StackTrackingMethodVisitorTest extends InstrumentorTestBase {
     public void sanityTrackerTest() throws Exception {
         // just make sure that a sufficiently complex methods won't cause
         // any problems for tracking the stack
-        reader.accept(new ClassVisitor(Opcodes.ASM5) {
+        reader.accept(new ClassVisitor(Opcodes.ASM7) {
             private String clzName;
 
             @Override

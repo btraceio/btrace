@@ -213,7 +213,7 @@ final class Preprocessor {
             cn.fields = new ArrayList();
         }
         cn.fields.add(new FieldNode(
-                        Opcodes.ASM5,
+                        Opcodes.ASM7,
                         Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_VOLATILE,
                         Constants.BTRACE_LEVEL_FLD,
                         Constants.INT_DESC,
@@ -482,7 +482,7 @@ final class Preprocessor {
                 vin.var = LocalVarGenerator.translateIdx(vin.var);
             }
         }
-        StackTrackingMethodVisitor v = new StackTrackingMethodVisitor(new MethodVisitor(Opcodes.ASM5) {
+        StackTrackingMethodVisitor v = new StackTrackingMethodVisitor(new MethodVisitor(Opcodes.ASM7) {
             @Override
             public void visitMaxs(int maxStack, int maxLocals) {
                 super.visitMaxs(maxStack, maxLocals);
@@ -502,7 +502,7 @@ final class Preprocessor {
         }
         if (clinit == null) {
             clinit = new MethodNode(
-                    Opcodes.ASM5, (Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC),
+                    Opcodes.ASM7, (Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC),
                     "<clinit>", "()V", null, new String[0]
             );
             clinit.instructions.add(new InsnNode(Opcodes.RETURN));
@@ -801,7 +801,7 @@ final class Preprocessor {
 
     private void addRuntimeNode(ClassNode cn) {
         rtField = new FieldNode(
-                Opcodes.ASM5, (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC),
+                Opcodes.ASM7, (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC),
                 "runtime", Type.getDescriptor(BTraceRuntimeImplBase.class),
                 null, null
         );

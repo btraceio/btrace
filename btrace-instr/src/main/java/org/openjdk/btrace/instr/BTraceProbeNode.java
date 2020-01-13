@@ -73,7 +73,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     private VerifierException verifierException = null;
 
     private BTraceProbeNode(BTraceProbeFactory factory) {
-        super(Opcodes.ASM5);
+        super(Opcodes.ASM7);
         this.factory = factory;
         debug = new DebugSupport(factory.getSettings());
         delegate = new BTraceProbeSupport(debug);
@@ -115,7 +115,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
     @Override
     public FieldVisitor visitField(int access, final String name, final String desc, String signature, Object value) {
-        return new FieldVisitor(Opcodes.ASM5, super.visitField(access, name, desc, signature, value)) {
+        return new FieldVisitor(Opcodes.ASM7, super.visitField(access, name, desc, signature, value)) {
             @Override
             public AnnotationVisitor visitAnnotation(String type, boolean aVisible) {
                 if (type.equals(Constants.INJECTED_DESC)) {
@@ -197,7 +197,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         ClassWriter cw = InstrumentUtils.newClassWriter(true);
         ClassVisitor cv = cw;
         if (onlyBcpMethods) {
-            cv = new ClassVisitor(Opcodes.ASM5, cw) {
+            cv = new ClassVisitor(Opcodes.ASM7, cw) {
                 @Override
                 public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exceptions) {
                     if (name.startsWith("<")) {
@@ -443,7 +443,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
     private MethodNode copy(MethodNode n) {
         String[] exceptions = n.exceptions != null ? ((List<String>) n.exceptions).toArray(new String[0]) : null;
-        MethodNode mn = new MethodNode(Opcodes.ASM5, n.access, n.name, n.desc, n.signature, exceptions);
+        MethodNode mn = new MethodNode(Opcodes.ASM7, n.access, n.name, n.desc, n.signature, exceptions);
         n.accept(mn);
         mn.access = Opcodes.ACC_STATIC | Opcodes.ACC_PRIVATE;
         mn.desc = mn.desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
