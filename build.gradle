@@ -29,7 +29,7 @@ task mergedJavadoc(type: Javadoc, description: 'Creates Javadoc from all the pro
 project(':btrace-core') {
     dependencies {
         // https://mvnrepository.com/artifact/org.jctools/jctools-core
-        compile(group: 'org.jctools', name: 'jctools-core', version: '2.1.1')
+        compile(group: 'org.jctools', name: 'jctools-core', version: '3.0.0')
 
         // https://mvnrepository.com/artifact/org.ow2.asm/asm
         compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
