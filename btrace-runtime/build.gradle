@@ -60,5 +60,4 @@ jar {
     into('') {
         from sourceSets.java11.output
     }
-    manifest.attributes('Multi-Release': 'true')
 }

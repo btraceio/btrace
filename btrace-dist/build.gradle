@@ -61,6 +61,8 @@ task agentJar(type: ShadowJar) {
     exclude 'org/openjdk/btrace/services/**'
     exclude 'org/openjdk/btrace/statsd/*'
 
+    exclude 'module-info.class'
+
     configurations = [project.configurations.compile]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
@@ -91,14 +93,11 @@ task bootJar(type: ShadowJar) {
 
     exclude 'org/openjdk/btrace/agent/**'
     exclude 'org/openjdk/btrace/client/**'
+    exclude 'module-info.class'
 
     configurations = [project.configurations.compile]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-
-    manifest {
-        attributes('Multi-Release' : 'true')
-    }
 }
 
 task clientJar(type: ShadowJar) {
