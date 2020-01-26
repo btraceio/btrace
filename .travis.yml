@@ -32,7 +32,7 @@ before_install:
 - sudo apt-get install ca-certificates-java
 - sudo update-ca-certificates -f
 install: "./gradlew assemble -DexcludeBenchmark"
-script: "./gradlew check -DexcludeBenchmark && TEST_JAVA_HOME=$JAVA_8_HOME ./gradlew test --tests  org.openjdk.btrace.BTraceFunctionalTests"
+script: "./run_tests.sh"
 after_success:
 - "./gradlew buildDistributions -DexcludeBenchmark"
 - codecov
