@@ -31,8 +31,15 @@ before_install:
 - sudo dpkg --purge --force-depends ca-certificates-java
 - sudo apt-get install ca-certificates-java
 - sudo update-ca-certificates -f
-install: "./gradlew assemble -DexcludeBenchmark"
-script: "./gradlew check -DexcludeBenchmark"
+jobs:
+  include:
+    - stage: assemble
+      script: "./gradlew assemble -DexcludeBenchmark"
+    - stage: test_default
+      script: "./gradlew check -DexcludeBenchmark"
+    - stage: test_func_8
+      script:  "TEST_JAVA_HOME=%JAVA_8_HOME ./gradlews test --tests  org.openjdk.btrace.BTraceFunctionalTests"
+
 after_success:
 - "./gradlew buildDistributions -DexcludeBenchmark"
 - codecov

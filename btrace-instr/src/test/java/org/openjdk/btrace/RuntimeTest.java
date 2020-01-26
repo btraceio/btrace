@@ -113,10 +113,6 @@ abstract public class RuntimeTest {
             toolsjar = toolsJarPath.toString();
         }
         btraceExtPath = btraceExtPath + File.pathSeparator + toolsjar;
-//        Path toolsJarPath = Paths.get(java, "lib", "tools.jar");
-//        if (Files.exists(toolsJarPath)) {
-//            cp += File.pathSeparator + toolsJarPath.toString();
-//        }
         System.out.println("=== Using Java: " + java + ", toolsJar: " + toolsjar);
     }
 
