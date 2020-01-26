@@ -39,13 +39,13 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ClassCache {
     private final Map<ClassLoader, Map<ClassName, ClassInfo>> cacheMap = new WeakHashMap<>();
-    private final Map<ClassName, ClassInfo> bootstrapInfos = new ConcurrentHashMap<>(500);
+    private final Map<ClassName, ClassInfo> bootstrapInfos = new HashMap<>(500);
 
     public static ClassCache getInstance() {
         return Singleton.INSTANCE;
     }
 
-    public ClassInfo get(Class clz) {
+    public ClassInfo get(Class<?> clz) {
         return get(clz.getClassLoader(), clz.getName());
     }
 
