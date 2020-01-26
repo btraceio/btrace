@@ -27,8 +27,8 @@ public final class BTraceRuntimes {
             if (instance.isEnabled()) {
                 FACTORY = instance;
             }
-        } catch (ClassNotFoundException e) {
-            DebugSupport.warning("Can not load runtime factory: " + clzName);
+        } catch (ClassNotFoundException | UnsupportedClassVersionError e) {
+            DebugSupport.info("Can not load runtime factory: " + clzName);
         } catch (Exception e) {
             DebugSupport.warning(e);
         }
