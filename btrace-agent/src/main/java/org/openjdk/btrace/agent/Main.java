@@ -545,7 +545,8 @@ public final class Main {
             Class<Runtime> rtClass = Runtime.class;
             Method m = rtClass.getMethod("version");
             Object version = m.invoke(null);
-            JarFile jf = JarFile.class.getConstructor(File.class, boolean.class, int.class, version.getClass()).newInstance(path, true, ZipFile.OPEN_READ, version);
+            // JPMS enabled version of JarFile has different constructor signature
+            return JarFile.class.getConstructor(File.class, boolean.class, int.class, version.getClass()).newInstance(path, true, ZipFile.OPEN_READ, version);
         } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException ignore) {}
 
         return new JarFile(path);
@@ -565,8 +566,10 @@ public final class Main {
                     appendToBootClassPath(libFolder);
                     appendToSysClassPath(libFolder);
                 } else {
-                    DebugSupport.warning("Invalid 'libs' configuration [" + libs + "]. " +
-                            "Path '" + libFolder.toAbsolutePath() + "' does not exist.");
+                    if (libs != null && !libs.isEmpty()) {
+                        DebugSupport.warning("Invalid 'libs' configuration [" + libs + "]. " +
+                                "Path '" + libFolder.toAbsolutePath() + "' does not exist.");
+                    }
                 }
             }
         }
