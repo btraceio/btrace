@@ -25,7 +25,7 @@
 <btrace-probes namespace="org.openjdk.btrace">
     <probe name="noargs">
         <map>
-            <clazz>resources.Main</clazz>
+            <clazz>//resources\..*//</clazz>
             <method>callA</method>
         </map>
     </probe>
