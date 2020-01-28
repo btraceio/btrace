@@ -50,7 +50,7 @@ public class Verifier extends ClassVisitor {
     private boolean classRenamed;
 
     public Verifier(BTraceProbeNode cv, boolean trusted) {
-        super(ASM5, cv);
+        super(ASM7, cv);
         trustedAllowed = trusted;
         cn = cv;
     }
@@ -123,7 +123,7 @@ public class Verifier extends ClassVisitor {
         AnnotationVisitor delegate = super.visitAnnotation(type, visible);
         if (type.equals(Constants.BTRACE_DESC)) {
             seenBTrace = true;
-            return new AnnotationVisitor(ASM5, delegate) {
+            return new AnnotationVisitor(ASM7, delegate) {
                 @Override
                 public void visit(String name, Object value) {
                     if (("unsafe".equals(name) || "trusted".equals(name)) && Boolean.TRUE.equals(value)) {

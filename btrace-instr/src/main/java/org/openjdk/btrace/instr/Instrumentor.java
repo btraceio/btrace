@@ -61,10 +61,10 @@ public class Instrumentor extends ClassVisitor {
     private final Set<OnMethod> calledOnMethods = new HashSet<>();
 
     private String className, superName;
-    private final ClassVisitor copyingVisitor = new ClassVisitor(ASM5, cv) {
+    private final ClassVisitor copyingVisitor = new ClassVisitor(ASM7, cv) {
         @Override
         public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exceptions) {
-            return new MethodVisitor(ASM5, super.visitMethod(access, name, desc, sig, exceptions)) {
+            return new MethodVisitor(ASM7, super.visitMethod(access, name, desc, sig, exceptions)) {
                 @Override
                 public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itfc) {
                     if (owner.equals(bcn.getClassName(true))) {
@@ -78,7 +78,7 @@ public class Instrumentor extends ClassVisitor {
     };
 
     private Instrumentor(ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
-        super(ASM5, cv);
+        super(ASM7, cv);
         this.cl = cl;
         this.bcn = bcn;
         applicableOnMethods = applicables;
@@ -186,7 +186,7 @@ public class Instrumentor extends ClassVisitor {
         }
 
         final int mAccess = access;
-        return new MethodVisitor(ASM5, methodVisitor) {
+        return new MethodVisitor(ASM7, methodVisitor) {
             @Override
             public AnnotationVisitor visitAnnotation(String annoDesc, boolean visible) {
                 for (OnMethod om : annotationMatchers) {

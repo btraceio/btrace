@@ -64,7 +64,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
     private int pc = 0, lastFramePc = Integer.MIN_VALUE;
 
     public InstrumentingMethodVisitor(int access, String owner, String name, String desc, MethodVisitor mv) {
-        super(ASM5, mv);
+        super(ASM7, mv);
         this.owner = owner;
         this.name = name;
         this.desc = desc;

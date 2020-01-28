@@ -528,7 +528,7 @@ public class BTraceProbePersisted implements BTraceProbe {
                 }
             }
         }
-        cr.accept(new ClassVisitor(ASM5) {
+        cr.accept(new ClassVisitor(ASM7) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
                 String mid = CallGraph.methodId(name, desc);
@@ -559,7 +559,7 @@ public class BTraceProbePersisted implements BTraceProbe {
 
     private void verifyBytecode() throws VerifierException {
         ClassReader cr = new ClassReader(fullData);
-        cr.accept(new ClassVisitor(ASM5) {
+        cr.accept(new ClassVisitor(ASM7) {
             private String className;
 
             @Override
@@ -618,7 +618,7 @@ public class BTraceProbePersisted implements BTraceProbe {
                     return super.visitMethod(access, methodName, desc, sig, exceptions);
                 }
 
-                return new MethodVisitor(ASM5, super.visitMethod(access, methodName, desc, sig, exceptions)) {
+                return new MethodVisitor(ASM7, super.visitMethod(access, methodName, desc, sig, exceptions)) {
                     private final Map<Label, Label> labels = new HashMap<>();
 
                     @Override
