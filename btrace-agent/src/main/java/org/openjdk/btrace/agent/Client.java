@@ -451,11 +451,11 @@ abstract class Client implements CommandListener {
     void retransformLoaded() throws UnmodifiableClassException {
         if (runtime != null) {
             if (probe.isTransforming() && settings.isRetransformStartup()) {
-                ArrayList<Class> list = new ArrayList<>();
+                ArrayList<Class<?>> list = new ArrayList<>();
                 debugPrint("retransforming loaded classes");
                 debugPrint("filtering loaded classes");
                 ClassCache cc = ClassCache.getInstance();
-                for (Class c : inst.getAllLoadedClasses()) {
+                for (Class<?> c : inst.getAllLoadedClasses()) {
                     if (c != null) {
                         if (inst.isModifiableClass(c) && isCandidate(c)) {
                             debugPrint("candidate " + c + " added");
@@ -466,11 +466,11 @@ abstract class Client implements CommandListener {
                 list.trimToSize();
                 int size = list.size();
                 if (size > 0) {
-                    Class[] classes = new Class[size];
+                    Class<?>[] classes = new Class[size];
                     list.toArray(classes);
                     startRetransformClasses(size);
                     if (isDebug()) {
-                        for (Class c : classes) {
+                        for (Class<?> c : classes) {
                             try {
                                 debugPrint("Attempting to retransform class: " + c.getName());
                                 inst.retransformClasses(c);

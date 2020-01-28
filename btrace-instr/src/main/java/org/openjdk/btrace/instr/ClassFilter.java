@@ -99,13 +99,13 @@ public class ClassFilter {
      * Note that we can not use Class.isAssignableFrom because the other
      * type is specified by just name and not by Class object.
      */
-    public static boolean isSubTypeOf(Class clazz, String typeName) {
+    public static boolean isSubTypeOf(Class<?> clazz, String typeName) {
         if (clazz == null) {
             return false;
         } else if (clazz.getName().equals(typeName)) {
             return true;
         } else {
-            for (Class iface : clazz.getInterfaces()) {
+            for (Class<?> iface : clazz.getInterfaces()) {
                 if (isSubTypeOf(iface, typeName)) {
                     return true;
                 }
