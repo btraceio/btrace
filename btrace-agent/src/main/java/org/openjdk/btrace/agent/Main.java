@@ -113,6 +113,10 @@ public final class Main {
             }
             parseArgs();
 
+            if (isDebug()) {
+                debugPrint("Adding class transformer");
+            }
+            inst.addTransformer(transformer, true);
             int startedScripts = startScripts();
 
             String tmp = argMap.get("noServer");
@@ -150,7 +154,6 @@ public final class Main {
                 BTraceRuntime.leave();
             }
         } finally {
-            inst.addTransformer(transformer, true);
             debugPrint("Agent init took: " + (System.nanoTime() - ts) + "ns");
         }
     }
