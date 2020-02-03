@@ -24,6 +24,8 @@
  */
 package org.openjdk.btrace.instr;
 
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.MethodNode;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 
@@ -33,6 +35,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
@@ -52,6 +55,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
     private final ReentrantReadWriteLock setupLock = new ReentrantReadWriteLock();
     private final Collection<BTraceProbe> probes = new ArrayList<>(3);
     private final Filter filter = new Filter();
+    private final Collection<MethodNode> cushionMethods = new HashSet<>();
+
     public BTraceTransformer(DebugSupport d) {
         debug = d;
     }
@@ -87,14 +92,12 @@ public final class BTraceTransformer implements ClassFileTransformer {
             probes.remove(p);
             for (OnMethod om : p.onmethods()) {
                 filter.remove(om);
+                cushionMethods.add(new MethodNode(Opcodes.ASM7, Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, Instrumentor.getActionMethodName(p, om.getTargetName()), om.getTargetDescriptor(), null, null));
             }
+
         } finally {
             setupLock.writeLock().unlock();
         }
-    }
-
-    Filter getFilter() {
-        return filter;
     }
 
     @Override
@@ -121,6 +124,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
                 }
                 BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
                 BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
+                cw.addCushionMethods(cushionMethods);
                 for (BTraceProbe p : probes) {
                     p.notifyTransform(className);
                     cw.addInstrumentor(p, loader);

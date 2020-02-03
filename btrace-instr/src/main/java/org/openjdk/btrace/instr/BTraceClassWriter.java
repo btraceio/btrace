@@ -26,9 +26,13 @@ package org.openjdk.btrace.instr;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.MethodNode;
 
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 
@@ -43,7 +47,7 @@ final class BTraceClassWriter extends ClassWriter {
     private final Deque<Instrumentor> instrumentors = new ArrayDeque<>();
     private final ClassLoader targetCL;
     private final BTraceClassReader cr;
-    private final InstrumentingClassVisitor iClassVisitor = null;
+    private final Collection<MethodNode> cushionMethods = new HashSet<>();
 
     BTraceClassWriter(ClassLoader cl, int flags) {
         super(flags);
@@ -80,7 +84,24 @@ final class BTraceClassWriter extends ClassWriter {
             if (instrumentors.isEmpty()) return null;
 
             ClassVisitor top = instrumentors.peekLast();
-            InstrumentUtils.accept(cr, top != null ? top : this);
+            ClassVisitor cv = new ClassVisitor(Opcodes.ASM7, top != null ? top : this) {
+                private String cname;
+
+                @Override
+                public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+                    cname = name;
+                    super.visit(version, access, name, signature, superName, interfaces);
+                }
+
+                @Override
+                public void visitEnd() {
+                    for (MethodNode m : cushionMethods) {
+                        m.accept(this);
+                    }
+                    super.visitEnd();
+                }
+            };
+            InstrumentUtils.accept(cr, cv);
             for (Instrumentor i : instrumentors) {
                 hit |= i.hasMatch();
             }
@@ -107,4 +128,14 @@ final class BTraceClassWriter extends ClassWriter {
         return Constants.OBJECT_INTERNAL;
     }
 
+    /**
+     * Add dummy cushion methods to account for an instrumented code in hot loop still running
+     * even once the instrumentation was removed (code can not be hotswapped as long as the affected
+     * method is on stack so it may happen that an instrumentation from a disconnected BTrace client
+     * will be running for a long time)
+     * @param pillowMethods the methods to create cushions for
+     */
+    public void addCushionMethods(Collection<MethodNode> pillowMethods) {
+        cushionMethods.addAll(pillowMethods);
+    }
 }

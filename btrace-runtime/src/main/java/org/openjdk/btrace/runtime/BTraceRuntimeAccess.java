@@ -151,16 +151,17 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
             return forClassName;
         }
 
+        int idx = forClassName.lastIndexOf('/');
+        if (idx > -1) {
+            forClassName = Auxilliary.class.getPackage().getName().replace('.', '/') + "/" + forClassName.substring(idx + 1);
+        } else {
+            forClassName = Auxilliary.class.getPackage().getName().replace('.', '/') + "/" + forClassName;
+        }
+
         String name = forClassName;
         int suffix = 1;
         while (clients.contains(name)) {
             name = forClassName + "$" + (suffix++);
-        }
-        int idx = name.lastIndexOf('/');
-        if (idx > -1) {
-            name = Auxilliary.class.getPackage().getName().replace('.', '/') + "/" + name.substring(idx + 1);
-        } else {
-            name = Auxilliary.class.getPackage().getName().replace('.', '/') + "/" + name;
         }
         clients.add(name);
         return name;

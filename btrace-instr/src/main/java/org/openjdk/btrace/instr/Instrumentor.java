@@ -1679,8 +1679,12 @@ public class Instrumentor extends ClassVisitor {
         cv.visitEnd();
     }
 
+    static String getActionMethodName(BTraceProbe bp, String name) {
+        return InstrumentUtils.getActionPrefix(bp.getClassName(true)) + name;
+    }
+
     private String getActionMethodName(String name) {
-        return InstrumentUtils.getActionPrefix(bcn.getClassName(true)) + name;
+        return getActionMethodName(bcn, name);
     }
 
     private void invokeBTraceAction(Assembler asm, OnMethod om) {

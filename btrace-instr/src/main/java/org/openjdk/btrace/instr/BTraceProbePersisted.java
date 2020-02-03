@@ -39,6 +39,7 @@ import org.objectweb.asm.Type;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -279,6 +280,9 @@ public class BTraceProbePersisted implements BTraceProbe {
         int holderLen = dis.readInt();
         dataHolder = new byte[holderLen];
         dis.readFully(dataHolder);
+        if (dataHolder.length > 0 && isClassRenamed()) {
+            dataHolder = ProbeRenameVisitor.rename(getClassName(), dataHolder);
+        }
     }
 
     private void readCallees(DataInputStream dis) throws IOException {
