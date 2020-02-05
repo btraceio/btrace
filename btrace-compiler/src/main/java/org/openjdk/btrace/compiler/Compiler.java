@@ -25,6 +25,7 @@
 package org.openjdk.btrace.compiler;
 
 import org.openjdk.btrace.core.Messages;
+import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -35,6 +36,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -95,6 +97,13 @@ public class Compiler {
         if (args.length == 0) {
             usage();
         }
+
+        // turn off the unique client name generation as it is undesired during compilation
+        try {
+            Field f = BTraceRuntimeAccess.class.getDeclaredField("uniqueClientClassNames");
+            f.setAccessible(true);
+            f.set(null, false);
+        } catch (Exception ignored) {}
 
         String classPath = ".";
         String outputDir = ".";

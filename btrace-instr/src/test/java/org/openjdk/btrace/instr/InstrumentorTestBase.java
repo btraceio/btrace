@@ -52,6 +52,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.util.Map;
@@ -343,7 +344,7 @@ public abstract class InstrumentorTestBase {
         byte[] traceData = loadFile("traces/" + name + ".class");
 
         BTraceProbe bcn = factory.createProbe(traceData);
-        this.traceCode = bcn.getFullBytecode();
+        traceCode = bcn.getFullBytecode();
 
         if (DEBUG) {
             System.err.println("=== Loaded Trace: " + bcn + "\n");
