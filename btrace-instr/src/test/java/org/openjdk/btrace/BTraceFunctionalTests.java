@@ -283,7 +283,6 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
     @Test
     public void testReflection() throws Exception {
-        debugTestApp = true;
         test(
                 "resources.Main",
                 "btrace/issues/BTRACE400.java",
