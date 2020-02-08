@@ -208,7 +208,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
         AtomicReference<Class<?>> cl = new AtomicReference<>(null);
         StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).forEach(f -> {
             if (cont.getAndDecrement() == 0) {
-                cl.compareAndSet(null, f.getDeclaringClass().getClassLoader());
+                cl.compareAndSet(null, f.getDeclaringClass());
             }
         });
         return cl.get();
