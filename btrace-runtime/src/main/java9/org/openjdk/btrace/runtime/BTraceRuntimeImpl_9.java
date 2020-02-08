@@ -37,6 +37,8 @@ import java.security.AccessController;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jdk.internal.reflect.Reflection;
 import jdk.internal.perf.Perf;
@@ -186,6 +188,30 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
             }
             break;
         }
+    }
+
+    @Override
+    public ClassLoader getCallerClassLoader(int stackDec) {
+        AtomicInteger cont = new AtomicInteger(stackDec);
+        AtomicReference<ClassLoader> cl = new AtomicReference<>(null);
+        StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).forEach(f -> {
+            if (cont.getAndDecrement() == 0) {
+                cl.compareAndSet(null, f.getDeclaringClass().getClassLoader());
+            }
+        });
+        return cl.get();
+    }
+
+    @Override
+    public Class<?> getCallerClass(int stackDec) {
+        AtomicInteger cont = new AtomicInteger(stackDec);
+        AtomicReference<Class<?>> cl = new AtomicReference<>(null);
+        StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).forEach(f -> {
+            if (cont.getAndDecrement() == 0) {
+                cl.compareAndSet(null, f.getDeclaringClass().getClassLoader());
+            }
+        });
+        return cl.get();
     }
 
     private static Perf getPerf() {

@@ -33,7 +33,6 @@ import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.types.AnyType;
-import sun.reflect.Reflection;
 
 import java.io.Serializable;
 import java.lang.management.MemoryUsage;
@@ -63,7 +62,7 @@ import java.util.regex.PatternSyntaxException;
  * @author Jaroslav Bachorik
  */
 public class BTraceUtils {
-    // standard stack depth decrement for Reflection.getCallerClass() calls
+    // standard stack depth decrement for figuring out the caller class calls
     private static final int STACK_DEC = 2;
 
     static {
@@ -619,7 +618,7 @@ public class BTraceUtils {
      * class
      */
     public static Field field(String clazz, String name, boolean throwException) {
-        ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
+        ClassLoader callerLoader = BTraceRuntime.getCallerClassloader(STACK_DEC);
         return Reflective.field(classForName(clazz, callerLoader), name, throwException);
     }
 
@@ -636,7 +635,7 @@ public class BTraceUtils {
      * class
      */
     public static Field field(String clazz, String name) {
-        ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
+        ClassLoader callerLoader = BTraceRuntime.getCallerClassloader(STACK_DEC);
         return Reflective.field(classForName(clazz, callerLoader), name);
     }
 
@@ -884,8 +883,8 @@ public class BTraceUtils {
      * @deprecated Since 1.1. Use {@linkplain ProbeClassName} and {@linkplain Self} annotations instead
      */
     @Deprecated
-    public static Class probeClass() {
-        return Reflection.getCallerClass(STACK_DEC);
+    public static Class<?> probeClass() {
+        return BTraceRuntime.getCallerClass(STACK_DEC);
     }
 
     /**
@@ -5445,7 +5444,7 @@ public class BTraceUtils {
          * Returns Class object for given class name.
          */
         public static Class classForName(String name) {
-            ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
+            ClassLoader callerLoader = BTraceRuntime.getCallerClassloader(STACK_DEC);
             return classForName(name, callerLoader);
         }
 
@@ -5595,7 +5594,7 @@ public class BTraceUtils {
          * class
          */
         public static Field field(String clazz, String name, boolean throwException) {
-            ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
+            ClassLoader callerLoader = BTraceRuntime.getCallerClassloader(STACK_DEC);
             return field(classForName(clazz, callerLoader), name, throwException);
         }
 
@@ -5612,7 +5611,7 @@ public class BTraceUtils {
          * class
          */
         public static Field field(String clazz, String name) {
-            ClassLoader callerLoader = Reflection.getCallerClass(STACK_DEC).getClassLoader();
+            ClassLoader callerLoader = BTraceRuntime.getCallerClassloader(STACK_DEC);
             return field(classForName(clazz, callerLoader), name);
         }
 

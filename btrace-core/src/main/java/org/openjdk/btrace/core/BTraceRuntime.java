@@ -1215,6 +1215,14 @@ public final class BTraceRuntime {
         profiler.reset();
     }
 
+    static ClassLoader getCallerClassloader(int stackDec) {
+        return getRt().getCallerClassLoader(stackDec + 1);
+    }
+
+    public static Class<?> getCallerClass(int stackDec) {
+        return getRt().getCallerClass(stackDec + 1);
+    }
+
     // private methods below this point
     // raise DTrace USDT probe
     private static native int dtraceProbe0(String s1, String s2, int i1, int i2);
@@ -1291,6 +1299,10 @@ public final class BTraceRuntime {
         List<GarbageCollectorMXBean> getGCMBeans();
 
         Class<?> defineClass(byte[] code, boolean mustBeBootstrap);
+
+        ClassLoader getCallerClassLoader(int stackDec);
+
+        Class<?> getCallerClass(int stackDec);
     }
 
     public interface BTraceRuntimeAccessor {
