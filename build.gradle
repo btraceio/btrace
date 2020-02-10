@@ -1,5 +1,5 @@
 plugins {
-    id "com.jfrog.bintray" version "1.7"
+    id "jacoco"
 }
 
 project.ext.asmVersion = 7.2
@@ -109,66 +109,5 @@ project(':btrace-dist') {
         compile project(':btrace-agent')
         compile project(':btrace-client')
         compile project(':btrace-compiler')
-    }
-}
-
-// Support for releasing to BinTray; see https://github.com/bintray/gradle-bintray-plugin
-// Add 'gradle.properties' file containing the following properties:
-// * bintray.user
-// * bintray.key
-// * gpg.passphrase
-bintray {
-    user = project.hasProperty("bintray.user") ? project.property("bintray.user") : System.getenv('BINTRAY_USER')
-    key = project.hasProperty("bintray.key") ? project.property("bintray.key") : System.getenv('BINTRAY_API_KEY')
-
-    publications = ['agent', 'client', 'boot']
-
-    dryRun = System.properties['bintrayUpload'] != null ? !(Boolean.getBoolean('bintrayUpload')) : true
-    publish = true
-
-    pkg {
-        repo = 'maven'
-        name = 'btrace'
-        desc = 'BTrace'
-        userOrg = 'btraceio'
-        websiteUrl = 'https://github.com/btraceio/btrace'
-        issueTrackerUrl = 'https://github.com/btraceio/btrace/issues'
-        vcsUrl = 'https://github.com/btraceio/btrace.git'
-        licenses = ['GPL-2.0+CE']
-        labels = []
-        publicDownloadNumbers = true
-        version {
-            name = project.version //Bintray logical version name
-            released  = new java.util.Date()
-            vcsTag = 'v' + project.version
-            //Optional configuration for GPG signing
-            gpg {
-                sign = project.hasProperty("gpg.passphrase") //Determines whether to GPG sign the files. The default is false
-                passphrase = sign ? project.property("gpg.passphrase") : "" //Optional. The passphrase for GPG signing'
-            }
-        }
-    }
-}
-
-def pomDetails = {
-    resolveStrategy = Closure.DELEGATE_FIRST
-    url 'https://github.com/btraceio/btrace'
-    scm {
-        url 'https://github.com/btraceio/btrace'
-        connection 'scm:git:https://github.com/btraceio/btrace.git'
-        developerConnection 'scm:git:https://github.com/btraceio/btrace.git'
-    }
-    licenses {
-        license {
-            name 'GNU General Public License, version 2, with the Classpath Exception'
-            url 'http://openjdk.java.net/legal/gplv2+ce.html'
-        }
-    }
-    developers {
-        developer {
-            id 'yardus'
-            name 'Jaroslav Bachorik'
-            email 'j.bachorik@btrace.io'
-        }
     }
 }

@@ -1,4 +1,7 @@
 plugins {
+    id 'maven'
+    id 'maven-publish'
+    id "com.jfrog.bintray" version "1.8.1"
     id "com.github.johnrengelman.shadow" version "5.1.0"
     id "nebula.ospackage" version "4.9.3"
     id "java"
@@ -204,4 +207,141 @@ test {
     doLast {
         project(':btrace-instr').tasks.test.execute()
     }
+}
+
+['agent', 'boot', 'client'].each { name ->
+    tasks.create(name: "${name}SourcesJar", type: Jar) {
+        group 'Documentation'
+        description "Build the btrace-${name} sources jar."
+
+        appendix "${name}"
+        classifier 'sources'
+        from sourceSets.main.allSource
+        exclude excludes["${name}"]
+    }
+
+
+    tasks.create(name: "${name}Javadoc", type: Javadoc) {
+        group 'Documentation'
+        description "Generates Javadoc API documentation for the btrace-${name}."
+
+        title = "btrace-${name}"
+        source = sourceSets.main.allJava
+        destinationDir = file("${project.docsDir}/${name}/javadoc")
+        classpath = files(compileJava.destinationDir) + configurations.compile.asFileTree
+        exclude excludes["${name}"]
+        options.addStringOption('Xdoclint:all,-missing', '-quiet')
+        failOnError false
+    }
+
+
+    tasks.create(name: "${name}JavadocJar", type: Jar) {
+        group 'Documentation'
+        description "Build the btrace-${name} javadoc jar."
+
+        appendix name
+        classifier 'javadoc'
+        from tasks["${name}Javadoc"].getOutputs()
+    }
+}
+
+// Support for releasing to BinTray; see https://github.com/bintray/gradle-bintray-plugin
+// Add 'gradle.properties' file containing the following properties:
+// * bintray.user
+// * bintray.key
+// * gpg.passphrase
+bintray {
+    user = project.hasProperty("bintray.user") ? project.property("bintray.user") : System.getenv('BINTRAY_USER')
+    key = project.hasProperty("bintray.key") ? project.property("bintray.key") : System.getenv('BINTRAY_API_KEY')
+
+    publications = ['agent', 'client', 'boot']
+
+    dryRun = System.properties['bintrayUpload'] != null ? !(Boolean.getBoolean('bintrayUpload')) : true
+    publish = true
+
+    pkg {
+        repo = 'maven'
+        name = 'btrace'
+        desc = 'BTrace'
+        userOrg = 'btraceio'
+        websiteUrl = 'https://github.com/btraceio/btrace'
+        issueTrackerUrl = 'https://github.com/btraceio/btrace/issues'
+        vcsUrl = 'https://github.com/btraceio/btrace.git'
+        licenses = ['GPL-2.0+CE']
+        labels = []
+        publicDownloadNumbers = true
+        version {
+            name = project.version //Bintray logical version name
+            released  = new java.util.Date()
+            vcsTag = 'v' + project.version
+            //Optional configuration for GPG signing
+            gpg {
+                sign = project.hasProperty("gpg.passphrase") //Determines whether to GPG sign the files. The default is false
+                passphrase = sign ? project.property("gpg.passphrase") : "" //Optional. The passphrase for GPG signing'
+            }
+        }
+    }
+}
+
+publishing {
+    publications {
+        agent(MavenPublication) {
+            artifactId 'btrace-agent'
+            artifact agentJar
+            artifact agentSourcesJar {
+                classifier "source"
+            }
+            artifact agentJavadocJar {
+                classifier "javadoc"
+            }
+            pom.withXml {
+                addPomDetails(asNode())
+            }
+        }
+
+        client(MavenPublication) {
+            artifactId 'btrace-client'
+            artifact clientJar
+            artifact clientSourcesJar {
+                classifier "sources"
+            }
+            artifact clientJavadocJar {
+                classifier "javadoc"
+            }
+            pom.withXml {
+                addPomDetails(asNode())
+            }
+        }
+
+        boot(MavenPublication) {
+            artifactId 'btrace-boot'
+            artifact bootJar
+            artifact bootSourcesJar {
+                classifier "sources"
+            }
+            artifact bootJavadocJar {
+                classifier "javadoc"
+            }
+            pom.withXml {
+                addPomDetails(asNode())
+            }
+        }
+    }
+}
+
+def addPomDetails(node) {
+    node.appendNode('url', 'https://github.com/btraceio/btrace')
+    def scmNode = node.appendNode('scm');
+    scmNode.appendNode('url', 'https://github.com/btraceio/btrace')
+    scmNode.appendNode('connection', 'scm:git:https://github.com/btraceio/btrace.git')
+    scmNode.appendNode('developerConnection', 'scm:git:https://github.com/btraceio/btrace.git')
+
+    def licenseNode = node.appendNode('licenses').appendNode('license')
+    licenseNode.appendNode('name', 'GNU General Public License, version 2, with the Classpath Exception')
+    licenseNode.appendNode('url', 'http://openjdk.java.net/legal/gplv2+ce.html')
+
+    def developerNode = node.appendNode('developers').appendNode('developer')
+    developerNode.appendNode('id', 'yardus')
+    developerNode.appendNode('name', 'Jaroslav Bachorik')
+    developerNode.appendNode('email', 'j.bachorik@btrace.io')
 }
