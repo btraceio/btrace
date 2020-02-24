@@ -25,7 +25,13 @@
 package org.openjdk.btrace.client;
 
 import com.sun.tools.attach.VirtualMachine;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.openjdk.btrace.compiler.Compiler;
+import org.openjdk.btrace.core.Args;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
@@ -39,11 +45,6 @@ import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.MessageCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
 import org.openjdk.btrace.core.comm.WireIO;
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -316,25 +317,25 @@ public class Client {
             if (debug) {
                 debugPrint("loading " + agentPath);
             }
-            String agentArgs = "port=" + port;
+            String agentArgs = Args.PORT + "=" + port;
             if (statsdDef != null) {
-                agentArgs += ",statsd=" + statsdDef;
+                agentArgs += "," + Args.STATSD + "=" + statsdDef;
             }
             if (debug) {
-                agentArgs += ",debug=true";
+                agentArgs += "," + Args.DEBUG + "=true";
             }
             if (trusted) {
-                agentArgs += ",trusted=true";
+                agentArgs += "," + Args.TRUSTED + "=true";
             }
             if (dumpClasses) {
-                agentArgs += ",dumpClasses=true";
-                agentArgs += ",dumpDir=" + dumpDir;
+                agentArgs += "," + Args.DUMP_CLASSES + "=true";
+                agentArgs += "," + Args.DUMP_DIR + "=" + dumpDir;
             }
             if (trackRetransforms) {
-                agentArgs += ",trackRetransforms=true";
+                agentArgs += "," + Args.TRACK_RETRANSFORMS + "=true";
             }
             if (bootCp != null) {
-                agentArgs += ",bootClassPath=" + bootCp;
+                agentArgs += "," + Args.BOOT_CLASS_PATH + "=" + bootCp;
             }
             String toolsPath = getToolsJarPath(
                     serverVmProps.getProperty("java.class.path"),
@@ -345,12 +346,12 @@ public class Client {
             } else {
                 sysCp = sysCp + File.pathSeparator + toolsPath;
             }
-            agentArgs += ",systemClassPath=" + sysCp;
+            agentArgs += "," + Args.SYSTEM_CLASS_PATH + "=" + sysCp;
             String cmdQueueLimit = System.getProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, null);
             if (cmdQueueLimit != null) {
-                agentArgs += ",cmdQueueLimit=" + cmdQueueLimit;
+                agentArgs += ",=" + Args.CMD_QUEUE_LIMIT + cmdQueueLimit;
             }
-            agentArgs += ",probeDescPath=" + probeDescPath;
+            agentArgs += "," + Args.PROBE_DESC_PATH + "=" + probeDescPath;
             if (debug) {
                 debugPrint("agent args: " + agentArgs);
             }
