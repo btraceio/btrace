@@ -15,7 +15,7 @@ fi
 
 if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
   if [ "${JAVA_HOME}" != "" ]; then
-    if [ -f "${JAVA_HOME}/jre" ]; then
+    if [ -d "${JAVA_HOME}/jre" ]; then
       TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
       if [ ! -f ${TOOLS_JAR} ]; then
         case "$(uname)" in

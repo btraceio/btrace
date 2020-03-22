@@ -19,7 +19,7 @@ if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
       ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/libs/btrace-client.jar org.openjdk.btrace.client.Main --version
       exit 0
     fi
-    if [ -f "${JAVA_HOME}/jre" ]; then
+    if [ -d "${JAVA_HOME}/jre" ]; then
       case "$(uname)" in
       Darwin*)
         if [ -f /System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar ]; then
