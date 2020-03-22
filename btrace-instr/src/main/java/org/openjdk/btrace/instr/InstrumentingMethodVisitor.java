@@ -22,14 +22,13 @@
 
 package org.openjdk.btrace.instr;
 
-import org.openjdk.btrace.core.DebugSupport;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
+import org.openjdk.btrace.core.DebugSupport;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -550,11 +549,11 @@ public final class InstrumentingMethodVisitor extends MethodVisitor implements M
                         if (typeStr.contains("/") && !typeStr.endsWith(";")) {
                             typeStr += ";";
                         }
-                        t = Type.getType(typeStr);
+                        t = Type.getType(typeStr).getElementType();
                     } else {
                         t = Type.getObjectType(typeStr);
                     }
-                    pushToStack(t.getElementType());
+                    pushToStack(t);
                 } else if (target == NULL) {
                     pushToStack(Constants.NULL_TYPE);
                 } else {
