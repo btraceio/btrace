@@ -164,6 +164,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
                     Assert.assertTrue(stdout.contains("[this, noargs]"));
                     Assert.assertTrue(stdout.contains("[this, args]"));
                     Assert.assertTrue(stdout.contains("{xxx}"));
+                    Assert.assertTrue(stdout.contains("heap:init"));
                 }
             }
         );

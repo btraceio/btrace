@@ -118,6 +118,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
     private static final int CMD_QUEUE_LIMIT_DEFAULT = 100;
     private static int CMD_QUEUE_LIMIT;
+    private boolean shouldInitializeMBeans = true; // mbean initialization guard; synchronized over *this*
 
     /**
      * Utility to create a new jvmstat perf counter. Called
@@ -523,6 +524,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
      * just at the end of it's class initializer.
      */
     public final void start() {
+        initMBeans();
         if (timerHandlers != null) {
             timer = new Timer(true);
             TimerTask[] timerTasks = new TimerTask[timerHandlers.length];
@@ -539,7 +541,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
         }
 
         if (lowMemoryHandlers != null) {
-            initMBeans();
             lowMemoryHandlerMap = new HashMap<>();
             for (LowMemoryHandler lmh : lowMemoryHandlers) {
                 String poolName = args.template(lmh.pool);
@@ -804,31 +805,26 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
     @Override
     public final RuntimeMXBean getRuntimeMXBean() {
-        initRuntimeMBean();
         return runtimeMBean;
     }
 
     @Override
     public final ThreadMXBean getThreadMXBean() {
-        initThreadMBean();
         return threadMBean;
     }
 
     @Override
     public final OperatingSystemMXBean getOperatingSystemMXBean() {
-        initOperatingSystemMBean();
         return operatingSystemMXBean;
     }
 
     @Override
     public final List<GarbageCollectorMXBean> getGCMBeans() {
-        initGcMBeans();
         return gcBeanList;
     }
 
     @Override
     public final HotSpotDiagnosticMXBean getHotspotMBean() {
-        initHotspotMBean();
         return hotspotMBean;
     }
 
@@ -955,15 +951,21 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
         }
     }
 
-    private void initMBeans() {
-        initMemoryMBean();
-        initOperatingSystemMBean();
-        initRuntimeMBean();
-        initThreadMBean();
-        initHotspotMBean();
-        initGcMBeans();
-        initMemoryPoolList();
-        initMemoryListener();
+    /**
+     * Must be called exactly once before the runtime starts
+     */
+    private synchronized void initMBeans() {
+        if (shouldInitializeMBeans) {
+            initMemoryMBean();
+            initOperatingSystemMBean();
+            initRuntimeMBean();
+            initThreadMBean();
+            initHotspotMBean();
+            initGcMBeans();
+            initMemoryPoolList();
+            initMemoryListener();
+            shouldInitializeMBeans = false;
+        }
     }
 
     private void initMemoryListener() {
@@ -1185,118 +1187,94 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     }
 
     private static void initMemoryMBean() {
-        synchronized (BTraceRuntimeImplBase.class) {
-            if (memoryMBean == null) {
-                try {
-                    memoryMBean = AccessController.doPrivileged(
-                        new PrivilegedExceptionAction<MemoryMXBean>() {
-                            @Override
-                            public MemoryMXBean run() throws Exception {
-                                return ManagementFactory.getMemoryMXBean();
-                            }
-                        });
-                } catch (Exception exp) {
-                    throw new UnsupportedOperationException(exp);
-                }
-            }
+        try {
+            memoryMBean = AccessController.doPrivileged(
+                new PrivilegedExceptionAction<MemoryMXBean>() {
+                    @Override
+                    public MemoryMXBean run() throws Exception {
+                        return ManagementFactory.getMemoryMXBean();
+                    }
+                });
+        } catch (Exception exp) {
+            throw new UnsupportedOperationException(exp);
         }
     }
 
     private static void initOperatingSystemMBean() {
-        synchronized (BTraceRuntimeImplBase.class) {
-            if (operatingSystemMXBean == null) {
-                try {
-                    operatingSystemMXBean = AccessController.doPrivileged(
-                            new PrivilegedExceptionAction<OperatingSystemMXBean>() {
-                                @Override
-                                public OperatingSystemMXBean run() throws Exception {
-                                    return ManagementFactory.getOperatingSystemMXBean();
-                                }
-                            }
-                    );
-                } catch (Exception e) {
-                    throw new UnsupportedOperationException(e);
-                }
-            }
+        try {
+            operatingSystemMXBean = AccessController.doPrivileged(
+                    new PrivilegedExceptionAction<OperatingSystemMXBean>() {
+                        @Override
+                        public OperatingSystemMXBean run() throws Exception {
+                            return ManagementFactory.getOperatingSystemMXBean();
+                        }
+                    }
+            );
+        } catch (Exception e) {
+            throw new UnsupportedOperationException(e);
         }
     }
 
     private static void initRuntimeMBean() {
-        synchronized (BTraceRuntimeImplBase.class) {
-            if (runtimeMBean == null) {
-                try {
-                    runtimeMBean = AccessController.doPrivileged(new PrivilegedExceptionAction<RuntimeMXBean>() {
-                        @Override
-                        public RuntimeMXBean run() throws Exception {
-                            return ManagementFactory.getRuntimeMXBean();
-                        }
-                    });
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+        try {
+            runtimeMBean = AccessController.doPrivileged(new PrivilegedExceptionAction<RuntimeMXBean>() {
+                @Override
+                public RuntimeMXBean run() throws Exception {
+                    return ManagementFactory.getRuntimeMXBean();
                 }
-            }
+            });
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     private static void initThreadMBean() {
-        synchronized (BTraceRuntimeImplBase.class) {
-            if (threadMBean == null) {
-                try {
-                    threadMBean = AccessController.doPrivileged(new PrivilegedExceptionAction<ThreadMXBean>() {
-                        @Override
-                        public ThreadMXBean run() throws Exception {
-                            return ManagementFactory.getThreadMXBean();
-                        }
-                    });
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+        try {
+            threadMBean = AccessController.doPrivileged(new PrivilegedExceptionAction<ThreadMXBean>() {
+                @Override
+                public ThreadMXBean run() throws Exception {
+                    return ManagementFactory.getThreadMXBean();
                 }
-            }
+            });
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     private static void initGcMBeans() {
-        synchronized (BTraceRuntimeImplBase.class) {
-            if (gcBeanList == null) {
-                try {
-                    gcBeanList = AccessController.doPrivileged(new PrivilegedExceptionAction<List<GarbageCollectorMXBean>>() {
-                        @Override
-                        public List<GarbageCollectorMXBean> run() throws Exception {
-                            return ManagementFactory.getGarbageCollectorMXBeans();
-                        }
-                    });
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+        try {
+            gcBeanList = AccessController.doPrivileged(new PrivilegedExceptionAction<List<GarbageCollectorMXBean>>() {
+                @Override
+                public List<GarbageCollectorMXBean> run() throws Exception {
+                    return ManagementFactory.getGarbageCollectorMXBeans();
                 }
-            }
+            });
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     private static void initHotspotMBean() {
-        synchronized (BTraceRuntimeImplBase.class) {
-            if (hotspotMBean == null) {
-                try {
-                    hotspotMBean = AccessController.doPrivileged(new PrivilegedExceptionAction<HotSpotDiagnosticMXBean>() {
-                        @Override
-                        public HotSpotDiagnosticMXBean run() throws Exception {
-                            MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-                            Set<ObjectName> s = server.queryNames(new ObjectName(HOTSPOT_BEAN_NAME), null);
-                            Iterator<ObjectName> itr = s.iterator();
-                            if (itr.hasNext()) {
-                                ObjectName name = itr.next();
-                                HotSpotDiagnosticMXBean bean =
-                                        ManagementFactory.newPlatformMXBeanProxy(server,
-                                                name.toString(), HotSpotDiagnosticMXBean.class);
-                                return bean;
-                            } else {
-                                return null;
-                            }
-                        }
-                    });
-                } catch (Exception e) {
-                    throw new UnsupportedOperationException(e);
+        try {
+            hotspotMBean = AccessController.doPrivileged(new PrivilegedExceptionAction<HotSpotDiagnosticMXBean>() {
+                @Override
+                public HotSpotDiagnosticMXBean run() throws Exception {
+                    MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+                    Set<ObjectName> s = server.queryNames(new ObjectName(HOTSPOT_BEAN_NAME), null);
+                    Iterator<ObjectName> itr = s.iterator();
+                    if (itr.hasNext()) {
+                        ObjectName name = itr.next();
+                        HotSpotDiagnosticMXBean bean =
+                                ManagementFactory.newPlatformMXBeanProxy(server,
+                                        name.toString(), HotSpotDiagnosticMXBean.class);
+                        return bean;
+                    } else {
+                        return null;
+                    }
                 }
-            }
+            });
+        } catch (Exception e) {
+            throw new UnsupportedOperationException(e);
         }
     }
 
@@ -1316,9 +1294,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     }
 
     protected static PerfReader getPerfReader() {
-        if (perfReader == null) {
-            throw new UnsupportedOperationException();
-        }
         return perfReader;
     }
 
