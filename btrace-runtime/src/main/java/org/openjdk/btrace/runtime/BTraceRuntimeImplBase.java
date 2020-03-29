@@ -546,7 +546,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
                 String poolName = args.template(lmh.pool);
                 lowMemoryHandlerMap.put(poolName, lmh);
             }
-            for (MemoryPoolMXBean mpoolBean : memPoolList) {
+            for (MemoryPoolMXBean mpoolBean : getMemoryPoolMXBeans()) {
                 String name = mpoolBean.getName();
                 LowMemoryHandler lmh = lowMemoryHandlerMap.get(name);
                 if (lmh != null) {
@@ -805,26 +805,31 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
     @Override
     public final RuntimeMXBean getRuntimeMXBean() {
+        initMBeans();
         return runtimeMBean;
     }
 
     @Override
     public final ThreadMXBean getThreadMXBean() {
+        initMBeans();
         return threadMBean;
     }
 
     @Override
     public final OperatingSystemMXBean getOperatingSystemMXBean() {
+        initMBeans();
         return operatingSystemMXBean;
     }
 
     @Override
     public final List<GarbageCollectorMXBean> getGCMBeans() {
+        initMBeans();
         return gcBeanList;
     }
 
     @Override
     public final HotSpotDiagnosticMXBean getHotspotMBean() {
+        initMBeans();
         return hotspotMBean;
     }
 
@@ -934,21 +939,15 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     }
 
     private void initThreadPool() {
-        if (threadPool == null) {
-            synchronized (this) {
-                if (threadPool == null) {
-                    threadPool = Executors.newFixedThreadPool(1,
-                            new ThreadFactory() {
-                                @Override
-                                public Thread newThread(Runnable r) {
-                                    Thread th = new Thread(r, "BTrace Worker");
-                                    th.setDaemon(true);
-                                    return th;
-                                }
-                            });
-                }
-            }
-        }
+        threadPool = Executors.newFixedThreadPool(1,
+                new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread th = new Thread(r, "BTrace Worker");
+                        th.setDaemon(true);
+                        return th;
+                    }
+                });
     }
 
     /**
@@ -1169,20 +1168,16 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     }
 
     private static void initMemoryPoolList() {
-        synchronized (BTraceRuntimeImplBase.class) {
-            if (memPoolList == null) {
-                try {
-                    memPoolList = AccessController.doPrivileged(
-                            new PrivilegedExceptionAction<List<MemoryPoolMXBean>>() {
-                                @Override
-                                public List<MemoryPoolMXBean> run() throws Exception {
-                                    return ManagementFactory.getMemoryPoolMXBeans();
-                                }
-                            });
-                } catch (Exception exp) {
-                    throw new UnsupportedOperationException(exp);
-                }
-            }
+        try {
+            memPoolList = AccessController.doPrivileged(
+                    new PrivilegedExceptionAction<List<MemoryPoolMXBean>>() {
+                        @Override
+                        public List<MemoryPoolMXBean> run() throws Exception {
+                            return ManagementFactory.getMemoryPoolMXBeans();
+                        }
+                    });
+        } catch (Exception exp) {
+            throw new UnsupportedOperationException(exp);
         }
     }
 
@@ -1285,11 +1280,13 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
     @Override
     public List<MemoryPoolMXBean> getMemoryPoolMXBeans() {
+        initMBeans();
         return memPoolList;
     }
 
     @Override
     public MemoryMXBean getMemoryMXBean() {
+        initMBeans();
         return memoryMBean;
     }
 
