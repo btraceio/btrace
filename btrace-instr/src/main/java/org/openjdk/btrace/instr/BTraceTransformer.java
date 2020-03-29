@@ -25,6 +25,8 @@
 package org.openjdk.btrace.instr;
 
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
@@ -92,7 +94,11 @@ public final class BTraceTransformer implements ClassFileTransformer {
             probes.remove(p);
             for (OnMethod om : p.onmethods()) {
                 filter.remove(om);
-                cushionMethods.add(new MethodNode(Opcodes.ASM7, Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, Instrumentor.getActionMethodName(p, om.getTargetName()), om.getTargetDescriptor(), null, null));
+                MethodNode cushionMethod = new MethodNode(Opcodes.ASM7, Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, Instrumentor.getActionMethodName(p, om.getTargetName()), om.getTargetDescriptor(), null, null);
+                InsnList code = new InsnList();
+                code.add(new InsnNode(Opcodes.RETURN));
+                cushionMethod.instructions = code;
+                cushionMethods.add(cushionMethod);
             }
 
         } finally {
