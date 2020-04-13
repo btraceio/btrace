@@ -42,7 +42,7 @@ final class JpsUtils {
                 MonitoredVm vm = vmHost.getMonitoredVm(id);
                 if (MonitoredVmUtil.isAttachable(vm)) {
                     String mainClass = MonitoredVmUtil.mainClass(vm, false);
-                    vms.add(vmPid + " " + mainClass);
+                    vms.add(vmPid + " " + mainClass + " [" + MonitoredVmUtil.commandLine(vm) + "]");
                 }
             }
         } catch (Exception e) {
