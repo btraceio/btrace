@@ -50,7 +50,7 @@ if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
     fi
     if [ ! -f "${TOOLS_JAR}" ] && [ ! -d "${JAVA_HOME}/jmods" ]; then
       # in non-jigsaw world TOOLS_JAR must point to a valid file
-      echo "Unable to locate tools.jar. Pleas, make sure JAVA_HOME points to a valid JDK installation"
+      echo "Unable to locate tools.jar. Please, make sure JAVA_HOME points to a valid JDK installation"
       exit 1
     fi
     ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/libs/btrace-client.jar:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar org.openjdk.btrace.client.Main $*
