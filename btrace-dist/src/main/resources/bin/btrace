@@ -14,38 +14,48 @@ if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ]; then
 fi
 
 if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
-  if [ "${JAVA_HOME}" != "" ]; then
-    if [ -d "${JAVA_HOME}/jre" ]; then
-      TOOLS_JAR="${JAVA_HOME}/lib/tools.jar"
-      if [ ! -f ${TOOLS_JAR} ]; then
-        case "$(uname)" in
-        Darwin*)
-          # In older JDK versions for Mac OS X, tools.jar is classes.jar
-          # and is kept in a different location. Check if we can locate
-          # classes.jar based on ${JAVA_VERSION}
-          TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
+  if [ -d "${JAVA_HOME}" ]; then
+    TOOLS_JAR="$JAVA_HOME/lib/tools.jar"
 
-          # if we can't find, try relative path from ${JAVA_HOME}. Usually,
-          # /System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Home
-          # is JAVA_HOME. (or whatever version beyond 1.6.0!)
-          if [ ! -f ${TOOLS_JAR} ]; then
-            TOOLS_JAR="${JAVA_HOME}/../Classes/classes.jar"
-          fi
+    if [ ! -f "$TOOLS_JAR" ]; then
+      # probably running on JRE - try to localize JDK
+      TOOLS_JAR="$JAVA_HOME/../lib/tools.jar"
+    fi
 
-          # If we still can't find, tell the user to set JAVA_VERSION.
-          # This way, we can avoid zip file errors from the agent side
-          # and "connection refused" message from client.
-          if [ ! -f ${TOOLS_JAR} ]; then
-            echo "Please set JAVA_VERSION to the target java version"
-            exit 1
-          fi
-          ;;
-        esac
-      fi
+    if [ ! -f "${TOOLS_JAR}" ] && [ ! -d "${JAVA_HOME}/jmods" ]; then
+      # old Java versions on MacOS don't have tools.jar at all
+      case "$(uname)" in
+      Darwin*)
+        # In older JDK versions for Mac OS X, tools.jar is classes.jar
+        # and is kept in a different location. Check if we can locate
+        # classes.jar based on ${JAVA_VERSION}
+        TOOLS_JAR="/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Classes/classes.jar"
+
+        # if we can't find, try relative path from ${JAVA_HOME}. Usually,
+        # /System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/Home
+        # is JAVA_HOME. (or whatever version beyond 1.6.0!)
+        if [ ! -f "${TOOLS_JAR}" ]; then
+          TOOLS_JAR="${JAVA_HOME}/../Classes/classes.jar"
+        fi
+
+        # If we still can't find, tell the user to set JAVA_VERSION.
+        # This way, we can avoid zip file errors from the agent side
+        # and "connection refused" message from client.
+        if [ ! -f "${TOOLS_JAR}" ]; then
+          echo "Please set JAVA_VERSION to the target java version"
+          exit 1
+        fi
+        ;;
+      esac
+    fi
+    if [ ! -f "${TOOLS_JAR}" ] && [ ! -d "${JAVA_HOME}/jmods" ]; then
+      # in non-jigsaw world TOOLS_JAR must point to a valid file
+      echo "Unable to locate tools.jar. Pleas, make sure JAVA_HOME points to a valid JDK installation"
+      exit 1
     fi
     ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/libs/btrace-client.jar:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar org.openjdk.btrace.client.Main $*
   else
-    echo "Please set JAVA_HOME before running this script"
+    echo "Please set a valid JAVA_HOME before running this script"
     exit 1
   fi
 else
