@@ -138,6 +138,8 @@ abstract public class RuntimeTest {
         if (attachDebugger) {
             args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
         }
+        args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
+        args.add("-XX:+IgnoreUnrecognizedVMOptions");
         args.add(testApp);
 
         ProcessBuilder pb = new ProcessBuilder(args);
@@ -187,7 +189,9 @@ abstract public class RuntimeTest {
                 try {
                     String l = null;
                     while ((l = stderrReader.readLine()) != null) {
-                        testAppLatch.countDown();
+                        if (!l.contains("Server VM warning")) {
+                            testAppLatch.countDown();
+                        }
                         if (debugTestApp) {
                             System.err.println("[traced app] " + l);
                         }
@@ -290,8 +294,12 @@ abstract public class RuntimeTest {
 
                     String line = null;
                     while ((line = br.readLine()) != null) {
-                        stderr.append(line).append('\n');
                         System.out.println("[btrace err] " + line);
+                        if (line.contains("Server VM warning")) {
+                            // skip JVM generated warnings
+                            continue;
+                        }
+                        stderr.append(line).append('\n');
                         if (line.contains("Exception") || line.contains("Error")) {
                             for (int i = 0; i < checkLines; i++) {
                                 l.countDown();

@@ -84,7 +84,7 @@ set inloop=1
     goto loop
   )
 
-%JAVA_HOME%\bin\java -Xshare:off "-javaagent:%BTRACE_HOME%/libs/btrace-agent.jar=%OPTIONS,script=%~1" %2 %3 %4 %5 %6 %7 %8 %9
+%JAVA_HOME%\bin\java -Xshare:off -XX:+IgnoreUnrecognizedVMOptions -XX:+AllowRedefinitionToAddDeleteMethods "-javaagent:%BTRACE_HOME%/libs/btrace-agent.jar=%OPTIONS,script=%~1" %2 %3 %4 %5 %6 %7 %8 %9
 goto end
 
 :noJavaHome

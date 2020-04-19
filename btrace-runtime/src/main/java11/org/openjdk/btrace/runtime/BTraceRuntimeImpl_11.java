@@ -38,7 +38,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.util.Collections;
 import java.util.Map;
@@ -71,10 +70,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
         @Override
         public boolean isEnabled() {
             Runtime.Version version = Runtime.version();
-            if (version.version().get(0) == 11) {
-                return true;
-            }
-            return false;
+            return version.version().get(0) >= 11;
         }
     }
     // perf counter variability - we always variable variability

@@ -83,7 +83,7 @@ public final class Main {
         return (con != null) ? con.writer() : new PrintWriter(System.out);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         int port = BTRACE_DEFAULT_PORT;
         String host = BTRACE_DEFAULT_HOST;
         String classPath = ".";
@@ -104,6 +104,11 @@ public final class Main {
                     break OUTER;
                 case "--version":
                     System.out.println(Messages.get("btrace.version"));
+                    return;
+                case "-l":
+                    for (String vm : JpsUtils.listVms()) {
+                        System.out.println(vm);
+                    }
                     return;
             }
         }
@@ -179,7 +184,13 @@ public final class Main {
             usage();
         }
 
-        String pid = args[count];
+        String pidArg = args[count];
+        Integer pid = JpsUtils.findVmByName(pidArg);
+        if (pid == null) {
+            errorExit("Unable to find JVM with either PID or name: " + pidArg, 1);
+        } else {
+            System.out.println("Attaching BTrace to PID: " + pid);
+        }
         String fileName = args[count + 1];
         String[] btraceArgs = new String[args.length - count - 2];
         if (btraceArgs.length > 0) {
@@ -197,7 +208,7 @@ public final class Main {
                 errorExit("BTrace compilation failed", 1);
             }
             if (!hostDefined)
-                client.attach(pid, null, classPath);
+                client.attach(pid.toString(), null, classPath);
             registerExitHook(client);
             if (con != null) {
                 registerSignalHandler(client);

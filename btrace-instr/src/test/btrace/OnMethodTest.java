@@ -65,5 +65,6 @@ public class OnMethodTest {
 
     private static void dump(String s) {
         println(s);
+        println("heap:" + Sys.Memory.heapUsage());
     }
 }

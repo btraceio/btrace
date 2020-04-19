@@ -134,10 +134,11 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
     @Test
     public void testOnExit() throws Exception {
+        timeout = 1500;
         test(
             "resources.Main",
             "btrace/OnExitTest.java",
-            1,
+            2,
             new ResultValidator() {
                 @Override
                 public void validate(String stdout, String stderr, int retcode) {
@@ -163,6 +164,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
                     Assert.assertTrue(stdout.contains("[this, noargs]"));
                     Assert.assertTrue(stdout.contains("[this, args]"));
                     Assert.assertTrue(stdout.contains("{xxx}"));
+                    Assert.assertTrue(stdout.contains("heap:init"));
                 }
             }
         );
