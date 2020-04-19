@@ -2,7 +2,7 @@ plugins {
     id "jacoco"
 }
 
-project.ext.asmVersion = 7.2
+project.ext.asmVersion = "8.0.1"
 
 def env = System.getenv()
 
