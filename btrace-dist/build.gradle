@@ -1,9 +1,9 @@
 plugins {
     id 'maven'
     id 'maven-publish'
-    id "com.jfrog.bintray" version "1.8.1"
-    id "com.github.johnrengelman.shadow" version "5.1.0"
-    id "nebula.ospackage" version "4.9.3"
+    id "com.jfrog.bintray" version "1.8.5"
+    id "com.github.johnrengelman.shadow" version "5.2.0"
+    id "nebula.ospackage" version "8.3.0"
     id "java"
 }
 
