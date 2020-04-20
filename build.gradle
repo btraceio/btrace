@@ -1,5 +1,6 @@
 plugins {
     id "jacoco"
+    id "com.github.sherter.google-java-format" version "0.8"
 }
 
 project.ext.asmVersion = "8.0.1"
@@ -8,6 +9,11 @@ def env = System.getenv()
 
 // use gradle.properties to set JAVA_HOME=<your JDK location>
 def javaHome = findProperty('JAVA_HOME') ?: env['JAVA_HOME']
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
 
 subprojects {
     apply from: rootProject.file('common.gradle')
