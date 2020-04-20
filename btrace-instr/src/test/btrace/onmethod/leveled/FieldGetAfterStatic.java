@@ -25,28 +25,37 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.TargetInstance;
-import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Self;
+import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class FieldGetAfterStatic {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="staticField",
-              location=@Location(value=Kind.FIELD_GET, clazz="resources.OnMethodTest", field="sField", where=Where.AFTER),
-              enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @TargetInstance Object inst, @TargetMethodOrField(fqn = true) String fldName, @Return long fldVal) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "staticField",
+      location =
+          @Location(
+              value = Kind.FIELD_GET,
+              clazz = "resources.OnMethodTest",
+              field = "sField",
+              where = Where.AFTER),
+      enableAt = @Level(">=1"))
+  public static void args(
+      @Self Object self,
+      @TargetInstance Object inst,
+      @TargetMethodOrField(fqn = true) String fldName,
+      @Return long fldVal) {
+    println("args");
+  }
 }

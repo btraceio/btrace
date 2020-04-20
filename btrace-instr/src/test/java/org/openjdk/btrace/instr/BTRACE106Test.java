@@ -33,32 +33,31 @@ import org.junit.Test;
  * @author Jaroslav Bachorik
  */
 public class BTRACE106Test extends InstrumentorTestBase {
-    @Test
-    public void annotatedClass() throws Exception {
-        originalBC = loadTargetClass("issues/BTRACE106");
-        transform("issues/BTRACE106");
-        checkTransformation(
-                "ALOAD 0\n" +
-                        "LDC \"aMethod\"\n" +
-                        "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n" +
-                        "LCONST_0\n" +
-                        "LSTORE 1\n" +
-                        "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
-                        "LSTORE 3\n" +
-                        "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
-                        "LLOAD 3\n" +
-                        "LSUB\n" +
-                        "LSTORE 1\n" +
-                        "ALOAD 0\n" +
-                        "LDC \"bMethod\"\n" +
-                        "LLOAD 1\n" +
-                        "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o3 (Ljava/lang/Object;Ljava/lang/String;J)V\n" +
-                        "ALOAD 0\n" +
-                        "LDC \"bMethod\"\n" +
-                        "LLOAD 1\n" +
-                        "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n" +
-                        "MAXSTACK = 4\n" +
-                        "MAXLOCALS = 5"
-        );
-    }
+  @Test
+  public void annotatedClass() throws Exception {
+    originalBC = loadTargetClass("issues/BTRACE106");
+    transform("issues/BTRACE106");
+    checkTransformation(
+        "ALOAD 0\n"
+            + "LDC \"aMethod\"\n"
+            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n"
+            + "LCONST_0\n"
+            + "LSTORE 1\n"
+            + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+            + "LSTORE 3\n"
+            + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+            + "LLOAD 3\n"
+            + "LSUB\n"
+            + "LSTORE 1\n"
+            + "ALOAD 0\n"
+            + "LDC \"bMethod\"\n"
+            + "LLOAD 1\n"
+            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o3 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
+            + "ALOAD 0\n"
+            + "LDC \"bMethod\"\n"
+            + "LLOAD 1\n"
+            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
+            + "MAXSTACK = 4\n"
+            + "MAXLOCALS = 5");
+  }
 }

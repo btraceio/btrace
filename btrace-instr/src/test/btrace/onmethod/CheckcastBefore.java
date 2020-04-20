@@ -25,26 +25,29 @@
 
 package traces.onmethod;
 
-import org.openjdk.btrace.core.types.AnyType;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.types.AnyType;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class CheckcastBefore {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="casts",
-              location=@Location(value=Kind.CHECKCAST))
-    public static void args(@Self Object self, @ProbeClassName String pcn,
-                            String castTo, @TargetInstance AnyType target) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "casts",
+      location = @Location(value = Kind.CHECKCAST))
+  public static void args(
+      @Self Object self,
+      @ProbeClassName String pcn,
+      String castTo,
+      @TargetInstance AnyType target) {
+    println("args");
+  }
 }

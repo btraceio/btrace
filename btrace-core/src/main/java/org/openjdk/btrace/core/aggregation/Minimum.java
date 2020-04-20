@@ -26,33 +26,34 @@ package org.openjdk.btrace.core.aggregation;
 
 /**
  * Aggregation function for computing the minimum value.
+ *
  * <p>
  *
  * @author Christian Glencross
  */
 class Minimum implements AggregationValue {
 
-    long min = Long.MAX_VALUE;
+  long min = Long.MAX_VALUE;
 
-    @Override
-    public synchronized void clear() {
-        min = Integer.MAX_VALUE;
-    }
+  @Override
+  public synchronized void clear() {
+    min = Integer.MAX_VALUE;
+  }
 
-    @Override
-    public synchronized void add(long value) {
-        if (value < min) {
-            min = value;
-        }
+  @Override
+  public synchronized void add(long value) {
+    if (value < min) {
+      min = value;
     }
+  }
 
-    @Override
-    public synchronized long getValue() {
-        return min;
-    }
+  @Override
+  public synchronized long getValue() {
+    return min;
+  }
 
-    @Override
-    public Object getData() {
-        return getValue();
-    }
+  @Override
+  public Object getData() {
+    return getValue();
+  }
 }

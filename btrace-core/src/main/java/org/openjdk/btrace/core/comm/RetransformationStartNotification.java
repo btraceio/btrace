@@ -31,36 +31,35 @@ import java.io.ObjectOutput;
 import java.lang.instrument.Instrumentation;
 
 /**
- * This command is sent out when the BTrace engine calls
- * {@linkplain Instrumentation#retransformClasses(Class[])} method.
- * It is followed by {@linkplain OkayCommand} command when the retransformation ends.
+ * This command is sent out when the BTrace engine calls {@linkplain
+ * Instrumentation#retransformClasses(Class[])} method. It is followed by {@linkplain OkayCommand}
+ * command when the retransformation ends.
  *
  * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class RetransformationStartNotification extends Command {
-    private int numClasses;
+  private int numClasses;
 
-    public RetransformationStartNotification() {
-        super(RETRANSFORMATION_START);
-    }
+  public RetransformationStartNotification() {
+    super(RETRANSFORMATION_START);
+  }
 
-    public RetransformationStartNotification(int numClasses) {
-        super(RETRANSFORMATION_START);
-        this.numClasses = numClasses;
-    }
+  public RetransformationStartNotification(int numClasses) {
+    super(RETRANSFORMATION_START);
+    this.numClasses = numClasses;
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeInt(numClasses);
-    }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeInt(numClasses);
+  }
 
-    @Override
-    protected void read(ObjectInput in)
-            throws IOException, ClassNotFoundException {
-        numClasses = in.readInt();
-    }
+  @Override
+  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
+    numClasses = in.readInt();
+  }
 
-    public int getNumClasses() {
-        return numClasses;
-    }
+  public int getNumClasses() {
+    return numClasses;
+  }
 }

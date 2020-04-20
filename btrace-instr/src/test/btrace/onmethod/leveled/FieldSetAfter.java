@@ -25,26 +25,36 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.TargetInstance;
-import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
+import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class FieldSetAfter {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="field",
-              location=@Location(value=Kind.FIELD_SET, clazz="resources.OnMethodTest", field="field", where=Where.AFTER), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @TargetInstance Object inst, @TargetMethodOrField String fldName, int value) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "field",
+      location =
+          @Location(
+              value = Kind.FIELD_SET,
+              clazz = "resources.OnMethodTest",
+              field = "field",
+              where = Where.AFTER),
+      enableAt = @Level(">=1"))
+  public static void args(
+      @Self Object self,
+      @TargetInstance Object inst,
+      @TargetMethodOrField String fldName,
+      int value) {
+    println("args");
+  }
 }

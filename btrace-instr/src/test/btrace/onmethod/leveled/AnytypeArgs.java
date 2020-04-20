@@ -25,21 +25,19 @@
 
 package traces.onmethod.leveled;
 
-import org.openjdk.btrace.core.types.AnyType;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
+import org.openjdk.btrace.core.types.AnyType;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class AnytypeArgs {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level(">=1"))
-    public static void args(@Self Object self, AnyType[] args) {
-        println("args");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args", enableAt = @Level(">=1"))
+  public static void args(@Self Object self, AnyType[] args) {
+    println("args");
+  }
 }

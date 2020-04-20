@@ -24,13 +24,6 @@
  */
 package org.openjdk.btrace.instr;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
@@ -41,221 +34,242 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.DebugSupport;
 
 /**
  * The single entry point for class transformation.
- * <p>
- * When a class is to be transformed all the registered {@linkplain BTraceProbe} instances are
- * asked for the appropriate instrumentation. When there are no registered probes or none of
- * the registered probes is able to instrument the class it will not be transformed.
+ *
+ * <p>When a class is to be transformed all the registered {@linkplain BTraceProbe} instances are
+ * asked for the appropriate instrumentation. When there are no registered probes or none of the
+ * registered probes is able to instrument the class it will not be transformed.
  *
  * @author Jaroslav Bachorik
  * @since 1.3.5
  */
 public final class BTraceTransformer implements ClassFileTransformer {
-    private final DebugSupport debug;
-    private final ReentrantReadWriteLock setupLock = new ReentrantReadWriteLock();
-    private final Collection<BTraceProbe> probes = new ArrayList<>(3);
-    private final Filter filter = new Filter();
-    private final Collection<MethodNode> cushionMethods = new HashSet<>();
+  private final DebugSupport debug;
+  private final ReentrantReadWriteLock setupLock = new ReentrantReadWriteLock();
+  private final Collection<BTraceProbe> probes = new ArrayList<>(3);
+  private final Filter filter = new Filter();
+  private final Collection<MethodNode> cushionMethods = new HashSet<>();
 
-    public BTraceTransformer(DebugSupport d) {
-        debug = d;
+  public BTraceTransformer(DebugSupport d) {
+    debug = d;
+  }
+
+  /*
+   * Certain classes like java.lang.ThreadLocal and it's
+   * inner classes, java.lang.Object cannot be safely
+   * instrumented with BTrace. This is because BTrace uses
+   * ThreadLocal class to check recursive entries due to
+   * BTrace's own functions. But this leads to infinite recursions
+   * if BTrace instruments java.lang.ThreadLocal for example.
+   * For now, we avoid such classes till we find a solution.
+   */
+  private static boolean isSensitiveClass(String name) {
+    return ClassFilter.isSensitiveClass(name);
+  }
+
+  public final void register(BTraceProbe p) {
+    try {
+      setupLock.writeLock().lock();
+      probes.add(p);
+      for (OnMethod om : p.onmethods()) {
+        filter.add(om);
+      }
+    } finally {
+      setupLock.writeLock().unlock();
+    }
+  }
+
+  public final void unregister(BTraceProbe p) {
+    try {
+      setupLock.writeLock().lock();
+      probes.remove(p);
+      for (OnMethod om : p.onmethods()) {
+        filter.remove(om);
+        MethodNode cushionMethod =
+            new MethodNode(
+                Opcodes.ASM7,
+                Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC,
+                Instrumentor.getActionMethodName(p, om.getTargetName()),
+                om.getTargetDescriptor(),
+                null,
+                null);
+        InsnList code = new InsnList();
+        code.add(new InsnNode(Opcodes.RETURN));
+        cushionMethod.instructions = code;
+        cushionMethods.add(cushionMethod);
+      }
+
+    } finally {
+      setupLock.writeLock().unlock();
+    }
+  }
+
+  @Override
+  public byte[] transform(
+      ClassLoader loader,
+      String className,
+      Class<?> classBeingRedefined,
+      ProtectionDomain protectionDomain,
+      byte[] classfileBuffer)
+      throws IllegalClassFormatException {
+    try {
+      setupLock.readLock().lock();
+      if (probes.isEmpty()) return null;
+
+      className = className != null ? className : "<anonymous>";
+
+      if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader()))
+          && isSensitiveClass(className)) {
+        if (isDebug()) {
+          debugPrint("skipping transform for BTrace class " + className); // NOI18N
+        }
+        return null;
+      }
+
+      if (filter.matchClass(className) == Filter.Result.FALSE) return null;
+
+      boolean entered = BTraceRuntime.enter();
+      try {
+        if (isDebug()) {
+          debug.dumpClass(className.replace('.', '/') + "_orig", classfileBuffer);
+        }
+        BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
+        BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
+        cw.addCushionMethods(cushionMethods);
+        for (BTraceProbe p : probes) {
+          p.notifyTransform(className);
+          cw.addInstrumentor(p, loader);
+        }
+        byte[] transformed = cw.instrument();
+        if (transformed == null) {
+          // no instrumentation necessary
+          if (isDebug()) {
+            debugPrint("skipping class " + cr.getJavaClassName());
+          }
+          return classfileBuffer;
+        } else {
+          if (isDebug()) {
+            debugPrint("transformed class " + cr.getJavaClassName());
+          }
+          if (debug.isDumpClasses()) {
+            debug.dumpClass(className.replace('.', '/'), transformed);
+          }
+        }
+        return transformed;
+      } catch (Throwable th) {
+        debugPrint(th);
+        throw th;
+      } finally {
+        if (entered) {
+          BTraceRuntime.leave();
+        }
+      }
+    } finally {
+      setupLock.readLock().unlock();
+    }
+  }
+
+  private boolean isDebug() {
+    return debug.isDebug();
+  }
+
+  private void debugPrint(String msg) {
+    debug.debug(msg);
+  }
+
+  private void debugPrint(Throwable th) {
+    debug.debug(th);
+  }
+
+  static class Filter {
+    private final Map<String, Integer> nameMap = new HashMap<>();
+    private final Map<Pattern, Integer> nameRegexMap = new HashMap<>();
+    private boolean isFast = true;
+    private boolean isRegex = false;
+
+    private static <K> void addToMap(Map<K, Integer> map, K name) {
+      synchronized (map) {
+        Integer i = map.get(name);
+        if (i == null) {
+          map.put(name, 1);
+        } else {
+          map.put(name, i + 1);
+        }
+      }
     }
 
-    /*
-     * Certain classes like java.lang.ThreadLocal and it's
-     * inner classes, java.lang.Object cannot be safely
-     * instrumented with BTrace. This is because BTrace uses
-     * ThreadLocal class to check recursive entries due to
-     * BTrace's own functions. But this leads to infinite recursions
-     * if BTrace instruments java.lang.ThreadLocal for example.
-     * For now, we avoid such classes till we find a solution.
-     */
-    private static boolean isSensitiveClass(String name) {
-        return ClassFilter.isSensitiveClass(name);
+    private static <K> void removeFromMap(Map<K, Integer> map, K name) {
+      synchronized (map) {
+        Integer i = map.get(name);
+        if (i == null) {
+          return;
+        }
+        int freq = i - 1;
+        if (freq == 0) {
+          map.remove(name);
+        }
+      }
     }
 
-    public final void register(BTraceProbe p) {
-        try {
-            setupLock.writeLock().lock();
-            probes.add(p);
-            for (OnMethod om : p.onmethods()) {
-                filter.add(om);
-            }
-        } finally {
-            setupLock.writeLock().unlock();
+    void add(OnMethod om) {
+      if (om.isSubtypeMatcher() || om.isClassAnnotationMatcher()) {
+        isFast = false;
+      } else {
+        if (om.isClassRegexMatcher()) {
+          isRegex = true;
+          String name = om.getClazz().replace("\\.", "/");
+          addToMap(nameRegexMap, Pattern.compile(name));
+        } else {
+          String name = om.getClazz().replace('.', '/');
+          addToMap(nameMap, name);
         }
+      }
     }
 
-    public final void unregister(BTraceProbe p) {
-        try {
-            setupLock.writeLock().lock();
-            probes.remove(p);
-            for (OnMethod om : p.onmethods()) {
-                filter.remove(om);
-                MethodNode cushionMethod = new MethodNode(Opcodes.ASM7, Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, Instrumentor.getActionMethodName(p, om.getTargetName()), om.getTargetDescriptor(), null, null);
-                InsnList code = new InsnList();
-                code.add(new InsnNode(Opcodes.RETURN));
-                cushionMethod.instructions = code;
-                cushionMethods.add(cushionMethod);
-            }
-
-        } finally {
-            setupLock.writeLock().unlock();
+    void remove(OnMethod om) {
+      String name = om.getClazz().replace('.', '/');
+      if (!(om.isSubtypeMatcher() || om.isClassAnnotationMatcher())) {
+        if (om.isClassRegexMatcher()) {
+          removeFromMap(nameRegexMap, Pattern.compile(name));
+        } else {
+          removeFromMap(nameMap, name);
         }
+      }
     }
 
-    @Override
-    public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-        try {
-            setupLock.readLock().lock();
-            if (probes.isEmpty()) return null;
-
-            className = className != null ? className : "<anonymous>";
-
-            if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader())) && isSensitiveClass(className)) {
-                if (isDebug()) {
-                    debugPrint("skipping transform for BTrace class " + className); // NOI18N
-                }
-                return null;
-            }
-
-            if (filter.matchClass(className) == Filter.Result.FALSE) return null;
-
-            boolean entered = BTraceRuntime.enter();
-            try {
-                if (isDebug()) {
-                    debug.dumpClass(className.replace('.', '/') + "_orig", classfileBuffer);
-                }
-                BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
-                BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
-                cw.addCushionMethods(cushionMethods);
-                for (BTraceProbe p : probes) {
-                    p.notifyTransform(className);
-                    cw.addInstrumentor(p, loader);
-                }
-                byte[] transformed = cw.instrument();
-                if (transformed == null) {
-                    // no instrumentation necessary
-                    if (isDebug()) {
-                        debugPrint("skipping class " + cr.getJavaClassName());
-                    }
-                    return classfileBuffer;
-                } else {
-                    if (isDebug()) {
-                        debugPrint("transformed class " + cr.getJavaClassName());
-                    }
-                    if (debug.isDumpClasses()) {
-                        debug.dumpClass(className.replace('.', '/'), transformed);
-                    }
-                }
-                return transformed;
-            } catch (Throwable th) {
-                debugPrint(th);
-                throw th;
-            } finally {
-                if (entered) {
-                    BTraceRuntime.leave();
-                }
-            }
-        } finally {
-            setupLock.readLock().unlock();
+    public Result matchClass(String className) {
+      if (isFast) {
+        synchronized (nameMap) {
+          if (nameMap.containsKey(className)) {
+            return Result.TRUE;
+          }
         }
+        if (isRegex) {
+          synchronized (nameRegexMap) {
+            for (Pattern p : nameRegexMap.keySet()) {
+              if (p.matcher(className).matches()) {
+                return Result.TRUE;
+              }
+            }
+          }
+        }
+        return Result.FALSE;
+      }
+      return Result.MAYBE;
     }
 
-    private boolean isDebug() {
-        return debug.isDebug();
+    enum Result {
+      TRUE,
+      FALSE,
+      MAYBE
     }
-
-    private void debugPrint(String msg) {
-        debug.debug(msg);
-    }
-
-    private void debugPrint(Throwable th) {
-        debug.debug(th);
-    }
-
-    static class Filter {
-        private final Map<String, Integer> nameMap = new HashMap<>();
-        private final Map<Pattern, Integer> nameRegexMap = new HashMap<>();
-        private boolean isFast = true;
-        private boolean isRegex = false;
-
-        private static <K> void addToMap(Map<K, Integer> map, K name) {
-            synchronized (map) {
-                Integer i = map.get(name);
-                if (i == null) {
-                    map.put(name, 1);
-                } else {
-                    map.put(name, i + 1);
-                }
-            }
-        }
-
-        private static <K> void removeFromMap(Map<K, Integer> map, K name) {
-            synchronized (map) {
-                Integer i = map.get(name);
-                if (i == null) {
-                    return;
-                }
-                int freq = i - 1;
-                if (freq == 0) {
-                    map.remove(name);
-                }
-            }
-        }
-
-        void add(OnMethod om) {
-            if (om.isSubtypeMatcher() || om.isClassAnnotationMatcher()) {
-                isFast = false;
-            } else {
-                if (om.isClassRegexMatcher()) {
-                    isRegex = true;
-                    String name = om.getClazz().replace("\\.", "/");
-                    addToMap(nameRegexMap, Pattern.compile(name));
-                } else {
-                    String name = om.getClazz().replace('.', '/');
-                    addToMap(nameMap, name);
-                }
-            }
-
-        }
-
-        void remove(OnMethod om) {
-            String name = om.getClazz().replace('.', '/');
-            if (!(om.isSubtypeMatcher() || om.isClassAnnotationMatcher())) {
-                if (om.isClassRegexMatcher()) {
-                    removeFromMap(nameRegexMap, Pattern.compile(name));
-                } else {
-                    removeFromMap(nameMap, name);
-                }
-            }
-        }
-
-        public Result matchClass(String className) {
-            if (isFast) {
-                synchronized (nameMap) {
-                    if (nameMap.containsKey(className)) {
-                        return Result.TRUE;
-                    }
-                }
-                if (isRegex) {
-                    synchronized (nameRegexMap) {
-                        for (Pattern p : nameRegexMap.keySet()) {
-                            if (p.matcher(className).matches()) {
-                                return Result.TRUE;
-                            }
-                        }
-                    }
-                }
-                return Result.FALSE;
-            }
-            return Result.MAYBE;
-        }
-
-        enum Result {
-            TRUE, FALSE, MAYBE
-        }
-    }
+  }
 }

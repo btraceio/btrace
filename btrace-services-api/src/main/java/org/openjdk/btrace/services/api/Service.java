@@ -29,46 +29,46 @@ import org.openjdk.btrace.services.spi.RuntimeService;
 import org.openjdk.btrace.services.spi.SimpleService;
 
 /**
- * A service factory to be used to get access to the services locally
- * inside one particular method. The instantiated services are referenced
- * as local variables.
- * <p>
- * For script-wide service instantiation use {@linkplain Injected} annotation.
+ * A service factory to be used to get access to the services locally inside one particular method.
+ * The instantiated services are referenced as local variables.
+ *
+ * <p>For script-wide service instantiation use {@linkplain Injected} annotation.
  *
  * @author Jaroslav Bachorik
  */
 public final class Service {
-    /**
-     * Creates a BTrace runtime aware service
-     *
-     * @param <S> service type
-     * @param clz service class
-     * @return The instance of service of the required type
-     */
-    public static <S extends RuntimeService> S runtime(Class<S> clz) {
-        throw new IllegalStateException("BTrace service injection failed");
-    }
+  /**
+   * Creates a BTrace runtime aware service
+   *
+   * @param <S> service type
+   * @param clz service class
+   * @return The instance of service of the required type
+   */
+  public static <S extends RuntimeService> S runtime(Class<S> clz) {
+    throw new IllegalStateException("BTrace service injection failed");
+  }
 
-    /**
-     * Creates a simple service via the default 0-argument constructor
-     *
-     * @param <S> service type
-     * @param clz service class
-     * @return The instance of service of the required type
-     */
-    public static <S extends SimpleService> S simple(Class<S> clz) {
-        throw new IllegalStateException("BTrace service injection failed");
-    }
+  /**
+   * Creates a simple service via the default 0-argument constructor
+   *
+   * @param <S> service type
+   * @param clz service class
+   * @return The instance of service of the required type
+   */
+  public static <S extends SimpleService> S simple(Class<S> clz) {
+    throw new IllegalStateException("BTrace service injection failed");
+  }
 
-    /**
-     * Creates a simple service via the provided factory method
-     *
-     * @param <S>           service type
-     * @param factoryMethod factory method to use; it must be a static method declared by the service class
-     * @param clz           service class
-     * @return The instance of service of the required type
-     */
-    public static <S extends SimpleService> S simple(String factoryMethod, Class<S> clz) {
-        throw new IllegalStateException("BTrace service injection failed");
-    }
+  /**
+   * Creates a simple service via the provided factory method
+   *
+   * @param <S> service type
+   * @param factoryMethod factory method to use; it must be a static method declared by the service
+   *     class
+   * @param clz service class
+   * @return The instance of service of the required type
+   */
+  public static <S extends SimpleService> S simple(String factoryMethod, Class<S> clz) {
+    throw new IllegalStateException("BTrace service injection failed");
+  }
 }

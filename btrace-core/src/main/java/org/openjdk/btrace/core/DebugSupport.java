@@ -33,76 +33,76 @@ import java.io.FileOutputStream;
  * @author Jaroslav Bachorik
  */
 public final class DebugSupport {
-    private final SharedSettings settings;
+  private final SharedSettings settings;
 
-    public DebugSupport(SharedSettings s) {
-        settings = s != null ? s : new SharedSettings();
-    }
+  public DebugSupport(SharedSettings s) {
+    settings = s != null ? s : new SharedSettings();
+  }
 
-    public static void info(String msg) {
-        System.out.println("btrace INFO: " + msg);
-    }
+  public static void info(String msg) {
+    System.out.println("btrace INFO: " + msg);
+  }
 
-    public static void warning(String msg) {
-        System.err.println("btrace WARNING: " + msg);
-    }
+  public static void warning(String msg) {
+    System.err.println("btrace WARNING: " + msg);
+  }
 
-    public static void warning(Throwable th) {
-        System.err.println("btrace WARNING: " + th);
-        th.printStackTrace(System.out);
-    }
+  public static void warning(Throwable th) {
+    System.err.println("btrace WARNING: " + th);
+    th.printStackTrace(System.out);
+  }
 
-    public boolean isDebug() {
-        return settings.isDebug();
-    }
+  public boolean isDebug() {
+    return settings.isDebug();
+  }
 
-    public boolean isDumpClasses() {
-        return settings.isDumpClasses();
-    }
+  public boolean isDumpClasses() {
+    return settings.isDumpClasses();
+  }
 
-    public void dumpClass(String className, byte[] code) {
-        if (settings.isDumpClasses()) {
-            try {
-                className = className.replace(".", File.separator).replace("/", File.separator);
-                int index = className.lastIndexOf(File.separatorChar);
-                StringBuilder buf = new StringBuilder();
-                if (!settings.getDumpDir().equals(".")) {
-                    buf.append(settings.getDumpDir());
-                    buf.append(File.separatorChar);
-                }
-                String dir = buf.toString();
-                if (index != -1) {
-                    dir += className.substring(0, index);
-                }
-                new File(dir).mkdirs();
-                String file;
-                if (index != -1) {
-                    file = className.substring(index + 1);
-                } else {
-                    file = className;
-                }
-                file += ".class";
-                new File(dir).mkdirs();
-                File out = new File(dir, file);
-                try (FileOutputStream fos = new FileOutputStream(out)) {
-                    fos.write(code);
-                }
-            } catch (Exception exp) {
-                exp.printStackTrace();
-            }
+  public void dumpClass(String className, byte[] code) {
+    if (settings.isDumpClasses()) {
+      try {
+        className = className.replace(".", File.separator).replace("/", File.separator);
+        int index = className.lastIndexOf(File.separatorChar);
+        StringBuilder buf = new StringBuilder();
+        if (!settings.getDumpDir().equals(".")) {
+          buf.append(settings.getDumpDir());
+          buf.append(File.separatorChar);
         }
-    }
-
-    public void debug(String msg) {
-        if (settings.isDebug()) {
-            System.out.println("btrace DEBUG: " + msg);
+        String dir = buf.toString();
+        if (index != -1) {
+          dir += className.substring(0, index);
         }
-    }
-
-    public void debug(Throwable th) {
-        if (settings.isDebug()) {
-            System.out.println("btrace DEBUG: " + th);
-            th.printStackTrace(System.out);
+        new File(dir).mkdirs();
+        String file;
+        if (index != -1) {
+          file = className.substring(index + 1);
+        } else {
+          file = className;
         }
+        file += ".class";
+        new File(dir).mkdirs();
+        File out = new File(dir, file);
+        try (FileOutputStream fos = new FileOutputStream(out)) {
+          fos.write(code);
+        }
+      } catch (Exception exp) {
+        exp.printStackTrace();
+      }
     }
+  }
+
+  public void debug(String msg) {
+    if (settings.isDebug()) {
+      System.out.println("btrace DEBUG: " + msg);
+    }
+  }
+
+  public void debug(Throwable th) {
+    if (settings.isDebug()) {
+      System.out.println("btrace DEBUG: " + th);
+      th.printStackTrace(System.out);
+    }
+  }
 }

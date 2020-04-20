@@ -25,39 +25,40 @@
 
 package org.openjdk.btrace.instr;
 
-import org.objectweb.asm.MethodVisitor;
-
 import static org.objectweb.asm.Opcodes.*;
 
+import org.objectweb.asm.MethodVisitor;
+
 /**
- * This visitor helps in inserting code whenever an
- * exception is about to be thrown. The code to insert
- * on exception throw may be decided by derived class.
- * By default, this class inserts code to print stack
- * trace of the exception thrown.
+ * This visitor helps in inserting code whenever an exception is about to be thrown. The code to
+ * insert on exception throw may be decided by derived class. By default, this class inserts code to
+ * print stack trace of the exception thrown.
  *
  * @author A. Sundararajan
  */
 public class ThrowInstrumentor extends MethodInstrumentor {
-    public ThrowInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
-                             String parentClz, String superClz, int access, String name, String desc) {
-        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
-    }
+  public ThrowInstrumentor(
+      ClassLoader cl,
+      MethodVisitor mv,
+      MethodInstrumentorHelper mHelper,
+      String parentClz,
+      String superClz,
+      int access,
+      String name,
+      String desc) {
+    super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
+  }
 
-    @Override
-    public void visitInsn(int opcode) {
-        if (opcode == ATHROW) {
-            onThrow();
-        }
-        super.visitInsn(opcode);
+  @Override
+  public void visitInsn(int opcode) {
+    if (opcode == ATHROW) {
+      onThrow();
     }
+    super.visitInsn(opcode);
+  }
 
-    protected void onThrow() {
-        visitInsn(DUP);
-        visitMethodInsn(INVOKEVIRTUAL,
-                "java/lang/Throwable",
-                "printStackTrace",
-                "()V",
-                false);
-    }
+  protected void onThrow() {
+    visitInsn(DUP);
+    visitMethodInsn(INVOKEVIRTUAL, "java/lang/Throwable", "printStackTrace", "()V", false);
+  }
 }

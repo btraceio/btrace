@@ -25,34 +25,29 @@
 
 package traces.issues;
 
-import org.openjdk.btrace.core.annotations.*;
 import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import org.openjdk.btrace.core.annotations.*;
 
 @BTrace
 public class BTRACE106 {
-    @OnMethod(
-            clazz = "@/.*\\.Deprecated/",
-            method = "aMethod"
-    )
-    public static void o1(@Self Object self, @ProbeMethodName String pmn) { // all calls to methods
-        println(pmn);
-    }
+  @OnMethod(clazz = "@/.*\\.Deprecated/", method = "aMethod")
+  public static void o1(@Self Object self, @ProbeMethodName String pmn) { // all calls to methods
+    println(pmn);
+  }
 
-    @OnMethod(
-            clazz = "@/.*\\.Deprecated/",
-            method = "bMethod",
-            location = @Location(Kind.RETURN)
-    )
-    public static void o2(@Self Object self, @ProbeMethodName String pmn, @Duration long dur) { // all calls to methods
-        println(pmn);
-    }
+  @OnMethod(clazz = "@/.*\\.Deprecated/", method = "bMethod", location = @Location(Kind.RETURN))
+  public static void o2(
+      @Self Object self, @ProbeMethodName String pmn, @Duration long dur) { // all calls to methods
+    println(pmn);
+  }
 
-    @OnMethod(
-            clazz = "@/.*\\.Deprecated/",
-            method = "@/.*\\.Deprecated/",
-            location = @Location(Kind.RETURN)
-    )
-    public static void o3(@Self Object self, @ProbeMethodName String pmn, @Duration long dur) { // all calls to methods
-        println(pmn);
-    }
+  @OnMethod(
+      clazz = "@/.*\\.Deprecated/",
+      method = "@/.*\\.Deprecated/",
+      location = @Location(Kind.RETURN))
+  public static void o3(
+      @Self Object self, @ProbeMethodName String pmn, @Duration long dur) { // all calls to methods
+    println(pmn);
+  }
 }

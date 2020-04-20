@@ -26,16 +26,15 @@
 package org.openjdk.btrace.runtime;
 
 /**
- * This interface hides jvmstat classes from the
- * caller. The implementor of this interface should
+ * This interface hides jvmstat classes from the caller. The implementor of this interface should
  * read perf counters and return the value.
  *
  * @author A. Sundararajan
  */
 public interface PerfReader {
-    int perfInt(String name);
+  int perfInt(String name);
 
-    long perfLong(String name);
+  long perfLong(String name);
 
-    String perfString(String name);
+  String perfString(String name);
 }

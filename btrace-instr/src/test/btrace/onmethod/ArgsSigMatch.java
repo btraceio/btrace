@@ -25,32 +25,29 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import java.util.ArrayList;
+import java.util.List;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.TLS;
-import java.util.ArrayList;
-import java.util.List;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArgsSigMatch {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="argsTypeMatch")
-    public static void m1(@Self Object self, List<String> a) {
-        println("m1");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "argsTypeMatch")
+  public static void m1(@Self Object self, List<String> a) {
+    println("m1");
+  }
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="argsTypeMatch", exactTypeMatch = true)
-    public static void m2(@Self Object self, List<String> a) {
-        println("m2");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "argsTypeMatch", exactTypeMatch = true)
+  public static void m2(@Self Object self, List<String> a) {
+    println("m2");
+  }
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="argsTypeMatch", exactTypeMatch = true)
-    public static void m3(@Self Object self, ArrayList<String> a) {
-        println("m3");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "argsTypeMatch", exactTypeMatch = true)
+  public static void m3(@Self Object self, ArrayList<String> a) {
+    println("m3");
+  }
 }

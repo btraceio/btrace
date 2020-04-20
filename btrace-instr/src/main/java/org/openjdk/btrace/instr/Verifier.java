@@ -25,180 +25,178 @@
 
 package org.openjdk.btrace.instr;
 
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.VerifierException;
+import static org.objectweb.asm.Opcodes.*;
+
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
-
-import static org.objectweb.asm.Opcodes.*;
+import org.openjdk.btrace.core.Messages;
+import org.openjdk.btrace.core.VerifierException;
 
 /**
- * This class verifies that a BTrace program is safe
- * and well-formed.
- * Also it fills the onMethods and onProbes structures with the data taken from
- * the annotations
+ * This class verifies that a BTrace program is safe and well-formed. Also it fills the onMethods
+ * and onProbes structures with the data taken from the annotations
  *
  * @author A. Sundararajan
  * @author J. Bachorik
  */
 public class Verifier extends ClassVisitor {
-    private final boolean trustedAllowed;
-    private final BTraceProbeNode cn;
-    private boolean seenBTrace;
-    private boolean classRenamed;
+  private final boolean trustedAllowed;
+  private final BTraceProbeNode cn;
+  private boolean seenBTrace;
+  private boolean classRenamed;
 
-    public Verifier(BTraceProbeNode cv, boolean trusted) {
-        super(ASM7, cv);
-        trustedAllowed = trusted;
-        cn = cv;
+  public Verifier(BTraceProbeNode cv, boolean trusted) {
+    super(ASM7, cv);
+    trustedAllowed = trusted;
+    cn = cv;
+  }
+
+  public Verifier(BTraceProbeNode cv) {
+    this(cv, false);
+  }
+
+  public static void reportError(String err) {
+    reportError(err, null);
+  }
+
+  public static void reportError(String err, String msg) {
+    String str = Messages.get(err);
+    if (msg != null) {
+      str += ": " + msg;
     }
+    throw new VerifierException(str);
+  }
 
+  private static void usage(String msg) {
+    System.err.println(msg);
+    System.exit(1);
+  }
 
-    public Verifier(BTraceProbeNode cv) {
-        this(cv, false);
+  public boolean isClassRenamed() {
+    return classRenamed;
+  }
+
+  public String getClassName() {
+    return cn.name;
+  }
+
+  @Override
+  public void visitEnd() {
+    if (!cn.isTrusted()) {
+      if (cn.getGraph().hasCycle()) {
+        reportSafetyError("execution.loop.danger");
+      }
     }
+    super.visitEnd();
+  }
 
-    public static void reportError(String err) {
-        reportError(err, null);
+  @Override
+  public void visit(
+      int version,
+      int access,
+      String name,
+      String signature,
+      String superName,
+      String[] interfaces) {
+    if (!cn.isTrusted()) {
+      if ((access & ACC_INTERFACE) != 0 || (access & ACC_ENUM) != 0) {
+        reportSafetyError("btrace.program.should.be.class");
+      }
+      if ((access & ACC_PUBLIC) == 0) {
+        reportSafetyError("class.should.be.public", name);
+      }
+
+      if (!superName.equals(Constants.OBJECT_INTERNAL)) {
+        reportSafetyError("object.superclass.required", superName);
+      }
+      if (interfaces != null && interfaces.length > 0) {
+        reportSafetyError("no.interface.implementation");
+      }
     }
+    super.visit(version, access, name, signature, superName, interfaces);
+  }
 
-    public static void reportError(String err, String msg) {
-        String str = Messages.get(err);
-        if (msg != null) {
-            str += ": " + msg;
-        }
-        throw new VerifierException(str);
-    }
-
-    private static void usage(String msg) {
-        System.err.println(msg);
-        System.exit(1);
-    }
-
-    public boolean isClassRenamed() {
-        return classRenamed;
-    }
-
-    public String getClassName() {
-        return cn.name;
-    }
-
-    @Override
-    public void visitEnd() {
-        if (!cn.isTrusted()) {
-            if (cn.getGraph().hasCycle()) {
-                reportSafetyError("execution.loop.danger");
+  @Override
+  public AnnotationVisitor visitAnnotation(String type, boolean visible) {
+    AnnotationVisitor delegate = super.visitAnnotation(type, visible);
+    if (type.equals(Constants.BTRACE_DESC)) {
+      seenBTrace = true;
+      return new AnnotationVisitor(ASM7, delegate) {
+        @Override
+        public void visit(String name, Object value) {
+          if (("unsafe".equals(name) || "trusted".equals(name)) && Boolean.TRUE.equals(value)) {
+            if (!trustedAllowed) {
+              reportSafetyError("agent.unsafe.not.allowed");
             }
+            cn.setTrusted(); // Found @BTrace(..., trusted=true)
+          }
+          super.visit(name, value);
         }
-        super.visitEnd();
+      };
+    }
+    return delegate;
+  }
+
+  @Override
+  public FieldVisitor visitField(
+      int access, String name, String desc, String signature, Object value) {
+    if (!seenBTrace) {
+      reportSafetyError("not.a.btrace.program");
+    }
+    if (!cn.isTrusted()) {
+      if ((access & ACC_STATIC) == 0) {
+        reportSafetyError("agent.no.instance.variables", name);
+      }
+    }
+    return super.visitField(access, name, desc, signature, value);
+  }
+
+  @Override
+  public void visitInnerClass(String name, String outerName, String innerName, int access) {
+    if (!cn.isTrusted()) {
+      if (cn.name.equals(outerName)) {
+        reportSafetyError("no.nested.class");
+      }
+    }
+  }
+
+  @Override
+  public MethodVisitor visitMethod(
+      int access, String methodName, String methodDesc, String signature, String[] exceptions) {
+
+    if (!seenBTrace) {
+      reportSafetyError("not.a.btrace.program");
     }
 
-    @Override
-    public void visit(int version, int access, String name,
-                      String signature, String superName, String[] interfaces) {
-        if (!cn.isTrusted()) {
-            if ((access & ACC_INTERFACE) != 0 ||
-                    (access & ACC_ENUM) != 0) {
-                reportSafetyError("btrace.program.should.be.class");
-            }
-            if ((access & ACC_PUBLIC) == 0) {
-                reportSafetyError("class.should.be.public", name);
-            }
+    if (!cn.isTrusted()) {
+      if ((access & ACC_SYNCHRONIZED) != 0) {
+        reportSafetyError("no.synchronized.methods", methodName + methodDesc);
+      }
 
-            if (!superName.equals(Constants.OBJECT_INTERNAL)) {
-                reportSafetyError("object.superclass.required", superName);
-            }
-            if (interfaces != null && interfaces.length > 0) {
-                reportSafetyError("no.interface.implementation");
-            }
+      if (!methodName.equals(Constants.CONSTRUCTOR)) {
+        if ((access & ACC_STATIC) == 0) {
+          reportSafetyError("no.instance.method", methodName + methodDesc);
         }
-        super.visit(version, access, name, signature,
-                superName, interfaces);
+      }
     }
 
-    @Override
-    public AnnotationVisitor visitAnnotation(String type, boolean visible) {
-        AnnotationVisitor delegate = super.visitAnnotation(type, visible);
-        if (type.equals(Constants.BTRACE_DESC)) {
-            seenBTrace = true;
-            return new AnnotationVisitor(ASM7, delegate) {
-                @Override
-                public void visit(String name, Object value) {
-                    if (("unsafe".equals(name) || "trusted".equals(name)) && Boolean.TRUE.equals(value)) {
-                        if (!trustedAllowed) {
-                            reportSafetyError("agent.unsafe.not.allowed");
-                        }
-                        cn.setTrusted(); // Found @BTrace(..., trusted=true)
-                    }
-                    super.visit(name, value);
-                }
-            };
-        }
-        return delegate;
+    return super.visitMethod(access, methodName, methodDesc, signature, exceptions);
+  }
+
+  @Override
+  public void visitOuterClass(String owner, String name, String desc) {
+    if (!cn.isTrusted()) {
+      reportSafetyError("no.outer.class");
     }
+  }
 
-    @Override
-    public FieldVisitor visitField(int access, String name,
-                                   String desc, String signature, Object value) {
-        if (!seenBTrace) {
-            reportSafetyError("not.a.btrace.program");
-        }
-        if (!cn.isTrusted()) {
-            if ((access & ACC_STATIC) == 0) {
-                reportSafetyError("agent.no.instance.variables", name);
-            }
-        }
-        return super.visitField(access, name, desc, signature, value);
-    }
+  void reportSafetyError(String err) {
+    reportSafetyError(err, null);
+  }
 
-    @Override
-    public void visitInnerClass(String name, String outerName,
-                                String innerName, int access) {
-        if (!cn.isTrusted()) {
-            if (cn.name.equals(outerName)) {
-                reportSafetyError("no.nested.class");
-            }
-        }
-    }
-
-    @Override
-    public MethodVisitor visitMethod(int access, String methodName,
-                                     String methodDesc, String signature, String[] exceptions) {
-
-        if (!seenBTrace) {
-            reportSafetyError("not.a.btrace.program");
-        }
-
-        if (!cn.isTrusted()) {
-            if ((access & ACC_SYNCHRONIZED) != 0) {
-                reportSafetyError("no.synchronized.methods", methodName + methodDesc);
-            }
-
-            if (!methodName.equals(Constants.CONSTRUCTOR)) {
-                if ((access & ACC_STATIC) == 0) {
-                    reportSafetyError("no.instance.method", methodName + methodDesc);
-                }
-            }
-        }
-
-        return super.visitMethod(access, methodName, methodDesc, signature, exceptions);
-    }
-
-    @Override
-    public void visitOuterClass(String owner, String name,
-                                String desc) {
-        if (!cn.isTrusted()) {
-            reportSafetyError("no.outer.class");
-        }
-    }
-
-    void reportSafetyError(String err) {
-        reportSafetyError(err, null);
-    }
-
-    void reportSafetyError(String err, String msg) {
-        reportError(err, msg);
-    }
+  void reportSafetyError(String err, String msg) {
+    reportError(err, msg);
+  }
 }

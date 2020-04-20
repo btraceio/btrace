@@ -25,25 +25,26 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.annotations.Where;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArraySetAfter {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
-              location=@Location(value=Kind.ARRAY_SET, where=Where.AFTER), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @TargetInstance int[] arr, int index, int value) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "array",
+      location = @Location(value = Kind.ARRAY_SET, where = Where.AFTER),
+      enableAt = @Level(">=1"))
+  public static void args(@Self Object self, @TargetInstance int[] arr, int index, int value) {
+    println("args");
+  }
 }

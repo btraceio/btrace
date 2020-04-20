@@ -26,36 +26,36 @@ package org.openjdk.btrace.core.aggregation;
 
 /**
  * An element of aggregated data stored in an {@link Aggregation}.
- * <p>
- * Concrete implementations of this interface will implement different aggregating functions.
+ *
+ * <p>Concrete implementations of this interface will implement different aggregating functions.
+ *
  * <p>
  *
  * @author Christian Glencross
  */
 public interface AggregationValue {
 
-    /**
-     * Adds a data item to the aggregated value.
-     *
-     * @param data the data value
-     */
-    void add(long data);
+  /**
+   * Adds a data item to the aggregated value.
+   *
+   * @param data the data value
+   */
+  void add(long data);
 
-    /**
-     * Removes all data items previously added.
-     */
-    void clear();
+  /** Removes all data items previously added. */
+  void clear();
 
-    /**
-     * @return the aggregated value of all data items added since the aggregation was created or last cleared. The
-     * aggregation function is determined by the concrete implementation of the interface.
-     */
-    long getValue();
+  /**
+   * @return the aggregated value of all data items added since the aggregation was created or last
+   *     cleared. The aggregation function is determined by the concrete implementation of the
+   *     interface.
+   */
+  long getValue();
 
-    /**
-     * @return an object representation of the aggregated value. For most implementations this may be equivalent to
-     * <code>Integer.valueOf( getValue() )</code>. More complex aggregations such may return objects
-     * representing histograms, etc.
-     */
-    Object getData();
+  /**
+   * @return an object representation of the aggregated value. For most implementations this may be
+   *     equivalent to <code>Integer.valueOf( getValue() )</code>. More complex aggregations such
+   *     may return objects representing histograms, etc.
+   */
+  Object getData();
 }

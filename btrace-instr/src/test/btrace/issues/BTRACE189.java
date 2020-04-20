@@ -25,19 +25,18 @@
 
 package traces.issues;
 
-import org.openjdk.btrace.core.annotations.*;
 import static org.openjdk.btrace.core.BTraceUtils.*;
 
-@BTrace public class BTRACE189 {
-    @OnMethod(
-        clazz="@/.*/",
-        method="aMethod"
-    )
-    public static void o1(@Self Object self, @ProbeMethodName String pmn) { // all calls to methods
-        sharedMethod(pmn);
-    }
+import org.openjdk.btrace.core.annotations.*;
 
-    private static void sharedMethod(String pmn) {
-        println("pmn = " + pmn);
-    }
+@BTrace
+public class BTRACE189 {
+  @OnMethod(clazz = "@/.*/", method = "aMethod")
+  public static void o1(@Self Object self, @ProbeMethodName String pmn) { // all calls to methods
+    sharedMethod(pmn);
+  }
+
+  private static void sharedMethod(String pmn) {
+    println("pmn = " + pmn);
+  }
 }

@@ -25,27 +25,29 @@
 
 package traces.onmethod.leveled;
 
-import traces.onmethod.*;
-import org.openjdk.btrace.core.types.AnyType;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.annotations.Where;
+import org.openjdk.btrace.core.types.AnyType;
+import traces.onmethod.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArraySetAfterAny {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
-              location=@Location(value=Kind.ARRAY_SET, where=Where.AFTER), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @TargetInstance AnyType arr, int index, AnyType value) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "array",
+      location = @Location(value = Kind.ARRAY_SET, where = Where.AFTER),
+      enableAt = @Level(">=1"))
+  public static void args(
+      @Self Object self, @TargetInstance AnyType arr, int index, AnyType value) {
+    println("args");
+  }
 }

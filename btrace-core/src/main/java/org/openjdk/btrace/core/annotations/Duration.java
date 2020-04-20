@@ -32,16 +32,14 @@ import java.lang.annotation.Target;
 
 /**
  * It is used to mark a probe method argument as the receiver of the duration value<br>
- * Applicable only for {@linkplain OnMethod} annotation with {@linkplain Location} value
- * of {@linkplain Kind#RETURN} or {@linkplain Kind#ERROR}
- * <p>
- * The duration is reported in nanoseconds, using resolution available by OS
- * </p>
+ * Applicable only for {@linkplain OnMethod} annotation with {@linkplain Location} value of
+ * {@linkplain Kind#RETURN} or {@linkplain Kind#ERROR}
+ *
+ * <p>The duration is reported in nanoseconds, using resolution available by OS
  *
  * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  * @since 1.1
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Duration {
-}
+public @interface Duration {}

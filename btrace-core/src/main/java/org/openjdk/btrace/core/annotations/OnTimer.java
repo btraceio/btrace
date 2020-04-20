@@ -31,29 +31,27 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * BTrace methods annotated by this annotation are called when
- * a timer reaches the specified period value. This can be used
- * to run periodic tracing actions.
+ * BTrace methods annotated by this annotation are called when a timer reaches the specified period
+ * value. This can be used to run periodic tracing actions.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface OnTimer {
-    /**
-     * Time period of the timer in milliseconds.
-     * Defaults to 1 second
-     *
-     * @return timer period
-     */
-    long value() default 1000L;
+  /**
+   * Time period of the timer in milliseconds. Defaults to 1 second
+   *
+   * @return timer period
+   */
+  long value() default 1000L;
 
-    /**
-     * If specified the timer period will be taken from btrace arguments.
-     * The format is Ant-like property reference - eg. {@code from = "${timer}"}
-     *
-     * @return btrace argument name holding timer period
-     * @since 1.3.11
-     */
-    String from() default "";
+  /**
+   * If specified the timer period will be taken from btrace arguments. The format is Ant-like
+   * property reference - eg. {@code from = "${timer}"}
+   *
+   * @return btrace argument name holding timer period
+   * @since 1.3.11
+   */
+  String from() default "";
 }

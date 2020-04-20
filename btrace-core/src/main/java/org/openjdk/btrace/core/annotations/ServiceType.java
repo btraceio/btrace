@@ -32,12 +32,8 @@ import org.openjdk.btrace.core.BTraceRuntime;
  * @author Jaroslav Bachorik
  */
 public enum ServiceType {
-    /**
-     * A simple service; possibly a globally shared singleton
-     */
-    SIMPLE,
-    /**
-     * A runtime-aware service; requires an instance per {@linkplain BTraceRuntime}
-     */
-    RUNTIME
+  /** A simple service; possibly a globally shared singleton */
+  SIMPLE,
+  /** A runtime-aware service; requires an instance per {@linkplain BTraceRuntime} */
+  RUNTIME
 }

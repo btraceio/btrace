@@ -25,10 +25,9 @@
 
 package org.openjdk.btrace.dtrace;
 
+import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.IOException;
-
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.opensolaris.os.dtrace.ErrorEvent;
 
@@ -37,30 +36,26 @@ import org.opensolaris.os.dtrace.ErrorEvent;
  *
  * @author A. Sundararajan
  */
-public class DTraceErrorCommand extends ErrorCommand
-             implements DTraceCommand {
-    private ErrorEvent ee;
-    public DTraceErrorCommand(Exception exp, ErrorEvent ee) {
-        super(exp);
-        this.ee = ee;
-    }
+public class DTraceErrorCommand extends ErrorCommand implements DTraceCommand {
+  private ErrorEvent ee;
 
-    /**
-     * Returns the underlying DTrace error event.
-     */
-    public ErrorEvent getErrorEvent() {
-        return ee;
-    }
+  public DTraceErrorCommand(Exception exp, ErrorEvent ee) {
+    super(exp);
+    this.ee = ee;
+  }
 
-    public void write(ObjectOutput out) throws IOException {
-        super.write(out);
-        out.writeObject(ee);
-    }
+  /** Returns the underlying DTrace error event. */
+  public ErrorEvent getErrorEvent() {
+    return ee;
+  }
 
-    public void read(ObjectInput in)
-                throws ClassNotFoundException, IOException {
-        super.read(in);
-        ee = (ErrorEvent) in.readObject();
-    }
+  public void write(ObjectOutput out) throws IOException {
+    super.write(out);
+    out.writeObject(ee);
+  }
+
+  public void read(ObjectInput in) throws ClassNotFoundException, IOException {
+    super.read(in);
+    ee = (ErrorEvent) in.readObject();
+  }
 }
-

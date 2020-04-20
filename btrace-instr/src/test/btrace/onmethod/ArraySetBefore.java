@@ -25,24 +25,23 @@
 
 package traces.onmethod;
 
-import org.openjdk.btrace.core.types.AnyType;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 import org.openjdk.btrace.core.annotations.TargetInstance;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArraySetBefore {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
-              location=@Location(value=Kind.ARRAY_SET))
-    public static void args(@Self Object self, @TargetInstance int[] arr, int index, int value) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "array",
+      location = @Location(value = Kind.ARRAY_SET))
+  public static void args(@Self Object self, @TargetInstance int[] arr, int index, int value) {
+    println("args");
+  }
 }

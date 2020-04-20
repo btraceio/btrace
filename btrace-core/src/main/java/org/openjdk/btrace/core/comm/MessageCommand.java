@@ -34,71 +34,71 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MessageCommand extends DataCommand {
-    private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = new ThreadLocal<SimpleDateFormat>() {
+  private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
+      new ThreadLocal<SimpleDateFormat>() {
         @Override
         protected SimpleDateFormat initialValue() {
-            return new SimpleDateFormat("HH:mm:ss:SSS");
+          return new SimpleDateFormat("HH:mm:ss:SSS");
         }
-    };
+      };
 
-    private long time;
-    private String msg;
+  private long time;
+  private String msg;
 
-    public MessageCommand(long time, String msg) {
-        super(MESSAGE, null);
-        this.time = time;
-        this.msg = msg;
+  public MessageCommand(long time, String msg) {
+    super(MESSAGE, null);
+    this.time = time;
+    this.msg = msg;
+  }
+
+  public MessageCommand(String msg) {
+    this(0L, msg);
+  }
+
+  protected MessageCommand() {
+    this(0L, null);
+  }
+
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeLong(time);
+    byte[] bytes = msg != null ? msg.getBytes(StandardCharsets.UTF_8) : new byte[0];
+    out.writeInt(bytes.length);
+    if (bytes.length > 0) {
+      out.write(bytes);
+    }
+  }
+
+  @Override
+  protected void read(ObjectInput in) throws ClassNotFoundException, IOException {
+    time = in.readLong();
+    int len = in.readInt();
+    byte[] bytes = new byte[len];
+
+    int ptr = 0;
+    while (ptr < len) {
+      ptr += in.read(bytes, ptr, len - ptr);
     }
 
-    public MessageCommand(String msg) {
-        this(0L, msg);
+    msg = new String(bytes, StandardCharsets.UTF_8);
+  }
+
+  public long getTime() {
+    return time;
+  }
+
+  public String getMessage() {
+    return msg;
+  }
+
+  @Override
+  public void print(PrintWriter out) {
+    if (time != 0L) {
+      out.print(DATE_FORMAT.get().format(new Date(time)));
+      out.print(" : ");
     }
-
-    protected MessageCommand() {
-        this(0L, null);
+    if (msg != null) {
+      out.print(msg);
     }
-
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeLong(time);
-        byte[] bytes = msg != null ? msg.getBytes(StandardCharsets.UTF_8) : new byte[0];
-        out.writeInt(bytes.length);
-        if (bytes.length > 0) {
-            out.write(bytes);
-        }
-    }
-
-    @Override
-    protected void read(ObjectInput in)
-            throws ClassNotFoundException, IOException {
-        time = in.readLong();
-        int len = in.readInt();
-        byte[] bytes = new byte[len];
-
-        int ptr = 0;
-        while (ptr < len) {
-            ptr += in.read(bytes, ptr, len - ptr);
-        }
-
-        msg = new String(bytes, StandardCharsets.UTF_8);
-    }
-
-    public long getTime() {
-        return time;
-    }
-
-    public String getMessage() {
-        return msg;
-    }
-
-    @Override
-    public void print(PrintWriter out) {
-        if (time != 0L) {
-            out.print(DATE_FORMAT.get().format(new Date(time)));
-            out.print(" : ");
-        }
-        if (msg != null) {
-            out.print(msg);
-        }
-    }
+  }
 }

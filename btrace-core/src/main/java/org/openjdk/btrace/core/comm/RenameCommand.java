@@ -30,28 +30,28 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class RenameCommand extends Command {
-    private String newName;
+  private String newName;
 
-    public RenameCommand(String newName) {
-        super(RENAME);
-        this.newName = newName;
-    }
+  public RenameCommand(String newName) {
+    super(RENAME);
+    this.newName = newName;
+  }
 
-    protected RenameCommand() {
-        this(null);
-    }
+  protected RenameCommand() {
+    this(null);
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeUTF(newName);
-    }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeUTF(newName);
+  }
 
-    @Override
-    protected void read(ObjectInput in) throws IOException {
-        newName = in.readUTF();
-    }
+  @Override
+  protected void read(ObjectInput in) throws IOException {
+    newName = in.readUTF();
+  }
 
-    public String getNewName() {
-        return newName;
-    }
+  public String getNewName() {
+    return newName;
+  }
 }

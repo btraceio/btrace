@@ -25,25 +25,31 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Duration;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Duration;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class MethodCallDuration {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER), enableAt = @Level(">=1"))
-    public static void args(@Return long retVal, @Duration long dur, String a, long b) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "callTopLevel",
+      location =
+          @Location(
+              value = Kind.CALL,
+              clazz = "/.*\\.OnMethodTest/",
+              method = "callTarget",
+              where = Where.AFTER),
+      enableAt = @Level(">=1"))
+  public static void args(@Return long retVal, @Duration long dur, String a, long b) {
+    println("args");
+  }
 }

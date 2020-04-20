@@ -37,20 +37,20 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.CLASS)
 public @interface Injected {
-    /**
-     * The injected service type
-     *
-     * @return
-     */
-    ServiceType value() default ServiceType.SIMPLE;
+  /**
+   * The injected service type
+   *
+   * @return
+   */
+  ServiceType value() default ServiceType.SIMPLE;
 
-    /**
-     * The factory method to be used.
-     * <p>
-     * It must be a static method declared by the service class
-     * and returning the service class instance
-     *
-     * @return The name of the static method to be used as the factory method or an empty string
-     */
-    String factoryMethod() default "";
+  /**
+   * The factory method to be used.
+   *
+   * <p>It must be a static method declared by the service class and returning the service class
+   * instance
+   *
+   * @return The name of the static method to be used as the factory method or an empty string
+   */
+  String factoryMethod() default "";
 }

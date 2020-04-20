@@ -25,14 +25,12 @@
 
 package org.openjdk.btrace.runtime.profiling;
 
-
-import org.openjdk.btrace.core.Profiler;
-
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import org.openjdk.btrace.core.Profiler;
 
 /**
  * Implementation of {@linkplain Profiler}
@@ -41,102 +39,104 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class MethodInvocationProfiler extends Profiler implements Profiler.MBeanValueProvider {
 
-    private final Collection<WeakReference<MethodInvocationRecorder>> recorders = new ConcurrentLinkedDeque<>();
-    private final int expectedBlockCnt;
-    private final ThreadLocal<MethodInvocationRecorder> recorder = new ThreadLocal<MethodInvocationRecorder>() {
+  private final Collection<WeakReference<MethodInvocationRecorder>> recorders =
+      new ConcurrentLinkedDeque<>();
+  private final int expectedBlockCnt;
+  private final ThreadLocal<MethodInvocationRecorder> recorder =
+      new ThreadLocal<MethodInvocationRecorder>() {
         @Override
         protected MethodInvocationRecorder initialValue() {
-            MethodInvocationRecorder mir = new MethodInvocationRecorder(expectedBlockCnt);
-            recorders.add(new WeakReference<>(mir));
-            return mir;
+          MethodInvocationRecorder mir = new MethodInvocationRecorder(expectedBlockCnt);
+          recorders.add(new WeakReference<>(mir));
+          return mir;
         }
-    };
-    private volatile Snapshot lastValidSnapshot = null;
-    private long lastTs = START_TIME;
+      };
+  private volatile Snapshot lastValidSnapshot = null;
+  private long lastTs = START_TIME;
 
-    public MethodInvocationProfiler(int expectedMethodCnt) {
-        expectedBlockCnt = expectedMethodCnt;
+  public MethodInvocationProfiler(int expectedMethodCnt) {
+    expectedBlockCnt = expectedMethodCnt;
+  }
+
+  @Override
+  public void recordEntry(String blockName) {
+    recorder.get().recordEntry(blockName);
+  }
+
+  @Override
+  public void recordExit(String blockName, long duration) {
+    recorder.get().recordExit(blockName, duration);
+  }
+
+  @Override
+  public void reset() {
+    for (WeakReference<MethodInvocationRecorder> mirRef : recorders) {
+      MethodInvocationRecorder mir = mirRef.get();
+      if (mir != null) {
+        mir.reset();
+      }
     }
+  }
 
-    @Override
-    public void recordEntry(String blockName) {
-        recorder.get().recordEntry(blockName);
-    }
+  @Override
+  public Snapshot snapshot(boolean reset) {
+    Map<String, Integer> idMap = new HashMap<>();
 
-    @Override
-    public void recordExit(String blockName, long duration) {
-        recorder.get().recordExit(blockName, duration);
-    }
+    Record[] mergedRecords = null;
+    int mergedEntries = 0, mergedCapacity = 0;
+    for (WeakReference<MethodInvocationRecorder> mirRef : recorders) {
+      MethodInvocationRecorder mir = mirRef.get();
+      if (mir == null) continue;
 
-    @Override
-    public void reset() {
-        for (WeakReference<MethodInvocationRecorder> mirRef : recorders) {
-            MethodInvocationRecorder mir = mirRef.get();
-            if (mir != null) {
-                mir.reset();
-            }
+      Record[] records = mir.getRecords(reset);
+      if (records == null || records.length == 0) continue; // just skip the empty data
+
+      if (mergedRecords == null) {
+        mergedRecords = records;
+        mergedCapacity = mergedRecords.length;
+        for (int i = 0; i < records.length; i++) {
+          if (records[i] != null) {
+            mergedEntries = i + 1;
+            idMap.put(records[i].blockName, i);
+          }
         }
-    }
+        continue;
+      }
 
-    @Override
-    public Snapshot snapshot(boolean reset) {
-        Map<String, Integer> idMap = new HashMap<>();
-
-        Record[] mergedRecords = null;
-        int mergedEntries = 0, mergedCapacity = 0;
-        for (WeakReference<MethodInvocationRecorder> mirRef : recorders) {
-            MethodInvocationRecorder mir = mirRef.get();
-            if (mir == null) continue;
-
-            Record[] records = mir.getRecords(reset);
-            if (records == null || records.length == 0) continue; // just skip the empty data
-
-            if (mergedRecords == null) {
-                mergedRecords = records;
-                mergedCapacity = mergedRecords.length;
-                for (int i = 0; i < records.length; i++) {
-                    if (records[i] != null) {
-                        mergedEntries = i + 1;
-                        idMap.put(records[i].blockName, i);
-                    }
-                }
-                continue;
-            }
-
-            for (Record r : records) {
-                Integer id = idMap.get(r.blockName);
-                if (id == null) {
-                    id = mergedEntries++;
-                    if (mergedEntries > mergedCapacity) {
-                        mergedCapacity = (((mergedEntries + 1) * 5) >> 2);
-                        Record[] newRecs = new Record[mergedCapacity];
-                        System.arraycopy(mergedRecords, 0, newRecs, 0, mergedEntries - 1);
-                        mergedRecords = newRecs;
-                    }
-                    idMap.put(r.blockName, id);
-                    mergedRecords[id] = r;
-                } else {
-                    Record merged = mergedRecords[id];
-                    merged.invocations += r.invocations;
-                    merged.selfTime += r.selfTime;
-                    merged.wallTime += r.wallTime;
-                }
-            }
+      for (Record r : records) {
+        Integer id = idMap.get(r.blockName);
+        if (id == null) {
+          id = mergedEntries++;
+          if (mergedEntries > mergedCapacity) {
+            mergedCapacity = (((mergedEntries + 1) * 5) >> 2);
+            Record[] newRecs = new Record[mergedCapacity];
+            System.arraycopy(mergedRecords, 0, newRecs, 0, mergedEntries - 1);
+            mergedRecords = newRecs;
+          }
+          idMap.put(r.blockName, id);
+          mergedRecords[id] = r;
+        } else {
+          Record merged = mergedRecords[id];
+          merged.invocations += r.invocations;
+          merged.selfTime += r.selfTime;
+          merged.wallTime += r.wallTime;
         }
-        Record[] rslt = new Record[mergedEntries];
-        if (mergedRecords != null) {
-            System.arraycopy(mergedRecords, 0, rslt, 0, mergedEntries);
-        }
-
-        long curTs = System.currentTimeMillis();
-        Snapshot snp = new Snapshot(rslt, lastTs, curTs);
-        lastTs = curTs;
-        lastValidSnapshot = snp;
-        return snp;
+      }
+    }
+    Record[] rslt = new Record[mergedEntries];
+    if (mergedRecords != null) {
+      System.arraycopy(mergedRecords, 0, rslt, 0, mergedEntries);
     }
 
-    @Override
-    public Snapshot getMBeanValue() {
-        return lastValidSnapshot;
-    }
+    long curTs = System.currentTimeMillis();
+    Snapshot snp = new Snapshot(rslt, lastTs, curTs);
+    lastTs = curTs;
+    lastValidSnapshot = snp;
+    return snp;
+  }
+
+  @Override
+  public Snapshot getMBeanValue() {
+    return lastValidSnapshot;
+  }
 }

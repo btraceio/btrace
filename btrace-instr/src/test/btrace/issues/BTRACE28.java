@@ -25,6 +25,8 @@
 
 package traces.issues;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
@@ -32,17 +34,13 @@ import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
-
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class BTRACE28 {
-    @OnMethod(clazz = "/.*\\.BTRACE28/", method = "/.*/", location = @Location(value = Kind.RETURN))
-    public static void tracker(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
-        println(pcn);
-        println(pmn);
-        println("args empty");
-    }
+  @OnMethod(clazz = "/.*\\.BTRACE28/", method = "/.*/", location = @Location(value = Kind.RETURN))
+  public static void tracker(@ProbeClassName String pcn, @ProbeMethodName String pmn) {
+    println(pcn);
+    println(pmn);
+    println("args empty");
+  }
 }

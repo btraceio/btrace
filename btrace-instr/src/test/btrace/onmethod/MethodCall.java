@@ -25,28 +25,33 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.TargetInstance;
-import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class MethodCall {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"))
-    public static void args(@Self Object self, String a, long b,
-                            @TargetInstance Object calledSelf, @TargetMethodOrField(fqn=true) String calledMethod,
-                            @ProbeClassName String className, @ProbeMethodName String methodName) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "callTopLevel",
+      location = @Location(value = Kind.CALL, clazz = "/.*\\.OnMethodTest/", method = "callTarget"))
+  public static void args(
+      @Self Object self,
+      String a,
+      long b,
+      @TargetInstance Object calledSelf,
+      @TargetMethodOrField(fqn = true) String calledMethod,
+      @ProbeClassName String className,
+      @ProbeMethodName String methodName) {
+    println("args");
+  }
 }

@@ -25,21 +25,22 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class StaticArgsReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args$static", location=@Location(value=Kind.RETURN))
-    public static void args(String a, @Return long retVal, long b, String[] c, int[] d) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "args$static",
+      location = @Location(value = Kind.RETURN))
+  public static void args(String a, @Return long retVal, long b, String[] c, int[] d) {
+    println("args");
+  }
 }

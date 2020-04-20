@@ -25,28 +25,33 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.TargetInstance;
-import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
+import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class StaticMethodCall {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevelStatic",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), enableAt = @Level(">=1"))
-    public static void args(String a, long b,
-                            @TargetInstance Object calledSelf, @TargetMethodOrField(fqn=true) String calledMethod,
-                            @ProbeClassName String className, @ProbeMethodName String methodName) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "callTopLevelStatic",
+      location = @Location(value = Kind.CALL, clazz = "/.*\\.OnMethodTest/", method = "callTarget"),
+      enableAt = @Level(">=1"))
+  public static void args(
+      String a,
+      long b,
+      @TargetInstance Object calledSelf,
+      @TargetMethodOrField(fqn = true) String calledMethod,
+      @ProbeClassName String className,
+      @ProbeMethodName String methodName) {
+    println("args");
+  }
 }

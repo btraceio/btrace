@@ -30,28 +30,28 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class ExitCommand extends Command {
-    private int exitCode;
+  private int exitCode;
 
-    public ExitCommand(int exitCode) {
-        super(EXIT);
-        this.exitCode = exitCode;
-    }
+  public ExitCommand(int exitCode) {
+    super(EXIT);
+    this.exitCode = exitCode;
+  }
 
-    protected ExitCommand() {
-        this(0);
-    }
+  protected ExitCommand() {
+    this(0);
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeInt(exitCode);
-    }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeInt(exitCode);
+  }
 
-    @Override
-    protected void read(ObjectInput in) throws IOException {
-        exitCode = in.readInt();
-    }
+  @Override
+  protected void read(ObjectInput in) throws IOException {
+    exitCode = in.readInt();
+  }
 
-    public int getExitCode() {
-        return exitCode;
-    }
+  public int getExitCode() {
+    return exitCode;
+  }
 }

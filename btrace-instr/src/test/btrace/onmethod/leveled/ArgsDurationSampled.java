@@ -25,26 +25,35 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Duration;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
-import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.Duration;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Sampled;
+import org.openjdk.btrace.core.annotations.Self;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArgsDurationSampled {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), enableAt = @Level(">=1"))
-    @Sampled(kind = Sampled.Sampler.Const, mean = 20)
-    public static void args(@Self Object self, @Return long retVal, @Duration long dur, String a, long b, String[] c, int[] d) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "args",
+      location = @Location(value = Kind.RETURN),
+      enableAt = @Level(">=1"))
+  @Sampled(kind = Sampled.Sampler.Const, mean = 20)
+  public static void args(
+      @Self Object self,
+      @Return long retVal,
+      @Duration long dur,
+      String a,
+      long b,
+      String[] c,
+      int[] d) {
+    println("args");
+  }
 }

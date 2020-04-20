@@ -28,31 +28,32 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Aggregation function for computing the sum of values.
+ *
  * <p>
  *
  * @author Christian Glencross
  */
 class Sum implements AggregationValue {
 
-    AtomicLong value = new AtomicLong();
+  AtomicLong value = new AtomicLong();
 
-    @Override
-    public void clear() {
-        value.set(0);
-    }
+  @Override
+  public void clear() {
+    value.set(0);
+  }
 
-    @Override
-    public void add(long delta) {
-        value.addAndGet(delta);
-    }
+  @Override
+  public void add(long delta) {
+    value.addAndGet(delta);
+  }
 
-    @Override
-    public long getValue() {
-        return value.get();
-    }
+  @Override
+  public long getValue() {
+    return value.get();
+  }
 
-    @Override
-    public Object getData() {
-        return getValue();
-    }
+  @Override
+  public Object getData() {
+    return getValue();
+  }
 }

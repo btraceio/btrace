@@ -26,7 +26,6 @@ package org.openjdk.btrace;
 
 import java.io.*;
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.instr.BTraceProbe;
 import org.openjdk.btrace.instr.BTraceProbeFactory;
@@ -41,41 +40,42 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Fork(1)
 @BenchmarkMode(Mode.AverageTime)
 public class ProbeLoadingBenchmark {
-    private InputStream classStream;
-    private BTraceProbeFactory bpf;
+  private InputStream classStream;
+  private BTraceProbeFactory bpf;
 
-    @Setup(Level.Trial)
-    public void setup() throws Exception {
-        bpf = new BTraceProbeFactory(SharedSettings.GLOBAL);
+  @Setup(Level.Trial)
+  public void setup() throws Exception {
+    bpf = new BTraceProbeFactory(SharedSettings.GLOBAL);
+  }
+
+  @Setup(Level.Invocation)
+  public void setupRun() throws Exception {
+    classStream = ProbeLoadingBenchmark.class.getResourceAsStream("/scripts/TraceScript.class");
+  }
+
+  @TearDown(Level.Invocation)
+  public void tearDownRun() throws Exception {
+    classStream.close();
+  }
+
+  @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 2, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  public void testBTraceProbeNew(Blackhole bh) throws Exception {
+    BTraceProbe bp = bpf.createProbe(classStream);
+    if (bp == null) {
+      throw new NullPointerException();
     }
+    bh.consume(bp);
+  }
 
-    @Setup(Level.Invocation)
-    public void setupRun() throws Exception {
-        classStream = ProbeLoadingBenchmark.class.getResourceAsStream("/scripts/TraceScript.class");
-    }
+  public static void main(String[] args) throws Exception {
+    Options opt =
+        new OptionsBuilder()
+            .addProfiler("stack")
+            .include(".*" + ProbeLoadingBenchmark.class.getSimpleName() + ".*test.*")
+            .build();
 
-    @TearDown(Level.Invocation)
-    public void tearDownRun() throws Exception {
-        classStream.close();
-    }
-
-    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 2, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    public void testBTraceProbeNew(Blackhole bh) throws Exception {
-        BTraceProbe bp = bpf.createProbe(classStream);
-        if (bp == null) {
-            throw new NullPointerException();
-        }
-        bh.consume(bp);
-    }
-
-    public static void main(String[] args) throws Exception {
-        Options opt = new OptionsBuilder()
-                    .addProfiler("stack")
-                    .include(".*" + ProbeLoadingBenchmark.class.getSimpleName() + ".*test.*")
-                    .build();
-
-            new Runner(opt).run();
-    }
+    new Runner(opt).run();
+  }
 }

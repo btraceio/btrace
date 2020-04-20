@@ -26,20 +26,15 @@
 package org.openjdk.btrace.core.annotations;
 
 /**
- * This enum is specified in the Location
- * annotation to specify whether a probe point
- * is after or before specific point of interest.
+ * This enum is specified in the Location annotation to specify whether a probe point is after or
+ * before specific point of interest.
  *
  * @author A. Sundararajan
  */
 public enum Where {
-    /**
-     * after the location of interest
-     */
-    AFTER,
+  /** after the location of interest */
+  AFTER,
 
-    /**
-     * before the location of interest
-     */
-    BEFORE
+  /** before the location of interest */
+  BEFORE
 }

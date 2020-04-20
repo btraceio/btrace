@@ -31,18 +31,18 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * BTrace fields with this annotation are exposed as attributes of
- * the dynamic JMX bean that wraps the BTrace class.
+ * BTrace fields with this annotation are exposed as attributes of the dynamic JMX bean that wraps
+ * the BTrace class.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface Property {
-    // by default, the name of the attribute is same as the name
-    // of the field of the BTrace class.
-    String name() default "";
+  // by default, the name of the attribute is same as the name
+  // of the field of the BTrace class.
+  String name() default "";
 
-    // description of this attribute
-    String description() default "";
+  // description of this attribute
+  String description() default "";
 }

@@ -25,19 +25,18 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArgsNoSelf {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    public static void argsNoSelf(@ProbeMethodName(fqn = true) String pmn, String a, long b, String[] c, int[] d) {
-        println("args no self");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args")
+  public static void argsNoSelf(
+      @ProbeMethodName(fqn = true) String pmn, String a, long b, String[] c, int[] d) {
+    println("args no self");
+  }
 }

@@ -25,24 +25,25 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 import org.openjdk.btrace.core.annotations.TargetInstance;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class SyncEntry {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="sync",
-              location=@Location(value=Kind.SYNC_ENTRY))
-    public static void args(@Self Object self, @ProbeMethodName String pmn, @TargetInstance Object lock) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "sync",
+      location = @Location(value = Kind.SYNC_ENTRY))
+  public static void args(
+      @Self Object self, @ProbeMethodName String pmn, @TargetInstance Object lock) {
+    println("args");
+  }
 }

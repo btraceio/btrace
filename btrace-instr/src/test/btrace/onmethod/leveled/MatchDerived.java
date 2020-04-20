@@ -25,22 +25,20 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import java.util.Map;
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import java.util.Map;
 import resources.AbstractClass;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class MatchDerived {
-    @OnMethod(clazz="+resources.AbstractClass", method="/do(Get|Set)/", enableAt = @Level(">=1"))
-    public static void args(@Self AbstractClass self, String a, Map b) {
-        println("args");
-    }
+  @OnMethod(clazz = "+resources.AbstractClass", method = "/do(Get|Set)/", enableAt = @Level(">=1"))
+  public static void args(@Self AbstractClass self, String a, Map b) {
+    println("args");
+  }
 }

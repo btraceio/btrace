@@ -1,4 +1,3 @@
 package org.opensolaris.os.dtrace;
 
-public class ConsumerException extends Exception {
-}
+public class ConsumerException extends Exception {}

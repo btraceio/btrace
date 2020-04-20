@@ -25,18 +25,20 @@
 
 package traces.onmethod.leveled;
 
-import org.openjdk.btrace.core.annotations.*;
 import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+import org.openjdk.btrace.core.annotations.*;
+
+/** @author Jaroslav Bachorik */
 @BTrace
 public class SyncExit {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="sync",
-              location=@Location(value=Kind.SYNC_EXIT), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeClassName String pcn, @TargetInstance Object lock) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "sync",
+      location = @Location(value = Kind.SYNC_EXIT),
+      enableAt = @Level(">=1"))
+  public static void args(
+      @Self Object self, @ProbeClassName String pcn, @TargetInstance Object lock) {
+    println("args");
+  }
 }

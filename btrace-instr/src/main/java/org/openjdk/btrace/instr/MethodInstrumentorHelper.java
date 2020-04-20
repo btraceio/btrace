@@ -4,19 +4,19 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 
 public interface MethodInstrumentorHelper {
-    void insertFrameReplaceStack(Label l, Type... stack);
+  void insertFrameReplaceStack(Label l, Type... stack);
 
-    void insertFrameAppendStack(Label l, Type... stack);
+  void insertFrameAppendStack(Label l, Type... stack);
 
-    void insertFrameSameStack(Label l);
+  void insertFrameSameStack(Label l);
 
-    void addTryCatchHandler(Label start, Label handler);
+  void addTryCatchHandler(Label start, Label handler);
 
-    int newVar(Type t);
+  int newVar(Type t);
 
-    int storeAsNew();
+  int storeAsNew();
 
-    interface Accessor {
-        MethodInstrumentorHelper methodHelper();
-    }
+  interface Accessor {
+    MethodInstrumentorHelper methodHelper();
+  }
 }

@@ -25,6 +25,8 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
@@ -32,17 +34,15 @@ import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class NewArrayIntAfter {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="newArray",
-              location=@Location(value=Kind.NEWARRAY, clazz="int", where=Where.AFTER))
-    public static void args(@Self Object self, @Return int[] retVal) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "newArray",
+      location = @Location(value = Kind.NEWARRAY, clazz = "int", where = Where.AFTER))
+  public static void args(@Self Object self, @Return int[] retVal) {
+    println("args");
+  }
 }

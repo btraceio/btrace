@@ -25,26 +25,31 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.annotations.TargetInstance;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class Throw {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="exception",
-              location=@Location(value=Kind.THROW), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeClassName String pcn, @ProbeMethodName String pmn, @TargetInstance Throwable e) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "exception",
+      location = @Location(value = Kind.THROW),
+      enableAt = @Level(">=1"))
+  public static void args(
+      @Self Object self,
+      @ProbeClassName String pcn,
+      @ProbeMethodName String pmn,
+      @TargetInstance Throwable e) {
+    println("args");
+  }
 }

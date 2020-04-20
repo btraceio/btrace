@@ -24,9 +24,5 @@
  */
 package org.openjdk.btrace.services.spi;
 
-/**
- * @author Jaroslav Bachorik
- */
-public abstract class SimpleService implements BTraceService {
-
-}
+/** @author Jaroslav Bachorik */
+public abstract class SimpleService implements BTraceService {}

@@ -22,18 +22,20 @@
 
 package traces.onmethod.leveled;
 
-import org.openjdk.btrace.core.annotations.*;
 import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+import org.openjdk.btrace.core.annotations.*;
+
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ErrorCaught {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="caught",
-              location=@Location(value=Kind.ERROR), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeMethodName String pmn, @TargetInstance Throwable cause) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "caught",
+      location = @Location(value = Kind.ERROR),
+      enableAt = @Level(">=1"))
+  public static void args(
+      @Self Object self, @ProbeMethodName String pmn, @TargetInstance Throwable cause) {
+    println("args");
+  }
 }

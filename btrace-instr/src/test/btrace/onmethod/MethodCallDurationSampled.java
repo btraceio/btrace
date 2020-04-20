@@ -25,26 +25,31 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Duration;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
-import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Duration;
 import org.openjdk.btrace.core.annotations.Sampled;
+import org.openjdk.btrace.core.annotations.Where;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class MethodCallDurationSampled {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER))
-    @Sampled(kind = Sampled.Sampler.Const)
-    public static void args(@Return long retVal, @Duration long dur, String a, long b) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "callTopLevel",
+      location =
+          @Location(
+              value = Kind.CALL,
+              clazz = "/.*\\.OnMethodTest/",
+              method = "callTarget",
+              where = Where.AFTER))
+  @Sampled(kind = Sampled.Sampler.Const)
+  public static void args(@Return long retVal, @Duration long dur, String a, long b) {
+    println("args");
+  }
 }

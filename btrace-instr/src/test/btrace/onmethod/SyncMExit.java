@@ -22,24 +22,25 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 import org.openjdk.btrace.core.annotations.TargetInstance;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class SyncMExit {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="syncM",
-              location=@Location(value=Kind.SYNC_EXIT))
-    public static void args(@Self Object self, @ProbeClassName String pcn, @TargetInstance Object lock) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "syncM",
+      location = @Location(value = Kind.SYNC_EXIT))
+  public static void args(
+      @Self Object self, @ProbeClassName String pcn, @TargetInstance Object lock) {
+    println("args");
+  }
 }

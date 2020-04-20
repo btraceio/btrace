@@ -24,24 +24,27 @@
  */
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Return;
+import org.openjdk.btrace.core.annotations.Self;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace(unsafe = true)
 public class ArgsReturnAugmented1 {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN), enableAt = @Level(">=1"))
-    public static long args(@Self Object self, @Return long ret, String a, long b, String[] c, int[] d) {
-        println("args");
-        return ret + 1;
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "args",
+      location = @Location(value = Kind.RETURN),
+      enableAt = @Level(">=1"))
+  public static long args(
+      @Self Object self, @Return long ret, String a, long b, String[] c, int[] d) {
+    println("args");
+    return ret + 1;
+  }
 }

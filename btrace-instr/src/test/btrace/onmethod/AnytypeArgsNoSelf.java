@@ -25,19 +25,17 @@
 
 package traces.onmethod;
 
-import org.openjdk.btrace.core.types.AnyType;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnMethod;
 import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.OnMethod;
+import org.openjdk.btrace.core.types.AnyType;
+
+/** @author Jaroslav Bachorik */
 @BTrace
 public class AnytypeArgsNoSelf {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    public static void argsNoSelf(AnyType[] args) {
-        println("args no self");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args")
+  public static void argsNoSelf(AnyType[] args) {
+    println("args no self");
+  }
 }

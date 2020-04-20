@@ -28,38 +28,43 @@ package org.openjdk.btrace.instr;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
-
 /**
- * This visitor helps in inserting code whenever a source
- * line is reached. The code to insert on line number may
- * be decided by  derived class. By default, this class
- * inserts code to print the line.
+ * This visitor helps in inserting code whenever a source line is reached. The code to insert on
+ * line number may be decided by derived class. By default, this class inserts code to print the
+ * line.
  *
  * @author A. Sundararajan
  */
 public class LineNumberInstrumentor extends MethodInstrumentor {
-    private int lastLine;
+  private int lastLine;
 
-    public LineNumberInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
-                                  String parentClz, String superClz, int access, String name, String desc) {
-        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
-    }
+  public LineNumberInstrumentor(
+      ClassLoader cl,
+      MethodVisitor mv,
+      MethodInstrumentorHelper mHelper,
+      String parentClz,
+      String superClz,
+      int access,
+      String name,
+      String desc) {
+    super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
+  }
 
-    @Override
-    public void visitLineNumber(int line, Label start) {
-        if (lastLine != 0) {
-            onAfterLine(line - 1);
-        }
-        onBeforeLine(line);
-        lastLine = line;
-        super.visitLineNumber(line, start);
+  @Override
+  public void visitLineNumber(int line, Label start) {
+    if (lastLine != 0) {
+      onAfterLine(line - 1);
     }
+    onBeforeLine(line);
+    lastLine = line;
+    super.visitLineNumber(line, start);
+  }
 
-    protected void onBeforeLine(int line) {
-        asm.println("before line " + line);
-    }
+  protected void onBeforeLine(int line) {
+    asm.println("before line " + line);
+  }
 
-    protected void onAfterLine(int line) {
-        asm.println("after line " + line);
-    }
+  protected void onAfterLine(int line) {
+    asm.println("after line " + line);
+  }
 }

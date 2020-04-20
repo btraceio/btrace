@@ -32,45 +32,44 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This command is used to remotely set custom settings
- * (trusted mode, debug, etc.)
+ * This command is used to remotely set custom settings (trusted mode, debug, etc.)
  *
  * @author Jaroslav Bachorik
  */
 public class SetSettingsCommand extends Command {
-    private final Map<String, Object> params;
+  private final Map<String, Object> params;
 
-    public SetSettingsCommand(Map<String, ?> params) {
-        super(SET_PARAMS);
-        this.params = params != null ? new HashMap<String, Object>(params) : new HashMap<String, Object>();
+  public SetSettingsCommand(Map<String, ?> params) {
+    super(SET_PARAMS);
+    this.params =
+        params != null ? new HashMap<String, Object>(params) : new HashMap<String, Object>();
+  }
+
+  protected SetSettingsCommand() {
+    this(null);
+  }
+
+  public Map<String, Object> getParams() {
+    return params;
+  }
+
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeInt(params.size());
+    for (Map.Entry<String, ?> e : params.entrySet()) {
+      out.writeUTF(e.getKey());
+      out.writeObject(e.getValue());
     }
+  }
 
-    protected SetSettingsCommand() {
-        this(null);
+  @Override
+  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
+    int size = in.readInt();
+    for (int i = 0; i < size; i++) {
+      String k = in.readUTF();
+      Object v = in.readObject();
+
+      params.put(k, v);
     }
-
-    public Map<String, Object> getParams() {
-        return params;
-    }
-
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeInt(params.size());
-        for (Map.Entry<String, ?> e : params.entrySet()) {
-            out.writeUTF(e.getKey());
-            out.writeObject(e.getValue());
-        }
-    }
-
-    @Override
-    protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
-        int size = in.readInt();
-        for (int i = 0; i < size; i++) {
-            String k = in.readUTF();
-            Object v = in.readObject();
-
-            params.put(k, v);
-        }
-    }
-
+  }
 }

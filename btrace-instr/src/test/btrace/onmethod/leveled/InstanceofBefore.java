@@ -25,27 +25,28 @@
 
 package traces.onmethod.leveled;
 
-import org.openjdk.btrace.core.types.AnyType;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.types.AnyType;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class InstanceofBefore {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="casts",
-              location=@Location(value=Kind.INSTANCEOF), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeClassName String pcn,
-                            String type, @TargetInstance AnyType target) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "casts",
+      location = @Location(value = Kind.INSTANCEOF),
+      enableAt = @Level(">=1"))
+  public static void args(
+      @Self Object self, @ProbeClassName String pcn, String type, @TargetInstance AnyType target) {
+    println("args");
+  }
 }

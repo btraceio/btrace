@@ -25,7 +25,6 @@
 package org.openjdk.btrace;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.btrace.runtime.profiling.MethodInvocationProfiler;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -45,6 +44,7 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 /**
  * Basic benchmark for the performance of {@linkplain MethodInvocationProfiler}
+ *
  * @author Jaroslav Bachorik
  */
 @State(Scope.Thread)
@@ -52,85 +52,87 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 @Fork(1)
 @BenchmarkMode(Mode.AverageTime)
 public class ProfilerBenchmarks {
-    private MethodInvocationProfiler mip1;
-    private MethodInvocationProfiler mip2;
+  private MethodInvocationProfiler mip1;
+  private MethodInvocationProfiler mip2;
 
-    @Setup
-    public void setup() {
-        mip1 = new MethodInvocationProfiler(1);
-        mip2 = new MethodInvocationProfiler(500);
-    }
+  @Setup
+  public void setup() {
+    mip1 = new MethodInvocationProfiler(1);
+    mip2 = new MethodInvocationProfiler(500);
+  }
 
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(1)
-    public void testOneMethodSingleThread() {
-        mip1.recordEntry("a");
-        mip1.recordExit("a", 1);
-    }
+  @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  @Threads(1)
+  public void testOneMethodSingleThread() {
+    mip1.recordEntry("a");
+    mip1.recordExit("a", 1);
+  }
 
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(1)
-    public void testTwoMethods01Thread() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
+  @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  @Threads(1)
+  public void testTwoMethods01Thread() {
+    mip2.recordEntry("a");
+    mip2.recordEntry("b");
+    mip2.recordExit("b", 10);
+    mip2.recordExit("a", 1);
+  }
 
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(2)
-    public void testTwoMethods02Threads() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
+  @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  @Threads(2)
+  public void testTwoMethods02Threads() {
+    mip2.recordEntry("a");
+    mip2.recordEntry("b");
+    mip2.recordExit("b", 10);
+    mip2.recordExit("a", 1);
+  }
 
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(4)
-    public void testTwoMethods04Threads() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
+  @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  @Threads(4)
+  public void testTwoMethods04Threads() {
+    mip2.recordEntry("a");
+    mip2.recordEntry("b");
+    mip2.recordExit("b", 10);
+    mip2.recordExit("a", 1);
+  }
 
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(8)
-    public void testTwoMethods08Threads() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(16)
-    public void testTwoMethods16Threads() {
-        mip2.recordEntry("a");
-        mip2.recordEntry("b");
-        mip2.recordExit("b", 10);
-        mip2.recordExit("a", 1);
-    }
+  @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  @Threads(8)
+  public void testTwoMethods08Threads() {
+    mip2.recordEntry("a");
+    mip2.recordEntry("b");
+    mip2.recordExit("b", 10);
+    mip2.recordExit("a", 1);
+  }
 
-    public static void main(String[] args) throws Exception {
-        Options opt = new OptionsBuilder()
-                .addProfiler("stack")
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + ProfilerBenchmarks.class.getSimpleName() + ".*test.*")
-                .build();
+  @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  @Threads(16)
+  public void testTwoMethods16Threads() {
+    mip2.recordEntry("a");
+    mip2.recordEntry("b");
+    mip2.recordExit("b", 10);
+    mip2.recordExit("a", 1);
+  }
 
-        new Runner(opt).run();
-    }
+  public static void main(String[] args) throws Exception {
+    Options opt =
+        new OptionsBuilder()
+            .addProfiler("stack")
+            .verbosity(VerboseMode.NORMAL)
+            .include(".*" + ProfilerBenchmarks.class.getSimpleName() + ".*test.*")
+            .build();
+
+    new Runner(opt).run();
+  }
 }

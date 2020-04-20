@@ -25,7 +25,6 @@
 package org.openjdk.btrace;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.btrace.statsd.Statsd;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -44,6 +43,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 /**
  * Basic benchmark for the performance of {@linkplain Statsd}
+ *
  * @author Jaroslav Bachorik
  */
 @State(Scope.Thread)
@@ -51,27 +51,28 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Fork(1)
 @BenchmarkMode(Mode.AverageTime)
 public class StatsdBenchmarks {
-    private Statsd c;
+  private Statsd c;
 
-    @Setup
-    public void setup() {
-        c = Statsd.getInstance();
-    }
+  @Setup
+  public void setup() {
+    c = Statsd.getInstance();
+  }
 
-    @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    @Threads(1)
-    public void testGauge_1() {
-        c.gauge("g1", 10);
-    }
+  @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  @Threads(1)
+  public void testGauge_1() {
+    c.gauge("g1", 10);
+  }
 
-    public static void main(String[] args) throws Exception {
-        Options opt = new OptionsBuilder()
-                .addProfiler("stack")
-                .include(".*" + StatsdBenchmarks.class.getSimpleName() + ".*test.*")
-                .build();
+  public static void main(String[] args) throws Exception {
+    Options opt =
+        new OptionsBuilder()
+            .addProfiler("stack")
+            .include(".*" + StatsdBenchmarks.class.getSimpleName() + ".*test.*")
+            .build();
 
-        new Runner(opt).run();
-    }
+    new Runner(opt).run();
+  }
 }

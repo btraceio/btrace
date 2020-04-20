@@ -31,35 +31,34 @@ import java.io.ObjectOutput;
 import java.io.PrintWriter;
 
 public class ErrorCommand extends Command implements PrintableCommand {
-    private Throwable cause;
+  private Throwable cause;
 
-    public ErrorCommand(Throwable cause) {
-        super(ERROR);
-        this.cause = cause;
-    }
+  public ErrorCommand(Throwable cause) {
+    super(ERROR);
+    this.cause = cause;
+  }
 
-    protected ErrorCommand() {
-        this(null);
-    }
+  protected ErrorCommand() {
+    this(null);
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeObject(cause);
-    }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeObject(cause);
+  }
 
-    @Override
-    protected void read(ObjectInput in)
-            throws IOException, ClassNotFoundException {
-        cause = (Throwable) in.readObject();
-    }
+  @Override
+  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
+    cause = (Throwable) in.readObject();
+  }
 
-    public Throwable getCause() {
-        return cause;
-    }
+  public Throwable getCause() {
+    return cause;
+  }
 
-    @Override
-    public void print(PrintWriter out) {
-        out.append("! ERROR\n");
-        getCause().printStackTrace(out);
-    }
+  @Override
+  public void print(PrintWriter out) {
+    out.append("! ERROR\n");
+    getCause().printStackTrace(out);
+  }
 }

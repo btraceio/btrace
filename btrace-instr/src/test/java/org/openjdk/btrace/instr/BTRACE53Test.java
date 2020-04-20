@@ -27,25 +27,24 @@ package org.openjdk.btrace.instr;
 
 import org.junit.Test;
 
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 public class BTRACE53Test extends InstrumentorTestBase {
-    @Test
-    public void bytecodeValidation() throws Exception {
-        originalBC = loadTargetClass("DerivedClass");
-        transform("issues/BTRACE53");
-        checkTransformation("LCONST_0\n" +
-                "LSTORE 1\n" +
-                "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
-                "LSTORE 3\n" +
-                "INVOKESTATIC java/lang/System.nanoTime ()J\n" +
-                "LLOAD 3\n" +
-                "LSUB\n" +
-                "LSTORE 1\n" +
-                "LLOAD 1\n" +
-                "INVOKESTATIC resources/DerivedClass.$btrace$org$openjdk$btrace$runtime$aux$BTRACE53$onInit (J)V\n" +
-                "MAXSTACK = 4\n" +
-                "MAXLOCALS = 5");
-    }
+  @Test
+  public void bytecodeValidation() throws Exception {
+    originalBC = loadTargetClass("DerivedClass");
+    transform("issues/BTRACE53");
+    checkTransformation(
+        "LCONST_0\n"
+            + "LSTORE 1\n"
+            + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+            + "LSTORE 3\n"
+            + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
+            + "LLOAD 3\n"
+            + "LSUB\n"
+            + "LSTORE 1\n"
+            + "LLOAD 1\n"
+            + "INVOKESTATIC resources/DerivedClass.$btrace$org$openjdk$btrace$runtime$aux$BTRACE53$onInit (J)V\n"
+            + "MAXSTACK = 4\n"
+            + "MAXLOCALS = 5");
+  }
 }

@@ -30,72 +30,70 @@ import java.io.ObjectOutput;
 
 public class WireIO {
 
-    private WireIO() {
-    }
+  private WireIO() {}
 
-    public static Command read(ObjectInput in) throws IOException {
-        byte type = in.readByte();
-        Command cmd;
-        switch (type) {
-            case Command.ERROR:
-                cmd = new ErrorCommand();
-                break;
-            case Command.EVENT:
-                cmd = new EventCommand();
-                break;
-            case Command.EXIT:
-                cmd = new ExitCommand();
-                break;
-            case Command.INSTRUMENT:
-                cmd = new InstrumentCommand();
-                break;
-            case Command.MESSAGE:
-                cmd = new MessageCommand();
-                break;
-            case Command.RENAME:
-                cmd = new RenameCommand();
-                break;
-            case Command.SUCCESS:
-                cmd = new OkayCommand();
-                break;
-            case Command.NUMBER_MAP:
-                cmd = new NumberMapDataCommand();
-                break;
-            case Command.STRING_MAP:
-                cmd = new StringMapDataCommand();
-                break;
-            case Command.NUMBER:
-                cmd = new NumberDataCommand();
-                break;
-            case Command.GRID_DATA:
-                cmd = new GridDataCommand();
-                break;
-            case Command.RETRANSFORMATION_START:
-                cmd = new RetransformationStartNotification();
-                break;
-            case Command.RETRANSFORM_CLASS:
-                cmd = new RetransformClassNotification();
-                break;
-            case Command.SET_PARAMS:
-                cmd = new SetSettingsCommand();
-                break;
-            default:
-                throw new RuntimeException("invalid command: " + type);
-        }
-        try {
-            cmd.read(in);
-        } catch (ClassNotFoundException cnfe) {
-            throw new IOException(cnfe);
-        }
-        return cmd;
+  public static Command read(ObjectInput in) throws IOException {
+    byte type = in.readByte();
+    Command cmd;
+    switch (type) {
+      case Command.ERROR:
+        cmd = new ErrorCommand();
+        break;
+      case Command.EVENT:
+        cmd = new EventCommand();
+        break;
+      case Command.EXIT:
+        cmd = new ExitCommand();
+        break;
+      case Command.INSTRUMENT:
+        cmd = new InstrumentCommand();
+        break;
+      case Command.MESSAGE:
+        cmd = new MessageCommand();
+        break;
+      case Command.RENAME:
+        cmd = new RenameCommand();
+        break;
+      case Command.SUCCESS:
+        cmd = new OkayCommand();
+        break;
+      case Command.NUMBER_MAP:
+        cmd = new NumberMapDataCommand();
+        break;
+      case Command.STRING_MAP:
+        cmd = new StringMapDataCommand();
+        break;
+      case Command.NUMBER:
+        cmd = new NumberDataCommand();
+        break;
+      case Command.GRID_DATA:
+        cmd = new GridDataCommand();
+        break;
+      case Command.RETRANSFORMATION_START:
+        cmd = new RetransformationStartNotification();
+        break;
+      case Command.RETRANSFORM_CLASS:
+        cmd = new RetransformClassNotification();
+        break;
+      case Command.SET_PARAMS:
+        cmd = new SetSettingsCommand();
+        break;
+      default:
+        throw new RuntimeException("invalid command: " + type);
     }
+    try {
+      cmd.read(in);
+    } catch (ClassNotFoundException cnfe) {
+      throw new IOException(cnfe);
+    }
+    return cmd;
+  }
 
-    public static void write(ObjectOutput out, Command cmd)
-            throws IOException {
-        out.writeByte(cmd.getType());
-        cmd.write(out);
-        if (cmd.isUrgent()) {
-            out.flush();
-        }
+  public static void write(ObjectOutput out, Command cmd) throws IOException {
+    out.writeByte(cmd.getType());
+    cmd.write(out);
+    if (cmd.isUrgent()) {
+      out.flush();
     }
+  }
 }

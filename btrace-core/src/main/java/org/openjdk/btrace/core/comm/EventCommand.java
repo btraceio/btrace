@@ -30,29 +30,28 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class EventCommand extends Command {
-    private String event;
+  private String event;
 
-    public EventCommand(String event) {
-        super(EVENT);
-        this.event = event;
-    }
+  public EventCommand(String event) {
+    super(EVENT);
+    this.event = event;
+  }
 
-    protected EventCommand() {
-        this(null);
-    }
+  protected EventCommand() {
+    this(null);
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeUTF(event);
-    }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeUTF(event);
+  }
 
-    @Override
-    protected void read(ObjectInput in)
-            throws ClassNotFoundException, IOException {
-        event = in.readUTF();
-    }
+  @Override
+  protected void read(ObjectInput in) throws ClassNotFoundException, IOException {
+    event = in.readUTF();
+  }
 
-    public String getEvent() {
-        return event;
-    }
+  public String getEvent() {
+    return event;
+  }
 }

@@ -1,7 +1,7 @@
 package org.opensolaris.os.dtrace;
 
 public class ConsumerEvent {
-    public Consumer getSource() {
-        return null;
-    }
+  public Consumer getSource() {
+    return null;
+  }
 }

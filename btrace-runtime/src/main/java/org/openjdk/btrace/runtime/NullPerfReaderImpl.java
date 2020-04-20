@@ -26,24 +26,27 @@
 package org.openjdk.btrace.runtime;
 
 /**
- * Dummy perf reader that throws UnsupportedOperationException always.
- * We use this when we don't have access to jvmstat classes.
+ * Dummy perf reader that throws UnsupportedOperationException always. We use this when we don't
+ * have access to jvmstat classes.
  *
  * @author A. Sundararajan
  */
 final class NullPerfReaderImpl implements PerfReader {
-    @Override
-    public int perfInt(String name) {
-        throw new UnsupportedOperationException("jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
-    }
+  @Override
+  public int perfInt(String name) {
+    throw new UnsupportedOperationException(
+        "jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
+  }
 
-    @Override
-    public long perfLong(String name) {
-        throw new UnsupportedOperationException("jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
-    }
+  @Override
+  public long perfLong(String name) {
+    throw new UnsupportedOperationException(
+        "jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
+  }
 
-    @Override
-    public String perfString(String name) {
-        throw new UnsupportedOperationException("jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
-    }
+  @Override
+  public String perfString(String name) {
+    throw new UnsupportedOperationException(
+        "jvmstat not supported, do you have tools.jar (or classes.jar) in CLASSPATH?");
+  }
 }

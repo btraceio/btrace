@@ -35,39 +35,38 @@ import java.util.Set;
  * @author Jaroslav Bachorik
  */
 public abstract class BaseTemplateExpander implements TemplateExpander {
-    private final Set<Template> supportedTemplates = new HashSet<>();
+  private final Set<Template> supportedTemplates = new HashSet<>();
 
-    private Template lastTemplate = null;
+  private Template lastTemplate = null;
 
-    public BaseTemplateExpander(Template... templates) {
-        supportedTemplates.addAll(Arrays.asList(templates));
-        BTraceTemplates.registerTemplates(templates);
+  public BaseTemplateExpander(Template... templates) {
+    supportedTemplates.addAll(Arrays.asList(templates));
+    BTraceTemplates.registerTemplates(templates);
+  }
+
+  @Override
+  public final Result expand(TemplateExpanderVisitor v, Template t) {
+    if (lastTemplate == null) {
+      if (t == null || !supportedTemplates.contains(t)) {
+        return Result.IGNORED;
+      }
+
+      recordTemplate(t);
+      lastTemplate = t;
+      return Result.CLAIMED;
+    } else {
+      if (lastTemplate.equals(t)) {
+        recordTemplate(t);
+        return Result.CLAIMED;
+      } else {
+        Result r = expandTemplate(v, lastTemplate);
+        lastTemplate = t;
+        return t != null ? r : Result.IGNORED;
+      }
     }
+  }
 
+  protected abstract void recordTemplate(Template t);
 
-    @Override
-    public final Result expand(TemplateExpanderVisitor v, Template t) {
-        if (lastTemplate == null) {
-            if (t == null || !supportedTemplates.contains(t)) {
-                return Result.IGNORED;
-            }
-
-            recordTemplate(t);
-            lastTemplate = t;
-            return Result.CLAIMED;
-        } else {
-            if (lastTemplate.equals(t)) {
-                recordTemplate(t);
-                return Result.CLAIMED;
-            } else {
-                Result r = expandTemplate(v, lastTemplate);
-                lastTemplate = t;
-                return t != null ? r : Result.IGNORED;
-            }
-        }
-    }
-
-    protected abstract void recordTemplate(Template t);
-
-    protected abstract Result expandTemplate(TemplateExpanderVisitor v, Template t);
+  protected abstract Result expandTemplate(TemplateExpanderVisitor v, Template t);
 }

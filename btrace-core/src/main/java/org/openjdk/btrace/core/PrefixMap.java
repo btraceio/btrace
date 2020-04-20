@@ -24,63 +24,60 @@ package org.openjdk.btrace.core;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Simplified trie-based prefix map
- */
+/** Simplified trie-based prefix map */
 public class PrefixMap {
-    private final Node root = new Node();
+  private final Node root = new Node();
 
-    public void add(CharSequence val) {
-        Node n = root;
-        for (int i = 0; i < val.length(); i++) {
-            char ch = val.charAt(i);
-            Node child = n.getReferencedNode(ch);
-            if (child == null) {
-                child = new Node();
-                n.addReferencedNode(ch, child);
-            }
-            n = child;
-        }
-        n.setValue(val);
+  public void add(CharSequence val) {
+    Node n = root;
+    for (int i = 0; i < val.length(); i++) {
+      char ch = val.charAt(i);
+      Node child = n.getReferencedNode(ch);
+      if (child == null) {
+        child = new Node();
+        n.addReferencedNode(ch, child);
+      }
+      n = child;
     }
+    n.setValue(val);
+  }
 
-    public boolean contains(CharSequence val) {
-        Node n = root;
-        for (int i = 0; i < val.length(); i++) {
-            char ch = val.charAt(i);
-            Node child = n.getReferencedNode(ch);
-            if (child == null) {
-                return false;
-            }
-            if (child.value != null) {
-                return true;
-            }
-            n = child;
-        }
+  public boolean contains(CharSequence val) {
+    Node n = root;
+    for (int i = 0; i < val.length(); i++) {
+      char ch = val.charAt(i);
+      Node child = n.getReferencedNode(ch);
+      if (child == null) {
         return false;
+      }
+      if (child.value != null) {
+        return true;
+      }
+      n = child;
+    }
+    return false;
+  }
+
+  private static final class Node {
+    private final Map<Character, Node> refs = new HashMap<>();
+    private CharSequence value;
+
+    public Node() {
+      value = null;
     }
 
-    private static final class Node {
-        private final Map<Character, Node> refs = new HashMap<>();
-        private CharSequence value;
-
-        public Node() {
-            value = null;
-        }
-
-        public Node getReferencedNode(char ch) {
-            return refs.get(ch);
-        }
-
-        public void addReferencedNode(char ch, Node n) {
-            if (!refs.containsKey(ch)) {
-                refs.put(ch, n);
-            }
-        }
-
-        public void setValue(CharSequence val) {
-            value = val;
-        }
-
+    public Node getReferencedNode(char ch) {
+      return refs.get(ch);
     }
+
+    public void addReferencedNode(char ch, Node n) {
+      if (!refs.containsKey(ch)) {
+        refs.put(ch, n);
+      }
+    }
+
+    public void setValue(CharSequence val) {
+      value = val;
+    }
+  }
 }

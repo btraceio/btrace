@@ -30,20 +30,23 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 
 public final class Messages {
-    private static final ResourceBundle messages;
+  private static final ResourceBundle messages;
 
-    static {
-        messages = ResourceBundle.getBundle("org.openjdk.btrace.core.messages", Locale.getDefault(), ClassLoader.getSystemClassLoader());
-    }
+  static {
+    messages =
+        ResourceBundle.getBundle(
+            "org.openjdk.btrace.core.messages",
+            Locale.getDefault(),
+            ClassLoader.getSystemClassLoader());
+  }
 
-    private Messages() {
-    }
+  private Messages() {}
 
-    public static String get(String key) {
-        return messages.getString(key);
-    }
+  public static String get(String key) {
+    return messages.getString(key);
+  }
 
-    public static String format(String key, Object... args) {
-        return MessageFormat.format(get(key), args);
-    }
+  public static String format(String key, Object... args) {
+    return MessageFormat.format(get(key), args);
+  }
 }

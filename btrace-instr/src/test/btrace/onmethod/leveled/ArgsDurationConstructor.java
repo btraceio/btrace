@@ -25,23 +25,25 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Duration;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.Duration;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArgsDurationConstructor {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="<init>", location=@Location(value=Kind.RETURN), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @Duration long dur, String a) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "<init>",
+      location = @Location(value = Kind.RETURN),
+      enableAt = @Level(">=1"))
+  public static void args(@Self Object self, @Duration long dur, String a) {
+    println("args");
+  }
 }

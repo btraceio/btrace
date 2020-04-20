@@ -25,27 +25,25 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 import org.openjdk.btrace.core.annotations.Sampled;
+import org.openjdk.btrace.core.annotations.Self;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class Args2Sampled {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    @Sampled(kind = Sampled.Sampler.Const)
-    public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
-        println("args");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args")
+  @Sampled(kind = Sampled.Sampler.Const)
+  public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
+    println("args");
+  }
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    @Sampled(kind = Sampled.Sampler.Const)
-    public static void args2(@Self Object self, String a, long b, String[] c, int[] d) {
-        println("args");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args")
+  @Sampled(kind = Sampled.Sampler.Const)
+  public static void args2(@Self Object self, String a, long b, String[] c, int[] d) {
+    println("args");
+  }
 }

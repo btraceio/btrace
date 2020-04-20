@@ -22,7 +22,6 @@
 package org.openjdk.btrace;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
@@ -37,40 +36,41 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Fork(1)
 @BenchmarkMode(Mode.AverageTime)
 public class OnMethodTemplateBenchmark {
-    private ArgsMap argsMap;
+  private ArgsMap argsMap;
 
-    @Setup
-    public void setup() {
-        argsMap = new ArgsMap(new String[]{"arg1=val1"}, new DebugSupport(SharedSettings.GLOBAL));
-    }
+  @Setup
+  public void setup() {
+    argsMap = new ArgsMap(new String[] {"arg1=val1"}, new DebugSupport(SharedSettings.GLOBAL));
+  }
 
-    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    public void testEmptyTemplate(Blackhole bh) {
-        bh.consume(argsMap.template(""));
-    }
+  @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  public void testEmptyTemplate(Blackhole bh) {
+    bh.consume(argsMap.template(""));
+  }
 
-    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    public void testMatchTemplate(Blackhole bh) {
-        bh.consume(argsMap.template("this-is-${arg1}"));
-    }
+  @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  public void testMatchTemplate(Blackhole bh) {
+    bh.consume(argsMap.template("this-is-${arg1}"));
+  }
 
-    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    public void testNoMatchTemplate(Blackhole bh) {
-        bh.consume(argsMap.template("this-is-${arg2}"));
-    }
+  @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  public void testNoMatchTemplate(Blackhole bh) {
+    bh.consume(argsMap.template("this-is-${arg2}"));
+  }
 
-    public static void main(String[] args) throws Exception {
-        Options opt = new OptionsBuilder()
-                    .addProfiler("stack")
-                    .include(".*" + OnMethodTemplateBenchmark.class.getSimpleName() + ".*test.*")
-                    .build();
+  public static void main(String[] args) throws Exception {
+    Options opt =
+        new OptionsBuilder()
+            .addProfiler("stack")
+            .include(".*" + OnMethodTemplateBenchmark.class.getSimpleName() + ".*test.*")
+            .build();
 
-            new Runner(opt).run();
-    }
+    new Runner(opt).run();
+  }
 }

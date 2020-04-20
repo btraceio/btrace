@@ -31,22 +31,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * BTrace methods annotated by this annotation are called when
- * the traced JVM's specified memory pool exceeds specified
- * threshold size.
+ * BTrace methods annotated by this annotation are called when the traced JVM's specified memory
+ * pool exceeds specified threshold size.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface OnLowMemory {
-    /**
-     * The memory pool name.
-     */
-    String pool();
+  /** The memory pool name. */
+  String pool();
 
-    /**
-     * The threashold size to watch for.
-     */
-    long threshold();
+  /** The threashold size to watch for. */
+  long threshold();
 }

@@ -25,19 +25,17 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class NativeWithReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="nativeWithReturn")
-    public static void nMethod(@Self Object self) {
-        println("args");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "nativeWithReturn")
+  public static void nMethod(@Self Object self) {
+    println("args");
+  }
 }

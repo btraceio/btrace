@@ -24,8 +24,6 @@
  */
 package org.openjdk.btrace.instr;
 
-import org.openjdk.btrace.core.DebugSupport;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
@@ -34,348 +32,363 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
+import org.openjdk.btrace.core.DebugSupport;
 
 /**
- * Arbitrary class info type allowing access to supertype information
- * also for not-already-loaded classes.
+ * Arbitrary class info type allowing access to supertype information also for not-already-loaded
+ * classes.
  *
  * @author Jaroslav Bachorik
  */
 public final class ClassInfo {
-    private static final ClassLoader SYS_CL = ClassLoader.getSystemClassLoader();
-    private static volatile Method BSTRP_CHECK_MTD;
-    private final String cLoaderId;
-    private final ClassName classId;
+  private static final ClassLoader SYS_CL = ClassLoader.getSystemClassLoader();
+  private static volatile Method BSTRP_CHECK_MTD;
+  private final String cLoaderId;
+  private final ClassName classId;
 
-    // @ThreadSafe
-    private final Collection<ClassInfo> supertypes = new ArrayList<>();
-    private final ClassCache cache;
-    private boolean isInterface = false;
+  // @ThreadSafe
+  private final Collection<ClassInfo> supertypes = new ArrayList<>();
+  private final ClassCache cache;
+  private boolean isInterface = false;
 
-    ClassInfo(ClassCache cache, Class<?> clz) {
-        this.cache = cache;
-        ClassLoader cl = clz.getClassLoader();
-        cLoaderId = (cl != null ? cl.toString() : "<null>");
-        classId = new ClassName(clz.getName());
-        Class<?> supr = clz.getSuperclass();
-        if (supr != null) {
-            supertypes.add(cache.get(supr));
-        }
-        for (Class<?> itfc : clz.getInterfaces()) {
-            if (itfc != null) {
-                supertypes.add(cache.get(itfc));
-            }
-        }
-        isInterface = clz.isInterface();
+  ClassInfo(ClassCache cache, Class<?> clz) {
+    this.cache = cache;
+    ClassLoader cl = clz.getClassLoader();
+    cLoaderId = (cl != null ? cl.toString() : "<null>");
+    classId = new ClassName(clz.getName());
+    Class<?> supr = clz.getSuperclass();
+    if (supr != null) {
+      supertypes.add(cache.get(supr));
+    }
+    for (Class<?> itfc : clz.getInterfaces()) {
+      if (itfc != null) {
+        supertypes.add(cache.get(itfc));
+      }
+    }
+    isInterface = clz.isInterface();
+  }
+
+  ClassInfo(ClassCache cache, ClassLoader cl, ClassName cName) {
+    this.cache = cache;
+    cLoaderId = (cl != null ? cl.toString() : "<null>");
+    classId = cName;
+    loadExternalClass(cl, cName);
+  }
+
+  private static ClassLoader inferClassLoader(ClassLoader initiating, ClassName className) {
+    if (className == null) {
+      return initiating;
     }
 
-    ClassInfo(ClassCache cache, ClassLoader cl, ClassName cName) {
-        this.cache = cache;
-        cLoaderId = (cl != null ? cl.toString() : "<null>");
-        classId = cName;
-        loadExternalClass(cl, cName);
-    }
-
-    private static ClassLoader inferClassLoader(ClassLoader initiating, ClassName className) {
-        if (className == null) {
-            return initiating;
-        }
-
-        String jClassName = className.getJavaClassName().toString();
-        if (initiating == null || isBootstrap(jClassName)) {
-            return null;
-        } else {
-            String rsrcName = className.getResourcePath();
-            ClassLoader cl = initiating;
-            ClassLoader prev = initiating;
-            while (cl != null) {
-                try {
-                    if (cl.getResource(rsrcName) == null) {
-                        return prev;
-                    }
-                } catch (Throwable t) {
-                    // some containers can impose additional restrictions on loading resources and error on unexpected state
-                    DebugSupport.warning(t);
-                }
-                prev = cl;
-                cl = cl.getParent();
-            }
-            return initiating;
-        }
-    }
-
-    private static boolean isBootstrap(String className) {
+    String jClassName = className.getJavaClassName().toString();
+    if (initiating == null || isBootstrap(jClassName)) {
+      return null;
+    } else {
+      String rsrcName = className.getResourcePath();
+      ClassLoader cl = initiating;
+      ClassLoader prev = initiating;
+      while (cl != null) {
         try {
-            Method m = getCheckBootstrap();
-            if (m != null) {
-                return m.invoke(SYS_CL, className) != null;
-            }
+          if (cl.getResource(rsrcName) == null) {
+            return prev;
+          }
         } catch (Throwable t) {
-            DebugSupport.warning(t);
+          // some containers can impose additional restrictions on loading resources and error on
+          // unexpected state
+          DebugSupport.warning(t);
         }
-        return false;
+        prev = cl;
+        cl = cl.getParent();
+      }
+      return initiating;
     }
+  }
 
-    private static Method getCheckBootstrap() {
-        if (BSTRP_CHECK_MTD != null) {
-            return BSTRP_CHECK_MTD;
-        }
-        Method m = null;
+  private static boolean isBootstrap(String className) {
+    try {
+      Method m = getCheckBootstrap();
+      if (m != null) {
+        return m.invoke(SYS_CL, className) != null;
+      }
+    } catch (Throwable t) {
+      DebugSupport.warning(t);
+    }
+    return false;
+  }
+
+  private static Method getCheckBootstrap() {
+    if (BSTRP_CHECK_MTD != null) {
+      return BSTRP_CHECK_MTD;
+    }
+    Method m = null;
+    try {
+      m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
+      m.setAccessible(true);
+    } catch (Throwable t) {
+      DebugSupport.warning(t);
+    }
+    BSTRP_CHECK_MTD = m;
+    return BSTRP_CHECK_MTD;
+  }
+
+  /**
+   * Retrieves supertypes (including interfaces)
+   *
+   * @param onlyDirect only immediate supertype and implemented interfaces
+   * @return supertypes (including interfaces)
+   */
+  public Collection<ClassInfo> getSupertypes(boolean onlyDirect) {
+    if (onlyDirect) {
+      return supertypes;
+    }
+    Set<ClassInfo> supers = new LinkedHashSet<>(supertypes);
+    for (ClassInfo ci : supertypes) {
+      supers.addAll(ci.getSupertypes(onlyDirect));
+    }
+    return supers;
+  }
+
+  /**
+   * Associated class loader string representation as returned by {@code cl.toString()} or {@code
+   * "<null>"}
+   *
+   * @return associated class loader id
+   */
+  public String getLoaderId() {
+    return cLoaderId;
+  }
+
+  /**
+   * Class ID = internal class name
+   *
+   * @return internal class name
+   */
+  public String getClassName() {
+    return classId.getInternalClassName().toString();
+  }
+
+  public String getJavaClassName() {
+    return classId.getJavaClassName().toString();
+  }
+
+  public boolean isInterface() {
+    return isInterface;
+  }
+
+  // not thread safe - must be called only from the constructor
+  private void loadExternalClass(ClassLoader cl, ClassName className) {
+    String resourcePath = className.getResourcePath();
+
+    try {
+      InputStream typeIs =
+          cl == null
+              ? SYS_CL.getResourceAsStream(resourcePath)
+              : cl.getResourceAsStream(resourcePath);
+      if (typeIs != null) {
         try {
-            m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
-            m.setAccessible(true);
-        } catch (Throwable t) {
-            DebugSupport.warning(t);
-        }
-        BSTRP_CHECK_MTD = m;
-        return BSTRP_CHECK_MTD;
-    }
+          BTraceClassReader cr = new BTraceClassReader(cl, typeIs);
 
-    /**
-     * Retrieves supertypes (including interfaces)
-     *
-     * @param onlyDirect only immediate supertype and implemented interfaces
-     * @return supertypes (including interfaces)
-     */
-    public Collection<ClassInfo> getSupertypes(boolean onlyDirect) {
-        if (onlyDirect) {
-            return supertypes;
-        }
-        Set<ClassInfo> supers = new LinkedHashSet<>(supertypes);
-        for (ClassInfo ci : supertypes) {
-            supers.addAll(ci.getSupertypes(onlyDirect));
-        }
-        return supers;
-    }
-
-    /**
-     * Associated class loader string representation as returned by {@code cl.toString()} or {@code "<null>"}
-     *
-     * @return associated class loader id
-     */
-    public String getLoaderId() {
-        return cLoaderId;
-    }
-
-    /**
-     * Class ID = internal class name
-     *
-     * @return internal class name
-     */
-    public String getClassName() {
-        return classId.getInternalClassName().toString();
-    }
-
-    public String getJavaClassName() {
-        return classId.getJavaClassName().toString();
-    }
-
-    public boolean isInterface() {
-        return isInterface;
-    }
-
-    // not thread safe - must be called only from the constructor
-    private void loadExternalClass(ClassLoader cl, ClassName className) {
-        String resourcePath = className.getResourcePath();
-
-        try {
-            InputStream typeIs = cl == null ? SYS_CL.getResourceAsStream(resourcePath) : cl.getResourceAsStream(resourcePath);
-            if (typeIs != null) {
-                try {
-                    BTraceClassReader cr = new BTraceClassReader(cl, typeIs);
-
-                    isInterface = cr.isInterface();
-                    String[] info = cr.readClassSupers();
-                    String superName = info[0];
-                    if (superName != null) {
-                        ClassName superClassName = new ClassName(superName);
-                        supertypes.add(cache.get(inferClassLoader(cl, superClassName), superClassName));
-                    }
-                    if (info.length > 1) {
-                        for (int i = 1; i < info.length; i++) {
-                            String ifc = info[i];
-                            if (ifc != null) {
-                                ClassName ifcClassName = new ClassName(ifc);
-                                supertypes.add(cache.get(inferClassLoader(cl, ifcClassName), ifcClassName));
-                            }
-                        }
-                    }
-                } catch (IllegalArgumentException | IOException e) {
-                    DebugSupport.warning("Unable to load class: " + className);
-                    DebugSupport.warning(e);
-                }
+          isInterface = cr.isInterface();
+          String[] info = cr.readClassSupers();
+          String superName = info[0];
+          if (superName != null) {
+            ClassName superClassName = new ClassName(superName);
+            supertypes.add(cache.get(inferClassLoader(cl, superClassName), superClassName));
+          }
+          if (info.length > 1) {
+            for (int i = 1; i < info.length; i++) {
+              String ifc = info[i];
+              if (ifc != null) {
+                ClassName ifcClassName = new ClassName(ifc);
+                supertypes.add(cache.get(inferClassLoader(cl, ifcClassName), ifcClassName));
+              }
             }
-        } catch (Throwable t) {
-            // some containers can impose additional restrictions on classloaders throwing exceptions when not in expected state
-            DebugSupport.warning(t);
+          }
+        } catch (IllegalArgumentException | IOException e) {
+          DebugSupport.warning("Unable to load class: " + className);
+          DebugSupport.warning(e);
         }
+      }
+    } catch (Throwable t) {
+      // some containers can impose additional restrictions on classloaders throwing exceptions when
+      // not in expected state
+      DebugSupport.warning(t);
+    }
+  }
+
+  @Override
+  public int hashCode() {
+    int hash = 5;
+    hash = 37 * hash + Objects.hashCode(cLoaderId);
+    hash = 37 * hash + Objects.hashCode(classId);
+    return hash;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    ClassInfo other = (ClassInfo) obj;
+    if (!Objects.equals(cLoaderId, other.cLoaderId)) {
+      return false;
+    }
+    return Objects.equals(classId, other.classId);
+  }
+
+  @Override
+  public String toString() {
+    return "ClassInfo{"
+        + "cLoaderId="
+        + cLoaderId
+        + ", classId="
+        + classId
+        + ", supertypes="
+        + supertypes
+        + '}';
+  }
+
+  private abstract static class BaseClassName implements CharSequence {
+    protected final CharSequence wrapped;
+    private String str = null;
+
+    protected BaseClassName(CharSequence wrapped) {
+      this.wrapped = wrapped;
     }
 
     @Override
-    public int hashCode() {
-        int hash = 5;
-        hash = 37 * hash + Objects.hashCode(cLoaderId);
-        hash = 37 * hash + Objects.hashCode(classId);
-        return hash;
+    public int length() {
+      return wrapped.length();
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        ClassInfo other = (ClassInfo) obj;
-        if (!Objects.equals(cLoaderId, other.cLoaderId)) {
-            return false;
-        }
-        return Objects.equals(classId, other.classId);
+    public CharSequence subSequence(int start, int end) {
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public String toString() {
-        return "ClassInfo{" + "cLoaderId=" + cLoaderId + ", classId=" + classId + ", supertypes=" + supertypes + '}';
+      if (str == null) {
+        char[] val = new char[wrapped.length()];
+        for (int i = 0; i < wrapped.length(); i++) {
+          val[i] = charAt(i);
+        }
+        str = new String(val);
+      }
+      return str;
+    }
+  }
+
+  private static final class JavaClassName extends BaseClassName {
+    public JavaClassName(CharSequence wrapped) {
+      super(wrapped);
     }
 
-    private abstract static class BaseClassName implements CharSequence {
-        protected final CharSequence wrapped;
-        private String str = null;
+    @Override
+    public char charAt(int index) {
+      char c = wrapped.charAt(index);
+      return (c == '/' ? '.' : c);
+    }
+  }
 
-        protected BaseClassName(CharSequence wrapped) {
-            this.wrapped = wrapped;
-        }
-
-        @Override
-        public int length() {
-            return wrapped.length();
-        }
-
-        @Override
-        public CharSequence subSequence(int start, int end) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public String toString() {
-            if (str == null) {
-                char[] val = new char[wrapped.length()];
-                for (int i = 0; i < wrapped.length(); i++) {
-                    val[i] = charAt(i);
-                }
-                str = new String(val);
-            }
-            return str;
-        }
+  private static final class InternalClassName extends BaseClassName {
+    public InternalClassName(CharSequence wrapped) {
+      super(wrapped);
     }
 
-    private static final class JavaClassName extends BaseClassName {
-        public JavaClassName(CharSequence wrapped) {
-            super(wrapped);
-        }
+    @Override
+    public char charAt(int index) {
+      char c = wrapped.charAt(index);
+      return (c == '.' ? '/' : c);
+    }
+  }
 
-        @Override
-        public char charAt(int index) {
-            char c = wrapped.charAt(index);
-            return (c == '/' ? '.' : c);
-        }
+  static final class ClassName {
+    private final CharSequence cName;
+    private final JavaClassName jcName;
+    private final InternalClassName icName;
+    private String rsrcName = null;
+
+    public ClassName(CharSequence cName) {
+      this.cName = cName;
+      jcName = new JavaClassName(cName);
+      icName = new InternalClassName(cName);
     }
 
-    private static final class InternalClassName extends BaseClassName {
-        public InternalClassName(CharSequence wrapped) {
-            super(wrapped);
-        }
-
-        @Override
-        public char charAt(int index) {
-            char c = wrapped.charAt(index);
-            return (c == '.' ? '/' : c);
-        }
+    public CharSequence getJavaClassName() {
+      return jcName;
     }
 
-    static final class ClassName {
-        private final CharSequence cName;
-        private final JavaClassName jcName;
-        private final InternalClassName icName;
-        private String rsrcName = null;
+    public CharSequence getInternalClassName() {
+      return icName;
+    }
 
-        public ClassName(CharSequence cName) {
-            this.cName = cName;
-            jcName = new JavaClassName(cName);
-            icName = new InternalClassName(cName);
-        }
+    public String getResourcePath() {
+      if (rsrcName == null) {
+        rsrcName = new StringBuilder(icName).append(".class").toString();
+      }
+      return rsrcName;
+    }
 
-        public CharSequence getJavaClassName() {
-            return jcName;
-        }
+    @Override
+    public String toString() {
+      return new StringBuilder(cName).toString();
+    }
 
-        public CharSequence getInternalClassName() {
-            return icName;
-        }
+    @Override
+    public int hashCode() {
+      int h = 7;
+      int len = cName.length();
+      for (int i = 0; i < len; i++) {
+        char c = cName.charAt(i);
+        h = 31 * h + (c == '.' ? '/' : c);
+      }
 
-        public String getResourcePath() {
-            if (rsrcName == null) {
-                rsrcName = new StringBuilder(icName).append(".class").toString();
-            }
-            return rsrcName;
-        }
+      return h;
+    }
 
-        @Override
-        public String toString() {
-            return new StringBuilder(cName).toString();
-        }
-
-        @Override
-        public int hashCode() {
-            int h = 7;
-            int len = cName.length();
-            for (int i = 0; i < len; i++) {
-                char c = cName.charAt(i);
-                h = 31 * h + (c == '.' ? '/' : c);
-            }
-
-            return h;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
+        return false;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+      ClassName other = (ClassName) obj;
+      if (cName.length() != other.cName.length()) {
+        return false;
+      }
+      for (int i = 0; i < cName.length(); i++) {
+        char c1 = cName.charAt(i);
+        char c2 = other.cName.charAt(i);
+        switch (c1) {
+          case '.':
+          case '/':
+            {
+              if (c2 != '.' && c2 != '/') {
                 return false;
+              }
+              break;
             }
-            if (getClass() != obj.getClass()) {
+          default:
+            {
+              if (c1 != c2) {
                 return false;
+              }
             }
-            ClassName other = (ClassName) obj;
-            if (cName.length() != other.cName.length()) {
-                return false;
-            }
-            for (int i = 0; i < cName.length(); i++) {
-                char c1 = cName.charAt(i);
-                char c2 = other.cName.charAt(i);
-                switch (c1) {
-                    case '.':
-                    case '/': {
-                        if (c2 != '.' && c2 != '/') {
-                            return false;
-                        }
-                        break;
-                    }
-                    default: {
-                        if (c1 != c2) {
-                            return false;
-                        }
-                    }
-                }
-            }
-            return true;
         }
+      }
+      return true;
     }
-
+  }
 }

@@ -27,46 +27,43 @@ package org.openjdk.btrace.instr;
 
 import org.junit.Test;
 
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 public class BTRACE69Test extends InstrumentorTestBase {
-    @Test
-    public void bytecodeValidation() throws Exception {
-        originalBC = loadTargetClass("OnMethodTest");
-        transform("issues/BTRACE69");
-        checkTransformation(
-                "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n" +
-                        "TRYCATCHBLOCK L4 L6 L6 java/lang/Throwable\n" +
-                        "DUP\n" +
-                        "ASTORE 2\n" +
-                        "ALOAD 2\n" +
-                        "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$aux$BTRACE69$onSyncEntry (Ljava/lang/Object;)V\n" +
-                        "L7\n" +
-                        "LINENUMBER 110 L7\n" +
-                        "DUP\n" +
-                        "ASTORE 3\n" +
-                        "ALOAD 3\n" +
-                        "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$aux$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
-                        "GOTO L8\n" +
-                        "FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]\n" +
-                        "ASTORE 4\n" +
-                        "DUP\n" +
-                        "ASTORE 5\n" +
-                        "ALOAD 5\n" +
-                        "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$aux$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n" +
-                        "ALOAD 4\n" +
-                        "ATHROW\n" +
-                        "L8\n" +
-                        "LINENUMBER 111 L8\n" +
-                        "FRAME FULL [resources/OnMethodTest T resources/OnMethodTest resources/OnMethodTest T] []\n" +
-                        "RETURN\n" +
-                        "L5\n" +
-                        "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n" +
-                        "FRAME SAME1 java/lang/Throwable\n" +
-                        "ATHROW\n" +
-                        "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n" +
-                        "MAXLOCALS = 6"
-        );
-    }
+  @Test
+  public void bytecodeValidation() throws Exception {
+    originalBC = loadTargetClass("OnMethodTest");
+    transform("issues/BTRACE69");
+    checkTransformation(
+        "TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable\n"
+            + "TRYCATCHBLOCK L4 L6 L6 java/lang/Throwable\n"
+            + "DUP\n"
+            + "ASTORE 2\n"
+            + "ALOAD 2\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$aux$BTRACE69$onSyncEntry (Ljava/lang/Object;)V\n"
+            + "L7\n"
+            + "LINENUMBER 110 L7\n"
+            + "DUP\n"
+            + "ASTORE 3\n"
+            + "ALOAD 3\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$aux$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n"
+            + "GOTO L8\n"
+            + "FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]\n"
+            + "ASTORE 4\n"
+            + "DUP\n"
+            + "ASTORE 5\n"
+            + "ALOAD 5\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$aux$BTRACE69$onSyncExit (Ljava/lang/Object;)V\n"
+            + "ALOAD 4\n"
+            + "ATHROW\n"
+            + "L8\n"
+            + "LINENUMBER 111 L8\n"
+            + "FRAME FULL [resources/OnMethodTest T resources/OnMethodTest resources/OnMethodTest T] []\n"
+            + "RETURN\n"
+            + "L5\n"
+            + "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n"
+            + "FRAME SAME1 java/lang/Throwable\n"
+            + "ATHROW\n"
+            + "LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0\n"
+            + "MAXLOCALS = 6");
+  }
 }

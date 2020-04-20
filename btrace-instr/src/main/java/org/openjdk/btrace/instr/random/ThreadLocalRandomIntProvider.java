@@ -24,16 +24,13 @@
  */
 package org.openjdk.btrace.instr.random;
 
+import java.util.concurrent.ThreadLocalRandom;
 import org.openjdk.btrace.instr.RandomIntProvider;
 
-import java.util.concurrent.ThreadLocalRandom;
-
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 public final class ThreadLocalRandomIntProvider extends RandomIntProvider {
-    @Override
-    public int nextInt(int bound) {
-        return ThreadLocalRandom.current().nextInt(0, bound);
-    }
+  @Override
+  public int nextInt(int bound) {
+    return ThreadLocalRandom.current().nextInt(0, bound);
+  }
 }

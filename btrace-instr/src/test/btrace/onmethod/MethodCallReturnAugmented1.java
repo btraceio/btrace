@@ -25,24 +25,29 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace(unsafe = true)
 public class MethodCallReturnAugmented1 {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget", where=Where.AFTER))
-    public static long args(@Return long retVal, String a, long b) {
-        println("args");
-        return retVal + 1;
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "callTopLevel",
+      location =
+          @Location(
+              value = Kind.CALL,
+              clazz = "/.*\\.OnMethodTest/",
+              method = "callTarget",
+              where = Where.AFTER))
+  public static long args(@Return long retVal, String a, long b) {
+    println("args");
+    return retVal + 1;
+  }
 }

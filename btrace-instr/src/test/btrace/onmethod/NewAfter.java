@@ -25,6 +25,9 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import java.util.Map;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
@@ -32,18 +35,15 @@ import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.annotations.Where;
-import java.util.Map;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class NewAfter {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="newObject",
-              location=@Location(value=Kind.NEW, clazz="/.*/", where=Where.AFTER))
-    public static void args(@Self Object self, @Return Map instance, String instanceClassName) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "newObject",
+      location = @Location(value = Kind.NEW, clazz = "/.*/", where = Where.AFTER))
+  public static void args(@Self Object self, @Return Map instance, String instanceClassName) {
+    println("args");
+  }
 }

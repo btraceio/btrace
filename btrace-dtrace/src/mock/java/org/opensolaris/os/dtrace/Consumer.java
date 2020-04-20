@@ -30,22 +30,23 @@ package org.opensolaris.os.dtrace;
 import java.io.File;
 
 public interface Consumer {
-    void open();
+  void open();
 
-    void setOption(String argref, String s);
+  void setOption(String argref, String s);
 
-    void grabProcess(int pid);
+  void grabProcess(int pid);
 
-    void close();
+  void close();
 
-    Aggregate getAggregate() throws DTraceException;
+  Aggregate getAggregate() throws DTraceException;
 
-    void addConsumerListener(ConsumerListener consumerListener);
+  void addConsumerListener(ConsumerListener consumerListener);
 
-    void go(ExceptionHandler exceptionHandler);
+  void go(ExceptionHandler exceptionHandler);
 
-    void enable();
+  void enable();
 
-    void compile(File program, String[] args);
-    void compile(String program, String[] args);
+  void compile(File program, String[] args);
+
+  void compile(String program, String[] args);
 }

@@ -29,67 +29,77 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A key identifying an element of data in an aggregation. This represents a tuple of object values contained in an
- * Object[] array. Elements in the tuple may be null or of type {@link String} or {@link Number}.
+ * A key identifying an element of data in an aggregation. This represents a tuple of object values
+ * contained in an Object[] array. Elements in the tuple may be null or of type {@link String} or
+ * {@link Number}.
+ *
  * <p>
  *
  * @author Christian Glencross
  */
 public final class AggregationKey {
 
-    private static final Set<Class<?>> validKeyElementTypes = new HashSet<Class<?>>();
+  private static final Set<Class<?>> validKeyElementTypes = new HashSet<Class<?>>();
 
-    static {
-        validKeyElementTypes.add(String.class);
-        validKeyElementTypes.add(Boolean.class);
-        validKeyElementTypes.add(Byte.class);
-        validKeyElementTypes.add(Character.class);
-        validKeyElementTypes.add(Short.class);
-        validKeyElementTypes.add(Integer.class);
-        validKeyElementTypes.add(Long.class);
+  static {
+    validKeyElementTypes.add(String.class);
+    validKeyElementTypes.add(Boolean.class);
+    validKeyElementTypes.add(Byte.class);
+    validKeyElementTypes.add(Character.class);
+    validKeyElementTypes.add(Short.class);
+    validKeyElementTypes.add(Integer.class);
+    validKeyElementTypes.add(Long.class);
+  }
+
+  private final Object[] elements;
+
+  public AggregationKey(Object[] elements) {
+
+    // Validate that no unusual datatypes are in the key. These
+    // values may end up getting serialized to the client so we do not want
+    // anything unusual.
+    for (int i = 0; i < elements.length; i++) {
+      Object element = elements[i];
+      if (element != null
+          && (element.getClass() != String.class)
+          && (element.getClass() != Boolean.class)
+          && (element.getClass() != Byte.class)
+          && (element.getClass() != Character.class)
+          && (element.getClass() != Short.class)
+          && (element.getClass() != Integer.class)
+          && (element.getClass() != Long.class)) {
+        throw new IllegalArgumentException(
+            "Aggregation key element type '" + element.getClass().getName() + "' is not supported");
+      }
     }
 
-    private final Object[] elements;
+    this.elements = elements;
+  }
 
-    public AggregationKey(Object[] elements) {
+  public Object[] getElements() {
+    return elements;
+  }
 
-        // Validate that no unusual datatypes are in the key. These
-        // values may end up getting serialized to the client so we do not want
-        // anything unusual.
-        for (int i = 0; i < elements.length; i++) {
-            Object element = elements[i];
-            if (element != null && (element.getClass() != String.class) && (element.getClass() != Boolean.class) && (element.getClass() != Byte.class) && (element.getClass() != Character.class) && (element.getClass() != Short.class) && (element.getClass() != Integer.class) && (element.getClass() != Long.class)) {
-                throw new IllegalArgumentException("Aggregation key element type '" + element.getClass().getName() + "' is not supported");
-            }
-        }
+  @Override
+  public int hashCode() {
+    int prime = 31;
+    int result = 1;
+    result = prime * result + Arrays.hashCode(elements);
+    return result;
+  }
 
-        this.elements = elements;
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
     }
-
-    public Object[] getElements() {
-        return elements;
+    if (obj == null) {
+      return false;
     }
-
-    @Override
-    public int hashCode() {
-        int prime = 31;
-        int result = 1;
-        result = prime * result + Arrays.hashCode(elements);
-        return result;
+    if (getClass() != obj.getClass()) {
+      return false;
     }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        AggregationKey other = (AggregationKey) obj;
-        return Arrays.equals(elements, other.elements);
-    }
+    AggregationKey other = (AggregationKey) obj;
+    return Arrays.equals(elements, other.elements);
+  }
 }

@@ -24,11 +24,10 @@
  */
 package org.openjdk.btrace.agent;
 
+import java.lang.instrument.Instrumentation;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.instr.BTraceTransformer;
-
-import java.lang.instrument.Instrumentation;
 
 /**
  * Client-context data class
@@ -36,32 +35,32 @@ import java.lang.instrument.Instrumentation;
  * @author Jaroslav Bachorik
  */
 class ClientContext {
-    private final Instrumentation instr;
-    private final BTraceTransformer transformer;
-    private final ArgsMap args;
-    private final SharedSettings settings;
+  private final Instrumentation instr;
+  private final BTraceTransformer transformer;
+  private final ArgsMap args;
+  private final SharedSettings settings;
 
-    ClientContext(Instrumentation instr, BTraceTransformer transformer, ArgsMap args, SharedSettings settings) {
-        this.instr = instr;
-        this.transformer = transformer;
-        this.args = args;
-        this.settings = settings;
-    }
+  ClientContext(
+      Instrumentation instr, BTraceTransformer transformer, ArgsMap args, SharedSettings settings) {
+    this.instr = instr;
+    this.transformer = transformer;
+    this.args = args;
+    this.settings = settings;
+  }
 
-    Instrumentation getInstr() {
-        return instr;
-    }
+  Instrumentation getInstr() {
+    return instr;
+  }
 
-    BTraceTransformer getTransformer() {
-        return transformer;
-    }
+  BTraceTransformer getTransformer() {
+    return transformer;
+  }
 
-    SharedSettings getSettings() {
-        return settings;
-    }
+  SharedSettings getSettings() {
+    return settings;
+  }
 
-    ArgsMap getArguments() {
-        return args;
-    }
-
+  ArgsMap getArguments() {
+    return args;
+  }
 }
