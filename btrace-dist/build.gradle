@@ -9,6 +9,7 @@ plugins {
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.internal.os.OperatingSystem
 
 repositories {
     mavenCentral()
@@ -136,7 +137,7 @@ task clientJar(type: ShadowJar) {
 
 task fixPermissions(type: Exec) {
     onlyIf {
-        !Os.isFamily(Os.FAMILY_WINDOWS)
+        !OperatingSystem.current().isWindows()
     }
     commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btrace"
     commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btracec"
