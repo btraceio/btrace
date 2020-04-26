@@ -33,7 +33,7 @@ In order to ease the pre-build config the `config_build.sh` script is provided. 
 ### Build
 
 #### Java
-You __JAVA_HOME__ must point to JDK 11 (eg. __JAVA_11_HOME__)
+Your __JAVA_HOME__ must point to JDK 11 (eg. __JAVA_11_HOME__)
 
 #### Gradle
 ```sh
