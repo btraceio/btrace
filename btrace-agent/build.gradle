@@ -1,33 +1,33 @@
-plugins {
-    id "com.github.johnrengelman.shadow" version "5.1.0"
-}
+//plugins {
+//    id "com.github.johnrengelman.shadow" version "6.0.0"
+//}
 
 apply plugin: 'java'
-
-shadowJar {
-    baseName = "${project.name}"
-    version = "${project.version}"
-    classifier = null
-
-    exclude 'afu/**'
-    exclude 'javax/**'
-    exclude 'com/**'
-    exclude 'sun/**'
-    exclude 'org/relaxng/**'
-    exclude 'org/checkerframework/**'
-    exclude 'org/codehaus/**'
-
-    exclude 'org/jctools/maps/**'
-    exclude 'org/jctools/util/**'
-    exclude 'META-INF/services/**'
-
-    exclude 'org/objectweb/asm/commons/**'
-    exclude 'org/objectweb/asm/util/**'
-    exclude 'org/objectweb/asm/xml/**'
-
-    configurations = [project.configurations.compile]
-    relocate 'org.jctools.queues', 'org.openjdk.btrace.org.jctools.queues'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.org.objectweb.asm'
-}
-
-build.dependsOn shadowJar
+//
+//shadowJar {
+//    baseName = "${project.name}"
+//    version = "${project.version}"
+//    classifier = null
+//
+//    exclude 'afu/**'
+//    exclude 'javax/**'
+//    exclude 'com/**'
+//    exclude 'sun/**'
+//    exclude 'org/relaxng/**'
+//    exclude 'org/checkerframework/**'
+//    exclude 'org/codehaus/**'
+//
+//    exclude 'org/jctools/maps/**'
+//    exclude 'org/jctools/util/**'
+//    exclude 'META-INF/services/**'
+//
+//    exclude 'org/objectweb/asm/commons/**'
+//    exclude 'org/objectweb/asm/util/**'
+//    exclude 'org/objectweb/asm/xml/**'
+//
+//    configurations = [project.configurations.compile]
+//    relocate 'org.jctools.queues', 'org.openjdk.btrace.org.jctools.queues'
+//    relocate 'org.objectweb.asm', 'org.openjdk.btrace.org.objectweb.asm'
+//}
+//
+//build.dependsOn shadowJar

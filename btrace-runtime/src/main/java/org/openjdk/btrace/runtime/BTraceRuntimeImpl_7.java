@@ -167,6 +167,11 @@ public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
     return Reflection.getCallerClass(stackDec + 1);
   }
 
+  @Override
+  public int version() {
+    return 7;
+  }
+
   private static Perf getPerf() {
     synchronized (BTraceRuntimeImpl_7.class) {
       if (perf == null) {

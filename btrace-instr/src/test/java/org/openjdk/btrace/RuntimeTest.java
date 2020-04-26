@@ -99,6 +99,12 @@ public abstract class RuntimeTest {
 
     String javaHome = System.getenv("TEST_JAVA_HOME");
     if (javaHome == null) {
+      String targetVersion = System.getenv("TEST_JAVA_VERSION");
+      if (targetVersion != null) {
+        javaHome = System.getenv("JAVA_" + targetVersion + "_HOME");
+      }
+    }
+    if (javaHome == null) {
       javaHome = System.getProperty("java.home").replace("/jre", "");
     }
     java = javaHome;
@@ -131,8 +137,6 @@ public abstract class RuntimeTest {
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
     }
-    args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
-    args.add("-XX:+IgnoreUnrecognizedVMOptions");
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);

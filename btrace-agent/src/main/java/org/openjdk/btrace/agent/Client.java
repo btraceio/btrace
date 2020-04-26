@@ -62,6 +62,7 @@ import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.ClassCache;
 import org.openjdk.btrace.instr.ClassFilter;
 import org.openjdk.btrace.instr.ClassInfo;
+import org.openjdk.btrace.instr.HandlerRepository;
 import org.openjdk.btrace.instr.InstrumentUtils;
 import org.openjdk.btrace.instr.Instrumentor;
 import org.openjdk.btrace.instr.templates.impl.MethodTrackingExpander;
@@ -193,8 +194,19 @@ abstract class Client implements CommandListener {
           new TimerTask() {
             @Override
             public void run() {
-              if (out != null) {
-                out.flush();
+              try {
+                if (out != null) {
+                  boolean entered = BTraceRuntime.enter();
+                  try {
+                    out.flush();
+                  } finally {
+                    if (entered) {
+                      BTraceRuntime.leave();
+                    }
+                  }
+                }
+              } catch (Throwable t) {
+                t.printStackTrace();
               }
             }
           },
@@ -283,6 +295,7 @@ abstract class Client implements CommandListener {
         }
       } finally {
         runtime.shutdownCmdLine();
+        HandlerRepository.unregisterProbe(probe);
       }
     }
   }

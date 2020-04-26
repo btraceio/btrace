@@ -27,17 +27,24 @@ package org.openjdk.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
+
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
+import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.MethodID;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
@@ -58,30 +65,17 @@ public class Instrumentor extends ClassVisitor {
   private final Set<OnMethod> calledOnMethods = new HashSet<>();
 
   private String className, superName;
-  private final ClassVisitor copyingVisitor =
-      new ClassVisitor(ASM7, cv) {
-        @Override
-        public MethodVisitor visitMethod(
-            int access, String name, String desc, String sig, String[] exceptions) {
-          return new MethodVisitor(ASM7, super.visitMethod(access, name, desc, sig, exceptions)) {
-            @Override
-            public void visitMethodInsn(
-                int opcode, String owner, String name, String desc, boolean itfc) {
-              if (owner.equals(bcn.getClassName(true))) {
-                owner = className;
-                name = getActionMethodName(name);
-              }
-              super.visitMethodInsn(opcode, owner, name, desc, itfc);
-            }
-          };
-        }
-      };
+
+  private final boolean useHiddenClasses;
 
   private Instrumentor(
       ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
     super(ASM7, cv);
     this.cl = cl;
     this.bcn = bcn;
+    BTraceRuntime.Impl rt = bcn.getRuntime();
+    // 'rt' is null only during instrumentation tests; we want to default to in-situ instrumentation there
+    this.useHiddenClasses = rt != null && rt.version() >= 15;
     applicableOnMethods = applicables;
   }
 
@@ -1742,7 +1736,14 @@ public class Instrumentor extends ClassVisitor {
 
   @Override
   public void visitEnd() {
-    bcn.copyHandlers(copyingVisitor);
+    if (!useHiddenClasses) {
+      bcn.copyHandlers(new CopyingVisitor(className, false, this) {
+        @Override
+        protected String getActionMethodName(String name) {
+          return Instrumentor.this.getActionMethodName(name);
+        }
+      });
+    }
     cv.visitEnd();
   }
 
@@ -1755,10 +1756,22 @@ public class Instrumentor extends ClassVisitor {
   }
 
   private void invokeBTraceAction(Assembler asm, OnMethod om) {
-    asm.invokeStatic(
-        className,
-        getActionMethodName(om.getTargetName()),
-        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC));
+    if (useHiddenClasses) {
+      MethodType mt = MethodType.methodType(CallSite.class,
+              MethodHandles.Lookup.class, String.class, MethodType.class, String.class);
+
+      asm.invokeDynamic(
+              getActionMethodName(om.getTargetName()),
+              om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
+              new Handle(H_INVOKESTATIC, "org/openjdk/btrace/instr/Indy", "bootstrap", mt.toMethodDescriptorString(), false),
+              bcn.getClassName(true)
+      );
+    } else {
+      asm.invokeStatic(
+          className,
+          getActionMethodName(om.getTargetName()),
+          om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC));
+    }
     calledOnMethods.add(om);
     om.setCalled();
   }
