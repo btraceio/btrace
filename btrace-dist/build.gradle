@@ -135,6 +135,9 @@ task clientJar(type: ShadowJar) {
 }
 
 task fixPermissions(type: Exec) {
+    onlyIf {
+        !Os.isFamily(Os.FAMILY_WINDOWS)
+    }
     commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btrace"
     commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btracec"
     commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btracer"
