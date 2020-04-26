@@ -5,6 +5,7 @@ plugins {
     id "com.github.johnrengelman.shadow" version "5.2.0"
     id "nebula.ospackage" version "8.3.0"
     id "java"
+    id "io.sdkman.vendors" version "1.2.1"
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -280,6 +281,21 @@ bintray {
                 passphrase = sign ? project.property("gpg.passphrase") : "" //Optional. The passphrase for GPG signing'
             }
         }
+    }
+}
+
+sdkman {
+    api = "https://vendors.sdkman.io/"
+    consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_API_KEY')
+    consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
+    candidate = "btrace"
+    version = "${project.version}"
+    url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-bin.zip"
+}
+
+["sdkReleaseVersion", "sdkAnnounceVersion"].forEach {
+    tasks[it].onlyIf {
+        !project.version.toString().endsWith("-SNAPSHOT")
     }
 }
 
