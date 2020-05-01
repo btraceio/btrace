@@ -1034,6 +1034,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
           Thread.sleep(100);
         }
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        break;
       }
       backoffCntr++;
     }
