@@ -36,12 +36,14 @@ task compileTestProbes {
 
 test {
     onlyIf {
-        new File("${projectDir}/../btrace-dist/build/resources/main/libs/btrace-client.jar").exists()
+        new File("${projectDir}/../btrace-dist/build/resources/main/${project.version}/libs/btrace-client.jar").exists()
     }
     dependsOn cleanTest
     inputs.files compileTestProbes.outputs
     //inputs.files buildDTrace.outputs
     testLogging.showStandardStreams = true
 
-    jvmArgs '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED'
+
+
+    jvmArgs '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
 }

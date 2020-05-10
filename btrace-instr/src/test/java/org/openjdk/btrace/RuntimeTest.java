@@ -85,7 +85,7 @@ public abstract class RuntimeTest {
         btraceExtPath =
             new File(
                     projectRoot.getAbsolutePath()
-                        + "/btrace-dist/build/resources/main/libs/btrace-client.jar")
+                        + "/btrace-dist/build/resources/main/" + System.getProperty("project.version") + "/libs/btrace-client.jar")
                 .getPath();
       }
       Assert.assertNotNull(projectRoot);
