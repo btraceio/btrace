@@ -232,7 +232,7 @@ public abstract class InstrumentorTestBase {
     }
     assertEquals(
         expected,
-        diff.substring(0, diff.length() > expected.length() ? expected.length() : diff.length()));
+        diff.substring(0, Math.min(diff.length(), expected.length())));
   }
 
   protected void checkTrace(String expected) throws IOException {

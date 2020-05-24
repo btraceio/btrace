@@ -50,8 +50,8 @@ public class OnMethodLevelTest {
         var = "A";
     }
 
-    @OnMethod(clazz = "resources.Main", method = "callB", enableAt = @Level("150"))
-    public static void args(@Self Object self, int i, String s) {
+    @OnMethod(clazz = "resources.Main", method = "callB", enableAt = @Level("150"), location = @Location(Kind.RETURN))
+    public static void args(@Self Object self, int i, String s, @Duration long duration) {
         tls -= 1;
         ex--;
         dump(var + " [this, args]");

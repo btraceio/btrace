@@ -301,7 +301,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
         for (Interval i : optimized) {
           Label nextCheck = new Label();
           if (globalLevelVar == Integer.MIN_VALUE) {
-            asm.getStatic(e.getClassName(), Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
+            asm.getStatic(e.getProbeClassName(true), Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
             globalLevelVar = e.storeAsNew();
           } else {
             asm.loadLocal(Type.INT_TYPE, globalLevelVar);

@@ -37,6 +37,7 @@ import org.objectweb.asm.TypePath;
 import org.openjdk.btrace.core.MethodID;
 import org.openjdk.btrace.instr.Assembler;
 import org.openjdk.btrace.instr.BTraceMethodVisitor;
+import org.openjdk.btrace.instr.BTraceProbe;
 import org.openjdk.btrace.instr.MethodInstrumentorHelper;
 import org.openjdk.btrace.instr.templates.impl.MethodTrackingExpander;
 
@@ -48,6 +49,7 @@ import org.openjdk.btrace.instr.templates.impl.MethodTrackingExpander;
  */
 public class TemplateExpanderVisitor extends BTraceMethodVisitor {
   private final Collection<TemplateExpander> expanders = new ArrayList<>();
+  private final BTraceProbe bcn;
   private final String className, methodName, desc;
   private final Assembler asm;
   private TemplateExpander.Result lastResult = TemplateExpander.Result.IGNORED;
@@ -56,6 +58,7 @@ public class TemplateExpanderVisitor extends BTraceMethodVisitor {
   public TemplateExpanderVisitor(
       MethodVisitor mv,
       MethodInstrumentorHelper mHelper,
+      BTraceProbe bcn,
       String className,
       String methodName,
       String desc) {
@@ -63,6 +66,7 @@ public class TemplateExpanderVisitor extends BTraceMethodVisitor {
 
     expanders.add(
         new MethodTrackingExpander(MethodID.getMethodId(className, methodName, desc), mHelper));
+    this.bcn = bcn;
     this.className = className;
     this.methodName = methodName;
     this.desc = desc;
@@ -291,6 +295,10 @@ public class TemplateExpanderVisitor extends BTraceMethodVisitor {
   public void visitMaxs(int stack, int locals) {
     expandTemplate(null);
     super.visitMaxs(stack, locals);
+  }
+
+  public String getProbeClassName(boolean internal) {
+    return bcn.getClassName(internal);
   }
 
   public String getClassName() {

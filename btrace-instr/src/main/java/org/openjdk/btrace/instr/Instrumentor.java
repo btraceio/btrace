@@ -184,7 +184,7 @@ public class Instrumentor extends ClassVisitor {
 
     methodVisitor = mHelper;
 
-    methodVisitor = new TemplateExpanderVisitor(methodVisitor, mHelper, className, name, desc);
+    methodVisitor = new TemplateExpanderVisitor(methodVisitor, mHelper, bcn, className, name, desc);
 
     for (OnMethod om : appliedOnMethods) {
       methodVisitor = instrumentorFor(om, methodVisitor, mHelper, access, name, desc);
