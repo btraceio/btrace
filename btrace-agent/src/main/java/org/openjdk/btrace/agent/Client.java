@@ -52,6 +52,7 @@ import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.MessageCommand;
 import org.openjdk.btrace.core.comm.OkayCommand;
 import org.openjdk.btrace.core.comm.RenameCommand;
 import org.openjdk.btrace.core.comm.RetransformationStartNotification;
@@ -485,11 +486,40 @@ abstract class Client implements CommandListener {
                 debugPrint("Attempting to retransform class: " + c.getName());
                 inst.retransformClasses(c);
               } catch (VerifyError e) {
-                debugPrint("verification error: " + c.getName());
+                debugPrint(e);
+                try {
+                  onCommand(new MessageCommand("[BTRACE WARN] Class verification failed: " + c.getName() + " (" + e.getMessage() + ")"));
+                } catch (IOException ioException) {
+                  if (isDebug()) {
+                    debug.debug(ioException);
+                  }
+                }
               }
             }
           } else {
-            inst.retransformClasses(classes);
+            try {
+              inst.retransformClasses(classes);
+            } catch (VerifyError e) {
+              /*
+               * If the en-block retransformation fails because of verification retry classes one-by-one.
+               * Otherwise all classes are rolled back to the original state and no instrumentation
+               * is applied.
+               */
+              for (Class<?> c : classes) {
+                try {
+                  inst.retransformClasses(c);
+                } catch (VerifyError e1) {
+                  debugPrint(e1);
+                  try {
+                    onCommand(new MessageCommand("[BTRACE WARN] Class verification failed: " + c.getName() + " (" + e.getMessage() + ")"));
+                  } catch (IOException ioException) {
+                    if (isDebug()) {
+                      debug.debug(ioException);
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
