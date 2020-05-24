@@ -21,28 +21,27 @@
  */
 package org.openjdk.btrace.instr;
 
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Before;
+import org.junit.Test;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class OnMethodTest {
-    private ArgsMap instance;
+  private ArgsMap instance;
 
-    @Before
-    public void setUp() {
-        DebugSupport debug = new DebugSupport(SharedSettings.GLOBAL);
-        instance = new ArgsMap(new String[]{"className=ClassA", "methodName=methodA"}, debug);
-    }
+  @Before
+  public void setUp() {
+    DebugSupport debug = new DebugSupport(SharedSettings.GLOBAL);
+    instance = new ArgsMap(new String[] {"className=ClassA", "methodName=methodA"}, debug);
+  }
 
-    @Test
-    public void testApplyArgsValid() {
-        assertEquals("/.*\\.ClassA/", instance.template("/.*\\.${className}/"));
-        assertEquals("methodA", instance.template("${methodName}"));
-        assertEquals("${undefined}", instance.template("${undefined}"));
-    }
-
+  @Test
+  public void testApplyArgsValid() {
+    assertEquals("/.*\\.ClassA/", instance.template("/.*\\.${className}/"));
+    assertEquals("methodA", instance.template("${methodName}"));
+    assertEquals("${undefined}", instance.template("${undefined}"));
+  }
 }

@@ -25,9 +25,6 @@
 
 package org.openjdk.btrace.instr.templates;
 
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -35,6 +32,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 /**
  * A template descriptor
@@ -43,126 +42,126 @@ import java.util.Set;
  * @since 1.3
  */
 public final class Template {
-    static final String OWNER = "#";
-    private final String name;
-    private final String sig;
-    private final Set<String> tags = new HashSet<>();
+  static final String OWNER = "#";
+  private final String name;
+  private final String sig;
+  private final Set<String> tags = new HashSet<>();
 
-    private final String id;
+  private final String id;
 
-    public Template(String name, String sig) {
-        this.name = name;
-        this.sig = sig;
-        id = getId(OWNER, name, sig);
+  public Template(String name, String sig) {
+    this.name = name;
+    this.sig = sig;
+    id = getId(OWNER, name, sig);
+  }
+
+  public Template(String name, String sig, String... tags) {
+    this.name = name;
+    this.sig = sig;
+    this.tags.addAll(Arrays.asList(tags));
+    id = getId(OWNER, name, sig);
+  }
+
+  static String getId(String owner, String name, String sig) {
+    StringBuilder sb = new StringBuilder(owner);
+    sb.append('#').append(name).append("#").append(sig);
+    return sb.toString();
+  }
+
+  public String getOwner() {
+    return OWNER;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public String getSig() {
+    return sig;
+  }
+
+  public void insert(MethodVisitor mv) {
+    insert(mv, Collections.EMPTY_SET);
+  }
+
+  public void insert(MethodVisitor mv, String... tags) {
+    insert(mv, new HashSet<>(Arrays.asList(tags)));
+  }
+
+  public void insert(MethodVisitor mv, Set<String> tags) {
+    StringBuilder sb = new StringBuilder(name);
+    boolean head = true;
+    for (String t : tags) {
+      if (head) {
+        head = false;
+        sb.append(':');
+      } else {
+        sb.append(',');
+      }
+      sb.append(t);
     }
+    mv.visitMethodInsn(Opcodes.INVOKESTATIC, OWNER, sb.toString(), sig, false);
+  }
 
-    public Template(String name, String sig, String... tags) {
-        this.name = name;
-        this.sig = sig;
-        this.tags.addAll(Arrays.asList(tags));
-        id = getId(OWNER, name, sig);
+  public Set<String> getTags() {
+    return Collections.unmodifiableSet(tags);
+  }
+
+  void setTags(String... tags) {
+    setTags(Arrays.asList(tags));
+  }
+
+  void setTags(Collection<String> tags) {
+    this.tags.clear();
+    this.tags.addAll(tags);
+  }
+
+  public Map<String, String> getTagMap() {
+    Map<String, String> tMap = new HashMap<>();
+
+    for (String t : tags) {
+      int idx = t.indexOf('=');
+      if (idx > -1) {
+        String key, val;
+        key = t.substring(0, idx);
+        val = t.substring(idx + 1);
+        tMap.put(key, val);
+      } else {
+        tMap.put(t, "");
+      }
     }
+    return tMap;
+  }
 
-    static String getId(String owner, String name, String sig) {
-        StringBuilder sb = new StringBuilder(owner);
-        sb.append('#').append(name).append("#").append(sig);
-        return sb.toString();
+  String getId() {
+    return id;
+  }
+
+  @Override
+  public int hashCode() {
+    int hash = 7;
+    hash = 97 * hash + (name != null ? name.hashCode() : 0);
+    return hash;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
     }
-
-    public String getOwner() {
-        return OWNER;
+    if (getClass() != obj.getClass()) {
+      return false;
     }
+    Template other = (Template) obj;
+    return (name == null) ? (other.name == null) : name.equals(other.name);
+  }
 
-    public String getName() {
-        return name;
-    }
+  @Override
+  public String toString() {
+    return "Template{" + "name=" + name + ", tags=" + tags + '}';
+  }
 
-    public String getSig() {
-        return sig;
-    }
-
-    public void insert(MethodVisitor mv) {
-        insert(mv, Collections.EMPTY_SET);
-    }
-
-    public void insert(MethodVisitor mv, String... tags) {
-        insert(mv, new HashSet<>(Arrays.asList(tags)));
-    }
-
-    public void insert(MethodVisitor mv, Set<String> tags) {
-        StringBuilder sb = new StringBuilder(name);
-        boolean head = true;
-        for (String t : tags) {
-            if (head) {
-                head = false;
-                sb.append(':');
-            } else {
-                sb.append(',');
-            }
-            sb.append(t);
-        }
-        mv.visitMethodInsn(Opcodes.INVOKESTATIC, OWNER, sb.toString(), sig, false);
-    }
-
-    public Set<String> getTags() {
-        return Collections.unmodifiableSet(tags);
-    }
-
-    void setTags(String... tags) {
-        setTags(Arrays.asList(tags));
-    }
-
-    void setTags(Collection<String> tags) {
-        this.tags.clear();
-        this.tags.addAll(tags);
-    }
-
-    public Map<String, String> getTagMap() {
-        Map<String, String> tMap = new HashMap<>();
-
-        for (String t : tags) {
-            int idx = t.indexOf('=');
-            if (idx > -1) {
-                String key, val;
-                key = t.substring(0, idx);
-                val = t.substring(idx + 1);
-                tMap.put(key, val);
-            } else {
-                tMap.put(t, "");
-            }
-        }
-        return tMap;
-    }
-
-    String getId() {
-        return id;
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 97 * hash + (name != null ? name.hashCode() : 0);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        Template other = (Template) obj;
-        return (name == null) ? (other.name == null) : name.equals(other.name);
-    }
-
-    @Override
-    public String toString() {
-        return "Template{" + "name=" + name + ", tags=" + tags + '}';
-    }
-
-    public final Template duplicate() {
-        return new Template(name, sig);
-    }
+  public final Template duplicate() {
+    return new Template(name, sig);
+  }
 }

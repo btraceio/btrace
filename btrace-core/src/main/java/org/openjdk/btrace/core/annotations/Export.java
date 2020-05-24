@@ -31,12 +31,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * BTrace fields with this annotation are exposed to
- * out-of-process tools using mechanisms such as jvmstat.
+ * BTrace fields with this annotation are exposed to out-of-process tools using mechanisms such as
+ * jvmstat.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface Export {
-}
+public @interface Export {}

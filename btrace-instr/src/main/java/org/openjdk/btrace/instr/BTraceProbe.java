@@ -44,44 +44,43 @@
  */
 package org.openjdk.btrace.instr;
 
+import java.util.Collection;
+import org.objectweb.asm.ClassVisitor;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
-import org.objectweb.asm.ClassVisitor;
-
-import java.util.Collection;
 
 public interface BTraceProbe {
-    Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr);
+  Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr);
 
-    byte[] getFullBytecode();
+  byte[] getFullBytecode();
 
-    byte[] getDataHolderBytecode();
+  byte[] getDataHolderBytecode();
 
-    String getClassName();
+  String getClassName();
 
-    String getClassName(boolean internal);
+  String getClassName(boolean internal);
 
-    boolean isClassRenamed();
+  boolean isClassRenamed();
 
-    boolean isTransforming();
+  boolean isTransforming();
 
-    boolean isVerified();
+  boolean isVerified();
 
-    void notifyTransform(String className);
+  void notifyTransform(String className);
 
-    Iterable<OnMethod> onmethods();
+  Iterable<OnMethod> onmethods();
 
-    Iterable<OnProbe> onprobes();
+  Iterable<OnProbe> onprobes();
 
-    Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t);
+  Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t);
 
-    void unregister();
+  void unregister();
 
-    boolean willInstrument(Class clz);
+  boolean willInstrument(Class clz);
 
-    void checkVerified();
+  void checkVerified();
 
-    void copyHandlers(ClassVisitor copyingVisitor);
+  void copyHandlers(ClassVisitor copyingVisitor);
 
-    void applyArgs(ArgsMap argsMap);
+  void applyArgs(ArgsMap argsMap);
 }

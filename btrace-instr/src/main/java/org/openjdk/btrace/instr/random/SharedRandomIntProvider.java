@@ -24,19 +24,15 @@
  */
 package org.openjdk.btrace.instr.random;
 
+import java.util.Random;
 import org.openjdk.btrace.instr.RandomIntProvider;
 
-import java.util.Random;
-
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 public final class SharedRandomIntProvider extends RandomIntProvider {
-    private final Random rnd = new Random(System.nanoTime());
+  private final Random rnd = new Random(System.nanoTime());
 
-    @Override
-    public int nextInt(int bound) {
-        return rnd.nextInt(bound);
-    }
-
+  @Override
+  public int nextInt(int bound) {
+    return rnd.nextInt(bound);
+  }
 }

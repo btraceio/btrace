@@ -44,15 +44,14 @@
  */
 package org.openjdk.btrace.instr;
 
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.SharedSettings;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.SharedSettings;
 
 /**
  * A factory class for {@link BTraceProbeNode} instances
@@ -60,80 +59,86 @@ import java.util.Arrays;
  * @author Jaroslav Bachorik
  */
 public final class BTraceProbeFactory {
-    private final SharedSettings settings;
-    private final DebugSupport debug;
-    private final boolean canLoadPack;
+  private final SharedSettings settings;
+  private final DebugSupport debug;
+  private final boolean canLoadPack;
 
-    public BTraceProbeFactory(SharedSettings settings) {
-        this(settings, true);
+  public BTraceProbeFactory(SharedSettings settings) {
+    this(settings, true);
+  }
+
+  public BTraceProbeFactory(SharedSettings settings, boolean canLoadPack) {
+    this.settings = settings;
+    debug = new DebugSupport(settings);
+    this.canLoadPack = canLoadPack;
+  }
+
+  private static void applyArgs(BTraceProbe bp, ArgsMap argsMap) {
+    if (bp != null && argsMap != null && !argsMap.isEmpty()) {
+      bp.applyArgs(argsMap);
     }
+  }
 
-    public BTraceProbeFactory(SharedSettings settings, boolean canLoadPack) {
-        this.settings = settings;
-        debug = new DebugSupport(settings);
-        this.canLoadPack = canLoadPack;
-    }
+  SharedSettings getSettings() {
+    return settings;
+  }
 
-    private static void applyArgs(BTraceProbe bp, ArgsMap argsMap) {
-        if (bp != null && argsMap != null && !argsMap.isEmpty()) {
-            bp.applyArgs(argsMap);
-        }
-    }
+  public BTraceProbe createProbe(byte[] code) {
+    return createProbe(code, null);
+  }
 
-    SharedSettings getSettings() {
-        return settings;
-    }
+  public BTraceProbe createProbe(byte[] code, ArgsMap argsMap) {
+    BTraceProbe bp = null;
 
-    public BTraceProbe createProbe(byte[] code) {
-        return createProbe(code, null);
-    }
-
-    public BTraceProbe createProbe(byte[] code, ArgsMap argsMap) {
-        BTraceProbe bp = null;
-
-        int mgc = ((code[0] & 0xff) << 24) | ((code[1] & 0xff) << 16) | ((code[2] & 0xff) << 8) | ((code[3] & 0xff));
-        if (mgc == BTraceProbePersisted.MAGIC) {
-            if (canLoadPack) {
-                BTraceProbePersisted bpp = new BTraceProbePersisted(this);
-                try (DataInputStream dis = new DataInputStream(new ByteArrayInputStream(Arrays.copyOfRange(code, 4, code.length)))) {
-                    bpp.read(dis);
-                    bp = bpp;
-                } catch (IOException e) {
-                    debug.debug(e);
-                }
-            }
-        } else {
-            bp = new BTraceProbeNode(this, code);
-        }
-
-        applyArgs(bp, argsMap);
-        return bp;
-    }
-
-    public BTraceProbe createProbe(InputStream code) {
-        return createProbe(code, null);
-    }
-
-    public BTraceProbe createProbe(InputStream code, ArgsMap argsMap) {
-        BTraceProbe bp = null;
-        try (DataInputStream dis = new DataInputStream(code)) {
-            dis.mark(0);
-            int mgc = dis.readInt();
-            if (mgc == BTraceProbePersisted.MAGIC) {
-                BTraceProbePersisted bpp = new BTraceProbePersisted(this);
-                bpp.read(dis);
-                bp = bpp;
-            } else {
-                code.reset();
-                bp = new BTraceProbeNode(this, code);
-            }
+    int mgc =
+        ((code[0] & 0xff) << 24)
+            | ((code[1] & 0xff) << 16)
+            | ((code[2] & 0xff) << 8)
+            | ((code[3] & 0xff));
+    if (mgc == BTraceProbePersisted.MAGIC) {
+      if (canLoadPack) {
+        BTraceProbePersisted bpp = new BTraceProbePersisted(this);
+        try (DataInputStream dis =
+            new DataInputStream(
+                new ByteArrayInputStream(Arrays.copyOfRange(code, 4, code.length)))) {
+          bpp.read(dis);
+          bp = bpp;
         } catch (IOException e) {
-            if (debug.isDebug()) {
-                debug.debug(e);
-            }
+          debug.debug(e);
         }
-
-        applyArgs(bp, argsMap);
-        return bp;
+      }
+    } else {
+      bp = new BTraceProbeNode(this, code);
     }
+
+    applyArgs(bp, argsMap);
+    return bp;
+  }
+
+  public BTraceProbe createProbe(InputStream code) {
+    return createProbe(code, null);
+  }
+
+  public BTraceProbe createProbe(InputStream code, ArgsMap argsMap) {
+    BTraceProbe bp = null;
+    try (DataInputStream dis = new DataInputStream(code)) {
+      dis.mark(0);
+      int mgc = dis.readInt();
+      if (mgc == BTraceProbePersisted.MAGIC) {
+        BTraceProbePersisted bpp = new BTraceProbePersisted(this);
+        bpp.read(dis);
+        bp = bpp;
+      } else {
+        code.reset();
+        bp = new BTraceProbeNode(this, code);
+      }
+    } catch (IOException e) {
+      if (debug.isDebug()) {
+        debug.debug(e);
+      }
+    }
+
+    applyArgs(bp, argsMap);
+    return bp;
+  }
 }

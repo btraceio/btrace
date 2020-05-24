@@ -25,19 +25,21 @@
 
 package traces.issues;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.*;
 import org.openjdk.btrace.core.types.AnyType;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
-
 @BTrace
 public class TezSplitter {
-    @OnMethod(clazz = "org.apache.hadoop.mapred.split.TezMapredSplitsGrouper", method = "getGroupedSplits")
-    public static void getGroupedSplitsHook(AnyType[] args) {
-        println("here");
-//        Object[] vals = (Object[])(Object)args[1];
-//        for (Object o : vals) {
-//            println(o);
-//        }
-    }
+  @OnMethod(
+      clazz = "org.apache.hadoop.mapred.split.TezMapredSplitsGrouper",
+      method = "getGroupedSplits")
+  public static void getGroupedSplitsHook(AnyType[] args) {
+    println("here");
+    //        Object[] vals = (Object[])(Object)args[1];
+    //        for (Object o : vals) {
+    //            println(o);
+    //        }
+  }
 }

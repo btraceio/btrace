@@ -25,26 +25,24 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace(unsafe = true)
 public class ArgsUnsafe {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
-        try {
-            double la = Sys.VM.systemLoadAverage();
-            long t = Sys.VM.processCPUTime();
-            println(la + " # " + t);
-        } catch (Throwable e) {
-            println("FAILED");
-            println(e.getMessage());
-        }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args")
+  public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
+    try {
+      double la = Sys.VM.systemLoadAverage();
+      long t = Sys.VM.processCPUTime();
+      println(la + " # " + t);
+    } catch (Throwable e) {
+      println("FAILED");
+      println(e.getMessage());
     }
+  }
 }

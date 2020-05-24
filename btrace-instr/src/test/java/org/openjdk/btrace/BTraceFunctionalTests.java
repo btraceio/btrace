@@ -25,279 +25,264 @@
 
 package org.openjdk.btrace;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
 /**
  * A set of end-to-end functional tests.
- * <p>
- * The test simulates a user submitting a BTrace script to the target application
- * and asserts that no exceptions are thrown, JVM keeps on running and
- * BTrace generates the anticipated output.
+ *
+ * <p>The test simulates a user submitting a BTrace script to the target application and asserts
+ * that no exceptions are thrown, JVM keeps on running and BTrace generates the anticipated output.
  *
  * @author Jaroslav Bachorik
  */
 public class BTraceFunctionalTests extends RuntimeTest {
-    @BeforeClass
-    public static void classSetup() throws Exception {
-        setup();
-    }
+  @BeforeClass
+  public static void classSetup() throws Exception {
+    setup();
+  }
 
-    @Before
-    @Override
-    public void reset() {
-        super.reset();
-    }
+  @Before
+  @Override
+  public void reset() {
+    super.reset();
+  }
 
-    @Test
-    public void testOSMBean() throws Exception {
-        isUnsafe = true;
-        test(
-            "resources.Main",
-            "btrace/OSMBeanTest.java",
-            2,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                }
+  @Test
+  public void testOSMBean() throws Exception {
+    isUnsafe = true;
+    test(
+        "resources.Main",
+        "btrace/OSMBeanTest.java",
+        2,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+          }
+        });
+  }
+
+  @Test
+  public void testOnProbe() throws Exception {
+    if (Files.exists(Paths.get(java, "jre"))) {
+      test(
+          "resources.Main",
+          "btrace/OnProbeTest.java",
+          5,
+          new ResultValidator() {
+            @Override
+            public void validate(String stdout, String stderr, int retcode) {
+              Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+              Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+              Assert.assertTrue(stdout.contains("[this, noargs]"));
+              Assert.assertTrue(stdout.contains("[this, args]"));
             }
-        );
+          });
+    } else {
+      System.err.println("XML libraries not available. Skipping @OnProbe tests");
     }
+  }
 
-    @Test
-    public void testOnProbe() throws Exception {
-        if (Files.exists(Paths.get(java, "jre"))) {
-            test(
-                    "resources.Main",
-                    "btrace/OnProbeTest.java",
-                    5,
-                    new ResultValidator() {
-                        @Override
-                        public void validate(String stdout, String stderr, int retcode) {
-                            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                            Assert.assertTrue(stdout.contains("[this, noargs]"));
-                            Assert.assertTrue(stdout.contains("[this, args]"));
-                        }
-                    }
-            );
-        } else {
-            System.err.println("XML libraries not available. Skipping @OnProbe tests");
-        }
-    }
+  @Test
+  public void testOnTimer() throws Exception {
+    test(
+        "resources.Main",
+        "btrace/OnTimerTest.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("vm version"));
+            Assert.assertTrue(stdout.contains("vm starttime"));
+            Assert.assertTrue(stdout.contains("timer"));
+          }
+        });
+  }
 
-    @Test
-    public void testOnTimer() throws Exception {
-        test(
-            "resources.Main",
-            "btrace/OnTimerTest.java",
-            5,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("vm version"));
-                    Assert.assertTrue(stdout.contains("vm starttime"));
-                    Assert.assertTrue(stdout.contains("timer"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testOnTimerArg() throws Exception {
+    test(
+        "resources.Main",
+        "btrace/OnTimerArgTest.java",
+        new String[] {"timer=500"},
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("vm version"));
+            Assert.assertTrue(stdout.contains("vm starttime"));
+            Assert.assertTrue(stdout.contains("timer"));
+          }
+        });
+  }
 
-    @Test
-    public void testOnTimerArg() throws Exception {
-        test(
-            "resources.Main",
-            "btrace/OnTimerArgTest.java",
-            new String[]{"timer=500"},
-            5,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("vm version"));
-                    Assert.assertTrue(stdout.contains("vm starttime"));
-                    Assert.assertTrue(stdout.contains("timer"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testOnExit() throws Exception {
+    timeout = 1500;
+    test(
+        "resources.Main",
+        "btrace/OnExitTest.java",
+        2,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("onexit"));
+          }
+        });
+  }
 
-    @Test
-    public void testOnExit() throws Exception {
-        timeout = 1500;
-        test(
-            "resources.Main",
-            "btrace/OnExitTest.java",
-            2,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("onexit"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testOnMethod() throws Exception {
+    test(
+        "resources.Main",
+        "btrace/OnMethodTest.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("[this, noargs]"));
+            Assert.assertTrue(stdout.contains("[this, args]"));
+            Assert.assertTrue(stdout.contains("{xxx}"));
+            Assert.assertTrue(stdout.contains("heap:init"));
+          }
+        });
+  }
 
-    @Test
-    public void testOnMethod() throws Exception {
-        test(
-            "resources.Main",
-            "btrace/OnMethodTest.java",
-            5,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("[this, noargs]"));
-                    Assert.assertTrue(stdout.contains("[this, args]"));
-                    Assert.assertTrue(stdout.contains("{xxx}"));
-                    Assert.assertTrue(stdout.contains("heap:init"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testOnMethodLevel() throws Exception {
+    test(
+        "resources.Main",
+        "btrace/OnMethodLevelTest.java",
+        new String[] {"level=200"},
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("[this, noargs]"));
+            Assert.assertTrue(stdout.contains("[this, args]"));
+            Assert.assertTrue(stdout.contains("{xxx}"));
+          }
+        });
+  }
 
-    @Test
-    public void testOnMethodLevel() throws Exception {
-        test(
-            "resources.Main",
-            "btrace/OnMethodLevelTest.java",
-            new String[] {"level=200"},
-            5,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("[this, noargs]"));
-                    Assert.assertTrue(stdout.contains("[this, args]"));
-                    Assert.assertTrue(stdout.contains("{xxx}"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testOnMethodTrackRetransform() throws Exception {
+    trackRetransforms = true;
+    test(
+        "resources.Main",
+        "btrace/OnMethodTest.java",
+        2,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("Going to retransform class"));
+          }
+        });
+  }
 
-    @Test
-    public void testOnMethodTrackRetransform() throws Exception {
-        trackRetransforms = true;
-        test(
-            "resources.Main",
-            "btrace/OnMethodTest.java",
-            2,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("Going to retransform class"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testOnMethodReturn() throws Exception {
+    test(
+        "resources.Main",
+        "btrace/OnMethodReturnTest.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("[this, anytype(void)]"));
+            Assert.assertTrue(stdout.contains("[this, void]"));
+            Assert.assertTrue(stdout.contains("[this, 2]"));
+          }
+        });
+  }
 
-    @Test
-    public void testOnMethodReturn() throws Exception {
-        test(
-            "resources.Main",
-            "btrace/OnMethodReturnTest.java",
-            5,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("[this, anytype(void)]"));
-                    Assert.assertTrue(stdout.contains("[this, void]"));
-                    Assert.assertTrue(stdout.contains("[this, 2]"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testOnMethodSubclass() throws Exception {
+    test(
+        "resources.Main",
+        "btrace/OnMethodSubclassTest.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("print:class resources.Main"));
+          }
+        });
+  }
 
-    @Test
-    public void testOnMethodSubclass() throws Exception {
-        test(
-            "resources.Main",
-            "btrace/OnMethodSubclassTest.java",
-            5,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("print:class resources.Main"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testProbeArgs() throws Exception {
+    isUnsafe = true;
+    test(
+        "resources.Main",
+        "btrace/ProbeArgsTest.java",
+        new String[] {"arg1", "arg2=val2"},
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("arg#=2"));
+            Assert.assertTrue(stdout.contains("arg1="));
+            Assert.assertTrue(stdout.contains("arg2=val2"));
+            Assert.assertFalse(stdout.contains("matching probe"));
+          }
+        });
+  }
 
-    @Test
-    public void testProbeArgs() throws Exception {
-        isUnsafe = true;
-        test(
-            "resources.Main",
-            "btrace/ProbeArgsTest.java",
-            new String[] {"arg1", "arg2=val2"},
-            5,
-            new ResultValidator() {
-                @Override
-                public void validate(String stdout, String stderr, int retcode) {
-                    Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                    Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                    Assert.assertTrue(stdout.contains("arg#=2"));
-                    Assert.assertTrue(stdout.contains("arg1="));
-                    Assert.assertTrue(stdout.contains("arg2=val2"));
-                    Assert.assertFalse(stdout.contains("matching probe"));
-                }
-            }
-        );
-    }
+  @Test
+  public void testPerfCounter() throws Exception {
+    test(
+        "resources.Main",
+        "btrace/PerfCounterTest.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("matching probe"));
+          }
+        });
+  }
 
-    @Test
-    public void testPerfCounter() throws Exception {
-        test(
-                "resources.Main",
-                "btrace/PerfCounterTest.java",
-                5,
-                new ResultValidator() {
-                    @Override
-                    public void validate(String stdout, String stderr, int retcode) {
-                        Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                        Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                        Assert.assertTrue(stdout.contains("matching probe"));
-                    }
-                }
-        );
-    }
-
-    @Test
-    public void testReflection() throws Exception {
-        test(
-                "resources.Main",
-                "btrace/issues/BTRACE400.java",
-                5,
-                new ResultValidator() {
-                    @Override
-                    public void validate(String stdout, String stderr, int retcode) {
-                        Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                        Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-                        Assert.assertTrue(stdout.contains("private java.lang.String resources.Main.id"));
-                        Assert.assertTrue(stdout.contains("class resources.Main"));
-                    }
-                }
-        );
-    }
+  @Test
+  public void testReflection() throws Exception {
+    test(
+        "resources.Main",
+        "btrace/issues/BTRACE400.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+            Assert.assertTrue(stdout.contains("private java.lang.String resources.Main.id"));
+            Assert.assertTrue(stdout.contains("class resources.Main"));
+          }
+        });
+  }
 }

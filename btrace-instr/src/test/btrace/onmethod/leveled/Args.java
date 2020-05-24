@@ -25,33 +25,29 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.TLS;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class Args {
-    @TLS
-    private static int cntr = 15;
+  @TLS private static int cntr = 15;
 
-    @org.openjdk.btrace.core.annotations.Export
-    private static long exported = 1;
+  @org.openjdk.btrace.core.annotations.Export private static long exported = 1;
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level(">=1"))
-    public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
-        println("this = " + self);
-        println("args");
-        println(str(cntr));
-        cntr++;
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args", enableAt = @Level(">=1"))
+  public static void args(@Self Object self, String a, long b, String[] c, int[] d) {
+    println("this = " + self);
+    println("args");
+    println(str(cntr));
+    cntr++;
 
-        println(str(exported));
-        exported++;
-    }
+    println(str(exported));
+    exported++;
+  }
 }

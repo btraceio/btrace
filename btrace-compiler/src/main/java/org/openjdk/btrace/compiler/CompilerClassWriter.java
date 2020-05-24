@@ -24,8 +24,6 @@
  */
 package org.openjdk.btrace.compiler;
 
-import org.objectweb.asm.ClassWriter;
-
 import java.io.File;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
@@ -33,51 +31,50 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import org.objectweb.asm.ClassWriter;
 
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 class CompilerClassWriter extends ClassWriter {
-    private final URLClassLoader cl;
+  private final URLClassLoader cl;
 
-    public CompilerClassWriter(String classPath, PrintWriter perr) {
-        super(ClassWriter.COMPUTE_FRAMES);
-        List<URL> urls = new ArrayList<>();
-        if (classPath != null) {
-            for (String e : classPath.split(File.pathSeparator)) {
-                File f = new File(e);
-                try {
-                    urls.add(f.toURI().toURL());
-                } catch (MalformedURLException ex) {
-                    perr.printf("%s is not a valid classpath entry\n", e);
-                }
-            }
-        }
-        cl = new URLClassLoader(urls.toArray(new URL[0]), getClass().getClassLoader());
-    }
-
-    @Override
-    protected String getCommonSuperClass(String type1, String type2) {
-        Class<?> c, d;
+  public CompilerClassWriter(String classPath, PrintWriter perr) {
+    super(ClassWriter.COMPUTE_FRAMES);
+    List<URL> urls = new ArrayList<>();
+    if (classPath != null) {
+      for (String e : classPath.split(File.pathSeparator)) {
+        File f = new File(e);
         try {
-            c = cl.loadClass(type1.replace('/', '.'));
-            d = cl.loadClass(type2.replace('/', '.'));
-        } catch (Exception e) {
-            throw new RuntimeException(e.toString());
+          urls.add(f.toURI().toURL());
+        } catch (MalformedURLException ex) {
+          perr.printf("%s is not a valid classpath entry\n", e);
         }
-        if (c.isAssignableFrom(d)) {
-            return type1;
-        }
-        if (d.isAssignableFrom(c)) {
-            return type2;
-        }
-        if (c.isInterface() || d.isInterface()) {
-            return "java/lang/Object";
-        } else {
-            do {
-                c = c.getSuperclass();
-            } while (!c.isAssignableFrom(d));
-            return c.getName().replace('.', '/');
-        }
+      }
     }
+    cl = new URLClassLoader(urls.toArray(new URL[0]), getClass().getClassLoader());
+  }
+
+  @Override
+  protected String getCommonSuperClass(String type1, String type2) {
+    Class<?> c, d;
+    try {
+      c = cl.loadClass(type1.replace('/', '.'));
+      d = cl.loadClass(type2.replace('/', '.'));
+    } catch (Exception e) {
+      throw new RuntimeException(e.toString());
+    }
+    if (c.isAssignableFrom(d)) {
+      return type1;
+    }
+    if (d.isAssignableFrom(c)) {
+      return type2;
+    }
+    if (c.isInterface() || d.isInterface()) {
+      return "java/lang/Object";
+    } else {
+      do {
+        c = c.getSuperclass();
+      } while (!c.isAssignableFrom(d));
+      return c.getName().replace('.', '/');
+    }
+  }
 }

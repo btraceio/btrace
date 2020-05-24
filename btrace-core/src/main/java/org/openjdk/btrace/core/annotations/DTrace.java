@@ -31,16 +31,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for BTrace program to associate a D-script with it.
- * D-script is specified as (inline) String value.
+ * Annotation for BTrace program to associate a D-script with it. D-script is specified as (inline)
+ * String value.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface DTrace {
-    /**
-     * "one-liner" D-script String
-     */
-    String value();
+  /** "one-liner" D-script String */
+  String value();
 }

@@ -31,26 +31,24 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Top-level annotation that identifies a BTrace
- * class.
+ * Top-level annotation that identifies a BTrace class.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface BTrace {
-    // If this trace is exposed as MXBean, then this tells
-    // the name of the MXBean.
-    String name() default "";
+  // If this trace is exposed as MXBean, then this tells
+  // the name of the MXBean.
+  String name() default "";
 
-    // description of this trace class.
-    String description() default "";
-    // having "unsafe" set to true the script will be run in unsafe mode
+  // description of this trace class.
+  String description() default "";
+  // having "unsafe" set to true the script will be run in unsafe mode
 
-    @Deprecated
-    /**
-     * @deprecated use {@linkplain BTrace#trusted()} instead
-     */ boolean unsafe() default false;
+  @Deprecated
+  /** @deprecated use {@linkplain BTrace#trusted()} instead */
+  boolean unsafe() default false;
 
-    boolean trusted() default false;
+  boolean trusted() default false;
 }

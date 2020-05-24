@@ -25,24 +25,26 @@
 
 package traces.onmethod;
 
-import org.openjdk.btrace.core.types.AnyType;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+import static org.openjdk.btrace.core.BTraceUtils.Reflective.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import static org.openjdk.btrace.core.BTraceUtils.Reflective.*;
+import org.openjdk.btrace.core.types.AnyType;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArgsReturnBoxed {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
-    public static void args(@Self Object self, @Return AnyType retVal, String a, long b, String[] c, int[] d) {
-        println("args " + getLong("value", self));
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "args",
+      location = @Location(value = Kind.RETURN))
+  public static void args(
+      @Self Object self, @Return AnyType retVal, String a, long b, String[] c, int[] d) {
+    println("args " + getLong("value", self));
+  }
 }

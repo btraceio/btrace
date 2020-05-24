@@ -31,13 +31,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * BTrace method annotated by this annotation is called when
- * BTrace "exit(int)" built-in function is called by some
- * other BTrace action method.
+ * BTrace method annotated by this annotation is called when BTrace "exit(int)" built-in function is
+ * called by some other BTrace action method.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface OnExit {
-}
+public @interface OnExit {}

@@ -45,49 +45,50 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Fork(1)
 @BenchmarkMode(Mode.AverageTime)
 public class StringOpBenchmarks {
-    private static final String STRING_PART = "h";
+  private static final String STRING_PART = "h";
 
-    StringBuilder sb;
-    String st;
-    String res;
+  StringBuilder sb;
+  String st;
+  String res;
 
-    @Setup
-    public void setup() {
-        st = "";
-    }
+  @Setup
+  public void setup() {
+    st = "";
+  }
 
-    @Setup(Level.Invocation)
-    public void setupEach() {
-        sb = new StringBuilder();
-    }
+  @Setup(Level.Invocation)
+  public void setupEach() {
+    sb = new StringBuilder();
+  }
 
-    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    public void testStringBuilder() {
-        sb.append(STRING_PART).append(STRING_PART);
-    }
+  @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  public void testStringBuilder() {
+    sb.append(STRING_PART).append(STRING_PART);
+  }
 
-    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    public void testStringPlus() {
-        res = st + STRING_PART + STRING_PART;
-    }
+  @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  public void testStringPlus() {
+    res = st + STRING_PART + STRING_PART;
+  }
 
-    @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-    @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
-    @Benchmark
-    public void testStrCat() {
-        res = st.concat(STRING_PART).concat(STRING_PART);
-    }
+  @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 1200, timeUnit = TimeUnit.MILLISECONDS)
+  @Benchmark
+  public void testStrCat() {
+    res = st.concat(STRING_PART).concat(STRING_PART);
+  }
 
-    public static void main(String[] args) throws Exception {
-        Options opt = new OptionsBuilder()
-                    .addProfiler("gc")
-                    .include(".*" + StringOpBenchmarks.class.getSimpleName() + ".*test.*")
-                    .build();
+  public static void main(String[] args) throws Exception {
+    Options opt =
+        new OptionsBuilder()
+            .addProfiler("gc")
+            .include(".*" + StringOpBenchmarks.class.getSimpleName() + ".*test.*")
+            .build();
 
-            new Runner(opt).run();
-    }
+    new Runner(opt).run();
+  }
 }

@@ -25,6 +25,11 @@
 
 package org.openjdk.btrace.agent;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.net.SocketException;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.EventCommand;
@@ -34,145 +39,146 @@ import org.openjdk.btrace.core.comm.PrintableCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
 import org.openjdk.btrace.core.comm.WireIO;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
-import java.net.SocketException;
-
 /**
  * Represents a remote client communicated by socket.
  *
  * @author A. Sundararajan
  */
 class RemoteClient extends Client {
-    private volatile Socket sock;
-    private volatile ObjectInputStream ois;
-    private volatile ObjectOutputStream oos;
+  private volatile Socket sock;
+  private volatile ObjectInputStream ois;
+  private volatile ObjectOutputStream oos;
 
-    RemoteClient(ClientContext ctx, Socket sock) throws IOException {
-        super(ctx);
-        this.sock = sock;
-        this.ois = new ObjectInputStream(sock.getInputStream());
-        this.oos = new ObjectOutputStream(sock.getOutputStream());
-        boolean hasInstrument = false;
-        while (!hasInstrument) {
-            Command cmd = WireIO.read(ois);
-            switch (cmd.getType()) {
-                case Command.INSTRUMENT: {
-                    debugPrint("got instrument command");
-                    Class<?> btraceClazz = loadClass((InstrumentCommand) cmd);
-                    if (btraceClazz == null) {
-                        throw new RuntimeException("can not load BTrace class");
-                    }
-                    hasInstrument = true;
-                    initialize();
-                    break;
-                }
-                case Command.SET_PARAMS: {
-                    settings.from(((SetSettingsCommand) cmd).getParams());
-                    setupWriter();
-                    break;
-                }
-                default: {
-                    errorExit(new IllegalArgumentException("expecting instrument or settings command!"));
-                    throw new IOException("expecting instrument or settings command!");
-                }
+  RemoteClient(ClientContext ctx, Socket sock) throws IOException {
+    super(ctx);
+    this.sock = sock;
+    this.ois = new ObjectInputStream(sock.getInputStream());
+    this.oos = new ObjectOutputStream(sock.getOutputStream());
+    boolean hasInstrument = false;
+    while (!hasInstrument) {
+      Command cmd = WireIO.read(ois);
+      switch (cmd.getType()) {
+        case Command.INSTRUMENT:
+          {
+            debugPrint("got instrument command");
+            Class<?> btraceClazz = loadClass((InstrumentCommand) cmd);
+            if (btraceClazz == null) {
+              throw new RuntimeException("can not load BTrace class");
             }
-        }
+            hasInstrument = true;
+            initialize();
+            break;
+          }
+        case Command.SET_PARAMS:
+          {
+            settings.from(((SetSettingsCommand) cmd).getParams());
+            setupWriter();
+            break;
+          }
+        default:
+          {
+            errorExit(new IllegalArgumentException("expecting instrument or settings command!"));
+            throw new IOException("expecting instrument or settings command!");
+          }
+      }
+    }
 
-        BTraceRuntime.initUnsafe();
-        Thread cmdHandler = new Thread(new Runnable() {
-            @Override
-            public void run() {
+    BTraceRuntime.initUnsafe();
+    Thread cmdHandler =
+        new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
                 try {
-                    BTraceRuntime.enter();
-                    while (true) {
-                        try {
-                            Command cmd = WireIO.read(ois);
-                            switch (cmd.getType()) {
-                                case Command.EXIT: {
-                                    ExitCommand ecmd = (ExitCommand) cmd;
-                                    debugPrint("received exit command");
-                                    onCommand(ecmd);
+                  BTraceRuntime.enter();
+                  while (true) {
+                    try {
+                      Command cmd = WireIO.read(ois);
+                      switch (cmd.getType()) {
+                        case Command.EXIT:
+                          {
+                            ExitCommand ecmd = (ExitCommand) cmd;
+                            debugPrint("received exit command");
+                            onCommand(ecmd);
 
-                                    return;
-                                }
-                                case Command.EVENT: {
-                                    getRuntime().handleEvent((EventCommand) cmd);
-                                    break;
-                                }
-                                default:
-                                    if (isDebug()) {
-                                        debugPrint("received " + cmd);
-                                    }
-                                    // ignore any other command
-                            }
-                        } catch (Exception exp) {
-                            debugPrint(exp);
+                            return;
+                          }
+                        case Command.EVENT:
+                          {
+                            getRuntime().handleEvent((EventCommand) cmd);
                             break;
-                        }
+                          }
+                        default:
+                          if (isDebug()) {
+                            debugPrint("received " + cmd);
+                          }
+                          // ignore any other command
+                      }
+                    } catch (Exception exp) {
+                      debugPrint(exp);
+                      break;
                     }
+                  }
                 } finally {
-                    BTraceRuntime.leave();
+                  BTraceRuntime.leave();
                 }
-            }
-        });
-        cmdHandler.setDaemon(true);
-        debugPrint("starting client command handler thread");
-        cmdHandler.start();
+              }
+            });
+    cmdHandler.setDaemon(true);
+    debugPrint("starting client command handler thread");
+    cmdHandler.start();
+  }
+
+  @Override
+  public void onCommand(Command cmd) throws IOException {
+    if (oos == null) {
+      throw new IOException("no output stream");
+    }
+    if (isDebug()) {
+      debugPrint("client " + getClassName() + ": got " + cmd);
+    }
+    boolean isConnected = true;
+    try {
+      oos.reset();
+    } catch (SocketException e) {
+      isConnected = false;
     }
 
-    @Override
-    public void onCommand(Command cmd) throws IOException {
-        if (oos == null) {
-            throw new IOException("no output stream");
+    switch (cmd.getType()) {
+      case Command.EXIT:
+        if (isConnected) {
+          WireIO.write(oos, cmd);
         }
-        if (isDebug()) {
-            debugPrint("client " + getClassName() + ": got " + cmd);
+        onExit(((ExitCommand) cmd).getExitCode());
+        break;
+      default:
+        if (out != null) {
+          if (cmd instanceof PrintableCommand) {
+            ((PrintableCommand) cmd).print(out);
+            return;
+          }
         }
-        boolean isConnected = true;
-        try {
-            oos.reset();
-        } catch (SocketException e) {
-            isConnected = false;
-        }
-
-        switch (cmd.getType()) {
-            case Command.EXIT:
-                if (isConnected) {
-                    WireIO.write(oos, cmd);
-                }
-                onExit(((ExitCommand) cmd).getExitCode());
-                break;
-            default:
-                if (out != null) {
-                    if (cmd instanceof PrintableCommand) {
-                        ((PrintableCommand) cmd).print(out);
-                        return;
-                    }
-                }
-                if (isConnected) {
-                    WireIO.write(oos, cmd);
-                }
+        if (isConnected) {
+          WireIO.write(oos, cmd);
         }
     }
+  }
 
-    @Override
-    protected synchronized void closeAll() throws IOException {
-        super.closeAll();
+  @Override
+  protected synchronized void closeAll() throws IOException {
+    super.closeAll();
 
-        if (oos != null) {
-            oos.close();
-            oos = null;
-        }
-        if (ois != null) {
-            ois.close();
-            ois = null;
-        }
-        if (sock != null) {
-            sock.close();
-            sock = null;
-        }
+    if (oos != null) {
+      oos.close();
+      oos = null;
     }
+    if (ois != null) {
+      ois.close();
+      ois = null;
+    }
+    if (sock != null) {
+      sock.close();
+      sock = null;
+    }
+  }
 }

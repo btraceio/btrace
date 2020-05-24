@@ -25,22 +25,22 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class NewArrayIntBefore {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="newArray",
-              location=@Location(value=Kind.NEWARRAY, clazz="int"))
-    public static void args(@Self Object self, String arrayType, int dims) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "newArray",
+      location = @Location(value = Kind.NEWARRAY, clazz = "int"))
+  public static void args(@Self Object self, String arrayType, int dims) {
+    println("args");
+  }
 }

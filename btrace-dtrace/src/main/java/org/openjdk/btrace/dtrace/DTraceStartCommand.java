@@ -33,7 +33,7 @@ import org.opensolaris.os.dtrace.ConsumerEvent;
  * @author A. Sundararajan
  */
 public class DTraceStartCommand extends DTraceConsumerCommand {
-    public DTraceStartCommand(ConsumerEvent ce) {
-        super("dtrace-start", ce);
-    }
+  public DTraceStartCommand(ConsumerEvent ce) {
+    super("dtrace-start", ce);
+  }
 }

@@ -39,55 +39,54 @@ import java.util.Map;
  */
 public class StringMapDataCommand extends DataCommand {
 
-    private Map<String, String> data;
+  private Map<String, String> data;
 
-    public StringMapDataCommand() {
-        this(null, null);
-    }
+  public StringMapDataCommand() {
+    this(null, null);
+  }
 
-    public StringMapDataCommand(String name, Map<String, String> data) {
-        super(STRING_MAP, name);
-        if (data != null) {
-            this.data = new HashMap<>(data);
-        } else {
-            this.data = Collections.emptyMap();
-        }
+  public StringMapDataCommand(String name, Map<String, String> data) {
+    super(STRING_MAP, name);
+    if (data != null) {
+      this.data = new HashMap<>(data);
+    } else {
+      this.data = Collections.emptyMap();
     }
+  }
 
-    public Map<String, String> getData() {
-        return data;
-    }
+  public Map<String, String> getData() {
+    return data;
+  }
 
-    @Override
-    public void print(PrintWriter out) {
-        if (name != null && !name.isEmpty()) {
-            out.println(name);
-        }
-        for (Map.Entry<String, String> e : data.entrySet()) {
-            out.print(e.getKey());
-            out.print(" = ");
-            out.println(e.getValue());
-        }
+  @Override
+  public void print(PrintWriter out) {
+    if (name != null && !name.isEmpty()) {
+      out.println(name);
     }
+    for (Map.Entry<String, String> e : data.entrySet()) {
+      out.print(e.getKey());
+      out.print(" = ");
+      out.println(e.getValue());
+    }
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeUTF(name != null ? name : "");
-        out.writeInt(data.size());
-        for (String key : data.keySet()) {
-            out.writeUTF(key);
-            out.writeUTF(data.get(key));
-        }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeUTF(name != null ? name : "");
+    out.writeInt(data.size());
+    for (String key : data.keySet()) {
+      out.writeUTF(key);
+      out.writeUTF(data.get(key));
     }
+  }
 
-    @Override
-    protected void read(ObjectInput in)
-            throws IOException, ClassNotFoundException {
-        name = in.readUTF();
-        data = new HashMap<String, String>();
-        int sz = in.readInt();
-        for (int i = 0; i < sz; i++) {
-            data.put(in.readUTF(), in.readUTF());
-        }
+  @Override
+  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
+    name = in.readUTF();
+    data = new HashMap<String, String>();
+    int sz = in.readInt();
+    for (int i = 0; i < sz; i++) {
+      data.put(in.readUTF(), in.readUTF());
     }
+  }
 }

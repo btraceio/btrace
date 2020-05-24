@@ -26,10 +26,8 @@
 package org.openjdk.btrace.dtrace;
 
 /**
- * A marker interface to tell whether a given
- * BTrace command is a wrapper of a DTrace event.
+ * A marker interface to tell whether a given BTrace command is a wrapper of a DTrace event.
  *
  * @author A. Sundararajan
  */
-public interface DTraceCommand {
-}
+public interface DTraceCommand {}

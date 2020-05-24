@@ -25,20 +25,18 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class StaticNoArgsSelf {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="noargs$static", enableAt = @Level(">=1"))
-    public static void argsEmpty(@Self Object self) {
-        println("args empty");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "noargs$static", enableAt = @Level(">=1"))
+  public static void argsEmpty(@Self Object self) {
+    println("args empty");
+  }
 }

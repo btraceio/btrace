@@ -26,17 +26,17 @@
 package org.openjdk.btrace.core;
 
 /**
- * Instance of this exception type is thrown by BTrace
- * Verifier when an input .class is not a valid BTrace program.
+ * Instance of this exception type is thrown by BTrace Verifier when an input .class is not a valid
+ * BTrace program.
  *
  * @author A. Sundararajan
  */
 public class VerifierException extends RuntimeException {
-    public VerifierException(String msg) {
-        super(msg);
-    }
+  public VerifierException(String msg) {
+    super(msg);
+  }
 
-    public VerifierException(Throwable cause) {
-        super(cause);
-    }
+  public VerifierException(Throwable cause) {
+    super(cause);
+  }
 }

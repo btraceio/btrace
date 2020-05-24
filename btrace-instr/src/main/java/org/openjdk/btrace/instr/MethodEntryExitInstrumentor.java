@@ -28,20 +28,26 @@ package org.openjdk.btrace.instr;
 import org.objectweb.asm.MethodVisitor;
 
 /**
- * Instruments method entry and exit points. For exit, both normal and abnormal
- * (exception) return points are instrumented. Subclasses can decide what code
- * is inserted at entry/exit points.
+ * Instruments method entry and exit points. For exit, both normal and abnormal (exception) return
+ * points are instrumented. Subclasses can decide what code is inserted at entry/exit points.
  *
  * @author A. Sundararajan
  */
 public class MethodEntryExitInstrumentor extends ErrorReturnInstrumentor {
-    public MethodEntryExitInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
-                                       String parentClz, String superClz, int access, String name, String desc) {
-        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
-    }
+  public MethodEntryExitInstrumentor(
+      ClassLoader cl,
+      MethodVisitor mv,
+      MethodInstrumentorHelper mHelper,
+      String parentClz,
+      String superClz,
+      int access,
+      String name,
+      String desc) {
+    super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
+  }
 
-    @Override
-    protected void onMethodReturn(int opcode) {
-        asm.println("on method return");
-    }
+  @Override
+  protected void onMethodReturn(int opcode) {
+    asm.println("on method return");
+  }
 }

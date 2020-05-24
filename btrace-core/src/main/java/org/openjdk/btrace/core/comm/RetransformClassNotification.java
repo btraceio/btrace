@@ -31,40 +31,38 @@ import java.io.ObjectOutput;
 import java.io.PrintWriter;
 
 /**
- * This command is sent out as a notification that a class
- * is going to be transformed
+ * This command is sent out as a notification that a class is going to be transformed
  *
  * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class RetransformClassNotification extends Command implements PrintableCommand {
-    private String className;
+  private String className;
 
-    public RetransformClassNotification(String className) {
-        super(RETRANSFORM_CLASS);
-        this.className = className;
-    }
+  public RetransformClassNotification(String className) {
+    super(RETRANSFORM_CLASS);
+    this.className = className;
+  }
 
-    public RetransformClassNotification() {
-        super(RETRANSFORM_CLASS);
-    }
+  public RetransformClassNotification() {
+    super(RETRANSFORM_CLASS);
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeObject(className);
-    }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeObject(className);
+  }
 
-    @Override
-    protected void read(ObjectInput in)
-            throws IOException, ClassNotFoundException {
-        className = (String) in.readObject();
-    }
+  @Override
+  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
+    className = (String) in.readObject();
+  }
 
-    public String getClassName() {
-        return className;
-    }
+  public String getClassName() {
+    return className;
+  }
 
-    @Override
-    public void print(PrintWriter out) {
-        out.append("Going to retransform class ").append(className).append('\n');
-    }
+  @Override
+  public void print(PrintWriter out) {
+    out.append("Going to retransform class ").append(className).append('\n');
+  }
 }

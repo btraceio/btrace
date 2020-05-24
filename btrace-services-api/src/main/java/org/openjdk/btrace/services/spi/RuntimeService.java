@@ -26,13 +26,11 @@ package org.openjdk.btrace.services.spi;
 
 import org.openjdk.btrace.services.api.RuntimeContext;
 
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 public abstract class RuntimeService implements BTraceService {
-    protected final RuntimeContext rt;
+  protected final RuntimeContext rt;
 
-    public RuntimeService(RuntimeContext rt) {
-        this.rt = rt;
-    }
+  public RuntimeService(RuntimeContext rt) {
+    this.rt = rt;
+  }
 }

@@ -25,70 +25,69 @@
 
 package org.openjdk.btrace.core.comm;
 
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.SharedSettings;
-
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Map;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.SharedSettings;
 
 public class InstrumentCommand extends Command {
-    private final DebugSupport debug;
-    private byte[] code;
-    private ArgsMap args;
+  private final DebugSupport debug;
+  private byte[] code;
+  private ArgsMap args;
 
-    public InstrumentCommand(byte[] code, ArgsMap args, DebugSupport debug) {
-        super(INSTRUMENT);
-        this.code = code;
-        this.args = args;
-        this.debug = debug;
-    }
+  public InstrumentCommand(byte[] code, ArgsMap args, DebugSupport debug) {
+    super(INSTRUMENT);
+    this.code = code;
+    this.args = args;
+    this.debug = debug;
+  }
 
-    public InstrumentCommand(byte[] code, String[] args, DebugSupport debug) {
-        this(code, new ArgsMap(args, debug), debug);
-    }
+  public InstrumentCommand(byte[] code, String[] args, DebugSupport debug) {
+    this(code, new ArgsMap(args, debug), debug);
+  }
 
-    public InstrumentCommand(byte[] code, Map<String, String> args, DebugSupport debug) {
-        this(code, new ArgsMap(args, debug), debug);
-    }
+  public InstrumentCommand(byte[] code, Map<String, String> args, DebugSupport debug) {
+    this(code, new ArgsMap(args, debug), debug);
+  }
 
-    protected InstrumentCommand() {
-        this(null, (Map<String, String>) null, new DebugSupport(SharedSettings.GLOBAL));
-    }
+  protected InstrumentCommand() {
+    this(null, (Map<String, String>) null, new DebugSupport(SharedSettings.GLOBAL));
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeInt(code.length);
-        out.write(code);
-        out.writeInt(args.size());
-        for (Map.Entry<String, String> e : args) {
-            out.writeUTF(e.getKey());
-            String val = e.getValue();
-            out.writeUTF(val != null ? val : "");
-        }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeInt(code.length);
+    out.write(code);
+    out.writeInt(args.size());
+    for (Map.Entry<String, String> e : args) {
+      out.writeUTF(e.getKey());
+      String val = e.getValue();
+      out.writeUTF(val != null ? val : "");
     }
+  }
 
-    @Override
-    protected void read(ObjectInput in) throws IOException {
-        int len = in.readInt();
-        code = new byte[len];
-        in.readFully(code);
-        len = in.readInt();
-        args = new ArgsMap(len, debug);
-        for (int i = 0; i < len; i++) {
-            String key = in.readUTF();
-            String val = in.readUTF();
-            args.put(key, val);
-        }
+  @Override
+  protected void read(ObjectInput in) throws IOException {
+    int len = in.readInt();
+    code = new byte[len];
+    in.readFully(code);
+    len = in.readInt();
+    args = new ArgsMap(len, debug);
+    for (int i = 0; i < len; i++) {
+      String key = in.readUTF();
+      String val = in.readUTF();
+      args.put(key, val);
     }
+  }
 
-    public byte[] getCode() {
-        return code;
-    }
+  public byte[] getCode() {
+    return code;
+  }
 
-    public ArgsMap getArguments() {
-        return args;
-    }
+  public ArgsMap getArguments() {
+    return args;
+  }
 }

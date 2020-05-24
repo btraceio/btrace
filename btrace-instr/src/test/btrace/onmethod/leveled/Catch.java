@@ -25,25 +25,26 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import java.io.IOException;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.annotations.TargetInstance;
-import java.io.IOException;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class Catch {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="exception",
-              location=@Location(value=Kind.CATCH), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @TargetInstance IOException e) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "exception",
+      location = @Location(value = Kind.CATCH),
+      enableAt = @Level(">=1"))
+  public static void args(@Self Object self, @TargetInstance IOException e) {
+    println("args");
+  }
 }

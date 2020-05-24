@@ -7,7 +7,7 @@ apply plugin: 'maven'
 apply plugin: 'idea'
 
 project.group = 'org.openjdk.btrace'
-project.version = '2.0.1'
+project.version = '2.0.2'
 
 sourceCompatibility = '1.7'
 targetCompatibility = '1.7'
@@ -22,6 +22,18 @@ if (!project.hasProperty("JAVA_11_HOME")) {
     project.ext.setProperty("JAVA_11_HOME", System.getenv("JAVA_11_HOME"));
 }
 
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+}
+
+googleJavaFormat {
+    exclude '**/resources/**/*.java'
+    exclude '**/test/btrace/**.java'
+}
+
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 compileJava {
@@ -30,10 +42,11 @@ compileJava {
 }
 
 repositories {
-    mavenCentral();
+    mavenCentral()
     // You may define additional repositories, or even remove "mavenCentral()".
     // Read more about repositories here:
     //   http://www.gradle.org/docs/current/userguide/dependency_management.html#sec:repositories
+    jcenter()
 }
 
 dependencies {

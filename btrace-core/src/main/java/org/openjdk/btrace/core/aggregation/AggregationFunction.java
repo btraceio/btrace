@@ -26,48 +26,48 @@ package org.openjdk.btrace.core.aggregation;
 
 /**
  * The type of aggregation functions.
+ *
  * <p>
  *
  * @author Christian Glencross
  */
 public enum AggregationFunction {
+  COUNT {
+    @Override
+    public Count newValue() {
+      return new Count();
+    }
+  },
+  SUM {
+    @Override
+    public Sum newValue() {
+      return new Sum();
+    }
+  },
+  MINIMUM {
+    @Override
+    public Minimum newValue() {
+      return new Minimum();
+    }
+  },
+  MAXIMUM {
+    @Override
+    public Maximum newValue() {
+      return new Maximum();
+    }
+  },
+  AVERAGE {
+    @Override
+    public Average newValue() {
+      return new Average();
+    }
+  },
+  QUANTIZE {
+    @Override
+    public Quantize newValue() {
+      return new Quantize();
+    }
+  };
 
-    COUNT {
-        @Override
-        public Count newValue() {
-            return new Count();
-        }
-    },
-    SUM {
-        @Override
-        public Sum newValue() {
-            return new Sum();
-        }
-    },
-    MINIMUM {
-        @Override
-        public Minimum newValue() {
-            return new Minimum();
-        }
-    },
-    MAXIMUM {
-        @Override
-        public Maximum newValue() {
-            return new Maximum();
-        }
-    },
-    AVERAGE {
-        @Override
-        public Average newValue() {
-            return new Average();
-        }
-    },
-    QUANTIZE {
-        @Override
-        public Quantize newValue() {
-            return new Quantize();
-        }
-    };
-
-    public abstract AggregationValue newValue();
+  public abstract AggregationValue newValue();
 }

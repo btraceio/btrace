@@ -24,66 +24,64 @@
  */
 package org.openjdk.btrace.instr;
 
-import org.openjdk.btrace.instr.ClassInfo.ClassName;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+import org.openjdk.btrace.instr.ClassInfo.ClassName;
 
 /**
- * A simple class cache holding {@linkplain ClassInfo} instances and being
- * searchable either by {@linkplain Class} or a tuple of {@code (className, classLoader)}
+ * A simple class cache holding {@linkplain ClassInfo} instances and being searchable either by
+ * {@linkplain Class} or a tuple of {@code (className, classLoader)}
  *
  * @author Jaroslav Bachorik
  */
 public final class ClassCache {
-    private final Map<ClassLoader, Map<ClassName, ClassInfo>> cacheMap = new WeakHashMap<>();
-    private final Map<ClassName, ClassInfo> bootstrapInfos = new HashMap<>(500);
+  private final Map<ClassLoader, Map<ClassName, ClassInfo>> cacheMap = new WeakHashMap<>();
+  private final Map<ClassName, ClassInfo> bootstrapInfos = new HashMap<>(500);
 
-    public static ClassCache getInstance() {
-        return Singleton.INSTANCE;
+  public static ClassCache getInstance() {
+    return Singleton.INSTANCE;
+  }
+
+  public ClassInfo get(Class<?> clz) {
+    return get(clz.getClassLoader(), clz.getName());
+  }
+
+  /**
+   * Returns a cached {@linkplain ClassInfo} value. If the corresponding value has not been cached
+   * yet then it is created and put into the cache.
+   *
+   * @param cl The associated {@linkplain ClassLoader}
+   * @param className The Java class name or internal class name
+   */
+  public ClassInfo get(ClassLoader cl, String className) {
+    return get(cl, new ClassName(className));
+  }
+
+  synchronized ClassInfo get(ClassLoader cl, ClassName className) {
+    Map<ClassName, ClassInfo> infos = getInfos(cl);
+
+    ClassInfo ci = infos.get(className);
+    if (ci == null) {
+      ci = new ClassInfo(this, cl, className);
+      infos.put(className, ci);
     }
+    return ci;
+  }
 
-    public ClassInfo get(Class<?> clz) {
-        return get(clz.getClassLoader(), clz.getName());
+  private synchronized Map<ClassName, ClassInfo> getInfos(ClassLoader cl) {
+    if (cl == null) {
+      return bootstrapInfos;
     }
-
-    /**
-     * Returns a cached {@linkplain ClassInfo} value.
-     * If the corresponding value has not been cached yet then it is
-     * created and put into the cache.
-     *
-     * @param cl        The associated {@linkplain ClassLoader}
-     * @param className The Java class name or internal class name
-     */
-    public ClassInfo get(ClassLoader cl, String className) {
-        return get(cl, new ClassName(className));
+    Map<ClassName, ClassInfo> infos = cacheMap.get(cl);
+    if (infos == null) {
+      infos = new HashMap<>(500);
+      cacheMap.put(cl, infos);
     }
+    return infos;
+  }
 
-    synchronized ClassInfo get(ClassLoader cl, ClassName className) {
-        Map<ClassName, ClassInfo> infos = getInfos(cl);
-
-        ClassInfo ci = infos.get(className);
-        if (ci == null) {
-            ci = new ClassInfo(this, cl, className);
-            infos.put(className, ci);
-        }
-        return ci;
-    }
-
-    private synchronized Map<ClassName, ClassInfo> getInfos(ClassLoader cl) {
-        if (cl == null) {
-            return bootstrapInfos;
-        }
-        Map<ClassName, ClassInfo> infos = cacheMap.get(cl);
-        if (infos == null) {
-            infos = new HashMap<>(500);
-            cacheMap.put(cl, infos);
-        }
-        return infos;
-    }
-
-    private static final class Singleton {
-        private static final ClassCache INSTANCE = new ClassCache();
-    }
+  private static final class Singleton {
+    private static final ClassCache INSTANCE = new ClassCache();
+  }
 }

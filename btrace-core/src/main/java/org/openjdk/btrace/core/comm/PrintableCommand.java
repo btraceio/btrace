@@ -27,16 +27,16 @@ package org.openjdk.btrace.core.comm;
 import java.io.PrintWriter;
 
 /**
- * Marks any command which is able to print its internal info into
- * the provided {@linkplain PrintWriter}
+ * Marks any command which is able to print its internal info into the provided {@linkplain
+ * PrintWriter}
  *
  * @author Jaroslav Bachorik
  */
 public interface PrintableCommand {
-    /**
-     * Print the command internal info
-     *
-     * @param out the associated {@linkplain PrintWriter}
-     */
-    void print(PrintWriter out);
+  /**
+   * Print the command internal info
+   *
+   * @param out the associated {@linkplain PrintWriter}
+   */
+  void print(PrintWriter out);
 }

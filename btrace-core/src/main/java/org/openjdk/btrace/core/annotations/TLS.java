@@ -31,16 +31,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for thread-local BTrace fields. BTrace fields
- * annotated with this annotation are stored in thread local
- * storage. Field get/set are transparently converted to
- * thread local get and set respectively.
+ * Annotation for thread-local BTrace fields. BTrace fields annotated with this annotation are
+ * stored in thread local storage. Field get/set are transparently converted to thread local get and
+ * set respectively.
+ *
  * <h3>Important!!!</h3>
- * It is not possible to access the data stored in the thread local storage
- * from any other handler than {@linkplain OnMethod}
+ *
+ * It is not possible to access the data stored in the thread local storage from any other handler
+ * than {@linkplain OnMethod}
+ *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface TLS {
-}
+public @interface TLS {}

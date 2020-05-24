@@ -40,8 +40,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ProbeMethodName {
-    /**
-     * Flag indicating whether a fully qualified name (FQN) or a simple method name should be used
-     */
-    boolean fqn() default false;
+  /** Flag indicating whether a fully qualified name (FQN) or a simple method name should be used */
+  boolean fqn() default false;
 }

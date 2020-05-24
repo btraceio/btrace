@@ -26,29 +26,27 @@ package org.openjdk.btrace.instr;
 
 import org.openjdk.btrace.runtime.Interval;
 
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 public class Level {
-    private final Interval value;
+  private final Interval value;
 
-    public Level() {
-        this(">0");
-    }
+  public Level() {
+    this(">0");
+  }
 
-    private Level(Interval i) {
-        value = i;
-    }
+  private Level(Interval i) {
+    value = i;
+  }
 
-    private Level(String s) {
-        this(Interval.fromString(s));
-    }
+  private Level(String s) {
+    this(Interval.fromString(s));
+  }
 
-    public static Level fromString(String s) {
-        return new Level(s);
-    }
+  public static Level fromString(String s) {
+    return new Level(s);
+  }
 
-    public Interval getValue() {
-        return value;
-    }
+  public Interval getValue() {
+    return value;
+  }
 }

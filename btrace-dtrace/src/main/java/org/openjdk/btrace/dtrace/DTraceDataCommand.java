@@ -25,11 +25,10 @@
 
 package org.openjdk.btrace.dtrace;
 
-import java.util.List;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-
+import java.util.List;
 import org.openjdk.btrace.core.comm.MessageCommand;
 import org.opensolaris.os.dtrace.DataEvent;
 import org.opensolaris.os.dtrace.ProbeData;
@@ -40,39 +39,36 @@ import org.opensolaris.os.dtrace.Record;
  *
  * @author A. Sundararajan
  */
-public class DTraceDataCommand extends MessageCommand
-             implements DTraceCommand {
-    private DataEvent de;
-    public DTraceDataCommand(DataEvent de) {
-        super(asString(de));
-        this.de = de;
-    }
+public class DTraceDataCommand extends MessageCommand implements DTraceCommand {
+  private DataEvent de;
 
-    /**
-     * Returns the underlying DTrace DataEvent.
-     */
-    public DataEvent getDataEvent() {
-        return de;
-    }
+  public DTraceDataCommand(DataEvent de) {
+    super(asString(de));
+    this.de = de;
+  }
 
-    public void write(ObjectOutput out) throws IOException {
-        super.write(out);
-        out.writeObject(de);
-    }
+  /** Returns the underlying DTrace DataEvent. */
+  public DataEvent getDataEvent() {
+    return de;
+  }
 
-    public void read(ObjectInput in) 
-                throws ClassNotFoundException, IOException {
-        super.read(in);
-        de = (DataEvent) in.readObject();
+  public void write(ObjectOutput out) throws IOException {
+    super.write(out);
+    out.writeObject(de);
+  }
+
+  public void read(ObjectInput in) throws ClassNotFoundException, IOException {
+    super.read(in);
+    de = (DataEvent) in.readObject();
+  }
+
+  private static String asString(DataEvent de) {
+    ProbeData pd = de.getProbeData();
+    List<Record> records = pd.getRecords();
+    StringBuilder buf = new StringBuilder();
+    for (Record rec : records) {
+      buf.append(rec);
     }
-        
-    private static String asString(DataEvent de) {
-        ProbeData pd = de.getProbeData();
-        List<Record> records = pd.getRecords();
-        StringBuilder buf = new StringBuilder();
-        for (Record rec: records) {
-            buf.append(rec);
-        }
-        return buf.toString();
-    }
+    return buf.toString();
+  }
 }

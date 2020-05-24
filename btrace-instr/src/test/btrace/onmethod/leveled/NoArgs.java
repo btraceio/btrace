@@ -25,35 +25,33 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class NoArgs {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", enableAt = @Level(">=1"))
-    public static void argsEmpty(@Self Object x) {
-        println("args empty");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args", enableAt = @Level(">=1"))
+  public static void argsEmpty(@Self Object x) {
+    println("args empty");
+  }
 
-//    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", level  = 1)
-//    public static void argsNoSelf(String a, int b, String[] c, int[] d) {
-//        println("args no self");
-//    }
-//
-//    @OnMethod(clazz="/.*/", method="args", level  = 1)
-//    public static void args(@Self Object self, String a, int b, String[] c, int[] d) {
-//        println("args");
-//    }
-//
-//    @OnMethod(clazz="/.*/", method="args$static", level  = 1)
-//    public static void staticArgs() {
-//        println("args$static");
-//    }
+  //    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", level  = 1)
+  //    public static void argsNoSelf(String a, int b, String[] c, int[] d) {
+  //        println("args no self");
+  //    }
+  //
+  //    @OnMethod(clazz="/.*/", method="args", level  = 1)
+  //    public static void args(@Self Object self, String a, int b, String[] c, int[] d) {
+  //        println("args");
+  //    }
+  //
+  //    @OnMethod(clazz="/.*/", method="args$static", level  = 1)
+  //    public static void staticArgs() {
+  //        println("args$static");
+  //    }
 }

@@ -25,20 +25,18 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class NativeWithoutReturn {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="nativeWithoutReturn", enableAt = @Level(">=1"))
-    public static void nMethod(@Self Object self) {
-        println("args");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "nativeWithoutReturn", enableAt = @Level(">=1"))
+  public static void nMethod(@Self Object self) {
+    println("args");
+  }
 }

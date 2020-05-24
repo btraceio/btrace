@@ -25,26 +25,27 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class NoArgsEntryReturnNoCapture {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args")
-    public static void argsEmptyEntry(@Self Object x) {
-        println("entry");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args")
+  public static void argsEmptyEntry(@Self Object x) {
+    println("entry");
+  }
 
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="args", location=@Location(value=Kind.RETURN))
-    public static void argsEmptyReturn(@Self Object x) {
-        println("return");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "args",
+      location = @Location(value = Kind.RETURN))
+  public static void argsEmptyReturn(@Self Object x) {
+    println("return");
+  }
 }

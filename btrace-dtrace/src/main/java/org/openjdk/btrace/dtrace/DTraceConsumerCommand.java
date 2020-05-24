@@ -25,10 +25,9 @@
 
 package org.openjdk.btrace.dtrace;
 
+import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.IOException;
-
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.opensolaris.os.dtrace.Consumer;
 import org.opensolaris.os.dtrace.ConsumerEvent;
@@ -38,34 +37,29 @@ import org.opensolaris.os.dtrace.ConsumerEvent;
  *
  * @author A. Sundararajan
  */
-public abstract class DTraceConsumerCommand extends EventCommand
-             implements DTraceCommand {
-    private ConsumerEvent ce;
-    public DTraceConsumerCommand(String type, ConsumerEvent ce) {
-        super(type);
-        this.ce = ce;
-    }
+public abstract class DTraceConsumerCommand extends EventCommand implements DTraceCommand {
+  private ConsumerEvent ce;
 
-    /**
-     * Returns the underlying DTrace ConsumerEvent.
-     */
-    public ConsumerEvent getConsumerEvent() {
-        return ce;
-    }
+  public DTraceConsumerCommand(String type, ConsumerEvent ce) {
+    super(type);
+    this.ce = ce;
+  }
 
-    /**
-     * Returns the Consumer object.
-     */
-    public Consumer getConsumer() {
-        return (Consumer) ce.getSource();
-    }
+  /** Returns the underlying DTrace ConsumerEvent. */
+  public ConsumerEvent getConsumerEvent() {
+    return ce;
+  }
 
-    public void write(ObjectOutput out) throws IOException {
-        out.writeObject(ce);
-    }
-    
-    public void read(ObjectInput in)
-                throws ClassNotFoundException, IOException {
-        ce = (ConsumerEvent) in.readObject();
-    }              
+  /** Returns the Consumer object. */
+  public Consumer getConsumer() {
+    return (Consumer) ce.getSource();
+  }
+
+  public void write(ObjectOutput out) throws IOException {
+    out.writeObject(ce);
+  }
+
+  public void read(ObjectInput in) throws ClassNotFoundException, IOException {
+    ce = (ConsumerEvent) in.readObject();
+  }
 }

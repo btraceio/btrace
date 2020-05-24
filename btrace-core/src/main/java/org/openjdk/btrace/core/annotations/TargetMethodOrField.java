@@ -31,8 +31,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * It is used to mark a probe method argument as the receiver of called method name
- * in {@linkplain Location} = {@linkplain Kind#CALL}
+ * It is used to mark a probe method argument as the receiver of called method name in {@linkplain
+ * Location} = {@linkplain Kind#CALL}
  *
  * @author Jaroslav Bachorik
  * @since 1.1
@@ -40,8 +40,9 @@ import java.lang.annotation.Target;
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface TargetMethodOrField {
-    /**
-     * Flag indicating whether a fully qualified name (FQN) or a simple method/field name should be used
-     */
-    boolean fqn() default false;
+  /**
+   * Flag indicating whether a fully qualified name (FQN) or a simple method/field name should be
+   * used
+   */
+  boolean fqn() default false;
 }

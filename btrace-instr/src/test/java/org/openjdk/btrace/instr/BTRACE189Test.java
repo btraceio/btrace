@@ -33,51 +33,50 @@ import org.junit.Test;
  * @author Jaroslav Bachorik
  */
 public class BTRACE189Test extends InstrumentorTestBase {
-    @Test
-    public void annotatedClass() throws Exception {
-        originalBC = loadTargetClass("Main");
-        transform("issues/BTRACE189");
-        checkTrace(
-                "// access flags 0x9\n" +
-                        "public static Lorg/openjdk/btrace/core/BTraceRuntime; runtime\n" +
-                        "\n" +
-                        "// access flags 0x49\n" +
-                        "public static volatile I $btrace$$level = 0\n" +
-                        "\n" +
-                        "// access flags 0x9\n" +
-                        "public static <clinit>()V\n" +
-                        "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-                        "L0\n" +
-                        "LDC Ltraces/issues/BTRACE189;.class\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.forClass (Ljava/lang/Class;)Lorg/openjdk/btrace/core/BTraceRuntime;\n" +
-                        "PUTSTATIC traces/issues/BTRACE189.runtime : Lorg/openjdk/btrace/core/BTraceRuntime;\n" +
-                        "GETSTATIC traces/issues/BTRACE189.runtime : Lorg/openjdk/btrace/core/BTraceRuntime;\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.enter (Lorg/openjdk/btrace/core/BTraceRuntime;)Z\n" +
-                        "IFNE L2\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.leave ()V\n" +
-                        "RETURN\n" +
-                        "L2\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.start ()V\n" +
-                        "RETURN\n" +
-                        "L1\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.leave ()V\n" +
-                        "RETURN\n" +
-                        "MAXSTACK = 1\n" +
-                        "MAXLOCALS = 0\n" +
-                        "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n" +
-                        "GETSTATIC traces/issues/BTRACE189.runtime : Lorg/openjdk/btrace/core/BTraceRuntime;\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.enter (Lorg/openjdk/btrace/core/BTraceRuntime;)Z\n" +
-                        "IFNE L0\n" +
-                        "RETURN\n" +
-                        "L0\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.leave ()V\n" +
-                        "L1\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n" +
-                        "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.leave ()V\n" +
-                        "RETURN\n" +
-                        "// access flags 0x9\n" +
-                        "public static sharedMethod(Ljava/lang/String;)V"
-        );
-    }
+  @Test
+  public void annotatedClass() throws Exception {
+    originalBC = loadTargetClass("Main");
+    transform("issues/BTRACE189");
+    checkTrace(
+        "// access flags 0x9\n"
+            + "public static Lorg/openjdk/btrace/core/BTraceRuntime; runtime\n"
+            + "\n"
+            + "// access flags 0x49\n"
+            + "public static volatile I $btrace$$level = 0\n"
+            + "\n"
+            + "// access flags 0x9\n"
+            + "public static <clinit>()V\n"
+            + "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n"
+            + "L0\n"
+            + "LDC Ltraces/issues/BTRACE189;.class\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.forClass (Ljava/lang/Class;)Lorg/openjdk/btrace/core/BTraceRuntime;\n"
+            + "PUTSTATIC traces/issues/BTRACE189.runtime : Lorg/openjdk/btrace/core/BTraceRuntime;\n"
+            + "GETSTATIC traces/issues/BTRACE189.runtime : Lorg/openjdk/btrace/core/BTraceRuntime;\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.enter (Lorg/openjdk/btrace/core/BTraceRuntime;)Z\n"
+            + "IFNE L2\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.leave ()V\n"
+            + "RETURN\n"
+            + "L2\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.start ()V\n"
+            + "RETURN\n"
+            + "L1\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.leave ()V\n"
+            + "RETURN\n"
+            + "MAXSTACK = 1\n"
+            + "MAXLOCALS = 0\n"
+            + "TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable\n"
+            + "GETSTATIC traces/issues/BTRACE189.runtime : Lorg/openjdk/btrace/core/BTraceRuntime;\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.enter (Lorg/openjdk/btrace/core/BTraceRuntime;)Z\n"
+            + "IFNE L0\n"
+            + "RETURN\n"
+            + "L0\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.leave ()V\n"
+            + "L1\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.handleException (Ljava/lang/Throwable;)V\n"
+            + "INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.leave ()V\n"
+            + "RETURN\n"
+            + "// access flags 0x9\n"
+            + "public static sharedMethod(Ljava/lang/String;)V");
+  }
 }

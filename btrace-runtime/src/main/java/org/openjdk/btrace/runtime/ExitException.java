@@ -26,19 +26,18 @@
 package org.openjdk.btrace.runtime;
 
 /**
- * Instance of this exception is thrown to implement
- * BTrace exit built-in function.
+ * Instance of this exception is thrown to implement BTrace exit built-in function.
  *
  * @author A. Sundararajan
  */
 public final class ExitException extends RuntimeException {
-    private final int exitCode;
+  private final int exitCode;
 
-    ExitException(int code) {
-        exitCode = code;
-    }
+  ExitException(int code) {
+    exitCode = code;
+  }
 
-    int exitCode() {
-        return exitCode;
-    }
+  int exitCode() {
+    return exitCode;
+  }
 }

@@ -36,40 +36,39 @@ import java.io.PrintWriter;
  * @author A. Sundararajan
  */
 public class NumberDataCommand extends DataCommand {
-    private Number value;
+  private Number value;
 
-    public NumberDataCommand() {
-        this(null, 0);
-    }
+  public NumberDataCommand() {
+    this(null, 0);
+  }
 
-    public NumberDataCommand(String name, Number value) {
-        super(NUMBER, name);
-        this.value = value;
-    }
+  public NumberDataCommand(String name, Number value) {
+    super(NUMBER, name);
+    this.value = value;
+  }
 
-    @Override
-    public void print(PrintWriter out) {
-        if (name != null && !name.isEmpty()) {
-            out.print(name);
-            out.print(" = ");
-        }
-        out.println(value);
+  @Override
+  public void print(PrintWriter out) {
+    if (name != null && !name.isEmpty()) {
+      out.print(name);
+      out.print(" = ");
     }
+    out.println(value);
+  }
 
-    public Number getValue() {
-        return value;
-    }
+  public Number getValue() {
+    return value;
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-        out.writeUTF(name != null ? name : "");
-        out.writeObject(value);
-    }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeUTF(name != null ? name : "");
+    out.writeObject(value);
+  }
 
-    @Override
-    protected void read(ObjectInput in)
-            throws IOException, ClassNotFoundException {
-        name = in.readUTF();
-        value = (Number) in.readObject();
-    }
+  @Override
+  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
+    name = in.readUTF();
+    value = (Number) in.readObject();
+  }
 }

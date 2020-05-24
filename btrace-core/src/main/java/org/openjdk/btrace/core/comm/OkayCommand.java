@@ -30,16 +30,13 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class OkayCommand extends Command {
-    public OkayCommand() {
-        super(SUCCESS);
-    }
+  public OkayCommand() {
+    super(SUCCESS);
+  }
 
-    @Override
-    protected void write(ObjectOutput out) throws IOException {
-    }
+  @Override
+  protected void write(ObjectOutput out) throws IOException {}
 
-    @Override
-    protected void read(ObjectInput in)
-            throws IOException, ClassNotFoundException {
-    }
+  @Override
+  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {}
 }

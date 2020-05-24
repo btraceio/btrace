@@ -24,68 +24,66 @@
  */
 package traces.verifier;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 import org.openjdk.btrace.core.BTraceUtils;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-
 @BTrace
 public class VerifierScript implements Runnable {
-    private static Properties p = new Properties();
-    private static int[] x = new int[100];
-    private int i = 10;
+  private static Properties p = new Properties();
+  private static int[] x = new int[100];
+  private int i = 10;
 
-    @OnMethod(clazz = "/.*/")
-    public static void invalidMethodCall(@Self List l) {
-        if (l instanceof ArrayList) {
-            System.out.println(l.size());
-        }
+  @OnMethod(clazz = "/.*/")
+  public static void invalidMethodCall(@Self List l) {
+    if (l instanceof ArrayList) {
+      System.out.println(l.size());
     }
+  }
 
-    @OnMethod(clazz = "/.*/")
-    public static void invalidLoops(List<String> l) {
-        for (int i = 0; i < 10; i++) {
-            BTraceUtils.println(BTraceUtils.str(i));
-        }
-        for (String s : l) {
-            BTraceUtils.println(s);
-        }
-        while (true) {
-            BTraceUtils.print("x");
-        }
+  @OnMethod(clazz = "/.*/")
+  public static void invalidLoops(List<String> l) {
+    for (int i = 0; i < 10; i++) {
+      BTraceUtils.println(BTraceUtils.str(i));
     }
+    for (String s : l) {
+      BTraceUtils.println(s);
+    }
+    while (true) {
+      BTraceUtils.print("x");
+    }
+  }
 
-    @OnMethod(clazz = "/.*/")
-    public static int invalidReturn() {
-        return 1;
-    }
+  @OnMethod(clazz = "/.*/")
+  public static int invalidReturn() {
+    return 1;
+  }
 
-    @OnMethod(clazz = "/.*/")
-    public static synchronized void syncHandler() {
-        synchronized (VerifierScript.class) {
-            BTraceUtils.println("ok");
-        }
+  @OnMethod(clazz = "/.*/")
+  public static synchronized void syncHandler() {
+    synchronized (VerifierScript.class) {
+      BTraceUtils.println("ok");
     }
+  }
 
-    @OnMethod(clazz = "/.*/")
-    public static void validInstanceHandler() {
-    }
+  @OnMethod(clazz = "/.*/")
+  public static void validInstanceHandler() {}
 
-    @OnMethod(clazz = "/.*/")
-    public void invalidInstanceHandler() {
-        try {
-            System.out.println("x");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+  @OnMethod(clazz = "/.*/")
+  public void invalidInstanceHandler() {
+    try {
+      System.out.println("x");
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
+  }
 
-    @Override
-    public void run() {
-        // do nothing
-    }
+  @Override
+  public void run() {
+    // do nothing
+  }
 }

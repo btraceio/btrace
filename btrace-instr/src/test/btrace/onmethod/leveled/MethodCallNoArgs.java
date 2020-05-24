@@ -25,22 +25,23 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class MethodCallNoArgs {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="callTopLevel",
-              location=@Location(value=Kind.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"), enableAt = @Level(">=1"))
-    public static void args() {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "callTopLevel",
+      location = @Location(value = Kind.CALL, clazz = "/.*\\.OnMethodTest/", method = "callTarget"),
+      enableAt = @Level(">=1"))
+  public static void args() {
+    println("args");
+  }
 }

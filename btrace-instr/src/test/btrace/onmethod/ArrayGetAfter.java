@@ -25,26 +25,26 @@
 
 package traces.onmethod;
 
-import org.openjdk.btrace.core.types.AnyType;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.Where;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 import org.openjdk.btrace.core.annotations.TargetInstance;
+import org.openjdk.btrace.core.annotations.Where;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ArrayGetAfter {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="array",
-              location=@Location(value=Kind.ARRAY_GET, where=Where.AFTER))
-    public static void args(@Self Object self, @Return int retVal, @TargetInstance int[] target, int index) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "array",
+      location = @Location(value = Kind.ARRAY_GET, where = Where.AFTER))
+  public static void args(
+      @Self Object self, @Return int retVal, @TargetInstance int[] target, int index) {
+    println("args");
+  }
 }

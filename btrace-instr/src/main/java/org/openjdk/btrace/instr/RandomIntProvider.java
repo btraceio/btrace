@@ -28,44 +28,41 @@ import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.instr.random.SharedRandomIntProvider;
 import org.openjdk.btrace.instr.random.ThreadLocalRandomIntProvider;
 
-/**
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @SuppressWarnings("LiteralClassName")
 public abstract class RandomIntProvider {
-    private static final RandomIntProvider rndIntProvider;
-    // for the testability purposes; BTraceRuntime initializes Unsafe instance
-    // and fails under JUnit
-    private static volatile boolean useBtraceEnter = true;
+  private static final RandomIntProvider rndIntProvider;
+  // for the testability purposes; BTraceRuntime initializes Unsafe instance
+  // and fails under JUnit
+  private static volatile boolean useBtraceEnter = true;
 
-    static {
-        boolean entered = false;
-        try {
-            if (useBtraceEnter) {
-                entered = BTraceRuntime.enter();
-            }
-            Class clz = null;
-            try {
-                clz = Class.forName("java.util.concurrent.ThreadLocalRandom");
-            } catch (Throwable e) {
-                // ThreadLocalRandom not accessible -> pre JDK8
-            }
-            if (clz != null) {
-                rndIntProvider = new ThreadLocalRandomIntProvider();
-            } else {
-                rndIntProvider = new SharedRandomIntProvider();
-            }
-        } finally {
-            if (entered) BTraceRuntime.leave();
-        }
+  static {
+    boolean entered = false;
+    try {
+      if (useBtraceEnter) {
+        entered = BTraceRuntime.enter();
+      }
+      Class clz = null;
+      try {
+        clz = Class.forName("java.util.concurrent.ThreadLocalRandom");
+      } catch (Throwable e) {
+        // ThreadLocalRandom not accessible -> pre JDK8
+      }
+      if (clz != null) {
+        rndIntProvider = new ThreadLocalRandomIntProvider();
+      } else {
+        rndIntProvider = new SharedRandomIntProvider();
+      }
+    } finally {
+      if (entered) BTraceRuntime.leave();
     }
+  }
 
-    protected RandomIntProvider() {
-    }
+  protected RandomIntProvider() {}
 
-    public static RandomIntProvider getInstance() {
-        return rndIntProvider;
-    }
+  public static RandomIntProvider getInstance() {
+    return rndIntProvider;
+  }
 
-    public abstract int nextInt(int bound);
+  public abstract int nextInt(int bound);
 }

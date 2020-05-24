@@ -28,11 +28,10 @@ package org.openjdk.btrace.core.comm;
 import java.io.IOException;
 
 /**
- * Callback interface called to notify wire
- * protocol commands.
+ * Callback interface called to notify wire protocol commands.
  *
  * @author A. Sundararajan
  */
 public interface CommandListener {
-    void onCommand(Command cmd) throws IOException;
+  void onCommand(Command cmd) throws IOException;
 }

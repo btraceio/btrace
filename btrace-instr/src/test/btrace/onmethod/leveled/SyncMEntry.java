@@ -22,18 +22,20 @@
 
 package traces.onmethod.leveled;
 
-import org.openjdk.btrace.core.annotations.*;
 import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+import org.openjdk.btrace.core.annotations.*;
+
+/** @author Jaroslav Bachorik */
 @BTrace
 public class SyncMEntry {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="syncM",
-              location=@Location(value=Kind.SYNC_ENTRY), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, @ProbeMethodName String pmn, @TargetInstance Object lock) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "syncM",
+      location = @Location(value = Kind.SYNC_ENTRY),
+      enableAt = @Level(">=1"))
+  public static void args(
+      @Self Object self, @ProbeMethodName String pmn, @TargetInstance Object lock) {
+    println("args");
+  }
 }

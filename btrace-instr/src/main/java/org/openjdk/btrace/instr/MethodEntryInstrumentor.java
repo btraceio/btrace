@@ -28,25 +28,31 @@ package org.openjdk.btrace.instr;
 import org.objectweb.asm.MethodVisitor;
 
 /**
- * This visitor helps in inserting code whenever a method
- * is entered. The code to insert on method entry may be
- * decided by derived class. By default, this class inserts
- * code to print name and signature of the method entered.
+ * This visitor helps in inserting code whenever a method is entered. The code to insert on method
+ * entry may be decided by derived class. By default, this class inserts code to print name and
+ * signature of the method entered.
  *
  * @author A. Sundararajan
  */
 public class MethodEntryInstrumentor extends MethodInstrumentor {
-    public MethodEntryInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
-                                   String parentClz, String superClz, int access, String name, String desc) {
-        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
-    }
+  public MethodEntryInstrumentor(
+      ClassLoader cl,
+      MethodVisitor mv,
+      MethodInstrumentorHelper mHelper,
+      String parentClz,
+      String superClz,
+      int access,
+      String name,
+      String desc) {
+    super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
+  }
 
-    @Override
-    protected void visitMethodPrologue() {
-        onMethodEntry();
-    }
+  @Override
+  protected void visitMethodPrologue() {
+    onMethodEntry();
+  }
 
-    protected void onMethodEntry() {
-        asm.println("entering " + getName() + getDescriptor());
-    }
+  protected void onMethodEntry() {
+    asm.println("entering " + getName() + getDescriptor());
+  }
 }

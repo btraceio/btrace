@@ -25,19 +25,17 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class ConstructorArgs {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="<init>")
-    public static void args(@Self Object self, String a) {
-        println("constructor args");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "<init>")
+  public static void args(@Self Object self, String a) {
+    println("constructor args");
+  }
 }

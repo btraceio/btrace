@@ -27,12 +27,12 @@ package services;
 import org.openjdk.btrace.services.api.RuntimeContext;
 import org.openjdk.btrace.services.spi.RuntimeService;
 
-final public class DummyRuntimService extends RuntimeService {
-    public DummyRuntimService(RuntimeContext rt) {
-        super(rt);
-    }
+public final class DummyRuntimService extends RuntimeService {
+  public DummyRuntimService(RuntimeContext rt) {
+    super(rt);
+  }
 
-    public void doit(int x, String b) {
-        System.out.println("doit");
-    }
+  public void doit(int x, String b) {
+    System.out.println("doit");
+  }
 }

@@ -25,45 +25,45 @@
 
 package org.openjdk.btrace.instr;
 
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "btrace-probes")
 public class ProbeDescriptor {
-    private final Map<String, OnProbe> nameToProbeMap;
-    private String namespace;
-    private Collection<OnProbe> probes;
+  private final Map<String, OnProbe> nameToProbeMap;
+  private String namespace;
+  private Collection<OnProbe> probes;
 
-    public ProbeDescriptor() {
-        nameToProbeMap = new HashMap<>();
-    }
+  public ProbeDescriptor() {
+    nameToProbeMap = new HashMap<>();
+  }
 
-    @XmlAttribute(name = "namespace")
-    public String getNamespace() {
-        return namespace;
-    }
+  @XmlAttribute(name = "namespace")
+  public String getNamespace() {
+    return namespace;
+  }
 
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
-    }
+  public void setNamespace(String namespace) {
+    this.namespace = namespace;
+  }
 
-    @XmlElement(name = "probe")
-    public Collection<OnProbe> getProbes() {
-        return probes;
-    }
+  @XmlElement(name = "probe")
+  public Collection<OnProbe> getProbes() {
+    return probes;
+  }
 
-    public void setProbes(Collection<OnProbe> probes) {
-        this.probes = probes;
-        for (OnProbe op : probes) {
-            nameToProbeMap.put(op.getName(), op);
-        }
+  public void setProbes(Collection<OnProbe> probes) {
+    this.probes = probes;
+    for (OnProbe op : probes) {
+      nameToProbeMap.put(op.getName(), op);
     }
+  }
 
-    public OnProbe findProbe(String name) {
-        return nameToProbeMap.get(name);
-    }
+  public OnProbe findProbe(String name) {
+    return nameToProbeMap.get(name);
+  }
 }

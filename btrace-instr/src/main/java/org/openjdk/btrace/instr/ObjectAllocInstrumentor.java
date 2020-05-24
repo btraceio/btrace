@@ -25,63 +25,74 @@
 
 package org.openjdk.btrace.instr;
 
-import org.objectweb.asm.MethodVisitor;
-
 import static org.objectweb.asm.Opcodes.NEW;
 
+import org.objectweb.asm.MethodVisitor;
+
 /**
- * This visitor helps in inserting code whenever an object
- * is allocated. The code to insert on object alloc may be
- * decided by  derived class. By default, this class inserts
- * code to print a message.
+ * This visitor helps in inserting code whenever an object is allocated. The code to insert on
+ * object alloc may be decided by derived class. By default, this class inserts code to print a
+ * message.
  *
  * @author A. Sundararajan
  */
 public class ObjectAllocInstrumentor extends MethodInstrumentor {
-    private final boolean needsInitialization;
-    private boolean instanceCreated = false;
+  private final boolean needsInitialization;
+  private boolean instanceCreated = false;
 
-    public ObjectAllocInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
-                                   String parentClz, String superClz, int access, String name, String desc) {
-        this(cl, mv, mHelper, parentClz, superClz, access, name, desc, false);
-    }
+  public ObjectAllocInstrumentor(
+      ClassLoader cl,
+      MethodVisitor mv,
+      MethodInstrumentorHelper mHelper,
+      String parentClz,
+      String superClz,
+      int access,
+      String name,
+      String desc) {
+    this(cl, mv, mHelper, parentClz, superClz, access, name, desc, false);
+  }
 
-    public ObjectAllocInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
-                                   String parentClz, String superClz, int access, String name, String desc,
-                                   boolean needsInitialization) {
-        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
-        this.needsInitialization = needsInitialization;
-    }
+  public ObjectAllocInstrumentor(
+      ClassLoader cl,
+      MethodVisitor mv,
+      MethodInstrumentorHelper mHelper,
+      String parentClz,
+      String superClz,
+      int access,
+      String name,
+      String desc,
+      boolean needsInitialization) {
+    super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
+    this.needsInitialization = needsInitialization;
+  }
 
-    @Override
-    public void visitTypeInsn(int opcode, String desc) {
-        if (opcode == NEW) {
-            beforeObjectNew(desc);
-        }
-        super.visitTypeInsn(opcode, desc);
-        if (opcode == NEW) {
-            if (needsInitialization) {
-                instanceCreated = true;
-            } else {
-                afterObjectNew(desc);
-            }
-        }
+  @Override
+  public void visitTypeInsn(int opcode, String desc) {
+    if (opcode == NEW) {
+      beforeObjectNew(desc);
     }
+    super.visitTypeInsn(opcode, desc);
+    if (opcode == NEW) {
+      if (needsInitialization) {
+        instanceCreated = true;
+      } else {
+        afterObjectNew(desc);
+      }
+    }
+  }
 
-    @Override
-    public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean iface) {
-        super.visitMethodInsn(opcode, owner, name, desc, iface);
-        if (instanceCreated) {
-            if (Constants.CONSTRUCTOR.equals(name)) {
-                instanceCreated = false;
-                afterObjectNew(owner);
-            }
-        }
+  @Override
+  public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean iface) {
+    super.visitMethodInsn(opcode, owner, name, desc, iface);
+    if (instanceCreated) {
+      if (Constants.CONSTRUCTOR.equals(name)) {
+        instanceCreated = false;
+        afterObjectNew(owner);
+      }
     }
+  }
 
-    protected void beforeObjectNew(String desc) {
-    }
+  protected void beforeObjectNew(String desc) {}
 
-    protected void afterObjectNew(String desc) {
-    }
+  protected void afterObjectNew(String desc) {}
 }

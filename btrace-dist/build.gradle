@@ -1,19 +1,23 @@
 plugins {
     id 'maven'
     id 'maven-publish'
-    id "com.jfrog.bintray" version "1.8.1"
-    id "com.github.johnrengelman.shadow" version "5.1.0"
-    id "nebula.ospackage" version "4.9.3"
+    id "com.jfrog.bintray" version "1.8.5"
+    id "com.github.johnrengelman.shadow" version "5.2.0"
+    id "nebula.ospackage" version "8.3.0"
     id "java"
+    id "io.sdkman.vendors" version "1.2.1"
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.internal.os.OperatingSystem
 
 repositories {
     mavenCentral()
 }
 
-def libsDir = new File("${project.buildDir}/resources/main/libs")
+def distBase = "${project.buildDir}/resources/main"
+def distTarget = "${distBase}/${project.version}"
+def libsDir = new File("${distTarget}/libs")
 
 jar {
     onlyIf { false }
@@ -23,8 +27,13 @@ sourcesJar {
     onlyIf { false }
 }
 
+sourceSets {
+    main {
+        output.resourcesDir = file("${distTarget}")
+    }
+}
 artifacts {
-    archives file("$buildDir/resources/main/libs/btrace-agent.jar")
+    archives file("${distTarget}/libs/btrace-agent.jar")
 }
 
 task agentJar(type: ShadowJar) {
@@ -134,27 +143,37 @@ task clientJar(type: ShadowJar) {
 }
 
 task fixPermissions(type: Exec) {
-    commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btrace"
-    commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btracec"
-    commandLine 'chmod', '500', "$project.buildDir/resources/main/bin/btracer"
+    onlyIf {
+        !OperatingSystem.current().isWindows()
+    }
+    commandLine 'chmod', '500', "${distTarget}/bin/btrace"
+    commandLine 'chmod', '500', "${distTarget}/bin/btracec"
+    commandLine 'chmod', '500', "${distTarget}/bin/btracer"
 }
 
 task copyDtraceLib(type: Copy) {
     from "${projectDir}/../btrace-dtrace/build/dtrace/libs"
-    into "${project.buildDir}/resources/main/libs/"
+    into "${distTarget}/libs/"
 }
 
 task buildZip(type: Zip) {
-    from "$project.buildDir/resources/main"
+    from "${distTarget}"
     include "**/*"
-    archiveName "btrace-bin.zip"
+    archiveName "btrace-${project.version}-bin.zip"
+    destinationDir(file("$project.buildDir/distributions"))
+}
+
+task buildSdkmanZip(type: Zip) {
+    from "${distBase}"
+    include "**/*"
+    archiveName "btrace-${project.version}-sdkman-bin.zip"
     destinationDir(file("$project.buildDir/distributions"))
 }
 
 task buildTgz(type: Tar) {
-    archiveName = 'btrace-bin.tar.gz'
+    archiveName "btrace-${project.version}-bin.tar.gz"
     into ('/'){
-        from "$project.buildDir/resources/main"
+        from "${distTarget}"
         include '**/*'
     }
 
@@ -170,20 +189,20 @@ ospackage {
 
     into '/opt/btrace'
 
-    from("$project.buildDir/resources/main/bin") {
+    from("${distTarget}/bin") {
         into 'bin'
         fileMode 0550
     }
 
-    from("$project.buildDir/resources/main/libs") {
+    from("${distTarget}/libs") {
         into 'libs'
     }
 
-    from("$project.buildDir/resources/main/docs") {
+    from("${distTarget}/docs") {
         into 'docs'
     }
 
-    from("$project.buildDir/resources/main/samples") {
+    from("${distTarget}/samples") {
         into 'samples'
     }
 
@@ -199,9 +218,10 @@ buildDeb {
 copyDtraceLib.dependsOn project(':btrace-dtrace').build
 buildTgz.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
 buildZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
+buildSdkmanZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
 buildDeb.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
 buildRpm.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
-build.dependsOn buildZip, buildTgz, buildDeb, buildRpm
+build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
 
 test {
     doLast {
@@ -280,6 +300,21 @@ bintray {
                 passphrase = sign ? project.property("gpg.passphrase") : "" //Optional. The passphrase for GPG signing'
             }
         }
+    }
+}
+
+sdkman {
+    api = "https://vendors.sdkman.io/"
+    consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_API_KEY')
+    consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
+    candidate = "btrace"
+    version = "${project.version}"
+    url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-${project.version}-sdkman-bin.zip"
+}
+
+["sdkReleaseVersion", "sdkAnnounceVersion"].forEach {
+    tasks[it].onlyIf {
+        !project.version.toString().endsWith("-SNAPSHOT")
     }
 }
 

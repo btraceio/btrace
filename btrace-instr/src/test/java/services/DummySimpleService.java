@@ -27,15 +27,15 @@ package services;
 import org.openjdk.btrace.services.spi.SimpleService;
 
 public class DummySimpleService extends SimpleService {
-    public static DummySimpleService getInstance() {
-        return Singleton.INSTANCE;
-    }
+  public static DummySimpleService getInstance() {
+    return Singleton.INSTANCE;
+  }
 
-    public void doit(String a, int b) {
-        System.out.println(a + " - " + b);
-    }
+  public void doit(String a, int b) {
+    System.out.println(a + " - " + b);
+  }
 
-    private static final class Singleton {
-        private static final DummySimpleService INSTANCE = new DummySimpleService();
-    }
+  private static final class Singleton {
+    private static final DummySimpleService INSTANCE = new DummySimpleService();
+  }
 }

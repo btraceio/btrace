@@ -31,15 +31,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * It is used to mark a probe method argument as the receiver of called instance
- * with {@linkplain Location} value of {@linkplain Kind#CALL}, {@linkplain Kind#FIELD_GET}
- * or {@linkplain Kind#FIELD_SET}.
+ * It is used to mark a probe method argument as the receiver of called instance with {@linkplain
+ * Location} value of {@linkplain Kind#CALL}, {@linkplain Kind#FIELD_GET} or {@linkplain
+ * Kind#FIELD_SET}.
  *
  * @author Jaroslav Bachorik
  * @since 1.1
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface TargetInstance {
-
-}
+public @interface TargetInstance {}

@@ -23,7 +23,6 @@
  * questions.
  */
 
-
 package org.openjdk.btrace.core;
 
 import java.util.HashMap;
@@ -36,25 +35,25 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Jaroslav Bachorik
  */
 public class MethodID {
-    static final AtomicInteger lastMehodId = new AtomicInteger(1);
-    private static final Map<String, Integer> methodIds = new HashMap<>();
+  static final AtomicInteger lastMehodId = new AtomicInteger(1);
+  private static final Map<String, Integer> methodIds = new HashMap<>();
 
-    /**
-     * Generates a unique method id based on the provided method tag
-     *
-     * @param methodTag The tag used to distinguish between methods
-     * @return An ID belonging to the provided method tag
-     */
-    public static int getMethodId(String methodTag) {
-        synchronized (methodIds) {
-            if (!methodIds.containsKey(methodTag)) {
-                methodIds.put(methodTag, lastMehodId.getAndIncrement());
-            }
-            return methodIds.get(methodTag);
-        }
+  /**
+   * Generates a unique method id based on the provided method tag
+   *
+   * @param methodTag The tag used to distinguish between methods
+   * @return An ID belonging to the provided method tag
+   */
+  public static int getMethodId(String methodTag) {
+    synchronized (methodIds) {
+      if (!methodIds.containsKey(methodTag)) {
+        methodIds.put(methodTag, lastMehodId.getAndIncrement());
+      }
+      return methodIds.get(methodTag);
     }
+  }
 
-    public static int getMethodId(String className, String method, String desc) {
-        return getMethodId(className + "#" + method + "#" + desc);
-    }
+  public static int getMethodId(String className, String method, String desc) {
+    return getMethodId(className + "#" + method + "#" + desc);
+  }
 }

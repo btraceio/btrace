@@ -32,6 +32,4 @@ import java.util.Collection;
  *
  * @author Jaroslav Bachorik
  */
-public interface BTraceCollection<T> extends Collection<T> {
-
-}
+public interface BTraceCollection<T> extends Collection<T> {}

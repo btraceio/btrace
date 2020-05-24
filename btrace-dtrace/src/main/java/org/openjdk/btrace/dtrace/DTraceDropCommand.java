@@ -25,10 +25,9 @@
 
 package org.openjdk.btrace.dtrace;
 
+import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.IOException;
-
 import org.openjdk.btrace.core.comm.MessageCommand;
 import org.opensolaris.os.dtrace.DropEvent;
 
@@ -37,34 +36,30 @@ import org.opensolaris.os.dtrace.DropEvent;
  *
  * @author A. Sundararajan
  */
-public class DTraceDropCommand extends MessageCommand
-             implements DTraceCommand {
-    private DropEvent de;
-    public DTraceDropCommand(DropEvent de) {
-        super(asString(de));
-        this.de = de;
-    }
+public class DTraceDropCommand extends MessageCommand implements DTraceCommand {
+  private DropEvent de;
 
-    /**
-     * Returns the underlying DTrace drop event
-     */
-    public DropEvent getDropEvent() {
-        return de;
-    }
+  public DTraceDropCommand(DropEvent de) {
+    super(asString(de));
+    this.de = de;
+  }
 
-    public void write(ObjectOutput out) throws IOException {
-        super.write(out);
-        out.writeObject(out);
-    }
+  /** Returns the underlying DTrace drop event */
+  public DropEvent getDropEvent() {
+    return de;
+  }
 
-    public void read(ObjectInput in) 
-                throws ClassNotFoundException, IOException {
-        super.read(in);
-        de = (DropEvent) in.readObject();
-    }
+  public void write(ObjectOutput out) throws IOException {
+    super.write(out);
+    out.writeObject(out);
+  }
 
-    private static String asString(DropEvent de) {
-        return de.getDrop().getDefaultMessage();
-    }
+  public void read(ObjectInput in) throws ClassNotFoundException, IOException {
+    super.read(in);
+    de = (DropEvent) in.readObject();
+  }
+
+  private static String asString(DropEvent de) {
+    return de.getDrop().getDefaultMessage();
+  }
 }
-

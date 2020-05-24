@@ -32,36 +32,35 @@ package org.openjdk.btrace.instr.templates;
  * @since 1.3
  */
 public interface TemplateExpander {
-    /**
-     * The expander identifies and, possibly, expands the given template
-     *
-     * @param v The expander parent
-     * @param t The template to process
-     * @return appropriate {@linkplain Result} value
-     */
-    Result expand(TemplateExpanderVisitor v, Template t);
+  /**
+   * The expander identifies and, possibly, expands the given template
+   *
+   * @param v The expander parent
+   * @param t The template to process
+   * @return appropriate {@linkplain Result} value
+   */
+  Result expand(TemplateExpanderVisitor v, Template t);
 
-    /**
-     * Called upon code points invalidating the current expander status
-     */
-    void resetState();
+  /** Called upon code points invalidating the current expander status */
+  void resetState();
 
-    /**
-     * The result of expansion
-     * <ul>
-     * <li><b>EXPANDED</b> = expander has claimed and expanded the template</li>
-     * <li><b>CLAIMED</b> = expander has claimed the template but didn't expand it</li>
-     * <li><b>IGNORED</b> = expander has not claimed the template</li>
-     * </ul>
-     */
-    enum Result {
-        EXPANDED, CLAIMED, IGNORED
-    }
+  /**
+   * The result of expansion
+   *
+   * <ul>
+   *   <li><b>EXPANDED</b> = expander has claimed and expanded the template
+   *   <li><b>CLAIMED</b> = expander has claimed the template but didn't expand it
+   *   <li><b>IGNORED</b> = expander has not claimed the template
+   * </ul>
+   */
+  enum Result {
+    EXPANDED,
+    CLAIMED,
+    IGNORED
+  }
 
-    /**
-     * A knockoff of the java.util.function.Consumer interface for pre-8 usage
-     */
-    interface Consumer<T> {
-        void consume(T visitor);
-    }
+  /** A knockoff of the java.util.function.Consumer interface for pre-8 usage */
+  interface Consumer<T> {
+    void consume(T visitor);
+  }
 }

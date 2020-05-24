@@ -25,23 +25,24 @@
 
 package traces.onmethod.leveled;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.Level;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class NewBefore {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="newObject",
-              location=@Location(value=Kind.NEW, clazz="/.*/"), enableAt = @Level(">=1"))
-    public static void args(@Self Object self, String instanceClassName) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "newObject",
+      location = @Location(value = Kind.NEW, clazz = "/.*/"),
+      enableAt = @Level(">=1"))
+  public static void args(@Self Object self, String instanceClassName) {
+    println("args");
+  }
 }

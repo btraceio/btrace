@@ -31,14 +31,14 @@ package org.openjdk.btrace.core.comm;
  * @author A. Sundararajan
  */
 public abstract class DataCommand extends Command implements PrintableCommand {
-    protected String name;
+  protected String name;
 
-    public DataCommand(byte type, String name) {
-        super(type);
-        this.name = name;
-    }
+  public DataCommand(byte type, String name) {
+    super(type);
+    this.name = name;
+  }
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 }

@@ -22,22 +22,20 @@
 
 package traces.onmethod;
 
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.types.AnyType;
-import java.util.Map;
-import resources.AbstractClass;
-import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+/** @author Jaroslav Bachorik */
 @BTrace
 public class MatchAnnotatedRegex {
-    @OnMethod(clazz="@/.*\\.BTrace/", method="@/org\\.openjdk\\.btrace\\.core\\.annotations\\..*/")
-    public static void args(@Self AnyType self) {
-        println("args");
-    }
+  @OnMethod(
+      clazz = "@/.*\\.BTrace/",
+      method = "@/org\\.openjdk\\.btrace\\.core\\.annotations\\..*/")
+  public static void args(@Self AnyType self) {
+    println("args");
+  }
 }

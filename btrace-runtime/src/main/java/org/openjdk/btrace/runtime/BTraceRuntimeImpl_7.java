@@ -25,6 +25,10 @@
 
 package org.openjdk.btrace.runtime;
 
+import java.lang.instrument.Instrumentation;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.security.AccessController;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
@@ -34,136 +38,141 @@ import sun.misc.Unsafe;
 import sun.reflect.CallerSensitive;
 import sun.reflect.Reflection;
 
-import java.lang.instrument.Instrumentation;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.security.AccessController;
-
 /**
- * Helper class used by BTrace built-in functions and
- * also acts runtime "manager" for a specific BTrace client
- * and sends Commands to the CommandListener passed.
+ * Helper class used by BTrace built-in functions and also acts runtime "manager" for a specific
+ * BTrace client and sends Commands to the CommandListener passed.
  *
  * @author A. Sundararajan
  * @author Christian Glencross (aggregation support)
  * @author Joachim Skeie (GC MBean support, advanced Deque manipulation)
  * @author KLynch
  */
-public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase  {
-    public static final class Factory extends BTraceRuntimeImplFactory<BTraceRuntimeImpl_7> {
-        public Factory() {
-            super(new BTraceRuntimeImpl_7());
-        }
-
-        @Override
-        public BTraceRuntimeImpl_7 getRuntime(String className, ArgsMap args, CommandListener cmdListener, DebugSupport ds, Instrumentation inst) {
-            return new BTraceRuntimeImpl_7(className, args, cmdListener, ds, inst);
-        }
-
-        @Override
-        public boolean isEnabled() {
-            try {
-                Class.forName("java.lang.Module");
-                return false;
-            } catch (ClassNotFoundException ignored) {}
-            return true;
-        }
-    }
-
-    // perf counter variability - we always variable variability
-    private static final int V_Variable = 3;
-    // perf counter units
-    private static final int V_None = 1;
-    private static final int V_String = 5;
-    private static final int PERF_STRING_LIMIT = 256;
-
-    private static Perf perf;
-
-    public BTraceRuntimeImpl_7() {
-    }
-
-    public BTraceRuntimeImpl_7(String className, ArgsMap args, CommandListener cmdListener, DebugSupport ds, Instrumentation inst) {
-        super(className, args, cmdListener, ds, inst);
+public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
+  public static final class Factory extends BTraceRuntimeImplFactory<BTraceRuntimeImpl_7> {
+    public Factory() {
+      super(new BTraceRuntimeImpl_7());
     }
 
     @Override
-    @CallerSensitive
-    public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
-        Unsafe unsafe = BTraceRuntime.initUnsafe();
-        if (unsafe != null) {
-            Class<?> caller = Reflection.getCallerClass(2);
-            if (!caller.getName().startsWith("org.openjdk.btrace.")) {
-                throw new SecurityException("unsafe defineClass");
-            }
-            ClassLoader loader = null;
-            if (! mustBeBootstrap) {
-                loader = new ClassLoader(null) {};
-            }
-            Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
-            unsafe.ensureClassInitialized(cl);
-            return cl;
-        }
-
-        return null;
+    public BTraceRuntimeImpl_7 getRuntime(
+        String className,
+        ArgsMap args,
+        CommandListener cmdListener,
+        DebugSupport ds,
+        Instrumentation inst) {
+      return new BTraceRuntimeImpl_7(className, args, cmdListener, ds, inst);
     }
 
     @Override
-    public void newPerfCounter(Object value, String name, String desc) {
-        Perf perf = getPerf();
-        char tc = desc.charAt(0);
-        switch (tc) {
-            case 'C':
-            case 'Z':
-            case 'B':
-            case 'S':
-            case 'I':
-            case 'J':
-            case 'F':
-            case 'D': {
-                long initValue = (value != null) ? ((Number) value).longValue() : 0L;
-                ByteBuffer b = perf.createLong(name, V_Variable, V_None, initValue);
-                b.order(ByteOrder.nativeOrder());
-                counters.put(name, b);
-            }
-            break;
+    public boolean isEnabled() {
+      try {
+        Class.forName("java.lang.Module");
+        return false;
+      } catch (ClassNotFoundException ignored) {
+      }
+      return true;
+    }
+  }
 
-            case '[':
-                break;
-            case 'L': {
-                if (desc.equals("Ljava/lang/String;")) {
-                    byte[] buf;
-                    if (value != null) {
-                        buf = getStringBytes((String) value);
-                    } else {
-                        buf = new byte[PERF_STRING_LIMIT];
-                        buf[0] = '\0';
-                    }
-                    ByteBuffer b = perf.createByteArray(name, V_Variable, V_String,
-                            buf, buf.length);
-                    counters.put(name, b);
-                }
-            }
-            break;
+  // perf counter variability - we always variable variability
+  private static final int V_Variable = 3;
+  // perf counter units
+  private static final int V_None = 1;
+  private static final int V_String = 5;
+  private static final int PERF_STRING_LIMIT = 256;
+
+  private static Perf perf;
+
+  public BTraceRuntimeImpl_7() {}
+
+  public BTraceRuntimeImpl_7(
+      String className,
+      ArgsMap args,
+      CommandListener cmdListener,
+      DebugSupport ds,
+      Instrumentation inst) {
+    super(className, args, cmdListener, ds, inst);
+  }
+
+  @Override
+  @CallerSensitive
+  public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
+    Unsafe unsafe = BTraceRuntime.initUnsafe();
+    if (unsafe != null) {
+      Class<?> caller = Reflection.getCallerClass(2);
+      if (!caller.getName().startsWith("org.openjdk.btrace.")) {
+        throw new SecurityException("unsafe defineClass");
+      }
+      ClassLoader loader = null;
+      if (!mustBeBootstrap) {
+        loader = new ClassLoader(null) {};
+      }
+      Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
+      unsafe.ensureClassInitialized(cl);
+      return cl;
+    }
+
+    return null;
+  }
+
+  @Override
+  public void newPerfCounter(Object value, String name, String desc) {
+    Perf perf = getPerf();
+    char tc = desc.charAt(0);
+    switch (tc) {
+      case 'C':
+      case 'Z':
+      case 'B':
+      case 'S':
+      case 'I':
+      case 'J':
+      case 'F':
+      case 'D':
+        {
+          long initValue = (value != null) ? ((Number) value).longValue() : 0L;
+          ByteBuffer b = perf.createLong(name, V_Variable, V_None, initValue);
+          b.order(ByteOrder.nativeOrder());
+          counters.put(name, b);
         }
-    }
+        break;
 
-    @CallerSensitive
-    @Override
-    public ClassLoader getCallerClassLoader(int stackDec) {
-        return Reflection.getCallerClass(stackDec + 1).getClassLoader();
-    }
-
-    @Override
-    public Class<?> getCallerClass(int stackDec) {
-        return Reflection.getCallerClass(stackDec + 1);
-    }
-
-    private static Perf getPerf() {
-        synchronized(BTraceRuntimeImpl_7.class) {
-            if (perf == null) {
-                perf = AccessController.doPrivileged(new Perf.GetPerfAction());
+      case '[':
+        break;
+      case 'L':
+        {
+          if (desc.equals("Ljava/lang/String;")) {
+            byte[] buf;
+            if (value != null) {
+              buf = getStringBytes((String) value);
+            } else {
+              buf = new byte[PERF_STRING_LIMIT];
+              buf[0] = '\0';
             }
+            ByteBuffer b = perf.createByteArray(name, V_Variable, V_String, buf, buf.length);
+            counters.put(name, b);
+          }
         }
-        return perf;
+        break;
     }
+  }
+
+  @CallerSensitive
+  @Override
+  public ClassLoader getCallerClassLoader(int stackDec) {
+    return Reflection.getCallerClass(stackDec + 1).getClassLoader();
+  }
+
+  @Override
+  public Class<?> getCallerClass(int stackDec) {
+    return Reflection.getCallerClass(stackDec + 1);
+  }
+
+  private static Perf getPerf() {
+    synchronized (BTraceRuntimeImpl_7.class) {
+      if (perf == null) {
+        perf = AccessController.doPrivileged(new Perf.GetPerfAction());
+      }
+    }
+    return perf;
+  }
 }

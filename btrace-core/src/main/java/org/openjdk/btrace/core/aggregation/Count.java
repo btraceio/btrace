@@ -28,39 +28,40 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Aggregation function for counting the number of values.
+ *
  * <p>
  *
  * @author Christian Glencross
  */
 class Count implements AggregationValue {
 
-    AtomicInteger value = new AtomicInteger();
+  AtomicInteger value = new AtomicInteger();
 
-    @Override
-    public void clear() {
-        value.set(0);
-    }
+  @Override
+  public void clear() {
+    value.set(0);
+  }
 
-    public void add() {
-        value.incrementAndGet();
-    }
+  public void add() {
+    value.incrementAndGet();
+  }
 
-    @Override
-    public void add(long delta) {
-        if (delta >= 0) {
-            value.incrementAndGet();
-        } else {
-            value.decrementAndGet();
-        }
+  @Override
+  public void add(long delta) {
+    if (delta >= 0) {
+      value.incrementAndGet();
+    } else {
+      value.decrementAndGet();
     }
+  }
 
-    @Override
-    public long getValue() {
-        return value.get();
-    }
+  @Override
+  public long getValue() {
+    return value.get();
+  }
 
-    @Override
-    public Object getData() {
-        return getValue();
-    }
+  @Override
+  public Object getData() {
+    return getValue();
+  }
 }

@@ -29,83 +29,96 @@ import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Where;
 
 /**
- * This class is used to store data of the annotation
- * Location. We can not read the
- * Location annotation using reflection API [because we strip
- * {@code @OnMethod} annotated methods before defineClass]. Instead,
- * we read Location annotation while parsing the BTrace class and
- * store the data in an instance of this class. Please note that
- * the get/set methods have to be in sync with Location annotation.
+ * This class is used to store data of the annotation Location. We can not read the Location
+ * annotation using reflection API [because we strip {@code @OnMethod} annotated methods before
+ * defineClass]. Instead, we read Location annotation while parsing the BTrace class and store the
+ * data in an instance of this class. Please note that the get/set methods have to be in sync with
+ * Location annotation.
  *
  * @author A. Sundararajan
  */
 public class Location {
-    private String clazz = "";
-    private String method = "";
-    private String type = "";
-    private String field = "";
-    private int line = 0;
-    private Kind value = Kind.ENTRY;
-    private Where where = Where.BEFORE;
+  private String clazz = "";
+  private String method = "";
+  private String type = "";
+  private String field = "";
+  private int line = 0;
+  private Kind value = Kind.ENTRY;
+  private Where where = Where.BEFORE;
 
-    public String getClazz() {
-        return clazz;
-    }
+  public String getClazz() {
+    return clazz;
+  }
 
-    public void setClazz(String clazz) {
-        this.clazz = clazz;
-    }
+  public void setClazz(String clazz) {
+    this.clazz = clazz;
+  }
 
-    public String getMethod() {
-        return method;
-    }
+  public String getMethod() {
+    return method;
+  }
 
-    public void setMethod(String method) {
-        this.method = method;
-    }
+  public void setMethod(String method) {
+    this.method = method;
+  }
 
-    public String getField() {
-        return field;
-    }
+  public String getField() {
+    return field;
+  }
 
-    public void setField(String field) {
-        this.field = field;
-    }
+  public void setField(String field) {
+    this.field = field;
+  }
 
-    public int getLine() {
-        return line;
-    }
+  public int getLine() {
+    return line;
+  }
 
-    public void setLine(int line) {
-        this.line = line;
-    }
+  public void setLine(int line) {
+    this.line = line;
+  }
 
-    public String getType() {
-        return type;
-    }
+  public String getType() {
+    return type;
+  }
 
-    public void setType(String type) {
-        this.type = type;
-    }
+  public void setType(String type) {
+    this.type = type;
+  }
 
-    public Kind getValue() {
-        return value;
-    }
+  public Kind getValue() {
+    return value;
+  }
 
-    public void setValue(Kind value) {
-        this.value = value;
-    }
+  public void setValue(Kind value) {
+    this.value = value;
+  }
 
-    public Where getWhere() {
-        return where;
-    }
+  public Where getWhere() {
+    return where;
+  }
 
-    public void setWhere(Where where) {
-        this.where = where;
-    }
+  public void setWhere(Where where) {
+    this.where = where;
+  }
 
-    @Override
-    public String toString() {
-        return "Location{" + "clazz=" + clazz + ", method=" + method + ", type=" + type + ", field=" + field + ", line=" + line + ", value=" + value + ", where=" + where + '}';
-    }
+  @Override
+  public String toString() {
+    return "Location{"
+        + "clazz="
+        + clazz
+        + ", method="
+        + method
+        + ", type="
+        + type
+        + ", field="
+        + field
+        + ", line="
+        + line
+        + ", value="
+        + value
+        + ", where="
+        + where
+        + '}';
+  }
 }

@@ -31,19 +31,15 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * BTrace methods annotated by this annotation are called when
- * BTrace client sends "event" command. Client may send an
- * event based on some form of user request to send (like
- * pressing Ctrl-C or a GUI menu). String value may used as
- * the name of the event.
+ * BTrace methods annotated by this annotation are called when BTrace client sends "event" command.
+ * Client may send an event based on some form of user request to send (like pressing Ctrl-C or a
+ * GUI menu). String value may used as the name of the event.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface OnEvent {
-    /**
-     * The event name.
-     */
-    String value() default "";
+  /** The event name. */
+  String value() default "";
 }

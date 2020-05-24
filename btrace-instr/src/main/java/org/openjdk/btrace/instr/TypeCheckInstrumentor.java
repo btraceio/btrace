@@ -25,42 +25,48 @@
 
 package org.openjdk.btrace.instr;
 
-import org.objectweb.asm.MethodVisitor;
-
 import static org.objectweb.asm.Opcodes.CHECKCAST;
 import static org.objectweb.asm.Opcodes.INSTANCEOF;
 
+import org.objectweb.asm.MethodVisitor;
+
 /**
- * This class helps in inserting code whenever a type check
- * (instanceof or checkcast) is done. The code to insert on
- * type check may be decided by  derived class. By default,
- * this class inserts code to print message.
+ * This class helps in inserting code whenever a type check (instanceof or checkcast) is done. The
+ * code to insert on type check may be decided by derived class. By default, this class inserts code
+ * to print message.
  *
  * @author A. Sundararajan
  */
 public class TypeCheckInstrumentor extends MethodInstrumentor {
-    public TypeCheckInstrumentor(ClassLoader cl, MethodVisitor mv, MethodInstrumentorHelper mHelper,
-                                 String parentClz, String superClz, int access, String name, String desc) {
-        super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
-    }
+  public TypeCheckInstrumentor(
+      ClassLoader cl,
+      MethodVisitor mv,
+      MethodInstrumentorHelper mHelper,
+      String parentClz,
+      String superClz,
+      int access,
+      String name,
+      String desc) {
+    super(cl, mv, mHelper, parentClz, superClz, access, name, desc);
+  }
 
-    @Override
-    public void visitTypeInsn(int opcode, String desc) {
-        boolean typeCheck = (opcode == CHECKCAST || opcode == INSTANCEOF);
-        if (typeCheck) {
-            onBeforeTypeCheck(opcode, desc);
-        }
-        super.visitTypeInsn(opcode, desc);
-        if (typeCheck) {
-            onAfterTypeCheck(opcode, desc);
-        }
+  @Override
+  public void visitTypeInsn(int opcode, String desc) {
+    boolean typeCheck = (opcode == CHECKCAST || opcode == INSTANCEOF);
+    if (typeCheck) {
+      onBeforeTypeCheck(opcode, desc);
     }
+    super.visitTypeInsn(opcode, desc);
+    if (typeCheck) {
+      onAfterTypeCheck(opcode, desc);
+    }
+  }
 
-    protected void onBeforeTypeCheck(int opcode, String desc) {
-        asm.println("before type checking for " + desc);
-    }
+  protected void onBeforeTypeCheck(int opcode, String desc) {
+    asm.println("before type checking for " + desc);
+  }
 
-    protected void onAfterTypeCheck(int opcode, String desc) {
-        asm.println("after type checking for " + desc);
-    }
+  protected void onAfterTypeCheck(int opcode, String desc) {
+    asm.println("after type checking for " + desc);
+  }
 }

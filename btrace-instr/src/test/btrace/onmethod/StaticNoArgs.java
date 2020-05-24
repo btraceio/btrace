@@ -25,18 +25,16 @@
 
 package traces.onmethod;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnMethod;
 import static org.openjdk.btrace.core.BTraceUtils.*;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
+import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.OnMethod;
+
+/** @author Jaroslav Bachorik */
 @BTrace
 public class StaticNoArgs {
-    @OnMethod(clazz="/.*\\.OnMethodTest/", method="noargs$static")
-    public static void argsEmpty() {
-        println("args empty");
-    }
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "noargs$static")
+  public static void argsEmpty() {
+    println("args empty");
+  }
 }

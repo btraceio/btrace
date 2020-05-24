@@ -31,12 +31,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * BTrace method annotated by this annotation is called when
- * any exception is thrown by any of the BTrace action methods.
+ * BTrace method annotated by this annotation is called when any exception is thrown by any of the
+ * BTrace action methods.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface OnError {
-}
+public @interface OnError {}

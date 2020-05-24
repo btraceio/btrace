@@ -26,37 +26,38 @@ package org.openjdk.btrace.core.aggregation;
 
 /**
  * Aggregation function for computing the mean value.
+ *
  * <p>
  *
  * @author Christian Glencross
  */
 class Average implements AggregationValue {
 
-    long sum = 0;
-    int count = 0;
+  long sum = 0;
+  int count = 0;
 
-    @Override
-    public synchronized void clear() {
-        sum = 0;
-        count = 0;
-    }
+  @Override
+  public synchronized void clear() {
+    sum = 0;
+    count = 0;
+  }
 
-    @Override
-    public synchronized void add(long delta) {
-        sum += delta;
-        count++;
-    }
+  @Override
+  public synchronized void add(long delta) {
+    sum += delta;
+    count++;
+  }
 
-    @Override
-    public synchronized long getValue() {
-        if (count == 0) {
-            return 0; // Avoid division by zero
-        }
-        return (int) (sum / count);
+  @Override
+  public synchronized long getValue() {
+    if (count == 0) {
+      return 0; // Avoid division by zero
     }
+    return (int) (sum / count);
+  }
 
-    @Override
-    public Object getData() {
-        return getValue();
-    }
+  @Override
+  public Object getData() {
+    return getValue();
+  }
 }

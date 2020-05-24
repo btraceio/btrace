@@ -31,16 +31,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for BTrace program to associate a D-script with it.
- * D-script is referred by a relative or absolute file path.
+ * Annotation for BTrace program to associate a D-script with it. D-script is referred by a relative
+ * or absolute file path.
  *
  * @author A. Sundararajan
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface DTraceRef {
-    /**
-     * Locates D-script by a relative or absolute file path.
-     */
-    String value();
+  /** Locates D-script by a relative or absolute file path. */
+  String value();
 }

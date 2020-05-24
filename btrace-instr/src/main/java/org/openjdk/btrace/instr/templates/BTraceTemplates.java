@@ -37,47 +37,47 @@ import java.util.StringTokenizer;
  * @since 1.3
  */
 public final class BTraceTemplates {
-    private static final Map<String, Template> TEMPLATE_MAP = new HashMap<>();
+  private static final Map<String, Template> TEMPLATE_MAP = new HashMap<>();
 
-    public static void registerTemplates(Template... templates) {
-        for (Template t : templates) {
-            TEMPLATE_MAP.put(t.getId(), t);
-        }
+  public static void registerTemplates(Template... templates) {
+    for (Template t : templates) {
+      TEMPLATE_MAP.put(t.getId(), t);
+    }
+  }
+
+  public static Template getTemplate(String owner, String name, String sig) {
+    Template t;
+
+    if (!owner.equals(Template.OWNER)) {
+      return null;
     }
 
-    public static Template getTemplate(String owner, String name, String sig) {
-        Template t;
+    int idx = name.indexOf(':');
+    if (idx > -1) {
+      String tName = name.substring(0, idx);
+      String tagList = name.substring(idx + 1);
 
-        if (!owner.equals(Template.OWNER)) {
-            return null;
+      t = getTemplate(Template.getId(owner, tName, sig));
+      if (t != null) {
+        StringTokenizer st = new StringTokenizer(tagList, ",");
+
+        Set<String> tags = new HashSet<>();
+        while (st.hasMoreTokens()) {
+          String param = st.nextToken();
+          tags.add(param);
         }
 
-        int idx = name.indexOf(':');
-        if (idx > -1) {
-            String tName = name.substring(0, idx);
-            String tagList = name.substring(idx + 1);
-
-            t = getTemplate(Template.getId(owner, tName, sig));
-            if (t != null) {
-                StringTokenizer st = new StringTokenizer(tagList, ",");
-
-                Set<String> tags = new HashSet<>();
-                while (st.hasMoreTokens()) {
-                    String param = st.nextToken();
-                    tags.add(param);
-                }
-
-                t.setTags(tags);
-            }
-        } else {
-            t = getTemplate(Template.getId(owner, name, sig));
-        }
-
-        return t;
+        t.setTags(tags);
+      }
+    } else {
+      t = getTemplate(Template.getId(owner, name, sig));
     }
 
-    private static Template getTemplate(String id) {
-        Template t = TEMPLATE_MAP.get(id);
-        return t != null ? t.duplicate() : null;
-    }
+    return t;
+  }
+
+  private static Template getTemplate(String id) {
+    Template t = TEMPLATE_MAP.get(id);
+    return t != null ? t.duplicate() : null;
+  }
 }
