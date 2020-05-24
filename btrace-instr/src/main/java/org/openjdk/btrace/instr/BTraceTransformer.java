@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -104,6 +105,11 @@ public final class BTraceTransformer implements ClassFileTransformer {
         InsnList code = new InsnList();
         code.add(new InsnNode(Opcodes.RETURN));
         cushionMethod.instructions = code;
+        int localSize = 0;
+        for (Type t : Type.getArgumentTypes(om.getTargetDescriptor())) {
+          localSize += t.getSize();
+        }
+        cushionMethod.maxLocals = localSize;
         cushionMethods.add(cushionMethod);
       }
 
