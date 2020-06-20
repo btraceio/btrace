@@ -62,8 +62,6 @@ test {
     //inputs.files buildDTrace.outputs
     testLogging.showStandardStreams = true
 
-
-
     jvmArgs '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
 }
 

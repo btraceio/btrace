@@ -69,6 +69,7 @@ task agentJar(type: ShadowJar) {
 
     exclude 'org/openjdk/btrace/compiler/**'
     exclude 'org/openjdk/btrace/core/**'
+    exclude 'org/openjdk/btrace/client/**'
     exclude 'org/openjdk/btrace/runtime/**'
     exclude 'org/openjdk/btrace/services/**'
     exclude 'org/openjdk/btrace/statsd/*'

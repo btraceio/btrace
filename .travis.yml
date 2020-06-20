@@ -37,12 +37,14 @@ script: "source ./config_build.sh && ./run_tests.sh"
 after_success:
 - "./gradlew buildDistributions -DexcludeBenchmark"
 - codecov
-deploy:
-  provider: bintray
-  file: "bintray.json"
-  user: "jbachorik"
-  key:
-    secure: I+Lvki1TM2pQPJEf75U098GSQexgjudOZ2TDCPSQEdGys7PdW7SIy5THiHYdCG+tO8dSKQ3FUXufDD1KzhHxEBSWUX1rpAgE3SGvxYwzAU+bl3FvoQzjb+WD69ya86h0TFM2fVOJsg4+iDimheHcD+7mCuYx3ga1dsi8lVjh38s=
-  on:
-    branch: develop
-    condition: ${TRAVIS_JDK_VERSION} == openjdk11
+
+# TODO temporarily disable
+#deploy:
+#  provider: bintray
+#  file: "bintray.json"
+#  user: "jbachorik"
+#  key:
+#    secure: I+Lvki1TM2pQPJEf75U098GSQexgjudOZ2TDCPSQEdGys7PdW7SIy5THiHYdCG+tO8dSKQ3FUXufDD1KzhHxEBSWUX1rpAgE3SGvxYwzAU+bl3FvoQzjb+WD69ya86h0TFM2fVOJsg4+iDimheHcD+7mCuYx3ga1dsi8lVjh38s=
+#  on:
+#    branch: develop
+#    condition: ${TRAVIS_JDK_VERSION} == openjdk11
