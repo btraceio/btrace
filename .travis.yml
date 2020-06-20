@@ -20,7 +20,7 @@ addons:
     packages:
       - openjdk-8-jdk
       - openjdk-9-jdk
-      - openjdk15
+      - openjdk-15-jdk
 
 notifications:
   webhooks:
