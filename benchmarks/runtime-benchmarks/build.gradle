@@ -12,7 +12,7 @@ def env = System.getenv()
 def javaHome = env['JAVA_HOME']
 
 dependencies {
-  compile project(":btrace-dist")
+  compile project(path: ":btrace-dist", configuration: "shadow")
   compile project(":btrace-compiler")
   jmh project(":btrace-instr")
   jmh project(":btrace-runtime")

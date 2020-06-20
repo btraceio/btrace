@@ -83,4 +83,6 @@ public interface BTraceProbe {
   void copyHandlers(ClassVisitor copyingVisitor);
 
   void applyArgs(ArgsMap argsMap);
+
+  BTraceRuntime.Impl getRuntime();
 }

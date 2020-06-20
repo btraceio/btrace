@@ -193,6 +193,11 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     return getBytecode(true);
   }
 
+  @Override
+  public BTraceRuntime.Impl getRuntime() {
+    return rt;
+  }
+
   private byte[] getBytecode(boolean onlyBcpMethods) {
     ClassWriter cw = InstrumentUtils.newClassWriter(true);
     ClassVisitor cv = cw;
@@ -327,9 +332,11 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         copyNodes.add(copy(c));
       }
     }
+    copyingVisitor.visit(Opcodes.V1_7, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, getClassName(true), null, "java/lang/Object", null);
     for (MethodNode mn : copyNodes) {
       mn.accept(copyingVisitor);
     }
+    copyingVisitor.visitEnd();
   }
 
   @Override
