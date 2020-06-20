@@ -14,13 +14,13 @@ cache:
 language: java
 jdk:
 - openjdk11
-- openjdk15
 
 addons:
   apt:
     packages:
       - openjdk-8-jdk
       - openjdk-9-jdk
+      - openjdk15
 
 notifications:
   webhooks:
