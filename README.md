@@ -5,7 +5,7 @@
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
-2.0.1
+2.0.2
 
 ## Quick Summary
 BTrace is a safe, dynamic tracing tool for the Java platform.
@@ -17,7 +17,7 @@ BTrace can be used to dynamically trace a running Java program (similar to DTrac
 * Powered by [JCTools](https://github.com/JCTools/JCTools)
 * Powered by [hppcrt](https://github.com/vsonnier/hppcrt)
 * Optimized with [JProfiler Java Profiler](http://www.ej-technologies.com/products/jprofiler/overview.html)
-* Build env helper using [SDKMAN!] (https://sdkman.io/)
+* Build env helper using [SDKMAN!](https://sdkman.io/)
 
 ## Building BTrace
 
