@@ -32,9 +32,8 @@ before_install:
 - sudo apt-get install ca-certificates-java
 - sudo update-ca-certificates -f
 install:
-- "echo $JAVA_HOME"
-- "./gradlew assemble -DexcludeBenchmark"
-script: "source config_build && ./run_tests.sh"
+- "source ./config_build.sh && ./gradlew assemble -DexcludeBenchmark"
+script: "source ./config_build.sh && ./run_tests.sh"
 after_success:
 - "./gradlew buildDistributions -DexcludeBenchmark"
 - codecov
