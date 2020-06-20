@@ -2,25 +2,15 @@ env:
   global:
   - secure: EIQ8VWbg8LRnX7n6PIP9HjXLg4nIKOsJk0xnMunbMZ475Z+pTd73awLu6VCbjO5DVAd9R7W36snIlGVv92j3dai6e0jOO+WtSTQ7gd1cEq+4swEXg7Qvc1oyqsXVL+FoO+j1InZxxUx93ObLRGvFZiUeBhnPNdqsM794EkUScN4=
   - secure: HLMEzx4NuU+oXU5yGViN8pAfFvhVeib5zvfH21nVbOC1Rg57HUKQTRCg5S/acr5C8At4BfHORt7p3MHztGB/GXylzm1kFRnKliJ50S9BkEW+/852f2gbGmnIEe7aMz4nFOheRpLgk7zcZrbYbztoRAFL+HREBiEaAZu8bti4gpU=
-  - JAVA_8_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-  - JAVA_9_HOME=/usr/lib/jvm/java-9-openjdk-amd64
-  - JAVA_11_HOME=/home/travis/openjdk11
-  - JAVA_15_HOME=/home/travis/openjdk15
 sudo: false
 dist: trusty
 cache:
   directories:
   - "$HOME/.gradle"
+  - $HOME/.sdkman
 language: java
 jdk:
 - openjdk11
-
-addons:
-  apt:
-    packages:
-      - openjdk-8-jdk
-      - openjdk-9-jdk
-      - openjdk-15-jdk
 
 notifications:
   webhooks:
@@ -28,13 +18,20 @@ notifications:
     on_success: change
     on_failure: always
     on_start: never
+
 before_install:
+# adding $HOME/.sdkman to cache would create an empty directory, which interferes with the initial installation
+- "[[ -d /home/travis/.sdkman/ ]] && [[ -d /home/travis/.sdkman/bin/ ]] || rm -rf /home/travis/.sdkman/"
+- curl -sL https://get.sdkman.io | bash
+- echo sdkman_auto_answer=true > $HOME/.sdkman/etc/config
+- echo sdkman_auto_selfupdate=true >> $HOME/.sdkman/etc/config
+- source "/home/travis/.sdkman/bin/sdkman-init.sh"
 - pip install --user codecov
 - sudo dpkg --purge --force-depends ca-certificates-java
 - sudo apt-get install ca-certificates-java
 - sudo update-ca-certificates -f
 install: "./gradlew assemble -DexcludeBenchmark"
-script: "./run_tests.sh"
+script: "source config_build && ./run_tests.sh"
 after_success:
 - "./gradlew buildDistributions -DexcludeBenchmark"
 - codecov
@@ -46,4 +43,4 @@ deploy:
     secure: I+Lvki1TM2pQPJEf75U098GSQexgjudOZ2TDCPSQEdGys7PdW7SIy5THiHYdCG+tO8dSKQ3FUXufDD1KzhHxEBSWUX1rpAgE3SGvxYwzAU+bl3FvoQzjb+WD69ya86h0TFM2fVOJsg4+iDimheHcD+7mCuYx3ga1dsi8lVjh38s=
   on:
     branch: develop
-    condition: ${TRAVIS_JDK_VERSION} == oraclejdk8
+    condition: ${TRAVIS_JDK_VERSION} == openjdk11
