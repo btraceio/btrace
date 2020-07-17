@@ -27,7 +27,10 @@ package org.openjdk.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -39,6 +42,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
 import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
+import jdk.jfr.Event;
+import jdk.jfr.FlightRecorder;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
@@ -84,6 +89,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   private static final int PERF_STRING_LIMIT = 256;
 
   private static Perf perf;
+
+  private final JFRRuntimeSupport jfrRuntimeSupport = new JFRRuntimeSupport();
 
   public BTraceRuntimeImpl_11() {}
 
@@ -208,6 +215,21 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   @Override
   public int version() {
     return Runtime.version().feature();
+  }
+
+  @Override
+  public void addJfrPeriodicEvent(String eventClassName, String className, String methodName) {
+    jfrRuntimeSupport.addJfrPeriodicEvent(eventClassName, className, methodName);
+  }
+
+  @Override
+  public void addJfrEvent(String eventClassName) {
+    jfrRuntimeSupport.addJfrEvent(eventClassName);
+  }
+
+  @Override
+  protected void afterLeave() {
+//    jfrRuntimeSupport.cleanupEvents();
   }
 
   private static Perf getPerf() {

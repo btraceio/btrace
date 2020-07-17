@@ -2,4 +2,5 @@ dependencies {
     compile files("${JAVA_8_HOME}/lib/tools.jar")
     compile project(path: ':btrace-core')
     compile project(path: ':btrace-runtime')
+    runtimeOnly project(path: ':btrace-instr')
 }

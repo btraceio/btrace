@@ -32,11 +32,14 @@ import org.openjdk.btrace.core.annotations.Export;
 import static org.openjdk.btrace.core.BTraceUtils.*;
 import static org.openjdk.btrace.core.BTraceUtils.Reflective.*;
 
+import dummy.SimplePeriodicEvent;
+import dummy.SimpleEvent;
+
 /**
  *
  * @author Jaroslav Bachorik
  */
-@BTrace
+@BTrace(trusted = false)
 public class OnMethodTest {
     @TLS
     private static int tls = 10;
@@ -61,6 +64,35 @@ public class OnMethodTest {
         ex--;
         dump(var + " [this, args]");
         var = "B";
+//        emitEvent(i);
+    }
+
+//    @JfrPeriodicEventHandler
+//    public static void handleSimplePeriodic(SimplePeriodicEvent event) {
+//        if (event.shouldCommit()) {
+//            event.setValue(10);
+//            event.commit();
+//            println("*** done");
+//        }
+//    }
+//
+//    @JfrBlock(SimpleEvent.class)
+//    public static void emitEvent(long bytesRead) {
+//        SimpleEvent event = new SimpleEvent();
+//        println("process event: " + event.isEnabled() + ", " + event.shouldCommit());
+//        if (event.shouldCommit()) {
+//            println("commit event");
+//            event.setValue(bytesRead);
+//            event.commit();
+//        }
+//    }
+
+    @OnTimer(500)
+    public static void doRecurrent() {
+        long x = 10;
+        if (timeNanos() > x) {
+            println(x);
+        }
     }
 
     private static void dump(String s) {

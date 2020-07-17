@@ -259,7 +259,7 @@ public class Client {
   public void attach(String pid, String sysCp, String bootCp) throws IOException {
     try {
       String agentPath = "/btrace-agent.jar";
-      URL btracePkg = Client.class.getClassLoader().getResource("org/openjdk/btrace");
+      URL btracePkg = Client.class.getClassLoader().getResource("org/openjdk/btrace/client");
       if (btracePkg != null) {
         String tmp = btracePkg.toString();
         tmp = tmp.substring(0, tmp.indexOf('!'));

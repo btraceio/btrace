@@ -63,15 +63,18 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
   private final Map<String, BTraceMethodNode> idmap;
   private final Preprocessor prep;
+  private final BTraceBCPClassLoader bcpResourceClassLoader;
 
   private volatile BTraceRuntime.Impl rt = null;
 
   private BTraceTransformer transformer;
   private VerifierException verifierException = null;
 
+
   private BTraceProbeNode(BTraceProbeFactory factory) {
     super(Opcodes.ASM7);
     this.factory = factory;
+    bcpResourceClassLoader = new BTraceBCPClassLoader(factory.getSettings());
     debug = new DebugSupport(factory.getSettings());
     delegate = new BTraceProbeSupport(debug);
     idmap = new HashMap<>();
@@ -109,7 +112,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     BTraceMethodNode bmn = new BTraceMethodNode(mn, this);
     methods.add(bmn);
     idmap.put(CallGraph.methodId(name, desc), bmn);
-    return isTrusted() ? bmn : new MethodVerifier(bmn, access, delegate.getOrigName(), name, desc);
+    return isTrusted() ? bmn : new MethodVerifier(bmn, access, delegate.getOrigName(), name, desc, bcpResourceClassLoader);
   }
 
   @Override

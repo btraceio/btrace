@@ -50,6 +50,7 @@ public final class ClassInfo {
   private final Collection<ClassInfo> supertypes = new ArrayList<>();
   private final ClassCache cache;
   private boolean isInterface = false;
+  private boolean isAvailable = false;
 
   ClassInfo(ClassCache cache, Class<?> clz) {
     this.cache = cache;
@@ -66,6 +67,7 @@ public final class ClassInfo {
       }
     }
     isInterface = clz.isInterface();
+    isAvailable = true;
   }
 
   ClassInfo(ClassCache cache, ClassLoader cl, ClassName cName) {
@@ -175,6 +177,10 @@ public final class ClassInfo {
     return isInterface;
   }
 
+  public boolean isAvailable() {
+    return isAvailable;
+  }
+
   // not thread safe - must be called only from the constructor
   private void loadExternalClass(ClassLoader cl, ClassName className) {
     String resourcePath = className.getResourcePath();
@@ -204,6 +210,7 @@ public final class ClassInfo {
               }
             }
           }
+          isAvailable = true;
         } catch (IllegalArgumentException | IOException e) {
           DebugSupport.warning("Unable to load class: " + className);
           DebugSupport.warning(e);

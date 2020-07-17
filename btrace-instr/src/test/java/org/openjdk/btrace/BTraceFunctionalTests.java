@@ -27,6 +27,7 @@ package org.openjdk.btrace;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -70,7 +71,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnProbe() throws Exception {
-    if (Files.exists(Paths.get(java, "jre"))) {
+    if (Files.exists(Paths.get(javaHome, "jre"))) {
       test(
           "resources.Main",
           "btrace/OnProbeTest.java",
@@ -138,7 +139,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           public void validate(String stdout, String stderr, int retcode) {
             Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
             Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("onexit"));
+            Assert.assertTrue(stdout.contains("onexit"  ));
           }
         });
   }
@@ -148,7 +149,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     test(
         "resources.Main",
         "btrace/OnMethodTest.java",
-        20,
+        10,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode) {

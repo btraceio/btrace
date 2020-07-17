@@ -1292,6 +1292,10 @@ public final class BTraceRuntime {
 
     Class<?> getCallerClass(int stackDec);
 
+    void addJfrPeriodicEvent(String eventClassName, String className, String methodName);
+
+    void addJfrEvent(String eventClassName);
+
     int version();
   }
 

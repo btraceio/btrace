@@ -32,6 +32,8 @@ import org.openjdk.btrace.core.BTraceUtils;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Duration;
 import org.openjdk.btrace.core.annotations.Injected;
+import org.openjdk.btrace.core.annotations.JfrBlock;
+import org.openjdk.btrace.core.annotations.JfrPeriodicEventHandler;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
@@ -119,6 +121,10 @@ public abstract class Constants {
   public static final String BTRACE_DESC = Type.getDescriptor(BTrace.class);
 
   public static final String ONMETHOD_DESC = Type.getDescriptor(OnMethod.class);
+
+  public static final String JFRPERIODIC_DESC = Type.getDescriptor(JfrPeriodicEventHandler.class);
+
+  public static final String JFR_BLOCK_DESC = Type.getDescriptor(JfrBlock.class);
 
   public static final String BTRACE_PROBECLASSNAME_DESC = Type.getDescriptor(ProbeClassName.class);
 

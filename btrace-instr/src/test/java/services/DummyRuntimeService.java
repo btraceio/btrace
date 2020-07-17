@@ -27,8 +27,8 @@ package services;
 import org.openjdk.btrace.services.api.RuntimeContext;
 import org.openjdk.btrace.services.spi.RuntimeService;
 
-public final class DummyRuntimService extends RuntimeService {
-  public DummyRuntimService(RuntimeContext rt) {
+public final class DummyRuntimeService extends RuntimeService {
+  public DummyRuntimeService(RuntimeContext rt) {
     super(rt);
   }
 

@@ -64,6 +64,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -615,7 +616,10 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   @Override
   public final void leave() {
     BTraceRuntimeAccess.leave();
+    afterLeave();
   }
+
+  protected void afterLeave() {};
 
   /** Handles exception from BTrace probe actions. */
   @Override

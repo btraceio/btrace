@@ -27,7 +27,10 @@ package org.openjdk.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -234,6 +237,17 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   @Override
   public int version() {
     return 9;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public void addJfrPeriodicEvent(String eventClassName, String className, String methodName) {
+    debugPrint("Can not add JFR periodic event '" + eventClassName + "'. JFR is not supported in JDK 7.");
+  }
+
+  @Override
+  public void addJfrEvent(String eventClassName) {
+    debugPrint("Can not add JFR event '" + eventClassName + "'. JFR is not supported in JDK 7.");
   }
 
   private static Perf getPerf() {

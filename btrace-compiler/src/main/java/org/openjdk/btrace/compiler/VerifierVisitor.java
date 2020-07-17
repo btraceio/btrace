@@ -66,12 +66,15 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Injected;
+import org.openjdk.btrace.core.annotations.JfrBlock;
+import org.openjdk.btrace.core.annotations.JfrPeriodicEventHandler;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.OnError;
 import org.openjdk.btrace.core.annotations.OnExit;
@@ -92,12 +95,15 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   private String className;
   private String fqn;
   private boolean insideMethod;
+  private boolean insideJfrBlock;
 
   private boolean shortSyntax = false;
   private TypeMirror btraceServiceTm = null;
   private TypeMirror runtimeServiceTm = null;
   private TypeMirror simpleServiceTm = null;
   private TypeMirror serviceInjectorTm = null;
+
+  private boolean isInAnnotation = false;
 
   public VerifierVisitor(Verifier verifier, Element clzElement) {
     this.verifier = verifier;
@@ -133,7 +139,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   @Override
   public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
     Element e = getElement(node);
-    if (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR) {
+    if (e != null && (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR)) {
       String name = e.getSimpleName().toString();
 
       // allow constructor calls
@@ -141,13 +147,19 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return super.visitMethodInvocation(node, v);
       }
 
-      Element parent = null;
+      TypeElement parent = null;
       do {
-        parent = e.getEnclosingElement();
+        parent = (TypeElement)e.getEnclosingElement();
       } while (parent != null
           && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
 
       if (parent != null) {
+        if (isJfrCode(parent)) {
+          if (!insideJfrBlock) {
+            reportError("jfr.no.annotation", node);
+          }
+          return super.visitMethodInvocation(node, v);
+        }
         TypeMirror tm = parent.asType();
         String typeName = tm.toString();
 
@@ -303,12 +315,14 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   @Override
   public Boolean visitMethod(MethodTree node, Void v) {
     boolean oldInsideMethod = insideMethod;
+    boolean oldInsideJfrBlock = insideJfrBlock;
     insideMethod = true;
     try {
       Name name = node.getName();
       if (name.contentEquals("<init>")) {
         return super.visitMethod(node, v);
       } else {
+        insideJfrBlock = insideJfrBlock || checkJfrBlock(node);
         checkSampling(node);
 
         if (isExitHandler(node)) {
@@ -331,14 +345,19 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
               new TreeScanner<Void, Void>() {
                 @Override
                 public Void visitAnnotation(AnnotationTree at, Void p) {
-                  String annType = at.getAnnotationType().toString();
-                  Integer i = annotationHisto.get(annType);
-                  if (i == null) {
-                    annotationHisto.put(annType, 0);
-                  } else {
-                    annotationHisto.put(annType, i + 1);
+                  isInAnnotation = true;
+                  try {
+                    String annType = at.getAnnotationType().toString();
+                    Integer i = annotationHisto.get(annType);
+                    if (i == null) {
+                      annotationHisto.put(annType, 0);
+                    } else {
+                      annotationHisto.put(annType, i + 1);
+                    }
+                    return super.visitAnnotation(at, p);
+                  } finally {
+                    isInAnnotation = false;
                   }
-                  return super.visitAnnotation(at, p);
                 }
               },
               null);
@@ -375,6 +394,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
       }
     } finally {
       insideMethod = oldInsideMethod;
+      insideJfrBlock = oldInsideJfrBlock;
     }
   }
 
@@ -386,7 +406,15 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
   @Override
   public Boolean visitNewClass(NewClassTree node, Void v) {
-    reportError("no.new.object", node);
+    Element e = getElement(node);
+    TypeElement te = (TypeElement)e.getEnclosingElement();
+    if (isJfrCode(te)) {
+      if (!insideJfrBlock) {
+        reportError("jfr.no.annotation", node);
+      }
+    } else {
+      reportError("no.new.object", node);
+    }
     return super.visitNewClass(node, v);
   }
 
@@ -411,13 +439,25 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
   @Override
   public Boolean visitMemberSelect(MemberSelectTree node, Void v) {
-    if (node.getIdentifier().contentEquals("class")) {
-      TypeMirror tm = getType(node.getExpression());
-      if (!verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
-        reportError("no.class.literals", node);
+    if (!isInAnnotation) {
+      if (node.getIdentifier().contentEquals("class")) {
+        TypeMirror tm = getType(node.getExpression());
+        if (!verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
+          reportError("no.class.literals", node);
+        }
       }
     }
     return super.visitMemberSelect(node, v);
+  }
+
+  @Override
+  public Boolean visitAnnotation(AnnotationTree node, Void unused) {
+    try {
+      isInAnnotation = true;
+      return super.visitAnnotation(node, unused);
+    } finally {
+      isInAnnotation = false;
+    }
   }
 
   @Override
@@ -550,9 +590,13 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     return false;
   }
 
+  private boolean checkJfrBlock(MethodTree node) {
+    Element e = getElement(node);
+    return e != null && (e.getAnnotation(JfrBlock.class) != null || e.getAnnotation(JfrPeriodicEventHandler.class) != null);
+  }
+
   private boolean checkSampling(MethodTree node) {
-    TreePath mPath = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), node);
-    ExecutableElement ee = (ExecutableElement) verifier.getTreeUtils().getElement(mPath);
+    ExecutableElement ee = (ExecutableElement) getElement(node);
 
     Sampled s = ee.getAnnotation(Sampled.class);
     OnMethod om = ee.getAnnotation(OnMethod.class);
@@ -582,6 +626,22 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     if (variable.getKind() == Tree.Kind.ARRAY_ACCESS) {
       reportError("no.assignment", variable);
       return false;
+    }
+
+    Element e = getElement(variable);
+    if (e.getKind() == ElementKind.FIELD) {
+      VariableElement ve = (VariableElement) e;
+      TypeMirror tm = ve.getEnclosingElement().asType();
+      if (tm != null) {
+        TypeElement te = (TypeElement) verifier.getTypeUtils().asElement(tm);
+        if (isJfrCode(te)) {
+          if (!insideJfrBlock) {
+            reportError("jfr.no.annotation", variable);
+            return false;
+          }
+          return true;
+        }
+      }
     }
 
     if (variable.getKind() != Tree.Kind.IDENTIFIER) {
@@ -635,6 +695,9 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
       } else if (t instanceof JCTree.JCThrow) {
         e = ((JCTree.JCNewClass) ((JCTree.JCThrow) t).expr).type.tsym;
       }
+      if (e == null) {
+        verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, t.toString());
+      }
     }
     return e;
   }
@@ -670,5 +733,18 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
       }
     }
     return allLiterals;
+  }
+
+  private boolean isJfrCode(TypeElement typeElement) {
+    if (typeElement != null) {
+      if (typeElement.getQualifiedName().contentEquals("jdk.jfr.Event")) {
+        return true;
+      }
+      TypeMirror typeMirror = typeElement.getSuperclass();
+      if (typeMirror != null) {
+        return isJfrCode((TypeElement) verifier.getTypeUtils().asElement(typeMirror));
+      }
+    }
+    return false;
   }
 }

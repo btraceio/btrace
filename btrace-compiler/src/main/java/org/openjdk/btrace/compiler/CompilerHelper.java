@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -101,11 +103,20 @@ class CompilerHelper {
             // temp hack; need turn off verifier
             SharedSettings.GLOBAL.setTrusted(true);
 
+            String[] pathElements = classPath.split(File.pathSeparator);
+            List<URL> urlElements = new ArrayList<>(pathElements.length);
+
+            for (String pathElement : pathElements) {
+              File f = new File(pathElement);
+              urlElements.add(f.toURI().toURL());
+            }
+            URLClassLoader generatorCL = new URLClassLoader(urlElements.toArray(new URL[0]), Compiler.class.getClassLoader());
             ServiceLoader<PackGenerator> generators =
-                ServiceLoader.load(PackGenerator.class, Compiler.class.getClassLoader());
+                ServiceLoader.load(PackGenerator.class, generatorCL);
             Iterator<PackGenerator> iter = generators.iterator();
             if (iter.hasNext()) {
               PackGenerator generator = iter.next();
+              SharedSettings.GLOBAL.setBootClassPath(classPath);
               classData = generator.generateProbePack(classData);
             }
           }

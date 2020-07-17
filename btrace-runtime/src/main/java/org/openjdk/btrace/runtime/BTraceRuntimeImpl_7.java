@@ -29,6 +29,7 @@ import java.lang.instrument.Instrumentation;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
+
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
@@ -170,6 +171,16 @@ public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
   @Override
   public int version() {
     return 7;
+  }
+
+  @Override
+  public void addJfrPeriodicEvent(String eventClassName, String className, String methodName) {
+    debugPrint("Can not add JFR periodic event '" + eventClassName + "'. JFR is not supported in JDK 7.");
+  }
+
+  @Override
+  public void addJfrEvent(String eventClassName) {
+    debugPrint("Can not add JFR event '" + eventClassName + "'. JFR is not supported in JDK 7.");
   }
 
   private static Perf getPerf() {

@@ -40,6 +40,7 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -51,9 +52,11 @@ import org.junit.Assert;
 @SuppressWarnings("ConstantConditions")
 public abstract class RuntimeTest {
   private static String cp = null;
-  protected static String java = null;
-  private static String btraceExtPath = null;
-  private static File projectRoot = null;
+  protected static String javaHome = null;
+  protected static String javacJavaHome = null;
+  private static String clientClassPath = null;
+  private static String eventsClassPath = null;
+  private static Path projectRoot = null;
   private static boolean forceDebug = false;
   /** Display the otput from the test application */
   protected boolean debugTestApp = false;
@@ -65,6 +68,10 @@ public abstract class RuntimeTest {
   protected long timeout = 10000L;
   /** Track retransforming progress */
   protected boolean trackRetransforms = false;
+  /**
+   * Provide extra JVM args
+   */
+  protected List<String> extraJvmArgs = Collections.emptyList();
 
   protected boolean attachDebugger = false;
 
@@ -88,39 +95,39 @@ public abstract class RuntimeTest {
         f = f.getParentFile();
       }
       if (f != null) {
-        projectRoot = new File(f.getAbsoluteFile() + "/../..");
-        btraceExtPath =
-            new File(
-                    projectRoot.getAbsolutePath()
-                        + "/btrace-dist/build/resources/main/" + System.getProperty("project.version") + "/libs/btrace-client.jar")
-                .getPath();
+        projectRoot = f.getAbsoluteFile().toPath().resolve("../..");
+        Path clientJarPath = projectRoot.resolve("btrace-dist/build/resources/main").resolve(System.getProperty("project.version")).resolve("libs/btrace-client.jar");
+        Path eventsJarPath = projectRoot.resolve("btrace-instr/build/libs/events.jar");
+        clientClassPath = clientJarPath.toString();
+        eventsClassPath = eventsJarPath.toString();
+        // client jar needs to take precedence in order for the agent.jar inferring code to work
+        cp = clientJarPath.toString() + File.pathSeparator + projectRoot.resolve("btrace-instr/build/classes/java/test");
       }
       Assert.assertNotNull(projectRoot);
-      Assert.assertNotNull(btraceExtPath);
+      Assert.assertNotNull(clientClassPath);
     } catch (URISyntaxException e) {
       throw new Error(e);
     }
     String toolsjar = null;
 
-    cp = System.getProperty("java.class.path");
-
-    String javaHome = System.getenv("TEST_JAVA_HOME");
-    if (javaHome == null) {
+    String jHome = System.getenv("TEST_JAVA_HOME");
+    if (jHome == null) {
       String targetVersion = System.getenv("TEST_JAVA_VERSION");
       if (targetVersion != null) {
-        javaHome = System.getenv("JAVA_" + targetVersion + "_HOME");
+        jHome = System.getenv("JAVA_" + targetVersion + "_HOME");
       }
     }
-    if (javaHome == null) {
-      javaHome = System.getProperty("java.home").replace("/jre", "");
+    if (jHome == null) {
+      jHome = System.getProperty("java.home").replace("/jre", "");
     }
-    java = javaHome;
-    Path toolsJarPath = Paths.get(java, "lib", "tools.jar");
+    javaHome = jHome;
+
+    Path toolsJarPath = Paths.get(javaHome, "lib", "tools.jar");
     if (Files.exists(toolsJarPath)) {
       toolsjar = toolsJarPath.toString();
     }
-    btraceExtPath = btraceExtPath + File.pathSeparator + toolsjar;
-    System.out.println("=== Using Java: " + java + ", toolsJar: " + toolsjar);
+    cp = toolsjar != null ? cp + File.pathSeparator + toolsjar : cp;
+    System.out.println("=== Using Java: " + javaHome + ", cp: " + cp);
   }
 
   protected void reset() {
@@ -145,12 +152,13 @@ public abstract class RuntimeTest {
       debugBTrace = true;
       debugTestApp = true;
     }
-    List<String> args = new ArrayList<>(Arrays.asList(java + "/bin/java", "-cp", cp));
+    List<String> args = new ArrayList<>(Arrays.asList(javaHome + "/bin/java", "-cp", cp));
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
     }
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
+    args.addAll(extraJvmArgs);
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);
@@ -245,7 +253,7 @@ public abstract class RuntimeTest {
   }
 
   private File locateTrace(final String trace) {
-    Path start = Paths.get(projectRoot.getAbsolutePath(), "btrace-instr/src");
+    Path start = projectRoot.resolve("btrace-instr/src");
     final AtomicReference<Path> tracePath = new AtomicReference<>();
     try {
       Files.walkFileTree(
@@ -296,13 +304,13 @@ public abstract class RuntimeTest {
     List<String> argVals =
         new ArrayList<>(
             Arrays.asList(
-                java + "/bin/java",
+                javaHome + "/bin/java",
                 "-Dcom.sun.btrace.unsafe=" + isUnsafe,
                 "-Dcom.sun.btrace.debug=" + debugBTrace,
                 "-Dcom.sun.btrace.trackRetransforms=" + trackRetransforms,
-                "-cp",
-                btraceExtPath,
+                "-cp", cp,
                 "org.openjdk.btrace.client.Main",
+                "-cp", eventsClassPath,
                 "-d",
                 "/tmp/btrace-test",
                 "-pd",

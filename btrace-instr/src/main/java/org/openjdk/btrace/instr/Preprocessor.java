@@ -28,12 +28,14 @@ package org.openjdk.btrace.instr;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -82,6 +84,9 @@ final class Preprocessor {
   private static final Type TLS_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "TLS;");
   private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
   private static final Type INJECTED_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Injected;");
+  private static final Type JFRPERIODIC_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "JfrPeriodicEventHandler;");
+  private static final Type BTRACE_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "BTrace;");
+  private static final Type JFRBLOCK_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "JfrBlock;");
   private static final String SERVICE_INTERNAL = "org/openjdk/btrace/services/api/Service";
   private static final String TIMERHANDLER_INTERNAL =
       "org/openjdk/btrace/core/handlers/TimerHandler";
@@ -151,16 +156,14 @@ final class Preprocessor {
     BOX_TYPE_MAP.put("Z", Constants.BOOLEAN_BOXED_DESC);
     BOX_TYPE_MAP.put("C", Constants.CHARACTER_BOXED_DESC);
 
-    try {
-      RT_AWARE_ANNOTS.add(Constants.ONMETHOD_DESC);
-      RT_AWARE_ANNOTS.add(Constants.ONTIMER_DESC);
-      RT_AWARE_ANNOTS.add(Constants.ONEVENT_DESC);
-      RT_AWARE_ANNOTS.add(Constants.ONERROR_DESC);
-      RT_AWARE_ANNOTS.add(Constants.ONPROBE_DESC);
-      GUARDED_ANNOTS.addAll(RT_AWARE_ANNOTS);
-    } catch (Throwable t) {
-      t.printStackTrace();
-    }
+    RT_AWARE_ANNOTS.add(Constants.ONMETHOD_DESC);
+    RT_AWARE_ANNOTS.add(Constants.ONTIMER_DESC);
+    RT_AWARE_ANNOTS.add(Constants.ONEVENT_DESC);
+    RT_AWARE_ANNOTS.add(Constants.ONERROR_DESC);
+    RT_AWARE_ANNOTS.add(Constants.ONPROBE_DESC);
+    RT_AWARE_ANNOTS.add(Constants.JFRPERIODIC_DESC);
+
+    GUARDED_ANNOTS.addAll(RT_AWARE_ANNOTS);
 
     // @OnExit is rtAware but not guarded
     RT_AWARE_ANNOTS.add(Constants.ONEXIT_DESC);
@@ -173,6 +176,8 @@ final class Preprocessor {
   private final DebugSupport debug;
   private MethodNode clinit = null;
   private FieldNode rtField = null;
+
+  private Map<MethodNode, EnumSet<MethodClassifier>> classifierMap = new HashMap<>();
 
   public Preprocessor(DebugSupport debug) {
     this.debug = debug;
@@ -190,7 +195,7 @@ final class Preprocessor {
       }
     }
     if (fn.invisibleAnnotations != null) {
-      for (AnnotationNode an : ((List<AnnotationNode>) fn.invisibleAnnotations)) {
+      for (AnnotationNode an : fn.invisibleAnnotations) {
         if (an.desc.equals(targetDesc)) {
           return an;
         }
@@ -199,10 +204,21 @@ final class Preprocessor {
     return null;
   }
 
-  public static AnnotationNode getAnnotation(MethodNode fn, Type annotation) {
-    if (fn == null || fn.visibleAnnotations == null) return null;
+  public static AnnotationNode getAnnotation(MethodNode mn, Type annotation) {
+    if (mn == null || mn.visibleAnnotations == null) return null;
     String targetDesc = annotation.getDescriptor();
-    for (AnnotationNode an : ((List<AnnotationNode>) fn.visibleAnnotations)) {
+    for (AnnotationNode an : mn.visibleAnnotations) {
+      if (an.desc.equals(targetDesc)) {
+        return an;
+      }
+    }
+    return null;
+  }
+
+  public static AnnotationNode getAnnotation(ClassNode cn, Type annotation) {
+    if (cn == null || cn.visibleAnnotations == null) return null;
+    String targetDesc = annotation.getDescriptor();
+    for (AnnotationNode an : cn.visibleAnnotations) {
       if (an.desc.equals(targetDesc)) {
         return an;
       }
@@ -470,8 +486,6 @@ final class Preprocessor {
     boolean checkFields =
         !(tlsFldNames.isEmpty() && exportFldNames.isEmpty() && injectedFlds.isEmpty());
 
-    MethodClassifier clsf = getClassifier(mn);
-
     int retopcode = Type.getReturnType(mn.desc).getOpcode(Opcodes.IRETURN);
     InsnList l = mn.instructions;
     for (AbstractInsnNode n = l.getFirst(); n != null; n = n != null ? n.getNext() : null) {
@@ -490,7 +504,7 @@ final class Preprocessor {
       } else if (type == AbstractInsnNode.METHOD_INSN) {
         MethodInsnNode min = (MethodInsnNode) n;
         n = unfoldServiceInstantiation(cn, min, l);
-      } else if (n.getOpcode() == retopcode && isClassified(clsf, MethodClassifier.RT_AWARE)) {
+      } else if (n.getOpcode() == retopcode && getClassifiers(mn).contains(MethodClassifier.RT_AWARE)) {
         addBTraceRuntimeExit(cn, (InsnNode) n, l);
       }
     }
@@ -544,6 +558,7 @@ final class Preprocessor {
   private void initRuntime(ClassNode cn, MethodNode clinit) {
     addRuntimeNode(cn);
     InsnList l = new InsnList();
+
     l.add(new LdcInsnNode(Type.getObjectType(cn.name)));
     l.add(loadTimerHandlers(cn));
     l.add(loadEventHandlers(cn));
@@ -561,6 +576,7 @@ final class Preprocessor {
 
     l.add(getRuntimeImpl(cn));
     addRuntimeCheck(cn, clinit, l, true);
+    l.add(addJfrEvents(cn));
 
     clinit.instructions.insert(l);
 
@@ -802,6 +818,38 @@ final class Preprocessor {
     return il;
   }
 
+  @SuppressWarnings("unchecked")
+  private InsnList addJfrEvents(ClassNode cn) {
+    InsnList il = new InsnList();
+
+    for (MethodNode mn : getMethods(cn)) {
+      AnnotationNode annotation = getAnnotation(mn, JFRPERIODIC_TYPE);
+      if (annotation != null) {
+        il.add(getRuntimeImpl(cn));
+        il.add(new LdcInsnNode(Type.getArgumentTypes(mn.desc)[0].getInternalName().replace('/', '.')));
+        il.add(new LdcInsnNode(cn.name.replace('/', '.')));
+        il.add(new LdcInsnNode(mn.name));
+        il.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, Constants.BTRACERTIMPL_INTERNAL, "addJfrPeriodicEvent", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"));
+        Type eventType = Type.getArgumentTypes(mn.desc)[0];
+        mn.desc = "(Ljava/lang/Object;)V";
+        InsnList chkCastList = new InsnList();
+        chkCastList.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        chkCastList.add(new TypeInsnNode(Opcodes.CHECKCAST, eventType.getDescriptor()));
+        chkCastList.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        mn.instructions.insert(chkCastList);
+      }
+      annotation = getAnnotation(mn, JFRBLOCK_TYPE);
+      if (annotation != null && annotation.values != null && !annotation.values.isEmpty()) {
+        for (Type eventClass :  (List<Type>)annotation.values.get(1)) {
+          il.add(getRuntimeImpl(cn));
+          il.add(new LdcInsnNode(eventClass.getInternalName().replace('/', '.')));
+          il.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, Constants.BTRACERTIMPL_INTERNAL, "addJfrEvent", "(Ljava/lang/String;)V"));
+        }
+      }
+    }
+    return il;
+  }
+
   private void startRuntime(ClassNode cNode, MethodNode clinit1) {
     for (AbstractInsnNode n = clinit1.instructions.getFirst(); n != null; n = n.getNext()) {
       if (n.getOpcode() == Opcodes.RETURN) {
@@ -851,39 +899,73 @@ final class Preprocessor {
   private void addBTraceErrorHandler(ClassNode cn, MethodNode mn) {
     if (!mn.name.equals("<clinit>") && isUnannotated(mn)) return;
 
-    MethodClassifier clsf = getClassifier(mn);
-    if (isClassified(clsf, MethodClassifier.RT_AWARE)) {
+    EnumSet<MethodClassifier> clsf = getClassifiers(mn);
+    if (!clsf.isEmpty()) {
       LabelNode from = new LabelNode();
       LabelNode to = new LabelNode();
       InsnList l = mn.instructions;
       l.insert(from);
       l.add(to);
-      l.add(
-          new FrameNode(Opcodes.F_SAME1, 0, null, 1, new Object[] {Constants.THROWABLE_INTERNAL}));
+      // add proper stackframe map node
+      l.add(throwableHandlerFrame(mn));
+
       l.add(getRuntimeImpl(cn));
       l.add(new InsnNode(Opcodes.DUP_X1));
       l.add(new InsnNode(Opcodes.SWAP));
       l.add(
-          new MethodInsnNode(
-              Opcodes.INVOKEVIRTUAL,
-              Constants.BTRACERTBASE_INTERNAL,
-              "handleException",
-              BTRACERT_HANDLE_EXCEPTION_DESC,
-              false));
+              new MethodInsnNode(
+                      Opcodes.INVOKEVIRTUAL,
+                      Constants.BTRACERTBASE_INTERNAL,
+                      "handleException",
+                      BTRACERT_HANDLE_EXCEPTION_DESC,
+                      false));
       l.add(getReturnSequence(cn, mn, true));
+
       mn.tryCatchBlocks.add(new TryCatchBlockNode(from, to, to, Constants.THROWABLE_INTERNAL));
     }
+  }
+
+  private FrameNode throwableHandlerFrame(MethodNode mn) {
+    List<Object> locals = new ArrayList<>();
+    for (Type argType : Type.getArgumentTypes(mn.desc)) {
+      if (TypeUtils.isPrimitive(argType)) {
+        switch (argType.getSort()) {
+          case Type.INT:
+          case Type.BOOLEAN:
+          case Type.BYTE:
+          case Type.CHAR: {
+            locals.add(Opcodes.INTEGER);
+            break;
+          }
+          case Type.FLOAT: {
+            locals.add(Opcodes.FLOAT);
+            break;
+          }
+          case Type.DOUBLE: {
+            locals.add(Opcodes.DOUBLE);
+            break;
+          }
+          case Type.LONG: {
+            locals.add(Opcodes.LONG);
+            break;
+          }
+        }
+      } else {
+        locals.add(argType.getInternalName());
+      }
+    }
+    return new FrameNode(Opcodes.F_FULL, locals.size(), locals.toArray(new Object[0]), 1, new Object[] {Constants.THROWABLE_INTERNAL});
   }
 
   private void addBTraceRuntimeEnter(ClassNode cn, MethodNode mn) {
     // no runtime check for <clinit>
     if (mn.name.equals("<clinit>")) return;
 
-    MethodClassifier clsf = getClassifier(mn);
-    if (isClassified(clsf, MethodClassifier.RT_AWARE)) {
+    EnumSet<MethodClassifier> clsf = getClassifiers(mn);
+    if (clsf.contains(MethodClassifier.RT_AWARE)) {
       InsnList entryCheck = new InsnList();
       entryCheck.add(getRuntimeImpl(cn));
-      if (isClassified(clsf, MethodClassifier.GUARDED)) {
+      if (clsf.contains(MethodClassifier.GUARDED)) {
         addRuntimeCheck(cn, mn, entryCheck, false);
       }
       mn.instructions.insert(entryCheck);
@@ -910,11 +992,11 @@ final class Preprocessor {
   }
 
   private List<MethodNode> getMethods(ClassNode cn) {
-    return (List<MethodNode>) cn.methods;
+    return cn.methods;
   }
 
   private List<FieldNode> getFields(ClassNode cn) {
-    return (List<FieldNode>) cn.fields;
+    return cn.fields;
   }
 
   private List<AnnotationNode> getAnnotations(MethodNode mn) {
@@ -923,23 +1005,28 @@ final class Preprocessor {
         : Collections.<AnnotationNode>emptyList();
   }
 
-  private MethodClassifier getClassifier(MethodNode mn) {
+  private EnumSet<MethodClassifier> getClassifiers(MethodNode mn) {
+    // thread safe; check-modification will be done in single thread only for each instance of Preprocessor
+    EnumSet<MethodClassifier> classifiers = classifierMap.get(mn);
+    if (classifiers != null) {
+      return classifiers;
+    }
     // <clinit> will always be guarded by BTrace error handler
-    if (mn.name.equals("<clinit>")) return MethodClassifier.GUARDED;
+    if (mn.name.equals("<clinit>")) return EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
 
     List<AnnotationNode> annots = getAnnotations(mn);
+    classifiers = EnumSet.noneOf(MethodClassifier.class);
     if (!annots.isEmpty()) {
       for (AnnotationNode an : annots) {
         if (RT_AWARE_ANNOTS.contains(an.desc)) {
-          if (GUARDED_ANNOTS.contains(an.desc)) {
-            return MethodClassifier.GUARDED;
-          } else {
-            return MethodClassifier.RT_AWARE;
-          }
+          classifiers.add(MethodClassifier.RT_AWARE);
+        }
+        if (GUARDED_ANNOTS.contains(an.desc)) {
+          classifiers.add(MethodClassifier.GUARDED);
         }
       }
     }
-    return MethodClassifier.NONE;
+    return classifiers;
   }
 
   private FieldInsnNode findNodeInitialization(FieldNode fn) {
@@ -1457,8 +1544,6 @@ final class Preprocessor {
   }
 
   private enum MethodClassifier {
-    /** No BTrace specific classifier available */
-    NONE,
     /**
      * An annotated method that will need access to the current {@linkplain BTraceRuntime} instance.
      */

@@ -26,11 +26,15 @@ package org.openjdk.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
+
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.annotations.Sampled;
@@ -43,30 +47,31 @@ import org.openjdk.btrace.services.api.Service;
  * @author A. Sundararajan
  */
 final class MethodVerifier extends StackTrackingMethodVisitor {
+  private static final ClassInfo JFR_EVENT_TYPE = ClassCache.getInstance().get(ClassLoader.getSystemClassLoader(), "jdk.jfr.Event");
 
-  private static final Set<String> primitiveWrapperTypes;
-  private static final Set<String> unboxMethods;
+  private static final Set<String> PRIMITIVE_WRAPPER_TYPES;
+  private static final Set<String> UNBOX_METHODS;
 
   static {
-    primitiveWrapperTypes = new HashSet<>();
-    unboxMethods = new HashSet<>();
+    PRIMITIVE_WRAPPER_TYPES = new HashSet<>();
+    UNBOX_METHODS = new HashSet<>();
 
-    primitiveWrapperTypes.add("java/lang/Boolean");
-    primitiveWrapperTypes.add("java/lang/Byte");
-    primitiveWrapperTypes.add("java/lang/Character");
-    primitiveWrapperTypes.add("java/lang/Short");
-    primitiveWrapperTypes.add("java/lang/Integer");
-    primitiveWrapperTypes.add("java/lang/Long");
-    primitiveWrapperTypes.add("java/lang/Float");
-    primitiveWrapperTypes.add("java/lang/Double");
-    unboxMethods.add("booleanValue");
-    unboxMethods.add("byteValue");
-    unboxMethods.add("charValue");
-    unboxMethods.add("shortValue");
-    unboxMethods.add("intValue");
-    unboxMethods.add("longValue");
-    unboxMethods.add("floatValue");
-    unboxMethods.add("doubleValue");
+    PRIMITIVE_WRAPPER_TYPES.add("java/lang/Boolean");
+    PRIMITIVE_WRAPPER_TYPES.add("java/lang/Byte");
+    PRIMITIVE_WRAPPER_TYPES.add("java/lang/Character");
+    PRIMITIVE_WRAPPER_TYPES.add("java/lang/Short");
+    PRIMITIVE_WRAPPER_TYPES.add("java/lang/Integer");
+    PRIMITIVE_WRAPPER_TYPES.add("java/lang/Long");
+    PRIMITIVE_WRAPPER_TYPES.add("java/lang/Float");
+    PRIMITIVE_WRAPPER_TYPES.add("java/lang/Double");
+    UNBOX_METHODS.add("booleanValue");
+    UNBOX_METHODS.add("byteValue");
+    UNBOX_METHODS.add("charValue");
+    UNBOX_METHODS.add("shortValue");
+    UNBOX_METHODS.add("intValue");
+    UNBOX_METHODS.add("longValue");
+    UNBOX_METHODS.add("floatValue");
+    UNBOX_METHODS.add("doubleValue");
   }
 
   private final String className;
@@ -76,27 +81,37 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   private final Map<Label, Label> labels;
   protected Location loc;
   private Object delayedClzLoad = null;
+  private final ClassLoader ctxClassLoader;
+  private boolean jfrBlock = false;
+  private final Set<String> jfrEventTypeNames = new HashSet<>();
 
   public MethodVerifier(
-      BTraceMethodNode parent, int access, String className, String methodName, String desc) {
+      BTraceMethodNode parent, int access, String className, String methodName, String desc, ClassLoader ctxClassLoader) {
     super(parent, className, desc, ((access & ACC_STATIC) == ACC_STATIC));
     this.className = className;
     this.methodName = methodName;
     methodDesc = desc;
     this.access = access;
     labels = new HashMap<>();
+    this.ctxClassLoader = ctxClassLoader != null ? ctxClassLoader : ClassLoader.getSystemClassLoader();
   }
 
   static boolean isPrimitiveWrapper(String type) {
-    return primitiveWrapperTypes.contains(type);
+    return PRIMITIVE_WRAPPER_TYPES.contains(type);
   }
 
   static boolean isUnboxMethod(String name) {
-    return unboxMethods.contains(name);
+    return UNBOX_METHODS.contains(name);
   }
 
   private BTraceMethodNode getParent() {
     return (BTraceMethodNode) mv;
+  }
+
+  @Override
+  public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+    jfrBlock = descriptor.equals(Constants.JFRPERIODIC_DESC) || descriptor.equals(Constants.JFR_BLOCK_DESC);
+    return super.visitAnnotation(descriptor, visible);
   }
 
   @Override
@@ -116,12 +131,24 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
 
   @Override
   public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+    boolean jfrType = isJfrEventType(owner);
+
     if (opcode == PUTFIELD) {
-      Verifier.reportError("no.assignment");
+      if (jfrType) {
+        if (!jfrBlock) {
+          Verifier.reportError("jfr.no.annotation");
+        }
+      } else {
+        Verifier.reportError("no.assignment");
+      }
     }
 
     if (opcode == PUTSTATIC) {
-      if (!owner.equals(className)) {
+      if (jfrType) {
+        if (!jfrBlock) {
+          Verifier.reportError("jfr.no.annotation");
+        }
+      } else if (!owner.equals(className)) {
         Verifier.reportError("no.assignment");
       }
     }
@@ -184,48 +211,56 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
 
   @Override
   public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-    switch (opcode) {
-      case INVOKEVIRTUAL:
-        if (isPrimitiveWrapper(owner) && isUnboxMethod(name)) {
-          // allow primitive type unbox methods.
-          // These calls are generated by javac for auto-unboxing
-          // and can't be caught by source AST analyzer as well.
-        } else if (owner.equals(Type.getInternalName(StringBuilder.class))) {
-          // allow string concatenation via StringBuilder
-        } else {
-          List<StackItem> args = getMethodParams(desc, false);
-          if (!isServiceTarget(args.get(0))) {
-            Verifier.reportError("no.method.calls", owner + "." + name + desc);
+    if (!isJfrEventType(owner)) {
+      switch (opcode) {
+        case INVOKEVIRTUAL:
+          if (isPrimitiveWrapper(owner) && isUnboxMethod(name)) {
+            // allow primitive type unbox methods.
+            // These calls are generated by javac for auto-unboxing
+            // and can't be caught by source AST analyzer as well.
+          } else if (owner.equals(Type.getInternalName(StringBuilder.class))) {
+            // allow string concatenation via StringBuilder
+          } else {
+            List<StackItem> args = getMethodParams(desc, false);
+            if (!isServiceTarget(args.get(0))) {
+//              System.err.println("*** err: " + owner + "." + name + desc);
+//              Thread.dumpStack();
+              Verifier.reportError("no.method.calls", owner + "." + name + desc);
+            }
           }
-        }
-        break;
-      case INVOKEINTERFACE:
-        Verifier.reportError("no.method.calls", owner + "." + name + desc);
-        break;
-      case INVOKESPECIAL:
-        if (owner.equals(Constants.OBJECT_INTERNAL) && name.equals(Constants.CONSTRUCTOR)) {
-          // allow object initializer
-        } else if (owner.equals(Type.getInternalName(StringBuilder.class))) {
-          // allow string concatenation via StringBuilder
-        } else {
+          break;
+        case INVOKEINTERFACE:
           Verifier.reportError("no.method.calls", owner + "." + name + desc);
-        }
-        break;
-      case INVOKESTATIC:
-        if (owner.equals(Constants.SERVICE)) {
-          delayedClzLoad = null;
-        } else if (!owner.equals(Constants.BTRACE_UTILS)
-            && !owner.startsWith(Constants.BTRACE_UTILS + "$")
-            && !owner.equals(className)) {
-          if ("valueOf".equals(name) && isPrimitiveWrapper(owner)) {
-            // allow primitive wrapper boxing methods.
-            // These calls are generated by javac for autoboxing
-            // and can't be caught sourc AST analyzer as well.
+          break;
+        case INVOKESPECIAL:
+          if (owner.equals(Constants.OBJECT_INTERNAL) && name.equals(Constants.CONSTRUCTOR)) {
+            // allow object initializer
+          } else if (owner.equals(Type.getInternalName(StringBuilder.class))) {
+            // allow string concatenation via StringBuilder
           } else {
             Verifier.reportError("no.method.calls", owner + "." + name + desc);
           }
-        }
-        break;
+          break;
+        case INVOKESTATIC:
+          if (owner.equals(Constants.SERVICE)) {
+            delayedClzLoad = null;
+          } else if (!owner.equals(Constants.BTRACE_UTILS)
+                  && !owner.startsWith(Constants.BTRACE_UTILS + "$")
+                  && !owner.equals(className)) {
+            if ("valueOf".equals(name) && isPrimitiveWrapper(owner)) {
+              // allow primitive wrapper boxing methods.
+              // These calls are generated by javac for autoboxing
+              // and can't be caught sourc AST analyzer as well.
+            } else {
+              Verifier.reportError("no.method.calls", owner + "." + name + desc);
+            }
+          }
+          break;
+      }
+    } else {
+      if (!jfrBlock) {
+        Verifier.reportError("jfr.no.annotation");
+      }
     }
     if (delayedClzLoad != null) {
       Verifier.reportError("no.class.literals", delayedClzLoad.toString());
@@ -250,11 +285,17 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
     }
     if (opcode == NEW) {
       // allow StringBuilder creation for string concatenation
-      if (!desc.equals(Type.getInternalName(StringBuilder.class))) {
-        Verifier.reportError("no.new.object", desc);
+      if (desc.equals(Type.getInternalName(StringBuilder.class))) {
+        super.visitTypeInsn(opcode, desc);
+        return;
       }
+      if (isJfrEventType(desc)) {
+        super.visitTypeInsn(opcode, desc);
+        return;
+      }
+      Verifier.reportError("no.new.object", desc);
     }
-    super.visitTypeInsn(opcode, desc);
+
   }
 
   @Override
@@ -308,5 +349,29 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
           }
       }
     }
+  }
+  
+  private boolean isJfrEventType(String typeName) {
+    synchronized (jfrEventTypeNames) {
+      if (jfrEventTypeNames.contains(typeName)) {
+        return true;
+      }
+      if (JFR_EVENT_TYPE.isAvailable()) {
+        ClassInfo ci = ClassCache.getInstance().get(ctxClassLoader, typeName);
+        if (ci.isAvailable()) {
+          Queue<ClassInfo> toCheck = new ArrayDeque<>(ci.getSupertypes(true));
+
+          while (!toCheck.isEmpty()) {
+            ClassInfo current = toCheck.poll();
+            if (current.getClassName().equals(JFR_EVENT_TYPE.getClassName())) {
+              jfrEventTypeNames.add(typeName);
+              return true;
+            }
+            toCheck.addAll(current.getSupertypes(true));
+          }
+        }
+      }
+    }
+    return false;
   }
 }
