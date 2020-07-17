@@ -5,11 +5,6 @@ plugins {
 
 project.ext.asmVersion = "8.0.1"
 
-def env = System.getenv()
-
-// use gradle.properties to set JAVA_HOME=<your JDK location>
-def javaHome = findProperty('JAVA_HOME') ?: env['JAVA_HOME']
-
 repositories {
     mavenCentral()
     jcenter()
@@ -32,88 +27,3 @@ task mergedJavadoc(type: Javadoc, description: 'Creates Javadoc from all the pro
     }
 }
 
-project(':btrace-core') {
-    dependencies {
-        // https://mvnrepository.com/artifact/org.jctools/jctools-core
-        compile(group: 'org.jctools', name: 'jctools-core', version: '3.0.0')
-
-        // https://mvnrepository.com/artifact/org.ow2.asm/asm
-        compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
-        compile(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
-    }
-}
-
-project(':btrace-services-api') {
-    dependencies {
-        compile project(':btrace-core')
-    }
-}
-
-project(':btrace-services') {
-    dependencies {
-        compile project(':btrace-core')
-        compile project(':btrace-services-api')
-    }
-}
-
-project(':btrace-statsd') {
-    dependencies {
-        compile project(':btrace-core')
-        compile project(':btrace-services-api')
-    }
-}
-
-project(':btrace-instr') {
-    dependencies {
-        compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
-        compile(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
-        compile group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc4'
-        compile project(':btrace-core')
-        compile project(':btrace-runtime')
-        compile project(':btrace-compiler')
-        compile project(':btrace-statsd')
-        testCompile project(':btrace-client')
-    }
-}
-
-project(':btrace-agent') {
-    dependencies {
-        compile project(':btrace-runtime')
-        compile project(':btrace-instr')
-    }
-}
-
-project(':btrace-client') {
-    dependencies {
-        compile project(':btrace-core')
-        compile project(':btrace-compiler')
-    }
-}
-
-project(':btrace-compiler') {
-    dependencies {
-        compile files("${javaHome}/lib/tools.jar")
-        compile project(path: ':btrace-core')
-        compile project(path: ':btrace-runtime')
-    }
-}
-
-project(':btrace-agent') {
-    dependencies {
-        compile files("${javaHome}/lib/tools.jar")
-    }
-}
-
-project(':btrace-dtrace') {
-    dependencies {
-        compile project(':btrace-core')
-    }
-}
-
-project(':btrace-dist') {
-    dependencies {
-        compile project(':btrace-agent')
-        compile project(':btrace-client')
-        compile project(':btrace-compiler')
-    }
-}

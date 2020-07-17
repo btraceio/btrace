@@ -14,6 +14,17 @@ sourceSets {
     }
 }
 
+dependencies {
+    compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    compile(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
+    compile group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc4'
+    compile project(':btrace-core')
+    compile project(':btrace-runtime')
+    compile project(':btrace-compiler')
+    compile project(':btrace-statsd')
+    testCompile project(':btrace-client')
+}
+
 compileJava15Java {
     onlyIf {
         JavaVersion.current() >= JavaVersion.VERSION_15

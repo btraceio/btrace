@@ -1,1 +1,4 @@
-
+dependencies {
+    compile project(':btrace-core')
+    compile project(':btrace-services-api')
+}

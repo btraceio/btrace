@@ -19,6 +19,12 @@ def distBase = "${project.buildDir}/resources/main"
 def distTarget = "${distBase}/${project.version}"
 def libsDir = new File("${distTarget}/libs")
 
+dependencies {
+    compile project(':btrace-agent')
+    compile project(':btrace-client')
+    compile project(':btrace-compiler')
+}
+
 jar {
     onlyIf { false }
 }
@@ -130,10 +136,9 @@ task clientJar(type: ShadowJar) {
 
     exclude 'org/jctools/maps/**'
     exclude 'org/jctools/util/**'
-    exclude 'META-INF/**'
+    exclude 'META-INF/services/com.sun.*'
+    exclude 'META-INF/services/javax.annotation.*'
 
-    exclude 'org/objectweb/asm/commons/**'
-    exclude 'org/objectweb/asm/util/**'
     exclude 'org/objectweb/asm/xml/**'
 
     exclude 'org/openjdk/btrace/agent/**'
