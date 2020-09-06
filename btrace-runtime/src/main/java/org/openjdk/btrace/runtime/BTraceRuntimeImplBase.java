@@ -64,7 +64,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -616,10 +615,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   @Override
   public final void leave() {
     BTraceRuntimeAccess.leave();
-    afterLeave();
   }
-
-  protected void afterLeave() {};
 
   /** Handles exception from BTrace probe actions. */
   @Override
@@ -841,6 +837,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+    cleanupRuntime();
   }
 
   public final int getLevel() {
@@ -857,6 +854,10 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
       this.level.set(null, level);
     } catch (IllegalAccessException ignored) {
     }
+  }
+
+  protected void cleanupRuntime() {
+    // to be overridden by concrete implementations
   }
 
   protected static void loadLibrary(final ClassLoader cl) {

@@ -228,8 +228,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  protected void afterLeave() {
-//    jfrRuntimeSupport.cleanupEvents();
+  protected void cleanupRuntime() {
+    jfrRuntimeSupport.cleanupEvents();
   }
 
   private static Perf getPerf() {
