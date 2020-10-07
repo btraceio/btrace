@@ -11,23 +11,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  setup:
+  all:
     runs-on: ubuntu-latest
     steps:
     - name: Set up Java 11
       uses: actions/setup-java@v1
       with:
         java-version: 11
+    - name: Set up Java 8
+      uses: actions/setup-java@v1
+      with:
+        java-version: 8
     - name: Checkout
       uses: actions/checkout@v2
     - name: Setup env
-      run: ./config_build.sh
-  build:
-    needs: setup
-    runs-on: ubuntu-latest
-
-    steps:
+      run: source config_build.sh
+      shell: bash
+    - name: Sanity
+      run: echo "=== $JAVA_11_HOME || $(which java)"
+      shell: bash
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew build
+    
