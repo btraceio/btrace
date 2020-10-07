@@ -19,21 +19,21 @@ jobs:
       with:
         java-version: 11
     - name: Store JAVA_11_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\//}}" >> $GITHUB_ENV
+      run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/}}" >> $GITHUB_ENV
       shell: bash
     - name: Set up Java 8
       uses: actions/setup-java@v1
       with:
         java-version: 8
     - name: Store JAVA_8_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_8_HOME=${JAVA_PATH/\/bin\//}" >> $GITHUB_ENV
+      run: JAVA_PATH=$(which java) && echo "JAVA_8_HOME=${JAVA_PATH/\/bin\/java/}" >> $GITHUB_ENV
       shell: bash
     - name: Set up Java 9
       uses: actions/setup-java@v1
       with:
         java-version: 9
     - name: Store JAVA_9_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_9_HOME=${JAVA_PATH/\/bin\//}" >> $GITHUB_ENV
+      run: JAVA_PATH=$(which java) && echo "JAVA_9_HOME=${JAVA_PATH/\/bin\/java/}" >> $GITHUB_ENV
       shell: bash
     - name: Set up Java 15
       uses: actions/setup-java@v1
@@ -44,9 +44,6 @@ jobs:
       shell: bash
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Sanity
-      run: ls /opt/hostedtoolcache/jdk/11.0.8
-      shell: bash
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
