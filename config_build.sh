@@ -3,7 +3,7 @@
 echo "== BTrace build config file. You should 'source config_build.sh' to set up the env variables."
 echo
 
-SDKMAN_VER=$(sdk version || true)
+SDKMAN_VER=$(sdk version 2>/dev/null || true)
 if [ ! -z "$SDKMAN_VER" ]; then
   curl -s "https://get.sdkman.io" | bash
   source "$HOME/.sdkman/bin/sdkman-init.sh"
