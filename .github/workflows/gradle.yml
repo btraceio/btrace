@@ -5,9 +5,9 @@ name: BTrace Build
 
 on:
   push:
-    branches: [ gh-actions-test ]
+    branches: [ develop ]
   pull_request:
-    branches: [ gh-actions-test ]
+    branches: [ develop ]
   workflow_dispatch:
 
 jobs:
