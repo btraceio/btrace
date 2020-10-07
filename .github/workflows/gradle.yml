@@ -19,7 +19,7 @@ jobs:
       with:
         java-version: 11
     - name: Setup env
-    - run: ./config_build.sh
+      run: ./config_build.sh
   build:
     needs: setup
     runs-on: ubuntu-latest
