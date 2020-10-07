@@ -56,4 +56,11 @@ jobs:
         name: binary-dist
         path: |
           btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
+    - name: Archive reports
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: reports
+        path: |
+          btrace-instr/build/reports/**/*
     
