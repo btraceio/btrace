@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 echo "== BTrace build config file. You should 'source config_build.sh' to set up the env variables."
 echo
 
@@ -12,7 +13,7 @@ fi
 
 SDKMAN_BASE=$HOME/.sdkman/candidates/java
 
-JAVA_8_VERSION="8.0.252.hs-adpt"
+JAVA_8_VERSION="8.0.262.hs-adpt"
 JAVA_9_VERSION="9.0.4-open"
 JAVA_11_VERSION="11.0.7.hs-adpt"
 JAVA_15_VERSION="15.ea.28-open"
