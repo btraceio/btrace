@@ -12,7 +12,7 @@ fi
 
 SDKMAN_BASE=$HOME/.sdkman/candidates/java
 
-JAVA_8_VERSION="8.0.262.hs-adpt"
+JAVA_8_VERSION="8.0.265.hs-adpt"
 JAVA_9_VERSION="9.0.4-open"
 JAVA_11_VERSION="11.0.7.hs-adpt"
 JAVA_15_VERSION="15.ea.28-open"
