@@ -40,7 +40,7 @@ jobs:
       with:
         java-version: 15
     - name: Store JAVA_15_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_15_HOME=${JAVA_PATH/\/bin\//\/}" >> $GITHUB_ENV
+      run: JAVA_PATH=$(which java) && echo "JAVA_15_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
       shell: bash
     - name: Checkout
       uses: actions/checkout@v2
