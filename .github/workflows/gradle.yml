@@ -42,13 +42,16 @@ jobs:
     - name: Store JAVA_15_HOME
       run: JAVA_PATH=$(which java) && echo "JAVA_15_HOME=${JAVA_PATH/\/bin\//\/}" >> $GITHUB_ENV
       shell: bash
-    - name: Sanity
-      run: $JAVA_11_HOME/bin/java -version
-      shell: bash
     - name: Checkout
       uses: actions/checkout@v2
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
       run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build
+    - name: Archive binary artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: binary-dist
+        path: |
+          btrace-dist/build/distributions/**/btrace-*-bin*
     
