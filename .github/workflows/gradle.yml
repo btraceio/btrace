@@ -1,27 +1,66 @@
 # This workflow will build a Java project with Gradle
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
 
-name: Java CI with Gradle
+name: BTrace Build
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ gh-actions-test ]
   pull_request:
-    branches: [ develop ]
+    branches: [ gh-actions-test ]
   workflow_dispatch:
 
 jobs:
-  build:
-
+  all:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
     - name: Set up Java 11
       uses: actions/setup-java@v1
       with:
         java-version: 11
+    - name: Store JAVA_11_HOME
+      run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      shell: bash
+    - name: Set up Java 8
+      uses: actions/setup-java@v1
+      with:
+        java-version: 8
+    - name: Store JAVA_8_HOME
+      run: JAVA_PATH=$(which java) && echo "JAVA_8_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      shell: bash
+    - name: Set up Java 9
+      uses: actions/setup-java@v1
+      with:
+        java-version: 9
+    - name: Store JAVA_9_HOME
+      run: JAVA_PATH=$(which java) && echo "JAVA_9_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      shell: bash
+    - name: Set up Java 15
+      uses: actions/setup-java@v1
+      with:
+        java-version: 15
+    - name: Store JAVA_15_HOME
+      run: JAVA_PATH=$(which java) && echo "JAVA_15_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      shell: bash
+    - name: Checkout
+      uses: actions/checkout@v2
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
+    - name: Build
+      run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build -x test
+    - name: Run Tests
+      run: ./run_tests.sh
+    - name: Archive binary artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: binary-dist
+        path: |
+          btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
+    - name: Archive reports
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: reports
+        path: |
+          btrace-instr/build/reports/**/*
+    
