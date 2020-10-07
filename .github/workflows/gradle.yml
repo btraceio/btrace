@@ -45,7 +45,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Sanity
-      run: echo "=== $JAVA_11_HOME"
+      run: echo "=== $JAVA_HOME || $(ls $JAVA_HOME/bin)"
       shell: bash
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
