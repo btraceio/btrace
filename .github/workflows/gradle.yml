@@ -45,7 +45,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Sanity
-      run: ls /opt/hostedtoolcache/jdk
+      run: ls /opt/hostedtoolcache/jdk/11.0.8
       shell: bash
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
