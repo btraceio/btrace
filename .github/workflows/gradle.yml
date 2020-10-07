@@ -28,11 +28,22 @@ jobs:
     - name: Store JAVA_8_HOME
       run: JAVA_PATH=$(which java) && echo "JAVA_8_HOME=${JAVA_PATH/\/bin\//}" >> $GITHUB_ENV
       shell: bash
+    - name: Set up Java 9
+      uses: actions/setup-java@v1
+      with:
+        java-version: 9
+    - name: Store JAVA_9_HOME
+      run: JAVA_PATH=$(which java) && echo "JAVA_9_HOME=${JAVA_PATH/\/bin\//}" >> $GITHUB_ENV
+      shell: bash
+    - name: Set up Java 15
+      uses: actions/setup-java@v1
+      with:
+        java-version: 15
+    - name: Store JAVA_15_HOME
+      run: JAVA_PATH=$(which java) && echo "JAVA_15_HOME=${JAVA_PATH/\/bin\//}" >> $GITHUB_ENV
+      shell: bash
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Setup env
-      run: source config_build.sh
-      shell: bash
     - name: Sanity
       run: echo "=== $JAVA_11_HOME"
       shell: bash
