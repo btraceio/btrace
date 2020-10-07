@@ -48,7 +48,7 @@ jobs:
       run: chmod +x gradlew
     - name: Build
       run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build -x test
-    - name: Tests
+    - name: Run Tests
       run: ./run_tests.sh
     - name: Archive binary artifacts
       uses: actions/upload-artifact@v2
