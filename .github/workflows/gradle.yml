@@ -53,5 +53,5 @@ jobs:
       with:
         name: binary-dist
         path: |
-          btrace-dist/build/distributions/**/btrace-*-bin*
+          btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
     
