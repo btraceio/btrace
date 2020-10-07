@@ -4,7 +4,7 @@ echo "== BTrace build config file. You should 'source config_build.sh' to set up
 echo
 
 SDKMAN_VER=$(sdk version 2>/dev/null || true)
-if [ ! -z "$SDKMAN_VER" ]; then
+if [ -z "$SDKMAN_VER" ]; then
   curl -s "https://get.sdkman.io" | bash
   source "$HOME/.sdkman/bin/sdkman-init.sh"
   SDKMAN_VER=$(sdk version)
@@ -14,8 +14,8 @@ SDKMAN_BASE=$HOME/.sdkman/candidates/java
 
 JAVA_8_VERSION="8.0.265.hs-adpt"
 JAVA_9_VERSION="9.0.4-open"
-JAVA_11_VERSION="11.0.7.hs-adpt"
-JAVA_15_VERSION="15.ea.28-open"
+JAVA_11_VERSION="11.0.8.hs-adpt"
+JAVA_15_VERSION="15.0.0.hs-adpt"
 
 echo "Using SDKMAN version: ${SDKMAN_VER}"
 
