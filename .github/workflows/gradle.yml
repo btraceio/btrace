@@ -42,6 +42,9 @@ jobs:
     - name: Store JAVA_15_HOME
       run: JAVA_PATH=$(which java) && echo "JAVA_15_HOME=${JAVA_PATH/\/bin\//}" >> $GITHUB_ENV
       shell: bash
+    - name: Sanity
+      run: ls $JAVA_HOME/bin
+      shell: bash
     - name: Checkout
       uses: actions/checkout@v2
     - name: Grant execute permission for gradlew
