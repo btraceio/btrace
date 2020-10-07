@@ -53,7 +53,6 @@ import org.junit.Assert;
 public abstract class RuntimeTest {
   private static String cp = null;
   protected static String javaHome = null;
-  protected static String javacJavaHome = null;
   private static String clientClassPath = null;
   private static String eventsClassPath = null;
   private static Path projectRoot = null;
@@ -159,6 +158,7 @@ public abstract class RuntimeTest {
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
     args.addAll(extraJvmArgs);
+    args.addAll(Arrays.asList("-XX:+AllowRedefinitionToAddDeleteMethods", "-XX:+IgnoreUnrecognizedVMOptions"));
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);

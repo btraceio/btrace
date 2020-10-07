@@ -35,6 +35,7 @@ compileJava11_dummyJava {
     targetCompatibility = 7
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
 }
 
 compileJava15Java {
@@ -42,6 +43,7 @@ compileJava15Java {
     targetCompatibility = 15
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_15_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_15_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
