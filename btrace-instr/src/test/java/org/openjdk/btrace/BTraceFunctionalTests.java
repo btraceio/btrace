@@ -148,7 +148,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     test(
         "resources.Main",
         "btrace/OnMethodTest.java",
-        5,
+        20,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode) {
