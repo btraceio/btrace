@@ -39,9 +39,9 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 11
-      - name: Store JAVA_11_HOME
-        run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-        shell: bash
+    - name: Store JAVA_11_HOME
+      run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      shell: bash
     - name: Checkout
       uses: actions/checkout@v2
     - name: Grant execute permission for gradlew
