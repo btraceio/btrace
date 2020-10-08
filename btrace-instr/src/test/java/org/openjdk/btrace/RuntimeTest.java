@@ -149,6 +149,8 @@ public abstract class RuntimeTest {
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
     }
+    args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
+    args.add("-XX:+IgnoreUnrecognizedVMOptions");
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);
