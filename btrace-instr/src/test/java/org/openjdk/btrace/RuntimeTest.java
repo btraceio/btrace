@@ -333,6 +333,10 @@ public abstract class RuntimeTest {
                       // skip JVM generated warnings
                       continue;
                     }
+                    if (line.startsWith("[traced app]") || line.startsWith("[btrace out]")) {
+                      // skip test debug lines
+                      continue;
+                    }
                     stderr.append(line).append('\n');
                     if (line.contains("Exception") || line.contains("Error")) {
                       for (int i = 0; i < checkLines; i++) {
