@@ -143,7 +143,7 @@ public abstract class RuntimeTest {
     if (forceDebug) {
       // force debug flags
       debugBTrace = true;
-      debugBTrace = true;
+      debugTestApp = true;
     }
     List<String> args = new ArrayList<>(Arrays.asList(java + "/bin/java", "-cp", cp));
     if (attachDebugger) {
