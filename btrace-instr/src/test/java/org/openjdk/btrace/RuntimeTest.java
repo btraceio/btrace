@@ -54,6 +54,7 @@ public abstract class RuntimeTest {
   protected static String java = null;
   private static String btraceExtPath = null;
   private static File projectRoot = null;
+  private static boolean forceDebug = false;
   /** Display the otput from the test application */
   protected boolean debugTestApp = false;
   /** Run BTrace in debug mode */
@@ -68,6 +69,7 @@ public abstract class RuntimeTest {
   protected boolean attachDebugger = false;
 
   public static void setup() {
+    forceDebug = Boolean.getBoolean("btrace.test.debug");
     URL url =
         BTraceFunctionalTests.class
             .getClassLoader()
@@ -133,6 +135,11 @@ public abstract class RuntimeTest {
   public void test(
       String testApp, final String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
+    if (forceDebug) {
+      // force debug flags
+      debugBTrace = true;
+      debugBTrace = true;
+    }
     List<String> args = new ArrayList<>(Arrays.asList(java + "/bin/java", "-cp", cp));
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
