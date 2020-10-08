@@ -14,13 +14,6 @@ jobs:
   all:
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Java 11
-      uses: actions/setup-java@v1
-      with:
-        java-version: 11
-    - name: Store JAVA_11_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-      shell: bash
     - name: Set up Java 8
       uses: actions/setup-java@v1
       with:
@@ -42,6 +35,13 @@ jobs:
     - name: Store JAVA_15_HOME
       run: JAVA_PATH=$(which java) && echo "JAVA_15_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
       shell: bash
+    - name: Set up Java 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+      - name: Store JAVA_11_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+        shell: bash
     - name: Checkout
       uses: actions/checkout@v2
     - name: Grant execute permission for gradlew
