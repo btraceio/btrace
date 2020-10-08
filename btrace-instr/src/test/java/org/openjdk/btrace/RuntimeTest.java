@@ -69,7 +69,12 @@ public abstract class RuntimeTest {
   protected boolean attachDebugger = false;
 
   public static void setup() {
-    forceDebug = Boolean.getBoolean("btrace.test.debug");
+    String forceDebugVal = System.getProperty("btrace.test.debug");
+    if (forceDebugVal == null) {
+      forceDebugVal = System.getenv("BTRACE_TEST_DEBUG");
+    }
+    forceDebug = Boolean.parseBoolean(forceDebugVal);
+    System.err.println("===> force debug = " + forceDebug);
     URL url =
         BTraceFunctionalTests.class
             .getClassLoader()
