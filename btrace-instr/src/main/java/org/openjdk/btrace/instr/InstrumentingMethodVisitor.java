@@ -27,12 +27,13 @@ import static org.objectweb.asm.Opcodes.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
@@ -1177,15 +1178,19 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   }
 
   private Object[] computeFrameLocals() {
+    return computeFrameLocals(argsSize, locals, newLocals, variableMapper);
+  }
+
+  // package accessible for targeted tests
+  static Object[] computeFrameLocals(int argsSize, List<Object> locals, Set<LocalVarSlot> newLocals, VariableMapper variableMapper) {
+    newLocals = newLocals != null ? newLocals : Collections.<LocalVarSlot>emptySet();
     Object[] localsArr;
     int nextMappedVar = variableMapper.getNextMappedVar();
     if (nextMappedVar > argsSize) {
       int arrSize = Math.max(locals.size(), nextMappedVar);
       localsArr = new Object[arrSize];
       int idx = 0;
-      Iterator<Object> iter = locals.iterator();
-      while (iter.hasNext()) {
-        Object e = iter.next();
+      for (Object e : locals) {
         if (idx < argsSize) {
           localsArr[idx] = e;
           if (e == LONG || e == DOUBLE) {
@@ -1224,10 +1229,14 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         }
       }
     }
-    return trimLocalVars(localsArr);
+    System.err.println("locals arr: " + Arrays.deepToString(localsArr));
+    localsArr = trimLocalVars(localsArr);
+    System.err.println("locals arr[trimmed]: " + Arrays.deepToString(localsArr));
+    System.err.println();
+    return localsArr;
   }
 
-  private Object[] trimLocalVars(Object[] localsArr) {
+  private static Object[] trimLocalVars(Object[] localsArr) {
     Object[] tmp = new Object[localsArr.length];
     int idx = 0;
     int firstEmpty = -1, emptyRunLen = 0;
@@ -1238,7 +1247,14 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         }
         emptyRunLen++;
         tmp[idx++] = TOP;
+      } else if (o == TOP) {
+        if (firstEmpty == -1) {
+          firstEmpty = idx;
+        }
+        emptyRunLen++;
+        tmp[idx++] = TOP;
       } else {
+        firstEmpty = -1;
         emptyRunLen = 0;
         tmp[idx++] = o;
       }
@@ -1302,7 +1318,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     return slotType != null ? Type.getObjectType((String) slotType) : Constants.OBJECT_TYPE;
   }
 
-  private static final class LocalVarSlot {
+  static final class LocalVarSlot {
     final int idx;
     final Object type;
     private boolean expired = false;
