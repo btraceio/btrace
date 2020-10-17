@@ -34,7 +34,7 @@ compileJava9Java {
 
 compileJava11Java {
     onlyIf {
-        JavaVersion.current() >= JavaVersion.VERSION_11 && JavaVersion.current() < JavaVersion.VERSION_15
+        JavaVersion.current() >= JavaVersion.VERSION_11
     }
     sourceCompatibility = 11
     targetCompatibility = 11
