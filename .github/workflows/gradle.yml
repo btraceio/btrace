@@ -47,9 +47,9 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build
-      run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build -x test
+      run: JAVA_HOME="$JAVA_15_HOME" ./gradlew build -x test
     - name: Run Tests
-      run: JAVA_HOME="$JAVA_11_HOME" ./run_tests.sh
+      run: JAVA_HOME="$JAVA_15_HOME" ./run_tests.sh
     - name: Archive binary artifacts
       uses: actions/upload-artifact@v2
       with:
