@@ -401,7 +401,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     loadLibrary(perfReader.getClass().getClassLoader());
   }
 
-  BTraceRuntimeImplBase() {
+  protected BTraceRuntimeImplBase() {
     debug = new DebugSupport(null);
     args = null;
     queue = null;
@@ -410,7 +410,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     instrumentation = null;
   }
 
-  BTraceRuntimeImplBase(
+  protected BTraceRuntimeImplBase(
       final String className,
       ArgsMap args,
       final CommandListener cmdListener,
