@@ -10,28 +10,31 @@ public final class BTraceRuntimes {
   private static BTraceRuntimeImplFactory<?> FACTORY = null;
 
   static {
-    loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_7$Factory");
-    loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9$Factory");
-    loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_11$Factory");
-
+    boolean loaded = loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_11$Factory") ||
+                     loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9$Factory") ||
+                     loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_7$Factory");
+    DebugSupport.SHARED.debug("BTraceRuntime loaded: " + loaded);
     BTraceRuntimeAccess.registerRuntimeAccessor();
   }
 
   @SuppressWarnings("unchecked")
-  private static void loadFactory(String clzName) {
+  private static boolean loadFactory(String clzName) {
     try {
+      DebugSupport.SHARED.debug("Attempting to load BTrace runtime implementation: " + clzName);
       Class<BTraceRuntimeImplFactory<?>> factoryClz =
           (Class<BTraceRuntimeImplFactory<?>>)
               ClassLoader.getSystemClassLoader().loadClass(clzName);
       BTraceRuntimeImplFactory<?> instance = factoryClz.getConstructor().newInstance();
       if (instance.isEnabled()) {
         FACTORY = instance;
+        DebugSupport.SHARED.debug("BTrace runtime implementation " + clzName + " is loaded");
+        return true;
       }
-    } catch (ClassNotFoundException | UnsupportedClassVersionError e) {
-      DebugSupport.info("Can not load runtime factory: " + clzName);
+    } catch (ClassNotFoundException | UnsupportedClassVersionError ignored) {
     } catch (Exception e) {
       DebugSupport.warning(e);
     }
+    return false;
   }
 
   public static BTraceRuntime.Impl getDefault() {
