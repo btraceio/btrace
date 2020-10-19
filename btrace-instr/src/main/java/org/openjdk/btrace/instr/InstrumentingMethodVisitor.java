@@ -1229,10 +1229,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         }
       }
     }
-    System.err.println("locals arr: " + Arrays.deepToString(localsArr));
     localsArr = trimLocalVars(localsArr);
-    System.err.println("locals arr[trimmed]: " + Arrays.deepToString(localsArr));
-    System.err.println();
     return localsArr;
   }
 
