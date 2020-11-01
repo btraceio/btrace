@@ -4,6 +4,8 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.SharedSettings;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,6 +28,7 @@ public final class HandlerRepository {
     }
 
     public static byte[] getProbeHandler(String callerName, String probeName, final String handlerName, final String handlerDesc) {
+        DebugSupport debugSupport = new DebugSupport(SharedSettings.GLOBAL);
         BTraceProbe probe = probeMap.get(probeName);
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 
@@ -43,13 +46,15 @@ public final class HandlerRepository {
 
         probe.copyHandlers(visitor);
         byte[] data = writer.toByteArray();
-        System.out.println("===> data size: " + data.length);
 
-        try {
-            System.out.println("===> dump: /tmp/" + handlerClassName.replace('/', '_') + ".class");
-            Files.write(Paths.get("/tmp/" + handlerClassName.replace('/', '_') + ".class"), data, StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (debugSupport.isDumpClasses()) {
+            try {
+                String handlerPath = "/tmp/" + handlerClassName.replace('/', '_') + ".class";
+                debugSupport.debug("BTrace INDY handler dumped: " + handlerPath);
+                Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         return data;

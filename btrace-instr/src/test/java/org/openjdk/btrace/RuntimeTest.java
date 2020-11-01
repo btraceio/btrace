@@ -46,6 +46,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
+
 import org.junit.Assert;
 
 /** @author Jaroslav Bachorik */
@@ -57,6 +59,8 @@ public abstract class RuntimeTest {
   private static String eventsClassPath = null;
   private static Path projectRoot = null;
   private static boolean forceDebug = false;
+  /** Try starting JFR recording if available */
+  private boolean startJfr = false;
   /** Display the otput from the test application */
   protected boolean debugTestApp = false;
   /** Run BTrace in debug mode */
@@ -80,7 +84,6 @@ public abstract class RuntimeTest {
       forceDebugVal = System.getenv("BTRACE_TEST_DEBUG");
     }
     forceDebug = Boolean.parseBoolean(forceDebugVal);
-    System.err.println("===> force debug = " + forceDebug);
     URL url =
         BTraceFunctionalTests.class
             .getClassLoader()
@@ -136,6 +139,19 @@ public abstract class RuntimeTest {
     timeout = 10000L;
   }
 
+  public void testWithJfr(String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
+    startJfr = true;
+    test(testApp, testScript, checkLines, v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void testWithJfr(
+          String testApp, final String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+          throws Exception {
+    startJfr = true;
+    test(testApp, testScript, cmdArgs, checkLines, v);
+  }
+
   @SuppressWarnings("DefaultCharset")
   public void test(String testApp, final String testScript, int checkLines, ResultValidator v)
       throws Exception {
@@ -151,6 +167,7 @@ public abstract class RuntimeTest {
       debugBTrace = true;
       debugTestApp = true;
     }
+    String jfrFile = null;
     List<String> args = new ArrayList<>(Arrays.asList(javaHome + "/bin/java", "-cp", cp));
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
@@ -159,6 +176,10 @@ public abstract class RuntimeTest {
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
     args.addAll(extraJvmArgs);
     args.addAll(Arrays.asList("-XX:+AllowRedefinitionToAddDeleteMethods", "-XX:+IgnoreUnrecognizedVMOptions"));
+    if (startJfr) {
+      jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
+      args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
+    }
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);
@@ -249,7 +270,7 @@ public abstract class RuntimeTest {
       errT.join();
     }
 
-    v.validate(stdout.toString(), stderr.toString(), ret.get());
+    v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
   }
 
   private File locateTrace(final String trace) {
@@ -400,6 +421,6 @@ public abstract class RuntimeTest {
   }
 
   protected interface ResultValidator {
-    void validate(String stdout, String stderr, int retcode);
+    void validate(String stdout, String stderr, int retcode, String jfrFile);
   }
 }

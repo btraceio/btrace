@@ -84,6 +84,7 @@ final class Preprocessor {
   private static final Type TLS_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "TLS;");
   private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
   private static final Type INJECTED_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Injected;");
+  private static final Type EVENT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Event;");
   private static final Type JFRPERIODIC_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "JfrPeriodicEventHandler;");
   private static final Type BTRACE_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "BTrace;");
   private static final Type JFRBLOCK_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "JfrBlock;");
@@ -171,6 +172,8 @@ final class Preprocessor {
 
   private final Set<String> tlsFldNames = new HashSet<>();
   private final Set<String> exportFldNames = new HashSet<>();
+  private final Set<String> jfrHandlerNames = new HashSet<>();
+  private final Map<String, AnnotationNode> eventFlds = new HashMap<>();
   private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
   private final Map<String, Integer> serviceLocals = new HashMap<>();
   private final DebugSupport debug;
@@ -188,7 +191,7 @@ final class Preprocessor {
       return null;
     String targetDesc = annotation.getDescriptor();
     if (fn.visibleAnnotations != null) {
-      for (AnnotationNode an : ((List<AnnotationNode>) fn.visibleAnnotations)) {
+      for (AnnotationNode an : fn.visibleAnnotations) {
         if (an.desc.equals(targetDesc)) {
           return an;
         }
@@ -215,21 +218,6 @@ final class Preprocessor {
     return null;
   }
 
-  public static AnnotationNode getAnnotation(ClassNode cn, Type annotation) {
-    if (cn == null || cn.visibleAnnotations == null) return null;
-    String targetDesc = annotation.getDescriptor();
-    for (AnnotationNode an : cn.visibleAnnotations) {
-      if (an.desc.equals(targetDesc)) {
-        return an;
-      }
-    }
-    return null;
-  }
-
-  private static boolean isClassified(MethodClassifier clsf, MethodClassifier requested) {
-    return clsf.ordinal() >= requested.ordinal();
-  }
-
   private static boolean isUnannotated(MethodNode mn) {
     return mn == null || mn.visibleAnnotations == null || mn.visibleAnnotations.isEmpty();
   }
@@ -239,6 +227,74 @@ final class Preprocessor {
     processClinit(cn);
     processFields(cn);
 
+    InsnList eventsInit = new InsnList();
+    for (Map.Entry<String, AnnotationNode> eventEntry : eventFlds.entrySet()) {
+      AnnotationNode an = eventEntry.getValue();
+      String name = null;
+      String label = null;
+      String desc = null;
+      String[] category = null;
+      String fields = null;
+      String handler = null;
+      String period = null;
+      Iterator<Object> iter = an.values.iterator();
+      while (iter.hasNext()) {
+        String key = (String)iter.next();
+        Object value = iter.next();
+        switch (key) {
+          case "name": {
+            name = (String)value;
+            break;
+          }
+          case "label": {
+            label = (String)value;
+            label = label.isEmpty() ? null : label;
+            break;
+          }
+          case "description": {
+            desc = (String)value;
+            desc = desc.isEmpty() ? null : desc;
+            break;
+          }
+          case "category": {
+            category = (String[])value;
+            break;
+          }
+          case "fields": {
+            fields = (String)value;
+            break;
+          }
+          case "period": {
+            period = (String)value;
+            period = period.isEmpty() ? null : period;
+            break;
+          }
+          case "handler": {
+            handler = (String)value;
+            handler = handler.isEmpty() ? null : handler;
+            break;
+          }
+        }
+      }
+      if (handler != null) {
+        jfrHandlerNames.add(handler);
+      }
+      eventsInit.add(new TypeInsnNode(Opcodes.NEW, "org/openjdk/btrace/core/jfr/JfrEvent$Template"));
+      eventsInit.add(new InsnNode(Opcodes.DUP));
+      eventsInit.add(new LdcInsnNode(cn.name.replace('/', '.')));
+      eventsInit.add(new LdcInsnNode(name));
+      eventsInit.add(label != null ? new LdcInsnNode(label) : new InsnNode(Opcodes.ACONST_NULL));
+      eventsInit.add(desc != null ? new LdcInsnNode(desc) : new InsnNode(Opcodes.ACONST_NULL));
+      eventsInit.add(category != null ? new LdcInsnNode(label) : new InsnNode(Opcodes.ACONST_NULL));
+      eventsInit.add(new LdcInsnNode(fields));
+      eventsInit.add(period != null ? new LdcInsnNode(period) : new InsnNode(Opcodes.ACONST_NULL));
+      eventsInit.add(handler != null ? new LdcInsnNode(handler) : new InsnNode(Opcodes.ACONST_NULL));
+      eventsInit.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "org/openjdk/btrace/core/jfr/JfrEvent$Template", "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V", false));
+      eventsInit.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "org/openjdk/btrace/core/BTraceRuntime", "createEventFactory", "(Lorg/openjdk/btrace/core/jfr/JfrEvent$Template;)Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;", false));
+      eventsInit.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, eventEntry.getKey(), "Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;"));
+    }
+    clinit.instructions.insertBefore(clinit.instructions.getLast(), eventsInit);
+
     for (MethodNode mn : getMethods(cn)) {
       preprocessMethod(cn, mn);
     }
@@ -246,7 +302,7 @@ final class Preprocessor {
 
   private void addLevelField(ClassNode cn) {
     if (cn.fields == null) {
-      cn.fields = new ArrayList();
+      cn.fields = new ArrayList<>();
     }
     cn.fields.add(
         new FieldNode(
@@ -289,6 +345,7 @@ final class Preprocessor {
       if (tryProcessInjected(fn) == null) {
         iter.remove();
       }
+      tryProcessEvent(fn);
     }
   }
 
@@ -324,6 +381,15 @@ final class Preprocessor {
       return null;
     }
     return fn;
+  }
+
+  private void tryProcessEvent(FieldNode fn) {
+    AnnotationNode an;
+    if ((an = getAnnotation(fn, EVENT_TYPE)) != null) {
+      if (fn.visibleAnnotations != null) fn.visibleAnnotations.remove(an);
+      if (fn.invisibleAnnotations != null) fn.invisibleAnnotations.remove(an);
+      eventFlds.put(fn.name, an);
+    }
   }
 
   private void initTLS(ClassNode cn, FieldNode fn, String typeDesc) {
@@ -1012,7 +1078,14 @@ final class Preprocessor {
       return classifiers;
     }
     // <clinit> will always be guarded by BTrace error handler
-    if (mn.name.equals("<clinit>")) return EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
+    if (mn.name.equals("<clinit>")) {
+      return EnumSet.of(MethodClassifier.RT_AWARE);
+    }
+
+    // JFR event handlers will alwyas be guarded by BTrace error handler
+    if (jfrHandlerNames.contains(mn.name)) {
+      return EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
+    }
 
     List<AnnotationNode> annots = getAnnotations(mn);
     classifiers = EnumSet.noneOf(MethodClassifier.class);

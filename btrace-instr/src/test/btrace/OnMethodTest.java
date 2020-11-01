@@ -64,28 +64,7 @@ public class OnMethodTest {
         ex--;
         dump(var + " [this, args]");
         var = "B";
-//        emitEvent(i);
     }
-
-//    @JfrPeriodicEventHandler
-//    public static void handleSimplePeriodic(SimplePeriodicEvent event) {
-//        if (event.shouldCommit()) {
-//            event.setValue(10);
-//            event.commit();
-//            println("*** done");
-//        }
-//    }
-//
-//    @JfrBlock(SimpleEvent.class)
-//    public static void emitEvent(long bytesRead) {
-//        SimpleEvent event = new SimpleEvent();
-//        println("process event: " + event.isEnabled() + ", " + event.shouldCommit());
-//        if (event.shouldCommit()) {
-//            println("commit event");
-//            event.setValue(bytesRead);
-//            event.commit();
-//        }
-//    }
 
     @OnTimer(500)
     public static void doRecurrent() {

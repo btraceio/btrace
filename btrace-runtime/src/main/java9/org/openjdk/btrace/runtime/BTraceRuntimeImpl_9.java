@@ -45,6 +45,7 @@ import jdk.internal.reflect.Reflection;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.runtime.aux.Auxilliary;
 
 /**
@@ -240,14 +241,74 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public void addJfrPeriodicEvent(String eventClassName, String className, String methodName) {
-    debugPrint("Can not add JFR periodic event '" + eventClassName + "'. JFR is not supported in JDK 7.");
-  }
+  public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
+    return new JfrEvent.Factory() {
+      private final JfrEvent dummy = new JfrEvent() {
+        @Override
+        public JfrEvent withValue(String fieldName, byte value) {
+          return this;
+        }
 
-  @Override
-  public void addJfrEvent(String eventClassName) {
-    debugPrint("Can not add JFR event '" + eventClassName + "'. JFR is not supported in JDK 7.");
+        @Override
+        public JfrEvent withValue(String fieldName, boolean value) {
+          return this;
+        }
+
+        @Override
+        public JfrEvent withValue(String fieldName, char value) {
+          return this;
+        }
+
+        @Override
+        public JfrEvent withValue(String fieldName, short value) {
+          return this;
+        }
+
+        @Override
+        public JfrEvent withValue(String fieldName, int value) {
+          return this;
+        }
+
+        @Override
+        public JfrEvent withValue(String fieldName, float value) {
+          return this;
+        }
+
+        @Override
+        public JfrEvent withValue(String fieldName, long value) {
+          return this;
+        }
+
+        @Override
+        public JfrEvent withValue(String fieldName, double value) {
+          return this;
+        }
+
+        @Override
+        public JfrEvent withValue(String fieldName, String value) {
+          return this;
+        }
+
+        @Override
+        public void commit() {
+
+        }
+
+        @Override
+        public boolean shouldCommit() {
+          return false;
+        }
+
+        @Override
+        public <T extends Class<?>> T getJfrClass() {
+          return null;
+        }
+      };
+      @Override
+      public JfrEvent newEvent() {
+        return dummy;
+      }
+    };
   }
 
   private static Perf getPerf() {

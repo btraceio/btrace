@@ -43,10 +43,12 @@ import jdk.internal.perf.Perf;
 import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
 import jdk.jfr.Event;
+import jdk.jfr.EventType;
 import jdk.jfr.FlightRecorder;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.runtime.aux.Auxilliary;
 
 /**
@@ -90,8 +92,6 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   private static Perf perf;
 
-  private final JFRRuntimeSupport jfrRuntimeSupport = new JFRRuntimeSupport();
-
   public BTraceRuntimeImpl_11() {}
 
   public BTraceRuntimeImpl_11(
@@ -112,7 +112,19 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
           Map.of(
               "jdk.internal.reflect", myModules,
               "jdk.internal.perf", myModules),
-          Collections.singletonMap("java.lang", myModules),
+          Map.of(
+                  "java.lang", myModules
+          ),
+          Collections.emptySet(),
+          Collections.emptyMap());
+      instr.redefineModule(
+          EventType.class.getModule(),
+          Collections.emptySet(),
+          Map.of(
+                  "jdk.jfr.internal", myModules),
+          Map.of(
+                  "jdk.jfr", myModules
+          ),
           Collections.emptySet(),
           Collections.emptyMap());
     }
@@ -218,18 +230,13 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  public void addJfrPeriodicEvent(String eventClassName, String className, String methodName) {
-    jfrRuntimeSupport.addJfrPeriodicEvent(eventClassName, className, methodName);
-  }
-
-  @Override
-  public void addJfrEvent(String eventClassName) {
-    jfrRuntimeSupport.addJfrEvent(eventClassName);
+  public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
+    return new JfrEventFactoryImpl(template);
   }
 
   @Override
   protected void cleanupRuntime() {
-    jfrRuntimeSupport.cleanupEvents();
+    // cleanup JFR periodic hooks
   }
 
   private static Perf getPerf() {
