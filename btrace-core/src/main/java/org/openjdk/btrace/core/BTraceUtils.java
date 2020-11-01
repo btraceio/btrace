@@ -52,6 +52,7 @@ import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
+import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
 
 /**
@@ -6398,5 +6399,9 @@ public class BTraceUtils {
     public static int probe(String str1, String str2, int i1, int i2) {
       return BTraceRuntime.dtraceProbe(str1, str2, i1, i2);
     }
+  }
+
+  public static JfrEvent prepare(JfrEvent.Factory eventFactory) {
+    return BTraceRuntime.prepareEvent(eventFactory);
   }
 }

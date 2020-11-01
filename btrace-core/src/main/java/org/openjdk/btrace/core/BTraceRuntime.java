@@ -64,6 +64,7 @@ import org.openjdk.btrace.core.comm.GridDataCommand;
 import org.openjdk.btrace.core.comm.NumberDataCommand;
 import org.openjdk.btrace.core.comm.NumberMapDataCommand;
 import org.openjdk.btrace.core.comm.StringMapDataCommand;
+import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
 import org.openjdk.btrace.core.types.BTraceCollection;
 import org.openjdk.btrace.core.types.BTraceDeque;
@@ -1057,6 +1058,15 @@ public final class BTraceRuntime {
     }
   }
 
+  //  called from instrumentation initialization code
+  public static JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
+    return getRt().createEventFactory(template);
+  }
+
+  static JfrEvent prepareEvent(JfrEvent.Factory eventFactory) {
+    return eventFactory.newEvent();
+  }
+
   // BTrace aggregation support
   static Aggregation newAggregation(AggregationFunction type) {
     return new Aggregation(type);
@@ -1292,9 +1302,7 @@ public final class BTraceRuntime {
 
     Class<?> getCallerClass(int stackDec);
 
-    void addJfrPeriodicEvent(String eventClassName, String className, String methodName);
-
-    void addJfrEvent(String eventClassName);
+    JfrEvent.Factory createEventFactory(JfrEvent.Template template);
 
     int version();
   }

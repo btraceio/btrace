@@ -12,10 +12,10 @@ fi
 
 SDKMAN_BASE=$HOME/.sdkman/candidates/java
 
-JAVA_8_VERSION="8.0.265.hs-adpt"
+JAVA_8_VERSION="8.0.272.hs-adpt"
 JAVA_9_VERSION="9.0.4-open"
-JAVA_11_VERSION="11.0.8.hs-adpt"
-JAVA_15_VERSION="15.0.0.hs-adpt"
+JAVA_11_VERSION="11.0.9.hs-adpt"
+JAVA_15_VERSION="15.0.1.hs-adpt"
 
 echo "Using SDKMAN version: ${SDKMAN_VER}"
 

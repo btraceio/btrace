@@ -26,12 +26,10 @@ package org.openjdk.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
-import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 
 import org.objectweb.asm.AnnotationVisitor;
@@ -131,24 +129,12 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
 
   @Override
   public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-    boolean jfrType = isJfrEventType(owner);
-
     if (opcode == PUTFIELD) {
-      if (jfrType) {
-        if (!jfrBlock) {
-          Verifier.reportError("jfr.no.annotation");
-        }
-      } else {
-        Verifier.reportError("no.assignment");
-      }
+      Verifier.reportError("no.assignment");
     }
 
     if (opcode == PUTSTATIC) {
-      if (jfrType) {
-        if (!jfrBlock) {
-          Verifier.reportError("jfr.no.annotation");
-        }
-      } else if (!owner.equals(className)) {
+      if (!owner.equals(className)) {
         Verifier.reportError("no.assignment");
       }
     }
@@ -257,10 +243,6 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
           }
           break;
       }
-    } else {
-      if (!jfrBlock) {
-        Verifier.reportError("jfr.no.annotation");
-      }
     }
     if (delayedClzLoad != null) {
       Verifier.reportError("no.class.literals", delayedClzLoad.toString());
@@ -286,10 +268,6 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
     if (opcode == NEW) {
       // allow StringBuilder creation for string concatenation
       if (desc.equals(Type.getInternalName(StringBuilder.class))) {
-        super.visitTypeInsn(opcode, desc);
-        return;
-      }
-      if (isJfrEventType(desc)) {
         super.visitTypeInsn(opcode, desc);
         return;
       }
@@ -352,26 +330,6 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   }
   
   private boolean isJfrEventType(String typeName) {
-    synchronized (jfrEventTypeNames) {
-      if (jfrEventTypeNames.contains(typeName)) {
-        return true;
-      }
-      if (JFR_EVENT_TYPE.isAvailable()) {
-        ClassInfo ci = ClassCache.getInstance().get(ctxClassLoader, typeName);
-        if (ci.isAvailable()) {
-          Queue<ClassInfo> toCheck = new ArrayDeque<>(ci.getSupertypes(true));
-
-          while (!toCheck.isEmpty()) {
-            ClassInfo current = toCheck.poll();
-            if (current.getClassName().equals(JFR_EVENT_TYPE.getClassName())) {
-              jfrEventTypeNames.add(typeName);
-              return true;
-            }
-            toCheck.addAll(current.getSupertypes(true));
-          }
-        }
-      }
-    }
-    return false;
+    return "org/openjdk/btrace/core/jfr/JfrEvent".equals(typeName);
   }
 }

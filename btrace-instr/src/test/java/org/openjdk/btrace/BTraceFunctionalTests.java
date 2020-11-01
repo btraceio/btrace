@@ -286,4 +286,23 @@ public class BTraceFunctionalTests extends RuntimeTest {
           }
         });
   }
+
+  @Test
+  public void testJfr() throws Exception {
+      debugTestApp = true;
+      debugBTrace = true;
+      test(
+      "resources.Main",
+      "btrace/JfrTest.java",
+      5,
+      new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode) {
+              Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
+              Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+              Assert.assertTrue(stdout.contains("private java.lang.String resources.Main.id"));
+              Assert.assertTrue(stdout.contains("class resources.Main"));
+          }
+      });
+  }
 }
