@@ -53,10 +53,6 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
     private final Map<String, Integer> fieldIndex = new HashMap<>();
 
     JfrEventFactoryImpl(JfrEvent.Template template) {
-        // init JFR
-//        FlightRecorder.getFlightRecorder();
-
-        System.out.println("===> new event factory");
         List<AnnotationElement> defAnnotations = new ArrayList<>();
         List<ValueDescriptor> defFields = new ArrayList<>();
         defAnnotations.add(new AnnotationElement(Name.class, template.getName()));
@@ -84,7 +80,6 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
         }
         eventFactory = EventFactory.create(defAnnotations, defFields);
         eventFactory.register();
-        System.out.println("===> " + template.getPeriod() + ", " + template.getPeriodicHandler());
         if (template.getPeriod() != null && template.getPeriodicHandler() != null) {
             addJfrPeriodicEvent(eventFactory.getEventType(), template);
         }
@@ -92,37 +87,30 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
 
     @Override
     public JfrEvent newEvent() {
-        System.out.println("===> new event");
         return new JfrEventImpl(eventFactory.newEvent(), fieldIndex);
     }
 
     private void addJfrPeriodicEvent(EventType type, JfrEvent.Template template) {
         try {
             Class<?> handlerClass = Class.forName(template.getOwner());
-            final Method handlerMethod = handlerClass.getMethod(template.getPeriodicHandler(), JfrEvent.class);
+            Method handlerMethod = handlerClass.getMethod(template.getPeriodicHandler(), JfrEvent.class);
             Runnable hook = (Runnable) Proxy.newProxyInstance(handlerClass.getClassLoader(), new Class[]{Runnable.class}, new InvocationHandler() {
                 @Override
                 public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                    System.out.println("===> ***** ");
                     if (method.getName().equals("run")) {
-                        JfrEvent event = newEvent();
-                        return handlerMethod.invoke(null, event);
+                        try {
+                            JfrEvent event = newEvent();
+                            return handlerMethod.invoke(null, event);
+                        } catch (Throwable t) {
+                            t.printStackTrace(System.out);
+                            throw t;
+                        }
                     } else {
                         return method.invoke(this, args);
                     }
                 }
             });
-            Method m = EventType.class.getDeclaredMethod("getPlatformEventType");
-            m.setAccessible(true);
-            Object pet = m.invoke(type);
-            m = pet.getClass().getMethod("getPeriod");
-            long per = (long)m.invoke(pet);
-            System.out.println("===> period: " + per);
-            Field f = EventFactory.class.getDeclaredField("eventClass");
-            f.setAccessible(true);
-            Class<? extends Event> eClz = (Class<? extends Event>)f.get(eventFactory);
-            System.out.println("===> adding periodic event: " + type);
-            System.out.println("===> " + type.getAnnotation(Period.class));
+            Class<? extends Event> eClz = eventFactory.newEvent().getClass();
             FlightRecorder.addPeriodicEvent(eClz, hook);
             // TODO periodic event cleanup
 //            periodicJfrEvents.add(hook);

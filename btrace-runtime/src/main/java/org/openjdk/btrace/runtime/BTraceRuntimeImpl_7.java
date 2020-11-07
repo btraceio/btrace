@@ -171,7 +171,6 @@ public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template eventTemplate) {
-      System.out.printf("===> JFR JDK 7");
       return new JfrEvent.Factory() {
           private final JfrEvent dummy = new JfrEvent() {
               @Override

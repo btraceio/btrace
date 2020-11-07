@@ -92,8 +92,6 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   private static Perf perf;
 
-  private final JFRRuntimeSupport jfrRuntimeSupport = new JFRRuntimeSupport();
-
   public BTraceRuntimeImpl_11() {}
 
   public BTraceRuntimeImpl_11(
@@ -233,13 +231,12 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
-    System.out.println("===> JFR JDK 11");
     return new JfrEventFactoryImpl(template);
   }
 
   @Override
   protected void cleanupRuntime() {
-    jfrRuntimeSupport.cleanupEvents();
+    // cleanup JFR periodic hooks
   }
 
   private static Perf getPerf() {

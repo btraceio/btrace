@@ -242,7 +242,6 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
-    System.out.println("===> JFR JDK 9");
     return new JfrEvent.Factory() {
       private final JfrEvent dummy = new JfrEvent() {
         @Override

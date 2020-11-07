@@ -12,7 +12,6 @@ public abstract class JfrEvent {
         private final String periodicHandler;
 
         public Template(String owner, String name, String label, String description, String[] category, String fields, String period, String periodicHandler) {
-            System.err.println("==> new template");
             this.owner = owner;
             this.name = name;
             this.label = label;

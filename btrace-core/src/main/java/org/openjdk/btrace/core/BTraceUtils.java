@@ -6401,7 +6401,7 @@ public class BTraceUtils {
     }
   }
 
-  public static JfrEvent prepare(JfrEvent.Factory eventFactory) {
+  public static JfrEvent prepareEvent(JfrEvent.Factory eventFactory) {
     return BTraceRuntime.prepareEvent(eventFactory);
   }
 }

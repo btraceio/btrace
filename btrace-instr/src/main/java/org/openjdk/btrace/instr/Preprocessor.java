@@ -172,6 +172,7 @@ final class Preprocessor {
 
   private final Set<String> tlsFldNames = new HashSet<>();
   private final Set<String> exportFldNames = new HashSet<>();
+  private final Set<String> jfrHandlerNames = new HashSet<>();
   private final Map<String, AnnotationNode> eventFlds = new HashMap<>();
   private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
   private final Map<String, Integer> serviceLocals = new HashMap<>();
@@ -275,6 +276,9 @@ final class Preprocessor {
           }
         }
       }
+      if (handler != null) {
+        jfrHandlerNames.add(handler);
+      }
       eventsInit.add(new TypeInsnNode(Opcodes.NEW, "org/openjdk/btrace/core/jfr/JfrEvent$Template"));
       eventsInit.add(new InsnNode(Opcodes.DUP));
       eventsInit.add(new LdcInsnNode(cn.name.replace('/', '.')));
@@ -298,7 +302,7 @@ final class Preprocessor {
 
   private void addLevelField(ClassNode cn) {
     if (cn.fields == null) {
-      cn.fields = new ArrayList();
+      cn.fields = new ArrayList<>();
     }
     cn.fields.add(
         new FieldNode(
@@ -1074,7 +1078,14 @@ final class Preprocessor {
       return classifiers;
     }
     // <clinit> will always be guarded by BTrace error handler
-    if (mn.name.equals("<clinit>")) return EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
+    if (mn.name.equals("<clinit>")) {
+      return EnumSet.of(MethodClassifier.RT_AWARE);
+    }
+
+    // JFR event handlers will alwyas be guarded by BTrace error handler
+    if (jfrHandlerNames.contains(mn.name)) {
+      return EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
+    }
 
     List<AnnotationNode> annots = getAnnotations(mn);
     classifiers = EnumSet.noneOf(MethodClassifier.class);

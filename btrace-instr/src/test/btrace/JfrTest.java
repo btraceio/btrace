@@ -31,15 +31,23 @@ import static org.openjdk.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class JfrTest {
-    @Event(name="periodic", label="Periodic", description="Periodic Event", period="10 ms", handler="onPeriod", fields = "int count")
+    @Event(name="periodic", label="Periodic", description="Periodic Event", period="100 ms", handler="onPeriod", fields = "int count")
     private static JfrEvent.Factory periodic;
+
+    @Event(name="custom", label="Custom Event", fields="string thiz")
+    private static JfrEvent.Factory custom;
 
     private static int counter = 0;
 
     public static void onPeriod(JfrEvent event) {
-        println("===> tick");
         if (event.shouldCommit()) {
             event.withValue("count", counter++).commit();
         }
+    }
+
+    @OnMethod(clazz = "resources.Main", method = "callA")
+    public static void noargs(@Self Object self) {
+        println("Main.callA");
+        prepareEvent(custom).withValue("thiz", str(self)).commit();
     }
 }

@@ -14,7 +14,7 @@ import static org.openjdk.btrace.core.BTraceUtils.*;
 
     @OnMethod(clazz = "/.*/", method = "/.*/")
     public static void onMethod() {
-        JfrEvent event = prepare(customEventFactory);
+        JfrEvent event = prepareEvent(customEventFactory);
         event.withValue("a", 10).withValue("b", "hello").commit();
     }
 
