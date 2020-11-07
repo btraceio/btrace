@@ -146,6 +146,7 @@ final class Preprocessor {
   // For each @Export field, we create a perf counter
   // with the name "btrace.<class name>.<field name>"
   private static final String BTRACE_COUNTER_PREFIX = "btrace.";
+  private static final String JFR_HANDLER_FIELD_PREFIX = "$jfr$handler$";
 
   static {
     BOX_TYPE_MAP.put("I", Constants.INTEGER_BOXED_DESC);
@@ -181,6 +182,7 @@ final class Preprocessor {
   private FieldNode rtField = null;
 
   private Map<MethodNode, EnumSet<MethodClassifier>> classifierMap = new HashMap<>();
+  private AbstractInsnNode clinitEntryPoint;
 
   public Preprocessor(DebugSupport debug) {
     this.debug = debug;
@@ -227,8 +229,13 @@ final class Preprocessor {
     processClinit(cn);
     processFields(cn);
 
+    for (MethodNode mn : getMethods(cn)) {
+      preprocessMethod(cn, mn);
+    }
+
     InsnList eventsInit = new InsnList();
     for (Map.Entry<String, AnnotationNode> eventEntry : eventFlds.entrySet()) {
+      String fieldName = eventEntry.getKey();
       AnnotationNode an = eventEntry.getValue();
       String name = null;
       String label = null;
@@ -237,6 +244,7 @@ final class Preprocessor {
       String fields = null;
       String handler = null;
       String period = null;
+      boolean stacktrace = false;
       Iterator<Object> iter = an.values.iterator();
       while (iter.hasNext()) {
         String key = (String)iter.next();
@@ -264,19 +272,19 @@ final class Preprocessor {
             fields = (String)value;
             break;
           }
+          case "stacktrace": {
+            stacktrace = (boolean)value;
+            break;
+          }
           case "period": {
             period = (String)value;
             period = period.isEmpty() ? null : period;
             break;
           }
-          case "handler": {
-            handler = (String)value;
-            handler = handler.isEmpty() ? null : handler;
-            break;
-          }
         }
       }
-      if (handler != null) {
+      if (fieldName.startsWith(JFR_HANDLER_FIELD_PREFIX)) {
+        handler = fieldName.substring(JFR_HANDLER_FIELD_PREFIX.length());
         jfrHandlerNames.add(handler);
       }
       eventsInit.add(new TypeInsnNode(Opcodes.NEW, "org/openjdk/btrace/core/jfr/JfrEvent$Template"));
@@ -287,17 +295,14 @@ final class Preprocessor {
       eventsInit.add(desc != null ? new LdcInsnNode(desc) : new InsnNode(Opcodes.ACONST_NULL));
       eventsInit.add(category != null ? new LdcInsnNode(label) : new InsnNode(Opcodes.ACONST_NULL));
       eventsInit.add(new LdcInsnNode(fields));
+      eventsInit.add(new LdcInsnNode(stacktrace));
       eventsInit.add(period != null ? new LdcInsnNode(period) : new InsnNode(Opcodes.ACONST_NULL));
       eventsInit.add(handler != null ? new LdcInsnNode(handler) : new InsnNode(Opcodes.ACONST_NULL));
-      eventsInit.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "org/openjdk/btrace/core/jfr/JfrEvent$Template", "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V", false));
+      eventsInit.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "org/openjdk/btrace/core/jfr/JfrEvent$Template", "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;)V", false));
       eventsInit.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "org/openjdk/btrace/core/BTraceRuntime", "createEventFactory", "(Lorg/openjdk/btrace/core/jfr/JfrEvent$Template;)Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;", false));
       eventsInit.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, eventEntry.getKey(), "Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;"));
     }
-    clinit.instructions.insertBefore(clinit.instructions.getLast(), eventsInit);
-
-    for (MethodNode mn : getMethods(cn)) {
-      preprocessMethod(cn, mn);
-    }
+    clinit.instructions.insertBefore(clinitEntryPoint, eventsInit);
   }
 
   private void addLevelField(ClassNode cn) {
@@ -322,6 +327,7 @@ final class Preprocessor {
     scanMethodInstructions(cn, mn, lvg);
     addBTraceErrorHandler(cn, mn);
     addBTraceRuntimeEnter(cn, mn);
+    addJfrHandlerField(cn, mn);
 
     recalculateVars(mn);
   }
@@ -642,7 +648,8 @@ final class Preprocessor {
 
     l.add(getRuntimeImpl(cn));
     addRuntimeCheck(cn, clinit, l, true);
-    l.add(addJfrEvents(cn));
+
+    clinitEntryPoint = l.getLast();
 
     clinit.instructions.insert(l);
 
@@ -884,38 +891,6 @@ final class Preprocessor {
     return il;
   }
 
-  @SuppressWarnings("unchecked")
-  private InsnList addJfrEvents(ClassNode cn) {
-    InsnList il = new InsnList();
-
-    for (MethodNode mn : getMethods(cn)) {
-      AnnotationNode annotation = getAnnotation(mn, JFRPERIODIC_TYPE);
-      if (annotation != null) {
-        il.add(getRuntimeImpl(cn));
-        il.add(new LdcInsnNode(Type.getArgumentTypes(mn.desc)[0].getInternalName().replace('/', '.')));
-        il.add(new LdcInsnNode(cn.name.replace('/', '.')));
-        il.add(new LdcInsnNode(mn.name));
-        il.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, Constants.BTRACERTIMPL_INTERNAL, "addJfrPeriodicEvent", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"));
-        Type eventType = Type.getArgumentTypes(mn.desc)[0];
-        mn.desc = "(Ljava/lang/Object;)V";
-        InsnList chkCastList = new InsnList();
-        chkCastList.add(new VarInsnNode(Opcodes.ALOAD, 0));
-        chkCastList.add(new TypeInsnNode(Opcodes.CHECKCAST, eventType.getDescriptor()));
-        chkCastList.add(new VarInsnNode(Opcodes.ALOAD, 0));
-        mn.instructions.insert(chkCastList);
-      }
-      annotation = getAnnotation(mn, JFRBLOCK_TYPE);
-      if (annotation != null && annotation.values != null && !annotation.values.isEmpty()) {
-        for (Type eventClass :  (List<Type>)annotation.values.get(1)) {
-          il.add(getRuntimeImpl(cn));
-          il.add(new LdcInsnNode(eventClass.getInternalName().replace('/', '.')));
-          il.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, Constants.BTRACERTIMPL_INTERNAL, "addJfrEvent", "(Ljava/lang/String;)V"));
-        }
-      }
-    }
-    return il;
-  }
-
   private void startRuntime(ClassNode cNode, MethodNode clinit1) {
     for (AbstractInsnNode n = clinit1.instructions.getFirst(); n != null; n = n.getNext()) {
       if (n.getOpcode() == Opcodes.RETURN) {
@@ -1055,6 +1030,18 @@ final class Preprocessor {
 
   private void addBTraceRuntimeExit(ClassNode cn, InsnNode n, InsnList l) {
     l.insertBefore(n, getRuntimeExit(cn));
+  }
+
+  private void addJfrHandlerField(ClassNode cn, MethodNode mn) {
+    if (mn.visibleAnnotations != null) {
+      for (AnnotationNode annotation : mn.visibleAnnotations) {
+        if (annotation.desc.equals(Constants.JFRPERIODIC_DESC)) {
+          String fldName = JFR_HANDLER_FIELD_PREFIX + mn.name;
+          cn.fields.add(new FieldNode(Opcodes.ASM7, Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, fldName, Constants.JFREVENTFACTORY_DESC, null, null));
+          eventFlds.put(fldName, annotation);
+        }
+      }
+    }
   }
 
   private List<MethodNode> getMethods(ClassNode cn) {

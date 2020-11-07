@@ -27,10 +27,7 @@ package org.openjdk.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -243,70 +240,9 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
     return new JfrEvent.Factory() {
-      private final JfrEvent dummy = new JfrEvent() {
-        @Override
-        public JfrEvent withValue(String fieldName, byte value) {
-          return this;
-        }
-
-        @Override
-        public JfrEvent withValue(String fieldName, boolean value) {
-          return this;
-        }
-
-        @Override
-        public JfrEvent withValue(String fieldName, char value) {
-          return this;
-        }
-
-        @Override
-        public JfrEvent withValue(String fieldName, short value) {
-          return this;
-        }
-
-        @Override
-        public JfrEvent withValue(String fieldName, int value) {
-          return this;
-        }
-
-        @Override
-        public JfrEvent withValue(String fieldName, float value) {
-          return this;
-        }
-
-        @Override
-        public JfrEvent withValue(String fieldName, long value) {
-          return this;
-        }
-
-        @Override
-        public JfrEvent withValue(String fieldName, double value) {
-          return this;
-        }
-
-        @Override
-        public JfrEvent withValue(String fieldName, String value) {
-          return this;
-        }
-
-        @Override
-        public void commit() {
-
-        }
-
-        @Override
-        public boolean shouldCommit() {
-          return false;
-        }
-
-        @Override
-        public <T extends Class<?>> T getJfrClass() {
-          return null;
-        }
-      };
       @Override
       public JfrEvent newEvent() {
-        return dummy;
+        return JfrEvent.EMPTY;
       }
     };
   }

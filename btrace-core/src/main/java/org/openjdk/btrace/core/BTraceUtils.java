@@ -45,6 +45,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+
+import jdk.jfr.Event;
 import org.openjdk.btrace.core.aggregation.Aggregation;
 import org.openjdk.btrace.core.aggregation.AggregationFunction;
 import org.openjdk.btrace.core.aggregation.AggregationKey;
@@ -6401,7 +6403,136 @@ public class BTraceUtils {
     }
   }
 
-  public static JfrEvent prepareEvent(JfrEvent.Factory eventFactory) {
-    return BTraceRuntime.prepareEvent(eventFactory);
+  /**
+   * Support for JFR integration.
+   *
+   * @since 2.1.0
+   */
+  public static final class Jfr {
+    /**
+     * Create a new event instance using the factory field annotated by {@linkplain org.openjdk.btrace.core.annotations.Event}
+     * @param eventFactory the event factory
+     * @return new event instance
+     */
+    public static JfrEvent prepareEvent(JfrEvent.Factory eventFactory) {
+      return eventFactory.newEvent();
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, byte fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, char fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, short fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, int fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, long fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, float fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, double fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, boolean fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Set an event field value
+     * @param event event instance
+     * @param fieldName field name
+     * @param fieldValue field value
+     */
+    public static void setEventField(JfrEvent event, String fieldName, String fieldValue) {
+      event.withValue(fieldName, fieldValue);
+    }
+
+    /**
+     * Check whether the event should be committed.
+     * @see Event#shouldCommit()
+     * @param event event to check
+     * @return {@literal true} if the event should be committed
+     */
+    public static boolean shouldCommit(JfrEvent event) {
+      return event.shouldCommit();
+    }
+
+    /**
+     * Commit the event
+     * @see Event#commit()
+     * @param event the event to commit
+     */
+    public static void commit(JfrEvent event) {
+      event.commit();
+    }
+
+    public static void begin(JfrEvent event) {
+      event.begin();
+    }
+
+    public static void end(JfrEvent event) {
+      event.end();
+    }
   }
 }

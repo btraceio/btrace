@@ -1063,10 +1063,6 @@ public final class BTraceRuntime {
     return getRt().createEventFactory(template);
   }
 
-  static JfrEvent prepareEvent(JfrEvent.Factory eventFactory) {
-    return eventFactory.newEvent();
-  }
-
   // BTrace aggregation support
   static Aggregation newAggregation(AggregationFunction type) {
     return new Aggregation(type);

@@ -27,10 +27,7 @@ package org.openjdk.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -42,9 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
 import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
-import jdk.jfr.Event;
 import jdk.jfr.EventType;
-import jdk.jfr.FlightRecorder;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
@@ -91,6 +86,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   private static final int PERF_STRING_LIMIT = 256;
 
   private static Perf perf;
+
+  private final Set<JfrEventFactoryImpl> eventFactories = new java.util.concurrent.CopyOnWriteArraySet<>();
 
   public BTraceRuntimeImpl_11() {}
 
@@ -231,12 +228,17 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
-    return new JfrEventFactoryImpl(template);
+    JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template);
+    eventFactories.add(factory);
+    return factory;
   }
 
   @Override
   protected void cleanupRuntime() {
-    // cleanup JFR periodic hooks
+    for (JfrEventFactoryImpl factory : eventFactories) {
+      factory.unregister();
+    }
+    eventFactories.clear();
   }
 
   private static Perf getPerf() {

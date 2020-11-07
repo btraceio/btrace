@@ -28,26 +28,28 @@ package traces;
 import org.openjdk.btrace.core.annotations.*;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import static org.openjdk.btrace.core.BTraceUtils.*;
+import static org.openjdk.btrace.core.BTraceUtils.Jfr.*;
 
 @BTrace
 public class JfrTest {
-    @Event(name="periodic", label="Periodic", description="Periodic Event", period="100 ms", handler="onPeriod", fields = "int count")
-    private static JfrEvent.Factory periodic;
-
     @Event(name="custom", label="Custom Event", fields="string thiz")
     private static JfrEvent.Factory custom;
 
     private static int counter = 0;
 
-    public static void onPeriod(JfrEvent event) {
-        if (event.shouldCommit()) {
-            event.withValue("count", counter++).commit();
+    @PeriodicEvent(name="periodic", label="Periodic", description="Periodic Event", period="1 s", fields = "int count")
+    public static void periodic(JfrEvent event) {
+        if (shouldCommit(event)) {
+            setEventField(event, "count", counter++);
+            commit(event);
         }
     }
 
     @OnMethod(clazz = "resources.Main", method = "callA")
     public static void noargs(@Self Object self) {
         println("Main.callA");
-        prepareEvent(custom).withValue("thiz", str(self)).commit();
+        JfrEvent event = prepareEvent(custom);
+        setEventField(event, "thiz", str(self));
+        commit(event);
     }
 }

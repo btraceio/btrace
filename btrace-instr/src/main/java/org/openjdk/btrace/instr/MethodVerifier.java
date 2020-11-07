@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.annotations.Sampled;
@@ -77,11 +76,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   private final String methodDesc;
   private final int access;
   private final Map<Label, Label> labels;
-  protected Location loc;
   private Object delayedClzLoad = null;
-  private final ClassLoader ctxClassLoader;
-  private boolean jfrBlock = false;
-  private final Set<String> jfrEventTypeNames = new HashSet<>();
 
   public MethodVerifier(
       BTraceMethodNode parent, int access, String className, String methodName, String desc, ClassLoader ctxClassLoader) {
@@ -91,7 +86,6 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
     methodDesc = desc;
     this.access = access;
     labels = new HashMap<>();
-    this.ctxClassLoader = ctxClassLoader != null ? ctxClassLoader : ClassLoader.getSystemClassLoader();
   }
 
   static boolean isPrimitiveWrapper(String type) {
@@ -104,12 +98,6 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
 
   private BTraceMethodNode getParent() {
     return (BTraceMethodNode) mv;
-  }
-
-  @Override
-  public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-    jfrBlock = descriptor.equals(Constants.JFRPERIODIC_DESC) || descriptor.equals(Constants.JFR_BLOCK_DESC);
-    return super.visitAnnotation(descriptor, visible);
   }
 
   @Override

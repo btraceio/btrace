@@ -79,8 +79,12 @@ class JfrEventImpl extends JfrEvent {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T extends Class<?>> T getJfrClass() {
-        return (T)event.getClass();
+    public void begin() {
+        event.begin();
+    }
+
+    @Override
+    public void end() {
+        event.end();
     }
 }

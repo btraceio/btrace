@@ -5,23 +5,16 @@ import jdk.jfr.Category;
 import jdk.jfr.Description;
 import jdk.jfr.Event;
 import jdk.jfr.EventFactory;
-import jdk.jfr.EventType;
 import jdk.jfr.FlightRecorder;
-import jdk.jfr.FlightRecorderListener;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 import jdk.jfr.Period;
-import jdk.jfr.Recording;
-import jdk.jfr.RecordingState;
 import jdk.jfr.Registered;
 import jdk.jfr.StackTrace;
 import jdk.jfr.ValueDescriptor;
-import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -52,11 +45,14 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
     private final EventFactory eventFactory;
     private final Map<String, Integer> fieldIndex = new HashMap<>();
 
+    private Runnable periodicHook = null;
+
     JfrEventFactoryImpl(JfrEvent.Template template) {
         List<AnnotationElement> defAnnotations = new ArrayList<>();
         List<ValueDescriptor> defFields = new ArrayList<>();
         defAnnotations.add(new AnnotationElement(Name.class, template.getName()));
         defAnnotations.add(new AnnotationElement(Registered.class, true));
+        defAnnotations.add(new AnnotationElement(StackTrace.class, template.isStacktrace()));
         if (template.getLabel() != null) {
             defAnnotations.add(new AnnotationElement(Label.class, template.getLabel()));
         }
@@ -68,7 +64,6 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
         }
         if (template.getPeriod() != null) {
             defAnnotations.add(new AnnotationElement(Period.class, template.getPeriod()));
-            defAnnotations.add(new AnnotationElement(StackTrace.class, false));
         }
         int counter = 0;
         StringTokenizer tokenizer = new StringTokenizer(template.getFields(), ",");
@@ -81,7 +76,7 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
         eventFactory = EventFactory.create(defAnnotations, defFields);
         eventFactory.register();
         if (template.getPeriod() != null && template.getPeriodicHandler() != null) {
-            addJfrPeriodicEvent(eventFactory.getEventType(), template);
+            addJfrPeriodicEvent(template);
         }
     }
 
@@ -90,7 +85,7 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
         return new JfrEventImpl(eventFactory.newEvent(), fieldIndex);
     }
 
-    private void addJfrPeriodicEvent(EventType type, JfrEvent.Template template) {
+    private void addJfrPeriodicEvent(JfrEvent.Template template) {
         try {
             Class<?> handlerClass = Class.forName(template.getOwner());
             Method handlerMethod = handlerClass.getMethod(template.getPeriodicHandler(), JfrEvent.class);
@@ -112,8 +107,7 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
             });
             Class<? extends Event> eClz = eventFactory.newEvent().getClass();
             FlightRecorder.addPeriodicEvent(eClz, hook);
-            // TODO periodic event cleanup
-//            periodicJfrEvents.add(hook);
+            periodicHook = hook;
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
             StringBuilder msg = new StringBuilder("Unable to register periodic JFR event of type '");
@@ -122,7 +116,14 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
             msg.append("'");
             DebugSupport.info(msg.toString());
         } catch (Throwable ignored) {
-            ignored.printStackTrace();
         }
+    }
+
+    void unregister() {
+        if (periodicHook != null) {
+            FlightRecorder.removePeriodicEvent(periodicHook);
+        }
+        eventFactory.unregister();
+
     }
 }
