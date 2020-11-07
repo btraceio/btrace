@@ -9,5 +9,5 @@ for VERSION in 8 9 11 15; do
     continue
   fi
   echo "Running tests with TEST_JAVA_HOME=${!home_string}"
-  TEST_JAVA_HOME=${!home_string} BTRACE_TEST_DEBUG="true" ./gradlew test --tests org.openjdk.btrace.BTraceFunctionalTests
+  TEST_JAVA_HOME=${!home_string} BTRACE_TEST_DEBUG="true" ./gradlew test
 done
