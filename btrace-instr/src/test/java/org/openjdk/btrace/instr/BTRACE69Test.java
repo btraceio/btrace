@@ -57,7 +57,7 @@ public class BTRACE69Test extends InstrumentorTestBase {
             + "ATHROW\n"
             + "L8\n"
             + "LINENUMBER 111 L8\n"
-            + "FRAME FULL [resources/OnMethodTest T resources/OnMethodTest resources/OnMethodTest T] []\n"
+            + "FRAME FULL [resources/OnMethodTest T resources/OnMethodTest resources/OnMethodTest] []\n"
             + "RETURN\n"
             + "L5\n"
             + "FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]\n"

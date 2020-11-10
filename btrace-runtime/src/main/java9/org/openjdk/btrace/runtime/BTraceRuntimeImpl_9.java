@@ -231,6 +231,11 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
     return cl.get();
   }
 
+  @Override
+  public int version() {
+    return 9;
+  }
+
   private static Perf getPerf() {
     synchronized (BTraceRuntimeImpl_9.class) {
       if (perf == null) {

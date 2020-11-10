@@ -6,6 +6,7 @@ public class VariableMapper {
   private static final int UNMASK = 0x1FFFFFFF;
   private static final int DOUBLE_SLOT_FLAG = 0x20000000;
   private static final int REMAP_FLAG = 0x40000000;
+  private static final int INVALID_MASK = 0xFFFFFFFF;
 
   private int argsSize;
 
@@ -17,7 +18,7 @@ public class VariableMapper {
     nextMappedVar = argsSize;
   }
 
-  private VariableMapper(int argsSize, int nextMappedVar, int[] mapping) {
+  VariableMapper(int argsSize, int nextMappedVar, int[] mapping) {
     this.argsSize = argsSize;
     this.nextMappedVar = nextMappedVar;
     this.mapping = Arrays.copyOf(mapping, mapping.length);
@@ -27,10 +28,8 @@ public class VariableMapper {
     return var & UNMASK;
   }
 
-  public void replaceWith(VariableMapper other) {
-    argsSize = other.argsSize;
-    nextMappedVar = other.nextMappedVar;
-    mapping = Arrays.copyOf(other.mapping, other.mapping.length);
+  public static boolean isInvalidMapping(int var) {
+    return (var & INVALID_MASK) != 0;
   }
 
   public VariableMapper mirror() {
@@ -42,7 +41,7 @@ public class VariableMapper {
     if (mapping.length <= from + padding) {
       mapping = Arrays.copyOf(mapping, Math.max(mapping.length * 2, from + padding + 1));
     }
-    mapping[from] = to;
+    mapping[from] = to | REMAP_FLAG;
     if (padding > 0) {
       mapping[from + padding] = Math.abs(to) + padding; // padding
     }
@@ -50,7 +49,7 @@ public class VariableMapper {
 
   public int remap(int var, int size) {
     if ((var & REMAP_FLAG) != 0) {
-      return var & UNMASK;
+      return unmask(var);
     }
 
     int offset = var - argsSize;
@@ -74,31 +73,37 @@ public class VariableMapper {
       mappedVar = remapVar(newVarIdxInternal(size), size);
       setMapping(offset, mappedVar, size);
     }
-    int unmasked = mappedVar & UNMASK;
+    int unmasked = unmask(mappedVar);
     // adjust the mapping pointer if remapping with variable occupying 2 slots
     nextMappedVar = Math.max(unmasked + size, nextMappedVar);
     return unmasked;
   }
 
   public int map(int var) {
+    // if the var number is the result of current mapping (REMAP_FLAG is set)
     if (((var & REMAP_FLAG) != 0)) {
-      return var & UNMASK;
+      return unmask(var);
     }
 
     int offset = (var - argsSize);
+
+    // only remap locals slots above method arguments
     if (offset >= 0) {
       if (mapping.length <= offset) {
+        // catch out of bounds mapping
         return 0xFFFFFFFF;
       }
-      return mapping[offset] & UNMASK;
+      int newVar = mapping[offset];
+      return (newVar & REMAP_FLAG) != 0 ? unmask(newVar) : 0xFFFFFFFF;
     }
+    // method argument slots are not remapped
     return var;
   }
 
   public int[] mappings() {
     int[] cleansed = new int[mapping.length];
     for (int i = 0; i < mapping.length; i++) {
-      cleansed[i] = mapping[i] & UNMASK;
+      cleansed[i] = unmask(mapping[i]);
     }
     return cleansed;
   }
@@ -124,5 +129,20 @@ public class VariableMapper {
 
   public int getNextMappedVar() {
     return nextMappedVar;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder("nextVar: ").append(nextMappedVar).append(", mappings: [");
+    for (int i = 0; i < mapping.length; i++) {
+      if ((mapping[i] & REMAP_FLAG) != 0) {
+        sb.append(unmask(mapping[i]));
+      } else {
+        sb.append(mapping[i]);
+      }
+      sb.append(",");
+    }
+    sb.append("],\n{").append(Arrays.toString(mapping)).append("}");
+    return sb.toString();
   }
 }

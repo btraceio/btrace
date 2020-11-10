@@ -54,6 +54,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.openjdk.btrace.core.aggregation.Aggregation;
 import org.openjdk.btrace.core.aggregation.AggregationFunction;
 import org.openjdk.btrace.core.aggregation.AggregationKey;
@@ -152,7 +153,8 @@ public final class BTraceRuntime {
   }
 
   public static boolean enter() {
-    return getRt().enter();
+    BTraceRuntime.Impl rt = getRt();
+    return rt == null || rt.enter();
   }
 
   /**
@@ -160,7 +162,10 @@ public final class BTraceRuntime {
    * probed method continues).
    */
   public static void leave() {
-    getRt().leave();
+    BTraceRuntime.Impl rt = getRt();
+    if (rt != null) {
+      rt.leave();
+    }
   }
 
   /** Handles exception from BTrace probe actions. */
@@ -1286,6 +1291,8 @@ public final class BTraceRuntime {
     ClassLoader getCallerClassLoader(int stackDec);
 
     Class<?> getCallerClass(int stackDec);
+
+    int version();
   }
 
   public interface BTraceRuntimeAccessor {

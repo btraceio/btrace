@@ -27,6 +27,7 @@ package org.openjdk.btrace.instr;
 import static org.objectweb.asm.Opcodes.*;
 import static org.openjdk.btrace.instr.Constants.*;
 
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
@@ -484,6 +485,11 @@ public final class Assembler {
 
   public Assembler invokeStatic(String owner, String method, String desc) {
     mv.visitMethodInsn(INVOKESTATIC, owner, method, desc, false);
+    return this;
+  }
+
+  public Assembler invokeDynamic(String name, String descriptor, Handle bootstrap, Object ... bootstrapArguments) {
+    mv.visitInvokeDynamicInsn(name, descriptor, bootstrap, bootstrapArguments);
     return this;
   }
 

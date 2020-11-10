@@ -10,6 +10,11 @@ sourceSets {
             srcDirs = ['src/main/java11']
         }
     }
+    java15 {
+        java {
+            srcDirs = ['src/main/java15']
+        }
+    }
 }
 
 compileJava {
@@ -28,10 +33,21 @@ compileJava9Java {
 }
 
 compileJava11Java {
+    onlyIf {
+        JavaVersion.current() >= JavaVersion.VERSION_11
+    }
     sourceCompatibility = 11
     targetCompatibility = 11
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
+    options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
+}
+
+compileJava15Java {
+    sourceCompatibility = 15
+    targetCompatibility = 15
+    options.fork = true
+    options.forkOptions.executable = "${project.property("JAVA_15_HOME")}/bin/javac"
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
@@ -42,12 +58,18 @@ dependencies {
     java11Implementation files(sourceSets.main.output.classesDirs) {
         builtBy compileJava
     }
+    java15Implementation files(sourceSets.main.output.classesDirs) {
+        builtBy compileJava
+    }
 
     java9Implementation project(':btrace-core')
     java9Implementation project(':btrace-services')
 
     java11Implementation project(':btrace-core')
     java11Implementation project(':btrace-services')
+
+    java15Implementation project(':btrace-core')
+    java15Implementation project(':btrace-services')
 
     compile project(':btrace-core')
     compile project(':btrace-services')
@@ -59,5 +81,8 @@ jar {
     }
     into('') {
         from sourceSets.java11.output
+    }
+    into('') {
+        from sourceSets.java15.output
     }
 }

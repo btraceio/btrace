@@ -33,10 +33,11 @@ import java.io.FileOutputStream;
  * @author Jaroslav Bachorik
  */
 public final class DebugSupport {
+  public static final DebugSupport SHARED = new DebugSupport(null);
   private final SharedSettings settings;
 
   public DebugSupport(SharedSettings s) {
-    settings = s != null ? s : new SharedSettings();
+    settings = s != null ? s : SharedSettings.GLOBAL;
   }
 
   public static void info(String msg) {

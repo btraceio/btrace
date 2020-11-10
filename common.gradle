@@ -7,7 +7,7 @@ apply plugin: 'maven'
 apply plugin: 'idea'
 
 project.group = 'org.openjdk.btrace'
-project.version = '2.0.2'
+project.version = '2.0.3'
 
 sourceCompatibility = '1.7'
 targetCompatibility = '1.7'
@@ -20,6 +20,9 @@ if (!project.hasProperty("JAVA_9_HOME")) {
 }
 if (!project.hasProperty("JAVA_11_HOME")) {
     project.ext.setProperty("JAVA_11_HOME", System.getenv("JAVA_11_HOME"));
+}
+if (!project.hasProperty("JAVA_15_HOME")) {
+    project.ext.setProperty("JAVA_15_HOME", System.getenv("JAVA_15_HOME"));
 }
 
 buildscript {

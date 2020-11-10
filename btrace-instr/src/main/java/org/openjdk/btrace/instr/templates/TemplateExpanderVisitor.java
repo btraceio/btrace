@@ -173,6 +173,7 @@ public class TemplateExpanderVisitor extends BTraceMethodVisitor {
     if (expandTemplate(null) == TemplateExpander.Result.IGNORED) {
       switch (i) {
         case Opcodes.RETURN:
+        case Opcodes.IRETURN:
         case Opcodes.LRETURN:
         case Opcodes.DRETURN:
         case Opcodes.FRETURN:

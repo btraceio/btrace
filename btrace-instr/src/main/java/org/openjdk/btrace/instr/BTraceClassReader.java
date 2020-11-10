@@ -206,21 +206,4 @@ final class BTraceClassReader extends ClassReader {
     return -1;
   }
 
-  /**
-   * Dummy, non-stack-collecting runtime exception. It is used for execution control in ClassReader
-   * instances in order to avoid processing the complete class file when the relevant info is
-   * available right at the beginning of parsing.
-   */
-  private static final class BailoutException extends RuntimeException {
-    /** Shared instance to optimize the cost of throwing */
-    private static final BailoutException INSTANCE = new BailoutException();
-
-    private BailoutException() {}
-
-    @Override
-    public synchronized Throwable fillInStackTrace() {
-      // we don't need the stack here
-      return this;
-    }
-  }
 }

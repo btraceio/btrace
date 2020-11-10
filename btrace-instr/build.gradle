@@ -6,6 +6,25 @@ buildscript {
     }
 }
 
+sourceSets {
+    java15 {
+        java {
+            srcDirs = ['src/main/java15']
+        }
+    }
+}
+
+compileJava15Java {
+    onlyIf {
+        JavaVersion.current() >= JavaVersion.VERSION_15
+    }
+    sourceCompatibility = 15
+    targetCompatibility = 15
+    options.fork = true
+    options.forkOptions.executable = "${project.property("JAVA_15_HOME")}/bin/javac"
+    options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
+}
+
 compileTestJava {
     sourceCompatibility = 7
     targetCompatibility = 7
@@ -43,7 +62,17 @@ test {
     //inputs.files buildDTrace.outputs
     testLogging.showStandardStreams = true
 
-
-
     jvmArgs '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+}
+
+dependencies {
+    java15Implementation files(sourceSets.main.output.classesDirs) {
+        builtBy compileJava
+    }
+}
+
+jar {
+    into('') {
+        from sourceSets.java15.output
+    }
 }

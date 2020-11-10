@@ -53,7 +53,7 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>> {
   }
 
   public ArgsMap() {
-    this((Map<String, String>) null, new DebugSupport(SharedSettings.GLOBAL));
+    this((Map<String, String>) null, DebugSupport.SHARED);
   }
 
   public ArgsMap(int initialCapacity, DebugSupport debug) {

@@ -2,10 +2,10 @@ plugins {
     id 'maven'
     id 'maven-publish'
     id "com.jfrog.bintray" version "1.8.5"
-    id "com.github.johnrengelman.shadow" version "5.2.0"
+    id "com.github.johnrengelman.shadow" version "6.0.0"
     id "nebula.ospackage" version "8.3.0"
     id "java"
-    id "io.sdkman.vendors" version "1.2.1"
+    id "io.sdkman.vendors" version "2.0.0"
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -69,6 +69,7 @@ task agentJar(type: ShadowJar) {
 
     exclude 'org/openjdk/btrace/compiler/**'
     exclude 'org/openjdk/btrace/core/**'
+    exclude 'org/openjdk/btrace/client/**'
     exclude 'org/openjdk/btrace/runtime/**'
     exclude 'org/openjdk/btrace/services/**'
     exclude 'org/openjdk/btrace/statsd/*'

@@ -54,6 +54,7 @@ public abstract class RuntimeTest {
   protected static String java = null;
   private static String btraceExtPath = null;
   private static File projectRoot = null;
+  private static boolean forceDebug = false;
   /** Display the otput from the test application */
   protected boolean debugTestApp = false;
   /** Run BTrace in debug mode */
@@ -68,6 +69,12 @@ public abstract class RuntimeTest {
   protected boolean attachDebugger = false;
 
   public static void setup() {
+    String forceDebugVal = System.getProperty("btrace.test.debug");
+    if (forceDebugVal == null) {
+      forceDebugVal = System.getenv("BTRACE_TEST_DEBUG");
+    }
+    forceDebug = Boolean.parseBoolean(forceDebugVal);
+    System.err.println("===> force debug = " + forceDebug);
     URL url =
         BTraceFunctionalTests.class
             .getClassLoader()
@@ -99,6 +106,12 @@ public abstract class RuntimeTest {
 
     String javaHome = System.getenv("TEST_JAVA_HOME");
     if (javaHome == null) {
+      String targetVersion = System.getenv("TEST_JAVA_VERSION");
+      if (targetVersion != null) {
+        javaHome = System.getenv("JAVA_" + targetVersion + "_HOME");
+      }
+    }
+    if (javaHome == null) {
       javaHome = System.getProperty("java.home").replace("/jre", "");
     }
     java = javaHome;
@@ -127,6 +140,11 @@ public abstract class RuntimeTest {
   public void test(
       String testApp, final String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
+    if (forceDebug) {
+      // force debug flags
+      debugBTrace = true;
+      debugTestApp = true;
+    }
     List<String> args = new ArrayList<>(Arrays.asList(java + "/bin/java", "-cp", cp));
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
@@ -315,6 +333,10 @@ public abstract class RuntimeTest {
                     System.out.println("[btrace err] " + line);
                     if (line.contains("Server VM warning")) {
                       // skip JVM generated warnings
+                      continue;
+                    }
+                    if (line.startsWith("[traced app]") || line.startsWith("[btrace out]")) {
+                      // skip test debug lines
                       continue;
                     }
                     stderr.append(line).append('\n');

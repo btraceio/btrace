@@ -862,19 +862,23 @@ public final class Main {
 
           @Override
           public void run() {
-            boolean entered = BTraceRuntime.enter();
             try {
-              client.debugPrint("new Client created " + client);
-              client.retransformLoaded();
-            } catch (UnmodifiableClassException uce) {
-              if (isDebug()) {
-                debugPrint(uce);
+              boolean entered = BTraceRuntime.enter();
+              try {
+                client.debugPrint("new Client created " + client);
+                client.retransformLoaded();
+              } catch (UnmodifiableClassException uce) {
+                if (isDebug()) {
+                  debugPrint(uce);
+                }
+                client.getRuntime().send(new ErrorCommand(uce));
+              } finally {
+                if (entered) {
+                  BTraceRuntime.leave();
+                }
               }
-              client.getRuntime().send(new ErrorCommand(uce));
-            } finally {
-              if (entered) {
-                BTraceRuntime.leave();
-              }
+            } catch (Throwable t) {
+              t.printStackTrace();
             }
           }
         });

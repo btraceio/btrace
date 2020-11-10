@@ -459,12 +459,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     String maxQLen = System.getProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, null);
     if (maxQLen == null) {
       CMD_QUEUE_LIMIT = CMD_QUEUE_LIMIT_DEFAULT;
-      BTraceRuntimeAccess.debugPrint0(
-          "\""
-              + BTraceRuntime.CMD_QUEUE_LIMIT_KEY
-              + "\" not provided. "
-              + "Using the default cmd queue limit of "
-              + CMD_QUEUE_LIMIT_DEFAULT);
     } else {
       try {
         CMD_QUEUE_LIMIT = Integer.parseInt(maxQLen);
