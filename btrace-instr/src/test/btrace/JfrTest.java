@@ -32,12 +32,12 @@ import static org.openjdk.btrace.core.BTraceUtils.Jfr.*;
 
 @BTrace
 public class JfrTest {
-    @Event(name="custom", label="Custom Event", fields="string thiz")
+    @Event(name="custom", label="Custom Event", fields=@Event.Field(type = Event.FieldType.STRING, name = "thiz"))
     private static JfrEvent.Factory custom;
 
     private static int counter = 0;
 
-    @PeriodicEvent(name="periodic", label="Periodic", description="Periodic Event", period="1 s", fields = "int count")
+    @PeriodicEvent(name="periodic", label="Periodic", description="Periodic Event", period="1 s", fields = @Event.Field(type = Event.FieldType.INT, name = "count"))
     public static void periodic(JfrEvent event) {
         if (shouldCommit(event)) {
             setEventField(event, "count", counter++);

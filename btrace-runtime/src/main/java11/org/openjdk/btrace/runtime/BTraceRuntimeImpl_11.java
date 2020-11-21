@@ -228,7 +228,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
-    JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template);
+    JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template, debug);
     eventFactories.add(factory);
     return factory;
   }

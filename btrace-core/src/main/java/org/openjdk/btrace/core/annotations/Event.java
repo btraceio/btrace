@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
  *
  * <pre>
  *     <code>
- * \@Event(name="myCustomEvent", fields="int f1, java.lang.String f2, boolean f3")
+ * \@Event(name="myCustomEvent", fields={|@Event.Field(type = FieldType.INT, name = "f1"), |@Event.Field(type = FieldType.STRING, name = "f2"), |@Event.Field(type = FieldType.BOOLEAN, name = "f3")})
  * private static JfrEvent myCustomEvent = null;
  *
  * ...
@@ -31,10 +31,114 @@ import java.lang.annotation.Target;
  * }
  *     </code>
  * </pre>
+ * @since 2.1.0
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Event {
+    /**
+     * Event field type
+     */
+    enum FieldType {
+        BYTE("byte"), CHAR("char"), SHORT("short"), INT("int"),
+        LONG("long"), FLOAT("float"), DOUBLE("double"), BOOLEAN("boolean"),
+        STRING("java.lang.String"), CLASS("java.lang.Class"), THREAD("java.lang.Thread");
+
+        private String type;
+        FieldType(String type) {
+            this.type = type;
+        }
+
+        public String getType() {
+            return type;
+        }
+    }
+
+    /**
+     * Field kind
+     */
+    enum FieldKind {
+        /**
+         * @see jdk.jfr.Timestamp
+         */
+        TIMESTAMP,
+        /**
+         * @see jdk.jfr.Timespan
+         */
+        TIMESPAN,
+        /**
+         * @see jdk.jfr.DataAmount
+         */
+        DATAAMOUNT,
+        /**
+         * @see jdk.jfr.Frequency
+         */
+        FREQUENCY,
+        /**
+         * @see jdk.jfr.MemoryAddress
+         */
+        MEMORYADDRESS,
+        /**
+         * @see jdk.jfr.Percentage
+         */
+        PERCENTAGE,
+        /**
+         * @see jdk.jfr.BooleanFlag
+         */
+        BOOLEANFLAG,
+        /**
+         * @see jdk.jfr.Unsigned
+         */
+        UNSIGNED,
+        /**
+         * No additional field kind specification
+         */
+        NONE;
+    }
+
+    /**
+     * Event field definition
+     */
+    @interface Field {
+        /**
+         * Additional field kind
+         */
+        @interface Kind {
+            FieldKind name();
+            String value() default "";
+        }
+
+        /**
+         *
+         * @return field type
+         */
+        FieldType type();
+
+        /**
+         *
+         * @return field name
+         */
+        String name();
+
+        /**
+         *
+         * @return field label
+         */
+        String label() default "";
+
+        /**
+         *
+         * @return field description
+         */
+        String description() default "";
+
+        /**
+         *
+         * @return additional field kind
+         */
+        Kind kind() default @Kind(name = FieldKind.NONE);
+    }
+
     /**
      * Event name
      * @return event name
@@ -70,21 +174,8 @@ public @interface Event {
     boolean stacktrace() default true;
 
     /**
-     * Comma separated list of event field definitions<br>
-     * Event field definition is in form of '[type] [name]', eg. {@literal int x}<br>
-     * The following are allowed types:
-     * <ul>
-     *     <li>byte</li>
-     *     <li>char</li>
-     *     <li>short</li>
-     *     <li>int</li>
-     *     <li>long</li>
-     *     <li>float</li>
-     *     <li>double</li>
-     *     <li>boolean</li>
-     *     <li>string</li>
-     * </ul>
-     * @return comma separated list of event field definitions
+     * Event fields
+     * @return event field definitions
      */
-    String fields();
+    Field[] fields();
 }

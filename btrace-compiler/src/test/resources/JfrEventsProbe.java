@@ -7,7 +7,14 @@ import static org.openjdk.btrace.core.BTraceUtils.*;
 import static org.openjdk.btrace.core.BTraceUtils.Jfr.*;
 
 @BTrace public class JfrEventsProbe {
-    @Event(name = "CustomEvent", label = "Custom Event", fields = "int a, String b")
+    @Event(
+        name = "CustomEvent",
+        label = "Custom Event",
+        fields = {
+            @Event.Field(type = Event.FieldType.INT, name = "a"),
+            @Event.Field(type = Event.FieldType.STRING, name = "b")
+        }
+    )
     private static JfrEvent.Factory customEventFactory;
 
     @OnMethod(clazz = "/.*/", method = "/.*/")
@@ -18,7 +25,7 @@ import static org.openjdk.btrace.core.BTraceUtils.Jfr.*;
         commit(event);
     }
 
-    @PeriodicEvent(name = "PeriodicEvent", fields = "int cnt", period = "1 s")
+    @PeriodicEvent(name = "PeriodicEvent", fields = @Event.Field(type = Event.FieldType.INT, name = "cnt", kind = @Event.Field.Kind(name = Event.FieldKind.TIMESTAMP)), period = "1 s")
     public static void onPeriod(JfrEvent event) {
         if (shouldCommit(event)) {
             setEventField(event, "cnt", 1);

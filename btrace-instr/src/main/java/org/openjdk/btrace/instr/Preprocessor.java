@@ -57,6 +57,7 @@ import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.annotations.Event;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
 
@@ -85,9 +86,6 @@ final class Preprocessor {
   private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
   private static final Type INJECTED_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Injected;");
   private static final Type EVENT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Event;");
-  private static final Type JFRPERIODIC_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "JfrPeriodicEventHandler;");
-  private static final Type BTRACE_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "BTrace;");
-  private static final Type JFRBLOCK_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "JfrBlock;");
   private static final String SERVICE_INTERNAL = "org/openjdk/btrace/services/api/Service";
   private static final String TIMERHANDLER_INTERNAL =
       "org/openjdk/btrace/core/handlers/TimerHandler";
@@ -140,6 +138,14 @@ final class Preprocessor {
   private static final String RT_SERVICE_CTR_DESC = "(" + RT_CTX_DESC + ")V";
   private static final String SERVICE_CTR_DESC =
       "(" + Constants.STRING_DESC + ")" + Constants.VOID_DESC;
+
+  private static final String JFR_EVENT_TEMPLATE_INTERNAL = "org/openjdk/btrace/core/jfr/JfrEvent$Template";
+  private static final String JFR_EVENT_TEMPLATE_DESC = "L" + JFR_EVENT_TEMPLATE_INTERNAL + ";";
+  private static final String JFR_EVENT_TEMPLATE_FIELD_INTERNAL = "org/openjdk/btrace/core/jfr/JfrEvent$Template$Field";
+  private static final String JFR_EVENT_TEMPLATE_FIELD_DESC = "L" + JFR_EVENT_TEMPLATE_FIELD_INTERNAL + ";";
+  private static final String JFR_EVENT_FACTORY_INTERNAL = "org/openjdk/btrace/core/jfr/JfrEvent$Factory";
+  private static final String JFR_EVENT_FACTORY_DESC = "L" + JFR_EVENT_FACTORY_INTERNAL + ";";
+
   private static final Map<String, String> BOX_TYPE_MAP = new HashMap<>();
   private static final Set<String> GUARDED_ANNOTS = new HashSet<>();
   private static final Set<String> RT_AWARE_ANNOTS = new HashSet<>();
@@ -241,7 +247,7 @@ final class Preprocessor {
       String label = null;
       String desc = null;
       String[] category = null;
-      String fields = null;
+      InsnList fieldsInit = new InsnList();
       String handler = null;
       String period = null;
       boolean stacktrace = false;
@@ -269,7 +275,7 @@ final class Preprocessor {
             break;
           }
           case "fields": {
-            fields = (String)value;
+            fieldsInit = loadFieldsDefs((List<AnnotationNode>)value);
             break;
           }
           case "stacktrace": {
@@ -287,22 +293,108 @@ final class Preprocessor {
         handler = fieldName.substring(JFR_HANDLER_FIELD_PREFIX.length());
         jfrHandlerNames.add(handler);
       }
-      eventsInit.add(new TypeInsnNode(Opcodes.NEW, "org/openjdk/btrace/core/jfr/JfrEvent$Template"));
+      eventsInit.add(new TypeInsnNode(Opcodes.NEW, JFR_EVENT_TEMPLATE_INTERNAL));
       eventsInit.add(new InsnNode(Opcodes.DUP));
       eventsInit.add(new LdcInsnNode(cn.name.replace('/', '.')));
       eventsInit.add(new LdcInsnNode(name));
       eventsInit.add(label != null ? new LdcInsnNode(label) : new InsnNode(Opcodes.ACONST_NULL));
       eventsInit.add(desc != null ? new LdcInsnNode(desc) : new InsnNode(Opcodes.ACONST_NULL));
       eventsInit.add(category != null ? new LdcInsnNode(label) : new InsnNode(Opcodes.ACONST_NULL));
-      eventsInit.add(new LdcInsnNode(fields));
+      eventsInit.add(fieldsInit);
       eventsInit.add(new LdcInsnNode(stacktrace));
       eventsInit.add(period != null ? new LdcInsnNode(period) : new InsnNode(Opcodes.ACONST_NULL));
       eventsInit.add(handler != null ? new LdcInsnNode(handler) : new InsnNode(Opcodes.ACONST_NULL));
-      eventsInit.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "org/openjdk/btrace/core/jfr/JfrEvent$Template", "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;)V", false));
-      eventsInit.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "org/openjdk/btrace/core/BTraceRuntime", "createEventFactory", "(Lorg/openjdk/btrace/core/jfr/JfrEvent$Template;)Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;", false));
+      eventsInit.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, JFR_EVENT_TEMPLATE_INTERNAL, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;[" + JFR_EVENT_TEMPLATE_FIELD_DESC + "ZLjava/lang/String;Ljava/lang/String;)V", false));
+      eventsInit.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "org/openjdk/btrace/core/BTraceRuntime", "createEventFactory", "(" + JFR_EVENT_TEMPLATE_DESC + ")" + JFR_EVENT_FACTORY_DESC, false));
       eventsInit.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, eventEntry.getKey(), "Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;"));
     }
     clinit.instructions.insertBefore(clinitEntryPoint, eventsInit);
+  }
+
+  private InsnList loadFieldsDefs(List<AnnotationNode> fieldsDef) {
+    InsnList insn = new InsnList();
+    insn.add(new LdcInsnNode(fieldsDef.size()));
+    insn.add(new TypeInsnNode(Opcodes.ANEWARRAY, JFR_EVENT_TEMPLATE_FIELD_INTERNAL));
+    int cntr = 0;
+    for (AnnotationNode fieldDef : fieldsDef) {
+      insn.add(new InsnNode(Opcodes.DUP));
+      insn.add(new LdcInsnNode(cntr++));
+      insn.add(loadFieldDef(fieldDef));
+      insn.add(new InsnNode(Opcodes.AASTORE));
+    }
+    return insn;
+  }
+
+  private InsnList loadFieldDef(AnnotationNode fieldDef) {
+    InsnList insn = new InsnList();
+    Iterator<Object> iter = fieldDef.values.iterator();
+    String name = null;
+    String type = null;
+    String label = null;
+    String description = null;
+    String[] kind = null;
+    while (iter.hasNext()) {
+      String key = (String)iter.next();
+      switch (key) {
+        case "name": {
+          name = (String) iter.next();
+          break;
+        }
+        case "type": {
+          type = ((String[]) iter.next())[1];
+          break;
+        }
+        case "label": {
+          label = (String)iter.next();
+          break;
+        }
+        case "description": {
+          description = (String)iter.next();
+          break;
+        }
+        case "kind": {
+          kind = getKind((AnnotationNode)iter.next());
+          break;
+        }
+      }
+    }
+    insn.add(new TypeInsnNode(Opcodes.NEW, JFR_EVENT_TEMPLATE_FIELD_INTERNAL));
+    insn.add(new InsnNode(Opcodes.DUP));
+    insn.add(new LdcInsnNode(name));
+    insn.add(new LdcInsnNode(type));
+    insn.add((label == null || label.isEmpty()) ? new InsnNode(Opcodes.ACONST_NULL) : new LdcInsnNode(label));
+    insn.add((description == null || description.isEmpty()) ? new InsnNode(Opcodes.ACONST_NULL) : new LdcInsnNode(description));
+    if (kind != null) {
+      if (!kind[0].equals(Event.FieldKind.NONE.name())) {
+        insn.add(new LdcInsnNode(kind[0]));
+        insn.add((kind[1] == null || kind[1].isEmpty()) ? new InsnNode(Opcodes.ACONST_NULL) : new LdcInsnNode(kind[1]));
+      }
+    } else {
+      insn.add(new InsnNode(Opcodes.ACONST_NULL));
+      insn.add(new InsnNode(Opcodes.ACONST_NULL));
+    }
+    insn.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, JFR_EVENT_TEMPLATE_FIELD_INTERNAL, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V", false));
+    return insn;
+  }
+
+  private String[] getKind(AnnotationNode kindNode) {
+    Iterator<Object> iter = kindNode.values.iterator();
+    String name = null;
+    String value = null;
+    while (iter.hasNext()) {
+      String key = (String) iter.next();
+      switch (key) {
+        case "name": {
+          name = ((String[])iter.next())[1];
+          break;
+        }
+        case "value": {
+          value = (String)iter.next();
+          break;
+        }
+      }
+    }
+    return new String[]{name, value};
   }
 
   private void addLevelField(ClassNode cn) {

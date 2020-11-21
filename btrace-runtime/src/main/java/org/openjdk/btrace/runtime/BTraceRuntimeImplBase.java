@@ -228,7 +228,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
   // Per-client state starts here.
 
-  private final DebugSupport debug;
+  protected final DebugSupport debug;
 
   // current thread's exception
   private final ThreadLocal<Throwable> currentException = new ThreadLocal<>();

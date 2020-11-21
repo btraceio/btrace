@@ -57,23 +57,10 @@ public @interface PeriodicEvent {
     String[] category() default "";
 
     /**
-     * Comma separated list of event field definitions<br>
-     * Event field definition is in form of '[type] [name]', eg. {@literal int x}<br>
-     * The following are allowed types:
-     * <ul>
-     *     <li>byte</li>
-     *     <li>char</li>
-     *     <li>short</li>
-     *     <li>int</li>
-     *     <li>long</li>
-     *     <li>float</li>
-     *     <li>double</li>
-     *     <li>boolean</li>
-     *     <li>string</li>
-     * </ul>
-     * @return comma separated list of event field definitions
+     * Event fields
+     * @return event field definitions
      */
-    String fields();
+    Event.Field[] fields();
 
     /**
      * Event period

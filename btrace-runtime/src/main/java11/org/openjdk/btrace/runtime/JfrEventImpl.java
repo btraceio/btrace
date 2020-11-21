@@ -1,6 +1,7 @@
 package org.openjdk.btrace.runtime;
 
 import jdk.jfr.Event;
+import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 
 import java.util.Map;
@@ -8,63 +9,83 @@ import java.util.Map;
 class JfrEventImpl extends JfrEvent {
     private final Event event;
     private final Map<String, Integer> fieldIndex;
+    private final DebugSupport debug;
 
-    JfrEventImpl(Event event, Map<String, Integer> fieldIndex) {
+    JfrEventImpl(Event event, Map<String, Integer> fieldIndex, DebugSupport debug) {
         this.event = event;
         this.fieldIndex = fieldIndex;
+        this.debug = debug;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, byte value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, boolean value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, char value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, short value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, int value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, float value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, long value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, double value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
     @Override
     public JfrEvent withValue(String fieldName, String value) {
-        event.set(fieldIndex.get(fieldName), value);
+        if (checkField(fieldName)) {
+            event.set(fieldIndex.get(fieldName), value);
+        }
         return this;
     }
 
@@ -86,5 +107,13 @@ class JfrEventImpl extends JfrEvent {
     @Override
     public void end() {
         event.end();
+    }
+
+    private boolean checkField(String fieldName) {
+        if (!fieldIndex.containsKey(fieldName)) {
+            DebugSupport.warning("Invalid event field: " + fieldName);
+            return false;
+        }
+        return true;
     }
 }

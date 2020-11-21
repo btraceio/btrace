@@ -388,7 +388,9 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
   @Override
   public Boolean visitNewArray(NewArrayTree node, Void v) {
-    reportError("no.array.creation", node);
+    if (!isInAnnotation) {
+      reportError("no.array.creation", node);
+    }
     return super.visitNewArray(node, v);
   }
 

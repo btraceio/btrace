@@ -44,8 +44,6 @@ import org.openjdk.btrace.services.api.Service;
  * @author A. Sundararajan
  */
 final class MethodVerifier extends StackTrackingMethodVisitor {
-  private static final ClassInfo JFR_EVENT_TYPE = ClassCache.getInstance().get(ClassLoader.getSystemClassLoader(), "jdk.jfr.Event");
-
   private static final Set<String> PRIMITIVE_WRAPPER_TYPES;
   private static final Set<String> UNBOX_METHODS;
 
@@ -197,8 +195,6 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
           } else {
             List<StackItem> args = getMethodParams(desc, false);
             if (!isServiceTarget(args.get(0))) {
-//              System.err.println("*** err: " + owner + "." + name + desc);
-//              Thread.dumpStack();
               Verifier.reportError("no.method.calls", owner + "." + name + desc);
             }
           }

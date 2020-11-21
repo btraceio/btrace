@@ -2,17 +2,58 @@ package org.openjdk.btrace.core.jfr;
 
 public abstract class JfrEvent {
     public static final class Template {
+        public static final class Field {
+            private final String name;
+            private final String type;
+            private final String label;
+            private final String description;
+            private final String specificationName;
+            private final String specificationValue;
+
+            public Field(String name, String type, String label, String description, String specificationName, String specificationValue) {
+                this.name = name;
+                this.type = type;
+                this.label = label;
+                this.description = description;
+                this.specificationName = specificationName;
+                this.specificationValue = specificationValue;
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public String getType() {
+                return type;
+            }
+
+            public String getLabel() {
+                return label;
+            }
+
+            public String getDescription() {
+                return description;
+            }
+
+            public String getSpecificationName() {
+                return specificationName;
+            }
+
+            public String getSpecificationValue() {
+                return specificationValue;
+            }
+        }
         private final String owner;
         private final String name;
         private final String label;
         private final String description;
         private final String[] category;
-        private final String fields;
+        private final Field[] fields;
         private final boolean stacktrace;
         private final String period;
         private final String periodicHandler;
 
-        public Template(String owner, String name, String label, String description, String[] category, String fields, boolean stacktrace, String period, String periodicHandler) {
+        public Template(String owner, String name, String label, String description, String[] category, Field[] fields, boolean stacktrace, String period, String periodicHandler) {
             this.owner = owner;
             this.name = name;
             this.label = label;
@@ -44,7 +85,7 @@ public abstract class JfrEvent {
             return category;
         }
 
-        public String getFields() {
+        public Field[] getFields() {
             return fields;
         }
 
@@ -60,6 +101,7 @@ public abstract class JfrEvent {
             return periodicHandler;
         }
     }
+
     public interface  Factory {
         JfrEvent newEvent();
     }
