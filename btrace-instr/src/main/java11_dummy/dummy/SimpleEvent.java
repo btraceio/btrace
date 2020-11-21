@@ -13,17 +13,16 @@ import jdk.jfr.Registered;
 @Category("BTrace")
 @Name("btrace.SimpleEvent")
 public class SimpleEvent extends Event {
-    @Label("value")
-    private long value;
+  @Label("value")
+  private long value;
 
-    public SimpleEvent() {
-    }
+  public SimpleEvent() {}
 
-    public long getValue() {
-        return value;
-    }
+  public long getValue() {
+    return value;
+  }
 
-    public void setValue(long value) {
-        this.value = value;
-    }
+  public void setValue(long value) {
+    this.value = value;
+  }
 }

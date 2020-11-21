@@ -66,7 +66,7 @@ public class Postprocessor extends ClassVisitor {
         == 0) {
       shortSyntax =
           true; // specifying "class <MyClass>" rather than "public class <MyClass>" means using
-                // short syntax
+      // short syntax
       access |= Opcodes.ACC_PUBLIC; // force the public modifier on the btrace class
     }
     className = name;

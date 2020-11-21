@@ -54,7 +54,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.openjdk.btrace.core.aggregation.Aggregation;
 import org.openjdk.btrace.core.aggregation.AggregationFunction;
 import org.openjdk.btrace.core.aggregation.AggregationKey;

@@ -29,7 +29,6 @@ import java.lang.instrument.Instrumentation;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
-
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
@@ -171,12 +170,12 @@ public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template eventTemplate) {
-      return new JfrEvent.Factory() {
-          @Override
-          public JfrEvent newEvent() {
-              return JfrEvent.EMPTY;
-          }
-      };
+    return new JfrEvent.Factory() {
+      @Override
+      public JfrEvent newEvent() {
+        return JfrEvent.EMPTY;
+      }
+    };
   }
 
   @Override

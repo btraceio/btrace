@@ -488,7 +488,8 @@ public final class Assembler {
     return this;
   }
 
-  public Assembler invokeDynamic(String name, String descriptor, Handle bootstrap, Object ... bootstrapArguments) {
+  public Assembler invokeDynamic(
+      String name, String descriptor, Handle bootstrap, Object... bootstrapArguments) {
     mv.visitInvokeDynamicInsn(name, descriptor, bootstrap, bootstrapArguments);
     return this;
   }

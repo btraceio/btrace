@@ -11,16 +11,16 @@ import jdk.jfr.Period;
 @Category("BTrace")
 @Enabled
 public class SimplePeriodicEvent extends Event {
-    @Label("value")
-    private int value;
+  @Label("value")
+  private int value;
 
-    public SimplePeriodicEvent() {}
+  public SimplePeriodicEvent() {}
 
-    public void setValue(int value) {
-        this.value = value;
-    }
+  public void setValue(int value) {
+    this.value = value;
+  }
 
-    public int getValue() {
-        return value;
-    }
+  public int getValue() {
+    return value;
+  }
 }

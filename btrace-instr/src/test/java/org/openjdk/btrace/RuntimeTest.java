@@ -46,8 +46,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.LockSupport;
-
 import org.junit.Assert;
 
 /** @author Jaroslav Bachorik */
@@ -71,9 +69,7 @@ public abstract class RuntimeTest {
   protected long timeout = 10000L;
   /** Track retransforming progress */
   protected boolean trackRetransforms = false;
-  /**
-   * Provide extra JVM args
-   */
+  /** Provide extra JVM args */
   protected List<String> extraJvmArgs = Collections.emptyList();
 
   protected boolean attachDebugger = false;
@@ -98,12 +94,19 @@ public abstract class RuntimeTest {
       }
       if (f != null) {
         projectRoot = f.getAbsoluteFile().toPath().resolve("../..");
-        Path clientJarPath = projectRoot.resolve("btrace-dist/build/resources/main").resolve(System.getProperty("project.version")).resolve("libs/btrace-client.jar");
+        Path clientJarPath =
+            projectRoot
+                .resolve("btrace-dist/build/resources/main")
+                .resolve(System.getProperty("project.version"))
+                .resolve("libs/btrace-client.jar");
         Path eventsJarPath = projectRoot.resolve("btrace-instr/build/libs/events.jar");
         clientClassPath = clientJarPath.toString();
         eventsClassPath = eventsJarPath.toString();
         // client jar needs to take precedence in order for the agent.jar inferring code to work
-        cp = clientJarPath.toString() + File.pathSeparator + projectRoot.resolve("btrace-instr/build/classes/java/test");
+        cp =
+            clientJarPath.toString()
+                + File.pathSeparator
+                + projectRoot.resolve("btrace-instr/build/classes/java/test");
       }
       Assert.assertNotNull(projectRoot);
       Assert.assertNotNull(clientClassPath);
@@ -139,15 +142,16 @@ public abstract class RuntimeTest {
     timeout = 10000L;
   }
 
-  public void testWithJfr(String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
+  public void testWithJfr(
+      String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
     startJfr = true;
     test(testApp, testScript, checkLines, v);
   }
 
   @SuppressWarnings("DefaultCharset")
   public void testWithJfr(
-          String testApp, final String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
-          throws Exception {
+      String testApp, final String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      throws Exception {
     startJfr = true;
     test(testApp, testScript, cmdArgs, checkLines, v);
   }
@@ -176,7 +180,9 @@ public abstract class RuntimeTest {
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
     args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
-    args.addAll(Arrays.asList("-XX:+AllowRedefinitionToAddDeleteMethods", "-XX:+IgnoreUnrecognizedVMOptions"));
+    args.addAll(
+        Arrays.asList(
+            "-XX:+AllowRedefinitionToAddDeleteMethods", "-XX:+IgnoreUnrecognizedVMOptions"));
     if (startJfr) {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
       args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
@@ -330,9 +336,11 @@ public abstract class RuntimeTest {
                 "-Dcom.sun.btrace.unsafe=" + isUnsafe,
                 "-Dcom.sun.btrace.debug=" + debugBTrace,
                 "-Dcom.sun.btrace.trackRetransforms=" + trackRetransforms,
-                "-cp", cp,
+                "-cp",
+                cp,
                 "org.openjdk.btrace.client.Main",
-                "-cp", eventsClassPath,
+                "-cp",
+                eventsClassPath,
                 "-d",
                 "/tmp/btrace-test",
                 "-pd",

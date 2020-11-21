@@ -501,7 +501,13 @@ abstract class Client implements CommandListener {
               } catch (VerifyError e) {
                 debugPrint(e);
                 try {
-                  onCommand(new MessageCommand("[BTRACE WARN] Class verification failed: " + c.getName() + " (" + e.getMessage() + ")"));
+                  onCommand(
+                      new MessageCommand(
+                          "[BTRACE WARN] Class verification failed: "
+                              + c.getName()
+                              + " ("
+                              + e.getMessage()
+                              + ")"));
                 } catch (IOException ioException) {
                   if (isDebug()) {
                     debug.debug(ioException);
@@ -524,7 +530,13 @@ abstract class Client implements CommandListener {
                 } catch (VerifyError e1) {
                   debugPrint(e1);
                   try {
-                    onCommand(new MessageCommand("[BTRACE WARN] Class verification failed: " + c.getName() + " (" + e.getMessage() + ")"));
+                    onCommand(
+                        new MessageCommand(
+                            "[BTRACE WARN] Class verification failed: "
+                                + c.getName()
+                                + " ("
+                                + e.getMessage()
+                                + ")"));
                   } catch (IOException ioException) {
                     if (isDebug()) {
                       debug.debug(ioException);

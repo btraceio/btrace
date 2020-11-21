@@ -52,17 +52,10 @@ import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
-import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.TreeScanner;
 import com.sun.tools.javac.tree.JCTree;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -107,22 +100,23 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
   private final Set<String> eventFieldNames = new HashSet<>();
 
-  private final TreeScanner<Void, Void> jfrFieldNameCollector = new TreeScanner<Void, Void>() {
-    @Override
-    public Void visitAnnotation(AnnotationTree node, Void o) {
-      String annType = node.getAnnotationType().toString();
-      if (annType.endsWith("Event")) {
-        for (ExpressionTree et : node.getArguments()) {
-          AssignmentTree t = (AssignmentTree)et;
-          String name = t.getVariable().toString();
-          if (name.equals("fields")) {
-            processEventFields(t);
+  private final TreeScanner<Void, Void> jfrFieldNameCollector =
+      new TreeScanner<Void, Void>() {
+        @Override
+        public Void visitAnnotation(AnnotationTree node, Void o) {
+          String annType = node.getAnnotationType().toString();
+          if (annType.endsWith("Event")) {
+            for (ExpressionTree et : node.getArguments()) {
+              AssignmentTree t = (AssignmentTree) et;
+              String name = t.getVariable().toString();
+              if (name.equals("fields")) {
+                processEventFields(t);
+              }
+            }
           }
+          return super.visitAnnotation(node, o);
         }
-      }
-      return super.visitAnnotation(node, o);
-    }
-  };
+      };
 
   public VerifierVisitor(Verifier verifier, Element clzElement) {
     this.verifier = verifier;
@@ -151,7 +145,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   @Override
   public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
     Element e = getElement(node);
-    if (e != null && (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR)) {
+    if (e != null
+        && (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR)) {
       String name = e.getSimpleName().toString();
 
       // allow constructor calls
@@ -161,7 +156,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
       TypeElement parent = null;
       do {
-        parent = (TypeElement)e.getEnclosingElement();
+        parent = (TypeElement) e.getEnclosingElement();
       } while (parent != null
           && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
 
@@ -396,7 +391,6 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
         node.accept(jfrFieldNameCollector, null);
 
-
         return super.visitMethod(node, v);
       }
     } finally {
@@ -428,7 +422,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   @Override
   public Boolean visitNewClass(NewClassTree node, Void v) {
     Element e = getElement(node);
-    TypeElement te = (TypeElement)e.getEnclosingElement();
+    TypeElement te = (TypeElement) e.getEnclosingElement();
     reportError("no.new.object", node);
     return super.visitNewClass(node, v);
   }

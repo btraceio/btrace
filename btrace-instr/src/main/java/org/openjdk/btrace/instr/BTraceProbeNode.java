@@ -71,7 +71,6 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   private BTraceTransformer transformer;
   private VerifierException verifierException = null;
 
-
   private BTraceProbeNode(BTraceProbeFactory factory) {
     super(Opcodes.ASM7);
     this.factory = factory;
@@ -113,7 +112,10 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     BTraceMethodNode bmn = new BTraceMethodNode(mn, this, jfrHandlers.contains(name));
     methods.add(bmn);
     idmap.put(CallGraph.methodId(name, desc), bmn);
-    return isTrusted() ? bmn : new MethodVerifier(bmn, access, delegate.getOrigName(), name, desc, bcpResourceClassLoader);
+    return isTrusted()
+        ? bmn
+        : new MethodVerifier(
+            bmn, access, delegate.getOrigName(), name, desc, bcpResourceClassLoader);
   }
 
   @Override
@@ -127,15 +129,16 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
           delegate.addServiceField(name, Type.getType(desc).getInternalName());
         }
         if (type.equals("Lorg/openjdk/btrace/core/annotations/Event;")) {
-          av = new AnnotationVisitor(Opcodes.ASM8, av) {
-            @Override
-            public void visit(String name, Object value) {
-              if (name.equals("handler") && value instanceof String) {
-                jfrHandlers.add((String)value);
-              }
-              super.visit(name, value);
-            }
-          };
+          av =
+              new AnnotationVisitor(Opcodes.ASM8, av) {
+                @Override
+                public void visit(String name, Object value) {
+                  if (name.equals("handler") && value instanceof String) {
+                    jfrHandlers.add((String) value);
+                  }
+                  super.visit(name, value);
+                }
+              };
         }
         return av;
       }
@@ -348,7 +351,13 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         copyNodes.add(copy(c));
       }
     }
-    copyingVisitor.visit(Opcodes.V1_7, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, getClassName(true), null, "java/lang/Object", null);
+    copyingVisitor.visit(
+        Opcodes.V1_7,
+        Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL,
+        getClassName(true),
+        null,
+        "java/lang/Object",
+        null);
     for (MethodNode mn : copyNodes) {
       mn.accept(copyingVisitor);
     }

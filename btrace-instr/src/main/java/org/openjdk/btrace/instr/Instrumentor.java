@@ -30,14 +30,12 @@ import static org.objectweb.asm.Opcodes.*;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
-
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Handle;
@@ -74,7 +72,8 @@ public class Instrumentor extends ClassVisitor {
     this.cl = cl;
     this.bcn = bcn;
     BTraceRuntime.Impl rt = bcn.getRuntime();
-    // 'rt' is null only during instrumentation tests; we want to default to in-situ instrumentation there
+    // 'rt' is null only during instrumentation tests; we want to default to in-situ instrumentation
+    // there
     this.useHiddenClasses = rt != null && rt.version() >= 15;
     applicableOnMethods = applicables;
   }
@@ -1737,12 +1736,13 @@ public class Instrumentor extends ClassVisitor {
   @Override
   public void visitEnd() {
     if (!useHiddenClasses) {
-      bcn.copyHandlers(new CopyingVisitor(className, false, this) {
-        @Override
-        protected String getActionMethodName(String name) {
-          return Instrumentor.this.getActionMethodName(name);
-        }
-      });
+      bcn.copyHandlers(
+          new CopyingVisitor(className, false, this) {
+            @Override
+            protected String getActionMethodName(String name) {
+              return Instrumentor.this.getActionMethodName(name);
+            }
+          });
     }
     cv.visitEnd();
   }
@@ -1757,15 +1757,24 @@ public class Instrumentor extends ClassVisitor {
 
   private void invokeBTraceAction(Assembler asm, OnMethod om) {
     if (useHiddenClasses) {
-      MethodType mt = MethodType.methodType(CallSite.class,
-              MethodHandles.Lookup.class, String.class, MethodType.class, String.class);
+      MethodType mt =
+          MethodType.methodType(
+              CallSite.class,
+              MethodHandles.Lookup.class,
+              String.class,
+              MethodType.class,
+              String.class);
 
       asm.invokeDynamic(
-              getActionMethodName(om.getTargetName()),
-              om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
-              new Handle(H_INVOKESTATIC, "org/openjdk/btrace/instr/Indy", "bootstrap", mt.toMethodDescriptorString(), false),
-              bcn.getClassName(true)
-      );
+          getActionMethodName(om.getTargetName()),
+          om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
+          new Handle(
+              H_INVOKESTATIC,
+              "org/openjdk/btrace/instr/Indy",
+              "bootstrap",
+              mt.toMethodDescriptorString(),
+              false),
+          bcn.getClassName(true));
     } else {
       asm.invokeStatic(
           className,

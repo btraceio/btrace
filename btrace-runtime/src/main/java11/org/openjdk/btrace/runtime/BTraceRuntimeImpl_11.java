@@ -87,7 +87,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   private static Perf perf;
 
-  private final Set<JfrEventFactoryImpl> eventFactories = new java.util.concurrent.CopyOnWriteArraySet<>();
+  private final Set<JfrEventFactoryImpl> eventFactories =
+      new java.util.concurrent.CopyOnWriteArraySet<>();
 
   public BTraceRuntimeImpl_11() {}
 
@@ -109,19 +110,14 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
           Map.of(
               "jdk.internal.reflect", myModules,
               "jdk.internal.perf", myModules),
-          Map.of(
-                  "java.lang", myModules
-          ),
+          Map.of("java.lang", myModules),
           Collections.emptySet(),
           Collections.emptyMap());
       instr.redefineModule(
           EventType.class.getModule(),
           Collections.emptySet(),
-          Map.of(
-                  "jdk.jfr.internal", myModules),
-          Map.of(
-                  "jdk.jfr", myModules
-          ),
+          Map.of("jdk.jfr.internal", myModules),
+          Map.of("jdk.jfr", myModules),
           Collections.emptySet(),
           Collections.emptyMap());
     }

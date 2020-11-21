@@ -45,7 +45,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
 import jdk.jfr.Event;
 import org.openjdk.btrace.core.aggregation.Aggregation;
 import org.openjdk.btrace.core.aggregation.AggregationFunction;
@@ -6410,7 +6409,9 @@ public class BTraceUtils {
    */
   public static final class Jfr {
     /**
-     * Create a new event instance using the factory field annotated by {@linkplain org.openjdk.btrace.core.annotations.Event}
+     * Create a new event instance using the factory field annotated by {@linkplain
+     * org.openjdk.btrace.core.annotations.Event}
+     *
      * @param eventFactory the event factory
      * @return new event instance
      */
@@ -6420,6 +6421,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6430,6 +6432,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6440,6 +6443,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6450,6 +6454,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6460,6 +6465,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6470,6 +6476,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6480,6 +6487,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6490,6 +6498,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6500,6 +6509,7 @@ public class BTraceUtils {
 
     /**
      * Set an event field value
+     *
      * @param event event instance
      * @param fieldName field name
      * @param fieldValue field value
@@ -6510,6 +6520,7 @@ public class BTraceUtils {
 
     /**
      * Check whether the event should be committed.
+     *
      * @see Event#shouldCommit()
      * @param event event to check
      * @return {@literal true} if the event should be committed
@@ -6520,6 +6531,7 @@ public class BTraceUtils {
 
     /**
      * Commit the event
+     *
      * @see Event#commit()
      * @param event the event to commit
      */

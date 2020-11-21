@@ -25,23 +25,20 @@
 
 package org.openjdk.btrace;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
-import jdk.jfr.EventType;
-import jdk.jfr.Recording;
-import jdk.jfr.consumer.RecordedEvent;
-import jdk.jfr.consumer.RecordingFile;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import jdk.jfr.EventType;
+import jdk.jfr.consumer.RecordedEvent;
+import jdk.jfr.consumer.RecordingFile;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * A set of end-to-end functional tests.
@@ -149,7 +146,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
             assertFalse("Script should not have failed", stdout.contains("FAILED"));
             assertTrue("Non-empty stderr", stderr.isEmpty());
-            assertTrue(stdout.contains("onexit"  ));
+            assertTrue(stdout.contains("onexit"));
           }
         });
   }
@@ -299,51 +296,61 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testJfr() throws Exception {
-      if (System.getProperty("java.runtime.version", "").startsWith("11.0.9")) {
-          // skip the test for JDK 11 since the latest version 11.0.9 ends in SISGSEGV
-          System.err.println("Skipping test for JDK 11.0.9");
-          return;
-      }
-      testWithJfr(
-      "resources.Main",
-      "btrace/JfrTest.java",
-      5,
-      new ResultValidator() {
+    if (System.getProperty("java.runtime.version", "").startsWith("11.0.9")) {
+      // skip the test for JDK 11 since the latest version 11.0.9 ends in SISGSEGV
+      System.err.println("Skipping test for JDK 11.0.9");
+      return;
+    }
+    testWithJfr(
+        "resources.Main",
+        "btrace/JfrTest.java",
+        5,
+        new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
-              assertFalse("Script should not have failed", stdout.contains("FAILED"));
-              assertTrue("Non-empty stderr", stderr.isEmpty());
-              assertNotNull(jfrFile);
-              try {
-                  RecordingFile f = new RecordingFile(Paths.get(jfrFile));
-                  boolean hasPeriodicType = false, hasPeriodicValue = false, hasCustomType = false, hasCustomValue = false;
-                  for (EventType et : f.readEventTypes()) {
-                      if (et.getName().equals("periodic")) {
-                          hasPeriodicType = true;
-                      } else if (et.getName().equals("custom")) {
-                          hasCustomType = true;
-                      }
-                      if (hasPeriodicType && hasCustomType) {
-                          while (f.hasMoreEvents()) {
-                              RecordedEvent e = f.readEvent();
-                              if (e.getEventType().getName().equals("periodic")) {
-                                  hasPeriodicValue = true;
-                              } else if (e.getEventType().getName().equals("custom")) {
-                                  hasCustomValue = true;
-                              }
-                              if (hasPeriodicValue && hasCustomValue) {
-                                  return;
-                              }
-                          }
-                          break;
-                      }
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertNotNull(jfrFile);
+            try {
+              RecordingFile f = new RecordingFile(Paths.get(jfrFile));
+              boolean hasPeriodicType = false,
+                  hasPeriodicValue = false,
+                  hasCustomType = false,
+                  hasCustomValue = false;
+              for (EventType et : f.readEventTypes()) {
+                if (et.getName().equals("periodic")) {
+                  hasPeriodicType = true;
+                } else if (et.getName().equals("custom")) {
+                  hasCustomType = true;
+                }
+                if (hasPeriodicType && hasCustomType) {
+                  while (f.hasMoreEvents()) {
+                    RecordedEvent e = f.readEvent();
+                    if (e.getEventType().getName().equals("periodic")) {
+                      hasPeriodicValue = true;
+                    } else if (e.getEventType().getName().equals("custom")) {
+                      hasCustomValue = true;
+                    }
+                    if (hasPeriodicValue && hasCustomValue) {
+                      return;
+                    }
                   }
-                  fail("periodic type ok: " + hasPeriodicType + ", periodic value ok: " + hasPeriodicValue +
-                          ", custom type ok: " + hasCustomType + ", custom value ok: " + hasCustomValue);
-              } catch (IOException e) {
-                  throw new RuntimeException(e);
+                  break;
+                }
               }
+              fail(
+                  "periodic type ok: "
+                      + hasPeriodicType
+                      + ", periodic value ok: "
+                      + hasPeriodicValue
+                      + ", custom type ok: "
+                      + hasCustomType
+                      + ", custom value ok: "
+                      + hasCustomValue);
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
           }
-      });
+        });
   }
 }

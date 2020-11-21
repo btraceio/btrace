@@ -110,7 +110,9 @@ class CompilerHelper {
               File f = new File(pathElement);
               urlElements.add(f.toURI().toURL());
             }
-            URLClassLoader generatorCL = new URLClassLoader(urlElements.toArray(new URL[0]), Compiler.class.getClassLoader());
+            URLClassLoader generatorCL =
+                new URLClassLoader(
+                    urlElements.toArray(new URL[0]), Compiler.class.getClassLoader());
             ServiceLoader<PackGenerator> generators =
                 ServiceLoader.load(PackGenerator.class, generatorCL);
             Iterator<PackGenerator> iter = generators.iterator();

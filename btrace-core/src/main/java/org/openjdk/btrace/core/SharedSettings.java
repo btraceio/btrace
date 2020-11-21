@@ -84,7 +84,7 @@ public final class SharedSettings {
       probeDescPath = s;
     }
 
-    s = (String)params.get(Args.BOOT_CLASS_PATH);
+    s = (String) params.get(Args.BOOT_CLASS_PATH);
     if (s != null && !s.isEmpty()) {
       bootClassPath = s;
     }

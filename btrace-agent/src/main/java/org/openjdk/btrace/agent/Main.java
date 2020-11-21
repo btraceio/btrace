@@ -527,13 +527,13 @@ public final class Main {
             break;
           }
         case BOOT_CLASS_PATH:
-        {
-          settings.setBootClassPath(!p.isEmpty() ? p : "");
-          if (isDebug()) {
-            debugPrint("probe boot class path is " + settings.getBootClassPath());
+          {
+            settings.setBootClassPath(!p.isEmpty() ? p : "");
+            if (isDebug()) {
+              debugPrint("probe boot class path is " + settings.getBootClassPath());
+            }
+            break;
           }
-          break;
-        }
 
         default:
           {
