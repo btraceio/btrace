@@ -52,12 +52,15 @@ import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
+import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.TreeScanner;
 import com.sun.tools.javac.tree.JCTree;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -102,15 +105,27 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
   private boolean isInAnnotation = false;
 
+  private final Set<String> eventFieldNames = new HashSet<>();
+
+  private final TreeScanner<Void, Void> jfrFieldNameCollector = new TreeScanner<Void, Void>() {
+    @Override
+    public Void visitAnnotation(AnnotationTree node, Void o) {
+      String annType = node.getAnnotationType().toString();
+      if (annType.endsWith("Event")) {
+        for (ExpressionTree et : node.getArguments()) {
+          AssignmentTree t = (AssignmentTree)et;
+          String name = t.getVariable().toString();
+          if (name.equals("fields")) {
+            processEventFields(t);
+          }
+        }
+      }
+      return super.visitAnnotation(node, o);
+    }
+  };
+
   public VerifierVisitor(Verifier verifier, Element clzElement) {
     this.verifier = verifier;
-    Collection<ExecutableElement> shared = new ArrayList<>();
-    for (Element e : clzElement.getEnclosedElements()) {
-      if (e.getKind() == ElementKind.METHOD
-          && e.getModifiers().containsAll(EnumSet.of(Modifier.STATIC, Modifier.PRIVATE))) {
-        shared.add((ExecutableElement) e);
-      }
-    }
     btraceServiceTm =
         verifier
             .getElementUtils()
@@ -158,6 +173,14 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
           return super.visitMethodInvocation(node, v);
         }
         if (isBTraceClass(typeName)) {
+          if (typeName.contains("BTraceUtils")) {
+            if (e.getSimpleName().contentEquals("setEventField")) {
+              String nameValue = node.getArguments().get(1).toString();
+              if (!eventFieldNames.contains(nameValue)) {
+                reportError("jfr.event.invalid.field", node.getArguments().get(1));
+              }
+            }
+          }
           return super.visitMethodInvocation(node, v);
         }
         // check service injection
@@ -328,7 +351,6 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
           }
         }
 
-        final Map<String, Integer> annotationHisto = new HashMap<>();
         for (VariableTree vt : node.getParameters()) {
           vt.accept(
               new TreeScanner<Void, Void>() {
@@ -336,13 +358,6 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
                 public Void visitAnnotation(AnnotationTree at, Void p) {
                   isInAnnotation = true;
                   try {
-                    String annType = at.getAnnotationType().toString();
-                    Integer i = annotationHisto.get(annType);
-                    if (i == null) {
-                      annotationHisto.put(annType, 0);
-                    } else {
-                      annotationHisto.put(annType, i + 1);
-                    }
                     return super.visitAnnotation(at, p);
                   } finally {
                     isInAnnotation = false;
@@ -379,10 +394,26 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
           }
         }
 
+        node.accept(jfrFieldNameCollector, null);
+
+
         return super.visitMethod(node, v);
       }
     } finally {
       insideMethod = oldInsideMethod;
+    }
+  }
+
+  private void addEventFieldNames(AnnotationTree at) {
+    for (ExpressionTree et1 : at.getArguments()) {
+      addEventFieldName((AssignmentTree) et1);
+    }
+  }
+
+  private void addEventFieldName(AssignmentTree assignmentTree) {
+    String varName = assignmentTree.getVariable().toString();
+    if (varName.equals("name")) {
+      eventFieldNames.add(assignmentTree.getExpression().toString());
     }
   }
 
@@ -493,10 +524,24 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         if (vt.getInitializer() != null) {
           reportError("injected.no.initializer", vt.getInitializer());
         }
+      } else {
+        vt.accept(jfrFieldNameCollector, null);
       }
     }
 
     return super.visitVariable(vt, p);
+  }
+
+  private void processEventFields(AssignmentTree t) {
+    if (t.getExpression() instanceof AnnotationTree) {
+      AnnotationTree at = (AnnotationTree) t.getExpression();
+      addEventFieldNames(at);
+    } else if (t.getExpression() instanceof NewArrayTree) {
+      for (ExpressionTree et2 : ((NewArrayTree) t.getExpression()).getInitializers()) {
+        AnnotationTree at = (AnnotationTree) et2;
+        addEventFieldNames(at);
+      }
+    }
   }
 
   @Override
