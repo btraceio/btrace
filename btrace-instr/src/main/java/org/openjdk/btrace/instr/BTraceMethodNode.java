@@ -55,6 +55,10 @@ public class BTraceMethodNode extends MethodNode {
   private boolean isBTraceHandler;
 
   BTraceMethodNode(MethodNode from, BTraceProbeNode cn) {
+    this(from, cn, false);
+  }
+
+  BTraceMethodNode(MethodNode from, BTraceProbeNode cn, boolean initBTraceHandler) {
     super(
         Opcodes.ASM7,
         from.access,
@@ -66,6 +70,7 @@ public class BTraceMethodNode extends MethodNode {
     graph = cn.getGraph();
     methodId = CallGraph.methodId(name, desc);
     debug = cn.debug;
+    this.isBTraceHandler = initBTraceHandler;
   }
 
   @Override

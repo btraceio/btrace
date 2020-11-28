@@ -526,6 +526,14 @@ public final class Main {
             }
             break;
           }
+        case BOOT_CLASS_PATH:
+          {
+            settings.setBootClassPath(!p.isEmpty() ? p : "");
+            if (isDebug()) {
+              debugPrint("probe boot class path is " + settings.getBootClassPath());
+            }
+            break;
+          }
 
         default:
           {
@@ -572,6 +580,7 @@ public final class Main {
         } else {
           if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
             JarFile jf = asJarFile(f);
+            debugPrint("Adding jar: " + jf.toString());
             inst.appendToBootstrapClassLoaderSearch(jf);
           } else {
             debugPrint("ignoring boot classpath element '" + path + "' - only jar files allowed");

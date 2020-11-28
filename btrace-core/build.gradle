@@ -2,14 +2,22 @@ import org.apache.tools.ant.filters.*
 
 plugins {
     id 'net.nemerosa.versioning' version '2.6.1'
-//    id "nebula.java-cross-compile" version "4.0.1"
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/org.jctools/jctools-core
+    compile(group: 'org.jctools', name: 'jctools-core', version: '3.0.0')
+
+    // https://mvnrepository.com/artifact/org.ow2.asm/asm
+    compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    compile(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
 }
 
 compileJava {
     sourceCompatibility = 7
     targetCompatibility = 7
     options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
+    options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
 }
 
 processResources {

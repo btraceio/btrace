@@ -42,6 +42,7 @@ import jdk.internal.reflect.Reflection;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.runtime.aux.Auxilliary;
 
 /**
@@ -234,6 +235,16 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   @Override
   public int version() {
     return 9;
+  }
+
+  @Override
+  public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
+    return new JfrEvent.Factory() {
+      @Override
+      public JfrEvent newEvent() {
+        return JfrEvent.EMPTY;
+      }
+    };
   }
 
   private static Perf getPerf() {

@@ -124,7 +124,6 @@ class MethodInvocationRecorder {
           processExit(blockName, duration);
           return;
         } finally {
-          // System.out.println("== 1->0");
           writerStatus.compareAndSet(1, 0);
         }
       } else {
@@ -132,21 +131,17 @@ class MethodInvocationRecorder {
           LockSupport.parkNanos(this, 600);
         }
         if (writerStatus.compareAndSet(1, 3)) {
-          // System.out.println("== 1->3");
           try {
             delayedRecords.add(new DelayedRecord(blockName, duration));
             return;
           } finally {
-            // System.out.println("== 3->1");
             writerStatus.compareAndSet(3, 1);
           }
         } else if (writerStatus.compareAndSet(2, 3)) {
-          // System.out.println("== 2->3");
           try {
             delayedRecords.add(new DelayedRecord(blockName, duration));
             return;
           } finally {
-            // System.out.println("== 3->2");
             writerStatus.compareAndSet(3, 2);
           }
         }
@@ -186,7 +181,6 @@ class MethodInvocationRecorder {
       LockSupport.parkNanos(this, 600);
     }
 
-    // System.out.println("== 0->3");
     try {
       while ((dr = delayedRecords.poll()) != null) {
         if (dr.duration == -1) {
@@ -196,7 +190,6 @@ class MethodInvocationRecorder {
         }
       }
     } finally {
-      // System.out.println("== 3->0");
       writerStatus.compareAndSet(3, 0);
     }
   }
@@ -206,7 +199,6 @@ class MethodInvocationRecorder {
     try {
       processDelayedRecords();
 
-      // System.out.println("== 0->2");
       while (!writerStatus.compareAndSet(0, 2)) {
         LockSupport.parkNanos(this, 600);
       }
@@ -225,7 +217,6 @@ class MethodInvocationRecorder {
 
       return recs;
     } finally {
-      // System.out.println("== 2->0");
       while (!writerStatus.compareAndSet(2, 0)) {
         LockSupport.parkNanos(this, 600);
       }

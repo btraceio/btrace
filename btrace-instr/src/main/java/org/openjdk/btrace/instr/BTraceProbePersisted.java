@@ -46,7 +46,6 @@ import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.core.comm.RetransformClassNotification;
-import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
 
 public class BTraceProbePersisted implements BTraceProbe {
   static final int MAGIC = 0xbacecaca;
@@ -538,7 +537,13 @@ public class BTraceProbePersisted implements BTraceProbe {
     cr.accept(
         new ClassVisitor(ASM7) {
           @Override
-          public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+          public void visit(
+              int version,
+              int access,
+              String name,
+              String signature,
+              String superName,
+              String[] interfaces) {
             copyingVisitor.visit(version, access, name, signature, superName, interfaces);
           }
 

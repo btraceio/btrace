@@ -31,7 +31,7 @@ import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ServiceType;
 import org.openjdk.btrace.services.api.Service;
-import services.DummyRuntimService;
+import services.DummyRuntimeService;
 import services.DummySimpleService;
 
 /**
@@ -43,11 +43,11 @@ import services.DummySimpleService;
 @BTrace
 public class ServicesTest {
     @Injected(ServiceType.RUNTIME)
-    private static DummyRuntimService printer;
+    private static DummyRuntimeService printer;
 
     @OnMethod(clazz = "resources.OnMethodTest", method = "args")
     public static void testRuntimeService(String a, long b, String[] c, int[] d) {
-        DummyRuntimService ds = Service.runtime(DummyRuntimService.class);
+        DummyRuntimeService ds = Service.runtime(DummyRuntimeService.class);
 
         ds.doit(10, "hello");
     }

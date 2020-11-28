@@ -45,16 +45,11 @@ public class Verifier extends ClassVisitor {
   private final boolean trustedAllowed;
   private final BTraceProbeNode cn;
   private boolean seenBTrace;
-  private boolean classRenamed;
 
   public Verifier(BTraceProbeNode cv, boolean trusted) {
     super(ASM7, cv);
     trustedAllowed = trusted;
     cn = cv;
-  }
-
-  public Verifier(BTraceProbeNode cv) {
-    this(cv, false);
   }
 
   public static void reportError(String err) {
@@ -69,22 +64,13 @@ public class Verifier extends ClassVisitor {
     throw new VerifierException(str);
   }
 
-  private static void usage(String msg) {
-    System.err.println(msg);
-    System.exit(1);
-  }
-
-  public boolean isClassRenamed() {
-    return classRenamed;
-  }
-
   public String getClassName() {
     return cn.name;
   }
 
   @Override
   public void visitEnd() {
-    if (!cn.isTrusted()) {
+    if (!trustedAllowed && !cn.isTrusted()) {
       if (cn.getGraph().hasCycle()) {
         reportSafetyError("execution.loop.danger");
       }
@@ -100,7 +86,7 @@ public class Verifier extends ClassVisitor {
       String signature,
       String superName,
       String[] interfaces) {
-    if (!cn.isTrusted()) {
+    if (!trustedAllowed && !cn.isTrusted()) {
       if ((access & ACC_INTERFACE) != 0 || (access & ACC_ENUM) != 0) {
         reportSafetyError("btrace.program.should.be.class");
       }
@@ -145,7 +131,7 @@ public class Verifier extends ClassVisitor {
     if (!seenBTrace) {
       reportSafetyError("not.a.btrace.program");
     }
-    if (!cn.isTrusted()) {
+    if (!trustedAllowed && !cn.isTrusted()) {
       if ((access & ACC_STATIC) == 0) {
         reportSafetyError("agent.no.instance.variables", name);
       }
@@ -155,7 +141,7 @@ public class Verifier extends ClassVisitor {
 
   @Override
   public void visitInnerClass(String name, String outerName, String innerName, int access) {
-    if (!cn.isTrusted()) {
+    if (!trustedAllowed && !cn.isTrusted()) {
       if (cn.name.equals(outerName)) {
         reportSafetyError("no.nested.class");
       }
@@ -170,7 +156,7 @@ public class Verifier extends ClassVisitor {
       reportSafetyError("not.a.btrace.program");
     }
 
-    if (!cn.isTrusted()) {
+    if (!trustedAllowed && !cn.isTrusted()) {
       if ((access & ACC_SYNCHRONIZED) != 0) {
         reportSafetyError("no.synchronized.methods", methodName + methodDesc);
       }
@@ -187,7 +173,7 @@ public class Verifier extends ClassVisitor {
 
   @Override
   public void visitOuterClass(String owner, String name, String desc) {
-    if (!cn.isTrusted()) {
+    if (!trustedAllowed && !cn.isTrusted()) {
       reportSafetyError("no.outer.class");
     }
   }

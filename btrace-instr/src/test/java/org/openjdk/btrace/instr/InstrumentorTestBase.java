@@ -230,9 +230,7 @@ public abstract class InstrumentorTestBase {
     if (DEBUG) {
       System.err.println(diff);
     }
-    assertEquals(
-        expected,
-        diff.substring(0, Math.min(diff.length(), expected.length())));
+    assertEquals(expected, diff.substring(0, Math.min(diff.length(), expected.length())));
   }
 
   protected void checkTrace(String expected) throws IOException {

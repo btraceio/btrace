@@ -36,7 +36,7 @@ task btracec(type: JavaExec) {
 jmhClasses.dependsOn btracec
 
 jmh {
-  def agent = "-javaagent:${project.buildDir}/../../../btrace-dist/build/resources/main/libs/btrace-agent.jar=stdout=false,noServer=true,script=${project.buildDir}/classes/btrace/TraceScript.class"
+  def agent = "-javaagent:${project.buildDir}/../../../btrace-dist/build/resources/main/${project.version}/libs/btrace-agent.jar=stdout=false,noServer=true,script=${project.buildDir}/classes/btrace/TraceScript.class"
   println(agent)
   duplicateClassesStrategy = 'warn'
 //  jvmArgsAppend = []

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,17 +22,34 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package services;
 
-import org.openjdk.btrace.services.api.RuntimeContext;
-import org.openjdk.btrace.services.spi.RuntimeService;
+package traces;
 
-public final class DummyRuntimService extends RuntimeService {
-  public DummyRuntimService(RuntimeContext rt) {
-    super(rt);
-  }
+import org.openjdk.btrace.core.annotations.*;
+import org.openjdk.btrace.core.jfr.JfrEvent;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+import static org.openjdk.btrace.core.BTraceUtils.Jfr.*;
 
-  public void doit(int x, String b) {
-    System.out.println("doit");
-  }
+@BTrace
+public class JfrTest {
+    @Event(name="custom", label="Custom Event", fields=@Event.Field(type = Event.FieldType.STRING, name = "thiz"))
+    private static JfrEvent.Factory custom;
+
+    private static int counter = 0;
+
+    @PeriodicEvent(name="periodic", label="Periodic", description="Periodic Event", period="1 s", fields = @Event.Field(type = Event.FieldType.INT, name = "count"))
+    public static void periodic(JfrEvent event) {
+        if (shouldCommit(event)) {
+            setEventField(event, "count", counter++);
+            commit(event);
+        }
+    }
+
+    @OnMethod(clazz = "resources.Main", method = "callA")
+    public static void noargs(@Self Object self) {
+        println("Main.callA");
+        JfrEvent event = prepareEvent(custom);
+        setEventField(event, "thiz", str(self));
+        commit(event);
+    }
 }

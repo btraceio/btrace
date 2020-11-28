@@ -54,18 +54,15 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreeScanner;
 import com.sun.tools.javac.tree.JCTree;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
@@ -99,15 +96,30 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   private TypeMirror simpleServiceTm = null;
   private TypeMirror serviceInjectorTm = null;
 
+  private boolean isInAnnotation = false;
+
+  private final Set<String> eventFieldNames = new HashSet<>();
+
+  private final TreeScanner<Void, Void> jfrFieldNameCollector =
+      new TreeScanner<Void, Void>() {
+        @Override
+        public Void visitAnnotation(AnnotationTree node, Void o) {
+          String annType = node.getAnnotationType().toString();
+          if (annType.endsWith("Event")) {
+            for (ExpressionTree et : node.getArguments()) {
+              AssignmentTree t = (AssignmentTree) et;
+              String name = t.getVariable().toString();
+              if (name.equals("fields")) {
+                processEventFields(t);
+              }
+            }
+          }
+          return super.visitAnnotation(node, o);
+        }
+      };
+
   public VerifierVisitor(Verifier verifier, Element clzElement) {
     this.verifier = verifier;
-    Collection<ExecutableElement> shared = new ArrayList<>();
-    for (Element e : clzElement.getEnclosedElements()) {
-      if (e.getKind() == ElementKind.METHOD
-          && e.getModifiers().containsAll(EnumSet.of(Modifier.STATIC, Modifier.PRIVATE))) {
-        shared.add((ExecutableElement) e);
-      }
-    }
     btraceServiceTm =
         verifier
             .getElementUtils()
@@ -133,7 +145,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   @Override
   public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
     Element e = getElement(node);
-    if (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR) {
+    if (e != null
+        && (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR)) {
       String name = e.getSimpleName().toString();
 
       // allow constructor calls
@@ -141,9 +154,9 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         return super.visitMethodInvocation(node, v);
       }
 
-      Element parent = null;
+      TypeElement parent = null;
       do {
-        parent = e.getEnclosingElement();
+        parent = (TypeElement) e.getEnclosingElement();
       } while (parent != null
           && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
 
@@ -155,6 +168,14 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
           return super.visitMethodInvocation(node, v);
         }
         if (isBTraceClass(typeName)) {
+          if (typeName.contains("BTraceUtils")) {
+            if (e.getSimpleName().contentEquals("setEventField")) {
+              String nameValue = node.getArguments().get(1).toString();
+              if (!eventFieldNames.contains(nameValue)) {
+                reportError("jfr.event.invalid.field", node.getArguments().get(1));
+              }
+            }
+          }
           return super.visitMethodInvocation(node, v);
         }
         // check service injection
@@ -325,20 +346,17 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
           }
         }
 
-        final Map<String, Integer> annotationHisto = new HashMap<>();
         for (VariableTree vt : node.getParameters()) {
           vt.accept(
               new TreeScanner<Void, Void>() {
                 @Override
                 public Void visitAnnotation(AnnotationTree at, Void p) {
-                  String annType = at.getAnnotationType().toString();
-                  Integer i = annotationHisto.get(annType);
-                  if (i == null) {
-                    annotationHisto.put(annType, 0);
-                  } else {
-                    annotationHisto.put(annType, i + 1);
+                  isInAnnotation = true;
+                  try {
+                    return super.visitAnnotation(at, p);
+                  } finally {
+                    isInAnnotation = false;
                   }
-                  return super.visitAnnotation(at, p);
                 }
               },
               null);
@@ -371,6 +389,8 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
           }
         }
 
+        node.accept(jfrFieldNameCollector, null);
+
         return super.visitMethod(node, v);
       }
     } finally {
@@ -378,14 +398,31 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     }
   }
 
+  private void addEventFieldNames(AnnotationTree at) {
+    for (ExpressionTree et1 : at.getArguments()) {
+      addEventFieldName((AssignmentTree) et1);
+    }
+  }
+
+  private void addEventFieldName(AssignmentTree assignmentTree) {
+    String varName = assignmentTree.getVariable().toString();
+    if (varName.equals("name")) {
+      eventFieldNames.add(assignmentTree.getExpression().toString());
+    }
+  }
+
   @Override
   public Boolean visitNewArray(NewArrayTree node, Void v) {
-    reportError("no.array.creation", node);
+    if (!isInAnnotation) {
+      reportError("no.array.creation", node);
+    }
     return super.visitNewArray(node, v);
   }
 
   @Override
   public Boolean visitNewClass(NewClassTree node, Void v) {
+    Element e = getElement(node);
+    TypeElement te = (TypeElement) e.getEnclosingElement();
     reportError("no.new.object", node);
     return super.visitNewClass(node, v);
   }
@@ -411,13 +448,25 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
 
   @Override
   public Boolean visitMemberSelect(MemberSelectTree node, Void v) {
-    if (node.getIdentifier().contentEquals("class")) {
-      TypeMirror tm = getType(node.getExpression());
-      if (!verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
-        reportError("no.class.literals", node);
+    if (!isInAnnotation) {
+      if (node.getIdentifier().contentEquals("class")) {
+        TypeMirror tm = getType(node.getExpression());
+        if (!verifier.getTypeUtils().isSubtype(tm, btraceServiceTm)) {
+          reportError("no.class.literals", node);
+        }
       }
     }
     return super.visitMemberSelect(node, v);
+  }
+
+  @Override
+  public Boolean visitAnnotation(AnnotationTree node, Void unused) {
+    try {
+      isInAnnotation = true;
+      return super.visitAnnotation(node, unused);
+    } finally {
+      isInAnnotation = false;
+    }
   }
 
   @Override
@@ -469,10 +518,24 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         if (vt.getInitializer() != null) {
           reportError("injected.no.initializer", vt.getInitializer());
         }
+      } else {
+        vt.accept(jfrFieldNameCollector, null);
       }
     }
 
     return super.visitVariable(vt, p);
+  }
+
+  private void processEventFields(AssignmentTree t) {
+    if (t.getExpression() instanceof AnnotationTree) {
+      AnnotationTree at = (AnnotationTree) t.getExpression();
+      addEventFieldNames(at);
+    } else if (t.getExpression() instanceof NewArrayTree) {
+      for (ExpressionTree et2 : ((NewArrayTree) t.getExpression()).getInitializers()) {
+        AnnotationTree at = (AnnotationTree) et2;
+        addEventFieldNames(at);
+      }
+    }
   }
 
   @Override
@@ -551,8 +614,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   private boolean checkSampling(MethodTree node) {
-    TreePath mPath = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), node);
-    ExecutableElement ee = (ExecutableElement) verifier.getTreeUtils().getElement(mPath);
+    ExecutableElement ee = (ExecutableElement) getElement(node);
 
     Sampled s = ee.getAnnotation(Sampled.class);
     OnMethod om = ee.getAnnotation(OnMethod.class);
@@ -634,6 +696,9 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         e = ((JCTree.JCIdent) ((JCTree.JCNewClass) t).clazz).sym;
       } else if (t instanceof JCTree.JCThrow) {
         e = ((JCTree.JCNewClass) ((JCTree.JCThrow) t).expr).type.tsym;
+      }
+      if (e == null) {
+        verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, t.toString());
       }
     }
     return e;

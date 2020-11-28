@@ -11,9 +11,15 @@ public final class InstrPackGenerator implements PackGenerator {
   public byte[] generateProbePack(byte[] classData) throws IOException {
     BTraceProbeNode bpn =
         (BTraceProbeNode) new BTraceProbeFactory(SharedSettings.GLOBAL).createProbe(classData);
+    // force bytecode verification before creating the persisted representation
+    bpn.checkVerified();
+
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     try (DataOutputStream dos = new DataOutputStream(bos)) {
       BTraceProbePersisted bpp = BTraceProbePersisted.from(bpn);
+      if (!bpp.isVerified()) {
+        throw new Error();
+      }
       bpp.write(dos);
     }
 

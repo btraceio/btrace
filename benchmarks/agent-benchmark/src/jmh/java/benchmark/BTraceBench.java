@@ -324,13 +324,14 @@ public class BTraceBench {
 
     Path distLibs = null;
     String basedir = System.getProperty("jmh.basedir");
+    String version = System.getProperty("project.version");
     Path root = null;
     if (basedir == null) {
       root = fs.getPath(".").toAbsolutePath();
     } else {
       root = Paths.get(basedir).getParent();
     }
-    distLibs = root.resolve("btrace-dist/build/resources/main/libs");
+    distLibs = root.resolve("btrace-dist/build/resources/main/" + version + "/libs");
 
     Path agentPath = distLibs.resolve("btrace-agent.jar");
     Path bootPath = distLibs.resolve("btrace-boot.jar");
@@ -342,7 +343,7 @@ public class BTraceBench {
             agentPath, tmpDir.resolve("btrace-agent.jar"), StandardCopyOption.REPLACE_EXISTING);
     Files.copy(bootPath, tmpDir.resolve("btrace-boot.jar"), StandardCopyOption.REPLACE_EXISTING);
 
-    URL traceLoc = BTraceBench.class.getResource("/TraceScript.class");
+    URL traceLoc = BTraceBench.class.getResource("/TraceScript.btclass");
     String trace = traceLoc.getPath();
 
     return new BTraceConfig(tmpDir, targetPath.toString(), trace);

@@ -48,6 +48,8 @@ public final class SharedSettings {
   private boolean retransformStartup = true;
   private String dumpDir = null;
   private String probeDescPath = ".";
+  private String bootClassPath = "";
+  private String systemClassPath = "";
   private String statsdHost = null;
   private int statsdPort = 8125; // default statsd port
   private int fileRollMilliseconds = Integer.MIN_VALUE;
@@ -81,6 +83,12 @@ public final class SharedSettings {
     if (s != null && !s.isEmpty()) {
       probeDescPath = s;
     }
+
+    s = (String) params.get(Args.BOOT_CLASS_PATH);
+    if (s != null && !s.isEmpty()) {
+      bootClassPath = s;
+    }
+
     s = (String) params.get(STATSD_HOST_KEY);
     if (s != null && !s.isEmpty()) {
       statsdHost = s;
@@ -112,6 +120,7 @@ public final class SharedSettings {
     outputFile = other.outputFile;
     outputDir = other.outputDir;
     probeDescPath = other.probeDescPath;
+    bootClassPath = other.bootClassPath;
     retransformStartup = other.retransformStartup;
     statsdHost = other.statsdHost;
     statsdPort = other.statsdPort;
@@ -167,6 +176,14 @@ public final class SharedSettings {
 
   public void setProbeDescPath(String probeDescPath) {
     this.probeDescPath = probeDescPath;
+  }
+
+  public String getBootClassPath() {
+    return bootClassPath;
+  }
+
+  public void setBootClassPath(String bootClassPath) {
+    this.bootClassPath = bootClassPath;
   }
 
   public String getStatsdHost() {

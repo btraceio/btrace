@@ -7,6 +7,11 @@ buildscript {
 }
 
 sourceSets {
+    java11_dummy {
+        java {
+            srcDirs = ['src/main/java11_dummy']
+        }
+    }
     java15 {
         java {
             srcDirs = ['src/main/java15']
@@ -14,14 +19,31 @@ sourceSets {
     }
 }
 
+dependencies {
+    compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    compile(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
+    compile group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc4'
+    compile project(':btrace-core')
+    compile project(':btrace-runtime')
+    compile project(':btrace-compiler')
+    compile project(':btrace-statsd')
+    testCompile project(':btrace-client')
+}
+
+compileJava11_dummyJava {
+    sourceCompatibility = 7
+    targetCompatibility = 7
+    options.fork = true
+    options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
+}
+
 compileJava15Java {
-    onlyIf {
-        JavaVersion.current() >= JavaVersion.VERSION_15
-    }
     sourceCompatibility = 15
     targetCompatibility = 15
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_15_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_15_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
@@ -33,7 +55,7 @@ compileTestJava {
 }
 
 task compileTestProbes {
-    dependsOn compileTestJava
+    dependsOn compileTestJava, compileJava11_dummyJava
     doLast {
         def path = project(':btrace-instr').sourceSets.main.runtimeClasspath
 
@@ -41,7 +63,7 @@ task compileTestProbes {
         def compiler = loader.loadClass('org.openjdk.btrace.compiler.Compiler')
         def rtCp = sourceSets.main.runtimeClasspath.collect { it.absolutePath }.join(':')
 
-        def args = ["-cp", "${buildDir}/classes/java/test:${rtCp}", "-d", "${buildDir}/classes"]
+        def args = ["-cp", "${buildDir}/classes/java/test:${buildDir}/classes/java/java11_dummy:${rtCp}", "-d", "${buildDir}/classes"]
 
         def files = fileTree(dir: "src/test/btrace", include: '**/*.java', exclude: 'verifier/**/*.java').findAll {
             it != null
@@ -53,11 +75,19 @@ task compileTestProbes {
     }
 }
 
+task buildEventsJar(type: Jar) {
+    inputs.files compileJava11_dummyJava
+    from files("${project.buildDir}/classes/java/java11_dummy")
+    archiveBaseName = "events"
+    archiveVersion = ""
+    archiveClassifier = ""
+}
+
 test {
     onlyIf {
         new File("${projectDir}/../btrace-dist/build/resources/main/${project.version}/libs/btrace-client.jar").exists()
     }
-    dependsOn cleanTest
+    dependsOn cleanTest, buildEventsJar
     inputs.files compileTestProbes.outputs
     //inputs.files buildDTrace.outputs
     testLogging.showStandardStreams = true

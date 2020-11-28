@@ -12,6 +12,10 @@ def javaHome = Jvm.current().javaHome
 def isSolaris = OperatingSystem.current() == OperatingSystem.SOLARIS
 def osArch = System.getProperty("os.arch")
 
+dependencies {
+    compile project(':btrace-core')
+}
+
 task nativeHeaders(type:Exec) {
     def classpath = sourceSets.main.runtimeClasspath.asPath
     commandLine "javah", "-d", nativeHeadersDir, "-classpath", classpath, "org.openjdk.btrace.core.BTraceRuntime"

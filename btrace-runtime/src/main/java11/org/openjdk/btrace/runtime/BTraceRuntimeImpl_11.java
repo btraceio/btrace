@@ -39,9 +39,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
 import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
+import jdk.jfr.EventType;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.runtime.aux.Auxilliary;
 
 /**
@@ -85,6 +87,9 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   private static Perf perf;
 
+  private final Set<JfrEventFactoryImpl> eventFactories =
+      new java.util.concurrent.CopyOnWriteArraySet<>();
+
   public BTraceRuntimeImpl_11() {}
 
   public BTraceRuntimeImpl_11(
@@ -105,7 +110,14 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
           Map.of(
               "jdk.internal.reflect", myModules,
               "jdk.internal.perf", myModules),
-          Collections.singletonMap("java.lang", myModules),
+          Map.of("java.lang", myModules),
+          Collections.emptySet(),
+          Collections.emptyMap());
+      instr.redefineModule(
+          EventType.class.getModule(),
+          Collections.emptySet(),
+          Map.of("jdk.jfr.internal", myModules),
+          Map.of("jdk.jfr", myModules),
           Collections.emptySet(),
           Collections.emptyMap());
     }
@@ -208,6 +220,21 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   @Override
   public int version() {
     return Runtime.version().feature();
+  }
+
+  @Override
+  public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
+    JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template, debug);
+    eventFactories.add(factory);
+    return factory;
+  }
+
+  @Override
+  protected void cleanupRuntime() {
+    for (JfrEventFactoryImpl factory : eventFactories) {
+      factory.unregister();
+    }
+    eventFactories.clear();
   }
 
   private static Perf getPerf() {

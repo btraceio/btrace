@@ -362,7 +362,7 @@ public class BTraceBench {
             agentPath, tmpDir.resolve("btrace-agent.jar"), StandardCopyOption.REPLACE_EXISTING);
     Files.copy(bootPath, tmpDir.resolve("btrace-boot.jar"), StandardCopyOption.REPLACE_EXISTING);
 
-    URL traceLoc = BTraceBench.class.getResource("/TraceScript.class");
+    URL traceLoc = BTraceBench.class.getResource("/TraceScript.btclass");
     String trace = traceLoc.getPath();
 
     return new BTraceConfig(tmpDir, targetPath.toString(), trace);

@@ -33,6 +33,7 @@ import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.jfr.JfrEvent;
 import sun.misc.Perf;
 import sun.misc.Unsafe;
 import sun.reflect.CallerSensitive;
@@ -165,6 +166,16 @@ public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
   @Override
   public Class<?> getCallerClass(int stackDec) {
     return Reflection.getCallerClass(stackDec + 1);
+  }
+
+  @Override
+  public JfrEvent.Factory createEventFactory(JfrEvent.Template eventTemplate) {
+    return new JfrEvent.Factory() {
+      @Override
+      public JfrEvent newEvent() {
+        return JfrEvent.EMPTY;
+      }
+    };
   }
 
   @Override

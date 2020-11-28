@@ -25,9 +25,17 @@
 
 package org.openjdk.btrace;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import org.junit.Assert;
+import jdk.jfr.EventType;
+import jdk.jfr.consumer.RecordedEvent;
+import jdk.jfr.consumer.RecordingFile;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,27 +69,27 @@ public class BTraceFunctionalTests extends RuntimeTest {
         2,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
           }
         });
   }
 
   @Test
   public void testOnProbe() throws Exception {
-    if (Files.exists(Paths.get(java, "jre"))) {
+    if (Files.exists(Paths.get(javaHome, "jre"))) {
       test(
           "resources.Main",
           "btrace/OnProbeTest.java",
           5,
           new ResultValidator() {
             @Override
-            public void validate(String stdout, String stderr, int retcode) {
-              Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-              Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-              Assert.assertTrue(stdout.contains("[this, noargs]"));
-              Assert.assertTrue(stdout.contains("[this, args]"));
+            public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+              assertFalse("Script should not have failed", stdout.contains("FAILED"));
+              assertTrue("Non-empty stderr", stderr.isEmpty());
+              assertTrue(stdout.contains("[this, noargs]"));
+              assertTrue(stdout.contains("[this, args]"));
             }
           });
     } else {
@@ -97,12 +105,12 @@ public class BTraceFunctionalTests extends RuntimeTest {
         5,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("vm version"));
-            Assert.assertTrue(stdout.contains("vm starttime"));
-            Assert.assertTrue(stdout.contains("timer"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("vm version"));
+            assertTrue(stdout.contains("vm starttime"));
+            assertTrue(stdout.contains("timer"));
           }
         });
   }
@@ -116,12 +124,12 @@ public class BTraceFunctionalTests extends RuntimeTest {
         5,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("vm version"));
-            Assert.assertTrue(stdout.contains("vm starttime"));
-            Assert.assertTrue(stdout.contains("timer"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("vm version"));
+            assertTrue(stdout.contains("vm starttime"));
+            assertTrue(stdout.contains("timer"));
           }
         });
   }
@@ -135,10 +143,10 @@ public class BTraceFunctionalTests extends RuntimeTest {
         2,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("onexit"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("onexit"));
           }
         });
   }
@@ -148,16 +156,16 @@ public class BTraceFunctionalTests extends RuntimeTest {
     test(
         "resources.Main",
         "btrace/OnMethodTest.java",
-        20,
+        10,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("[this, noargs]"));
-            Assert.assertTrue(stdout.contains("[this, args]"));
-            Assert.assertTrue(stdout.contains("{xxx}"));
-            Assert.assertTrue(stdout.contains("heap:init"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("[this, noargs]"));
+            assertTrue(stdout.contains("[this, args]"));
+            assertTrue(stdout.contains("{xxx}"));
+            assertTrue(stdout.contains("heap:init"));
           }
         });
   }
@@ -171,12 +179,12 @@ public class BTraceFunctionalTests extends RuntimeTest {
         5,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("[this, noargs]"));
-            Assert.assertTrue(stdout.contains("[this, args]"));
-            Assert.assertTrue(stdout.contains("{xxx}"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("[this, noargs]"));
+            assertTrue(stdout.contains("[this, args]"));
+            assertTrue(stdout.contains("{xxx}"));
           }
         });
   }
@@ -190,10 +198,10 @@ public class BTraceFunctionalTests extends RuntimeTest {
         2,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("Going to retransform class"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("Going to retransform class"));
           }
         });
   }
@@ -206,12 +214,12 @@ public class BTraceFunctionalTests extends RuntimeTest {
         5,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("[this, anytype(void)]"));
-            Assert.assertTrue(stdout.contains("[this, void]"));
-            Assert.assertTrue(stdout.contains("[this, 2]"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("[this, anytype(void)]"));
+            assertTrue(stdout.contains("[this, void]"));
+            assertTrue(stdout.contains("[this, 2]"));
           }
         });
   }
@@ -224,10 +232,10 @@ public class BTraceFunctionalTests extends RuntimeTest {
         5,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("print:class resources.Main"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("print:class resources.Main"));
           }
         });
   }
@@ -242,13 +250,13 @@ public class BTraceFunctionalTests extends RuntimeTest {
         5,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("arg#=2"));
-            Assert.assertTrue(stdout.contains("arg1="));
-            Assert.assertTrue(stdout.contains("arg2=val2"));
-            Assert.assertFalse(stdout.contains("matching probe"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("arg#=2"));
+            assertTrue(stdout.contains("arg1="));
+            assertTrue(stdout.contains("arg2=val2"));
+            assertFalse(stdout.contains("matching probe"));
           }
         });
   }
@@ -261,10 +269,10 @@ public class BTraceFunctionalTests extends RuntimeTest {
         5,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("matching probe"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("matching probe"));
           }
         });
   }
@@ -277,11 +285,71 @@ public class BTraceFunctionalTests extends RuntimeTest {
         5,
         new ResultValidator() {
           @Override
-          public void validate(String stdout, String stderr, int retcode) {
-            Assert.assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            Assert.assertTrue("Non-empty stderr", stderr.isEmpty());
-            Assert.assertTrue(stdout.contains("private java.lang.String resources.Main.id"));
-            Assert.assertTrue(stdout.contains("class resources.Main"));
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertTrue(stdout.contains("private java.lang.String resources.Main.id"));
+            assertTrue(stdout.contains("class resources.Main"));
+          }
+        });
+  }
+
+  @Test
+  public void testJfr() throws Exception {
+    if (System.getProperty("java.runtime.version", "").startsWith("11.0.9")) {
+      // skip the test for JDK 11 since the latest version 11.0.9 ends in SISGSEGV
+      System.err.println("Skipping test for JDK 11.0.9");
+      return;
+    }
+    testWithJfr(
+        "resources.Main",
+        "btrace/JfrTest.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse("Script should not have failed", stdout.contains("FAILED"));
+            assertTrue("Non-empty stderr", stderr.isEmpty());
+            assertNotNull(jfrFile);
+            try {
+              RecordingFile f = new RecordingFile(Paths.get(jfrFile));
+              boolean hasPeriodicType = false,
+                  hasPeriodicValue = false,
+                  hasCustomType = false,
+                  hasCustomValue = false;
+              for (EventType et : f.readEventTypes()) {
+                if (et.getName().equals("periodic")) {
+                  hasPeriodicType = true;
+                } else if (et.getName().equals("custom")) {
+                  hasCustomType = true;
+                }
+                if (hasPeriodicType && hasCustomType) {
+                  while (f.hasMoreEvents()) {
+                    RecordedEvent e = f.readEvent();
+                    if (e.getEventType().getName().equals("periodic")) {
+                      hasPeriodicValue = true;
+                    } else if (e.getEventType().getName().equals("custom")) {
+                      hasCustomValue = true;
+                    }
+                    if (hasPeriodicValue && hasCustomValue) {
+                      return;
+                    }
+                  }
+                  break;
+                }
+              }
+              fail(
+                  "periodic type ok: "
+                      + hasPeriodicType
+                      + ", periodic value ok: "
+                      + hasPeriodicValue
+                      + ", custom type ok: "
+                      + hasCustomType
+                      + ", custom value ok: "
+                      + hasCustomValue);
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
           }
         });
   }

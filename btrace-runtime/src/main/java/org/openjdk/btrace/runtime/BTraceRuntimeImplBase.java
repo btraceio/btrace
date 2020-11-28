@@ -228,7 +228,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
   // Per-client state starts here.
 
-  private final DebugSupport debug;
+  protected final DebugSupport debug;
 
   // current thread's exception
   private final ThreadLocal<Throwable> currentException = new ThreadLocal<>();
@@ -837,6 +837,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
+    cleanupRuntime();
   }
 
   public final int getLevel() {
@@ -853,6 +854,10 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
       this.level.set(null, level);
     } catch (IllegalAccessException ignored) {
     }
+  }
+
+  protected void cleanupRuntime() {
+    // to be overridden by concrete implementations
   }
 
   protected static void loadLibrary(final ClassLoader cl) {

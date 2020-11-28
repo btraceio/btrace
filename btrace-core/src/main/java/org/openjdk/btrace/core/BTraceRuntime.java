@@ -54,7 +54,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.openjdk.btrace.core.aggregation.Aggregation;
 import org.openjdk.btrace.core.aggregation.AggregationFunction;
 import org.openjdk.btrace.core.aggregation.AggregationKey;
@@ -64,6 +63,7 @@ import org.openjdk.btrace.core.comm.GridDataCommand;
 import org.openjdk.btrace.core.comm.NumberDataCommand;
 import org.openjdk.btrace.core.comm.NumberMapDataCommand;
 import org.openjdk.btrace.core.comm.StringMapDataCommand;
+import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
 import org.openjdk.btrace.core.types.BTraceCollection;
 import org.openjdk.btrace.core.types.BTraceDeque;
@@ -1057,6 +1057,11 @@ public final class BTraceRuntime {
     }
   }
 
+  //  called from instrumentation initialization code
+  public static JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
+    return getRt().createEventFactory(template);
+  }
+
   // BTrace aggregation support
   static Aggregation newAggregation(AggregationFunction type) {
     return new Aggregation(type);
@@ -1291,6 +1296,8 @@ public final class BTraceRuntime {
     ClassLoader getCallerClassLoader(int stackDec);
 
     Class<?> getCallerClass(int stackDec);
+
+    JfrEvent.Factory createEventFactory(JfrEvent.Template template);
 
     int version();
   }

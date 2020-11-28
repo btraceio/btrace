@@ -205,5 +205,4 @@ final class BTraceClassReader extends ClassReader {
     }
     return -1;
   }
-
 }

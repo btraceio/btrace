@@ -62,7 +62,9 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   private final CallGraph graph;
 
   private final Map<String, BTraceMethodNode> idmap;
+  private final Set<String> jfrHandlers = new HashSet<>();
   private final Preprocessor prep;
+  private final BTraceBCPClassLoader bcpResourceClassLoader;
 
   private volatile BTraceRuntime.Impl rt = null;
 
@@ -72,6 +74,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   private BTraceProbeNode(BTraceProbeFactory factory) {
     super(Opcodes.ASM7);
     this.factory = factory;
+    bcpResourceClassLoader = new BTraceBCPClassLoader(factory.getSettings());
     debug = new DebugSupport(factory.getSettings());
     delegate = new BTraceProbeSupport(debug);
     idmap = new HashMap<>();
@@ -106,10 +109,13 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       int access, String name, String desc, String sig, String[] exceptions) {
     super.visitMethod(access, name, desc, sig, exceptions);
     MethodNode mn = methods.remove(methods.size() - 1);
-    BTraceMethodNode bmn = new BTraceMethodNode(mn, this);
+    BTraceMethodNode bmn = new BTraceMethodNode(mn, this, jfrHandlers.contains(name));
     methods.add(bmn);
     idmap.put(CallGraph.methodId(name, desc), bmn);
-    return isTrusted() ? bmn : new MethodVerifier(bmn, access, delegate.getOrigName(), name, desc);
+    return isTrusted()
+        ? bmn
+        : new MethodVerifier(
+            bmn, access, delegate.getOrigName(), name, desc, bcpResourceClassLoader);
   }
 
   @Override
@@ -118,10 +124,23 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     return new FieldVisitor(Opcodes.ASM7, super.visitField(access, name, desc, signature, value)) {
       @Override
       public AnnotationVisitor visitAnnotation(String type, boolean aVisible) {
+        AnnotationVisitor av = super.visitAnnotation(type, aVisible);
         if (type.equals(Constants.INJECTED_DESC)) {
           delegate.addServiceField(name, Type.getType(desc).getInternalName());
         }
-        return super.visitAnnotation(type, aVisible);
+        if (type.equals("Lorg/openjdk/btrace/core/annotations/Event;")) {
+          av =
+              new AnnotationVisitor(Opcodes.ASM8, av) {
+                @Override
+                public void visit(String name, Object value) {
+                  if (name.equals("handler") && value instanceof String) {
+                    jfrHandlers.add((String) value);
+                  }
+                  super.visit(name, value);
+                }
+              };
+        }
+        return av;
       }
     };
   }
@@ -332,7 +351,13 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         copyNodes.add(copy(c));
       }
     }
-    copyingVisitor.visit(Opcodes.V1_7, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, getClassName(true), null, "java/lang/Object", null);
+    copyingVisitor.visit(
+        Opcodes.V1_7,
+        Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL,
+        getClassName(true),
+        null,
+        "java/lang/Object",
+        null);
     for (MethodNode mn : copyNodes) {
       mn.accept(copyingVisitor);
     }

@@ -50,7 +50,8 @@ public class ProbeLoadingBenchmark {
 
   @Setup(Level.Invocation)
   public void setupRun() throws Exception {
-    classStream = ProbeLoadingBenchmark.class.getResourceAsStream("/scripts/TraceScript.class");
+    classStream = ProbeLoadingBenchmark.class.getResourceAsStream("/btrace/TraceScript.class");
+    System.out.println("====> " + classStream);
   }
 
   @TearDown(Level.Invocation)
