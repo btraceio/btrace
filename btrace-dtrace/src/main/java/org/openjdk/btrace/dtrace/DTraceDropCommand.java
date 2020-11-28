@@ -40,7 +40,7 @@ public class DTraceDropCommand extends MessageCommand implements DTraceCommand {
   private DropEvent de;
 
   public DTraceDropCommand(DropEvent de) {
-    super(asString(de));
+    super(asString(de), true);
     this.de = de;
   }
 

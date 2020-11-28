@@ -33,7 +33,7 @@ public class ExitCommand extends Command {
   private int exitCode;
 
   public ExitCommand(int exitCode) {
-    super(EXIT);
+    super(EXIT, true);
     this.exitCode = exitCode;
   }
 

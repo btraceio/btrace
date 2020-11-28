@@ -43,7 +43,7 @@ public class NumberDataCommand extends DataCommand {
   }
 
   public NumberDataCommand(String name, Number value) {
-    super(NUMBER, name);
+    super(NUMBER, name, false);
     this.value = value;
   }
 

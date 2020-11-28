@@ -43,7 +43,7 @@ public class DTraceDataCommand extends MessageCommand implements DTraceCommand {
   private DataEvent de;
 
   public DTraceDataCommand(DataEvent de) {
-    super(asString(de));
+    super(asString(de), true);
     this.de = de;
   }
 

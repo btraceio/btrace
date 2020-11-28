@@ -30,13 +30,22 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.locks.LockSupport;
 import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.CircularBuffer;
+import org.openjdk.btrace.core.Function;
+import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.ListProbesCommand;
 import org.openjdk.btrace.core.comm.PrintableCommand;
+import org.openjdk.btrace.core.comm.ReconnectCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
 
 /**
@@ -45,44 +54,104 @@ import org.openjdk.btrace.core.comm.WireIO;
  * @author A. Sundararajan
  */
 class RemoteClient extends Client {
+  private final class DelayedCommandExecutor implements Function<Command, Boolean> {
+    private boolean isConnected;
+
+    public DelayedCommandExecutor(boolean isConnected) {
+      this.isConnected = isConnected;
+    }
+
+    @Override
+    public Boolean apply(Command value) {
+      return dispatchCommand(value, isConnected);
+    }
+  }
+
   private volatile Socket sock;
   private volatile ObjectInputStream ois;
   private volatile ObjectOutputStream oos;
 
-  RemoteClient(ClientContext ctx, Socket sock) throws IOException {
-    super(ctx);
-    this.sock = sock;
-    this.ois = new ObjectInputStream(sock.getInputStream());
-    this.oos = new ObjectOutputStream(sock.getOutputStream());
-    boolean hasInstrument = false;
-    while (!hasInstrument) {
+  private CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
+
+  static Client getClient(ClientContext ctx, Socket sock, Function<Client, Future<?>> initCallback)
+      throws IOException {
+    ObjectInputStream ois = new ObjectInputStream(sock.getInputStream());
+    ObjectOutputStream oos = new ObjectOutputStream(sock.getOutputStream());
+    SharedSettings settings = new SharedSettings();
+    while (true) {
       Command cmd = WireIO.read(ois);
       switch (cmd.getType()) {
-        case Command.INSTRUMENT:
-          {
-            debugPrint("got instrument command");
-            Class<?> btraceClazz = loadClass((InstrumentCommand) cmd);
-            if (btraceClazz == null) {
-              throw new RuntimeException("can not load BTrace class");
-            }
-            hasInstrument = true;
-            initialize();
-            break;
-          }
         case Command.SET_PARAMS:
           {
             settings.from(((SetSettingsCommand) cmd).getParams());
-            setupWriter();
             break;
+          }
+        case Command.INSTRUMENT:
+          {
+            try {
+              Client client =
+                  new RemoteClient(ctx, ois, oos, sock, (InstrumentCommand) cmd, settings);
+              initCallback.apply(client).get();
+              WireIO.write(oos, new StatusCommand(InstrumentCommand.STATUS_FLAG));
+              return client;
+            } catch (ExecutionException | InterruptedException e) {
+              WireIO.write(oos, new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
+              throw new IOException(e);
+            }
+          }
+        case Command.RECONNECT:
+          {
+            Client client = Client.findClient(((ReconnectCommand) cmd).getProbeId());
+            if (client instanceof RemoteClient) {
+              ((RemoteClient) client).reconnect(ois, oos, sock);
+              WireIO.write(oos, new StatusCommand(ReconnectCommand.STATUS_FLAG));
+              return client;
+            }
+            WireIO.write(oos, new StatusCommand(-1 * ReconnectCommand.STATUS_FLAG));
+            throw new IOException("Can not reconnect to non-remote session");
+          }
+        case Command.LIST_PROBES:
+          {
+            ListProbesCommand listProbesCommand = (ListProbesCommand)cmd;
+            listProbesCommand.setProbes(Client.listProbes());
+            WireIO.write(oos, listProbesCommand);
+            break;
+          }
+        case Command.EXIT:
+          {
+            return null;
           }
         default:
           {
-            errorExit(new IllegalArgumentException("expecting instrument or settings command!"));
-            throw new IOException("expecting instrument or settings command!");
+            throw new IOException("expecting instrument, reconnect or settings command! (" + cmd.getClass() + ")");
           }
       }
     }
+  }
 
+  private RemoteClient(
+      ClientContext ctx,
+      ObjectInputStream ois,
+      ObjectOutputStream oos,
+      Socket sock,
+      InstrumentCommand cmd,
+      SharedSettings settings)
+      throws IOException {
+    super(ctx);
+    this.sock = sock;
+    this.ois = ois;
+    this.oos = oos;
+    this.settings.from(settings);
+    debugPrint("got instrument command");
+    Class<?> btraceClazz = loadClass(cmd);
+    if (btraceClazz == null) {
+      throw new RuntimeException("can not load BTrace class");
+    }
+
+    initClient();
+  }
+
+  private void initClient() {
     BTraceRuntime.initUnsafe();
     Thread cmdHandler =
         new Thread(
@@ -93,15 +162,29 @@ class RemoteClient extends Client {
                   BTraceRuntime.enter();
                   while (true) {
                     try {
-                      Command cmd = WireIO.read(ois);
+                      if (RemoteClient.this.ois == null) {
+                        LockSupport.parkNanos(500_000_000L); // sleep 500ms
+                        continue;
+                      }
+                      Command cmd = WireIO.read(RemoteClient.this.ois);
                       switch (cmd.getType()) {
                         case Command.EXIT:
                           {
-                            ExitCommand ecmd = (ExitCommand) cmd;
                             debugPrint("received exit command");
-                            onCommand(ecmd);
+                            onCommand(cmd);
 
                             return;
+                          }
+                        case Command.DISCONNECT:
+                          {
+                            debugPrint("received disconnect command");
+                            onCommand(cmd);
+                            break;
+                          }
+                        case Command.LIST_PROBES:
+                          {
+                            onCommand(cmd);
+                            break;
                           }
                         case Command.EVENT:
                           {
@@ -132,35 +215,74 @@ class RemoteClient extends Client {
   @Override
   public void onCommand(Command cmd) throws IOException {
     if (oos == null) {
-      throw new IOException("no output stream");
+      if (!cmd.isUrgent()) {
+        delayedCommands.add(cmd);
+      }
+      return;
     }
     if (isDebug()) {
       debugPrint("client " + getClassName() + ": got " + cmd);
     }
-    boolean isConnected = true;
     try {
-      oos.reset();
-    } catch (SocketException e) {
-      isConnected = false;
-    }
+      boolean isConnected = true;
+      try {
+        oos.reset();
+      } catch (SocketException e) {
+        isConnected = false;
+      }
 
-    switch (cmd.getType()) {
-      case Command.EXIT:
-        if (isConnected) {
-          WireIO.write(oos, cmd);
+      delayedCommands.forEach(new DelayedCommandExecutor(isConnected));
+
+      if (!dispatchCommand(cmd, isConnected)) {
+        if (!cmd.isUrgent()) {
+          delayedCommands.add(cmd);
         }
-        onExit(((ExitCommand) cmd).getExitCode());
-        break;
-      default:
-        if (out != null) {
-          if (cmd instanceof PrintableCommand) {
-            ((PrintableCommand) cmd).print(out);
-            return;
+      }
+
+    } catch (IOException ignored) {
+      // client can be in detached state
+    }
+  }
+
+  private boolean dispatchCommand(Command cmd, boolean isConnected) {
+    if (cmd == Command.NULL) {
+      return true; // do not dispatch the NULL command
+    }
+    try {
+      switch (cmd.getType()) {
+        case Command.EXIT:
+          if (isConnected) {
+            WireIO.write(oos, cmd);
           }
+          onExit(((ExitCommand) cmd).getExitCode());
+          break;
+        case Command.LIST_PROBES: {
+          if (isConnected) {
+            ((ListProbesCommand) cmd).setProbes(listProbes());
+            WireIO.write(oos, cmd);
+          }
+          break;
         }
-        if (isConnected) {
-          WireIO.write(oos, cmd);
+        case Command.DISCONNECT: {
+          this.ois = null;
+          this.oos = null;
+          this.sock = null;
+          break;
         }
+        default:
+          if (out != null) {
+            if (cmd instanceof PrintableCommand) {
+              ((PrintableCommand) cmd).print(out);
+              break;
+            }
+          }
+          if (isConnected) {
+            WireIO.write(oos, cmd);
+          }
+      }
+      return true;
+    } catch (IOException e) {
+      return false;
     }
   }
 
@@ -180,5 +302,12 @@ class RemoteClient extends Client {
       sock.close();
       sock = null;
     }
+  }
+
+  void reconnect(ObjectInputStream ois, ObjectOutputStream oos, Socket socket) throws IOException {
+    this.sock = socket;
+    this.ois = ois;
+    this.oos = oos;
+    onCommand(Command.NULL);
   }
 }

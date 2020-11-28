@@ -33,7 +33,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
@@ -1182,7 +1181,11 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   }
 
   // package accessible for targeted tests
-  static Object[] computeFrameLocals(int argsSize, List<Object> locals, Set<LocalVarSlot> newLocals, VariableMapper variableMapper) {
+  static Object[] computeFrameLocals(
+      int argsSize,
+      List<Object> locals,
+      Set<LocalVarSlot> newLocals,
+      VariableMapper variableMapper) {
     newLocals = newLocals != null ? newLocals : Collections.<LocalVarSlot>emptySet();
     Object[] localsArr;
     int nextMappedVar = variableMapper.getNextMappedVar();

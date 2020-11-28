@@ -33,7 +33,7 @@ public class EventCommand extends Command {
   private String event;
 
   public EventCommand(String event) {
-    super(EVENT);
+    super(EVENT, true);
     this.event = event;
   }
 

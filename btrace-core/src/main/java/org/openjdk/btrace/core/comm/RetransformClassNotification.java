@@ -39,7 +39,7 @@ public class RetransformClassNotification extends Command implements PrintableCo
   private String className;
 
   public RetransformClassNotification(String className) {
-    super(RETRANSFORM_CLASS);
+    super(RETRANSFORM_CLASS, true);
     this.className = className;
   }
 

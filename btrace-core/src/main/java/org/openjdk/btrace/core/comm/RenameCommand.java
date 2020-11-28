@@ -33,7 +33,7 @@ public class RenameCommand extends Command {
   private String newName;
 
   public RenameCommand(String newName) {
-    super(RENAME);
+    super(RENAME, true);
     this.newName = newName;
   }
 
