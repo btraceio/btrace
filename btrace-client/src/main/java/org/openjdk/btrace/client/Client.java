@@ -133,7 +133,7 @@ public class Client {
   private volatile ObjectInputStream ois;
   private volatile ObjectOutputStream oos;
 
-  private boolean detached = false;
+  private boolean disconnected = false;
 
   public Client(int port) {
     this(port, null, ".", false, false, false, false, null, null);
@@ -469,7 +469,7 @@ public class Client {
               if (statusReported || cmd.getType() != Command.STATUS) {
                 listener.onCommand(cmd);
               } else {
-                StatusCommand statusCommand = (StatusCommand)cmd;
+                StatusCommand statusCommand = (StatusCommand) cmd;
                 if (statusCommand.getFlag() == ReconnectCommand.STATUS_FLAG) {
                   if (statusCommand.isSuccess()) {
                     DebugSupport.info("Reconnected to an active probe: " + resumeProbe);
@@ -638,13 +638,13 @@ public class Client {
     reset();
   }
 
-  boolean isDetached() {
-    return detached;
+  boolean isDisconnected() {
+    return disconnected;
   }
 
-  void detach() {
-    detached = true;
-    System.exit(0);
+  void disconnect() throws IOException {
+    disconnected = true;
+    sendDisconnect();
   }
 
   void listProbes() throws IOException {

@@ -52,9 +52,8 @@ public class VariableMapperTest {
     assertEquals(
         0,
         instance.remap(
-            16,
-            1)); // default mapping array size is 8 so going for double should trigger overflow
-                 // handling
+            16, 1)); // default mapping array size is 8 so going for double should trigger overflow
+    // handling
   }
 
   @Test
@@ -93,6 +92,6 @@ public class VariableMapperTest {
         VariableMapper.isInvalidMapping(
             instance.map(
                 16))); // default mapping array size is 8 so going for double should trigger
-                       // overflow handling
+    // overflow handling
   }
 }

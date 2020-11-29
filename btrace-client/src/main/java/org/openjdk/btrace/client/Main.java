@@ -29,7 +29,6 @@ import java.io.Console;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.comm.Command;
@@ -253,17 +252,23 @@ public final class Main {
         final CommandListener listener = createCommandListener(client);
 
         final boolean isUnattended = unattended;
-        client.submit(host, fileName, code, btraceArgs, new CommandListener() {
-          @Override
-          public void onCommand(Command cmd) throws IOException {
-            if (isUnattended && cmd.getType() == Command.STATUS && ((StatusCommand)cmd).getFlag() == InstrumentCommand.STATUS_FLAG) {
-              client.sendDisconnect();
-              System.exit(0);
-            } else {
-              listener.onCommand(cmd);
-            }
-          }
-        });
+        client.submit(
+            host,
+            fileName,
+            code,
+            btraceArgs,
+            new CommandListener() {
+              @Override
+              public void onCommand(Command cmd) throws IOException {
+                if (isUnattended
+                    && cmd.getType() == Command.STATUS
+                    && ((StatusCommand) cmd).getFlag() == InstrumentCommand.STATUS_FLAG) {
+                  client.sendDisconnect();
+                } else {
+                  listener.onCommand(cmd);
+                }
+              }
+            });
       }
     } catch (IOException exp) {
       errorExit(exp.getMessage(), 1);
@@ -284,6 +289,9 @@ public final class Main {
           ExitCommand ecmd = (ExitCommand) cmd;
           System.exit(ecmd.getExitCode());
         }
+        if (type == Command.DISCONNECT) {
+          System.exit(0);
+        }
       }
     };
   }
@@ -298,7 +306,7 @@ public final class Main {
                   public void run() {
                     if (!exiting) {
                       try {
-                        if (!client.isDetached()) {
+                        if (!client.isDisconnected()) {
                           if (isDebug()) debugPrint("sending exit command");
                           client.sendExit(0);
                         } else {
@@ -352,7 +360,7 @@ public final class Main {
                   client.listProbes();
                   break;
                 case "6":
-                  client.detach();
+                  client.disconnect();
                   break;
                 default:
                   con.printf("invalid option!\n");

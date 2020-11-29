@@ -102,7 +102,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     test(
         "resources.Main",
         "btrace/OnTimerTest.java",
-        5,
+        10,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -121,7 +121,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "resources.Main",
         "btrace/OnTimerArgTest.java",
         new String[] {"timer=500"},
-        5,
+        10,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -304,7 +304,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testWithJfr(
         "resources.Main",
         "btrace/JfrTest.java",
-        5,
+        10,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {

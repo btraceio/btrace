@@ -52,13 +52,14 @@ public abstract class Command implements Serializable {
   public static final byte FIRST_COMMAND = ERROR;
   public static final byte LAST_COMMAND = RECONNECT;
 
-  public static Command NULL = new Command() {
-    @Override
-    protected void write(ObjectOutput out) throws IOException {}
+  public static Command NULL =
+      new Command() {
+        @Override
+        protected void write(ObjectOutput out) throws IOException {}
 
-    @Override
-    protected void read(ObjectInput in) throws IOException, ClassNotFoundException {}
-  };
+        @Override
+        protected void read(ObjectInput in) throws IOException, ClassNotFoundException {}
+      };
 
   protected byte type;
   private boolean urgent;

@@ -76,13 +76,12 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.Function;
 import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.Function;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.Constants;
@@ -886,16 +885,6 @@ public final class Main {
               try {
                 client.debugPrint("new Client created " + client);
                 if (client.retransformLoaded()) {
-                  client
-                      .getRuntime()
-                      .send(
-                          new MessageCommand(
-                              "BTrace Probe: [id="
-                                  + client.id
-                                  + ", name="
-                                  + client.getClassName()
-                                  + "]",
-                              true));
                   client.getRuntime().send(new StatusCommand((byte) 1));
                 }
               } catch (UnmodifiableClassException uce) {

@@ -276,7 +276,9 @@ abstract class Client implements CommandListener {
     List<String> probes = new ArrayList<>(CLIENTS.size());
     for (Client client : CLIENTS.values()) {
       if (client instanceof RemoteClient) {
-        probes.add(client.id + " [" + client.getClassName() + "]");
+        if (((RemoteClient) client).isDisconnected()) {
+          probes.add(client.id + " [" + client.getClassName() + "]");
+        }
       }
     }
     return probes;
@@ -322,8 +324,7 @@ abstract class Client implements CommandListener {
     return loadClass(instr, true);
   }
 
-  final Class<?> loadClass(InstrumentCommand instr, boolean canLoadPack)
-      throws IOException {
+  final Class<?> loadClass(InstrumentCommand instr, boolean canLoadPack) throws IOException {
     ArgsMap args = instr.getArguments();
     byte[] btraceCode = instr.getCode();
     try {

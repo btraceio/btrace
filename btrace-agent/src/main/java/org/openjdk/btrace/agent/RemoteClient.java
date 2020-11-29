@@ -38,6 +38,7 @@ import org.openjdk.btrace.core.CircularBuffer;
 import org.openjdk.btrace.core.Function;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.DisconnectCommand;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
@@ -112,7 +113,7 @@ class RemoteClient extends Client {
           }
         case Command.LIST_PROBES:
           {
-            ListProbesCommand listProbesCommand = (ListProbesCommand)cmd;
+            ListProbesCommand listProbesCommand = (ListProbesCommand) cmd;
             listProbesCommand.setProbes(Client.listProbes());
             WireIO.write(oos, listProbesCommand);
             break;
@@ -123,7 +124,8 @@ class RemoteClient extends Client {
           }
         default:
           {
-            throw new IOException("expecting instrument, reconnect or settings command! (" + cmd.getClass() + ")");
+            throw new IOException(
+                "expecting instrument, reconnect or settings command! (" + cmd.getClass() + ")");
           }
       }
     }
@@ -256,19 +258,27 @@ class RemoteClient extends Client {
           }
           onExit(((ExitCommand) cmd).getExitCode());
           break;
-        case Command.LIST_PROBES: {
-          if (isConnected) {
-            ((ListProbesCommand) cmd).setProbes(listProbes());
-            WireIO.write(oos, cmd);
+        case Command.LIST_PROBES:
+          {
+            if (isConnected) {
+              ((ListProbesCommand) cmd).setProbes(listProbes());
+              WireIO.write(oos, cmd);
+            }
+            break;
           }
-          break;
-        }
-        case Command.DISCONNECT: {
-          this.ois = null;
-          this.oos = null;
-          this.sock = null;
-          break;
-        }
+        case Command.DISCONNECT:
+          {
+            ((DisconnectCommand) cmd).setProbeId(id.toString());
+            WireIO.write(oos, cmd);
+            oos.flush();
+            ois.close();
+            oos.close();
+            sock.close();
+            this.ois = null;
+            this.oos = null;
+            this.sock = null;
+            break;
+          }
         default:
           if (out != null) {
             if (cmd instanceof PrintableCommand) {
@@ -284,6 +294,10 @@ class RemoteClient extends Client {
     } catch (IOException e) {
       return false;
     }
+  }
+
+  public boolean isDisconnected() {
+    return sock == null;
   }
 
   @Override
