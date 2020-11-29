@@ -1819,4 +1819,8 @@ public class Instrumentor extends ClassVisitor {
       return InstrumentUtils.isAssignable(args1, args2, cl, exactTypeMatch);
     }
   }
+
+  boolean hasCushionMethods() {
+    return !useHiddenClasses;
+  }
 }

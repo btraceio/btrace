@@ -83,27 +83,15 @@ final class BTraceClassWriter extends ClassWriter {
     synchronized (instrumentors) {
       if (instrumentors.isEmpty()) return null;
 
-      ClassVisitor top = instrumentors.peekLast();
+      final Instrumentor top = instrumentors.peekLast();
       ClassVisitor cv =
           new ClassVisitor(Opcodes.ASM7, top != null ? top : this) {
-            private String cname;
-
-            @Override
-            public void visit(
-                int version,
-                int access,
-                String name,
-                String signature,
-                String superName,
-                String[] interfaces) {
-              cname = name;
-              super.visit(version, access, name, signature, superName, interfaces);
-            }
-
             @Override
             public void visitEnd() {
-              for (MethodNode m : cushionMethods) {
-                m.accept(this);
+              if (top != null && top.hasCushionMethods()) {
+                for (MethodNode m : cushionMethods) {
+                  m.accept(this);
+                }
               }
               super.visitEnd();
             }
