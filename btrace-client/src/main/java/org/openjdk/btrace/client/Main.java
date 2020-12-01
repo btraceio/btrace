@@ -29,11 +29,14 @@ import java.io.Console;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.ExitCommand;
+import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.PrintableCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
@@ -93,6 +96,9 @@ public final class Main {
     boolean classpathDefined = false;
     boolean includePathDefined = false;
     String statsdDef = "";
+    String resumeProbe = null;
+    boolean listProbes = false;
+    boolean unattended = false;
 
     OUTER:
     for (String arg : args) {
@@ -157,6 +163,15 @@ public final class Main {
         } else if (args[count].equals("-host") && !hostDefined) {
           host = args[++count];
           hostDefined = true;
+        } else if (args[count].equals("-r")) {
+          if (isDebug()) debugPrint("reconnecting to an already active probe " + resumeProbe);
+          resumeProbe = args[++count];
+        } else if (args[count].equals("-lp")) {
+          if (isDebug()) debugPrint("listing active probes");
+          listProbes = true;
+        } else if (args[count].equals("-x")) {
+          if (isDebug()) debugPrint("submitting probe in unattended mode");
+          unattended = true;
         } else {
           usage();
         }
@@ -186,16 +201,11 @@ public final class Main {
     if (pid == null) {
       errorExit("Unable to find JVM with either PID or name: " + pidArg, 1);
     } else {
-      System.out.println("Attaching BTrace to PID: " + pid);
-    }
-    String fileName = args[count + 1];
-    String[] btraceArgs = new String[args.length - count - 2];
-    if (btraceArgs.length > 0) {
-      System.arraycopy(args, count + 2, btraceArgs, 0, btraceArgs.length);
+      DebugSupport.info("Attaching BTrace to PID: " + pid);
     }
 
     try {
-      Client client =
+      final Client client =
           new Client(
               port,
               OUTPUT_FILE,
@@ -206,23 +216,60 @@ public final class Main {
               DUMP_CLASSES,
               DUMP_DIR,
               statsdDef);
-      if (!new File(fileName).exists()) {
-        errorExit("File not found: " + fileName, 1);
+      if (resumeProbe != null) {
+        registerExitHook(client);
+        if (con != null) {
+          registerSignalHandler(client);
+        }
+        client.reconnect(host, resumeProbe, createCommandListener(client));
+      } else if (listProbes) {
+        registerExitHook(client);
+        client.attach(pid.toString(), null, classPath);
+        client.connectAndListProbes(host, createCommandListener(client));
+        System.exit(0);
+      } else {
+        String fileName = args[count + 1];
+        String[] btraceArgs = new String[args.length - count - 2];
+        if (btraceArgs.length > 0) {
+          System.arraycopy(args, count + 2, btraceArgs, 0, btraceArgs.length);
+        }
+        if (!new File(fileName).exists()) {
+          errorExit("File not found: " + fileName, 1);
+        }
+        byte[] code = client.compile(fileName, classPath, includePath);
+        if (code == null) {
+          errorExit("BTrace compilation failed", 1);
+        }
+        if (isDebug()) {
+          debugPrint("Boot classpath: " + classPath);
+        }
+        if (!hostDefined) client.attach(pid.toString(), null, classPath);
+        registerExitHook(client);
+        if (con != null) {
+          registerSignalHandler(client);
+        }
+        if (isDebug()) debugPrint("submitting the BTrace program");
+        final CommandListener listener = createCommandListener(client);
+
+        final boolean isUnattended = unattended;
+        client.submit(
+            host,
+            fileName,
+            code,
+            btraceArgs,
+            new CommandListener() {
+              @Override
+              public void onCommand(Command cmd) throws IOException {
+                if (isUnattended
+                    && cmd.getType() == Command.STATUS
+                    && ((StatusCommand) cmd).getFlag() == InstrumentCommand.STATUS_FLAG) {
+                  client.sendDisconnect();
+                } else {
+                  listener.onCommand(cmd);
+                }
+              }
+            });
       }
-      byte[] code = client.compile(fileName, classPath, includePath);
-      if (code == null) {
-        errorExit("BTrace compilation failed", 1);
-      }
-      if (isDebug()) {
-        debugPrint("Boot classpath: " + classPath);
-      }
-      if (!hostDefined) client.attach(pid.toString(), null, classPath);
-      registerExitHook(client);
-      if (con != null) {
-        registerSignalHandler(client);
-      }
-      if (isDebug()) debugPrint("submitting the BTrace program");
-      client.submit(host, fileName, code, btraceArgs, createCommandListener(client));
     } catch (IOException exp) {
       errorExit(exp.getMessage(), 1);
     }
@@ -242,6 +289,9 @@ public final class Main {
           ExitCommand ecmd = (ExitCommand) cmd;
           System.exit(ecmd.getExitCode());
         }
+        if (type == Command.DISCONNECT) {
+          System.exit(0);
+        }
       }
     };
   }
@@ -256,8 +306,13 @@ public final class Main {
                   public void run() {
                     if (!exiting) {
                       try {
-                        if (isDebug()) debugPrint("sending exit command");
-                        client.sendExit(0);
+                        if (!client.isDisconnected()) {
+                          if (isDebug()) debugPrint("sending exit command");
+                          client.sendExit(0);
+                        } else {
+                          if (isDebug()) debugPrint("sending disconnect command");
+                          client.sendDisconnect();
+                        }
                       } catch (IOException ioexp) {
                         if (isDebug()) debugPrint(ioexp.toString());
                       }
@@ -276,7 +331,7 @@ public final class Main {
             try {
               con.printf("Please enter your option:\n");
               con.printf(
-                  "\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n");
+                  "\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n\t5. list probes\n\t6. detach client\n");
               con.flush();
               String option = con.readLine();
               if (option == null) {
@@ -300,6 +355,12 @@ public final class Main {
                   break;
                 case "4":
                   out.flush();
+                  break;
+                case "5":
+                  client.listProbes();
+                  break;
+                case "6":
+                  client.disconnect();
                   break;
                 default:
                   con.printf("invalid option!\n");

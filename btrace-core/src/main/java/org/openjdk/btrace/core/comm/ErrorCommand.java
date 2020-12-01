@@ -34,7 +34,7 @@ public class ErrorCommand extends Command implements PrintableCommand {
   private Throwable cause;
 
   public ErrorCommand(Throwable cause) {
-    super(ERROR);
+    super(ERROR, true);
     this.cause = cause;
   }
 

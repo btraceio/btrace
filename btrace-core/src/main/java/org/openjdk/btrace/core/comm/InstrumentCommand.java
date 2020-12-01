@@ -34,12 +34,14 @@ import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
 
 public class InstrumentCommand extends Command {
+  public static final int STATUS_FLAG = 1;
+
   private final DebugSupport debug;
   private byte[] code;
   private ArgsMap args;
 
   public InstrumentCommand(byte[] code, ArgsMap args, DebugSupport debug) {
-    super(INSTRUMENT);
+    super(INSTRUMENT, true);
     this.code = code;
     this.args = args;
     this.debug = debug;

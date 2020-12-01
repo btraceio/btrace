@@ -29,14 +29,34 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-public class OkayCommand extends Command {
-  public OkayCommand() {
-    super(SUCCESS);
+public class StatusCommand extends Command {
+  // custom flag
+  private int flag;
+
+  public StatusCommand(int flag) {
+    super(STATUS, true);
+    this.flag = flag;
+  }
+
+  public StatusCommand() {
+    this((byte) 0);
   }
 
   @Override
-  protected void write(ObjectOutput out) throws IOException {}
+  protected void write(ObjectOutput out) throws IOException {
+    out.writeInt(flag);
+  }
 
   @Override
-  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {}
+  protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
+    flag = in.readInt();
+  }
+
+  public int getFlag() {
+    return Math.abs(flag);
+  }
+
+  public boolean isSuccess() {
+    return flag >= 0;
+  }
 }

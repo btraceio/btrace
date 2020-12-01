@@ -96,7 +96,7 @@ public class GridDataCommand extends DataCommand {
    * @see String#format(java.lang.String, java.lang.Object[])
    */
   public GridDataCommand(String name, List<Object[]> data, String format) {
-    super(GRID_DATA, name);
+    super(GRID_DATA, name, false);
     this.data = data;
     this.format = format;
   }

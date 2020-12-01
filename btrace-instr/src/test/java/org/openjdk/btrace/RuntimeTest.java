@@ -179,7 +179,7 @@ public abstract class RuntimeTest {
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
     // uncomment the following line to get extra JFR logs
-//    args.add("-Xlog:jfr*=trace");
+    //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
     args.addAll(
         Arrays.asList(

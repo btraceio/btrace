@@ -54,8 +54,8 @@ public class WireIO {
       case Command.RENAME:
         cmd = new RenameCommand();
         break;
-      case Command.SUCCESS:
-        cmd = new OkayCommand();
+      case Command.STATUS:
+        cmd = new StatusCommand();
         break;
       case Command.NUMBER_MAP:
         cmd = new NumberMapDataCommand();
@@ -77,6 +77,15 @@ public class WireIO {
         break;
       case Command.SET_PARAMS:
         cmd = new SetSettingsCommand();
+        break;
+      case Command.LIST_PROBES:
+        cmd = new ListProbesCommand();
+        break;
+      case Command.DISCONNECT:
+        cmd = new DisconnectCommand();
+        break;
+      case Command.RECONNECT:
+        cmd = new ReconnectCommand();
         break;
       default:
         throw new RuntimeException("invalid command: " + type);

@@ -46,13 +46,21 @@ public class MessageCommand extends DataCommand {
   private String msg;
 
   public MessageCommand(long time, String msg) {
-    super(MESSAGE, null);
+    this(time, msg, false);
+  }
+
+  public MessageCommand(long time, String msg, boolean urgent) {
+    super(MESSAGE, null, urgent);
     this.time = time;
     this.msg = msg;
   }
 
   public MessageCommand(String msg) {
-    this(0L, msg);
+    this(msg, false);
+  }
+
+  public MessageCommand(String msg, boolean urgent) {
+    this(0L, msg, urgent);
   }
 
   protected MessageCommand() {
@@ -61,6 +69,7 @@ public class MessageCommand extends DataCommand {
 
   @Override
   protected void write(ObjectOutput out) throws IOException {
+    out.writeBoolean(isUrgent());
     out.writeLong(time);
     byte[] bytes = msg != null ? msg.getBytes(StandardCharsets.UTF_8) : new byte[0];
     out.writeInt(bytes.length);
@@ -71,6 +80,9 @@ public class MessageCommand extends DataCommand {
 
   @Override
   protected void read(ObjectInput in) throws ClassNotFoundException, IOException {
+    if (in.readBoolean()) {
+      setUrgent();
+    }
     time = in.readLong();
     int len = in.readInt();
     byte[] bytes = new byte[len];
@@ -98,7 +110,10 @@ public class MessageCommand extends DataCommand {
       out.print(" : ");
     }
     if (msg != null) {
-      out.print(msg);
+      out.println(msg);
+    }
+    if (isUrgent()) {
+      out.flush();
     }
   }
 }

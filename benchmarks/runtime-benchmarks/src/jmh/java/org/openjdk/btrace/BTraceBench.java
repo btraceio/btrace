@@ -44,7 +44,7 @@ import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.DataCommand;
-import org.openjdk.btrace.core.comm.OkayCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.instr.MethodTracker;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -236,7 +236,7 @@ public class BTraceBench {
   @Measurement(iterations = 5, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
   @Benchmark
   public void testSendCommand() {
-    br.send(new OkayCommand());
+    br.send(new StatusCommand());
   }
 
   @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
@@ -244,7 +244,7 @@ public class BTraceBench {
   @Threads(2)
   @Benchmark
   public void testSendCommandMulti2() {
-    br.send(new OkayCommand());
+    br.send(new StatusCommand());
   }
 
   @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
@@ -252,7 +252,7 @@ public class BTraceBench {
   @Threads(4)
   @Benchmark
   public void testSendCommandMulti4() {
-    br.send(new OkayCommand());
+    br.send(new StatusCommand());
   }
 
   @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
@@ -260,7 +260,7 @@ public class BTraceBench {
   @Threads(8)
   @Benchmark
   public void testSendCommandMulti8() {
-    br.send(new OkayCommand());
+    br.send(new StatusCommand());
   }
 
   @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
@@ -268,7 +268,7 @@ public class BTraceBench {
   @Threads(16)
   @Benchmark
   public void testSendCommandMulti16() {
-    br.send(new OkayCommand());
+    br.send(new StatusCommand());
   }
 
   long sampleHit10Checks = 0;

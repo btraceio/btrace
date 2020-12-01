@@ -37,7 +37,7 @@ public abstract class Command implements Serializable {
   public static final byte INSTRUMENT = 3;
   public static final byte MESSAGE = 4;
   public static final byte RENAME = 5;
-  public static final byte SUCCESS = 6;
+  public static final byte STATUS = 6;
   public static final byte NUMBER_MAP = 7;
   public static final byte STRING_MAP = 8;
   public static final byte NUMBER = 9;
@@ -45,41 +45,55 @@ public abstract class Command implements Serializable {
   public static final byte RETRANSFORMATION_START = 11;
   public static final byte RETRANSFORM_CLASS = 12;
   public static final byte SET_PARAMS = 13;
+  public static final byte LIST_PROBES = 14;
+  public static final byte DISCONNECT = 15;
+  public static final byte RECONNECT = 16;
 
   public static final byte FIRST_COMMAND = ERROR;
-  public static final byte LAST_COMMAND = SET_PARAMS;
+  public static final byte LAST_COMMAND = RECONNECT;
+
+  public static Command NULL =
+      new Command() {
+        @Override
+        protected void write(ObjectOutput out) throws IOException {}
+
+        @Override
+        protected void read(ObjectInput in) throws IOException, ClassNotFoundException {}
+      };
 
   protected byte type;
+  private boolean urgent;
 
   protected Command(byte type) {
+    this(type, true);
+  }
+
+  protected Command(byte type, boolean urgent) {
     if (type < FIRST_COMMAND || type > LAST_COMMAND) {
       throw new IllegalArgumentException();
     }
     this.type = type;
+    this.urgent = urgent;
+  }
+
+  private Command() {
+    this.type = -1;
+    this.urgent = true;
   }
 
   protected abstract void write(ObjectOutput out) throws IOException;
 
   protected abstract void read(ObjectInput in) throws IOException, ClassNotFoundException;
 
-  public byte getType() {
+  public final byte getType() {
     return type;
   }
 
-  final boolean isUrgent() {
-    switch (type) {
-      case MESSAGE:
-      case NUMBER_MAP:
-      case STRING_MAP:
-      case NUMBER:
-      case GRID_DATA:
-        {
-          return false;
-        }
-      default:
-        {
-          return true;
-        }
-    }
+  public final boolean isUrgent() {
+    return urgent;
+  }
+
+  final void setUrgent() {
+    urgent = true;
   }
 }

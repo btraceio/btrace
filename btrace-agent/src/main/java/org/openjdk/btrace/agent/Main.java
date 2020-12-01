@@ -77,9 +77,12 @@ import java.util.zip.ZipFile;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.Function;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
@@ -853,14 +856,20 @@ public final class Main {
           debugPrint("client accepted " + sock);
         }
         ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
-        Client client = new RemoteClient(ctx, sock);
-        handleNewClient(client).get();
-      } catch (RuntimeException | IOException | ExecutionException re) {
+        Client client =
+            RemoteClient.getClient(
+                ctx,
+                sock,
+                new Function<Client, Future<?>>() {
+                  @Override
+                  public Future<?> apply(Client value) {
+                    return handleNewClient(value);
+                  }
+                });
+      } catch (RuntimeException | IOException re) {
         if (isDebug()) {
           debugPrint(re);
         }
-      } catch (InterruptedException e) {
-        return;
       }
     }
   }
@@ -875,12 +884,15 @@ public final class Main {
               boolean entered = BTraceRuntime.enter();
               try {
                 client.debugPrint("new Client created " + client);
-                client.retransformLoaded();
+                if (client.retransformLoaded()) {
+                  client.getRuntime().send(new StatusCommand((byte) 1));
+                }
               } catch (UnmodifiableClassException uce) {
                 if (isDebug()) {
                   debugPrint(uce);
                 }
                 client.getRuntime().send(new ErrorCommand(uce));
+                client.getRuntime().send(new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
               } finally {
                 if (entered) {
                   BTraceRuntime.leave();

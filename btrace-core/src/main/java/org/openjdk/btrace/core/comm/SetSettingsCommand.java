@@ -40,9 +40,8 @@ public class SetSettingsCommand extends Command {
   private final Map<String, Object> params;
 
   public SetSettingsCommand(Map<String, ?> params) {
-    super(SET_PARAMS);
-    this.params =
-        params != null ? new HashMap<String, Object>(params) : new HashMap<String, Object>();
+    super(SET_PARAMS, true);
+    this.params = params != null ? new HashMap<>(params) : new HashMap<String, Object>();
   }
 
   protected SetSettingsCommand() {

@@ -58,11 +58,15 @@ import org.openjdk.btrace.core.annotations.DTrace;
 import org.openjdk.btrace.core.annotations.DTraceRef;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.comm.DisconnectCommand;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.ListProbesCommand;
 import org.openjdk.btrace.core.comm.MessageCommand;
+import org.openjdk.btrace.core.comm.ReconnectCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
 
 /**
@@ -128,6 +132,8 @@ public class Client {
   private volatile Socket sock;
   private volatile ObjectInputStream ois;
   private volatile ObjectOutputStream oos;
+
+  private boolean disconnected = false;
 
   public Client(int port) {
     this(port, null, ".", false, false, false, false, null, null);
@@ -368,6 +374,123 @@ public class Client {
     }
   }
 
+  void connectAndListProbes(String host, final CommandListener listener) throws IOException {
+    if (sock != null) {
+      throw new IllegalStateException();
+    }
+    try {
+      if (debug) {
+        debugPrint("opening socket to " + port);
+      }
+      long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
+      while (sock == null && System.nanoTime() <= timeout) {
+        try {
+          sock = new Socket(host, port);
+        } catch (ConnectException e) {
+          if (debug) {
+            debugPrint("server not yet available; retrying ...");
+          }
+          Thread.sleep(20);
+        }
+      }
+
+      if (sock == null) {
+        debugPrint("server not available. exiting.");
+        System.exit(1);
+      }
+      oos = new ObjectOutputStream(sock.getOutputStream());
+      WireIO.write(oos, new ListProbesCommand());
+      ois = new ObjectInputStream(sock.getInputStream());
+
+      if (debug) {
+        debugPrint("entering into command loop");
+      }
+      commandLoop(
+          new CommandListener() {
+            @Override
+            public void onCommand(Command cmd) throws IOException {
+              if (cmd.getType() == Command.LIST_PROBES) {
+                listener.onCommand(cmd);
+                System.exit(0);
+              } else {
+                listener.onCommand(cmd);
+              }
+            }
+          });
+    } catch (UnknownHostException uhe) {
+      throw new IOException(uhe);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  void reconnect(String host, final String resumeProbe, final CommandListener listener)
+      throws IOException {
+    if (sock != null) {
+      throw new IllegalStateException();
+    }
+    try {
+      if (debug) {
+        debugPrint("opening socket to " + port);
+      }
+      long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
+      while (sock == null && System.nanoTime() <= timeout) {
+        try {
+          sock = new Socket(host, port);
+        } catch (ConnectException e) {
+          if (debug) {
+            debugPrint("server not yet available; retrying ...");
+          }
+          Thread.sleep(20);
+        }
+      }
+
+      if (sock == null) {
+        debugPrint("server not available. exiting.");
+        System.exit(1);
+      }
+      oos = new ObjectOutputStream(sock.getOutputStream());
+      if (debug) {
+        debugPrint("reconnecting client");
+      }
+      WireIO.write(oos, new ReconnectCommand(resumeProbe));
+
+      ois = new ObjectInputStream(sock.getInputStream());
+
+      if (debug) {
+        debugPrint("entering into command loop");
+      }
+      commandLoop(
+          new CommandListener() {
+            boolean statusReported = false;
+
+            @Override
+            public void onCommand(Command cmd) throws IOException {
+              if (statusReported || cmd.getType() != Command.STATUS) {
+                listener.onCommand(cmd);
+              } else {
+                StatusCommand statusCommand = (StatusCommand) cmd;
+                if (statusCommand.getFlag() == ReconnectCommand.STATUS_FLAG) {
+                  if (statusCommand.isSuccess()) {
+                    DebugSupport.info("Reconnected to an active probe: " + resumeProbe);
+                  } else {
+                    DebugSupport.warning("Unable to reconnect to an active probe: " + resumeProbe);
+                    System.exit(1);
+                  }
+                } else {
+                  listener.onCommand(cmd);
+                }
+                statusReported = true;
+              }
+            }
+          });
+    } catch (UnknownHostException uhe) {
+      throw new IOException(uhe);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
   /**
    * Submits the compiled BTrace .class to the VM attached and passes given command line arguments.
    * Receives commands from the traced JVM and sends those to the command listener provided.
@@ -382,7 +505,11 @@ public class Client {
    * Receives commands from the traced JVM and sends those to the command listener provided.
    */
   public void submit(
-      String host, String fileName, byte[] code, String[] args, CommandListener listener)
+      String host,
+      final String fileName,
+      byte[] code,
+      String[] args,
+      final CommandListener listener)
       throws IOException {
     if (sock != null) {
       throw new IllegalStateException();
@@ -405,7 +532,7 @@ public class Client {
       }
 
       if (sock == null) {
-        debugPrint("server not available. exitting.");
+        debugPrint("server not available. exiting.");
         System.exit(1);
       }
       oos = new ObjectOutputStream(sock.getOutputStream());
@@ -422,17 +549,42 @@ public class Client {
 
       WireIO.write(oos, new SetSettingsCommand(settings));
 
+      ois = new ObjectInputStream(sock.getInputStream());
+
       if (debug) {
         debugPrint("sending instrument command: " + Arrays.deepToString(args));
       }
       SharedSettings sSettings = new SharedSettings();
       sSettings.from(settings);
       WireIO.write(oos, new InstrumentCommand(code, args, new DebugSupport(sSettings)));
-      ois = new ObjectInputStream(sock.getInputStream());
+
       if (debug) {
         debugPrint("entering into command loop");
       }
-      commandLoop(listener);
+      commandLoop(
+          new CommandListener() {
+            boolean statusReported = false;
+
+            @Override
+            public void onCommand(Command cmd) throws IOException {
+              if (statusReported || cmd.getType() != Command.STATUS) {
+                listener.onCommand(cmd);
+              } else {
+                StatusCommand statusCommand = (StatusCommand) cmd;
+                if (statusCommand.getFlag() == InstrumentCommand.STATUS_FLAG) {
+                  if (statusCommand.isSuccess()) {
+                    DebugSupport.info("Successfully started BTrace probe: " + fileName);
+                  } else {
+                    DebugSupport.warning("Failed to start BTrace probe: " + fileName);
+                    System.exit(1);
+                  }
+                  statusReported = true;
+                } else {
+                  listener.onCommand(cmd);
+                }
+              }
+            }
+          });
     } catch (UnknownHostException uhe) {
       throw new IOException(uhe);
     } catch (InterruptedException e) {
@@ -458,6 +610,10 @@ public class Client {
     send(new ExitCommand(code));
   }
 
+  public void sendDisconnect() throws IOException {
+    send(new DisconnectCommand());
+  }
+
   /** Sends an EventCommand to the traced JVM. */
   public void sendEvent() throws IOException {
     sendEvent("");
@@ -480,6 +636,19 @@ public class Client {
       sock.close();
     }
     reset();
+  }
+
+  boolean isDisconnected() {
+    return disconnected;
+  }
+
+  void disconnect() throws IOException {
+    disconnected = true;
+    sendDisconnect();
+  }
+
+  void listProbes() throws IOException {
+    send(new ListProbesCommand());
   }
 
   /** reset the internal status of the client */

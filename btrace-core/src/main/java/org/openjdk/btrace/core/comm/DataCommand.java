@@ -33,8 +33,8 @@ package org.openjdk.btrace.core.comm;
 public abstract class DataCommand extends Command implements PrintableCommand {
   protected String name;
 
-  public DataCommand(byte type, String name) {
-    super(type);
+  public DataCommand(byte type, String name, boolean urgent) {
+    super(type, urgent);
     this.name = name;
   }
 
