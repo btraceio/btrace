@@ -29,6 +29,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class WireIO {
+  public static final int VERSION = 1;
 
   private WireIO() {}
 

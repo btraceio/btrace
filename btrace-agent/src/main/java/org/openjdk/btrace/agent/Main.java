@@ -83,6 +83,7 @@ import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
+import org.openjdk.btrace.core.comm.WireIO;
 import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
@@ -836,6 +837,8 @@ public final class Main {
         debugPrint("starting server at " + port);
       }
       System.setProperty("btrace.port", String.valueOf(port));
+      System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
+
       String scriptOutputFile = settings.getOutputFile();
       if (scriptOutputFile != null && scriptOutputFile.length() > 0) {
         System.setProperty("btrace.output", scriptOutputFile);

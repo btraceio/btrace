@@ -45,9 +45,9 @@ final class JpsUtils {
           String mainClass = MonitoredVmUtil.mainClass(mvm, false);
 
           vms.add(
-              "["
+              "("
                   + (hasBTraceServer(vmPid) ? "+" : "-")
-                  + "] "
+                  + ") "
                   + vmPid
                   + " "
                   + mainClass
