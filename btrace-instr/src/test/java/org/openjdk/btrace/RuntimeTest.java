@@ -243,9 +243,11 @@ public abstract class RuntimeTest {
                 try {
                   String l = null;
                   while ((l = stderrReader.readLine()) != null) {
-                    if (!l.contains("Server VM warning")) {
-                      testAppLatch.countDown();
+                    if (l.contains("Server VM warning") ||
+                        l.contains("XML libraries not available")) {
+                      continue;
                     }
+                    testAppLatch.countDown();
                     if (debugTestApp) {
                       System.err.println("[traced app] " + l);
                     }
