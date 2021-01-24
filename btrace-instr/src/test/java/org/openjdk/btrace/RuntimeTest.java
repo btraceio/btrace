@@ -372,7 +372,7 @@ public abstract class RuntimeTest {
                   String line = null;
                   while ((line = br.readLine()) != null) {
                     System.out.println("[btrace err] " + line);
-                    if (line.contains("Server VM warning")) {
+                    if (line.contains("Server VM warning") || line.contains("XML libraries not available")) {
                       // skip JVM generated warnings
                       continue;
                     }
