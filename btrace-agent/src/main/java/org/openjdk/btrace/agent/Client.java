@@ -73,8 +73,6 @@ import org.openjdk.btrace.instr.Instrumentor;
 import org.openjdk.btrace.instr.templates.impl.MethodTrackingExpander;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
-import sun.reflect.annotation.AnnotationParser;
-import sun.reflect.annotation.AnnotationType;
 
 /**
  * Abstract class that represents a BTrace client at the BTrace agent.
@@ -93,8 +91,6 @@ abstract class Client implements CommandListener {
     Instrumentor.class.getClassLoader();
     ClassReader.class.getClassLoader();
     ClassWriter.class.getClassLoader();
-    AnnotationParser.class.getClassLoader();
-    AnnotationType.class.getClassLoader();
     Annotation.class.getClassLoader();
     MethodTrackingExpander.class.getClassLoader();
     ClassCache.class.getClassLoader();
