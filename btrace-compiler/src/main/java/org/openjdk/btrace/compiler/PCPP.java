@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,20 +60,20 @@ public class PCPP {
    * definitions. Macros and multi-f defines (which typically contain either macro definitions or
    * expressions) are currently not handled.
    */
-  private final Map /*<String, String>*/ defineMap = new HashMap();
+  private final Map<String, String> defineMap = new HashMap<>();
 
-  private final Set /*<String>*/ nonConstantDefines = new HashSet();
+  private final Set<String> nonConstantDefines = new HashSet<>();
   /** List containing the #include paths as Strings */
-  private final List /*<String>*/ includePaths;
+  private final List<String> includePaths;
 
   private ParseState state;
 
-  public PCPP(List /*<String>*/ includePaths) {
+  public PCPP(List<String> includePaths) {
     this.includePaths = includePaths;
     printer = new Printer();
   }
 
-  public PCPP(List /*<String>*/ includePaths, Writer out) {
+  public PCPP(List<String> includePaths, Writer out) {
     this.includePaths = includePaths;
     printer = new Printer(out);
   }
@@ -89,7 +88,7 @@ public class PCPP {
         usage();
       }
 
-      List includePaths = new ArrayList();
+      List<String> includePaths = new ArrayList<>();
       for (int i = 0; i < args.length; i++) {
         if (i < args.length - 1) {
           String arg = args[i];
@@ -166,8 +165,7 @@ public class PCPP {
 
   public String findFile(String filename) {
     String sep = File.separator;
-    for (Iterator iter = includePaths.iterator(); iter.hasNext(); ) {
-      String inclPath = (String) iter.next();
+    for (String inclPath : includePaths) {
       String fullPath = inclPath + sep + filename;
       File file = new File(fullPath);
       if (file.exists()) {
@@ -178,7 +176,7 @@ public class PCPP {
   }
 
   // Accessors
-  private void pushBackToken() throws IOException {
+  private void pushBackToken() {
     state.tok().pushBack();
   }
 
@@ -251,11 +249,7 @@ public class PCPP {
     }
     char c = (char) t;
     if (c == '"' || c == '\'') {
-      StringBuilder buf = new StringBuilder();
-      buf.append(c);
-      buf.append(state.tok().sval);
-      buf.append(c);
-      return buf.toString();
+      return c + state.tok().sval + c;
     }
     return new String(new char[] {c});
   }
@@ -303,7 +297,7 @@ public class PCPP {
           printer.print(" ");
         }
         String s = curTokenAsString();
-        String newS = (String) defineMap.get(s);
+        String newS = defineMap.get(s);
         if (newS == null) {
           newS = s;
         }
@@ -367,13 +361,13 @@ public class PCPP {
     debugPrint(true, "#undef " + name);
 
     // there shouldn't be any extra symbols after the name, but just in case...
-    List values = new ArrayList();
+    List<String> values = new ArrayList<>();
     while (nextToken(true) != StreamTokenizer.TT_EOL) {
       values.add(curTokenAsString());
     }
 
     if (printer.enabled()) {
-      String oldDef = (String) defineMap.remove(name);
+      String oldDef = defineMap.remove(name);
       if (oldDef == null) {
         System.err.println(
             "WARNING: ignoring redundant \"#undef "
@@ -408,7 +402,7 @@ public class PCPP {
     // System.err.println("IN HANDLE_DEFINE: '" + name + "'  (line " + lineNumber() + " file " +
     // filename() + ")");
     // (Note that this is not actually proper handling for multi-line #defines)
-    List values = new ArrayList();
+    List<String> values = new ArrayList<>();
     while (nextToken(true) != StreamTokenizer.TT_EOL) {
       values.add(curTokenAsString());
     }
@@ -423,7 +417,7 @@ public class PCPP {
       int sz = values.size();
       if (sz == 0) {
         // definition to nothing, like "#define FOO"
-        String oldDef = (String) defineMap.put(name, "");
+        String oldDef = defineMap.put(name, "");
         if (oldDef != null) {
           System.err.println("WARNING: \"" + name + "\" redefined from \"" + oldDef + "\" to \"\"");
         }
@@ -433,11 +427,11 @@ public class PCPP {
         // System.out.println("//---DEFINED: " + name + "to \"\"");
       } else if (sz == 1) {
         // See whether the value is a constant
-        String value = (String) values.get(0);
+        String value = values.get(0);
         if (isConstant(value)) {
           // Value is numeric constant like "#define FOO 5".
           // Put it in the #define map
-          String oldDef = (String) defineMap.put(name, value);
+          String oldDef = defineMap.put(name, value);
           if (oldDef != null) {
             System.err.println(
                 "WARNING: \"" + name + "\" redefined from \"" + oldDef + "\" to \"" + value + "\"");
@@ -470,7 +464,7 @@ public class PCPP {
           if (i != 0) {
             val.append(" ");
           }
-          val.append(resolveDefine((String) values.get(i), false));
+          val.append(resolveDefine(values.get(i), false));
         }
         if (defineMap.get(name) != null) {
           // This is probably something the user should investigate.
@@ -494,9 +488,9 @@ public class PCPP {
         // Print name and value
         printer.print("# define ");
         printer.print(name);
-        for (Iterator iter = values.iterator(); iter.hasNext(); ) {
+        for (String line : values) {
           printer.print(" ");
-          printer.print((String) iter.next());
+          printer.print(line);
         }
         printer.println();
       }
@@ -534,7 +528,7 @@ public class PCPP {
   }
 
   private String resolveDefine(String word, boolean returnNullIfNotFound) {
-    String lastWord = (String) defineMap.get(word);
+    String lastWord = defineMap.get(word);
     if (lastWord == null) {
       if (returnNullIfNotFound) {
         return null;
@@ -543,7 +537,7 @@ public class PCPP {
     }
     String nextWord = null;
     do {
-      nextWord = (String) defineMap.get(lastWord);
+      nextWord = defineMap.get(lastWord);
       if (nextWord != null) {
         lastWord = nextWord;
       }
@@ -566,7 +560,7 @@ public class PCPP {
   ////////////////////////////////////////////////
 
   /** Handles #else directives */
-  private void handleElse() throws IOException {
+  private void handleElse() {
     boolean enabledStatusBeforeElse = printer.enabled();
     printer.popEnableBit();
     printer.pushEnableBit(printer.enabled() && !enabledStatusBeforeElse);
@@ -657,19 +651,7 @@ public class PCPP {
           }
           break;
         case '>':
-          {
-            // NOTE: we don't handle expressions like this properly
-            boolean rhs = handleIfRecursive(true);
-            ifValue = false;
-          }
-          break;
         case '<':
-          {
-            // NOTE: we don't handle expressions like this properly
-            boolean rhs = handleIfRecursive(true);
-            ifValue = false;
-          }
-          break;
         case '=':
           {
             // NOTE: we don't handle expressions like this properly
@@ -691,7 +673,7 @@ public class PCPP {
               nextRequiredToken(')');
             } else {
               // Handle things like #if SOME_SYMBOL.
-              String symbolValue = (String) defineMap.get(word);
+              String symbolValue = defineMap.get(word);
 
               // See if the statement is "true"; i.e., a non-zero expression
               if (symbolValue != null) {
@@ -714,7 +696,7 @@ public class PCPP {
                   } catch (NumberFormatException nfe2) {
                     try {
                       // ok, it's not a valid hex/octal value, try boolean
-                      return Boolean.valueOf(word);
+                      return Boolean.parseBoolean(word);
                     } catch (NumberFormatException nfe3) {
                       // give up; the symbol isn't a numeric or boolean value
                       return false;

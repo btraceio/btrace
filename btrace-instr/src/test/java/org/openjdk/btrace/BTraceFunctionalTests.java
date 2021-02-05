@@ -140,14 +140,11 @@ public class BTraceFunctionalTests extends RuntimeTest {
     test(
         "resources.Main",
         "btrace/OnExitTest.java",
-        2,
-        new ResultValidator() {
-          @Override
-          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
-            assertFalse("Script should not have failed", stdout.contains("FAILED"));
-            assertTrue("Non-empty stderr", stderr.isEmpty());
-            assertTrue(stdout.contains("onexit"));
-          }
+        5,
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse("Script should not have failed", stdout.contains("FAILED"));
+          assertTrue("Non-empty stderr", stderr.isEmpty());
+          assertTrue(stdout.contains("onexit"));
         });
   }
 

@@ -12,7 +12,7 @@ Demonstrates the BTrace ability to instrument a class.
 ```java
 package extra;
 
-abstract public class HelloWorld extends HelloWorldBase {
+public abstract class HelloWorld extends HelloWorldBase {
     protected int field = 0;
 
     public static void main(String[] args) throws Exception {
@@ -30,27 +30,27 @@ abstract public class HelloWorld extends HelloWorldBase {
     }
 
     private void callA(String a, int b) {
-	field++;
+        field++;
         callB(callC(a, b));
-	field--;
+        field--;
     }
 
     private void callB(String s) {
-	field++;
+        field++;
         System.out.println("You want " + s);
-	field--;
+        field--;
     }
 
-    abstract protected String callC(String a, int b);
+    protected abstract String callC(String a, int b);
 }
 
 final class HelloWorldExt extends HelloWorld {
     @Override
     protected String callC(String a, int b) {
-	try {
+        try {
             field++;
             String s = a + "-" + b;
-            for(int i=0;i<100;i++) {
+            for (int i = 0; i < 100; i++) {
                 s = callD(s);
             }
             return s;
@@ -61,7 +61,7 @@ final class HelloWorldExt extends HelloWorld {
 }
 
 abstract class HelloWorldBase {
-    final protected String callD(String s) {
+    protected final String callD(String s) {
         return "# " + s;
     }
 }

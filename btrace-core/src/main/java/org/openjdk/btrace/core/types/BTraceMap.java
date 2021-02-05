@@ -136,8 +136,9 @@ public final class BTraceMap<K, V> implements Map<K, V>, Cloneable {
     return m.toString();
   }
 
+  @SuppressWarnings({"RedundantThrows", "MethodDoesntCallSuperMethod"})
   @Override
   protected Object clone() throws CloneNotSupportedException {
-    return new BTraceMap(isWeak ? new WeakHashMap() : new HashMap());
+    return new BTraceMap<>(isWeak ? new WeakHashMap<>() : new HashMap<>());
   }
 }

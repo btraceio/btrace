@@ -38,7 +38,6 @@ import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.PrintableCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import sun.misc.Signal;
-import sun.misc.SignalHandler;
 
 /**
  * This is the main class for a simple command line BTrace client. It is possible to create a GUI
@@ -46,6 +45,7 @@ import sun.misc.SignalHandler;
  *
  * @author A. Sundararajan
  */
+@SuppressWarnings("RedundantThrows")
 public final class Main {
   public static final boolean TRACK_RETRANSFORM;
   public static final int BTRACE_DEFAULT_PORT = 2020;
@@ -205,7 +205,7 @@ public final class Main {
     }
 
     try {
-      final Client client =
+      Client client =
           new Client(
               port,
               OUTPUT_FILE,
@@ -249,24 +249,21 @@ public final class Main {
           registerSignalHandler(client);
         }
         if (isDebug()) debugPrint("submitting the BTrace program");
-        final CommandListener listener = createCommandListener(client);
+        CommandListener listener = createCommandListener(client);
 
-        final boolean isUnattended = unattended;
+        boolean isUnattended = unattended;
         client.submit(
             host,
             fileName,
             code,
             btraceArgs,
-            new CommandListener() {
-              @Override
-              public void onCommand(Command cmd) throws IOException {
-                if (isUnattended
-                    && cmd.getType() == Command.STATUS
-                    && ((StatusCommand) cmd).getFlag() == InstrumentCommand.STATUS_FLAG) {
-                  client.sendDisconnect();
-                } else {
-                  listener.onCommand(cmd);
-                }
+            cmd -> {
+              if (isUnattended
+                  && cmd.getType() == Command.STATUS
+                  && ((StatusCommand) cmd).getFlag() == InstrumentCommand.STATUS_FLAG) {
+                client.sendDisconnect();
+              } else {
+                listener.onCommand(cmd);
               }
             });
       }
@@ -276,99 +273,90 @@ public final class Main {
   }
 
   private static CommandListener createCommandListener(Client client) {
-    return new CommandListener() {
-      @Override
-      public void onCommand(Command cmd) throws IOException {
-        int type = cmd.getType();
-        if (cmd instanceof PrintableCommand) {
-          ((PrintableCommand) cmd).print(out);
-          out.flush();
-        } else if (type == Command.EXIT) {
-          exiting = true;
-          out.flush();
-          ExitCommand ecmd = (ExitCommand) cmd;
-          System.exit(ecmd.getExitCode());
-        }
-        if (type == Command.DISCONNECT) {
-          System.exit(0);
-        }
+    return cmd -> {
+      int type = cmd.getType();
+      if (cmd instanceof PrintableCommand) {
+        ((PrintableCommand) cmd).print(out);
+        out.flush();
+      } else if (type == Command.EXIT) {
+        exiting = true;
+        out.flush();
+        ExitCommand ecmd = (ExitCommand) cmd;
+        System.exit(ecmd.getExitCode());
+      }
+      if (type == Command.DISCONNECT) {
+        System.exit(0);
       }
     };
   }
 
-  private static void registerExitHook(final Client client) {
+  private static void registerExitHook(Client client) {
     if (isDebug()) debugPrint("registering shutdown hook");
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread(
-                new Runnable() {
-                  @Override
-                  public void run() {
-                    if (!exiting) {
-                      try {
-                        if (!client.isDisconnected()) {
-                          if (isDebug()) debugPrint("sending exit command");
-                          client.sendExit(0);
-                        } else {
-                          if (isDebug()) debugPrint("sending disconnect command");
-                          client.sendDisconnect();
-                        }
-                      } catch (IOException ioexp) {
-                        if (isDebug()) debugPrint(ioexp.toString());
+                () -> {
+                  if (!exiting) {
+                    try {
+                      if (!client.isDisconnected()) {
+                        if (isDebug()) debugPrint("sending exit command");
+                        client.sendExit(0);
+                      } else {
+                        if (isDebug()) debugPrint("sending disconnect command");
+                        client.sendDisconnect();
                       }
+                    } catch (IOException ioexp) {
+                      if (isDebug()) debugPrint(ioexp.toString());
                     }
                   }
                 }));
   }
 
-  private static void registerSignalHandler(final Client client) {
+  private static void registerSignalHandler(Client client) {
     if (isDebug()) debugPrint("registering signal handler for SIGINT");
     Signal.handle(
         new Signal("INT"),
-        new SignalHandler() {
-          @Override
-          public void handle(Signal sig) {
-            try {
-              con.printf("Please enter your option:\n");
-              con.printf(
-                  "\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n\t5. list probes\n\t6. detach client\n");
-              con.flush();
-              String option = con.readLine();
-              if (option == null) {
-                return;
-              }
-              option = option.trim();
-              switch (option) {
-                case "1":
-                  System.exit(0);
-                case "2":
-                  if (isDebug()) debugPrint("sending event command");
-                  client.sendEvent();
-                  break;
-                case "3":
-                  con.printf("Please enter the event name: ");
-                  String name = con.readLine();
-                  if (name != null) {
-                    if (isDebug()) debugPrint("sending event command");
-                    client.sendEvent(name);
-                  }
-                  break;
-                case "4":
-                  out.flush();
-                  break;
-                case "5":
-                  client.listProbes();
-                  break;
-                case "6":
-                  client.disconnect();
-                  break;
-                default:
-                  con.printf("invalid option!\n");
-                  break;
-              }
-            } catch (IOException ioexp) {
-              if (isDebug()) debugPrint(ioexp.toString());
+        sig -> {
+          try {
+            con.printf("Please enter your option:\n");
+            con.printf(
+                "\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n\t5. list probes\n\t6. detach client\n");
+            con.flush();
+            String option = con.readLine();
+            if (option == null) {
+              return;
             }
+            option = option.trim();
+            switch (option) {
+              case "1":
+                System.exit(0);
+              case "2":
+                if (isDebug()) debugPrint("sending event command");
+                client.sendEvent();
+                break;
+              case "3":
+                con.printf("Please enter the event name: ");
+                String name = con.readLine();
+                if (name != null) {
+                  if (isDebug()) debugPrint("sending event command");
+                  client.sendEvent(name);
+                }
+                break;
+              case "4":
+                out.flush();
+                break;
+              case "5":
+                client.listProbes();
+                break;
+              case "6":
+                client.disconnect();
+                break;
+              default:
+                con.printf("invalid option!\n");
+                break;
+            }
+          } catch (IOException ioexp) {
+            if (isDebug()) debugPrint(ioexp.toString());
           }
         });
   }

@@ -49,7 +49,7 @@ class CopyingVisitor extends ClassVisitor {
         super.visitMethodInsn(opcode, owner, name, desc, itfc);
       }
     };
-  };
+  }
 
   protected String getActionMethodName(String name) {
     return name;

@@ -99,6 +99,7 @@ public class WireIO {
     return cmd;
   }
 
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public static void write(ObjectOutput out, Command cmd) throws IOException {
     synchronized (out) {
       out.writeByte(cmd.getType());

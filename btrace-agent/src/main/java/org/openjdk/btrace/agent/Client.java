@@ -83,7 +83,7 @@ import org.openjdk.btrace.runtime.BTraceRuntimes;
 abstract class Client implements CommandListener {
   private static final Map<UUID, Client> CLIENTS = new ConcurrentHashMap<>();
   private static final Map<String, PrintWriter> WRITER_MAP = new HashMap<>();
-  private static final Pattern SYSPROP_PTN = Pattern.compile("\\$\\{(.+?)\\}");
+  private static final Pattern SYSPROP_PTN = Pattern.compile("\\$\\{(.+?)}");
 
   static {
     ClassFilter.class.getClassLoader();
@@ -123,7 +123,7 @@ abstract class Client implements CommandListener {
     debug = new DebugSupport(settings);
 
     setupWriter();
-    CLIENTS.put(this.id, this);
+    CLIENTS.put(id, this);
   }
 
   private static String pid() {
@@ -310,7 +310,7 @@ abstract class Client implements CommandListener {
         }
       } finally {
         runtime.shutdownCmdLine();
-        CLIENTS.remove(this.id);
+        CLIENTS.remove(id);
         HandlerRepository.unregisterProbe(probe);
       }
     }
@@ -352,12 +352,9 @@ abstract class Client implements CommandListener {
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread(
-                new Runnable() {
-                  @Override
-                  public void run() {
-                    if (runtime != null) {
-                      runtime.handleExit(0);
-                    }
+                () -> {
+                  if (runtime != null) {
+                    runtime.handleExit(0);
                   }
                 }));
     if (isDebug()) {
@@ -435,7 +432,7 @@ abstract class Client implements CommandListener {
     return probe != null ? probe.getClassName() : "<unknown>";
   }
 
-  private final boolean isCandidate(Class c) {
+  private final boolean isCandidate(Class<?> c) {
     String cname = c.getName().replace('.', '/');
     if (c.isInterface() || c.isPrimitive() || c.isArray()) {
       return false;

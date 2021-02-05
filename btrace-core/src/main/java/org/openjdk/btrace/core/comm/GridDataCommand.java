@@ -49,7 +49,7 @@ import org.openjdk.btrace.core.aggregation.HistogramData;
  */
 public class GridDataCommand extends DataCommand {
   private static final Pattern INDEX_PATTERN = Pattern.compile("%(\\d)+\\$");
-  private static final HashMap<Class<?>, String> typeFormats = new HashMap<Class<?>, String>();
+  private static final HashMap<Class<?>, String> typeFormats = new HashMap<>();
 
   static {
     typeFormats.put(Integer.class, "%15d");
@@ -239,7 +239,7 @@ public class GridDataCommand extends DataCommand {
     if (format.length() == 0) format = null;
 
     int rowCount = in.readInt();
-    data = new ArrayList<Object[]>(rowCount);
+    data = new ArrayList<>(rowCount);
     for (int i = 0; i < rowCount; i++) {
       int cellCount = in.readInt();
       Object[] row = new Object[cellCount];
