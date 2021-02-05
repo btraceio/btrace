@@ -100,10 +100,12 @@ public class WireIO {
   }
 
   public static void write(ObjectOutput out, Command cmd) throws IOException {
-    out.writeByte(cmd.getType());
-    cmd.write(out);
-    if (cmd.isUrgent()) {
-      out.flush();
+    synchronized (out) {
+      out.writeByte(cmd.getType());
+      cmd.write(out);
+      if (cmd.isUrgent()) {
+        out.flush();
+      }
     }
   }
 }

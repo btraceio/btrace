@@ -72,7 +72,7 @@ class RemoteClient extends Client {
   private volatile ObjectInputStream ois;
   private volatile ObjectOutputStream oos;
 
-  private CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
+  private final CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
 
   static Client getClient(ClientContext ctx, Socket sock, Function<Client, Future<?>> initCallback)
       throws IOException {
@@ -228,7 +228,9 @@ class RemoteClient extends Client {
     try {
       boolean isConnected = true;
       try {
-        oos.reset();
+        synchronized (oos) {
+          oos.reset();
+        }
       } catch (SocketException e) {
         isConnected = false;
       }
@@ -269,10 +271,12 @@ class RemoteClient extends Client {
         case Command.DISCONNECT:
           {
             ((DisconnectCommand) cmd).setProbeId(id.toString());
-            WireIO.write(oos, cmd);
-            oos.flush();
-            ois.close();
-            oos.close();
+            synchronized (oos) {
+              WireIO.write(oos, cmd);
+              oos.flush();
+              ois.close();
+              oos.close();
+            }
             sock.close();
             this.ois = null;
             this.oos = null;
@@ -305,7 +309,9 @@ class RemoteClient extends Client {
     super.closeAll();
 
     if (oos != null) {
-      oos.close();
+      synchronized (oos) {
+        oos.close();
+      }
       oos = null;
     }
     if (ois != null) {
