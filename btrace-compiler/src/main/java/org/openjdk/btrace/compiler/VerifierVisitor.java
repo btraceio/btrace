@@ -74,6 +74,7 @@ import org.openjdk.btrace.core.annotations.OnError;
 import org.openjdk.btrace.core.annotations.OnExit;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Sampled;
+import org.openjdk.btrace.core.extensions.ExtensionRepository;
 
 /**
  * This class tree visitor validates a BTrace program's ClassTree.
@@ -154,22 +155,27 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
         return super.visitMethodInvocation(node, v);
       }
 
+      // get the method owner
       TypeElement parent = null;
       do {
         parent = (TypeElement) e.getEnclosingElement();
       } while (parent != null
-          && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
+              && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
+
 
       if (parent != null) {
         TypeMirror tm = parent.asType();
         String typeName = tm.toString();
 
         if (isSameClass(typeName)) {
+          // allow calls to the same class methods
           return super.visitMethodInvocation(node, v);
         }
+
         if (isBTraceClass(typeName)) {
           if (typeName.contains("BTraceUtils")) {
             if (e.getSimpleName().contentEquals("setEventField")) {
+              // extra validation for JFR event field write
               String nameValue = node.getArguments().get(1).toString();
               if (!eventFieldNames.contains(nameValue)) {
                 reportError("jfr.event.invalid.field", node.getArguments().get(1));
@@ -187,6 +193,9 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
             reportError("service.injector.literals", node);
           }
 
+          return super.visitMethodInvocation(node, v);
+        }
+        if (ExtensionRepository.getInstance().getExtensionForType(typeName) != null) {
           return super.visitMethodInvocation(node, v);
         }
       }

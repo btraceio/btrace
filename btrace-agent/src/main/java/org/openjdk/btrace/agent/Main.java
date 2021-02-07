@@ -77,12 +77,12 @@ import java.util.zip.ZipFile;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
+import org.openjdk.btrace.core.extensions.ExtensionRepository;
 import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
@@ -137,6 +137,8 @@ public final class Main {
         debugPrint("parsed command line arguments");
       }
       parseArgs();
+
+      ExtensionRepository.getInstance();
 
       if (isDebug()) {
         debugPrint("Adding class transformer");
@@ -337,11 +339,6 @@ public final class Main {
     return scriptCount;
   }
 
-  private static void usage() {
-    System.out.println(Messages.get("btrace.agent.usage"));
-    System.exit(0);
-  }
-
   private static void loadArgs(String args) {
     if (args == null) {
       args = "";
@@ -364,17 +361,12 @@ public final class Main {
   }
 
   private static void parseArgs() {
-    String p = argMap.get(HELP);
-    if (p != null) {
-      usage();
-    }
-
     String libs = argMap.get(LIBS);
     String config = argMap.get(CONFIG);
     processClasspaths(libs);
     loadDefaultArguments(config);
 
-    p = argMap.get(DEBUG);
+    String p = argMap.get(DEBUG);
     settings.setDebug(p != null && !"false".equals(p));
     if (isDebug()) {
       debugPrint("debugMode is " + settings.isDebug());

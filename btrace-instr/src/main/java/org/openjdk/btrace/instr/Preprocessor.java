@@ -66,18 +66,24 @@ import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
  *
  * <p>Transformations done here:
  *
- * <p>1. add <clinit> method, if one not found 2. replace @Export fields by perf counters and
- * replace put/get by perf counter update/read 3. replace @TLS fields by ThreadLocal fields and
- * replace put/get by ThreadLocal set/get 4. In <clinit> method, add ThreadLocal creation and perf
- * counter creation calls (for @Export and
+ * <ol>
+ *     <li>Add &lt;clinit&gt; method, if one not found</li>
+ *     <li>Replace @Export fields by perf counters and
+ *         replace put/get by perf counter update/read</li>
+ *     <li>Replace @TLS fields by ThreadLocal fields and
+ *         replace put/get by ThreadLocal set/get</li>
+ *     <li>In &lt;clinit&gt; method, add ThreadLocal creation and perf
+ *         counter creation calls (for @Export and @TLS fields respectively)</li>
+ *     <li>Add a field to store BTraceRuntime object and initialize the same in &lt;clinit&gt; method</li>
+ *     <li>Add prolog and epilogue in each BTrace action method to insert BTraceRuntime.enter/leave and
+ *         also to call BTraceRuntimeImplBase.handleException on exception catch</li>
+ *     <li>Initialize and reference any service instances</li>
+ *     <li>Add a field to store client's BTraceRuntime instance</li>
+ *     <li>Make all fields publicly accessible</li>
+ * </ol>
  *
  * @author A. Sundararajan
- * @author J. Bachorik (Tree API rewrite) @TLS fields respectively) 5. Add a field to store
- *     BTraceRuntime object and initialize the same in <clinit> method 6. add prolog and epilogue in
- *     each BTrace action method to insert BTraceRuntime.enter/leave and also to call
- *     BTraceRuntimeImplBase.handleException on exception catch 7. initialize and reference any
- *     service instances 8. add a field to store client's BTraceRuntime instance 9. make all fields
- *     publicly accessible
+ * @author J. Bachorik (Tree API rewrite)
  */
 final class Preprocessor {
   private static final String ANNOTATIONS_PREFIX = "org/openjdk/btrace/core/annotations/";

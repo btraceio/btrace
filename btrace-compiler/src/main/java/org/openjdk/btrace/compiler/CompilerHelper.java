@@ -24,6 +24,8 @@ import javax.tools.JavaFileObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.extensions.ExtensionEntry;
+import org.openjdk.btrace.core.extensions.ExtensionRepository;
 
 class CompilerHelper {
   private final boolean generatePack;
@@ -59,10 +61,19 @@ class CompilerHelper {
       options.add(sourcePath);
     }
 
+    StringBuilder cpBuilder = new StringBuilder();
     if (classPath != null) {
-      options.add("-classpath");
-      options.add(classPath);
+      cpBuilder.append(classPath);
     }
+    for (ExtensionEntry extension : ExtensionRepository.getInstance().getExtensions()) {
+      cpBuilder.append(File.pathSeparatorChar).append(extension.getJarPath().toString());
+    }
+    if (cpBuilder.length() > 0) {
+      options.add("-classpath");
+      options.add(cpBuilder.toString());
+    }
+
+
 
     // create a compilation task
     JavacTask task =
