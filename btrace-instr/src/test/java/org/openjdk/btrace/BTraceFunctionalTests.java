@@ -30,9 +30,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Properties;
+
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
@@ -293,9 +297,17 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testJfr() throws Exception {
-    if (System.getProperty("java.runtime.version", "").startsWith("11.0.9")) {
-      // skip the test for JDK 11 since the latest version 11.0.9 ends in SISGSEGV
-      System.err.println("Skipping test for JDK 11.0.9");
+    String rtVersion = System.getProperty("java.runtime.version", "");
+    String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
+    if (testJavaHome != null) {
+        Properties releaseProps = new Properties();
+        releaseProps.load(new FileInputStream(new File(testJavaHome + File.separator + "release")));
+        rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
+    }
+    System.out.println("=== " + rtVersion);
+    if (rtVersion.startsWith("11.0.9") || rtVersion.startsWith("11.0.10")) {
+      // skip the test for JDK 11 since the latest version 11.0.9 and newer ends in SISGSEGV
+      System.err.println("Skipping test for JDK 11.0.9+");
       return;
     }
     testWithJfr(
