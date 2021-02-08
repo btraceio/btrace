@@ -304,8 +304,9 @@ public class BTraceFunctionalTests extends RuntimeTest {
         releaseProps.load(new FileInputStream(new File(testJavaHome + File.separator + "release")));
         rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
     }
-    if (rtVersion.startsWith("11.") || rtVersion.startsWith("1.8.")) {
+    if (!rtVersion.startsWith("15.")) {
       // skip the test for 8.0.* because of missing support
+      // skip all non-LTS versions (except the last one)
       // skip the test for JDK 11 since the latest version 11.0.9 and newer ends in SISGSEGV
       System.err.println("Skipping test for JDK " + rtVersion);
       return;
