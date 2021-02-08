@@ -304,10 +304,10 @@ public class BTraceFunctionalTests extends RuntimeTest {
         releaseProps.load(new FileInputStream(new File(testJavaHome + File.separator + "release")));
         rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
     }
-    System.out.println("=== " + rtVersion);
-    if (rtVersion.startsWith("11.0.9") || rtVersion.startsWith("11.0.10")) {
+    if (rtVersion.startsWith("11.") || rtVersion.startsWith("1.8.")) {
+      // skip the test for 8.0.* because of missing support
       // skip the test for JDK 11 since the latest version 11.0.9 and newer ends in SISGSEGV
-      System.err.println("Skipping test for JDK 11.0.9+");
+      System.err.println("Skipping test for JDK " + rtVersion);
       return;
     }
     testWithJfr(
