@@ -1186,7 +1186,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       List<Object> locals,
       Set<LocalVarSlot> newLocals,
       VariableMapper variableMapper) {
-    newLocals = newLocals != null ? newLocals : Collections.<LocalVarSlot>emptySet();
+    newLocals = newLocals != null ? newLocals : Collections.emptySet();
     Object[] localsArr;
     int nextMappedVar = variableMapper.getNextMappedVar();
     if (nextMappedVar > argsSize) {
@@ -1281,6 +1281,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     return o;
   }
 
+  @SuppressWarnings("UnusedReturnValue")
   private Object popFromStack(Type t) {
     return stack.pop();
   }
@@ -1395,14 +1396,14 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     }
 
     public Object pop1() {
-      if (!isEmpty()) {
+      if (hasData()) {
         return stack[--stackPtr];
       }
       return TOP;
     }
 
     public Object pop() {
-      if (!isEmpty()) {
+      if (hasData()) {
         Object val = stack[--stackPtr];
         if (val == TOP_EXT) {
           val = stack[--stackPtr];
@@ -1413,12 +1414,13 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     }
 
     public Object peek() {
-      if (!isEmpty()) {
+      if (hasData()) {
         return stack[stackPtr - 1];
       }
       return TOP;
     }
 
+    @SuppressWarnings("SuspiciousNameCombination")
     public Object peekX1() {
       if (stackPtr > 1) {
         return stack[stackPtr - 2];
@@ -1426,8 +1428,8 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       return TOP;
     }
 
-    public boolean isEmpty() {
-      return stackPtr == 0;
+    public boolean hasData() {
+      return stackPtr != 0;
     }
 
     public int size() {

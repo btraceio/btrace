@@ -38,7 +38,10 @@ public final class MethodTracker {
   private static final RandomIntProvider rndIntProvider = RandomIntProvider.getInstance();
 
   private static AtomicLong[] counters = new AtomicLong[50];
+
+  @SuppressWarnings("unchecked")
   private static ThreadLocal<Long>[] tsArray = new ThreadLocal[50];
+
   private static Object[] rLocks = new Object[50];
   private static int[] means = new int[50];
   private static int[] origMeans = new int[50];
@@ -65,13 +68,7 @@ public final class MethodTracker {
       rLocks[methodId] = new Object();
       means[methodId] = mean * 2;
       origMeans[methodId] = mean;
-      tsArray[methodId] =
-          new ThreadLocal<Long>() {
-            @Override
-            protected Long initialValue() {
-              return 0L;
-            }
-          };
+      tsArray[methodId] = ThreadLocal.withInitial(() -> 0L);
       samplers[methodId] = 0;
     }
   }

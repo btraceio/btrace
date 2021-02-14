@@ -30,7 +30,6 @@ import static org.objectweb.asm.Opcodes.*;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -208,7 +207,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
   }
 
   private void loadArguments(List<ArgumentProvider> argumentProviders) {
-    Collections.sort(argumentProviders, ArgumentProvider.COMPARATOR);
+    argumentProviders.sort(ArgumentProvider.COMPARATOR);
     for (ArgumentProvider ap : argumentProviders) {
       if (ap != null) {
         ap.provide();
@@ -557,23 +556,20 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
 
   public abstract static class ArgumentProvider {
     static final Comparator<ArgumentProvider> COMPARATOR =
-        new Comparator<ArgumentProvider>() {
-          @Override
-          public final int compare(ArgumentProvider o1, ArgumentProvider o2) {
-            if (o1 == null && o2 == null) {
-              return 0;
-            }
-            if (o1 != null && o2 == null) return -1;
-            if (o1 == null) return 1;
-
-            if (o1.index == o2.index) {
-              return 0;
-            }
-            if (o1.index < o2.index) {
-              return -1;
-            }
-            return 1;
+        (o1, o2) -> {
+          if (o1 == null && o2 == null) {
+            return 0;
           }
+          if (o1 != null && o2 == null) return -1;
+          if (o1 == null) return 1;
+
+          if (o1.index == o2.index) {
+            return 0;
+          }
+          if (o1.index < o2.index) {
+            return -1;
+          }
+          return 1;
         };
     protected final Assembler asm;
     private final int index;
