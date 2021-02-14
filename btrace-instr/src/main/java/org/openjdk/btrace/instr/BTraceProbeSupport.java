@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -143,21 +142,11 @@ public final class BTraceProbeSupport {
   }
 
   Iterable<OnMethod> onmethods() {
-    return new Iterable<OnMethod>() {
-      @Override
-      public Iterator<OnMethod> iterator() {
-        return Collections.unmodifiableCollection(onMethods).iterator();
-      }
-    };
+    return () -> Collections.unmodifiableCollection(onMethods).iterator();
   }
 
   Iterable<OnProbe> onprobes() {
-    return new Iterable<OnProbe>() {
-      @Override
-      public Iterator<OnProbe> iterator() {
-        return onProbes.iterator();
-      }
-    };
+    return () -> onProbes.iterator();
   }
 
   Map<String, String> serviceFields() {

@@ -73,11 +73,7 @@ public final class ClassCache {
     if (cl == null) {
       return bootstrapInfos;
     }
-    Map<ClassName, ClassInfo> infos = cacheMap.get(cl);
-    if (infos == null) {
-      infos = new HashMap<>(500);
-      cacheMap.put(cl, infos);
-    }
+    Map<ClassName, ClassInfo> infos = cacheMap.computeIfAbsent(cl, k -> new HashMap<>(500));
     return infos;
   }
 

@@ -39,7 +39,7 @@ import org.objectweb.asm.Type;
  * @author A. Sundararajan
  */
 public class CatchInstrumentor extends MethodInstrumentor {
-  private final Map<Label, String> handlers = new HashMap<Label, String>();
+  private final Map<Label, String> handlers = new HashMap<>();
 
   public CatchInstrumentor(
       ClassLoader cl,

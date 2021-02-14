@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -63,9 +64,7 @@ public final class Template {
   }
 
   static String getId(String owner, String name, String sig) {
-    StringBuilder sb = new StringBuilder(owner);
-    sb.append('#').append(name).append("#").append(sig);
-    return sb.toString();
+    return owner + '#' + name + "#" + sig;
   }
 
   public String getOwner() {
@@ -81,7 +80,7 @@ public final class Template {
   }
 
   public void insert(MethodVisitor mv) {
-    insert(mv, Collections.EMPTY_SET);
+    insert(mv, Collections.emptySet());
   }
 
   public void insert(MethodVisitor mv, String... tags) {
@@ -153,7 +152,7 @@ public final class Template {
       return false;
     }
     Template other = (Template) obj;
-    return (name == null) ? (other.name == null) : name.equals(other.name);
+    return Objects.equals(name, other.name);
   }
 
   @Override

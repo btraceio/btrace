@@ -1,6 +1,6 @@
 #! /bin/sh
 
-if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ]; then
+if [ -z "$BTRACE_HOME" ] || [ ! -d "$BTRACE_HOME" ]; then
   # resolve links - $0 could be a link to btrace's home
   PRG="$0"
   progname=$(basename "$0")

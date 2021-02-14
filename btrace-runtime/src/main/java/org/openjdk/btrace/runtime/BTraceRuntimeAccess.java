@@ -97,18 +97,12 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
   protected static final ThreadLocal<RTWrapper> rt;
 
   static {
-    rt =
-        new ThreadLocal<RTWrapper>() {
-          @Override
-          protected RTWrapper initialValue() {
-            return new RTWrapper();
-          }
-        };
+    rt = ThreadLocal.withInitial(RTWrapper::new);
     registerRuntimeAccessor();
     // ignore
   }
 
-  // for testing purposes
+  // for testing purposes; needs to be non-final
   private static volatile boolean uniqueClientClassNames = true;
 
   // BTraceRuntime against BTrace class name
@@ -192,26 +186,24 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
    *     Cloneable}. In case a {@linkplain Cloneable} value is provided the value is never used
    *     directly - instead, a new clone of the value is created per thread.
    */
-  public static ThreadLocal newThreadLocal(final Object initValue) {
-    return new ThreadLocal() {
-      @Override
-      protected Object initialValue() {
-        if (initValue == null) return initValue;
+  public static ThreadLocal newThreadLocal(Object initValue) {
+    return ThreadLocal.withInitial(
+        () -> {
+          if (initValue == null) return initValue;
 
-        if (initValue instanceof Cloneable) {
-          try {
-            Class<?> clz = initValue.getClass();
-            Method m = clz.getDeclaredMethod("clone");
-            m.setAccessible(true);
-            return m.invoke(initValue);
-          } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+          if (initValue instanceof Cloneable) {
+            try {
+              Class<?> clz = initValue.getClass();
+              Method m = clz.getDeclaredMethod("clone");
+              m.setAccessible(true);
+              return m.invoke(initValue);
+            } catch (Exception e) {
+              e.printStackTrace();
+              return null;
+            }
           }
-        }
-        return initValue;
-      }
-    };
+          return initValue;
+        });
   }
 
   /** Get the current thread BTraceRuntime instance if there is one. */
@@ -222,6 +214,7 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
     return (BTraceRuntimeImplBase) current;
   }
 
+  @SuppressWarnings("UnusedReturnValue")
   static <T> T doWithCurrent(Callable<T> callable) {
     RTWrapper rtw = rt.get();
     assert rtw != null : "BTraceRuntime access not set up";

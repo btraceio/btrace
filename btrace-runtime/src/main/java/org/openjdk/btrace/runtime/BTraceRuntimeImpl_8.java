@@ -48,20 +48,20 @@ import sun.reflect.Reflection;
  * @author Joachim Skeie (GC MBean support, advanced Deque manipulation)
  * @author KLynch
  */
-public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
-  public static final class Factory extends BTraceRuntimeImplFactory<BTraceRuntimeImpl_7> {
+public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
+  public static final class Factory extends BTraceRuntimeImplFactory<BTraceRuntimeImpl_8> {
     public Factory() {
-      super(new BTraceRuntimeImpl_7());
+      super(new BTraceRuntimeImpl_8());
     }
 
     @Override
-    public BTraceRuntimeImpl_7 getRuntime(
+    public BTraceRuntimeImpl_8 getRuntime(
         String className,
         ArgsMap args,
         CommandListener cmdListener,
         DebugSupport ds,
         Instrumentation inst) {
-      return new BTraceRuntimeImpl_7(className, args, cmdListener, ds, inst);
+      return new BTraceRuntimeImpl_8(className, args, cmdListener, ds, inst);
     }
 
     @Override
@@ -84,9 +84,9 @@ public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
 
   private static Perf perf;
 
-  public BTraceRuntimeImpl_7() {}
+  public BTraceRuntimeImpl_8() {}
 
-  public BTraceRuntimeImpl_7(
+  public BTraceRuntimeImpl_8(
       String className,
       ArgsMap args,
       CommandListener cmdListener,
@@ -170,12 +170,7 @@ public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template eventTemplate) {
-    return new JfrEvent.Factory() {
-      @Override
-      public JfrEvent newEvent() {
-        return JfrEvent.EMPTY;
-      }
-    };
+    return () -> JfrEvent.EMPTY;
   }
 
   @Override
@@ -184,7 +179,7 @@ public final class BTraceRuntimeImpl_7 extends BTraceRuntimeImplBase {
   }
 
   private static Perf getPerf() {
-    synchronized (BTraceRuntimeImpl_7.class) {
+    synchronized (BTraceRuntimeImpl_8.class) {
       if (perf == null) {
         perf = AccessController.doPrivileged(new Perf.GetPerfAction());
       }
