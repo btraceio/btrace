@@ -9,7 +9,7 @@ public class ExitHandler {
     this.method = method;
   }
 
-  public Method getMethod(Class clz) throws NoSuchMethodException {
+  public Method getMethod(Class<?> clz) throws NoSuchMethodException {
     return clz.getMethod(method, int.class);
   }
 }

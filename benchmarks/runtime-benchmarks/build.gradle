@@ -5,9 +5,6 @@ plugins {
 
 description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
 
-sourceCompatibility = 8
-targetCompatibility = 8
-
 def env = System.getenv()
 def javaHome = env['JAVA_HOME']
 

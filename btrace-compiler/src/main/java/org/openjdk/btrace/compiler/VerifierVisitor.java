@@ -80,7 +80,7 @@ import org.openjdk.btrace.core.annotations.Sampled;
  *
  * @author A. Sundararajan
  */
-public class VerifierVisitor extends TreeScanner<Boolean, Void> {
+public class VerifierVisitor extends TreeScanner<Void, Void> {
   private static final String ON_ERROR_TYPE = OnError.class.getName();
   private static final String ON_EXIT_TYPE = OnExit.class.getName();
   private static final String THROWABLE_TYPE = Throwable.class.getName();
@@ -143,7 +143,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitMethodInvocation(MethodInvocationTree node, Void v) {
+  public Void visitMethodInvocation(MethodInvocationTree node, Void v) {
     Element e = getElement(node);
     if (e != null
         && (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR)) {
@@ -205,31 +205,31 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitAssert(AssertTree node, Void v) {
+  public Void visitAssert(AssertTree node, Void v) {
     reportError("no.asserts", node);
     return super.visitAssert(node, v);
   }
 
   @Override
-  public Boolean visitAssignment(AssignmentTree node, Void v) {
+  public Void visitAssignment(AssignmentTree node, Void v) {
     checkLValue(node.getVariable());
     return super.visitAssignment(node, v);
   }
 
   @Override
-  public Boolean visitCompoundAssignment(CompoundAssignmentTree node, Void v) {
+  public Void visitCompoundAssignment(CompoundAssignmentTree node, Void v) {
     checkLValue(node.getVariable());
     return super.visitCompoundAssignment(node, v);
   }
 
   @Override
-  public Boolean visitCatch(CatchTree node, Void v) {
+  public Void visitCatch(CatchTree node, Void v) {
     reportError("no.catch", node);
     return super.visitCatch(node, v);
   }
 
   @Override
-  public Boolean visitClass(ClassTree node, Void v) {
+  public Void visitClass(ClassTree node, Void v) {
     // check for local class
     if (insideMethod) {
       reportError("no.local.class", node);
@@ -300,29 +300,30 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         }
       }
     }
-    return reportError("not.a.btrace.program", node);
+    reportError("not.a.btrace.program", node);
+    return null;
   }
 
   @Override
-  public Boolean visitDoWhileLoop(DoWhileLoopTree node, Void v) {
+  public Void visitDoWhileLoop(DoWhileLoopTree node, Void v) {
     reportError("no.do.while", node);
     return super.visitDoWhileLoop(node, v);
   }
 
   @Override
-  public Boolean visitEnhancedForLoop(EnhancedForLoopTree node, Void v) {
+  public Void visitEnhancedForLoop(EnhancedForLoopTree node, Void v) {
     reportError("no.enhanced.for", node);
     return super.visitEnhancedForLoop(node, v);
   }
 
   @Override
-  public Boolean visitForLoop(ForLoopTree node, Void v) {
+  public Void visitForLoop(ForLoopTree node, Void v) {
     reportError("no.for.loop", node);
     return super.visitForLoop(node, v);
   }
 
   @Override
-  public Boolean visitMethod(MethodTree node, Void v) {
+  public Void visitMethod(MethodTree node, Void v) {
     boolean oldInsideMethod = insideMethod;
     insideMethod = true;
     try {
@@ -412,7 +413,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitNewArray(NewArrayTree node, Void v) {
+  public Void visitNewArray(NewArrayTree node, Void v) {
     if (!isInAnnotation) {
       reportError("no.array.creation", node);
     }
@@ -420,7 +421,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitNewClass(NewClassTree node, Void v) {
+  public Void visitNewClass(NewClassTree node, Void v) {
     Element e = getElement(node);
     TypeElement te = (TypeElement) e.getEnclosingElement();
     reportError("no.new.object", node);
@@ -428,7 +429,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitReturn(ReturnTree node, Void v) {
+  public Void visitReturn(ReturnTree node, Void v) {
     if (node.getExpression() != null) {
       TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), node);
       while (tp != null) {
@@ -436,7 +437,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         Tree leaf = tp.getLeaf();
         if (leaf.getKind() == Tree.Kind.METHOD) {
           if (isAnnotated((MethodTree) leaf)) {
-            return reportError("return.type.should.be.void", node);
+            reportError("return.type.should.be.void", node);
           } else {
             return super.visitReturn(node, v);
           }
@@ -447,7 +448,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitMemberSelect(MemberSelectTree node, Void v) {
+  public Void visitMemberSelect(MemberSelectTree node, Void v) {
     if (!isInAnnotation) {
       if (node.getIdentifier().contentEquals("class")) {
         TypeMirror tm = getType(node.getExpression());
@@ -460,7 +461,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitAnnotation(AnnotationTree node, Void unused) {
+  public Void visitAnnotation(AnnotationTree node, Void unused) {
     try {
       isInAnnotation = true;
       return super.visitAnnotation(node, unused);
@@ -470,25 +471,25 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitSynchronized(SynchronizedTree node, Void v) {
+  public Void visitSynchronized(SynchronizedTree node, Void v) {
     reportError("no.synchronized.blocks", node);
     return super.visitSynchronized(node, v);
   }
 
   @Override
-  public Boolean visitThrow(ThrowTree node, Void v) {
+  public Void visitThrow(ThrowTree node, Void v) {
     reportError("no.throw", node);
     return super.visitThrow(node, v);
   }
 
   @Override
-  public Boolean visitTry(TryTree node, Void v) {
+  public Void visitTry(TryTree node, Void v) {
     reportError("no.try", node);
     return super.visitTry(node, v);
   }
 
   @Override
-  public Boolean visitVariable(VariableTree vt, Void p) {
+  public Void visitVariable(VariableTree vt, Void p) {
     VariableElement ve = (VariableElement) getElement(vt);
 
     if (ve.getEnclosingElement().getKind() == ElementKind.CLASS) {
@@ -539,13 +540,13 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
   }
 
   @Override
-  public Boolean visitWhileLoop(WhileLoopTree node, Void v) {
+  public Void visitWhileLoop(WhileLoopTree node, Void v) {
     reportError("no.while.loop", node);
     return super.visitWhileLoop(node, v);
   }
 
   @Override
-  public Boolean visitOther(Tree node, Void v) {
+  public Void visitOther(Tree node, Void v) {
     reportError("no.other", node);
     return super.visitOther(node, v);
   }
@@ -613,7 +614,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     return false;
   }
 
-  private boolean checkSampling(MethodTree node) {
+  private void checkSampling(MethodTree node) {
     ExecutableElement ee = (ExecutableElement) getElement(node);
 
     Sampled s = ee.getAnnotation(Sampled.class);
@@ -627,7 +628,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         case ERROR:
         case CALL:
           {
-            return true;
+            return;
           }
         default:
           {
@@ -635,15 +636,13 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
           }
       }
       reportError("sampler.invalid.location", node);
-      return false;
     }
-    return true;
   }
 
-  private boolean checkLValue(Tree variable) {
+  private void checkLValue(Tree variable) {
     if (variable.getKind() == Tree.Kind.ARRAY_ACCESS) {
       reportError("no.assignment", variable);
-      return false;
+      return;
     }
 
     if (variable.getKind() != Tree.Kind.IDENTIFIER) {
@@ -652,17 +651,14 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
         name = name.substring(0, name.lastIndexOf('.'));
         if (!className.equals(name)) {
           reportError("no.assignment", variable);
-          return false;
         }
       } else {
         reportError("no.assignment", variable);
-        return false;
       }
     }
-    return true;
   }
 
-  private Boolean reportError(String msg, Tree node) {
+  private void reportError(String msg, Tree node) {
     SourcePositions srcPos = verifier.getSourcePositions();
     CompilationUnitTree compUnit = verifier.getCompilationUnit();
     if (compUnit != null) {
@@ -675,7 +671,6 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
     } else {
       verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
     }
-    return Boolean.FALSE;
   }
 
   private Element getElement(Tree t) {
@@ -695,7 +690,7 @@ public class VerifierVisitor extends TreeScanner<Boolean, Void> {
       } else if (t instanceof JCTree.JCNewClass) {
         e = ((JCTree.JCIdent) ((JCTree.JCNewClass) t).clazz).sym;
       } else if (t instanceof JCTree.JCThrow) {
-        e = ((JCTree.JCNewClass) ((JCTree.JCThrow) t).expr).type.tsym;
+        e = ((JCTree.JCThrow) t).expr.type.tsym;
       }
       if (e == null) {
         verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, t.toString());

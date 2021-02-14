@@ -52,7 +52,8 @@ public abstract class Command implements Serializable {
   public static final byte FIRST_COMMAND = ERROR;
   public static final byte LAST_COMMAND = RECONNECT;
 
-  public static Command NULL =
+  @SuppressWarnings("RedundantThrows")
+  public static final Command NULL =
       new Command() {
         @Override
         protected void write(ObjectOutput out) throws IOException {}
@@ -77,8 +78,8 @@ public abstract class Command implements Serializable {
   }
 
   private Command() {
-    this.type = -1;
-    this.urgent = true;
+    type = -1;
+    urgent = true;
   }
 
   protected abstract void write(ObjectOutput out) throws IOException;

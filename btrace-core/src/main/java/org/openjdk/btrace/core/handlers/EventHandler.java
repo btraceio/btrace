@@ -17,7 +17,7 @@ public final class EventHandler {
     return event != null ? event : ALL_EVENTS;
   }
 
-  public Method getMethod(Class clz) throws NoSuchMethodException {
+  public Method getMethod(Class<?> clz) throws NoSuchMethodException {
     return clz.getMethod(method);
   }
 }

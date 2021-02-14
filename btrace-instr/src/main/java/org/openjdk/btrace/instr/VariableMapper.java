@@ -8,7 +8,7 @@ public class VariableMapper {
   private static final int REMAP_FLAG = 0x40000000;
   private static final int INVALID_MASK = 0xFFFFFFFF;
 
-  private int argsSize;
+  private final int argsSize;
 
   private int nextMappedVar = 0;
   private int[] mapping = new int[8];
@@ -134,11 +134,11 @@ public class VariableMapper {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("nextVar: ").append(nextMappedVar).append(", mappings: [");
-    for (int i = 0; i < mapping.length; i++) {
-      if ((mapping[i] & REMAP_FLAG) != 0) {
-        sb.append(unmask(mapping[i]));
+    for (int j : mapping) {
+      if ((j & REMAP_FLAG) != 0) {
+        sb.append(unmask(j));
       } else {
-        sb.append(mapping[i]);
+        sb.append(j);
       }
       sb.append(",");
     }

@@ -228,8 +228,9 @@ public class BTraceDeque<V> implements Deque<V>, BTraceCollection<V>, Cloneable 
     return delegate.equals(obj);
   }
 
+  @SuppressWarnings({"RedundantThrows", "MethodDoesntCallSuperMethod"})
   @Override
   protected Object clone() throws CloneNotSupportedException {
-    return new BTraceDeque(new ArrayDeque());
+    return new BTraceDeque<>(new ArrayDeque<>());
   }
 }
