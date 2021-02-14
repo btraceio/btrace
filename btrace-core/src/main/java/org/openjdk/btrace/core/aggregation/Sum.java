@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 class Sum implements AggregationValue {
 
-  AtomicLong value = new AtomicLong();
+  final AtomicLong value = new AtomicLong();
 
   @Override
   public void clear() {

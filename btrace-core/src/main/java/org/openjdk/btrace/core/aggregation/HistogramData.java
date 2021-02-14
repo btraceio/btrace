@@ -58,8 +58,8 @@ public class HistogramData implements Serializable {
 
   public void print(PrintWriter p) {
     int totalCount = 0;
-    for (int i = 0; i < counts.length; i++) {
-      totalCount += counts[i];
+    for (long count : counts) {
+      totalCount += count;
     }
 
     p.println("          value  ------------- Distribution ------------- count");

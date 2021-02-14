@@ -189,7 +189,7 @@ public class ClassFilter {
     return SENSITIVE_CLASSES.contains(name);
   }
 
-  public boolean isCandidate(Class target) {
+  public boolean isCandidate(Class<?> target) {
     if (target.isInterface() || target.isPrimitive() || target.isArray()) {
       return false;
     }
@@ -305,7 +305,7 @@ public class ClassFilter {
       }
     }
 
-    sourceClasses = new HashSet(strSrcList.size());
+    sourceClasses = new HashSet<>(strSrcList.size());
     sourceClasses.addAll(strSrcList);
     sourceClassPatterns = new Pattern[patSrcList.size()];
     patSrcList.toArray(sourceClassPatterns);

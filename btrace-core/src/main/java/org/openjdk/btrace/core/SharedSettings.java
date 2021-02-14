@@ -49,7 +49,7 @@ public final class SharedSettings {
   private String dumpDir = null;
   private String probeDescPath = ".";
   private String bootClassPath = "";
-  private String systemClassPath = "";
+  private final String systemClassPath = "";
   private String statsdHost = null;
   private int statsdPort = 8125; // default statsd port
   private int fileRollMilliseconds = Integer.MIN_VALUE;
@@ -141,7 +141,7 @@ public final class SharedSettings {
   }
 
   @Deprecated
-  /** @deprecated use {@linkplain SharedSettings#isTrusted()} instead */
+  /* @deprecated use {@linkplain SharedSettings#isTrusted()} instead */
   public boolean isUnsafe() {
     return trusted;
   }
