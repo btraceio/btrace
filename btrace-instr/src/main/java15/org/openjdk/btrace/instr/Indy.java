@@ -22,12 +22,7 @@ public final class Indy {
     } catch (Throwable t) {
       // if unable to properly link just ignore the instrumentation
       System.err.println(
-          "[BTRACE] Failed to link probe handler: "
-              + probeClassName
-              + "."
-              + name
-              + "\n"
-              + t.toString());
+          "[BTRACE] Failed to link probe handler: " + probeClassName + "." + name + "\n" + t);
       MethodHandle noopHandle =
           MethodHandles.lookup().findStatic(Indy.class, "noop", MethodType.methodType(void.class));
       mh = MethodHandles.dropArguments(noopHandle, 0, type.parameterArray());

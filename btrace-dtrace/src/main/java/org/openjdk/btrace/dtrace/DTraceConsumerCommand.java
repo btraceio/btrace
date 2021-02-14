@@ -52,7 +52,7 @@ public abstract class DTraceConsumerCommand extends EventCommand implements DTra
 
   /** Returns the Consumer object. */
   public Consumer getConsumer() {
-    return (Consumer) ce.getSource();
+    return ce.getSource();
   }
 
   public void write(ObjectOutput out) throws IOException {

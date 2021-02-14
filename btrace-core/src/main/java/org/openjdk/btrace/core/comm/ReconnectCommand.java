@@ -24,6 +24,7 @@ public class ReconnectCommand extends Command {
     out.writeUTF(probeId);
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     probeId = in.readUTF();

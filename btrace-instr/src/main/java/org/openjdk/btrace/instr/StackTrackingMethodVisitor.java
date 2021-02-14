@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
@@ -48,6 +49,7 @@ import org.objectweb.asm.Type;
  *
  * @author Jaroslav Bachorik
  */
+@SuppressWarnings("DuplicateBranchesInSwitch")
 class StackTrackingMethodVisitor extends MethodVisitor {
   private final State state;
   private final Map<Label, Collection<Label>> tryCatchStart = new HashMap<>();
@@ -869,11 +871,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
   @Override
   public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
     super.visitTryCatchBlock(start, end, handler, type);
-    Collection<Label> labels = tryCatchStart.get(start);
-    if (labels == null) {
-      labels = new ArrayList<>();
-      tryCatchStart.put(start, labels);
-    }
+    Collection<Label> labels = tryCatchStart.computeIfAbsent(start, k -> new ArrayList<>());
     labels.add(handler);
 
     addToMappedCollection(tryCatchStart, start, handler);
@@ -883,11 +881,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
   }
 
   private void addToMappedCollection(Map<Label, Collection<Label>> map, Label l, Label handler) {
-    Collection<Label> labels = map.get(l);
-    if (labels == null) {
-      labels = new ArrayList<>();
-      map.put(l, labels);
-    }
+    Collection<Label> labels = map.computeIfAbsent(l, k -> new ArrayList<>());
     labels.add(handler);
   }
 
@@ -1025,7 +1019,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
         return false;
       }
       ConstantItem other = (ConstantItem) obj;
-      return !(val != other.val && (val == null || !val.equals(other.val)));
+      return !(!Objects.equals(val, other.val));
     }
   }
 
@@ -1063,7 +1057,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
         return false;
       }
       InstanceItem other = (InstanceItem) obj;
-      return !(t != other.t && (t == null || !t.equals(other.t)));
+      return !(!Objects.equals(t, other.t));
     }
   }
 
@@ -1122,13 +1116,13 @@ class StackTrackingMethodVisitor extends MethodVisitor {
         return false;
       }
       ResultItem other = (ResultItem) obj;
-      if ((owner == null) ? (other.owner != null) : !owner.equals(other.owner)) {
+      if (!Objects.equals(owner, other.owner)) {
         return false;
       }
-      if ((name == null) ? (other.name != null) : !name.equals(other.name)) {
+      if (!Objects.equals(name, other.name)) {
         return false;
       }
-      return (desc == null) ? (other.desc == null) : desc.equals(other.desc);
+      return Objects.equals(desc, other.desc);
     }
 
     public enum Origin {
@@ -1145,13 +1139,13 @@ class StackTrackingMethodVisitor extends MethodVisitor {
     private int maxVars;
 
     FrameState(Map<Integer, StackItem> args) {
-      this(new LinkedList<StackItem>(), null, args);
+      this(new LinkedList<>(), null, args);
     }
 
     private FrameState(
         Deque<StackItem> s, Map<Integer, StackItem> v, Map<Integer, StackItem> args) {
       stack = new LinkedList<>(s);
-      vars = v != null ? new HashMap<>(v) : new HashMap<Integer, StackItem>();
+      vars = v != null ? new HashMap<>(v) : new HashMap<>();
       this.args = new HashMap<>(args);
     }
 
@@ -1248,22 +1242,14 @@ class StackTrackingMethodVisitor extends MethodVisitor {
     public void branch(Label l) {
       if (visitedLabels.contains(l)) return; // back loop should preserve the stack
 
-      Set<FrameState> states = stateMap.get(l);
-      if (states == null) {
-        states = new HashSet<>();
-        stateMap.put(l, states);
-      }
+      Set<FrameState> states = stateMap.computeIfAbsent(l, k -> new HashSet<>());
       states.add(fState.duplicate());
     }
 
     public void branch(Label l, Type throwable) {
       if (visitedLabels.contains(l)) return; // back loop should preserve the stack
 
-      Set<FrameState> states = stateMap.get(l);
-      if (states == null) {
-        states = new HashSet<>();
-        stateMap.put(l, states);
-      }
+      Set<FrameState> states = stateMap.computeIfAbsent(l, k -> new HashSet<>());
       FrameState duplicated = fState.duplicate();
       duplicated.push(new InstanceItem(throwable));
       states.add(duplicated);

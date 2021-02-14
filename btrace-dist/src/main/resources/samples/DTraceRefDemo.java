@@ -55,7 +55,7 @@ public class DTraceRefDemo {
             method = "defineClass",
             location = @Location(Kind.RETURN)
     )
-    public static void defineclass(Class cl) {
+    public static void defineclass(Class<?> cl) {
         println("loaded " + Reflective.name(cl));
         Threads.jstack();
         println("==========================");

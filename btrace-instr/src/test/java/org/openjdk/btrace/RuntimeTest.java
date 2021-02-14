@@ -104,7 +104,7 @@ public abstract class RuntimeTest {
         eventsClassPath = eventsJarPath.toString();
         // client jar needs to take precedence in order for the agent.jar inferring code to work
         cp =
-            clientJarPath.toString()
+            clientJarPath
                 + File.pathSeparator
                 + projectRoot.resolve("btrace-instr/build/classes/java/test");
       }
@@ -142,29 +142,29 @@ public abstract class RuntimeTest {
     timeout = 10000L;
   }
 
-  public void testWithJfr(
-      String testApp, final String testScript, int checkLines, ResultValidator v) throws Exception {
+  public void testWithJfr(String testApp, String testScript, int checkLines, ResultValidator v)
+      throws Exception {
     startJfr = true;
     test(testApp, testScript, checkLines, v);
   }
 
   @SuppressWarnings("DefaultCharset")
   public void testWithJfr(
-      String testApp, final String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
     startJfr = true;
     test(testApp, testScript, cmdArgs, checkLines, v);
   }
 
   @SuppressWarnings("DefaultCharset")
-  public void test(String testApp, final String testScript, int checkLines, ResultValidator v)
+  public void test(String testApp, String testScript, int checkLines, ResultValidator v)
       throws Exception {
     test(testApp, testScript, null, checkLines, v);
   }
 
   @SuppressWarnings("DefaultCharset")
   public void test(
-      String testApp, final String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
     if (forceDebug) {
       // force debug flags
@@ -194,67 +194,58 @@ public abstract class RuntimeTest {
     pb.environment().remove("JAVA_TOOL_OPTIONS");
 
     Process p = pb.start();
-    final PrintWriter pw = new PrintWriter(p.getOutputStream());
+    PrintWriter pw = new PrintWriter(p.getOutputStream());
 
-    final StringBuilder stdout = new StringBuilder();
-    final StringBuilder stderr = new StringBuilder();
-    final AtomicInteger ret = new AtomicInteger(-1);
+    StringBuilder stdout = new StringBuilder();
+    StringBuilder stderr = new StringBuilder();
+    AtomicInteger ret = new AtomicInteger(-1);
 
-    final BufferedReader stdoutReader =
-        new BufferedReader(new InputStreamReader(p.getInputStream()));
+    BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
-    final CountDownLatch testAppLatch = new CountDownLatch(1);
-    final AtomicReference<String> pidStringRef = new AtomicReference<>();
+    CountDownLatch testAppLatch = new CountDownLatch(1);
+    AtomicReference<String> pidStringRef = new AtomicReference<>();
 
     Thread outT =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                try {
-                  String l;
-                  while ((l = stdoutReader.readLine()) != null) {
-                    if (l.startsWith("ready:")) {
-                      pidStringRef.set(l.split("\\:")[1]);
-                      testAppLatch.countDown();
-                    }
-                    if (debugTestApp) {
-                      System.out.println("[traced app] " + l);
-                    }
+            () -> {
+              try {
+                String l;
+                while ((l = stdoutReader.readLine()) != null) {
+                  if (l.startsWith("ready:")) {
+                    pidStringRef.set(l.split("\\:")[1]);
+                    testAppLatch.countDown();
                   }
-
-                } catch (Exception e) {
-                  e.printStackTrace(System.err);
+                  if (debugTestApp) {
+                    System.out.println("[traced app] " + l);
+                  }
                 }
+
+              } catch (Exception e) {
+                e.printStackTrace(System.err);
               }
             },
             "STDOUT Reader");
     outT.setDaemon(true);
 
-    final BufferedReader stderrReader =
-        new BufferedReader(new InputStreamReader(p.getErrorStream()));
+    BufferedReader stderrReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
     Thread errT =
         new Thread(
-            new Runnable() {
-
-              @Override
-              public void run() {
-                try {
-                  String l = null;
-                  while ((l = stderrReader.readLine()) != null) {
-                    if (l.contains("Server VM warning") ||
-                        l.contains("XML libraries not available")) {
-                      continue;
-                    }
-                    testAppLatch.countDown();
-                    if (debugTestApp) {
-                      System.err.println("[traced app] " + l);
-                    }
+            () -> {
+              try {
+                String l = null;
+                while ((l = stderrReader.readLine()) != null) {
+                  if (l.contains("Server VM warning")
+                      || l.contains("XML libraries not available")) {
+                    continue;
                   }
-                } catch (Exception e) {
-                  e.printStackTrace(System.err);
+                  testAppLatch.countDown();
+                  if (debugTestApp) {
+                    System.err.println("[traced app] " + l);
+                  }
                 }
+              } catch (Exception e) {
+                e.printStackTrace(System.err);
               }
             },
             "STDERR Reader");
@@ -283,9 +274,9 @@ public abstract class RuntimeTest {
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
   }
 
-  private File locateTrace(final String trace) {
+  private File locateTrace(String trace) {
     Path start = projectRoot.resolve("btrace-instr/src");
-    final AtomicReference<Path> tracePath = new AtomicReference<>();
+    AtomicReference<Path> tracePath = new AtomicReference<>();
     try {
       Files.walkFileTree(
           start,
@@ -327,9 +318,9 @@ public abstract class RuntimeTest {
       String pid,
       String trace,
       String[] cmdArgs,
-      final int checkLines,
-      final StringBuilder stdout,
-      final StringBuilder stderr)
+      int checkLines,
+      StringBuilder stdout,
+      StringBuilder stderr)
       throws Exception {
     File traceFile = locateTrace(trace);
     List<String> argVals =
@@ -353,73 +344,69 @@ public abstract class RuntimeTest {
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }
-    final ProcessBuilder pb = new ProcessBuilder(argVals);
+    ProcessBuilder pb = new ProcessBuilder(argVals);
 
     pb.environment().remove("JAVA_TOOL_OPTIONS");
-    final Process p = pb.start();
+    Process p = pb.start();
 
-    final CountDownLatch l = new CountDownLatch(checkLines);
+    CountDownLatch l = new CountDownLatch(checkLines);
 
     new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                try {
-                  BufferedReader br =
-                      new BufferedReader(
-                          new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
+            () -> {
+              try {
+                BufferedReader br =
+                    new BufferedReader(
+                        new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
 
-                  String line = null;
-                  while ((line = br.readLine()) != null) {
-                    System.out.println("[btrace err] " + line);
-                    if (line.contains("Server VM warning")) {
-                      // skip JVM generated warnings
-                      continue;
-                    }
-                    if (line.startsWith("[traced app]") || line.startsWith("[btrace out]")) {
-                      // skip test debug lines
-                      continue;
-                    }
-                    stderr.append(line).append('\n');
-                    if (line.contains("Exception") || line.contains("Error")) {
-                      for (int i = 0; i < checkLines; i++) {
-                        l.countDown();
-                      }
+                String line = null;
+                while ((line = br.readLine()) != null) {
+                  System.out.println("[btrace err] " + line);
+                  if (line.contains("Server VM warning")
+                      || line.contains("XML libraries not available")
+                      || line.contains("Connection reset")) {
+                    // skip JVM generated warnings
+                    continue;
+                  }
+                  if (line.startsWith("[traced app]") || line.startsWith("[btrace out]")) {
+                    // skip test debug lines
+                    continue;
+                  }
+                  stderr.append(line).append('\n');
+                  if (line.contains("Exception") || line.contains("Error")) {
+                    for (int i = 0; i < checkLines; i++) {
+                      l.countDown();
                     }
                   }
-                } catch (Exception e) {
-                  for (int i = 0; i < checkLines; i++) {
-                    l.countDown();
-                  }
-                  throw new Error(e);
                 }
+              } catch (Exception e) {
+                for (int i = 0; i < checkLines; i++) {
+                  l.countDown();
+                }
+                throw new Error(e);
               }
             },
             "Stderr Reader")
         .start();
 
     new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                try {
-                  BufferedReader br =
-                      new BufferedReader(
-                          new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
-                  String line = null;
-                  while ((line = br.readLine()) != null) {
-                    stdout.append(line).append('\n');
-                    System.out.println("[btrace out] " + line);
-                    if (!(debugBTrace && line.contains("DEBUG:"))) {
-                      l.countDown();
-                    }
-                  }
-                } catch (Exception e) {
-                  for (int i = 0; i < checkLines; i++) {
+            () -> {
+              try {
+                BufferedReader br =
+                    new BufferedReader(
+                        new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
+                String line = null;
+                while ((line = br.readLine()) != null) {
+                  stdout.append(line).append('\n');
+                  System.out.println("[btrace out] " + line);
+                  if (!(debugBTrace && line.contains("DEBUG:"))) {
                     l.countDown();
                   }
-                  throw new Error(e);
                 }
+              } catch (Exception e) {
+                for (int i = 0; i < checkLines; i++) {
+                  l.countDown();
+                }
+                throw new Error(e);
               }
             },
             "Stdout Reader")

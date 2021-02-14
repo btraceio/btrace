@@ -83,7 +83,7 @@ final class BTraceClassWriter extends ClassWriter {
     synchronized (instrumentors) {
       if (instrumentors.isEmpty()) return null;
 
-      final Instrumentor top = instrumentors.peekLast();
+      Instrumentor top = instrumentors.peekLast();
       ClassVisitor cv =
           new ClassVisitor(Opcodes.ASM7, top != null ? top : this) {
             @Override
@@ -117,8 +117,7 @@ final class BTraceClassWriter extends ClassWriter {
     // if the intersection is not empty the first element is the closest common ancestor
     Iterator<String> iter = type1Closure.iterator();
     if (iter.hasNext()) {
-      String common = iter.next();
-      return common;
+      return iter.next();
     }
     return Constants.OBJECT_INTERNAL;
   }

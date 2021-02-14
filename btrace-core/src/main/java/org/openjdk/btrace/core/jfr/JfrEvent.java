@@ -1,5 +1,6 @@
 package org.openjdk.btrace.core.jfr;
 
+@SuppressWarnings("UnusedReturnValue")
 public abstract class JfrEvent {
   public static final class Template {
     public static final class Field {
