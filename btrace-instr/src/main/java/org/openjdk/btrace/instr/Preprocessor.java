@@ -190,7 +190,7 @@ final class Preprocessor {
   private MethodNode clinit = null;
   private FieldNode rtField = null;
 
-  private Map<MethodNode, EnumSet<MethodClassifier>> classifierMap = new HashMap<>();
+  private final Map<MethodNode, EnumSet<MethodClassifier>> classifierMap = new HashMap<>();
   private AbstractInsnNode clinitEntryPoint;
 
   public Preprocessor(DebugSupport debug) {
@@ -233,6 +233,7 @@ final class Preprocessor {
     return mn == null || mn.visibleAnnotations == null || mn.visibleAnnotations.isEmpty();
   }
 
+  @SuppressWarnings("unchecked")
   public void process(ClassNode cn) {
     addLevelField(cn);
     processClinit(cn);
@@ -727,7 +728,7 @@ final class Preprocessor {
     }
   }
 
-  private void recalculateVars(final MethodNode mn) {
+  private void recalculateVars(MethodNode mn) {
     for (AbstractInsnNode n = mn.instructions.getFirst(); n != null; n = n.getNext()) {
       if (n.getType() == AbstractInsnNode.VAR_INSN) {
         VarInsnNode vin = (VarInsnNode) n;
@@ -804,9 +805,9 @@ final class Preprocessor {
   private InsnList loadTimerHandlers(ClassNode cn) {
     InsnList il = new InsnList();
     int cnt = 0;
-    for (MethodNode mn : (List<MethodNode>) cn.methods) {
+    for (MethodNode mn : cn.methods) {
       if (mn.visibleAnnotations != null) {
-        AnnotationNode an = (AnnotationNode) mn.visibleAnnotations.get(0);
+        AnnotationNode an = mn.visibleAnnotations.get(0);
         if (an.desc.equals(Constants.ONTIMER_DESC)) {
           Iterator<?> anValueIterator = an.values != null ? an.values.iterator() : null;
           if (anValueIterator != null) {
@@ -867,9 +868,9 @@ final class Preprocessor {
   private InsnList loadEventHandlers(ClassNode cn) {
     InsnList il = new InsnList();
     int cnt = 0;
-    for (MethodNode mn : (List<MethodNode>) cn.methods) {
+    for (MethodNode mn : cn.methods) {
       if (mn.visibleAnnotations != null) {
-        AnnotationNode an = (AnnotationNode) mn.visibleAnnotations.get(0);
+        AnnotationNode an = mn.visibleAnnotations.get(0);
         if (an.desc.equals(Constants.ONEVENT_DESC)) {
           il.add(new InsnNode(Opcodes.DUP));
           il.add(new LdcInsnNode(cnt++));
@@ -906,9 +907,9 @@ final class Preprocessor {
   private InsnList loadErrorHandlers(ClassNode cn) {
     InsnList il = new InsnList();
     int cnt = 0;
-    for (MethodNode mn : (List<MethodNode>) cn.methods) {
+    for (MethodNode mn : cn.methods) {
       if (mn.visibleAnnotations != null) {
-        AnnotationNode an = (AnnotationNode) mn.visibleAnnotations.get(0);
+        AnnotationNode an = mn.visibleAnnotations.get(0);
         if (an.desc.equals(Constants.ONERROR_DESC)) {
           il.add(new InsnNode(Opcodes.DUP));
           il.add(new LdcInsnNode(cnt++));
@@ -941,9 +942,9 @@ final class Preprocessor {
   private InsnList loadExitHandlers(ClassNode cn) {
     InsnList il = new InsnList();
     int cnt = 0;
-    for (MethodNode mn : (List<MethodNode>) cn.methods) {
+    for (MethodNode mn : cn.methods) {
       if (mn.visibleAnnotations != null) {
-        AnnotationNode an = (AnnotationNode) mn.visibleAnnotations.get(0);
+        AnnotationNode an = mn.visibleAnnotations.get(0);
         if (an.desc.equals(Constants.ONEXIT_DESC)) {
           il.add(new InsnNode(Opcodes.DUP));
           il.add(new LdcInsnNode(cnt++));
@@ -976,9 +977,9 @@ final class Preprocessor {
   private InsnList loadLowMemoryHandlers(ClassNode cn) {
     InsnList il = new InsnList();
     int cnt = 0;
-    for (MethodNode mn : (List<MethodNode>) cn.methods) {
+    for (MethodNode mn : cn.methods) {
       if (mn.visibleAnnotations != null) {
-        AnnotationNode an = (AnnotationNode) mn.visibleAnnotations.get(0);
+        AnnotationNode an = mn.visibleAnnotations.get(0);
         if (an.desc.equals(Constants.ONLOWMEMORY_DESC)) {
           String pool = "";
           long threshold = Long.MAX_VALUE;
@@ -1214,9 +1215,7 @@ final class Preprocessor {
   }
 
   private List<AnnotationNode> getAnnotations(MethodNode mn) {
-    return mn.visibleAnnotations != null
-        ? mn.visibleAnnotations
-        : Collections.<AnnotationNode>emptyList();
+    return mn.visibleAnnotations != null ? mn.visibleAnnotations : Collections.emptyList();
   }
 
   private EnumSet<MethodClassifier> getClassifiers(MethodNode mn) {
@@ -1604,7 +1603,7 @@ final class Preprocessor {
         Type[] params = Type.getArgumentTypes(mn.desc);
         for (int i = 0; i < mn.visibleParameterAnnotations.length; i++) {
           if (mn.visibleParameterAnnotations[i] != null) {
-            for (AnnotationNode an : (List<AnnotationNode>) mn.visibleParameterAnnotations[i]) {
+            for (AnnotationNode an : mn.visibleParameterAnnotations[i]) {
               if (an.desc.equals(Type.getDescriptor(Return.class))) {
                 retIndex = offset;
               }
@@ -1776,18 +1775,6 @@ final class Preprocessor {
      * MethodClassifier#RT_AWARE}.
      */
     GUARDED
-  }
-
-  public interface MethodFilter {
-    MethodFilter ALL =
-        new MethodFilter() {
-          @Override
-          public boolean test(String name, String desc) {
-            return true;
-          }
-        };
-
-    boolean test(String name, String desc);
   }
 
   private static class LocalVarGenerator {

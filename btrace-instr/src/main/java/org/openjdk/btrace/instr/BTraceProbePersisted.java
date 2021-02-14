@@ -98,11 +98,7 @@ public class BTraceProbePersisted implements BTraceProbe {
     }
     for (Handler h : roots) {
       String rootKey = CallGraph.methodId(h.name, h.desc);
-      Set<String> cs = cMap.get(rootKey);
-      if (cs == null) {
-        cs = new HashSet<>();
-        cMap.put(rootKey, cs);
-      }
+      Set<String> cs = cMap.computeIfAbsent(rootKey, k -> new HashSet<>());
       for (BTraceMethodNode bmn : bpn.callees(h.name, h.desc)) {
         cs.add(CallGraph.methodId(bmn.name, bmn.desc));
       }
@@ -291,11 +287,7 @@ public class BTraceProbePersisted implements BTraceProbe {
     int cnt = dis.readInt();
     for (int i = 0; i < cnt; i++) {
       String from = dis.readUTF();
-      Set<String> calleeSet = calleeMap.get(from);
-      if (calleeSet == null) {
-        calleeSet = new HashSet<>();
-        calleeMap.put(from, calleeSet);
-      }
+      Set<String> calleeSet = calleeMap.computeIfAbsent(from, k -> new HashSet<>());
       int callees = dis.readInt();
       for (int j = 0; j < callees; j++) {
         String to = dis.readUTF();
@@ -509,7 +501,7 @@ public class BTraceProbePersisted implements BTraceProbe {
   }
 
   @Override
-  public boolean willInstrument(Class clz) {
+  public boolean willInstrument(Class<?> clz) {
     return delegate.willInstrument(clz);
   }
 
@@ -521,9 +513,9 @@ public class BTraceProbePersisted implements BTraceProbe {
   }
 
   @Override
-  public void copyHandlers(final ClassVisitor copyingVisitor) {
+  public void copyHandlers(ClassVisitor copyingVisitor) {
     ClassReader cr = new ClassReader(fullData);
-    final Set<String> copiedMethods = new HashSet<>();
+    Set<String> copiedMethods = new HashSet<>();
     for (OnMethod om : onmethods()) {
       if (om.isCalled()) {
         String mid = CallGraph.methodId(om.getTargetName(), om.getTargetDescriptor());

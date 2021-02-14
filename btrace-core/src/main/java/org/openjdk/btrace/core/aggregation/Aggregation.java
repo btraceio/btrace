@@ -25,8 +25,6 @@
 package org.openjdk.btrace.core.aggregation;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -117,8 +115,8 @@ public class Aggregation implements Cloneable {
       } else {
         removeContents = sortedContents.subList(collectionSize - numberToRemove, collectionSize);
       }
-      for (int i = 0; i < removeContents.size(); i++) {
-        values.remove(removeContents.get(i).getKey());
+      for (Entry<AggregationKey, AggregationValue> removeContent : removeContents) {
+        values.remove(removeContent.getKey());
       }
     }
   }
@@ -186,28 +184,22 @@ public class Aggregation implements Cloneable {
   private List<Map.Entry<AggregationKey, AggregationValue>> sort() {
     ArrayList<Map.Entry<AggregationKey, AggregationValue>> result =
         new ArrayList<>(values.entrySet());
-    Collections.sort(
-        result,
-        new Comparator<Map.Entry<AggregationKey, AggregationValue>>() {
-
-          @Override
-          public int compare(
-              Entry<AggregationKey, AggregationValue> o1,
-              Entry<AggregationKey, AggregationValue> o2) {
-            long i1 = o1.getValue().getValue();
-            long i2 = o2.getValue().getValue();
-            if (i1 < i2) {
-              return -1;
-            } else if (i1 == i2) {
-              return 0;
-            } else {
-              return 1;
-            }
+    result.sort(
+        (o1, o2) -> {
+          long i1 = o1.getValue().getValue();
+          long i2 = o2.getValue().getValue();
+          if (i1 < i2) {
+            return -1;
+          } else if (i1 == i2) {
+            return 0;
+          } else {
+            return 1;
           }
         });
     return result;
   }
 
+  @SuppressWarnings({"RedundantThrows", "MethodDoesntCallSuperMethod"})
   @Override
   protected Object clone() throws CloneNotSupportedException {
     return new Aggregation(type);

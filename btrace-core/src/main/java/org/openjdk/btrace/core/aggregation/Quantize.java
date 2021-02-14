@@ -80,7 +80,7 @@ class Quantize implements AggregationValue {
       // Special case since 0 - MIN_VALUE overflows
       return 0;
     } else {
-      return ZERO_INDEX - 1 - logBase2(0 - data);
+      return ZERO_INDEX - 1 - logBase2(-data);
     }
   }
 
@@ -91,10 +91,10 @@ class Quantize implements AggregationValue {
       return Long.MIN_VALUE;
     } else if (index > ZERO_INDEX) {
       index = index - ZERO_INDEX - 1;
-      return 1 << index;
+      return 1L << index;
     } else {
       index = ZERO_INDEX - index - 1;
-      return 0 - (1 << index);
+      return -(1L << index);
     }
   }
 
@@ -132,8 +132,8 @@ class Quantize implements AggregationValue {
    */
   @Override
   public void clear() {
-    for (int i = 0; i < buckets.length; i++) {
-      buckets[i].set(0);
+    for (AtomicLong bucket : buckets) {
+      bucket.set(0);
     }
   }
 

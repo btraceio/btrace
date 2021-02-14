@@ -31,8 +31,8 @@ dependencies {
 }
 
 compileJava11_dummyJava {
-    sourceCompatibility = 7
-    targetCompatibility = 7
+    sourceCompatibility = 8
+    targetCompatibility = 8
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
     options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
@@ -48,8 +48,8 @@ compileJava15Java {
 }
 
 compileTestJava {
-    sourceCompatibility = 7
-    targetCompatibility = 7
+    sourceCompatibility = 8
+    targetCompatibility = 8
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
 }
