@@ -91,30 +91,24 @@ public class Postprocessor extends ClassVisitor {
       isconstructor = true;
     }
 
-    MethodVisitor mv =
-        new MethodConvertor(
-            localVarOffset,
-            isconstructor,
-            super.visitMethod(access, name, desc, signature, exceptions));
-    return mv;
+    return new MethodConvertor(
+        localVarOffset,
+        isconstructor,
+        super.visitMethod(access, name, desc, signature, exceptions));
   }
 
   @Override
   public FieldVisitor visitField(
-      final int access,
-      final String name,
-      final String desc,
-      final String signature,
-      final Object value) {
+      int access, String name, String desc, String signature, Object value) {
     if (!shortSyntax) return super.visitField(access, name, desc, signature, value);
 
-    final List<Attribute> attrs = new ArrayList<>();
+    List<Attribute> attrs = new ArrayList<>();
     return new FieldVisitor(Opcodes.ASM7) {
       private final List<AnnotationDef> annotations = new ArrayList<>();
 
       @Override
       public AnnotationVisitor visitAnnotation(String type, boolean visible) {
-        final AnnotationDef ad = new AnnotationDef(type);
+        AnnotationDef ad = new AnnotationDef(type);
         annotations.add(ad);
         return new AnnotationVisitor(Opcodes.ASM7, super.visitAnnotation(type, visible)) {
           @Override
@@ -641,7 +635,7 @@ public class Postprocessor extends ClassVisitor {
 
     @Override
     public void visitMaxs(int maxStack, int maxLocals) {
-      super.visitMaxs(maxStack, (maxLocals + localVarOffset > 0 ? maxLocals + localVarOffset : 0));
+      super.visitMaxs(maxStack, (Math.max(maxLocals + localVarOffset, 0)));
     }
 
     @Override

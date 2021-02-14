@@ -106,7 +106,7 @@ public final class OnProbe extends SpecialParameterHolder {
     name = other.name;
     targetName = other.targetName;
     targetDescriptor = other.targetDescriptor;
-    onMethods = new HashSet<OnMethod>(other.onMethods);
+    onMethods = new HashSet<>(other.onMethods);
   }
 
   public BTraceMethodNode getMethodNode() {

@@ -38,6 +38,7 @@ import org.openjdk.btrace.runtime.Interval;
  *
  * @author Jaroslav Bachorik
  */
+@SuppressWarnings("UnusedReturnValue")
 public final class Assembler {
   private final MethodVisitor mv;
   private final MethodInstrumentorHelper mHelper;

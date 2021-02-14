@@ -24,7 +24,7 @@ public final class HandlerRepository {
   }
 
   public static byte[] getProbeHandler(
-      String callerName, String probeName, final String handlerName, final String handlerDesc) {
+      String callerName, String probeName, String handlerName, String handlerDesc) {
     DebugSupport debugSupport = new DebugSupport(SharedSettings.GLOBAL);
     BTraceProbe probe = probeMap.get(probeName);
     ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);

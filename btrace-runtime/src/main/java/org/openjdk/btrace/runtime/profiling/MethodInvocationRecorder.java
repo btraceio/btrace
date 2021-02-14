@@ -48,10 +48,10 @@ import org.openjdk.btrace.core.Profiler;
 class MethodInvocationRecorder {
 
   private final int defaultBufferSize;
-  private final Map<String, Integer> indexMap = new HashMap<String, Integer>();
+  private final Map<String, Integer> indexMap = new HashMap<>();
   // 0 - available; 1 - processing invocation; 2 - generating snapshot; 3 - resetting
   private final AtomicInteger writerStatus = new AtomicInteger(0);
-  private final Deque<DelayedRecord> delayedRecords = new LinkedList<DelayedRecord>();
+  private final Deque<DelayedRecord> delayedRecords = new LinkedList<>();
   private int stackSize = 200;
   private int stackPtr = -1;
   private int stackBndr = 150;
@@ -277,6 +277,7 @@ class MethodInvocationRecorder {
     }
   }
 
+  @SuppressWarnings("ManualMinMaxCalculation")
   private void compactMeasured() {
     int lastMeasurePtr = lastIndex;
     if (lastIndex >= measuredPtr) {
@@ -296,10 +297,10 @@ class MethodInvocationRecorder {
           mr.selfTime += m.selfTime;
           mr.wallTime += m.wallTime;
           mr.invocations++;
-          mr.selfTimeMax = m.selfTime > mr.selfTimeMax ? m.selfTime : mr.selfTimeMax;
-          mr.selfTimeMin = m.selfTime < mr.selfTimeMin ? m.selfTime : mr.selfTimeMin;
-          mr.wallTimeMax = m.wallTime > mr.wallTimeMax ? m.wallTime : mr.wallTimeMax;
-          mr.wallTimeMin = m.wallTime < mr.wallTimeMin ? m.wallTime : mr.wallTimeMin;
+          mr.selfTimeMax = Math.max(m.selfTime, mr.selfTimeMax);
+          mr.selfTimeMin = Math.min(m.selfTime, mr.selfTimeMin);
+          mr.wallTimeMax = Math.max(m.wallTime, mr.wallTimeMax);
+          mr.wallTimeMin = Math.min(m.wallTime, mr.wallTimeMin);
           m.referring = mr;
         }
       }

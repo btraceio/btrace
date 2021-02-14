@@ -18,8 +18,8 @@ sourceSets {
 }
 
 compileJava {
-    sourceCompatibility = 7
-    targetCompatibility = 7
+    sourceCompatibility = 8
+    targetCompatibility = 8
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
 }

@@ -29,6 +29,7 @@ public class ListProbesCommand extends Command implements PrintableCommand {
     }
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     int numProbes = in.readInt();

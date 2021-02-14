@@ -47,7 +47,7 @@ public @interface BTrace {
   // having "unsafe" set to true the script will be run in unsafe mode
 
   @Deprecated
-  /** @deprecated use {@linkplain BTrace#trusted()} instead */
+  /* @deprecated use {@linkplain BTrace#trusted()} instead */
   boolean unsafe() default false;
 
   boolean trusted() default false;

@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -41,7 +42,7 @@ import java.util.regex.Pattern;
  * @author Jaroslav Bachorik
  */
 public final class CallGraph {
-  private static final Pattern MID_SPLIT_PTN = Pattern.compile("\\:\\:");
+  private static final Pattern MID_SPLIT_PTN = Pattern.compile("::");
   private final Set<Node> nodes = new HashSet<>();
   private final Set<Node> startingNodes = new HashSet<>();
 
@@ -156,7 +157,7 @@ public final class CallGraph {
   }
 
   private Set<Node> findCycles() {
-    if (nodes.size() < 2) return Collections.EMPTY_SET;
+    if (nodes.size() < 2) return Collections.emptySet();
 
     Map<String, Node> checkingNodes = new HashMap<>();
     for (Node n : nodes) {
@@ -244,7 +245,7 @@ public final class CallGraph {
         return false;
       }
       Node other = (Node) obj;
-      return (id == null) ? (other.id == null) : id.equals(other.id);
+      return Objects.equals(id, other.id);
     }
 
     @Override
@@ -299,10 +300,10 @@ public final class CallGraph {
         return false;
       }
       Edge other = (Edge) obj;
-      if (from != other.from && (from == null || !from.equals(other.from))) {
+      if (!Objects.equals(from, other.from)) {
         return false;
       }
-      return !(to != other.to && (to == null || !to.equals(other.to)));
+      return Objects.equals(to, other.to);
     }
 
     @Override
