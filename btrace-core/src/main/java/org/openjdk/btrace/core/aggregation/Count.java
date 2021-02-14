@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class Count implements AggregationValue {
 
-  AtomicInteger value = new AtomicInteger();
+  final AtomicInteger value = new AtomicInteger();
 
   @Override
   public void clear() {

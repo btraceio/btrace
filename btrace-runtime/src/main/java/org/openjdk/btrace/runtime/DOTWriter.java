@@ -164,7 +164,7 @@ public class DOTWriter {
   static final String INTEREDGESTYLE = "style=dashed, color=darkGrey";
   private final DotWriterFormatter dotWriterFormatter = new DotWriterFormatter();
   // Cache of field information.
-  Map<Class, Field[]> fieldCache = new HashMap<Class, Field[]>();
+  final Map<Class<?>, Field[]> fieldCache = new HashMap<>();
   // Maximum number of objects displayed.
   private int objectLimit = 256;
   // Maximum number of field entries displayed.
@@ -172,7 +172,7 @@ public class DOTWriter {
   // Maximum number of array entries displayed.
   private int arrayLimit = 32;
   // Map of visited objects.
-  private final Map<Object, Node> visited = new IdentityHashMap<Object, Node>();
+  private final Map<Object, Node> visited = new IdentityHashMap<>();
   // Graph properties.
   private final Properties graphProperties = new Properties();
   // Default node properties.
@@ -180,23 +180,23 @@ public class DOTWriter {
   // Default edge properties.
   private final Properties edgeProperties = new Properties();
   // List of nodes.
-  private final List<Node> nodes = new ArrayList<Node>();
+  private final List<Node> nodes = new ArrayList<>();
   // List of edges.
-  private final List<Edge> edges = new ArrayList<Edge>();
+  private final List<Edge> edges = new ArrayList<>();
   // Output stream.
   private PrintStream dotStream;
   // True if filters are active.
   private boolean filtering = false;
   // Include set of instances.
-  private final Set<Object> includeObjects = new HashSet<Object>();
+  private final Set<Object> includeObjects = new HashSet<>();
   // Exclude set of instances.
-  private final Set<Object> excludeObjects = new HashSet<Object>();
+  private final Set<Object> excludeObjects = new HashSet<>();
   // Include List of classes.
-  private final List<Class> includeClasses = new ArrayList<Class>();
+  private final List<Class> includeClasses = new ArrayList<>();
   // Include classes which matching name pattern
   private Pattern includeClassNames;
   // Exclude List of classes.
-  private final List<Class> excludeClasses = new ArrayList<Class>();
+  private final List<Class> excludeClasses = new ArrayList<>();
   // Excluse classes with matching name pattern
   private Pattern excludeClassNames;
   // True if collections should be expanded.
@@ -209,7 +209,7 @@ public class DOTWriter {
   public DOTWriter(String fileName) {
     try {
       dotStream = new PrintStream(fileName);
-    } catch (Throwable ex) {
+    } catch (Throwable ignored) {
     }
 
     // Set up default properties.
@@ -663,7 +663,7 @@ public class DOTWriter {
 
     try {
       value = field.get(object);
-    } catch (Throwable ex) {
+    } catch (Throwable ignored) {
     }
 
     return value;
@@ -821,7 +821,7 @@ public class DOTWriter {
   // This class maintains properties.
   static class Properties {
     // Property map.
-    private final Map<String, String> properties = new HashMap<String, String>();
+    private final Map<String, String> properties = new HashMap<>();
 
     // Adds a new property to the map.
     void addProperty(String key, String value) {
@@ -892,7 +892,7 @@ public class DOTWriter {
   // This class maintains information about a graph element.
   static class Element extends Properties {
     // Identifying number.
-    int id;
+    final int id;
 
     Element(int id) {
       this.id = id;
@@ -902,7 +902,7 @@ public class DOTWriter {
   // This class maintains information about a node.
   static class Node extends Element {
     // Subject of the node.
-    Object object;
+    final Object object;
 
     Node(int id, Object object) {
       super(id);
@@ -913,10 +913,10 @@ public class DOTWriter {
   // This class maintains information about an edge.
   static class Edge extends Element {
     // Beginning and end of edge.
-    Node head;
-    int headFieldId;
-    Node tail;
-    int tailFieldId;
+    final Node head;
+    final int headFieldId;
+    final Node tail;
+    final int tailFieldId;
 
     Edge(int id, Node head, int headFieldId, Node tail, int tailFieldId) {
       super(id);
@@ -945,16 +945,16 @@ public class DOTWriter {
         string = dotWriterFormatter.formatString((String) value, "\"");
       } else if (value instanceof char[]) {
         // char arrays as single quote strings.
-        string = dotWriterFormatter.formatString(new String((char[]) value), "\'");
+        string = dotWriterFormatter.formatString(new String((char[]) value), "'");
       } else if (value instanceof byte[] && allASCII((byte[]) value)) {
         // byte arrays of ascii characters as single quote strings.
         string =
             dotWriterFormatter.formatString(
-                new String((byte[]) value, StandardCharsets.UTF_8), "\'");
+                new String((byte[]) value, StandardCharsets.UTF_8), "'");
       } else if (value instanceof Character) {
         // Quote characters.
         Character character = (Character) value;
-        string = "\'" + character + "\'";
+        string = "'" + character + "'";
       } else if (!expandCollections && value instanceof Map.Entry) {
         // Map entries as key->value.
         Map.Entry entry = (Map.Entry) value;

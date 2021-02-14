@@ -90,10 +90,10 @@ public class ArrayAccessInstrumentor extends MethodInstrumentor {
     }
   }
 
-  protected final boolean locationTypeMatches(Location loc, Type arrtype, Type itemType) {
-    return loc.getType().isEmpty()
-        || (loc.getType().equals(arrtype.getClassName())
-            || loc.getType().equals(itemType.getClassName()));
+  protected final boolean locationTypeMismatch(Location loc, Type arrtype, Type itemType) {
+    return !loc.getType().isEmpty()
+        && (!loc.getType().equals(arrtype.getClassName())
+            && !loc.getType().equals(itemType.getClassName()));
   }
 
   protected void onBeforeArrayLoad(int opcode) {}
