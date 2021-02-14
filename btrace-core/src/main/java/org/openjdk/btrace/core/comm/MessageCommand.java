@@ -35,12 +35,7 @@ import java.util.Date;
 
 public class MessageCommand extends DataCommand {
   private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT =
-      new ThreadLocal<SimpleDateFormat>() {
-        @Override
-        protected SimpleDateFormat initialValue() {
-          return new SimpleDateFormat("HH:mm:ss:SSS");
-        }
-      };
+      ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm:ss:SSS"));
 
   private long time;
   private String msg;

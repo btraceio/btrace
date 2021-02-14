@@ -25,7 +25,6 @@
 package org.openjdk.btrace.instr;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Set;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Opcodes;
@@ -38,12 +37,7 @@ import org.openjdk.btrace.core.annotations.Where;
 /** @author Jaroslav Bachorik */
 public class BTraceMethodNode extends MethodNode {
   public static final Comparator<MethodNode> COMPARATOR =
-      new Comparator<MethodNode>() {
-        @Override
-        public int compare(MethodNode o1, MethodNode o2) {
-          return (o1.name + "#" + o1.desc).compareTo(o2.name + "#" + o2.desc);
-        }
-      };
+      (o1, o2) -> (o1.name + "#" + o1.desc).compareTo(o2.name + "#" + o2.desc);
   private final BTraceProbeNode cn;
   private final CallGraph graph;
   private final String methodId;
@@ -65,12 +59,12 @@ public class BTraceMethodNode extends MethodNode {
         from.name,
         from.desc,
         from.signature,
-        ((List<String>) from.exceptions).toArray(new String[0]));
+        from.exceptions.toArray(new String[0]));
     this.cn = cn;
     graph = cn.getGraph();
     methodId = CallGraph.methodId(name, desc);
     debug = cn.debug;
-    this.isBTraceHandler = initBTraceHandler;
+    isBTraceHandler = initBTraceHandler;
   }
 
   @Override
@@ -319,7 +313,7 @@ public class BTraceMethodNode extends MethodNode {
   }
 
   private AnnotationVisitor setSpecialParameters(
-      final SpecialParameterHolder ph, String desc, int parameter, AnnotationVisitor av) {
+      SpecialParameterHolder ph, String desc, int parameter, AnnotationVisitor av) {
     // for OnProbe the 'loc' variable will be null; we will need to verfiy the placement later on
     if (desc.equals(Constants.SELF_DESC)) {
       ph.setSelfParameter(parameter);

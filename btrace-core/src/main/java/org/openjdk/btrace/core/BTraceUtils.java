@@ -274,7 +274,7 @@ public class BTraceUtils {
    *
    * @param clazz the Class for which the class loader is returned
    */
-  public static ClassLoader loader(Class clazz) {
+  public static ClassLoader loader(Class<?> clazz) {
     return clazz.getClassLoader();
   }
 
@@ -367,7 +367,7 @@ public class BTraceUtils {
    * @param obj the Object whose Class is returned
    * @return the Class object of given object
    */
-  public static Class classOf(Object obj) {
+  public static Class<?> classOf(Object obj) {
     return Reflective.classOf(obj);
   }
 
@@ -391,12 +391,12 @@ public class BTraceUtils {
    *
    * @param field whose declaring Class is returned
    */
-  public static Class declaringClass(Field field) {
+  public static Class<?> declaringClass(Field field) {
     return Reflective.declaringClass(field);
   }
 
   /** Returns the name of the given Class object. */
-  public static String name(Class clazz) {
+  public static String name(Class<?> clazz) {
     return Reflective.name(clazz);
   }
 
@@ -416,12 +416,12 @@ public class BTraceUtils {
    * @param field Field for which type is returned
    * @return type of the given field
    */
-  public static Class type(Field field) {
+  public static Class<?> type(Field field) {
     return Reflective.type(field);
   }
 
   /** Returns the access flags of the given Class. */
-  public static int accessFlags(Class clazz) {
+  public static int accessFlags(Class<?> clazz) {
     return Reflective.accessFlags(clazz);
   }
 
@@ -469,7 +469,7 @@ public class BTraceUtils {
    * @param obj the object to check.
    * @return true if <code>obj</code> is an instance of the given class.
    */
-  public static boolean isInstance(Class clazz, Object obj) {
+  public static boolean isInstance(Class<?> clazz, Object obj) {
     return Reflective.isInstance(clazz, obj);
   }
 
@@ -483,7 +483,7 @@ public class BTraceUtils {
    * @param clazz the Class whose super class is returned.
    * @return the superclass of the class represented by the given object.
    */
-  public static Class getSuperclass(Class clazz) {
+  public static Class<?> getSuperclass(Class<?> clazz) {
     return Reflective.getSuperclass(clazz);
   }
 
@@ -493,7 +493,7 @@ public class BTraceUtils {
    * @param clazz the Class object to check.
    * @return <code>true</code> if the Class represents an interface; <code>false</code> otherwise.
    */
-  public static boolean isInterface(Class clazz) {
+  public static boolean isInterface(Class<?> clazz) {
     return Reflective.isInterface(clazz);
   }
 
@@ -504,17 +504,17 @@ public class BTraceUtils {
    * @return <code>true</code> if the given object represents an array class; <code>false</code>
    *     otherwise.
    */
-  public static boolean isArray(Class clazz) {
+  public static boolean isArray(Class<?> clazz) {
     return Reflective.isArray(clazz);
   }
 
   /** Returns whether the given Class represent primitive type or not. */
-  public static boolean isPrimitive(Class clazz) {
+  public static boolean isPrimitive(Class<?> clazz) {
     return Reflective.isPrimitive(clazz);
   }
 
   /** returns component type of an array Class. */
-  public static Class getComponentType(Class clazz) {
+  public static Class<?> getComponentType(Class<?> clazz) {
     return Reflective.getComponentType(clazz);
   }
 
@@ -532,7 +532,7 @@ public class BTraceUtils {
    * @param throwException whether to throw exception on failing to find field or not
    * @return the <code>Field</code> object for the specified field in this class
    */
-  public static Field field(Class clazz, String name, boolean throwException) {
+  public static Field field(Class<?> clazz, String name, boolean throwException) {
     return Reflective.field(clazz, name, throwException);
   }
 
@@ -546,7 +546,7 @@ public class BTraceUtils {
    * @param name the name of the field
    * @return the <code>Field</code> object for the specified field in this class
    */
-  public static Field field(Class clazz, String name) {
+  public static Field field(Class<?> clazz, String name) {
     return Reflective.field(clazz, name);
   }
 
@@ -926,7 +926,7 @@ public class BTraceUtils {
    *
    * @param clazz Class whose static fields are printed.
    */
-  public static void printStaticFields(Class clazz) {
+  public static void printStaticFields(Class<?> clazz) {
     Reflective.printStaticFields(clazz, false);
   }
 
@@ -938,7 +938,7 @@ public class BTraceUtils {
    * @param clazz Class whose static fields are printed.
    * @param classNamePrefix flag to tell whether to prefix field names names by class name or not.
    */
-  public static void printStaticFields(Class clazz, boolean classNamePrefix) {
+  public static void printStaticFields(Class<?> clazz, boolean classNamePrefix) {
     Reflective.printStaticFields(clazz, classNamePrefix);
   }
 
@@ -3031,46 +3031,42 @@ public class BTraceUtils {
     }
   }
 
-  private static Field getField(final Class clazz, final String name, final boolean throwError) {
+  private static Field getField(Class<?> clazz, String name, boolean throwError) {
     return AccessController.doPrivileged(
-        new PrivilegedAction<Field>() {
-          @Override
-          public Field run() {
-            try {
-              Field field = clazz.getDeclaredField(name);
-              field.setAccessible(true);
-              return field;
-            } catch (Exception exp) {
-              if (throwError) {
-                throw translate(exp);
-              } else {
-                return null;
+        (PrivilegedAction<Field>)
+            () -> {
+              try {
+                Field field = clazz.getDeclaredField(name);
+                field.setAccessible(true);
+                return field;
+              } catch (Exception exp) {
+                if (throwError) {
+                  throw translate(exp);
+                } else {
+                  return null;
+                }
               }
-            }
-          }
-        });
+            });
   }
 
-  private static Field[] getAllFields(final Class clazz) {
+  private static Field[] getAllFields(Class<?> clazz) {
     return AccessController.doPrivileged(
-        new PrivilegedAction<Field[]>() {
-          @Override
-          public Field[] run() {
-            try {
-              Field[] fields = clazz.getDeclaredFields();
-              for (Field f : fields) {
-                f.setAccessible(true);
+        (PrivilegedAction<Field[]>)
+            () -> {
+              try {
+                Field[] fields = clazz.getDeclaredFields();
+                for (Field f : fields) {
+                  f.setAccessible(true);
+                }
+                return fields;
+              } catch (Exception exp) {
+                throw translate(exp);
               }
-              return fields;
-            } catch (Exception exp) {
-              throw translate(exp);
-            }
-          }
-        });
+            });
   }
 
   private static void addFieldValues(
-      StringBuilder buf, Object obj, Class clazz, boolean classNamePrefix) {
+      StringBuilder buf, Object obj, Class<?> clazz, boolean classNamePrefix) {
     Field[] fields = getAllFields(clazz);
     for (Field f : fields) {
       int modifiers = f.getModifiers();
@@ -3089,14 +3085,14 @@ public class BTraceUtils {
         buf.append(", ");
       }
     }
-    Class sc = clazz.getSuperclass();
+    Class<?> sc = clazz.getSuperclass();
     if (sc != null) {
       addFieldValues(buf, obj, sc, classNamePrefix);
     }
   }
 
   private static void addStaticFieldValues(
-      StringBuilder buf, Class clazz, boolean classNamePrefix) {
+      StringBuilder buf, Class<?> clazz, boolean classNamePrefix) {
     Field[] fields = getAllFields(clazz);
     for (Field f : fields) {
       int modifiers = f.getModifiers();
@@ -3115,7 +3111,7 @@ public class BTraceUtils {
         buf.append(", ");
       }
     }
-    Class sc = clazz.getSuperclass();
+    Class<?> sc = clazz.getSuperclass();
     if (sc != null) {
       addStaticFieldValues(buf, sc, classNamePrefix);
     }
@@ -4318,6 +4314,7 @@ public class BTraceUtils {
    * Wraps the collections related BTrace utility methods
    * @since 1.2
    */
+  @SuppressWarnings("EmptyMethod")
   public static class Collections {
     // Create a new map
     public static <K, V> Map<K, V> newHashMap() {
@@ -4994,7 +4991,7 @@ public class BTraceUtils {
      * @return a weak reference to the given object.
      */
     public static WeakReference weakRef(Object obj) {
-      return new WeakReference<Object>(obj);
+      return new WeakReference<>(obj);
     }
 
     /**
@@ -5004,7 +5001,7 @@ public class BTraceUtils {
      * @return a soft reference to the given object.
      */
     public static SoftReference softRef(Object obj) {
-      return new SoftReference<Object>(obj);
+      return new SoftReference<>(obj);
     }
 
     /**
@@ -5036,7 +5033,7 @@ public class BTraceUtils {
      * @param obj the Object whose Class is returned
      * @return the Class object of given object
      */
-    public static Class classOf(Object obj) {
+    public static Class<?> classOf(Object obj) {
       return obj.getClass();
     }
 
@@ -5046,12 +5043,12 @@ public class BTraceUtils {
      *
      * @param field whose declaring Class is returned
      */
-    public static Class declaringClass(Field field) {
+    public static Class<?> declaringClass(Field field) {
       return field.getDeclaringClass();
     }
 
     /** Returns the name of the given Class object. */
-    public static String name(Class clazz) {
+    public static String name(Class<?> clazz) {
       return clazz.getName();
     }
 
@@ -5071,12 +5068,12 @@ public class BTraceUtils {
      * @param field Field for which type is returned
      * @return type of the given field
      */
-    public static Class type(Field field) {
+    public static Class<?> type(Field field) {
       return field.getType();
     }
 
     /** Returns the access flags of the given Class. */
-    public static int accessFlags(Class clazz) {
+    public static int accessFlags(Class<?> clazz) {
       return clazz.getModifiers();
     }
 
@@ -5093,13 +5090,13 @@ public class BTraceUtils {
     // get Class of the given name
 
     /** Returns Class object for given class name. */
-    public static Class classForName(String name) {
+    public static Class<?> classForName(String name) {
       ClassLoader callerLoader = BTraceRuntime.getCallerClassloader(STACK_DEC);
       return classForName(name, callerLoader);
     }
 
     /** Returns the Class for the given class name using the given class loader. */
-    public static Class classForName(String name, ClassLoader cl) {
+    public static Class<?> classForName(String name, ClassLoader cl) {
       try {
         return Class.forName(name, false, cl);
       } catch (ClassNotFoundException exp) {
@@ -5129,7 +5126,7 @@ public class BTraceUtils {
      * @param obj the object to check.
      * @return true if <code>obj</code> is an instance of the given class.
      */
-    public static boolean isInstance(Class clazz, Object obj) {
+    public static boolean isInstance(Class<?> clazz, Object obj) {
       return clazz.isInstance(obj);
     }
 
@@ -5143,7 +5140,7 @@ public class BTraceUtils {
      * @param clazz the Class whose super class is returned.
      * @return the superclass of the class represented by the given object.
      */
-    public static Class getSuperclass(Class clazz) {
+    public static Class<?> getSuperclass(Class<?> clazz) {
       return clazz.getSuperclass();
     }
 
@@ -5153,7 +5150,7 @@ public class BTraceUtils {
      * @param clazz the Class object to check.
      * @return <code>true</code> if the Class represents an interface; <code>false</code> otherwise.
      */
-    public static boolean isInterface(Class clazz) {
+    public static boolean isInterface(Class<?> clazz) {
       return clazz.isInterface();
     }
 
@@ -5164,17 +5161,17 @@ public class BTraceUtils {
      * @return <code>true</code> if the given object represents an array class; <code>false</code>
      *     otherwise.
      */
-    public static boolean isArray(Class clazz) {
+    public static boolean isArray(Class<?> clazz) {
       return clazz.isArray();
     }
 
     /** Returns whether the given Class represent primitive type or not. */
-    public static boolean isPrimitive(Class clazz) {
+    public static boolean isPrimitive(Class<?> clazz) {
       return clazz.isPrimitive();
     }
 
     /** returns component type of an array Class. */
-    public static Class getComponentType(Class clazz) {
+    public static Class<?> getComponentType(Class<?> clazz) {
       return clazz.getComponentType();
     }
 
