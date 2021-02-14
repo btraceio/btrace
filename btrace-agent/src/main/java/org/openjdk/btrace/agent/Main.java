@@ -77,7 +77,6 @@ import java.util.zip.ZipFile;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.Function;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
@@ -94,6 +93,7 @@ import org.openjdk.btrace.runtime.BTraceRuntimes;
  * @author A. Sundararajan
  * @author Joachim Skeie (rolling output)
  */
+@SuppressWarnings("RedundantThrows")
 public final class Main {
   public static final int BTRACE_DEFAULT_PORT = 2020;
   private static final Pattern KV_PATTERN = Pattern.compile(",");
@@ -102,13 +102,10 @@ public final class Main {
   private static final BTraceTransformer transformer = new BTraceTransformer(debug);
   // #BTRACE-42: Non-daemon thread prevents traced application from exiting
   private static final ThreadFactory qProcessorThreadFactory =
-      new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-          Thread result = new Thread(r, "BTrace Command Queue Processor");
-          result.setDaemon(true);
-          return result;
-        }
+      r -> {
+        Thread result = new Thread(r, "BTrace Command Queue Processor");
+        result.setDaemon(true);
+        return result;
       };
   private static final ExecutorService serializedExecutor =
       Executors.newSingleThreadExecutor(qProcessorThreadFactory);
@@ -158,15 +155,12 @@ public final class Main {
       }
       Thread agentThread =
           new Thread(
-              new Runnable() {
-                @Override
-                public void run() {
-                  BTraceRuntime.enter();
-                  try {
-                    startServer();
-                  } finally {
-                    BTraceRuntime.leave();
-                  }
+              () -> {
+                BTraceRuntime.enter();
+                try {
+                  startServer();
+                } finally {
+                  BTraceRuntime.leave();
                 }
               });
       // force back-registration of BTraceRuntimeImpl in BTraceRuntime
@@ -584,7 +578,7 @@ public final class Main {
         } else {
           if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
             JarFile jf = asJarFile(f);
-            debugPrint("Adding jar: " + jf.toString());
+            debugPrint("Adding jar: " + jf);
             inst.appendToBootstrapClassLoaderSearch(jf);
           } else {
             debugPrint("ignoring boot classpath element '" + path + "' - only jar files allowed");
@@ -629,6 +623,7 @@ public final class Main {
     addPreconfLibs(libs);
   }
 
+  @SuppressWarnings("JavaReflectionMemberAccess")
   private static JarFile asJarFile(File path) throws IOException {
     try {
       Class.forName("java.lang.Module"); // bail out early if on pre Java 9 version
@@ -821,6 +816,7 @@ public final class Main {
   }
 
   // -- Internals only below this point
+  @SuppressWarnings("InfiniteLoopStatement")
   private static void startServer() {
     int port = BTRACE_DEFAULT_PORT;
     String p = argMap.get(PORT);
@@ -859,16 +855,7 @@ public final class Main {
           debugPrint("client accepted " + sock);
         }
         ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
-        Client client =
-            RemoteClient.getClient(
-                ctx,
-                sock,
-                new Function<Client, Future<?>>() {
-                  @Override
-                  public Future<?> apply(Client value) {
-                    return handleNewClient(value);
-                  }
-                });
+        Client client = RemoteClient.getClient(ctx, sock, value -> handleNewClient(value));
       } catch (RuntimeException | IOException re) {
         if (isDebug()) {
           debugPrint(re);
@@ -877,33 +864,29 @@ public final class Main {
     }
   }
 
-  private static Future<?> handleNewClient(final Client client) {
+  private static Future<?> handleNewClient(Client client) {
     return serializedExecutor.submit(
-        new Runnable() {
-
-          @Override
-          public void run() {
+        () -> {
+          try {
+            boolean entered = BTraceRuntime.enter();
             try {
-              boolean entered = BTraceRuntime.enter();
-              try {
-                client.debugPrint("new Client created " + client);
-                if (client.retransformLoaded()) {
-                  client.getRuntime().send(new StatusCommand((byte) 1));
-                }
-              } catch (UnmodifiableClassException uce) {
-                if (isDebug()) {
-                  debugPrint(uce);
-                }
-                client.getRuntime().send(new ErrorCommand(uce));
-                client.getRuntime().send(new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
-              } finally {
-                if (entered) {
-                  BTraceRuntime.leave();
-                }
+              client.debugPrint("new Client created " + client);
+              if (client.retransformLoaded()) {
+                client.getRuntime().send(new StatusCommand((byte) 1));
               }
-            } catch (Throwable t) {
-              t.printStackTrace();
+            } catch (UnmodifiableClassException uce) {
+              if (isDebug()) {
+                debugPrint(uce);
+              }
+              client.getRuntime().send(new ErrorCommand(uce));
+              client.getRuntime().send(new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
+            } finally {
+              if (entered) {
+                BTraceRuntime.leave();
+              }
             }
+          } catch (Throwable t) {
+            t.printStackTrace();
           }
         });
   }

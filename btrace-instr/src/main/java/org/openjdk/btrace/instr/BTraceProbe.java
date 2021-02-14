@@ -76,7 +76,7 @@ public interface BTraceProbe {
 
   void unregister();
 
-  boolean willInstrument(Class clz);
+  boolean willInstrument(Class<?> clz);
 
   void checkVerified();
 

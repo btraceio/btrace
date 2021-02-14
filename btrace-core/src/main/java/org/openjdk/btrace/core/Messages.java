@@ -37,7 +37,7 @@ public final class Messages {
         ResourceBundle.getBundle(
             "org.openjdk.btrace.core.messages",
             Locale.getDefault(),
-            Messages.class.getClassLoader());
+            ClassLoader.getSystemClassLoader());
   }
 
   private Messages() {}

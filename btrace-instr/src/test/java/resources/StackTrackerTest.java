@@ -25,7 +25,7 @@
 package resources;
 
 public class StackTrackerTest {
-    private static String testStatic(int a, Class clz) {
+    private static String testStatic(int a, Class<?> clz) {
         int i = 10;
 
         try {

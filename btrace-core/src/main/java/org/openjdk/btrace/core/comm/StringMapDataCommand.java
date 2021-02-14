@@ -80,10 +80,11 @@ public class StringMapDataCommand extends DataCommand {
     }
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     name = in.readUTF();
-    data = new HashMap<String, String>();
+    data = new HashMap<>();
     int sz = in.readInt();
     for (int i = 0; i < sz; i++) {
       data.put(in.readUTF(), in.readUTF());
