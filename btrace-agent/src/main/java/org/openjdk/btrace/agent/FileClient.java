@@ -88,6 +88,7 @@ class FileClient extends Client {
     return ret;
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   public void onCommand(Command cmd) throws IOException {
     if (isDebug()) {

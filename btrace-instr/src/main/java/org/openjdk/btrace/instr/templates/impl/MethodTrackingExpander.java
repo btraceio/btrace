@@ -273,6 +273,7 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     return addLevelChecks(e, null, initializer);
   }
 
+  @SuppressWarnings("UnusedReturnValue")
   private Label addLevelChecks(TemplateExpanderVisitor e, Label skip) {
     return addLevelChecks(e, skip, null);
   }
@@ -348,8 +349,8 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     }
 
     @Override
-    public void consume(final TemplateExpanderVisitor e) {
-      final Assembler asm = e.asm();
+    public void consume(TemplateExpanderVisitor e) {
+      Assembler asm = e.asm();
 
       // initialize variables used in the coniditional code
       if (durationVar == Integer.MIN_VALUE) {
@@ -361,18 +362,14 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
         Label skipTarget =
             addLevelChecks(
                 e,
-                new Runnable() {
-
-                  @Override
-                  public void run() {
-                    if (entryTsVar == Integer.MIN_VALUE) {
-                      asm.ldc(0L);
-                      entryTsVar = e.storeAsNew();
-                    }
-                    if (sHitVar == Integer.MIN_VALUE) {
-                      asm.ldc(0);
-                      sHitVar = e.storeAsNew();
-                    }
+                () -> {
+                  if (entryTsVar == Integer.MIN_VALUE) {
+                    asm.ldc(0L);
+                    entryTsVar = e.storeAsNew();
+                  }
+                  if (sHitVar == Integer.MIN_VALUE) {
+                    asm.ldc(0);
+                    sHitVar = e.storeAsNew();
                   }
                 });
         asm.ldc(mid);
@@ -420,20 +417,17 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
     }
 
     @Override
-    public void consume(final TemplateExpanderVisitor e) {
-      final Assembler asm = e.asm();
+    public void consume(TemplateExpanderVisitor e) {
+      Assembler asm = e.asm();
 
       if (sHitVar == Integer.MIN_VALUE) {
         Label skipTarget =
             addLevelChecks(
                 e,
-                new Runnable() {
-                  @Override
-                  public void run() {
-                    if (sHitVar == Integer.MIN_VALUE) {
-                      asm.ldc(0);
-                      sHitVar = e.storeAsNew();
-                    }
+                () -> {
+                  if (sHitVar == Integer.MIN_VALUE) {
+                    asm.ldc(0);
+                    sHitVar = e.storeAsNew();
                   }
                 });
         asm.ldc(mid);
@@ -466,8 +460,8 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
 
   private class TimingEntry implements Consumer<TemplateExpanderVisitor> {
     @Override
-    public void consume(final TemplateExpanderVisitor e) {
-      final Assembler asm = e.asm();
+    public void consume(TemplateExpanderVisitor e) {
+      Assembler asm = e.asm();
       if (entryTsVar == Integer.MIN_VALUE) {
         if (durationVar == Integer.MIN_VALUE) {
           asm.ldc(0L);
@@ -476,12 +470,9 @@ public class MethodTrackingExpander extends BaseTemplateExpander {
         Label skipTarget =
             addLevelChecks(
                 e,
-                new Runnable() {
-                  @Override
-                  public void run() {
-                    asm.ldc(0L);
-                    entryTsVar = e.storeAsNew();
-                  }
+                () -> {
+                  asm.ldc(0L);
+                  entryTsVar = e.storeAsNew();
                 });
 
         asm.invokeStatic("java/lang/System", "nanoTime", "()J");

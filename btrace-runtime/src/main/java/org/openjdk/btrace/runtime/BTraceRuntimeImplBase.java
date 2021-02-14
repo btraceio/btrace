@@ -66,11 +66,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 import javax.management.ListenerNotFoundException;
 import javax.management.MBeanServer;
-import javax.management.Notification;
 import javax.management.NotificationEmitter;
 import javax.management.NotificationListener;
 import javax.management.ObjectName;
@@ -130,8 +129,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
   /** Write the value of integer perf. counter of given name. */
   public final void putPerfInt(int value, String name) {
-    long l = value;
-    putPerfLong(l, name);
+    putPerfLong(value, name);
   }
 
   /** Return the value of float perf. counter of given name. */
@@ -147,6 +145,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   /** Return the value of long perf. counter of given name. */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public final long getPerfLong(String name) {
     ByteBuffer b = counters.get(name);
     synchronized (b) {
@@ -157,6 +156,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   /** Write the value of float perf. counter of given name. */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public final void putPerfLong(long value, String name) {
     ByteBuffer b = counters.get(name);
     synchronized (b) {
@@ -166,10 +166,11 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   /** Return the value of String perf. counter of given name. */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public final String getPerfString(String name) {
     ByteBuffer b = counters.get(name);
     byte[] buf = new byte[b.limit()];
-    byte t = (byte) 0;
+    byte t = 0;
     int i = 0;
     synchronized (b) {
       while ((t = b.get()) != '\0') {
@@ -181,6 +182,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   /** Write the value of float perf. counter of given name. */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   public final void putPerfString(String value, String name) {
     ByteBuffer b = counters.get(name);
     byte[] v = getStringBytes(value);
@@ -297,7 +299,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     int speculation() {
       int nextId = getNextSpeculationId();
       if (nextId != -1) {
-        speculativeQueues.put(nextId, new MpmcArrayQueue<Command>(MAX_SPECULATIVE_MSG_LIMIT));
+        speculativeQueues.put(nextId, new MpmcArrayQueue<>(MAX_SPECULATIVE_MSG_LIMIT));
       }
       return nextId;
     }
@@ -362,31 +364,22 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
   private final AtomicBoolean exitting = new AtomicBoolean(false);
   private final MessagePassingQueue.WaitStrategy waitStrategy =
-      new MessagePassingQueue.WaitStrategy() {
-        @Override
-        public int idle(int i) {
-          if (exitting.get()) return 0;
-          try {
-            if (i < 3000) {
-              Thread.yield();
-            } else if (i < 3100) {
-              Thread.sleep(1);
-            } else {
-              Thread.sleep(500);
-            }
-          } catch (InterruptedException e) {
-            return 0;
+      i -> {
+        if (exitting.get()) return 0;
+        try {
+          if (i < 3000) {
+            Thread.yield();
+          } else if (i < 3100) {
+            Thread.sleep(1);
+          } else {
+            Thread.sleep(500);
           }
-          return i + 1;
+        } catch (InterruptedException e) {
+          return 0;
         }
+        return i + 1;
       };
-  private final MessagePassingQueue.ExitCondition exitCondition =
-      new MessagePassingQueue.ExitCondition() {
-        @Override
-        public boolean keepRunning() {
-          return !exitting.get();
-        }
-      };
+  private final MessagePassingQueue.ExitCondition exitCondition = () -> !exitting.get();
 
   // jvmstat related stuff
   // interface to read perf counters of this process
@@ -394,7 +387,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   // performance counters created by this client
   protected static final Map<String, ByteBuffer> counters = new HashMap<>();
 
-  private static volatile BTraceRuntimeImplFactory<BTraceRuntime.Impl> factory = null;
+  private static final BTraceRuntimeImplFactory<BTraceRuntime.Impl> factory = null;
 
   static {
     setupCmdQueueParams();
@@ -411,9 +404,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   BTraceRuntimeImplBase(
-      final String className,
+      String className,
       ArgsMap args,
-      final CommandListener cmdListener,
+      CommandListener cmdListener,
       DebugSupport ds,
       Instrumentation inst) {
     this.args = args;
@@ -427,19 +420,16 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
     cmdThread =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                try {
-                  enter();
-                  queue.drain(
-                      new ConsumerWrapper(cmdListener, exitting), waitStrategy, exitCondition);
-                } finally {
-                  queue.clear();
-                  specQueueManager.clear();
-                  leave();
-                  disabled = true;
-                }
+            () -> {
+              try {
+                enter();
+                queue.drain(
+                    new ConsumerWrapper(cmdListener, exitting), waitStrategy, exitCondition);
+              } finally {
+                queue.clear();
+                specQueueManager.clear();
+                leave();
+                disabled = true;
               }
             });
     cmdThread.setDaemon(true);
@@ -562,23 +552,21 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
           try {
             String eventName = args.template(eh.getEvent());
             eventHandlerMap.put(eventName, eh.getMethod(clazz));
-          } catch (NoSuchMethodException e) {
+          } catch (NoSuchMethodException ignored) {
           }
         }
       }
       String event = ecmd.getEvent();
       event = event != null ? event : EventHandler.ALL_EVENTS;
 
-      final Method eventHandler = eventHandlerMap.get(event);
+      Method eventHandler = eventHandlerMap.get(event);
       if (eventHandler != null) {
         BTraceRuntimeAccess.doWithCurrent(
-            new Callable<Void>() {
-              @Override
-              public Void call() throws Exception {
-                eventHandler.invoke(null, (Object[]) null);
-                return null;
-              }
-            });
+            (Callable<Void>)
+                () -> {
+                  eventHandler.invoke(null, (Object[]) null);
+                  return null;
+                });
       }
     }
   }
@@ -860,15 +848,13 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     // to be overridden by concrete implementations
   }
 
-  protected static void loadLibrary(final ClassLoader cl) {
+  protected static void loadLibrary(ClassLoader cl) {
     AccessController.doPrivileged(
-        new PrivilegedAction() {
-          @Override
-          public Object run() {
-            loadBTraceLibrary(cl);
-            return null;
-          }
-        });
+        (PrivilegedAction<Void>)
+            () -> {
+              loadBTraceLibrary(cl);
+              return null;
+            });
   }
 
   private static void loadBTraceLibrary(ClassLoader loader) {
@@ -937,13 +923,10 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     threadPool =
         Executors.newFixedThreadPool(
             1,
-            new ThreadFactory() {
-              @Override
-              public Thread newThread(Runnable r) {
-                Thread th = new Thread(r, "BTrace Worker");
-                th.setDaemon(true);
-                return th;
-              }
+            r -> {
+              Thread th = new Thread(r, "BTrace Worker");
+              th.setDaemon(true);
+              return th;
             });
   }
 
@@ -965,44 +948,40 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   private void initMemoryListener() {
     initThreadPool();
     memoryListener =
-        new NotificationListener() {
-          @Override
-          @SuppressWarnings("FutureReturnValueIgnored")
-          public void handleNotification(Notification notif, Object handback) {
-            boolean entered = enter();
-            try {
-              String notifType = notif.getType();
-              if (notifType.equals(MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED)) {
-                CompositeData cd = (CompositeData) notif.getUserData();
-                final MemoryNotificationInfo info = MemoryNotificationInfo.from(cd);
-                String name = info.getPoolName();
-                final LowMemoryHandler handler = lowMemoryHandlerMap.get(name);
-                if (handler != null) {
-                  threadPool.submit(
-                      new Runnable() {
-                        @Override
-                        public void run() {
-                          boolean entered = enter();
-                          try {
-                            if (handler.trackUsage) {
-                              handler.invoke(clazz, null, info.getUsage());
-                            } else {
-                              handler.invoke(clazz, null, null);
-                            }
-                          } catch (Throwable th) {
-                          } finally {
-                            if (entered) {
-                              BTraceRuntime.leave();
-                            }
+        (notif, handback) -> {
+          boolean entered = enter();
+          try {
+            String notifType = notif.getType();
+            if (notifType.equals(MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED)) {
+              CompositeData cd = (CompositeData) notif.getUserData();
+              MemoryNotificationInfo info = MemoryNotificationInfo.from(cd);
+              String name = info.getPoolName();
+              LowMemoryHandler handler = lowMemoryHandlerMap.get(name);
+              if (handler != null) {
+                threadPool.submit(
+                    new Runnable() {
+                      @Override
+                      public void run() {
+                        boolean entered = enter();
+                        try {
+                          if (handler.trackUsage) {
+                            handler.invoke(clazz, null, info.getUsage());
+                          } else {
+                            handler.invoke(clazz, null, null);
+                          }
+                        } catch (Throwable th) {
+                        } finally {
+                          if (entered) {
+                            BTraceRuntime.leave();
                           }
                         }
-                      });
-                }
+                      }
+                    });
               }
-            } finally {
-              if (entered) {
-                BTraceRuntime.leave();
-              }
+            }
+          } finally {
+            if (entered) {
+              BTraceRuntime.leave();
             }
           }
         };
@@ -1023,58 +1002,21 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
   private void enqueue(Command cmd) {
     int backoffCntr = 0;
-    while (queue != null && !queue.relaxedOffer(cmd)) {
-      try {
-        if (backoffCntr < 3000) {
-          Thread.yield();
-        } else if (backoffCntr < 3100) {
-          Thread.sleep(1);
-        } else {
-          Thread.sleep(100);
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        break;
+    while (!Thread.interrupted() && queue != null && !queue.relaxedOffer(cmd)) {
+      if (backoffCntr < 3000) {
+        Thread.yield();
+      } else if (backoffCntr < 3100) {
+        LockSupport.parkNanos(1_000_000);
+      } else {
+        LockSupport.parkNanos(100_000_000);
       }
       backoffCntr++;
     }
   }
 
-  private void handleExceptionImpl(Throwable th) {
-    if (currentException.get() != null) {
-      return;
-    }
-    boolean entered = enter();
-    try {
-      currentException.set(th);
-
-      if (th instanceof ExitException) {
-        exitImpl(((ExitException) th).exitCode());
-      } else {
-        if (errorHandlers != null) {
-          for (ErrorHandler eh : errorHandlers) {
-            try {
-              eh.getMethod(clazz).invoke(null, th);
-            } catch (Throwable ignored) {
-            }
-          }
-        } else {
-          // Do not call send(Command). Exception messages should not
-          // go to speculative buffers!
-          enqueue(new ErrorCommand(th));
-        }
-      }
-    } finally {
-      currentException.set(null);
-      if (entered) {
-        leave();
-      }
-    }
-  }
-
   private void wrapToTimerTasks(TimerTask[] tasks) {
     for (int index = 0; index < timerHandlers.length; index++) {
-      final TimerHandler th = timerHandlers[index];
+      TimerHandler th = timerHandlers[index];
       tasks[index] =
           new TimerTask() {
             final Method mthd;
@@ -1119,7 +1061,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
         NotificationEmitter emitter = (NotificationEmitter) memoryMBean;
         try {
           emitter.removeNotificationListener(memoryListener);
-        } catch (ListenerNotFoundException lnfe) {
+        } catch (ListenerNotFoundException ignored) {
         }
       }
 
@@ -1175,12 +1117,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     try {
       memPoolList =
           AccessController.doPrivileged(
-              new PrivilegedExceptionAction<List<MemoryPoolMXBean>>() {
-                @Override
-                public List<MemoryPoolMXBean> run() throws Exception {
-                  return ManagementFactory.getMemoryPoolMXBeans();
-                }
-              });
+              (PrivilegedExceptionAction<List<MemoryPoolMXBean>>)
+                  ManagementFactory::getMemoryPoolMXBeans);
     } catch (Exception exp) {
       throw new UnsupportedOperationException(exp);
     }
@@ -1190,12 +1128,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     try {
       memoryMBean =
           AccessController.doPrivileged(
-              new PrivilegedExceptionAction<MemoryMXBean>() {
-                @Override
-                public MemoryMXBean run() throws Exception {
-                  return ManagementFactory.getMemoryMXBean();
-                }
-              });
+              (PrivilegedExceptionAction<MemoryMXBean>) ManagementFactory::getMemoryMXBean);
     } catch (Exception exp) {
       throw new UnsupportedOperationException(exp);
     }
@@ -1205,12 +1138,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     try {
       operatingSystemMXBean =
           AccessController.doPrivileged(
-              new PrivilegedExceptionAction<OperatingSystemMXBean>() {
-                @Override
-                public OperatingSystemMXBean run() throws Exception {
-                  return ManagementFactory.getOperatingSystemMXBean();
-                }
-              });
+              (PrivilegedExceptionAction<OperatingSystemMXBean>)
+                  ManagementFactory::getOperatingSystemMXBean);
     } catch (Exception e) {
       throw new UnsupportedOperationException(e);
     }
@@ -1220,12 +1149,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     try {
       runtimeMBean =
           AccessController.doPrivileged(
-              new PrivilegedExceptionAction<RuntimeMXBean>() {
-                @Override
-                public RuntimeMXBean run() throws Exception {
-                  return ManagementFactory.getRuntimeMXBean();
-                }
-              });
+              (PrivilegedExceptionAction<RuntimeMXBean>) ManagementFactory::getRuntimeMXBean);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -1235,12 +1159,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     try {
       threadMBean =
           AccessController.doPrivileged(
-              new PrivilegedExceptionAction<ThreadMXBean>() {
-                @Override
-                public ThreadMXBean run() throws Exception {
-                  return ManagementFactory.getThreadMXBean();
-                }
-              });
+              (PrivilegedExceptionAction<ThreadMXBean>) ManagementFactory::getThreadMXBean);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -1250,12 +1169,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     try {
       gcBeanList =
           AccessController.doPrivileged(
-              new PrivilegedExceptionAction<List<GarbageCollectorMXBean>>() {
-                @Override
-                public List<GarbageCollectorMXBean> run() throws Exception {
-                  return ManagementFactory.getGarbageCollectorMXBeans();
-                }
-              });
+              (PrivilegedExceptionAction<List<GarbageCollectorMXBean>>)
+                  ManagementFactory::getGarbageCollectorMXBeans);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -1265,23 +1180,19 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     try {
       hotspotMBean =
           AccessController.doPrivileged(
-              new PrivilegedExceptionAction<HotSpotDiagnosticMXBean>() {
-                @Override
-                public HotSpotDiagnosticMXBean run() throws Exception {
-                  MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-                  Set<ObjectName> s = server.queryNames(new ObjectName(HOTSPOT_BEAN_NAME), null);
-                  Iterator<ObjectName> itr = s.iterator();
-                  if (itr.hasNext()) {
-                    ObjectName name = itr.next();
-                    HotSpotDiagnosticMXBean bean =
-                        ManagementFactory.newPlatformMXBeanProxy(
-                            server, name.toString(), HotSpotDiagnosticMXBean.class);
-                    return bean;
-                  } else {
-                    return null;
-                  }
-                }
-              });
+              (PrivilegedExceptionAction<HotSpotDiagnosticMXBean>)
+                  () -> {
+                    MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+                    Set<ObjectName> s = server.queryNames(new ObjectName(HOTSPOT_BEAN_NAME), null);
+                    Iterator<ObjectName> itr = s.iterator();
+                    if (itr.hasNext()) {
+                      ObjectName name = itr.next();
+                      return ManagementFactory.newPlatformMXBeanProxy(
+                          server, name.toString(), HotSpotDiagnosticMXBean.class);
+                    } else {
+                      return null;
+                    }
+                  });
     } catch (Exception e) {
       throw new UnsupportedOperationException(e);
     }
@@ -1304,6 +1215,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     return memoryMBean;
   }
 
+  @SuppressWarnings("SameReturnValue")
   protected static PerfReader getPerfReader() {
     return perfReader;
   }

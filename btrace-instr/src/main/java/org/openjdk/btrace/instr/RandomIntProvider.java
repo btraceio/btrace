@@ -34,7 +34,7 @@ public abstract class RandomIntProvider {
   private static final RandomIntProvider rndIntProvider;
   // for the testability purposes; BTraceRuntime initializes Unsafe instance
   // and fails under JUnit
-  private static volatile boolean useBtraceEnter = true;
+  private static final boolean useBtraceEnter = true;
 
   static {
     boolean entered = false;
@@ -42,7 +42,7 @@ public abstract class RandomIntProvider {
       if (useBtraceEnter) {
         entered = BTraceRuntime.enter();
       }
-      Class clz = null;
+      Class<?> clz = null;
       try {
         clz = Class.forName("java.util.concurrent.ThreadLocalRandom");
       } catch (Throwable e) {
@@ -51,6 +51,7 @@ public abstract class RandomIntProvider {
       if (clz != null) {
         rndIntProvider = new ThreadLocalRandomIntProvider();
       } else {
+        //noinspection StaticInitializerReferencesSubClass
         rndIntProvider = new SharedRandomIntProvider();
       }
     } finally {

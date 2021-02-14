@@ -338,14 +338,14 @@ public final class ClassInfo {
 
     public String getResourcePath() {
       if (rsrcName == null) {
-        rsrcName = new StringBuilder(icName).append(".class").toString();
+        rsrcName = icName + ".class";
       }
       return rsrcName;
     }
 
     @Override
     public String toString() {
-      return new StringBuilder(cName).toString();
+      return String.valueOf(cName);
     }
 
     @Override

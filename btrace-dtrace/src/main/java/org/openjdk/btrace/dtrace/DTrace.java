@@ -40,6 +40,7 @@ import org.opensolaris.os.dtrace.*;
  *
  * @author A. Sundararajan
  */
+@SuppressWarnings("RedundantThrows")
 public class DTrace {
 
   /**
@@ -72,22 +73,19 @@ public class DTrace {
     start(cons, listener);
   }
 
-  private static void start(Consumer cons, final CommandListener listener) throws DTraceException {
+  private static void start(Consumer cons, CommandListener listener) throws DTraceException {
     cons.enable();
     cons.go(
-        new ExceptionHandler() {
-          @Override
-          public void handleException(Throwable th) {
-            try {
-              listener.onCommand(new ErrorCommand(th));
-            } catch (IOException ioexp) {
-              ioexp.printStackTrace();
-            }
+        th -> {
+          try {
+            listener.onCommand(new ErrorCommand(th));
+          } catch (IOException ioexp) {
+            ioexp.printStackTrace();
           }
         });
   }
 
-  private static Consumer newConsumer(String[] args, final CommandListener listener)
+  private static Consumer newConsumer(String[] args, CommandListener listener)
       throws DTraceException {
     Consumer cons = new LocalConsumer();
     cons.addConsumerListener(
@@ -107,7 +105,7 @@ public class DTrace {
 
           @Override
           public void consumerStopped(ConsumerEvent ce) {
-            Consumer cons = (Consumer) ce.getSource();
+            Consumer cons = ce.getSource();
             Aggregate ag = null;
             try {
               ag = cons.getAggregate();

@@ -58,7 +58,8 @@ import javax.tools.SimpleJavaFileObject;
  *
  * @author A. Sundararajan
  */
-public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
+@SuppressWarnings("RedundantThrows")
+public final class MemoryJavaFileManager extends ForwardingJavaFileManager<JavaFileManager> {
 
   private final List<String> includeDirs;
   private Map<String, byte[]> classBytes;
@@ -66,7 +67,7 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
   public MemoryJavaFileManager(JavaFileManager fileManager, List<String> includeDirs) {
     super(fileManager);
     this.includeDirs = includeDirs;
-    classBytes = new HashMap<String, byte[]>();
+    classBytes = new HashMap<>();
   }
 
   static JavaFileObject preprocessedFileObject(JavaFileObject fo, List<String> includeDirs)
@@ -117,7 +118,7 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager {
 
   @Override
   public void close() throws IOException {
-    classBytes = new HashMap<String, byte[]>();
+    classBytes = new HashMap<>();
   }
 
   @Override
