@@ -97,28 +97,26 @@ final class XMLSerializer {
       } else {
         out = new PrintWriter(writer);
       }
-      objToId = new IdentityHashMap<Object, String>();
+      objToId = new IdentityHashMap<>();
       writeln("<?xml version='1.0' encoding='ISO-8859-1'?>");
     }
 
-    private static Field[] getAllFields(final Class clazz) {
+    private static Field[] getAllFields(Class clazz) {
       return AccessController.doPrivileged(
-          new PrivilegedAction<Field[]>() {
-            @Override
-            public Field[] run() {
-              try {
-                Field[] fields = clazz.getDeclaredFields();
-                for (Field f : fields) {
-                  f.setAccessible(true);
+          (PrivilegedAction<Field[]>)
+              () -> {
+                try {
+                  Field[] fields = clazz.getDeclaredFields();
+                  for (Field f : fields) {
+                    f.setAccessible(true);
+                  }
+                  return fields;
+                } catch (RuntimeException re) {
+                  throw re;
+                } catch (Exception exp) {
+                  throw new RuntimeException(exp);
                 }
-                return fields;
-              } catch (RuntimeException re) {
-                throw re;
-              } catch (Exception exp) {
-                throw new RuntimeException(exp);
-              }
-            }
-          });
+              });
     }
 
     private static String encodeTagName(String str) {

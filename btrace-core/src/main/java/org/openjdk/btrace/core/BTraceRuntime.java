@@ -88,13 +88,8 @@ public final class BTraceRuntime {
   // bootstrap class
   private static volatile Unsafe unsafe = null;
   private static Properties dotWriterProps;
-  private static volatile BTraceRuntimeAccessor rtAccessor =
-      new BTraceRuntimeAccessor() {
-        @Override
-        public Impl getRt() {
-          return null;
-        }
-      };
+  // this field is 'back-set' by the agent at startup thus needs to remain non-final
+  private static volatile BTraceRuntimeAccessor rtAccessor = () -> null;
   private static final String INDENT = "    ";
 
   static {
@@ -218,15 +213,15 @@ public final class BTraceRuntime {
 
   // BTrace map functions
   static <K, V> Map<K, V> newHashMap() {
-    return new BTraceMap(new HashMap<K, V>());
+    return new BTraceMap<>(new HashMap<>());
   }
 
   static <K, V> Map<K, V> newWeakMap() {
-    return new BTraceMap(new WeakHashMap<K, V>());
+    return new BTraceMap<>(new WeakHashMap<>());
   }
 
   static <V> Deque<V> newDeque() {
-    return new BTraceDeque<>(new ArrayDeque<V>());
+    return new BTraceDeque<>(new ArrayDeque<>());
   }
 
   static Appendable newStringBuilder(boolean threadSafe) {
@@ -347,10 +342,12 @@ public final class BTraceRuntime {
     dst.putAll(src);
   }
 
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   static void printMap(Map map) {
     if (map instanceof BTraceMap || map.getClass().getClassLoader() == null) {
       synchronized (map) {
         Map<String, String> m = new HashMap<>();
+        @SuppressWarnings("unchecked")
         Set<Map.Entry<Object, Object>> entries = map.entrySet();
         for (Map.Entry<Object, Object> e : entries) {
           m.put(BTraceUtils.Strings.str(e.getKey()), BTraceUtils.Strings.str(e.getValue()));
@@ -447,7 +444,7 @@ public final class BTraceRuntime {
   }
 
   public static int length(Appendable buffer) {
-    if (buffer != null && buffer instanceof CharSequence) {
+    if (buffer instanceof CharSequence) {
       return ((CharSequence) buffer).length();
     } else {
       throw new IllegalArgumentException();
@@ -499,11 +496,11 @@ public final class BTraceRuntime {
       }
       return false;
     }
-    Class objClass = obj.getClass();
+    Class<?> objClass = obj.getClass();
     ClassLoader cl = objClass.getClassLoader();
     cl = cl != null ? cl : ClassLoader.getSystemClassLoader();
     try {
-      Class target = cl.loadClass(className);
+      Class<?> target = cl.loadClass(className);
       return target.isAssignableFrom(objClass);
     } catch (ClassNotFoundException e) {
       // non-existing class
@@ -762,7 +759,7 @@ public final class BTraceRuntime {
     numFrames = numFrames > 0 ? numFrames : st.length - strip;
 
     int limit = strip + numFrames;
-    limit = limit <= st.length ? limit : st.length;
+    limit = Math.min(limit, st.length);
 
     if (prefix == null) {
       prefix = "";
@@ -810,32 +807,16 @@ public final class BTraceRuntime {
 
   static Properties properties() {
     return AccessController.doPrivileged(
-        new PrivilegedAction<Properties>() {
-          @Override
-          public Properties run() {
-            return System.getProperties();
-          }
-        });
+        (PrivilegedAction<Properties>) () -> System.getProperties());
   }
 
-  static String getenv(final String name) {
-    return AccessController.doPrivileged(
-        new PrivilegedAction<String>() {
-          @Override
-          public String run() {
-            return System.getenv(name);
-          }
-        });
+  static String getenv(String name) {
+    return AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getenv(name));
   }
 
   static Map<String, String> getenv() {
     return AccessController.doPrivileged(
-        new PrivilegedAction<Map<String, String>>() {
-          @Override
-          public Map<String, String> run() {
-            return System.getenv();
-          }
-        });
+        (PrivilegedAction<Map<String, String>>) () -> System.getenv());
   }
 
   static MemoryUsage heapUsage() {

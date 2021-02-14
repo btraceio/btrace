@@ -30,23 +30,33 @@ package org.opensolaris.os.dtrace;
 import java.io.File;
 
 public interface Consumer {
+  @SuppressWarnings("EmptyMethod")
   void open();
 
+  @SuppressWarnings("EmptyMethod")
   void setOption(String argref, String s);
 
+  @SuppressWarnings("EmptyMethod")
   void grabProcess(int pid);
 
+  @SuppressWarnings("EmptyMethod")
   void close();
 
+  @SuppressWarnings({"SameReturnValue", "RedundantThrows"})
   Aggregate getAggregate() throws DTraceException;
 
+  @SuppressWarnings("EmptyMethod")
   void addConsumerListener(ConsumerListener consumerListener);
 
+  @SuppressWarnings("EmptyMethod")
   void go(ExceptionHandler exceptionHandler);
 
+  @SuppressWarnings("EmptyMethod")
   void enable();
 
+  @SuppressWarnings("EmptyMethod")
   void compile(File program, String[] args);
 
+  @SuppressWarnings("EmptyMethod")
   void compile(String program, String[] args);
 }
