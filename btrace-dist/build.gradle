@@ -6,6 +6,7 @@ plugins {
     id "nebula.ospackage" version "8.3.0"
     id "java"
     id "io.sdkman.vendors" version "2.0.0"
+    id "signing"
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -298,7 +299,7 @@ bintray {
         publicDownloadNumbers = true
         version {
             name = project.version //Bintray logical version name
-            released  = new java.util.Date()
+            released  = new Date()
             vcsTag = 'v' + project.version
             //Optional configuration for GPG signing
             gpg {
@@ -328,6 +329,7 @@ publishing {
     publications {
         agent(MavenPublication) {
             artifactId 'btrace-agent'
+            groupId 'io.btrace'
             artifact agentJar
             artifact agentSourcesJar {
                 classifier "source"
@@ -342,6 +344,7 @@ publishing {
 
         client(MavenPublication) {
             artifactId 'btrace-client'
+            groupId 'io.btrace'
             artifact clientJar
             artifact clientSourcesJar {
                 classifier "sources"
@@ -356,6 +359,7 @@ publishing {
 
         boot(MavenPublication) {
             artifactId 'btrace-boot'
+            groupId 'io.btrace'
             artifact bootJar
             artifact bootSourcesJar {
                 classifier "sources"
@@ -382,7 +386,13 @@ def addPomDetails(node) {
     licenseNode.appendNode('url', 'http://openjdk.java.net/legal/gplv2+ce.html')
 
     def developerNode = node.appendNode('developers').appendNode('developer')
-    developerNode.appendNode('id', 'yardus')
+    developerNode.appendNode('id', 'jbachorik')
     developerNode.appendNode('name', 'Jaroslav Bachorik')
     developerNode.appendNode('email', 'j.bachorik@btrace.io')
+}
+
+signing {
+    sign publishing.publications.agent
+    sign publishing.publications.boot
+    sign publishing.publications.client
 }
