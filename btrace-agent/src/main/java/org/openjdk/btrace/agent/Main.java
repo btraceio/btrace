@@ -844,6 +844,12 @@ public final class Main {
         System.setProperty("btrace.output", scriptOutputFile);
       }
       ss = new ServerSocket(port);
+      int localPort = ss.getLocalPort();
+
+      if (isDebug()) {
+        debugPrint("started server at " + localPort);
+      }
+      System.setProperty("btrace.localport", String.valueOf(localPort));
     } catch (IOException ioexp) {
       ioexp.printStackTrace();
       return;
