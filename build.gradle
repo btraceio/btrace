@@ -3,7 +3,7 @@ plugins {
     id "com.github.sherter.google-java-format" version "0.9"
 }
 
-project.ext.asmVersion = "9.0"
+project.ext.asmVersion = "9.1"
 
 repositories {
     mavenCentral()

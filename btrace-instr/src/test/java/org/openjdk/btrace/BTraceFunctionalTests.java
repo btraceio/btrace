@@ -365,19 +365,19 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testExtension() throws Exception {
-      debugTestApp = true;
-      debugBTrace = true;
-      test(
-            "resources.Main",
-            "btrace/extensions/SimpleExtensionTest.java",
-            10,
-            (stdout, stderr, retcode, jfrFile) -> {
-                assertFalse("Script should not have failed", stdout.contains("FAILED"));
-                assertTrue("Non-empty stderr", stderr.isEmpty());
-                assertTrue(stdout.contains("[this, noargs]"));
-                assertTrue(stdout.contains("[this, args]"));
-                assertTrue(stdout.contains("{xxx}"));
-                assertTrue(stdout.contains("heap:init"));
-            });
+    debugTestApp = true;
+    debugBTrace = true;
+    test(
+        "resources.Main",
+        "btrace/extensions/SimpleExtensionTest.java",
+        10,
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse("Script should not have failed", stdout.contains("FAILED"));
+          assertTrue("Non-empty stderr", stderr.isEmpty());
+          assertTrue(stdout.contains("[this, noargs]"));
+          assertTrue(stdout.contains("[this, args]"));
+          assertTrue(stdout.contains("{xxx}"));
+          assertTrue(stdout.contains("heap:init"));
+        });
   }
 }

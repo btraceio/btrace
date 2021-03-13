@@ -74,6 +74,7 @@ import org.openjdk.btrace.core.annotations.OnError;
 import org.openjdk.btrace.core.annotations.OnExit;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Sampled;
+import org.openjdk.btrace.core.extensions.ExtensionEntry;
 import org.openjdk.btrace.core.extensions.ExtensionRepository;
 
 /**
@@ -160,8 +161,7 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
       do {
         parent = (TypeElement) e.getEnclosingElement();
       } while (parent != null
-              && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
-
+          && (parent.getKind() != ElementKind.CLASS && parent.getKind() != ElementKind.INTERFACE));
 
       if (parent != null) {
         TypeMirror tm = parent.asType();
@@ -649,20 +649,20 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   }
 
   private void checkLValue(Tree variable) {
-    if (variable.getKind() == Tree.Kind.ARRAY_ACCESS) {
-      reportError("no.assignment", variable);
-      return;
-    }
+    TreePath tp = new TreePath(new TreePath(verifier.getCompilationUnit()), variable);
+    Element e = verifier.getTreeUtils().getElement(tp);
 
-    if (variable.getKind() != Tree.Kind.IDENTIFIER) {
-      if (className != null) {
-        String name = variable.toString();
-        name = name.substring(0, name.lastIndexOf('.'));
-        if (!className.equals(name)) {
+    if (e != null && e.getKind().isField()) {
+      String fieldClass = e.getEnclosingElement().asType().toString();
+      ExtensionEntry entry = ExtensionRepository.getInstance().getExtensionForType(fieldClass);
+      if (entry == null) {
+        if (fqn != null) {
+          if (!fqn.equals(fieldClass)) {
+            reportError("no.assignment", variable);
+          }
+        } else {
           reportError("no.assignment", variable);
         }
-      } else {
-        reportError("no.assignment", variable);
       }
     }
   }

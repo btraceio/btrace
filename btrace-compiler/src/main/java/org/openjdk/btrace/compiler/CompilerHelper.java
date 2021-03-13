@@ -73,8 +73,6 @@ class CompilerHelper {
       options.add(cpBuilder.toString());
     }
 
-
-
     // create a compilation task
     JavacTask task =
         (JavacTask) compiler.getTask(err, manager, diagnostics, options, null, compUnits);

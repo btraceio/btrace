@@ -33,7 +33,6 @@ import static org.openjdk.btrace.core.Args.DUMP_CLASSES;
 import static org.openjdk.btrace.core.Args.DUMP_DIR;
 import static org.openjdk.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
 import static org.openjdk.btrace.core.Args.FILE_ROLL_MILLISECONDS;
-import static org.openjdk.btrace.core.Args.HELP;
 import static org.openjdk.btrace.core.Args.LIBS;
 import static org.openjdk.btrace.core.Args.NO_SERVER;
 import static org.openjdk.btrace.core.Args.PORT;

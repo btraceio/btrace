@@ -6544,6 +6544,4 @@ public class BTraceUtils {
       event.end();
     }
   }
-
-  public static void ext_test(String msg) {};
 }

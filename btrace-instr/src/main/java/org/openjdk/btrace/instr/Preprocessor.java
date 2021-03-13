@@ -67,19 +67,17 @@ import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
  * <p>Transformations done here:
  *
  * <ol>
- *     <li>Add &lt;clinit&gt; method, if one not found</li>
- *     <li>Replace @Export fields by perf counters and
- *         replace put/get by perf counter update/read</li>
- *     <li>Replace @TLS fields by ThreadLocal fields and
- *         replace put/get by ThreadLocal set/get</li>
- *     <li>In &lt;clinit&gt; method, add ThreadLocal creation and perf
- *         counter creation calls (for @Export and @TLS fields respectively)</li>
- *     <li>Add a field to store BTraceRuntime object and initialize the same in &lt;clinit&gt; method</li>
- *     <li>Add prolog and epilogue in each BTrace action method to insert BTraceRuntime.enter/leave and
- *         also to call BTraceRuntimeImplBase.handleException on exception catch</li>
- *     <li>Initialize and reference any service instances</li>
- *     <li>Add a field to store client's BTraceRuntime instance</li>
- *     <li>Make all fields publicly accessible</li>
+ *   <li>Add &lt;clinit&gt; method, if one not found
+ *   <li>Replace @Export fields by perf counters and replace put/get by perf counter update/read
+ *   <li>Replace @TLS fields by ThreadLocal fields and replace put/get by ThreadLocal set/get
+ *   <li>In &lt;clinit&gt; method, add ThreadLocal creation and perf counter creation calls
+ *       (for @Export and @TLS fields respectively)
+ *   <li>Add a field to store BTraceRuntime object and initialize the same in &lt;clinit&gt; method
+ *   <li>Add prolog and epilogue in each BTrace action method to insert BTraceRuntime.enter/leave
+ *       and also to call BTraceRuntimeImplBase.handleException on exception catch
+ *   <li>Initialize and reference any service instances
+ *   <li>Add a field to store client's BTraceRuntime instance
+ *   <li>Make all fields publicly accessible
  * </ol>
  *
  * @author A. Sundararajan

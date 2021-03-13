@@ -139,8 +139,66 @@ class StackTrackingMethodVisitor extends MethodVisitor {
   }
 
   @Override
-  public void visitInvokeDynamicInsn(String string, String string1, Handle handle, Object... os) {
-    super.visitInvokeDynamicInsn(string, string1, handle, os);
+  public void visitInvokeDynamicInsn(
+      String name, String descriptor, Handle handle, Object... bsArgs) {
+    super.visitInvokeDynamicInsn(name, descriptor, handle, bsArgs);
+
+    List<StackItem> poppedArgs = new ArrayList<>();
+    Type[] args = Type.getArgumentTypes(descriptor);
+    Type ret = Type.getReturnType(descriptor);
+
+    for (int i = args.length - 1; i >= 0; i--) {
+      if (!args[i].equals(Type.VOID_TYPE)) {
+        switch (args[i].getSort()) {
+          case Type.LONG:
+          case Type.DOUBLE:
+            {
+              state.pop();
+              // fall through
+            }
+          case Type.INT:
+          case Type.FLOAT:
+          case Type.BOOLEAN:
+          case Type.CHAR:
+          case Type.SHORT:
+          case Type.BYTE:
+          case Type.ARRAY:
+          case Type.METHOD:
+          case Type.OBJECT:
+            {
+              poppedArgs.add(state.pop());
+              break;
+            }
+        }
+      }
+    }
+
+    if (!ret.equals(Type.VOID_TYPE)) {
+      StackItem sl =
+          new ResultItem(
+              "", name, descriptor, ResultItem.Origin.METHOD, poppedArgs.toArray(new StackItem[0]));
+      switch (ret.getSort()) {
+        case Type.LONG:
+        case Type.DOUBLE:
+          {
+            state.push(sl);
+            // fall through
+          }
+        case Type.INT:
+        case Type.FLOAT:
+        case Type.BOOLEAN:
+        case Type.CHAR:
+        case Type.SHORT:
+        case Type.BYTE:
+        case Type.ARRAY:
+        case Type.METHOD:
+        case Type.OBJECT:
+          {
+            state.push(sl);
+            break;
+          }
+      }
+    }
   }
 
   @Override

@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassVisitor;
@@ -84,7 +83,9 @@ public class Postprocessor extends ClassVisitor {
   public MethodVisitor visitMethod(
       int access, String name, String desc, String signature, String[] exceptions) {
 
-    if (!shortSyntax) return new ExtensionMethodConvertor(super.visitMethod(access, name, desc, signature, exceptions));
+    if (!shortSyntax)
+      return new ExtensionMethodConvertor(
+          super.visitMethod(access, name, desc, signature, exceptions));
 
     if ((access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE)) == 0) {
       access &= ~Opcodes.ACC_PROTECTED;
@@ -654,24 +655,24 @@ public class Postprocessor extends ClassVisitor {
     }
 
     @Override
-    public void visitFieldInsn(int i, String clazz, String name, String desc) {
-      if (i == Opcodes.GETFIELD) {
+    public void visitFieldInsn(int opcode, String clazz, String name, String desc) {
+      if (opcode == Opcodes.GETFIELD) {
         Boolean opTarget = simulatedStack.poll();
         opTarget = opTarget != null ? opTarget : Boolean.FALSE;
         if (opTarget) {
-          i = Opcodes.GETSTATIC;
+          opcode = Opcodes.GETSTATIC;
         }
-      } else if (i == Opcodes.PUTFIELD) {
+      } else if (opcode == Opcodes.PUTFIELD) {
         simulatedStack.pop();
         simulatedStack.pop();
         if (desc.equals("J") || desc.equals("D")) {
           simulatedStack.pop();
         }
         if (clazz.equals(className)) { // all local fields are static
-          i = Opcodes.PUTSTATIC;
+          opcode = Opcodes.PUTSTATIC;
         }
       }
-      switch (i) {
+      switch (opcode) {
         case Opcodes.GETFIELD:
         case Opcodes.GETSTATIC:
           {
@@ -683,7 +684,7 @@ public class Postprocessor extends ClassVisitor {
           }
       }
       if (copyEnabled) {
-        super.visitFieldInsn(i, clazz, name, desc);
+        super.visitFieldInsn(opcode, clazz, name, desc);
       }
     }
 
@@ -770,15 +771,15 @@ public class Postprocessor extends ClassVisitor {
 
   private static class ExtensionMethodConvertor extends MethodVisitor {
     private final MethodType BOOTSTRAP_METHOD_TYPE =
-            MethodType.methodType(
-                    CallSite.class,
-                    MethodHandles.Lookup.class,
-                    String.class,
-                    MethodType.class,
-                    String.class,
-                    String.class,
-                    String.class,
-                    int.class);
+        MethodType.methodType(
+            CallSite.class,
+            MethodHandles.Lookup.class,
+            String.class,
+            MethodType.class,
+            String.class,
+            String.class,
+            String.class,
+            int.class);
 
     public ExtensionMethodConvertor(MethodVisitor parent) {
       super(Opcodes.ASM9, parent);
@@ -790,7 +791,46 @@ public class Postprocessor extends ClassVisitor {
     }
 
     @Override
-    public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
+    public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
+      ExtensionEntry extension = ExtensionRepository.getInstance().getExtensionForType(owner);
+      if (extension != null) {
+        Type retType =
+            opcode == Opcodes.GETSTATIC || opcode == Opcodes.GETFIELD
+                ? Type.getType(descriptor)
+                : Type.VOID_TYPE;
+        Type[] argTypes =
+            opcode == Opcodes.PUTSTATIC || opcode == Opcodes.PUTFIELD
+                ? new Type[] {Type.getType(descriptor)}
+                : new Type[0];
+
+        // Do type erasure for return type and argument types
+        retType = generalizeType(retType);
+        for (int argIdx = 0; argIdx < argTypes.length; argIdx++) {
+          argTypes[argIdx] = generalizeType(argTypes[argIdx]);
+        }
+
+        String dsc = Type.getMethodDescriptor(retType, argTypes);
+        super.visitInvokeDynamicInsn(
+            name,
+            dsc,
+            new Handle(
+                Opcodes.H_INVOKESTATIC,
+                "org/openjdk/btrace/instr/ExtensionBootstrap",
+                "bootstrapInvoke",
+                BOOTSTRAP_METHOD_TYPE.toMethodDescriptorString(),
+                false),
+            extension.getId(),
+            owner,
+            dsc,
+            opcode);
+      } else {
+        super.visitFieldInsn(opcode, owner, name, descriptor);
+      }
+    }
+
+    @Override
+    public void visitMethodInsn(
+        int opcode, String owner, String name, String descriptor, boolean isInterface) {
       if (opcode != Opcodes.INVOKEDYNAMIC) {
         ExtensionEntry extension = ExtensionRepository.getInstance().getExtensionForType(owner);
         if (extension != null) {
@@ -798,7 +838,7 @@ public class Postprocessor extends ClassVisitor {
           Type retType = Type.getReturnType(descriptor);
 
           if (opcode != Opcodes.INVOKESTATIC) {
-            // capture 'this' as 0-th argument
+            // Capture 'this' as 0-th argument
             Type[] newArgTypes = new Type[argTypes.length + 1];
             System.arraycopy(argTypes, 0, newArgTypes, 1, argTypes.length);
             newArgTypes[0] = Type.getType(Object.class);
@@ -806,13 +846,25 @@ public class Postprocessor extends ClassVisitor {
             descriptor = Type.getMethodDescriptor(retType, argTypes);
           }
 
-          // remove references to any potentially unresolvable types coming from extensions
+          // Remove references to any potentially unresolvable types coming from extensions
           retType = generalizeType(retType);
           for (int i = 0; i < argTypes.length; i++) {
             argTypes[i] = generalizeType(argTypes[i]);
           }
 
-          super.visitInvokeDynamicInsn(name, Type.getMethodDescriptor(retType, argTypes), new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/instr/ExtensionBootstrap", "bootstrapInvoke", BOOTSTRAP_METHOD_TYPE.toMethodDescriptorString(), false), extension.getId(), owner, descriptor, opcode);
+          super.visitInvokeDynamicInsn(
+              name,
+              Type.getMethodDescriptor(retType, argTypes),
+              new Handle(
+                  Opcodes.H_INVOKESTATIC,
+                  "org/openjdk/btrace/instr/ExtensionBootstrap",
+                  "bootstrapInvoke",
+                  BOOTSTRAP_METHOD_TYPE.toMethodDescriptorString(),
+                  false),
+              extension.getId(),
+              owner,
+              descriptor,
+              opcode);
           return;
         }
       }
