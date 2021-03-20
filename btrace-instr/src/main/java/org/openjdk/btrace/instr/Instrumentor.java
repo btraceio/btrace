@@ -1763,7 +1763,7 @@ public class Instrumentor extends ClassVisitor {
           om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
           new Handle(
               H_INVOKESTATIC,
-              "org/openjdk/btrace/instr/Indy",
+              "org/openjdk/btrace/runtime/Indy",
               "bootstrap",
               mt.toMethodDescriptorString(),
               false),

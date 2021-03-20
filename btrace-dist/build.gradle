@@ -60,28 +60,19 @@ task agentJar(type: ShadowJar) {
         )
     }
 
-    exclude 'afu/**'
-    exclude 'javax/**'
-    exclude 'com/**'
-    exclude 'sun/**'
-    exclude 'org/relaxng/**'
-    exclude 'org/checkerframework/**'
-    exclude 'org/codehaus/**'
-
-    exclude 'org/jctools/**'
-    exclude 'org/objectweb/asm/**'
-    exclude 'META-INF/services/**'
-    exclude 'META-INF/maven/**'
-    exclude 'META-INF/versions/**'
-
-    exclude 'org/openjdk/btrace/compiler/**'
-    exclude 'org/openjdk/btrace/core/**'
-    exclude 'org/openjdk/btrace/client/**'
-    exclude 'org/openjdk/btrace/runtime/**'
-    exclude 'org/openjdk/btrace/services/**'
-    exclude 'org/openjdk/btrace/statsd/*'
-
-    exclude 'module-info.class'
+    include {
+        if (it.directory) {
+            return true
+        }
+        if (it.path.endsWith('.jar')) {
+            return true
+        }
+        return it.path.startsWith('org/openjdk/btrace/agent/') ||
+               it.path.startsWith('org/openjdk/btrace/instr/') ||
+               // include the messages resource bundle and class in the agent jar (bootstrap can't load resources)
+               it.path == 'org/openjdk/btrace/core/Messages.class' ||
+               it.path == 'org/openjdk/btrace/core/messages.properties'
+    }
 
     configurations = [project.configurations.compile]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
@@ -95,25 +86,39 @@ task bootJar(type: ShadowJar) {
     classifier = null
     destinationDir = libsDir
 
-    exclude 'afu/**'
-    exclude 'javax/**'
-    exclude 'com/**'
-    exclude 'sun/**'
-    exclude 'org/relaxng/**'
-    exclude 'org/checkerframework/**'
-    exclude 'org/codehaus/**'
 
-    exclude 'org/jctools/maps/**'
-    exclude 'META-INF/services/**'
-    exclude 'META-INF/maven/**'
-
-    exclude 'org/objectweb/asm/commons/**'
-    exclude 'org/objectweb/asm/util/**'
-    exclude 'org/objectweb/asm/xml/**'
-
-    exclude 'org/openjdk/btrace/agent/**'
-    exclude 'org/openjdk/btrace/client/**'
-    exclude 'module-info.class'
+    include {
+        if (it.directory) {
+            return true
+        }
+        if (it.path.endsWith('.jar')) {
+            return true
+        }
+        if (it.path.startsWith('org/openjdk/btrace/core/')) {
+            if (it.path == 'org/openjdk/btrace/core/Messages.class' || it.path == 'org/openjdk/btrace/core/messages.properties') {
+                // messages resource bundle&class are hoisted to agent and client jars
+                return false
+            }
+            return true
+        }
+        if (it.path.startsWith('org/jctools/')) {
+            if (it.path.startsWith('org/jctools/map/')) {
+                return false
+            }
+            return true
+        }
+        if (it.path.startsWith('org/objectweb/asm/')) {
+            if (it.path.startsWith('org/objectweb/asm/commons/') ||
+                it.path.startsWith('org/objectweb/asm/util/') ||
+                it.path.startsWith('org/objectweb/asm/xml/')) {
+                return false
+            }
+            return true
+        }
+        return it.path.startsWith('org/openjdk/btrace/runtime/') ||
+                it.path.startsWith('org/openjdk/btrace/services/') ||
+                it.path.startsWith('org/openjdk/btrace/statsd/')
+    }
 
     configurations = [project.configurations.compile]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'

@@ -12,11 +12,6 @@ sourceSets {
             srcDirs = ['src/main/java11_dummy']
         }
     }
-    java15 {
-        java {
-            srcDirs = ['src/main/java15']
-        }
-    }
 }
 
 dependencies {
@@ -36,15 +31,6 @@ compileJava11_dummyJava {
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
     options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
-}
-
-compileJava15Java {
-    sourceCompatibility = 15
-    targetCompatibility = 15
-    options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_15_HOME")}/bin/javac"
-    options.forkOptions.javaHome = file("${project.property("JAVA_15_HOME")}")
-    options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
 compileTestJava {
@@ -93,16 +79,4 @@ test {
     testLogging.showStandardStreams = true
 
     jvmArgs '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
-}
-
-dependencies {
-    java15Implementation files(sourceSets.main.output.classesDirs) {
-        builtBy compileJava
-    }
-}
-
-jar {
-    into('') {
-        from sourceSets.java15.output
-    }
 }

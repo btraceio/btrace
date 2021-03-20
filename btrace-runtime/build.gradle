@@ -29,6 +29,7 @@ compileJava9Java {
     targetCompatibility = 9
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_9_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_9_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
@@ -37,6 +38,7 @@ compileJava11Java {
     targetCompatibility = 11
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
@@ -45,6 +47,7 @@ compileJava15Java {
     targetCompatibility = 15
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_15_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_15_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
