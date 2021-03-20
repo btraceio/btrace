@@ -89,7 +89,7 @@ public class Compiler {
   }
 
   // simple test main
-  @SuppressWarnings("DefaultCharset")
+  @SuppressWarnings({"DefaultCharset", "RedundantThrows"})
   public static void main(String[] args) throws Exception {
     if (args.length == 0) {
       usage();

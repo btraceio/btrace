@@ -54,9 +54,10 @@ import org.openjdk.btrace.core.comm.WireIO;
  *
  * @author A. Sundararajan
  */
+@SuppressWarnings("SynchronizeOnNonFinalField")
 class RemoteClient extends Client {
   private final class DelayedCommandExecutor implements Function<Command, Boolean> {
-    private boolean isConnected;
+    private final boolean isConnected;
 
     public DelayedCommandExecutor(boolean isConnected) {
       this.isConnected = isConnected;
@@ -72,7 +73,7 @@ class RemoteClient extends Client {
   private volatile ObjectInputStream ois;
   private volatile ObjectOutputStream oos;
 
-  private CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
+  private final CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
 
   static Client getClient(ClientContext ctx, Socket sock, Function<Client, Future<?>> initCallback)
       throws IOException {
@@ -157,56 +158,53 @@ class RemoteClient extends Client {
     BTraceRuntime.initUnsafe();
     Thread cmdHandler =
         new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                try {
-                  BTraceRuntime.enter();
-                  while (true) {
-                    try {
-                      if (RemoteClient.this.ois == null) {
-                        LockSupport.parkNanos(500_000_000L); // sleep 500ms
-                        continue;
-                      }
-                      Command cmd = WireIO.read(RemoteClient.this.ois);
-                      switch (cmd.getType()) {
-                        case Command.EXIT:
-                          {
-                            debugPrint("received exit command");
-                            onCommand(cmd);
-
-                            return;
-                          }
-                        case Command.DISCONNECT:
-                          {
-                            debugPrint("received disconnect command");
-                            onCommand(cmd);
-                            break;
-                          }
-                        case Command.LIST_PROBES:
-                          {
-                            onCommand(cmd);
-                            break;
-                          }
-                        case Command.EVENT:
-                          {
-                            getRuntime().handleEvent((EventCommand) cmd);
-                            break;
-                          }
-                        default:
-                          if (isDebug()) {
-                            debugPrint("received " + cmd);
-                          }
-                          // ignore any other command
-                      }
-                    } catch (Exception exp) {
-                      debugPrint(exp);
-                      break;
+            () -> {
+              try {
+                BTraceRuntime.enter();
+                while (true) {
+                  try {
+                    if (ois == null) {
+                      LockSupport.parkNanos(500_000_000L); // sleep 500ms
+                      continue;
                     }
+                    Command cmd = WireIO.read(ois);
+                    switch (cmd.getType()) {
+                      case Command.EXIT:
+                        {
+                          debugPrint("received exit command");
+                          onCommand(cmd);
+
+                          return;
+                        }
+                      case Command.DISCONNECT:
+                        {
+                          debugPrint("received disconnect command");
+                          onCommand(cmd);
+                          break;
+                        }
+                      case Command.LIST_PROBES:
+                        {
+                          onCommand(cmd);
+                          break;
+                        }
+                      case Command.EVENT:
+                        {
+                          getRuntime().handleEvent((EventCommand) cmd);
+                          break;
+                        }
+                      default:
+                        if (isDebug()) {
+                          debugPrint("received " + cmd);
+                        }
+                        // ignore any other command
+                    }
+                  } catch (Exception exp) {
+                    debugPrint(exp);
+                    break;
                   }
-                } finally {
-                  BTraceRuntime.leave();
                 }
+              } finally {
+                BTraceRuntime.leave();
               }
             });
     cmdHandler.setDaemon(true);
@@ -214,6 +212,7 @@ class RemoteClient extends Client {
     cmdHandler.start();
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   public void onCommand(Command cmd) throws IOException {
     if (oos == null) {
@@ -228,7 +227,9 @@ class RemoteClient extends Client {
     try {
       boolean isConnected = true;
       try {
-        oos.reset();
+        synchronized (oos) {
+          oos.reset();
+        }
       } catch (SocketException e) {
         isConnected = false;
       }
@@ -269,14 +270,16 @@ class RemoteClient extends Client {
         case Command.DISCONNECT:
           {
             ((DisconnectCommand) cmd).setProbeId(id.toString());
-            WireIO.write(oos, cmd);
-            oos.flush();
-            ois.close();
-            oos.close();
+            synchronized (oos) {
+              WireIO.write(oos, cmd);
+              oos.flush();
+              ois.close();
+              oos.close();
+            }
             sock.close();
-            this.ois = null;
-            this.oos = null;
-            this.sock = null;
+            ois = null;
+            oos = null;
+            sock = null;
             break;
           }
         default:
@@ -305,7 +308,9 @@ class RemoteClient extends Client {
     super.closeAll();
 
     if (oos != null) {
-      oos.close();
+      synchronized (oos) {
+        oos.close();
+      }
       oos = null;
     }
     if (ois != null) {
@@ -319,7 +324,7 @@ class RemoteClient extends Client {
   }
 
   void reconnect(ObjectInputStream ois, ObjectOutputStream oos, Socket socket) throws IOException {
-    this.sock = socket;
+    sock = socket;
     this.ois = ois;
     this.oos = oos;
     onCommand(Command.NULL);

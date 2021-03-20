@@ -21,14 +21,14 @@ public final class LowMemoryHandler {
     this.trackUsage = trackUsage;
   }
 
-  public synchronized Method getMethod(Class clz) throws NoSuchMethodException {
+  public synchronized Method getMethod(Class<?> clz) throws NoSuchMethodException {
     if (executable == null) {
       executable = trackUsage ? clz.getMethod(method, MemoryUsage.class) : clz.getMethod(method);
     }
     return executable;
   }
 
-  public void invoke(Class clz, Object... args)
+  public void invoke(Class<?> clz, Object... args)
       throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
     getMethod(clz).invoke(clz, null, args);
   }

@@ -34,7 +34,11 @@ final class BTraceBCPClassLoader extends URLClassLoader {
   @Override
   public Class<?> loadClass(String name) throws ClassNotFoundException {
     // delegate class loading to parent directly
-    return getParent().loadClass(name);
+    ClassLoader parent = getParent();
+    if (parent == null) {
+      parent = ClassLoader.getSystemClassLoader();
+    }
+    return parent.loadClass(name);
   }
 
   @Override
