@@ -13,7 +13,7 @@ public final class BTraceRuntimes {
     boolean loaded =
         loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_11$Factory")
             || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9$Factory")
-            || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_7$Factory");
+            || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_8$Factory");
     DebugSupport.SHARED.debug("BTraceRuntime loaded: " + loaded);
     BTraceRuntimeAccess.registerRuntimeAccessor();
   }

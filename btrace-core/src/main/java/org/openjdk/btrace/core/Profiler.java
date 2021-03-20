@@ -28,6 +28,7 @@ package org.openjdk.btrace.core;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import org.openjdk.btrace.core.annotations.Property;
 
 /**
@@ -104,14 +105,11 @@ public abstract class Profiler {
    */
   public static final class Record {
     public static final Comparator<Record> COMPARATOR =
-        new Comparator<Record>() {
-          @Override
-          public int compare(Record o1, Record o2) {
-            if (o1 == null && o2 != null) return 1;
-            if (o1 != null && o2 == null) return -1;
-            if (o1 == null && o2 == null) return 0;
-            return o1.blockName.compareTo(o2.blockName);
-          }
+        (o1, o2) -> {
+          if (o1 == null && o2 != null) return 1;
+          if (o1 != null && o2 == null) return -1;
+          if (o1 == null && o2 == null) return 0;
+          return o1.blockName.compareTo(o2.blockName);
         };
 
     public final String blockName;
@@ -146,7 +144,7 @@ public abstract class Profiler {
         return false;
       }
       Record other = (Record) obj;
-      if ((blockName == null) ? (other.blockName != null) : !blockName.equals(other.blockName)) {
+      if (!Objects.equals(blockName, other.blockName)) {
         return false;
       }
       if (wallTime != other.wallTime) {
@@ -220,7 +218,7 @@ public abstract class Profiler {
     }
 
     public List<Object[]> getGridData() {
-      List<Object[]> rslt = new ArrayList<Object[]>();
+      List<Object[]> rslt = new ArrayList<>();
 
       Object[] titleRow = {
         "Block",

@@ -112,7 +112,7 @@ public final class BTraceProbeFactory {
     }
 
     applyArgs(bp, argsMap);
-    HandlerRepository.registerProbe(bp);
+    HandlerRepositoryImpl.registerProbe(bp);
     return bp;
   }
 
@@ -140,7 +140,7 @@ public final class BTraceProbeFactory {
     }
 
     applyArgs(bp, argsMap);
-    HandlerRepository.registerProbe(bp);
+    HandlerRepositoryImpl.registerProbe(bp);
     return bp;
   }
 }

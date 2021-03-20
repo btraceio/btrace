@@ -130,7 +130,7 @@ class CompilerHelper {
     } finally {
       try {
         manager.close();
-      } catch (IOException exp) {
+      } catch (IOException ignored) {
       }
     }
     return result;
@@ -146,13 +146,13 @@ class CompilerHelper {
       }
       os = new FileOutputStream(f);
       os.write(code);
-    } catch (IOException e) {
+    } catch (IOException ignored) {
 
     } finally {
       if (os != null) {
         try {
           os.close();
-        } catch (IOException e) {
+        } catch (IOException ignored) {
         }
       }
     }

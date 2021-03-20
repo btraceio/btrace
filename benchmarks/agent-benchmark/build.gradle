@@ -1,12 +1,9 @@
 plugins {
   id 'java'
-  id("me.champeau.gradle.jmh") version "0.5.0-rc-2"
+  id("me.champeau.gradle.jmh") version "0.5.3"
 }
 
 description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
-
-sourceCompatibility = 8
-targetCompatibility = 8
 
 def env = System.getenv()
 def javaHome = env['JAVA_HOME']
@@ -17,7 +14,7 @@ dependencies {
   jmh project(":btrace-instr")
   jmh project(":btrace-runtime")
   jmh project(":btrace-statsd")
-  jmh("org.openjdk.jmh:jmh-core:1.21")
+  jmh("org.openjdk.jmh:jmh-core:1.27")
   jmh("org.openjdk.jmh:jmh-generator-annprocess:1.21")
 }
 

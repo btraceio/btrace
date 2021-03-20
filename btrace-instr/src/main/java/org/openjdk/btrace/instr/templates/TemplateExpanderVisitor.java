@@ -78,11 +78,6 @@ public class TemplateExpanderVisitor extends BTraceMethodVisitor {
   }
 
   @Override
-  public void visitCode() {
-    super.visitCode();
-  }
-
-  @Override
   public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isIface) {
     Template t = BTraceTemplates.getTemplate(owner, name, desc);
 

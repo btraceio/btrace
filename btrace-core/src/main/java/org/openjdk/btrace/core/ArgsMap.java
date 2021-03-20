@@ -33,7 +33,7 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>> {
   private final DebugSupport debug;
 
   public ArgsMap(Map<String, String> args, DebugSupport debug) {
-    map = args != null ? new LinkedHashMap<>(args) : new LinkedHashMap<String, String>();
+    map = args != null ? new LinkedHashMap<>(args) : new LinkedHashMap<>();
     this.debug = debug;
   }
 
@@ -153,6 +153,6 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>> {
   private static final class PatternSingleton {
     // lazy initialization trick
     // do not compile the pattern until it is actually requested
-    private static final Pattern INSTANCE = Pattern.compile("\\$\\{(.*?)\\}");
+    private static final Pattern INSTANCE = Pattern.compile("\\$\\{(.*?)}");
   }
 }

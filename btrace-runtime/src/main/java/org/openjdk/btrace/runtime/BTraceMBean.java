@@ -24,12 +24,12 @@
  */
 package org.openjdk.btrace.runtime;
 
-/**
- * This class is a simple implementation of DynamicMBean that exposes a BTrace class as a MBean. The
- * static fields annotated with @Property are exposed as MBean attributes.
- *
- * @author A. Sundararajan
- */
+/*
+ This class is a simple implementation of DynamicMBean that exposes a BTrace class as a MBean. The
+ static fields annotated with @Property are exposed as MBean attributes.
+
+ @author A. Sundararajan
+*/
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -77,18 +77,18 @@ import org.openjdk.btrace.core.annotations.Property;
  */
 public class BTraceMBean implements DynamicMBean {
 
-  private final Class clazz;
+  private final Class<?> clazz;
   private final Map<String, Field> attributes;
   private final String beanName;
   private MBeanInfo cachedBeanInfo;
 
-  public BTraceMBean(Class clazz) {
+  public BTraceMBean(Class<?> clazz) {
     this.clazz = clazz;
     attributes = getJMXAttributes(clazz);
     beanName = getBeanName(clazz);
   }
 
-  public static void registerMBean(Class clazz) {
+  public static void registerMBean(Class<?> clazz) {
     if (isMBean(clazz)) {
       MBeanServer server = ManagementFactory.getPlatformMBeanServer();
       BTraceMBean bean = new BTraceMBean(clazz);
@@ -180,6 +180,7 @@ public class BTraceMBean implements DynamicMBean {
     return getFieldValue(field);
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   public synchronized void setAttribute(Attribute attribute)
       throws InvalidAttributeValueException, MBeanException, AttributeNotFoundException {
@@ -208,6 +209,7 @@ public class BTraceMBean implements DynamicMBean {
     return new AttributeList();
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   public Object invoke(String name, Object[] args, String[] sig)
       throws MBeanException, ReflectionException {
@@ -220,9 +222,7 @@ public class BTraceMBean implements DynamicMBean {
       return cachedBeanInfo;
     }
     SortedSet<String> names = new TreeSet<>();
-    for (String name : attributes.keySet()) {
-      names.add(name);
-    }
+    names.addAll(attributes.keySet());
     MBeanAttributeInfo[] attrs = new MBeanAttributeInfo[names.size()];
     Iterator<String> it = names.iterator();
     for (int i = 0; i < attrs.length; i++) {
@@ -356,19 +356,17 @@ public class BTraceMBean implements DynamicMBean {
                     new String[] {"key", "value"},
                     new String[] {"key", "value"},
                     new OpenType[] {typeToOpenType(String.class), record});
-            CompositeType snapshot =
-                new CompositeType(
-                    "Snapshot",
-                    "Profiler snapshot",
-                    new String[] {"startTime", "lastRefresh", "interval", "data"},
-                    new String[] {"startTime", "lastRefresh", "interval", "data"},
-                    new OpenType[] {
-                      typeToOpenType(Long.class),
-                      typeToOpenType(Long.class),
-                      typeToOpenType(Long.class),
-                      new ArrayType(1, recordEntry)
-                    });
-            return snapshot;
+            return new CompositeType(
+                "Snapshot",
+                "Profiler snapshot",
+                new String[] {"startTime", "lastRefresh", "interval", "data"},
+                new String[] {"startTime", "lastRefresh", "interval", "data"},
+                new OpenType[] {
+                  typeToOpenType(Long.class),
+                  typeToOpenType(Long.class),
+                  typeToOpenType(Long.class),
+                  new ArrayType<>(1, recordEntry)
+                });
           } else {
             return classToOpenTypes.get(c);
           }
@@ -376,11 +374,11 @@ public class BTraceMBean implements DynamicMBean {
           ParameterizedType pt = (ParameterizedType) t;
           Type rawType = pt.getRawType();
           if (rawType instanceof Class) {
-            Class rt = (Class) rawType;
+            Class<?> rt = (Class<?>) rawType;
             Type[] argTypes = pt.getActualTypeArguments();
             if (Map.class.isAssignableFrom(rt)) {
-              OpenType keyType = typeToOpenType(argTypes[0]);
-              OpenType valueType = typeToOpenType(argTypes[1]);
+              OpenType<?> keyType = typeToOpenType(argTypes[0]);
+              OpenType<?> valueType = typeToOpenType(argTypes[1]);
               if (keyType != null && valueType != null) {
                 CompositeType rowType =
                     new CompositeType(
@@ -389,7 +387,7 @@ public class BTraceMBean implements DynamicMBean {
                         new String[] {"key", "value"},
                         new String[] {"key", "value"},
                         new OpenType[] {keyType, valueType});
-                return new ArrayType(1, rowType);
+                return new ArrayType<>(1, rowType);
               }
             }
           }
@@ -402,7 +400,8 @@ public class BTraceMBean implements DynamicMBean {
       return null;
     }
 
-    private static Object convertToOpenTypeValue(OpenType ot, Object value) {
+    @SuppressWarnings("unchecked")
+    private static Object convertToOpenTypeValue(OpenType<?> ot, Object value) {
       if (ot instanceof SimpleType) {
         if (value instanceof AtomicInteger) {
           return ((AtomicInteger) value).get();
@@ -450,7 +449,7 @@ public class BTraceMBean implements DynamicMBean {
             try {
               //                            System.err.println("!!! adding record: " + r);
               CompositeType at =
-                  (CompositeType) ((ArrayType) ct.getType("data")).getElementOpenType();
+                  (CompositeType) ((ArrayType<?>) ct.getType("data")).getElementOpenType();
               CompositeType rt = (CompositeType) at.getType("value");
               CompositeData recordData =
                   new CompositeDataSupport(
@@ -490,10 +489,8 @@ public class BTraceMBean implements DynamicMBean {
               total[index] =
                   new CompositeDataSupport(
                       at, new String[] {"key", "value"}, new Object[] {r.blockName, recordData});
-            } catch (OpenDataException ode) {
+            } catch (Exception ode) {
               ode.printStackTrace();
-            } catch (Exception e) {
-              e.printStackTrace();
             }
             index++;
           }
@@ -511,8 +508,6 @@ public class BTraceMBean implements DynamicMBean {
                       convertToOpenTypeValue(ct.getType("interval"), snapshot.timeInterval),
                       total
                     });
-          } catch (OpenDataException e) {
-            e.printStackTrace();
           } catch (Exception e) {
             e.printStackTrace();
           }
@@ -520,14 +515,14 @@ public class BTraceMBean implements DynamicMBean {
           return snapshotData;
         }
       } else if (ot instanceof ArrayType) {
-        ArrayType at = (ArrayType) ot;
-        OpenType et = at.getElementOpenType();
+        ArrayType<?> at = (ArrayType<?>) ot;
+        OpenType<?> et = at.getElementOpenType();
         if (value instanceof Map && et instanceof CompositeType) {
           CompositeType ct = (CompositeType) et;
-          Map<Object, Object> map = new HashMap((Map<Object, Object>) value);
+          Map<Object, Object> map = new HashMap<>((Map<Object, Object>) value);
           CompositeData[] array = new CompositeData[map.size()];
-          OpenType keyType = ct.getType("key");
-          OpenType valueType = ct.getType("value");
+          OpenType<?> keyType = ct.getType("key");
+          OpenType<?> valueType = ct.getType("value");
           int index = 0;
           for (Map.Entry<Object, Object> entry : map.entrySet()) {
             Map<String, Object> row = new HashMap<>();

@@ -23,6 +23,7 @@ public final class DisconnectCommand extends Command implements PrintableCommand
     out.writeUTF(probeId);
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     probeId = in.readUTF();

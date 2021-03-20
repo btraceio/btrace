@@ -365,16 +365,14 @@ public class Client {
       if (debug) {
         debugPrint("loaded " + agentPath);
       }
-    } catch (RuntimeException re) {
+    } catch (RuntimeException | IOException re) {
       throw re;
-    } catch (IOException ioexp) {
-      throw ioexp;
     } catch (Exception exp) {
       throw new IOException(exp.getMessage());
     }
   }
 
-  void connectAndListProbes(String host, final CommandListener listener) throws IOException {
+  void connectAndListProbes(String host, CommandListener listener) throws IOException {
     if (sock != null) {
       throw new IllegalStateException();
     }
@@ -406,15 +404,12 @@ public class Client {
         debugPrint("entering into command loop");
       }
       commandLoop(
-          new CommandListener() {
-            @Override
-            public void onCommand(Command cmd) throws IOException {
-              if (cmd.getType() == Command.LIST_PROBES) {
-                listener.onCommand(cmd);
-                System.exit(0);
-              } else {
-                listener.onCommand(cmd);
-              }
+          cmd -> {
+            if (cmd.getType() == Command.LIST_PROBES) {
+              listener.onCommand(cmd);
+              System.exit(0);
+            } else {
+              listener.onCommand(cmd);
             }
           });
     } catch (UnknownHostException uhe) {
@@ -424,8 +419,7 @@ public class Client {
     }
   }
 
-  void reconnect(String host, final String resumeProbe, final CommandListener listener)
-      throws IOException {
+  void reconnect(String host, String resumeProbe, CommandListener listener) throws IOException {
     if (sock != null) {
       throw new IllegalStateException();
     }
@@ -505,11 +499,7 @@ public class Client {
    * Receives commands from the traced JVM and sends those to the command listener provided.
    */
   public void submit(
-      String host,
-      final String fileName,
-      byte[] code,
-      String[] args,
-      final CommandListener listener)
+      String host, String fileName, byte[] code, String[] args, CommandListener listener)
       throws IOException {
     if (sock != null) {
       throw new IllegalStateException();
@@ -761,13 +751,13 @@ public class Client {
     }
   }
 
-  private Object getDTraceSource(final String fileName, byte[] code) {
+  private Object getDTraceSource(String fileName, byte[] code) {
     if (isPersistedProbe(code)) {
       return null;
     }
 
     ClassReader reader = new ClassReader(code);
-    final Object[] result = new Object[1];
+    Object[] result = new Object[1];
     reader.accept(
         new ClassVisitor(Opcodes.ASM7) {
 
@@ -815,13 +805,10 @@ public class Client {
     return result[0];
   }
 
-  private static final int MAGIC = 0xbacecaca;
-
   private static boolean isPersistedProbe(byte[] code) {
-    int num = 0;
-    for (int i = 0; i < 4; i++) {
-      num += (256 * num) + code[i];
-    }
-    return MAGIC == num;
+    return code[0] == (byte) (0xBA & 0xff)
+        && code[1] == (byte) (0xCE & 0xff)
+        && code[2] == (byte) (0XCA & 0xff)
+        && code[3] == (byte) (0XCA & 0xff);
   }
 }

@@ -256,7 +256,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
     if (opcode == NEW) {
       // allow StringBuilder creation for string concatenation
       if (desc.equals(Type.getInternalName(StringBuilder.class))) {
-        super.visitTypeInsn(opcode, desc);
+        super.visitTypeInsn(NEW, desc);
         return;
       }
       Verifier.reportError("no.new.object", desc);
