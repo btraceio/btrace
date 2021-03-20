@@ -74,10 +74,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
     public boolean isEnabled() {
       Runtime.Version version = Runtime.version();
       int major = version.version().get(0);
-      if (major == 9 || major == 10) {
-        return true;
-      }
-      return false;
+      return major == 9 || major == 10;
     }
   }
   // perf counter variability - we always variable variability
@@ -239,12 +236,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
-    return new JfrEvent.Factory() {
-      @Override
-      public JfrEvent newEvent() {
-        return JfrEvent.EMPTY;
-      }
-    };
+    return () -> JfrEvent.EMPTY;
   }
 
   private static Perf getPerf() {
