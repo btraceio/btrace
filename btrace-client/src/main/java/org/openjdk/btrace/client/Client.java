@@ -806,9 +806,9 @@ public class Client {
   }
 
   private static boolean isPersistedProbe(byte[] code) {
-    return code[0] == (byte)(0xBA & 0xff) &&
-           code[1] == (byte)(0xCE & 0xff) &&
-           code[2] == (byte)(0XCA & 0xff) &&
-           code[3] == (byte)(0XCA & 0xff);
+    return code[0] == (byte) (0xBA & 0xff)
+        && code[1] == (byte) (0xCE & 0xff)
+        && code[2] == (byte) (0XCA & 0xff)
+        && code[3] == (byte) (0XCA & 0xff);
   }
 }

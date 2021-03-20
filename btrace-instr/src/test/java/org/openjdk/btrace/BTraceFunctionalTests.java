@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
-
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
@@ -300,9 +299,9 @@ public class BTraceFunctionalTests extends RuntimeTest {
     String rtVersion = System.getProperty("java.runtime.version", "");
     String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
     if (testJavaHome != null) {
-        Properties releaseProps = new Properties();
-        releaseProps.load(new FileInputStream(new File(testJavaHome + File.separator + "release")));
-        rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
+      Properties releaseProps = new Properties();
+      releaseProps.load(new FileInputStream(new File(testJavaHome + File.separator + "release")));
+      rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
     }
     if (!rtVersion.startsWith("15.")) {
       // skip the test for 8.0.* because of missing support
