@@ -805,13 +805,10 @@ public class Client {
     return result[0];
   }
 
-  private static final int MAGIC = 0xbacecaca;
-
   private static boolean isPersistedProbe(byte[] code) {
-    int num = 0;
-    for (int i = 0; i < 4; i++) {
-      num += (256 * num) + code[i];
-    }
-    return MAGIC == num;
+    return code[0] == (byte)(0xBA & 0xff) &&
+           code[1] == (byte)(0xCE & 0xff) &&
+           code[2] == (byte)(0XCA & 0xff) &&
+           code[3] == (byte)(0XCA & 0xff);
   }
 }
