@@ -94,11 +94,7 @@ public abstract class RuntimeTest {
       }
       if (f != null) {
         projectRoot = f.getAbsoluteFile().toPath().resolve("../..");
-        Path clientJarPath =
-            projectRoot
-                .resolve("btrace-dist/build/resources/main")
-                .resolve(System.getProperty("project.version"))
-                .resolve("libs/btrace-client.jar");
+        Path clientJarPath = Paths.get(System.getProperty("btrace.test.libs"), "btrace-client.jar");
         Path eventsJarPath = projectRoot.resolve("btrace-instr/build/libs/events.jar");
         clientClassPath = clientJarPath.toString();
         eventsClassPath = eventsJarPath.toString();
@@ -196,8 +192,8 @@ public abstract class RuntimeTest {
     Process p = pb.start();
     PrintWriter pw = new PrintWriter(p.getOutputStream());
 
-    StringBuilder stdout = new StringBuilder();
-    StringBuilder stderr = new StringBuilder();
+    StringBuffer stdout = new StringBuffer();
+    StringBuffer stderr = new StringBuffer();
     AtomicInteger ret = new AtomicInteger(-1);
 
     BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -211,13 +207,14 @@ public abstract class RuntimeTest {
               try {
                 String l;
                 while ((l = stdoutReader.readLine()) != null) {
+                  if (debugTestApp) {
+                    System.out.println("[traced app] " + l);
+                  }
                   if (l.startsWith("ready:")) {
                     pidStringRef.set(l.split("\\:")[1]);
                     testAppLatch.countDown();
                   }
-                  if (debugTestApp) {
-                    System.out.println("[traced app] " + l);
-                  }
+                  stdout.append(l).append(System.lineSeparator());
                 }
 
               } catch (Exception e) {
@@ -235,14 +232,16 @@ public abstract class RuntimeTest {
               try {
                 String l = null;
                 while ((l = stderrReader.readLine()) != null) {
-                  if (l.contains("Server VM warning")
-                      || l.contains("XML libraries not available")) {
-                    continue;
-                  }
-                  testAppLatch.countDown();
                   if (debugTestApp) {
                     System.err.println("[traced app] " + l);
                   }
+                  if (l.contains("Server VM warning")
+                      || l.contains("XML libraries not available")
+                      || l.contains("WARNING")) {
+                    continue;
+                  }
+                  testAppLatch.countDown();
+                  stderr.append(l).append(System.lineSeparator());
                 }
               } catch (Exception e) {
                 e.printStackTrace(System.err);
@@ -319,14 +318,15 @@ public abstract class RuntimeTest {
       String trace,
       String[] cmdArgs,
       int checkLines,
-      StringBuilder stdout,
-      StringBuilder stderr)
+      StringBuffer stdout,
+      StringBuffer stderr)
       throws Exception {
     File traceFile = locateTrace(trace);
     List<String> argVals =
         new ArrayList<>(
             Arrays.asList(
                 javaHome + "/bin/java",
+                "-Dbtrace.extensions.dir=" + System.getProperty("btrace.test.libs") + "/ext",
                 "-Dcom.sun.btrace.unsafe=" + isUnsafe,
                 "-Dcom.sun.btrace.debug=" + debugBTrace,
                 "-Dcom.sun.btrace.trackRetransforms=" + trackRetransforms,
@@ -341,6 +341,7 @@ public abstract class RuntimeTest {
                 traceFile.getParentFile().getAbsolutePath(),
                 pid,
                 traceFile.getAbsolutePath()));
+    System.err.println("===> " + argVals);
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }

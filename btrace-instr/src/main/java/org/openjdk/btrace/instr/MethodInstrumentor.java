@@ -37,6 +37,7 @@ import java.util.Map;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
+import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.runtime.Interval;
 
@@ -496,7 +497,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
 
   private void report(String msg) {
     String out = "[" + getName(true) + "] " + msg;
-    System.err.println(out);
+    System.out.println(out);
   }
 
   protected static final class ValidationResult {
@@ -507,9 +508,7 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     private final int[] argsIndex;
 
     public ValidationResult(boolean valid, int[] argsIndex) {
-      if (argsIndex == null) {
-        Thread.dumpStack();
-      }
+      assert argsIndex != null;
       isValid = valid;
       this.argsIndex = argsIndex;
     }

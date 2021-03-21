@@ -1,5 +1,7 @@
 package org.openjdk.btrace.core.extensions;
 
+import org.openjdk.btrace.core.DebugSupport;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -17,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class ExtensionRepository {
+  private static final String REPOSITORY_LOCATION_KEY = "btrace.extensions.dir";
   private static final ExtensionRepository INSTANCE = new ExtensionRepository();
 
   private final Map<String, ExtensionEntry> extensionsById = new HashMap<>();
@@ -24,20 +27,24 @@ public final class ExtensionRepository {
 
   private ExtensionRepository() {
     try {
-      CodeSource source = ExtensionRepository.class.getProtectionDomain().getCodeSource();
-      if (source == null) {
-        String clzUrlStr =
-            ClassLoader.getSystemResource(
-                    ExtensionRepository.class.getName().replace('.', '/') + ".class")
-                .toString();
-        clzUrlStr = clzUrlStr.replace("jar:file:", "");
-        int idx = clzUrlStr.lastIndexOf("!");
-        source =
-            new CodeSource(
-                Paths.get(clzUrlStr.substring(0, idx)).toUri().toURL(), (CodeSigner[]) null);
+      String repositoryDir = System.getProperty(REPOSITORY_LOCATION_KEY);
+      Path repoDir = repositoryDir != null ? Paths.get(repositoryDir) : null;
+      if (repoDir == null) {
+        CodeSource source = ExtensionRepository.class.getProtectionDomain().getCodeSource();
+        if (source == null) {
+          String clzUrlStr =
+                  ClassLoader.getSystemResource(
+                          ExtensionRepository.class.getName().replace('.', '/') + ".class")
+                          .toString();
+          clzUrlStr = clzUrlStr.replace("jar:file:", "");
+          int idx = clzUrlStr.lastIndexOf("!");
+          source =
+                  new CodeSource(
+                          Paths.get(clzUrlStr.substring(0, idx)).toUri().toURL(), (CodeSigner[]) null);
+        }
+        URL libsLocation = source.getLocation();
+        repoDir = new File(libsLocation.toURI()).toPath().getParent().resolve("ext");
       }
-      URL libsLocation = source.getLocation();
-      Path repoDir = new File(libsLocation.toURI()).toPath().getParent().resolve("ext");
       if (Files.exists(repoDir) && Files.isDirectory(repoDir)) {
         Files.walkFileTree(
             repoDir,

@@ -1,4 +1,4 @@
-package org.openjdk.btrace.instr;
+package org.openjdk.btrace.runtime;
 
 import java.lang.invoke.CallSite;
 import java.lang.invoke.ConstantCallSite;
@@ -9,11 +9,14 @@ import java.lang.reflect.Array;
 import java.util.Arrays;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.extensions.ExtensionEntry;
 import org.openjdk.btrace.core.extensions.ExtensionRepository;
 
 /** The bootstrap handler for the extension dynamic invocations */
 public final class ExtensionBootstrap {
+  static volatile ExtensionRepository repository = ExtensionRepository.getInstance();
+
   public static CallSite bootstrapInvoke(
       MethodHandles.Lookup caller,
       String name,
@@ -23,10 +26,15 @@ public final class ExtensionBootstrap {
       String descriptor,
       int opcode)
       throws Exception {
+    boolean isStatic =
+        opcode == Opcodes.INVOKESTATIC
+            || opcode == Opcodes.PUTSTATIC
+            || opcode == Opcodes.GETSTATIC;
+    MethodType origType = type;
     Class<?> rType = type.returnType();
     try {
       // Try resolving the extension containing the target class
-      ExtensionEntry extension = ExtensionRepository.getInstance().getExtensionById(extName);
+      ExtensionEntry extension = repository.getExtensionById(extName);
       if (extension != null) {
         ClassLoader extClassLoader =
             extension.getClassLoader(caller.lookupClass().getClassLoader());
@@ -37,14 +45,19 @@ public final class ExtensionBootstrap {
           // class loading problems in the calling code when the extension is not enabled/available.
           // The actual types are transferred via 'descriptor' string.
           MethodHandle callHandle = null;
-          MethodType origType = type;
           Type retType = Type.getReturnType(descriptor);
           Type[] args = Type.getArgumentTypes(descriptor);
 
+          int typeArgOffset = 0;
+          if (!isStatic) {
+            // remove 'this' parameter
+            type = type.dropParameterTypes(0, 1);
+            typeArgOffset = 1;
+          }
           // Restore the erased parameter types
-          for (int i = 0; i < type.parameterCount(); i++) {
-            if (!type.parameterType(i).isPrimitive()) {
-              type = type.changeParameterType(i, getTypeClass(args[i], extClassLoader));
+          for (int i = typeArgOffset; i < args.length; i++) {
+            if (!type.parameterType(i - typeArgOffset).isPrimitive()) {
+              type = type.changeParameterType(i - typeArgOffset, getTypeClass(args[i], extClassLoader));
             }
           }
           // Restore the erased return type
@@ -52,20 +65,16 @@ public final class ExtensionBootstrap {
             Class<?> clz = getTypeClass(retType, extClassLoader);
             type = type.changeReturnType(clz);
           }
-
           // Find the actual method handle or field accessor
           switch (opcode) {
             case Opcodes.INVOKESTATIC:
               {
-                callHandle =
-                    MethodHandles.lookup().findStatic(extClass, name, type).asType(origType);
+                callHandle = MethodHandles.lookup().findStatic(extClass, name, type).asType(type);
                 break;
               }
             case Opcodes.INVOKEVIRTUAL:
               {
-                callHandle =
-                    MethodHandles.lookup()
-                        .findVirtual(extClass, name, type.dropParameterTypes(0, 1));
+                callHandle = MethodHandles.lookup().findVirtual(extClass, name, type);
                 callHandle =
                     callHandle.asType(callHandle.type().changeParameterType(0, Object.class));
                 break;
@@ -96,26 +105,26 @@ public final class ExtensionBootstrap {
               }
           }
           if (callHandle != null) {
-            return new ConstantCallSite(callHandle);
+            return new ConstantCallSite(callHandle.asType(origType));
           }
         }
       }
     } catch (Throwable t) {
-      t.printStackTrace();
-      throw t;
+      DebugSupport.SHARED.debug(t);
     }
 
     // No handle was resolved - use the no-op fallback instead
-    return new ConstantCallSite(getNoopHandle(type, rType));
+    MethodHandle noopHandle = getNoopHandle(origType, rType);
+    return new ConstantCallSite(noopHandle);
   }
 
-  private static MethodHandle getNoopHandle(MethodType type, Class<?> rType)
+  private static MethodHandle getNoopHandle(MethodType origType, Class<?> rType)
       throws NoSuchMethodException, IllegalAccessException {
     MethodHandle noopHandle =
         MethodHandles.lookup()
             .findStatic(ExtensionBootstrap.class, "noop", MethodType.methodType(Void.class));
     // Discard any incoming arguments
-    noopHandle = MethodHandles.dropArguments(noopHandle, 0, type.parameterArray());
+    noopHandle = MethodHandles.dropArguments(noopHandle, 0, origType.parameterArray());
     // Do return type transformation - the shared noop handler returns Void and 'filterReturnValue'
     // is used to transform it to the default value for each primitive and Object.
     if (rType.equals(void.class)) {
@@ -190,7 +199,7 @@ public final class ExtensionBootstrap {
                       ExtensionBootstrap.class,
                       "defaultBoolean",
                       MethodType.methodType(boolean.class, Void.class)));
-    } else if (rType.equals(Object.class)) {
+    } else if (Object.class.isAssignableFrom(rType)) {
       noopHandle =
           MethodHandles.filterReturnValue(
               noopHandle,
@@ -245,6 +254,10 @@ public final class ExtensionBootstrap {
 
   private static Class<?> getTypeClass(Type type, ClassLoader classLoader) throws Exception {
     Class<?> clz = null;
+    int typeDims = type.getSort() == Type.ARRAY ? type.getDimensions() : 0;
+    if (typeDims > 0) {
+      type = type.getElementType();
+    }
     switch (type.getSort()) {
       case Type.BYTE:
         {
@@ -292,8 +305,8 @@ public final class ExtensionBootstrap {
           break;
         }
     }
-    if (type.getSort() == Type.ARRAY && type.getDimensions() > 0) {
-      int[] dims = new int[type.getDimensions()];
+    if (typeDims > 0) {
+      int[] dims = new int[typeDims];
       Arrays.fill(dims, 0);
       clz = Array.newInstance(clz, dims).getClass();
     }

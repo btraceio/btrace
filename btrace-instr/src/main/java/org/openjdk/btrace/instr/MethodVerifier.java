@@ -134,16 +134,6 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   @Override
   public void visitInsn(int opcode) {
     switch (opcode) {
-      case IASTORE:
-      case LASTORE:
-      case FASTORE:
-      case DASTORE:
-      case AASTORE:
-      case BASTORE:
-      case CASTORE:
-      case SASTORE:
-        Verifier.reportError("no.assignment");
-        break;
       case ATHROW:
         Verifier.reportError("no.throw");
         break;

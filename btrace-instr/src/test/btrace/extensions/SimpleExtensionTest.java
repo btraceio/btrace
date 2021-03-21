@@ -12,16 +12,17 @@ import org.openjdk.btrace.core.annotations.*;
 public class SimpleExtensionTest {
   @OnMethod(clazz = "resources.Main", method = "callA")
   public static void noargs(@Self Object self) {
-    //        String[] arr = MainEntry.aaa(6);
-    //        arr[1] = "hello";
-    //        arr[2] = "world";
-    ext_test("hey ho");
+            String[] arr = MainEntry.aaa(6);
+            arr[1] = "hello";
+            arr[2] = "world";
+    ext_test("step[1]");
     MainEntry i = createInstance();
-    i.huhu("here we go");
-    println(fld);
+    println("xxx");
+    i.huhu("step[2]");
+    fld = 10;
+    println("step[3]=" + fld);
     fld += 10;
-    println(fld);
     Service s = newService();
-    s.doit();
+    s.doit("step[4]=" + fld);
   }
 }

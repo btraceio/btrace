@@ -815,7 +815,7 @@ public class Postprocessor extends ClassVisitor {
             dsc,
             new Handle(
                 Opcodes.H_INVOKESTATIC,
-                "org/openjdk/btrace/instr/ExtensionBootstrap",
+                "org/openjdk/btrace/runtime/ExtensionBootstrap",
                 "bootstrapInvoke",
                 BOOTSTRAP_METHOD_TYPE.toMethodDescriptorString(),
                 false),
@@ -857,7 +857,7 @@ public class Postprocessor extends ClassVisitor {
               Type.getMethodDescriptor(retType, argTypes),
               new Handle(
                   Opcodes.H_INVOKESTATIC,
-                  "org/openjdk/btrace/instr/ExtensionBootstrap",
+                  "org/openjdk/btrace/runtime/ExtensionBootstrap",
                   "bootstrapInvoke",
                   BOOTSTRAP_METHOD_TYPE.toMethodDescriptorString(),
                   false),

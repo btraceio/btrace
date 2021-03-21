@@ -303,7 +303,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
       releaseProps.load(new FileInputStream(new File(testJavaHome + File.separator + "release")));
       rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
     }
-    if (!rtVersion.startsWith("15.")) {
+    if (!rtVersion.startsWith("16.")) {
       // skip the test for 8.0.* because of missing support
       // skip all non-LTS versions (except the last one)
       // skip the test for JDK 11 since the latest version 11.0.9 and newer ends in SISGSEGV
@@ -365,19 +365,17 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testExtension() throws Exception {
-    debugTestApp = true;
-    debugBTrace = true;
     test(
         "resources.Main",
         "btrace/extensions/SimpleExtensionTest.java",
         10,
         (stdout, stderr, retcode, jfrFile) -> {
-          assertFalse("Script should not have failed", stdout.contains("FAILED"));
-          assertTrue("Non-empty stderr", stderr.isEmpty());
-          assertTrue(stdout.contains("[this, noargs]"));
-          assertTrue(stdout.contains("[this, args]"));
-          assertTrue(stdout.contains("{xxx}"));
-          assertTrue(stdout.contains("heap:init"));
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(stderr.isEmpty(), "Non-empty stderr");
+          assertTrue(stdout.contains("step[1]"));
+          assertTrue(stdout.contains("step[2]"));
+          assertTrue(stdout.contains("step[3]=10"));
+          assertTrue(stdout.contains("step[4]=20"));
         });
   }
 }
