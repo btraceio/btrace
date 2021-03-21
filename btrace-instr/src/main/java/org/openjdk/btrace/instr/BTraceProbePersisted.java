@@ -719,8 +719,10 @@ public class BTraceProbePersisted implements BTraceProbe {
                       // allow string concatenation via StringBuilder
                     } else if (owner.equals(Constants.THREAD_LOCAL_INTERNAL)) {
                       // allow ThreadLocal methods
-                    } else if (owner.equals(Constants.BTRACERTACCESSL_INTERNAL)) {
-                      // allow BTraceRuntimeImpl methods
+                    } else if (owner.equals(Constants.BTRACERTACCESS_INTERNAL)) {
+                      // allow BTraceRuntimeAccess methods
+                    } else if (owner.equals(Constants.BTRACERTBASE_INTERNAL)) {
+                      // allow BTraceRuntimeImplBase methods
                     } else {
                       if (!delegate.isServiceType(owner)) {
                         Verifier.reportError("no.method.calls", owner + "." + name + desc);

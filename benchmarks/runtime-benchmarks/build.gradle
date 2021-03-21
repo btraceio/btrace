@@ -1,6 +1,6 @@
 plugins {
   id 'java'
-  id("me.champeau.gradle.jmh") version "0.5.3"
+  id("me.champeau.jmh") version "0.6.2"
 }
 
 description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
@@ -21,13 +21,13 @@ dependencies {
 task btracec(type: JavaExec) {
   group 'Build'
   inputs.files 'src/main/resources/scripts'
-  outputs.dir "${buildDir}/classes/main"
+  outputs.dir "${buildDir}/classes/java/main"
 
   environment('BTRACE_HOME', "$projectDir")
   classpath configurations.compile
   main 'org.openjdk.btrace.compiler.Compiler'
   args '-d'
-  args "${buildDir}/classes/java/jmh/"
+  args "${buildDir}/classes/java/main/"
   args '-packext'
   args 'btclass'
   args fileTree(dir: "src/jmh/btrace", include: 'TraceScript.java')
@@ -37,15 +37,26 @@ jmhClasses.dependsOn btracec
 jmhJar {
   include 'META-INF/BenchmarkList'
   include 'META-INF/CompilerHints'
+  include 'org/jctools/**/*'
+  include 'org/objectweb/asm/**'
   include 'org/openjdk/jmh/**'
-  include 'org/openjdk/btrace/BTraceBench.class'
+  include 'org/openjdk/btrace/bench/**/*.class'
+  include "org/openjdk/btrace/core/**"
+  include "org/openjdk/btrace/instr/**"
   include 'org/openjdk/btrace/generated/**/*'
-  include 'jmh*'
+  include 'org/openjdk/btrace/runtime/**'
+  include 'org/openjdk/btrace/services/**'
+  include "joptsimple/**"
+  include "org/apache/**"
   include '*.btclass'
+  include 'jmh*'
 }
 
 jmh {
-  duplicateClassesStrategy = 'warn'
-  jvmArgsAppend = "-Djmh.basedir=${project.buildDir}/.. -Dproject.version=${project.version}"
+  duplicateClassesStrategy = DuplicatesStrategy.WARN
+  jvmArgsAppend = ["-Djmh.basedir=${project.buildDir}/..", "-Dproject.version=${project.version}"]
+//  jmhVersion = '1.27'
+  includes = ['org.openjdk.btrace.bench.ClassFilterBenchmark']
+  verbosity = 'EXTRA'
 }
 

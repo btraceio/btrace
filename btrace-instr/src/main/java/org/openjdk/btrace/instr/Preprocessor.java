@@ -554,7 +554,7 @@ final class Preprocessor {
     initList.add(
         new MethodInsnNode(
             Opcodes.INVOKESTATIC,
-            Constants.BTRACERTACCESSL_INTERNAL,
+            Constants.BTRACERTACCESS_INTERNAL,
             "newThreadLocal",
             NEW_TLS_DESC,
             false));
@@ -786,7 +786,7 @@ final class Preprocessor {
     l.add(
         new MethodInsnNode(
             Opcodes.INVOKESTATIC,
-            Constants.BTRACERTACCESSL_INTERNAL,
+            Constants.BTRACERTACCESS_INTERNAL,
             "forClass",
             BTRACERT_FOR_CLASS_DESC,
             false));
@@ -1173,7 +1173,7 @@ final class Preprocessor {
     entryCheck.add(
         new MethodInsnNode(
             Opcodes.INVOKESTATIC,
-            Constants.BTRACERTACCESSL_INTERNAL,
+            Constants.BTRACERTACCESS_INTERNAL,
             "enter",
             BTRACERT_ENTER_DESC,
             false));

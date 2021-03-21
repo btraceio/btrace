@@ -97,9 +97,9 @@ public abstract class Constants {
   public static final String THROWABLE_DESC = "L" + THROWABLE_INTERNAL + ";";
   public static final Type THROWABLE_TYPE = Type.getType(THROWABLE_DESC);
 
-  public static final String BTRACERTACCESSL_INTERNAL =
+  public static final String BTRACERTACCESS_INTERNAL =
       "org/openjdk/btrace/runtime/BTraceRuntimeAccess";
-  public static final String BTRACERTACCESS_DESC = "L" + BTRACERTACCESSL_INTERNAL + ";";
+  public static final String BTRACERTACCESS_DESC = "L" + BTRACERTACCESS_INTERNAL + ";";
   public static final String BTRACERT_INTERNAL = "org/openjdk/btrace/core/BTraceRuntime";
   public static final String BTRACERT_DESC = "L" + BTRACERT_INTERNAL + ";";
   public static final String BTRACERTIMPL_INTERNAL = "org/openjdk/btrace/core/BTraceRuntime$Impl";
