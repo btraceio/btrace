@@ -46,7 +46,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 /** @author Jaroslav Bachorik */
 @SuppressWarnings("ConstantConditions")
@@ -108,8 +108,8 @@ public abstract class RuntimeTest {
                 + File.pathSeparator
                 + projectRoot.resolve("btrace-instr/build/classes/java/test");
       }
-      Assert.assertNotNull(projectRoot);
-      Assert.assertNotNull(clientClassPath);
+      Assertions.assertNotNull(projectRoot);
+      Assertions.assertNotNull(clientClassPath);
     } catch (URISyntaxException e) {
       throw new Error(e);
     }

@@ -21,10 +21,10 @@
  */
 package org.openjdk.btrace.instr;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
@@ -32,7 +32,7 @@ import org.openjdk.btrace.core.SharedSettings;
 public class OnMethodTest {
   private ArgsMap instance;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     DebugSupport debug = new DebugSupport(SharedSettings.GLOBAL);
     instance = new ArgsMap(new String[] {"className=ClassA", "methodName=methodA"}, debug);

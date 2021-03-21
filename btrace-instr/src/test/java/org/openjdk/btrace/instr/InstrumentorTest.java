@@ -27,12 +27,12 @@ package org.openjdk.btrace.instr;
 import java.lang.reflect.Field;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /** @author Jaroslav Bachorik */
 public class InstrumentorTest extends InstrumentorTestBase {
-  @BeforeClass
+  @BeforeAll
   public static void classSetup() throws Exception {
     try {
       Field f = RandomIntProvider.class.getDeclaredField("useBtraceEnter");
