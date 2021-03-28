@@ -47,6 +47,7 @@ public class StatusCommand extends Command {
     out.writeInt(flag);
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     flag = in.readInt();

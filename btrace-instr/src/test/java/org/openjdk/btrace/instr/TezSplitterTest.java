@@ -1,6 +1,6 @@
 package org.openjdk.btrace.instr;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TezSplitterTest extends InstrumentorTestBase {
   @Test

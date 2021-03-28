@@ -1,9 +1,9 @@
 package org.openjdk.btrace;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.openjdk.btrace.core.ArgsMap;
 
 public class ArgsMapTest {
@@ -14,7 +14,7 @@ public class ArgsMapTest {
 
   private ArgsMap instance;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     instance = new ArgsMap();
     instance.put(KEY1, VALUE1);

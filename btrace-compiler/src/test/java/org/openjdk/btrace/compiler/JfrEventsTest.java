@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.Map;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.openjdk.btrace.core.SharedSettings;

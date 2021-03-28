@@ -25,7 +25,7 @@
 
 package org.openjdk.btrace.instr;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** @author Jaroslav Bachorik */
 public class BTRACE69Test extends InstrumentorTestBase {

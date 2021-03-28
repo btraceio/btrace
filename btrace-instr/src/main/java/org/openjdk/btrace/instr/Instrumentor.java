@@ -74,7 +74,7 @@ public class Instrumentor extends ClassVisitor {
     BTraceRuntime.Impl rt = bcn.getRuntime();
     // 'rt' is null only during instrumentation tests; we want to default to in-situ instrumentation
     // there
-    this.useHiddenClasses = rt != null && rt.version() >= 15;
+    useHiddenClasses = rt != null && rt.version() >= 15;
     applicableOnMethods = applicables;
   }
 
@@ -119,7 +119,7 @@ public class Instrumentor extends ClassVisitor {
 
   @Override
   public MethodVisitor visitMethod(
-      int access, final String name, final String desc, String signature, String[] exceptions) {
+      int access, String name, String desc, String signature, String[] exceptions) {
 
     List<OnMethod> appliedOnMethods = new ArrayList<>();
 
@@ -129,7 +129,7 @@ public class Instrumentor extends ClassVisitor {
       return super.visitMethod(access, name, desc, signature, exceptions);
     }
 
-    final Set<OnMethod> annotationMatchers = new HashSet<>();
+    Set<OnMethod> annotationMatchers = new HashSet<>();
 
     for (OnMethod om : applicableOnMethods) {
       if (om.getLocation().getValue() == Kind.LINE) {
@@ -172,7 +172,7 @@ public class Instrumentor extends ClassVisitor {
 
     methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
 
-    final InstrumentingMethodVisitor mHelper =
+    InstrumentingMethodVisitor mHelper =
         new InstrumentingMethodVisitor(access, className, name, desc, methodVisitor);
 
     methodVisitor = mHelper;
@@ -183,7 +183,6 @@ public class Instrumentor extends ClassVisitor {
       methodVisitor = instrumentorFor(om, methodVisitor, mHelper, access, name, desc);
     }
 
-    final int mAccess = access;
     return new MethodVisitor(ASM7, methodVisitor) {
       @Override
       public AnnotationVisitor visitAnnotation(String annoDesc, boolean visible) {
@@ -193,13 +192,13 @@ public class Instrumentor extends ClassVisitor {
           if (om.isMethodRegexMatcher()) {
             try {
               if (extAnnoName.matches(annoName)) {
-                mv = instrumentorFor(om, mv, mHelper, mAccess, name, desc);
+                mv = instrumentorFor(om, mv, mHelper, access, name, desc);
               }
             } catch (PatternSyntaxException pse) {
               reportPatternSyntaxException(extAnnoName);
             }
           } else if (annoName.equals(extAnnoName)) {
-            mv = instrumentorFor(om, mv, mHelper, mAccess, name, desc);
+            mv = instrumentorFor(om, mv, mHelper, access, name, desc);
           }
         }
         return mv.visitAnnotation(annoDesc, visible);
@@ -259,16 +258,16 @@ public class Instrumentor extends ClassVisitor {
   }
 
   private MethodVisitor instrumentorFor(
-      final OnMethod om,
+      OnMethod om,
       MethodVisitor mv,
       MethodInstrumentorHelper mHelper,
       int access,
-      final String name,
-      final String desc) {
-    final Location loc = om.getLocation();
-    final Where where = loc.getWhere();
-    final Type[] actionArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
-    final int numActionArgs = actionArgTypes.length;
+      String name,
+      String desc) {
+    Location loc = om.getLocation();
+    Where where = loc.getWhere();
+    Type[] actionArgTypes = Type.getArgumentTypes(om.getTargetDescriptor());
+    int numActionArgs = actionArgTypes.length;
 
     switch (loc.getValue()) {
       case ARRAY_GET:
@@ -284,7 +283,7 @@ public class Instrumentor extends ClassVisitor {
             Type arrtype = TypeUtils.getArrayType(opcode);
             Type retType = TypeUtils.getElementType(opcode);
 
-            if (!locationTypeMatches(loc, arrtype, retType)) return;
+            if (locationTypeMismatch(loc, arrtype, retType)) return;
 
             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
             addExtraTypeInfo(om.getTargetInstanceParameter(), arrtype);
@@ -326,7 +325,7 @@ public class Instrumentor extends ClassVisitor {
               Type arrtype = TypeUtils.getArrayType(opcode);
               Type retType = TypeUtils.getElementType(opcode);
 
-              if (!locationTypeMatches(loc, arrtype, retType)) return;
+              if (locationTypeMismatch(loc, arrtype, retType)) return;
 
               addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
               addExtraTypeInfo(om.getTargetInstanceParameter(), arrtype);
@@ -383,7 +382,7 @@ public class Instrumentor extends ClassVisitor {
             Type elementType = TypeUtils.getElementType(opcode);
             Type arrayType = TypeUtils.getArrayType(opcode);
 
-            if (!locationTypeMatches(loc, arrayType, elementType)) return;
+            if (locationTypeMismatch(loc, arrayType, elementType)) return;
 
             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
             addExtraTypeInfo(om.getTargetInstanceParameter(), arrayType);
@@ -434,7 +433,7 @@ public class Instrumentor extends ClassVisitor {
               Type elementType = TypeUtils.getElementType(opcode);
               Type arrayType = TypeUtils.getArrayType(opcode);
 
-              if (!locationTypeMatches(loc, arrayType, elementType)) return;
+              if (locationTypeMismatch(loc, arrayType, elementType)) return;
 
               addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
               addExtraTypeInfo(om.getTargetInstanceParameter(), arrayType);
@@ -664,8 +663,7 @@ public class Instrumentor extends ClassVisitor {
                     if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
                       asm.dupValue(returnType);
                     }
-                    int index = storeAsNew();
-                    returnVarIndex = index;
+                    returnVarIndex = storeAsNew();
                   }
                   // will also retrieve the call args and the return value from the backup variables
                   injectBtrace(vr, method, calledMethodArgs, returnType, opcode == INVOKESTATIC);
@@ -844,89 +842,86 @@ public class Instrumentor extends ClassVisitor {
 
       case ERROR:
         // <editor-fold defaultstate="collapsed" desc="Error Instrumentor">
-        ErrorReturnInstrumentor eri =
-            new ErrorReturnInstrumentor(cl, mv, mHelper, className, superName, access, name, desc) {
-              final ValidationResult vr;
-              private boolean generatingCode = false;
+        return new ErrorReturnInstrumentor(
+            cl, mv, mHelper, className, superName, access, name, desc) {
+          final ValidationResult vr;
+          private boolean generatingCode = false;
 
-              {
-                addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                addExtraTypeInfo(om.getTargetInstanceParameter(), Constants.THROWABLE_TYPE);
-                vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+          {
+            addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+            addExtraTypeInfo(om.getTargetInstanceParameter(), Constants.THROWABLE_TYPE);
+            vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+          }
+
+          @Override
+          protected void onErrorReturn() {
+            if (vr.isValid()) {
+              int throwableIndex = -1;
+
+              MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
+
+              if (om.getTargetInstanceParameter() != -1) {
+                asm.dup();
+                throwableIndex = storeAsNew();
               }
 
-              @Override
-              protected void onErrorReturn() {
-                if (vr.isValid()) {
-                  int throwableIndex = -1;
+              ArgumentProvider[] actionArgs = new ArgumentProvider[5];
 
-                  MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
-
-                  if (om.getTargetInstanceParameter() != -1) {
-                    asm.dup();
-                    throwableIndex = storeAsNew();
-                  }
-
-                  ArgumentProvider[] actionArgs = new ArgumentProvider[5];
-
-                  actionArgs[0] =
-                      localVarArg(
-                          om.getTargetInstanceParameter(),
-                          Constants.THROWABLE_TYPE,
-                          throwableIndex);
-                  actionArgs[1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
-                  actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
-                  actionArgs[3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
-                  actionArgs[4] =
-                      new ArgumentProvider(asm, om.getDurationParameter()) {
-                        @Override
-                        public void doProvide() {
-                          MethodTrackingExpander.DURATION.insert(mv);
-                        }
-                      };
-
-                  Label l = levelCheck(om, bcn.getClassName(true));
-
-                  loadArguments(vr, actionArgTypes, isStatic(), actionArgs);
-
-                  invokeBTraceAction(asm, om);
-                  if (l != null) {
-                    mv.visitLabel(l);
-                    insertFrameSameStack(l);
-                  }
-                  MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
-                }
-              }
-
-              @Override
-              protected void visitMethodPrologue() {
-                if (vr.isValid()) {
-                  if (!generatingCode) {
-                    try {
-                      generatingCode = true;
-                      if (om.getDurationParameter() != -1) {
-                        MethodTrackingExpander.ENTRY.insert(
-                            mv,
-                            MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                            MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                            MethodTrackingExpander.$TIMED,
-                            MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
-                      } else {
-                        MethodTrackingExpander.ENTRY.insert(
-                            mv,
-                            MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                            MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                            MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
-                      }
-                    } finally {
-                      generatingCode = false;
+              actionArgs[0] =
+                  localVarArg(
+                      om.getTargetInstanceParameter(), Constants.THROWABLE_TYPE, throwableIndex);
+              actionArgs[1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
+              actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
+              actionArgs[3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
+              actionArgs[4] =
+                  new ArgumentProvider(asm, om.getDurationParameter()) {
+                    @Override
+                    public void doProvide() {
+                      MethodTrackingExpander.DURATION.insert(mv);
                     }
-                  }
-                }
-                super.visitMethodPrologue();
+                  };
+
+              Label l = levelCheck(om, bcn.getClassName(true));
+
+              loadArguments(vr, actionArgTypes, isStatic(), actionArgs);
+
+              invokeBTraceAction(asm, om);
+              if (l != null) {
+                mv.visitLabel(l);
+                insertFrameSameStack(l);
               }
-            };
-        return eri;
+              MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
+            }
+          }
+
+          @Override
+          protected void visitMethodPrologue() {
+            if (vr.isValid()) {
+              if (!generatingCode) {
+                try {
+                  generatingCode = true;
+                  if (om.getDurationParameter() != -1) {
+                    MethodTrackingExpander.ENTRY.insert(
+                        mv,
+                        MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
+                        MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
+                        MethodTrackingExpander.$TIMED,
+                        MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                  } else {
+                    MethodTrackingExpander.ENTRY.insert(
+                        mv,
+                        MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
+                        MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
+                        MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                  }
+                } finally {
+                  generatingCode = false;
+                }
+              }
+            }
+            super.visitMethodPrologue();
+          }
+        };
         // </editor-fold>
 
       case FIELD_GET:
@@ -1413,119 +1408,117 @@ public class Instrumentor extends ClassVisitor {
         if (where != Where.BEFORE) {
           return mv;
         }
-        MethodReturnInstrumentor mri =
-            new MethodReturnInstrumentor(
-                cl, mv, mHelper, className, superName, access, name, desc) {
-              int retValIndex;
+        return new MethodReturnInstrumentor(
+            cl, mv, mHelper, className, superName, access, name, desc) {
+          int retValIndex;
 
-              final ValidationResult vr;
-              private boolean generatingCode = false;
+          final ValidationResult vr;
+          private boolean generatingCode = false;
 
-              {
-                addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-                addExtraTypeInfo(om.getReturnParameter(), getReturnType());
+          {
+            addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+            addExtraTypeInfo(om.getReturnParameter(), getReturnType());
 
-                vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+            vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+          }
+
+          private void callAction(int retOpCode) {
+            if (!vr.isValid()) {
+              return;
+            }
+
+            boolean boxReturnValue = false;
+            Type probeRetType = getReturnType();
+            if (om.getReturnParameter() != -1) {
+              Type retType =
+                  Type.getArgumentTypes(om.getTargetDescriptor())[om.getReturnParameter()];
+              if (probeRetType.equals(Type.VOID_TYPE)) {
+                if (TypeUtils.isAnyType(retType)) {
+                  // no return value but still tracking
+                  // let's push a synthetic AnyType value on stack
+                  asm.getStatic(
+                      Type.getInternalName(AnyType.class), "VOID", Constants.ANYTYPE_DESC);
+                  probeRetType = Constants.OBJECT_TYPE;
+                } else if (Constants.VOIDREF_TYPE.equals(retType)) {
+                  // intercepting return from method not returning value (void)
+                  // the receiver accepts java.lang.Void only so let's push NULL on stack
+                  asm.loadNull();
+                  probeRetType = Constants.VOIDREF_TYPE;
+                }
+              } else {
+                if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
+                  asm.dupReturnValue(retOpCode);
+                }
+                boxReturnValue = TypeUtils.isAnyType(retType);
               }
+              retValIndex = storeAsNew();
+            }
 
-              private void callAction(int retOpCode) {
-                if (!vr.isValid()) {
-                  return;
-                }
-
-                boolean boxReturnValue = false;
-                Type probeRetType = getReturnType();
-                if (om.getReturnParameter() != -1) {
-                  Type retType =
-                      Type.getArgumentTypes(om.getTargetDescriptor())[om.getReturnParameter()];
-                  if (probeRetType.equals(Type.VOID_TYPE)) {
-                    if (TypeUtils.isAnyType(retType)) {
-                      // no return value but still tracking
-                      // let's push a synthetic AnyType value on stack
-                      asm.getStatic(
-                          Type.getInternalName(AnyType.class), "VOID", Constants.ANYTYPE_DESC);
-                      probeRetType = Constants.OBJECT_TYPE;
-                    } else if (Constants.VOIDREF_TYPE.equals(retType)) {
-                      // intercepting return from method not returning value (void)
-                      // the receiver accepts java.lang.Void only so let's push NULL on stack
-                      asm.loadNull();
-                      probeRetType = Constants.VOIDREF_TYPE;
-                    }
-                  } else {
-                    if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
-                      asm.dupReturnValue(retOpCode);
-                    }
-                    boxReturnValue = TypeUtils.isAnyType(retType);
+            loadArguments(
+                vr,
+                actionArgTypes,
+                isStatic(),
+                constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                localVarArg(om.getReturnParameter(), probeRetType, retValIndex, boxReturnValue),
+                selfArg(om.getSelfParameter(), Type.getObjectType(className)),
+                new ArgumentProvider(asm, om.getDurationParameter()) {
+                  @Override
+                  public void doProvide() {
+                    MethodTrackingExpander.DURATION.insert(mv);
                   }
-                  retValIndex = storeAsNew();
-                }
+                });
 
-                loadArguments(
-                    vr,
-                    actionArgTypes,
-                    isStatic(),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
-                    localVarArg(om.getReturnParameter(), probeRetType, retValIndex, boxReturnValue),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)),
-                    new ArgumentProvider(asm, om.getDurationParameter()) {
-                      @Override
-                      public void doProvide() {
-                        MethodTrackingExpander.DURATION.insert(mv);
-                      }
-                    });
+            invokeBTraceAction(asm, om);
+          }
 
+          @Override
+          protected void onMethodReturn(int opcode) {
+            if (vr.isValid() || vr.isAny()) {
+              MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
+
+              Label l = levelCheck(om, bcn.getClassName(true));
+              if (numActionArgs == 0) {
                 invokeBTraceAction(asm, om);
+              } else {
+                callAction(opcode);
               }
+              MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
+              if (l != null) {
+                mv.visitLabel(l);
+                insertFrameSameStack(l);
+              }
+            }
+          }
 
-              @Override
-              protected void onMethodReturn(int opcode) {
-                if (vr.isValid() || vr.isAny()) {
-                  MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
+          @Override
+          protected void onMethodEntry() {
+            if (vr.isValid() || vr.isAny()) {
+              try {
+                if (!generatingCode) {
+                  generatingCode = true;
 
-                  Label l = levelCheck(om, bcn.getClassName(true));
-                  if (numActionArgs == 0) {
-                    invokeBTraceAction(asm, om);
+                  if (om.getDurationParameter() != -1) {
+                    MethodTrackingExpander.ENTRY.insert(
+                        mv,
+                        MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
+                        MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
+                        MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om),
+                        MethodTrackingExpander.$TIMED);
                   } else {
-                    callAction(opcode);
-                  }
-                  MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
-                  if (l != null) {
-                    mv.visitLabel(l);
-                    insertFrameSameStack(l);
-                  }
-                }
-              }
-
-              @Override
-              protected void onMethodEntry() {
-                if (vr.isValid() || vr.isAny()) {
-                  try {
-                    if (!generatingCode) {
-                      generatingCode = true;
-
-                      if (om.getDurationParameter() != -1) {
-                        MethodTrackingExpander.ENTRY.insert(
-                            mv,
-                            MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                            MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                            MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om),
-                            MethodTrackingExpander.$TIMED);
-                      } else {
-                        MethodTrackingExpander.ENTRY.insert(
-                            mv,
-                            MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                            MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                            MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
-                      }
-                    }
-                  } finally {
-                    generatingCode = false;
+                    MethodTrackingExpander.ENTRY.insert(
+                        mv,
+                        MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
+                        MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
+                        MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
                   }
                 }
+              } finally {
+                generatingCode = false;
               }
-            };
-        return mri;
+            }
+          }
+        };
         // </editor-fold>
 
       case SYNC_ENTRY:
@@ -1770,7 +1763,7 @@ public class Instrumentor extends ClassVisitor {
           om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
           new Handle(
               H_INVOKESTATIC,
-              "org/openjdk/btrace/instr/Indy",
+              "org/openjdk/btrace/runtime/Indy",
               "bootstrap",
               mt.toMethodDescriptorString(),
               false),

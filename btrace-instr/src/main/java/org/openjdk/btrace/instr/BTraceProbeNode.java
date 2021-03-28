@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -120,7 +119,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
   @Override
   public FieldVisitor visitField(
-      int access, final String name, final String desc, String signature, Object value) {
+      int access, String name, String desc, String signature, Object value) {
     return new FieldVisitor(Opcodes.ASM7, super.visitField(access, name, desc, signature, value)) {
       @Override
       public AnnotationVisitor visitAnnotation(String type, boolean aVisible) {
@@ -277,7 +276,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   }
 
   @Override
-  public boolean willInstrument(Class clz) {
+  public boolean willInstrument(Class<?> clz) {
     return delegate.willInstrument(clz);
   }
 
@@ -473,8 +472,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   }
 
   private MethodNode copy(MethodNode n) {
-    String[] exceptions =
-        n.exceptions != null ? ((List<String>) n.exceptions).toArray(new String[0]) : null;
+    String[] exceptions = n.exceptions != null ? n.exceptions.toArray(new String[0]) : null;
     MethodNode mn = new MethodNode(Opcodes.ASM7, n.access, n.name, n.desc, n.signature, exceptions);
     n.accept(mn);
     mn.access = Opcodes.ACC_STATIC | Opcodes.ACC_PRIVATE;
