@@ -63,6 +63,8 @@ jobs:
         ORG_GRADLE_PROJECT_signing.secretKeyRingFile: /tmp/secret.gpg
         ORG_GRADLE_PROJECT_signing.keyId: ${{ secrets.GPG_KEY_ID }}
         ORG_GRADLE_PROJECT_signing.password: ${{ secrets.GPG_PASSPHRASE }}
+        BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
+        BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
     - name: Archive binary artifacts
       uses: actions/upload-artifact@v2
       with:

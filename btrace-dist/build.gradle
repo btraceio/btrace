@@ -338,11 +338,12 @@ publishing {
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 
             credentials {
-                username = System.env("BTRACE_SONATYPE_USER")
-                password = System.env("BTRACE_SONATYPE_PWD")
+                username = System.getenv('BTRACE_SONATYPE_USER')
+                password = System.getenv('BTRACE_SONATYPE_PWD')
             }
         }
     }
+
     publications {
         agent(MavenPublication) {
             artifactId 'btrace-agent'
