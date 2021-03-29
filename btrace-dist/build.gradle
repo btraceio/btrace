@@ -331,6 +331,18 @@ sdkman {
 }
 
 publishing {
+    repositories {
+        maven {
+            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+
+            credentials {
+                username = System.env("BTRACE_SONATYPE_USER")
+                password = System.env("BTRACE_SONATYPE_PWD")
+            }
+        }
+    }
     publications {
         agent(MavenPublication) {
             artifactId 'btrace-agent'

@@ -14,6 +14,12 @@ jobs:
   all:
     runs-on: ubuntu-latest
     steps:
+    - name: Import GPG Key
+      run: |
+        echo "${GPG_PRIVATE_KEY}" > /tmp/secret.gpg
+      shell: bash
+      env:
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
     - name: Set up Java 8
       uses: actions/setup-java@v1
       with:
@@ -50,6 +56,13 @@ jobs:
       run: JAVA_HOME="$JAVA_15_HOME" ./gradlew build -x test
     - name: Run Tests
       run: JAVA_HOME="$JAVA_11_HOME" ./run_tests.sh
+    - name: Deploy Maven Snapshots
+      if: github.ref == 'refs/heads/develop'
+      run: ./gradlew :btrace-dist:publish
+      env:
+        ORG_GRADLE_PROJECT_signing.secretKeyRingFile: /tmp/secret.gpg
+        ORG_GRADLE_PROJECT_signing.keyId: ${{ secrets.GPG_KEY_ID }}
+        ORG_GRADLE_PROJECT_signing.password: ${{ secrets.GPG_PASSPHRASE }}
     - name: Archive binary artifacts
       uses: actions/upload-artifact@v2
       with:
