@@ -1,11 +1,11 @@
 # This workflow will build a Java project with Gradle
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
 
-name: BTrace Build
+name: BTrace CI/CD
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ develop, master ]
   pull_request:
     branches: [ develop ]
   workflow_dispatch:
@@ -14,12 +14,6 @@ jobs:
   all:
     runs-on: ubuntu-latest
     steps:
-    - name: Import GPG Key
-      run: |
-        echo "${GPG_PRIVATE_KEY}" > /tmp/secret.gpg
-      shell: bash
-      env:
-        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
     - name: Set up Java 8
       uses: actions/setup-java@v1
       with:
@@ -56,13 +50,12 @@ jobs:
       run: JAVA_HOME="$JAVA_15_HOME" ./gradlew build -x test
     - name: Run Tests
       run: JAVA_HOME="$JAVA_11_HOME" ./run_tests.sh
-    - name: Deploy Maven Snapshots
-      if: github.ref == 'refs/heads/develop'
+    - name: Deploy Maven
+      if: github.ref ==  'refs/heads/develop' || github.ref == 'refs/heads/master'
       run: ./gradlew :btrace-dist:publish
       env:
-        ORG_GRADLE_PROJECT_signing.secretKeyRingFile: /tmp/secret.gpg
-        ORG_GRADLE_PROJECT_signing.keyId: ${{ secrets.GPG_KEY_ID }}
-        ORG_GRADLE_PROJECT_signing.password: ${{ secrets.GPG_PASSPHRASE }}
+        GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+        GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
         BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
         BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
     - name: Archive binary artifacts

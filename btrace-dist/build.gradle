@@ -410,6 +410,14 @@ def addPomDetails(node) {
 }
 
 signing {
+    def signingKey = project.hasProperty('gpg.signing.key') ? project.property('gpg.signing.key') : System.getenv("GPG_SIGNING_KEY")
+    def signingPwd = project.hasProperty('gpg.signing.pwd') ? project.property('gpg.signing.pwd') : System.getenv("GPG_SIGNING_PWD")
+
+    if (signingKey != null && signingPwd != null) {
+        println "[1] ${signingKey.length()}"
+        println "[2] ${signingPwd.length()}"
+        useInMemoryPgpKeys(signingKey, signingPwd)
+    }
     sign publishing.publications.agent
     sign publishing.publications.boot
     sign publishing.publications.client
