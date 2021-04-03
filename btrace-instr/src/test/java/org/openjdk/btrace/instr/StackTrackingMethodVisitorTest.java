@@ -25,11 +25,11 @@
 package org.openjdk.btrace.instr;
 
 import java.io.IOException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -39,20 +39,20 @@ import org.objectweb.asm.Opcodes;
 public class StackTrackingMethodVisitorTest extends InstrumentorTestBase {
   private ClassReader reader;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() {}
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() {}
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     byte[] data = loadTargetClass("StackTrackerTest");
     System.err.println(asmify(data));
     reader = new ClassReader(data);
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() {}
 

@@ -3,10 +3,10 @@ package org.openjdk.btrace.instr;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.SharedSettings;
@@ -19,12 +19,12 @@ public class ProbeLoaderUpgradeTest {
   private InputStream classStream;
   private byte[] defData;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     BPF = new BTraceProbeFactory(SharedSettings.GLOBAL);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     classStream =
         ProbeLoaderUpgradeTest.class.getResourceAsStream("/resources/classdata/PackVersion1.btrc");
@@ -51,14 +51,14 @@ public class ProbeLoaderUpgradeTest {
     } finally {
       System.err.println("# Creating probe took: " + (System.nanoTime() - t1) + "ns");
     }
-    Assert.assertNotNull(bp);
-    Assert.assertNotNull(bp.getClassName());
+    Assertions.assertNotNull(bp);
+    Assertions.assertNotNull(bp.getClassName());
 
     String fullAsm = InstrumentorTestBase.asmify(bp.getFullBytecode());
     String bootstrapAsm = InstrumentorTestBase.asmify(bp.getDataHolderBytecode());
 
-    Assert.assertFalse(fullAsm.contains("com/sun/btrace"));
-    Assert.assertFalse(bootstrapAsm.contains("com/sun/btrace"));
+    Assertions.assertFalse(fullAsm.contains("com/sun/btrace"));
+    Assertions.assertFalse(bootstrapAsm.contains("com/sun/btrace"));
 
     InstrumentorTestBase.loadCode("PackVersion1", bp.getFullBytecode());
   }

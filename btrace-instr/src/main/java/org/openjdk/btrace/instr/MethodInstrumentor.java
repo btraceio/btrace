@@ -490,6 +490,10 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     return l;
   }
 
+  protected final boolean isPrologueVisited() {
+    return prologueVisited;
+  }
+
   private void report(String msg) {
     String out = "[" + getName(true) + "] " + msg;
     System.err.println(out);

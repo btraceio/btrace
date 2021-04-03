@@ -1,10 +1,10 @@
 package org.openjdk.btrace.instr;
 
 import java.io.InputStream;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.openjdk.btrace.core.SharedSettings;
 
 public class ProbeLoaderNewTest {
@@ -12,12 +12,12 @@ public class ProbeLoaderNewTest {
   private InputStream classStream;
   private byte[] defData;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     BPF = new BTraceProbeFactory(SharedSettings.GLOBAL);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     classStream =
         ProbeLoaderNewTest.class.getResourceAsStream("/resources/classdata/OnMethodTest.btrc");
@@ -32,7 +32,7 @@ public class ProbeLoaderNewTest {
     } finally {
       System.err.println("# Creating probe took: " + (System.nanoTime() - t1) + "ns");
     }
-    Assert.assertNotNull(bp);
-    Assert.assertNotNull(bp.getClassName());
+    Assertions.assertNotNull(bp);
+    Assertions.assertNotNull(bp.getClassName());
   }
 }

@@ -26,7 +26,6 @@ package benchmark;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -307,7 +306,7 @@ public class BTraceBench {
               .jvmArgsPrepend(
                   "-javaagent:"
                       + bc.agentJar
-                      + "=stdout=true,noServer=true,"
+                      + "=stdout=false,noServer=true,"
                       + "script="
                       + bc.scriptPath)
               .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
@@ -325,6 +324,7 @@ public class BTraceBench {
     Path distLibs = null;
     String basedir = System.getProperty("jmh.basedir");
     String version = System.getProperty("project.version");
+    String scriptPath = System.getProperty("script.path");
     Path root = null;
     if (basedir == null) {
       root = fs.getPath(".").toAbsolutePath();
@@ -343,9 +343,6 @@ public class BTraceBench {
             agentPath, tmpDir.resolve("btrace-agent.jar"), StandardCopyOption.REPLACE_EXISTING);
     Files.copy(bootPath, tmpDir.resolve("btrace-boot.jar"), StandardCopyOption.REPLACE_EXISTING);
 
-    URL traceLoc = BTraceBench.class.getResource("/TraceScript.btclass");
-    String trace = traceLoc.getPath();
-
-    return new BTraceConfig(tmpDir, targetPath.toString(), trace);
+    return new BTraceConfig(tmpDir, targetPath.toString(), scriptPath + "/TraceScript.btclass");
   }
 }

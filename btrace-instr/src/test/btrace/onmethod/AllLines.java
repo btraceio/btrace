@@ -23,38 +23,25 @@
  * questions.
  */
 
-package org.openjdk.btrace.instr;
+package traces.onmethod;
 
-import org.junit.jupiter.api.Test;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Location;
+import org.openjdk.btrace.core.annotations.OnMethod;
+import org.openjdk.btrace.core.annotations.ProbeMethodName;
+import org.openjdk.btrace.core.annotations.Self;
 
 /** @author Jaroslav Bachorik */
-public class BTRACE87Test extends InstrumentorTestBase {
-  @Test
-  public void bytecodeValidation() throws Exception {
-    originalBC = loadTargetClass("issues/BTRACE87");
-    transform("issues/BTRACE87");
-    checkTransformation(
-        "ASTORE 2\n"
-            + "ALOAD 0\n"
-            + "LDC \"containerMethod\"\n"
-            + "ICONST_0\n"
-            + "ANEWARRAY java/lang/Object\n"
-            + "INVOKESTATIC resources/issues/BTRACE87.$btrace$org$openjdk$btrace$runtime$aux$BTRACE87$o (Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)V\n"
-            + "ALOAD 2\n"
-            + "ASTORE 3\n"
-            + "ASTORE 4\n"
-            + "ALOAD 0\n"
-            + "LDC \"containerMethod\"\n"
-            + "ICONST_1\n"
-            + "ANEWARRAY java/lang/Object\n"
-            + "DUP\n"
-            + "ICONST_0\n"
-            + "ALOAD 3\n"
-            + "AASTORE\n"
-            + "INVOKESTATIC resources/issues/BTRACE87.$btrace$org$openjdk$btrace$runtime$aux$BTRACE87$o (Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)V\n"
-            + "ALOAD 4\n"
-            + "ALOAD 3\n"
-            + "MAXSTACK = 6\n"
-            + "MAXLOCALS = 5");
+@BTrace
+public class AllLines {
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "<init>",
+      location = @Location(value = Kind.LINE, line = -1))
+  public static void args(@Self Object self, @ProbeMethodName String pmn, int line) {
+    println("args");
   }
 }

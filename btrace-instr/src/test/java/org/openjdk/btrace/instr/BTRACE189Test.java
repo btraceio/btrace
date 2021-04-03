@@ -25,7 +25,7 @@
 
 package org.openjdk.btrace.instr;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that shared methods have properly extended public access

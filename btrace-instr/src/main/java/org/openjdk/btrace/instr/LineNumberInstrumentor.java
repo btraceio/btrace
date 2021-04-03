@@ -55,9 +55,20 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
     if (lastLine != 0) {
       onAfterLine(line - 1);
     }
-    onBeforeLine(line);
+    if (!isConstructor() || isPrologueVisited()) {
+      onBeforeLine(line);
+    }
     lastLine = line;
     super.visitLineNumber(line, start);
+  }
+
+  @Override
+  public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean iface) {
+    boolean beforeConstructor = !isPrologueVisited();
+    super.visitMethodInsn(opcode, owner, name, desc, iface);
+    if (lastLine != -1 && beforeConstructor) {
+      onBeforeLine(lastLine);
+    }
   }
 
   protected void onBeforeLine(int line) {
@@ -66,5 +77,13 @@ public class LineNumberInstrumentor extends MethodInstrumentor {
 
   protected void onAfterLine(int line) {
     asm.println("after line " + line);
+  }
+
+  @Override
+  public void visitEnd() {
+    if (lastLine != -1) {
+      onAfterLine(lastLine);
+    }
+    super.visitEnd();
   }
 }

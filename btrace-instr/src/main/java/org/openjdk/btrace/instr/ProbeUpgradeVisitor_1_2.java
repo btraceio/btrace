@@ -99,20 +99,20 @@ final class ProbeUpgradeVisitor_1_2 extends ClassVisitor {
             if (desc.equals("(Lcom/sun/btrace/BTraceRuntime;)Z")) {
               visitMethodInsn(
                   INVOKESTATIC,
-                  Constants.BTRACERTACCESSL_INTERNAL,
+                  Constants.BTRACERTACCESS_INTERNAL,
                   name,
                   "(" + Constants.BTRACERTACCESS_DESC + ")Z",
                   itf);
             } else {
               visitFieldInsn(GETSTATIC, cName, "runtime", Constants.BTRACERTACCESS_DESC);
-              visitMethodInsn(INVOKEVIRTUAL, Constants.BTRACERTACCESSL_INTERNAL, name, "()Z", itf);
+              visitMethodInsn(INVOKEVIRTUAL, Constants.BTRACERTACCESS_INTERNAL, name, "()Z", itf);
             }
           } else if (name.equals("forClass")) {
             desc = desc.replace("com/sun/btrace/shared/", "org/openjdk/btrace/core/handlers/");
             desc =
                 desc.replace(
                     ")Lcom/sun/btrace/BTraceRuntime;", ")" + Constants.BTRACERTACCESS_DESC);
-            super.visitMethodInsn(opcode, Constants.BTRACERTACCESSL_INTERNAL, name, desc, itf);
+            super.visitMethodInsn(opcode, Constants.BTRACERTACCESS_INTERNAL, name, desc, itf);
           } else {
             super.visitMethodInsn(INVOKESTATIC, Constants.BTRACERT_INTERNAL, name, desc, itf);
           }

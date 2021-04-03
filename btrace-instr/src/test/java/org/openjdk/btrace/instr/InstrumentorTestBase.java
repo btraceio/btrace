@@ -25,8 +25,8 @@
 
 package org.openjdk.btrace.instr;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,9 +41,9 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -81,7 +81,7 @@ public abstract class InstrumentorTestBase {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void classStartup() throws Exception {
     BTraceRuntime.class.getName();
     uccn = BTraceRuntimeAccess.class.getDeclaredField("uniqueClientClassNames");
@@ -98,12 +98,12 @@ public abstract class InstrumentorTestBase {
     uccn.set(null, false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     cleanup();
   }
 
-  @Before
+  @BeforeEach
   public void startup() {
     try {
       originalBC = null;

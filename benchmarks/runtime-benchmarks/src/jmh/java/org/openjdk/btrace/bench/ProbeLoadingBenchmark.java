@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package org.openjdk.btrace;
+package org.openjdk.btrace.bench;
 
 import java.io.*;
 import java.util.concurrent.TimeUnit;
@@ -50,8 +50,7 @@ public class ProbeLoadingBenchmark {
 
   @Setup(Level.Invocation)
   public void setupRun() throws Exception {
-    classStream = ProbeLoadingBenchmark.class.getResourceAsStream("/btrace/TraceScript.class");
-    System.out.println("====> " + classStream);
+    classStream = ProbeLoadingBenchmark.class.getResourceAsStream("/TraceScript.btclass");
   }
 
   @TearDown(Level.Invocation)
@@ -60,7 +59,7 @@ public class ProbeLoadingBenchmark {
   }
 
   @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
-  @Measurement(iterations = 5, time = 2, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 2, timeUnit = TimeUnit.SECONDS)
   @Benchmark
   public void testBTraceProbeNew(Blackhole bh) throws Exception {
     BTraceProbe bp = bpf.createProbe(classStream);

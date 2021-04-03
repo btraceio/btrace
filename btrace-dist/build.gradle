@@ -3,7 +3,7 @@ plugins {
     id 'maven-publish'
     id "com.jfrog.bintray" version "1.8.5"
     id "com.github.johnrengelman.shadow" version "6.1.0"
-    id "nebula.ospackage" version "8.5.1"
+    id "nebula.ospackage" version "8.5.6"
     id "java"
     id "io.sdkman.vendors" version "2.0.0"
     id "signing"
@@ -17,7 +17,7 @@ repositories {
 }
 
 def distBase = "${project.buildDir}/resources/main"
-def distTarget = "${distBase}/${project.version}"
+def distTarget = "${distBase}/v${project.version}"
 def libsDir = new File("${distTarget}/libs")
 
 dependencies {
@@ -171,19 +171,19 @@ task copyDtraceLib(type: Copy) {
 task buildZip(type: Zip) {
     from "${distTarget}"
     include "**/*"
-    archiveName "btrace-${project.version}-bin.zip"
+    archiveName "btrace-v${project.version}-bin.zip"
     destinationDir(file("$project.buildDir/distributions"))
 }
 
 task buildSdkmanZip(type: Zip) {
     from "${distBase}"
     include "**/*"
-    archiveName "btrace-${project.version}-sdkman-bin.zip"
+    archiveName "btrace-v${project.version}-sdkman-bin.zip"
     destinationDir(file("$project.buildDir/distributions"))
 }
 
 task buildTgz(type: Tar) {
-    archiveName "btrace-${project.version}-bin.tar.gz"
+    archiveName "btrace-v${project.version}-bin.tar.gz"
     into ('/'){
         from "${distTarget}"
         include '**/*'
@@ -316,12 +316,12 @@ bintray {
 }
 
 sdkman {
-    api = "https://vendors.sdkman.io/"
     consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_API_KEY')
     consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
     candidate = "btrace"
     version = "${project.version}"
-    url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-${project.version}-sdkman-bin.zip"
+    url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-v${project.version}-sdkman-bin.zip"
+    hashtag = "btrace"
 }
 
 ["sdkReleaseVersion", "sdkAnnounceVersion"].forEach {
@@ -331,6 +331,19 @@ sdkman {
 }
 
 publishing {
+    repositories {
+        maven {
+            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+
+            credentials {
+                username = System.getenv('BTRACE_SONATYPE_USER')
+                password = System.getenv('BTRACE_SONATYPE_PWD')
+            }
+        }
+    }
+
     publications {
         agent(MavenPublication) {
             artifactId 'btrace-agent'
@@ -397,6 +410,12 @@ def addPomDetails(node) {
 }
 
 signing {
+    def signingKey = project.hasProperty('gpg.signing.key') ? project.property('gpg.signing.key') : System.getenv("GPG_SIGNING_KEY")
+    def signingPwd = project.hasProperty('gpg.signing.pwd') ? project.property('gpg.signing.pwd') : System.getenv("GPG_SIGNING_PWD")
+
+    if (signingKey != null && signingPwd != null) {
+        useInMemoryPgpKeys(signingKey, signingPwd)
+    }
     sign publishing.publications.agent
     sign publishing.publications.boot
     sign publishing.publications.client
