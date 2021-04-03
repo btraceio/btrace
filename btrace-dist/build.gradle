@@ -171,19 +171,19 @@ task copyDtraceLib(type: Copy) {
 task buildZip(type: Zip) {
     from "${distTarget}"
     include "**/*"
-    archiveName "btrace-${project.version}-bin.zip"
+    archiveName "btrace-v${project.version}-bin.zip"
     destinationDir(file("$project.buildDir/distributions"))
 }
 
 task buildSdkmanZip(type: Zip) {
     from "${distBase}"
     include "**/*"
-    archiveName "btrace-${project.version}-sdkman-bin.zip"
+    archiveName "btrace-v${project.version}-sdkman-bin.zip"
     destinationDir(file("$project.buildDir/distributions"))
 }
 
 task buildTgz(type: Tar) {
-    archiveName "btrace-${project.version}-bin.tar.gz"
+    archiveName "btrace-v${project.version}-bin.tar.gz"
     into ('/'){
         from "${distTarget}"
         include '**/*'
@@ -321,7 +321,7 @@ sdkman {
     consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
     candidate = "btrace"
     version = "${project.version}"
-    url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-${project.version}-sdkman-bin.zip"
+    url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-v${project.version}-sdkman-bin.zip"
 }
 
 ["sdkReleaseVersion", "sdkAnnounceVersion"].forEach {

@@ -22,15 +22,20 @@ jobs:
         run: |
           git checkout master
           git merge --ff ${GITHUB_REF##*/}
-          git push
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tags: true
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body_path: RELEASE.md
-          draft: false
+          draft: true
           prerelease: false
+          files: |
+            btrace-dist/build/distributions/btrace-${{ github.ref }}-bin.tar.gz
+            btrace-dist/build/distributions/btrace-${{ github.ref }}-bin.zip
+            btrace-dist/build/distributions/btrace-${{ github.ref }}-sdkman-bin.zip
