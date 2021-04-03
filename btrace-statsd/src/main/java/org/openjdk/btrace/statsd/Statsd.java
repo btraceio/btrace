@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.services.spi.SimpleService;
@@ -59,63 +58,58 @@ public final class Statsd extends SimpleService {
   private final QManager qManager = new QManager();
   private final ExecutorService e =
       Executors.newSingleThreadExecutor(
-          new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-              Thread t = new Thread(r, "jStatsD Client Submitter");
-              t.setDaemon(true);
-              return t;
-            }
+          r -> {
+            Thread t = new Thread(r, "jStatsD Client Submitter");
+            t.setDaemon(true);
+            return t;
           });
 
   @SuppressWarnings("FutureReturnValueIgnored")
   private Statsd() {
     e.submit(
-        new Runnable() {
-          @Override
-          public void run() {
-            DatagramSocket ds = null;
-            boolean entered = BTraceRuntime.enter();
+        () -> {
+          DatagramSocket ds = null;
+          boolean entered = BTraceRuntime.enter();
+          try {
+            ds = new DatagramSocket();
+            DatagramPacket dp = new DatagramPacket(new byte[0], 0);
             try {
-              ds = new DatagramSocket();
-              DatagramPacket dp = new DatagramPacket(new byte[0], 0);
-              try {
-                dp.setAddress(InetAddress.getByName(SharedSettings.GLOBAL.getStatsdHost()));
-              } catch (UnknownHostException e) {
-                System.err.println(
-                    "[statsd] invalid host defined: " + SharedSettings.GLOBAL.getStatsdHost());
-                dp.setAddress(InetAddress.getLoopbackAddress());
-              } catch (SecurityException e) {
-                dp.setAddress(InetAddress.getLoopbackAddress());
-              }
-              dp.setPort(SharedSettings.GLOBAL.getStatsdPort());
+              dp.setAddress(InetAddress.getByName(SharedSettings.GLOBAL.getStatsdHost()));
+            } catch (UnknownHostException e) {
+              System.err.println(
+                  "[statsd] invalid host defined: " + SharedSettings.GLOBAL.getStatsdHost());
+              dp.setAddress(InetAddress.getLoopbackAddress());
+            } catch (SecurityException e) {
+              dp.setAddress(InetAddress.getLoopbackAddress());
+            }
+            dp.setPort(SharedSettings.GLOBAL.getStatsdPort());
 
-              while (true) {
-                Collection<String> msgs = new ArrayList<>();
-                msgs.add(qManager.getQ().take());
-                qManager.getQ().drainTo(msgs);
+            //noinspection InfiniteLoopStatement
+            while (true) {
+              Collection<String> msgs = new ArrayList<>();
+              msgs.add(qManager.getQ().take());
+              qManager.getQ().drainTo(msgs);
 
-                StringBuilder sb = new StringBuilder();
-                for (String m : msgs) {
-                  if (sb.length() + m.length() < 511) {
-                    sb.append(m).append('\n');
-                  } else {
-                    dp.setData(sb.toString().getBytes(CHARSET));
-                    ds.send(dp);
-                    sb.setLength(0);
-                  }
-                }
-                if (sb.length() > 0) {
+              StringBuilder sb = new StringBuilder();
+              for (String m : msgs) {
+                if (sb.length() + m.length() < 511) {
+                  sb.append(m).append('\n');
+                } else {
                   dp.setData(sb.toString().getBytes(CHARSET));
                   ds.send(dp);
+                  sb.setLength(0);
                 }
               }
-            } catch (IOException | InterruptedException e) {
-              e.printStackTrace();
-            } finally {
-              if (entered) {
-                BTraceRuntime.leave();
+              if (sb.length() > 0) {
+                dp.setData(sb.toString().getBytes(CHARSET));
+                ds.send(dp);
               }
+            }
+          } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+          } finally {
+            if (entered) {
+              BTraceRuntime.leave();
             }
           }
         });

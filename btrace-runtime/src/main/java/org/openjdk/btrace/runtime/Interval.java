@@ -100,7 +100,7 @@ public class Interval implements Comparable<Interval> {
 
   public static List<Interval> invert(Collection<Interval> intervals) {
     Interval remainder = new Interval(Integer.MIN_VALUE, Integer.MAX_VALUE);
-    Set<Interval> sorted = new TreeSet(union(intervals));
+    Set<Interval> sorted = new TreeSet<>(union(intervals));
     List<Interval> result = new ArrayList<>();
     for (Interval i : sorted) {
       if (i.isAll()) {
@@ -196,13 +196,7 @@ public class Interval implements Comparable<Interval> {
     } else if (a > o.a) {
       return 1;
     } else {
-      if (b < o.b) {
-        return -1;
-      } else if (b > o.b) {
-        return 1;
-      } else {
-        return 0;
-      }
+      return Integer.compare(b, o.b);
     }
   }
 

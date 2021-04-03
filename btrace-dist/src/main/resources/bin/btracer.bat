@@ -16,8 +16,17 @@ if "%1"=="" (
 )
 if "%JAVA_HOME%" == "" goto noJavaHome
 
+if exists "%JAVA_HOME%/jmods/" (
+  set JAVA_ARGS="%JAVA_ARGS% -XX:+AllowRedefinitionToAddDeleteMethods"
+  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
+  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
+  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"
+  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED"
+  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
+)
+
 if "%1" == "--version" (
-  %JAVA_HOME%\bin\java -cp %BTRACE_HOME%/build/btrace-client.jar org.openjdk.btrace.client.Main --version
+  %JAVA_HOME%\bin\java "%JAVA_ARGS%" -cp %BTRACE_HOME%/build/btrace-client.jar org.openjdk.btrace.client.Main --version
   goto end
 )
 
@@ -84,7 +93,7 @@ set inloop=1
     goto loop
   )
 
-%JAVA_HOME%\bin\java -Xshare:off -XX:+IgnoreUnrecognizedVMOptions -XX:+AllowRedefinitionToAddDeleteMethods "-javaagent:%BTRACE_HOME%/libs/btrace-agent.jar=%OPTIONS,script=%~1" %2 %3 %4 %5 %6 %7 %8 %9
+%JAVA_HOME%\bin\java -Xshare:off "%JAVA_ARGS%" "-javaagent:%BTRACE_HOME%/libs/btrace-agent.jar=%OPTIONS,script=%~1" %2 %3 %4 %5 %6 %7 %8 %9
 goto end
 
 :noJavaHome

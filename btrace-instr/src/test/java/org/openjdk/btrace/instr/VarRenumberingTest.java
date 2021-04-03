@@ -5,7 +5,7 @@
  */
 package org.openjdk.btrace.instr;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** @author jbachorik */
 public class VarRenumberingTest extends InstrumentorTestBase {

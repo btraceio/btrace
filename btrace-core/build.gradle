@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     // https://mvnrepository.com/artifact/org.jctools/jctools-core
-    compile(group: 'org.jctools', name: 'jctools-core', version: '3.0.0')
+    compile(group: 'org.jctools', name: 'jctools-core', version: '3.3.0')
 
     // https://mvnrepository.com/artifact/org.ow2.asm/asm
     compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
@@ -14,8 +14,8 @@ dependencies {
 }
 
 compileJava {
-    sourceCompatibility = 7
-    targetCompatibility = 7
+    sourceCompatibility = 8
+    targetCompatibility = 8
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
 }

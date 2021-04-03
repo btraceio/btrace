@@ -39,7 +39,7 @@ import java.util.Set;
  */
 public final class AggregationKey {
 
-  private static final Set<Class<?>> validKeyElementTypes = new HashSet<Class<?>>();
+  private static final Set<Class<?>> validKeyElementTypes = new HashSet<>();
 
   static {
     validKeyElementTypes.add(String.class);
@@ -58,8 +58,7 @@ public final class AggregationKey {
     // Validate that no unusual datatypes are in the key. These
     // values may end up getting serialized to the client so we do not want
     // anything unusual.
-    for (int i = 0; i < elements.length; i++) {
-      Object element = elements[i];
+    for (Object element : elements) {
       if (element != null
           && (element.getClass() != String.class)
           && (element.getClass() != Boolean.class)

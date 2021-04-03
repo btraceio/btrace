@@ -52,6 +52,7 @@ import org.openjdk.btrace.core.DebugSupport;
  * @author Jaroslav Bachorik
  * @since 1.3.5
  */
+@SuppressWarnings("RedundantThrows")
 public final class BTraceTransformer implements ClassFileTransformer {
   private final DebugSupport debug;
   private final ReentrantReadWriteLock setupLock = new ReentrantReadWriteLock();
@@ -201,17 +202,14 @@ public final class BTraceTransformer implements ClassFileTransformer {
     private boolean isFast = true;
     private boolean isRegex = false;
 
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     private static <K> void addToMap(Map<K, Integer> map, K name) {
       synchronized (map) {
-        Integer i = map.get(name);
-        if (i == null) {
-          map.put(name, 1);
-        } else {
-          map.put(name, i + 1);
-        }
+        map.merge(name, 1, Integer::sum);
       }
     }
 
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     private static <K> void removeFromMap(Map<K, Integer> map, K name) {
       synchronized (map) {
         Integer i = map.get(name);
