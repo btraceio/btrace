@@ -37,3 +37,5 @@ gradle.properties
 .github_changelog_generator
 **/out/*
 gradle-wrapper.properties
+
+/.java.versions

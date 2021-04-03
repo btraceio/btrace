@@ -43,11 +43,11 @@ compileJava11Java {
 }
 
 compileJava15Java {
-    sourceCompatibility = 15
-    targetCompatibility = 15
+    sourceCompatibility = 11
+    targetCompatibility = 11
     options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_15_HOME")}/bin/javac"
-    options.forkOptions.javaHome = file("${project.property("JAVA_15_HOME")}")
+    options.forkOptions.executable = "${project.property("JAVA_16_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_16_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
