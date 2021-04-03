@@ -7,7 +7,7 @@ apply plugin: 'maven'
 apply plugin: 'idea'
 
 project.group = 'org.openjdk.btrace'
-project.version = '2.2.0-SNAPSHOT'
+project.version = '2.2.0'
 
 sourceCompatibility = '8'
 targetCompatibility = '8'
