@@ -1,7 +1,7 @@
 import org.apache.tools.ant.filters.*
 
 plugins {
-    id 'net.nemerosa.versioning' version '2.6.1'
+    id 'net.nemerosa.versioning' version '2.14.0'
 }
 
 dependencies {
