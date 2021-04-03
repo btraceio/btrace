@@ -21,8 +21,8 @@ if (!project.hasProperty("JAVA_9_HOME")) {
 if (!project.hasProperty("JAVA_11_HOME")) {
     project.ext.setProperty("JAVA_11_HOME", System.getenv("JAVA_11_HOME"));
 }
-if (!project.hasProperty("JAVA_15_HOME")) {
-    project.ext.setProperty("JAVA_15_HOME", System.getenv("JAVA_15_HOME"));
+if (!project.hasProperty("JAVA_16_HOME")) {
+    project.ext.setProperty("JAVA_16_HOME", System.getenv("JAVA_16_HOME"));
 }
 
 buildscript {

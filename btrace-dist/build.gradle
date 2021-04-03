@@ -414,8 +414,6 @@ signing {
     def signingPwd = project.hasProperty('gpg.signing.pwd') ? project.property('gpg.signing.pwd') : System.getenv("GPG_SIGNING_PWD")
 
     if (signingKey != null && signingPwd != null) {
-        println "[1] ${signingKey.length()}"
-        println "[2] ${signingPwd.length()}"
         useInMemoryPgpKeys(signingKey, signingPwd)
     }
     sign publishing.publications.agent
