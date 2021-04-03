@@ -17,7 +17,7 @@ repositories {
 }
 
 def distBase = "${project.buildDir}/resources/main"
-def distTarget = "${distBase}/${project.version}"
+def distTarget = "${distBase}/v${project.version}"
 def libsDir = new File("${distTarget}/libs")
 
 dependencies {
