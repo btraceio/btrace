@@ -15,6 +15,7 @@ public class LocalConsumer implements Consumer {
   @Override
   public void close() {}
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   public Aggregate getAggregate() throws DTraceException {
     return null;

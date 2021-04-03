@@ -12,17 +12,12 @@ sourceSets {
             srcDirs = ['src/main/java11_dummy']
         }
     }
-    java15 {
-        java {
-            srcDirs = ['src/main/java15']
-        }
-    }
 }
 
 dependencies {
     compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
     compile(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
-    compile group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc4'
+    compile group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc7'
     compile project(':btrace-core')
     compile project(':btrace-runtime')
     compile project(':btrace-compiler')
@@ -31,25 +26,16 @@ dependencies {
 }
 
 compileJava11_dummyJava {
-    sourceCompatibility = 7
-    targetCompatibility = 7
+    sourceCompatibility = 8
+    targetCompatibility = 8
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
     options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
 }
 
-compileJava15Java {
-    sourceCompatibility = 15
-    targetCompatibility = 15
-    options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_15_HOME")}/bin/javac"
-    options.forkOptions.javaHome = file("${project.property("JAVA_15_HOME")}")
-    options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
-}
-
 compileTestJava {
-    sourceCompatibility = 7
-    targetCompatibility = 7
+    sourceCompatibility = 8
+    targetCompatibility = 8
     options.fork = true
     options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
 }
@@ -93,16 +79,4 @@ test {
     testLogging.showStandardStreams = true
 
     jvmArgs '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
-}
-
-dependencies {
-    java15Implementation files(sourceSets.main.output.classesDirs) {
-        builtBy compileJava
-    }
-}
-
-jar {
-    into('') {
-        from sourceSets.java15.output
-    }
 }

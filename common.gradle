@@ -7,10 +7,10 @@ apply plugin: 'maven'
 apply plugin: 'idea'
 
 project.group = 'org.openjdk.btrace'
-project.version = '2.1.0'
+project.version = '2.2.0'
 
-sourceCompatibility = '1.7'
-targetCompatibility = '1.7'
+sourceCompatibility = '8'
+targetCompatibility = '8'
 
 if (!project.hasProperty("JAVA_8_HOME")) {
     project.ext.setProperty("JAVA_8_HOME", System.getenv("JAVA_8_HOME"));
@@ -21,8 +21,8 @@ if (!project.hasProperty("JAVA_9_HOME")) {
 if (!project.hasProperty("JAVA_11_HOME")) {
     project.ext.setProperty("JAVA_11_HOME", System.getenv("JAVA_11_HOME"));
 }
-if (!project.hasProperty("JAVA_15_HOME")) {
-    project.ext.setProperty("JAVA_15_HOME", System.getenv("JAVA_15_HOME"));
+if (!project.hasProperty("JAVA_16_HOME")) {
+    project.ext.setProperty("JAVA_16_HOME", System.getenv("JAVA_16_HOME"));
 }
 
 buildscript {
@@ -54,7 +54,8 @@ repositories {
 
 dependencies {
     // Adding dependencies here will add the dependencies to each subproject.
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
 }
 
 String mavenArtifactId = name
@@ -95,5 +96,16 @@ task createFolders(description: 'Creates the source folders if they do not exist
             println "Creating source folder: ${srcDir}"
             srcDir.mkdirs()
         }
+    }
+}
+
+test {
+    useJUnitPlatform()
+    // Always run tests, even when nothing changed.
+    dependsOn 'cleanTest'
+
+    // Show test results.
+    testLogging {
+        events "passed", "skipped", "failed"
     }
 }

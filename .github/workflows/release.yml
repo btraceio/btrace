@@ -1,7 +1,5 @@
 on:
   push:
-    branches:
-      - release/*
     tags:
       - 'v*'
 
@@ -18,19 +16,47 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Merge to master
+      - name: Branch name
+        id: branch_name
         run: |
-          git checkout master
-          git merge --ff ${GITHUB_REF##*/}
-          git push
+          echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
+          echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
+          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+      - name: Set up Java 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Store JAVA_8_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_8_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Set up Java 9
+        uses: actions/setup-java@v1
+        with:
+          java-version: 9
+      - name: Store JAVA_9_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_9_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Set up Java 16
+        uses: actions/setup-java@v1
+        with:
+          java-version: 16
+      - name: Store JAVA_16_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_16_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Set up Java 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Store JAVA_11_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Build artifacts
+        run: JAVA_HOME="$JAVA_11_HOME" ./gradlew :btrace-dist:build
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body_path: RELEASE.md
-          draft: false
+          draft: true
           prerelease: false
+          files: |
+            btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.tar.gz
+            btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.zip
+            btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-sdkman-bin.zip

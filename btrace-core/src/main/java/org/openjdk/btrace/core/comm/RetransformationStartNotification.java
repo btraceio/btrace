@@ -54,6 +54,7 @@ public class RetransformationStartNotification extends Command {
     out.writeInt(numClasses);
   }
 
+  @SuppressWarnings("RedundantThrows")
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     numClasses = in.readInt();

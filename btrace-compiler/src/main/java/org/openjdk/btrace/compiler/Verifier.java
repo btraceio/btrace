@@ -160,7 +160,7 @@ public class Verifier extends AbstractProcessor implements TaskListener {
   }
 
   // verify each BTrace class
-  private boolean verify(ClassTree ct, Element topElement) {
+  private void verify(ClassTree ct, Element topElement) {
     currentClass = ct;
     CompilationUnitTree cut = getCompilationUnit();
     String className = ct.getSimpleName().toString();
@@ -170,10 +170,9 @@ public class Verifier extends AbstractProcessor implements TaskListener {
     }
     classNames.add(className);
     if (hasTrustedAnnotation(ct, topElement)) {
-      return true;
+      return;
     }
-    Boolean value = ct.accept(new VerifierVisitor(this, topElement), null);
-    return value == null ? true : value;
+    ct.accept(new VerifierVisitor(this, topElement), null);
   }
 
   /** Detects if the class is annotated as @BTrace(trusted=true). */

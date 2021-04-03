@@ -2,10 +2,11 @@ plugins {
     id 'maven'
     id 'maven-publish'
     id "com.jfrog.bintray" version "1.8.5"
-    id "com.github.johnrengelman.shadow" version "6.0.0"
-    id "nebula.ospackage" version "8.3.0"
+    id "com.github.johnrengelman.shadow" version "6.1.0"
+    id "nebula.ospackage" version "8.5.1"
     id "java"
     id "io.sdkman.vendors" version "2.0.0"
+    id "signing"
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -16,7 +17,7 @@ repositories {
 }
 
 def distBase = "${project.buildDir}/resources/main"
-def distTarget = "${distBase}/${project.version}"
+def distTarget = "${distBase}/v${project.version}"
 def libsDir = new File("${distTarget}/libs")
 
 dependencies {
@@ -59,28 +60,19 @@ task agentJar(type: ShadowJar) {
         )
     }
 
-    exclude 'afu/**'
-    exclude 'javax/**'
-    exclude 'com/**'
-    exclude 'sun/**'
-    exclude 'org/relaxng/**'
-    exclude 'org/checkerframework/**'
-    exclude 'org/codehaus/**'
-
-    exclude 'org/jctools/**'
-    exclude 'org/objectweb/asm/**'
-    exclude 'META-INF/services/**'
-    exclude 'META-INF/maven/**'
-    exclude 'META-INF/versions/**'
-
-    exclude 'org/openjdk/btrace/compiler/**'
-    exclude 'org/openjdk/btrace/core/**'
-    exclude 'org/openjdk/btrace/client/**'
-    exclude 'org/openjdk/btrace/runtime/**'
-    exclude 'org/openjdk/btrace/services/**'
-    exclude 'org/openjdk/btrace/statsd/*'
-
-    exclude 'module-info.class'
+    include {
+        if (it.directory) {
+            return true
+        }
+        if (it.path.endsWith('.jar')) {
+            return true
+        }
+        return it.path.startsWith('org/openjdk/btrace/agent/') ||
+               it.path.startsWith('org/openjdk/btrace/instr/') ||
+               // include the messages resource bundle and class in the agent jar (bootstrap can't load resources)
+               it.path == 'org/openjdk/btrace/core/Messages.class' ||
+               it.path == 'org/openjdk/btrace/core/messages.properties'
+    }
 
     configurations = [project.configurations.compile]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
@@ -94,25 +86,39 @@ task bootJar(type: ShadowJar) {
     classifier = null
     destinationDir = libsDir
 
-    exclude 'afu/**'
-    exclude 'javax/**'
-    exclude 'com/**'
-    exclude 'sun/**'
-    exclude 'org/relaxng/**'
-    exclude 'org/checkerframework/**'
-    exclude 'org/codehaus/**'
 
-    exclude 'org/jctools/maps/**'
-    exclude 'META-INF/services/**'
-    exclude 'META-INF/maven/**'
-
-    exclude 'org/objectweb/asm/commons/**'
-    exclude 'org/objectweb/asm/util/**'
-    exclude 'org/objectweb/asm/xml/**'
-
-    exclude 'org/openjdk/btrace/agent/**'
-    exclude 'org/openjdk/btrace/client/**'
-    exclude 'module-info.class'
+    include {
+        if (it.directory) {
+            return true
+        }
+        if (it.path.endsWith('.jar')) {
+            return true
+        }
+        if (it.path.startsWith('org/openjdk/btrace/core/')) {
+            if (it.path == 'org/openjdk/btrace/core/Messages.class' || it.path == 'org/openjdk/btrace/core/messages.properties') {
+                // messages resource bundle&class are hoisted to agent and client jars
+                return false
+            }
+            return true
+        }
+        if (it.path.startsWith('org/jctools/')) {
+            if (it.path.startsWith('org/jctools/map/')) {
+                return false
+            }
+            return true
+        }
+        if (it.path.startsWith('org/objectweb/asm/')) {
+            if (it.path.startsWith('org/objectweb/asm/commons/') ||
+                it.path.startsWith('org/objectweb/asm/util/') ||
+                it.path.startsWith('org/objectweb/asm/xml/')) {
+                return false
+            }
+            return true
+        }
+        return it.path.startsWith('org/openjdk/btrace/runtime/') ||
+                it.path.startsWith('org/openjdk/btrace/services/') ||
+                it.path.startsWith('org/openjdk/btrace/statsd/')
+    }
 
     configurations = [project.configurations.compile]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
@@ -165,19 +171,19 @@ task copyDtraceLib(type: Copy) {
 task buildZip(type: Zip) {
     from "${distTarget}"
     include "**/*"
-    archiveName "btrace-${project.version}-bin.zip"
+    archiveName "btrace-v${project.version}-bin.zip"
     destinationDir(file("$project.buildDir/distributions"))
 }
 
 task buildSdkmanZip(type: Zip) {
     from "${distBase}"
     include "**/*"
-    archiveName "btrace-${project.version}-sdkman-bin.zip"
+    archiveName "btrace-v${project.version}-sdkman-bin.zip"
     destinationDir(file("$project.buildDir/distributions"))
 }
 
 task buildTgz(type: Tar) {
-    archiveName "btrace-${project.version}-bin.tar.gz"
+    archiveName "btrace-v${project.version}-bin.tar.gz"
     into ('/'){
         from "${distTarget}"
         include '**/*'
@@ -298,7 +304,7 @@ bintray {
         publicDownloadNumbers = true
         version {
             name = project.version //Bintray logical version name
-            released  = new java.util.Date()
+            released  = new Date()
             vcsTag = 'v' + project.version
             //Optional configuration for GPG signing
             gpg {
@@ -315,7 +321,7 @@ sdkman {
     consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
     candidate = "btrace"
     version = "${project.version}"
-    url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-${project.version}-sdkman-bin.zip"
+    url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-v${project.version}-sdkman-bin.zip"
 }
 
 ["sdkReleaseVersion", "sdkAnnounceVersion"].forEach {
@@ -325,9 +331,23 @@ sdkman {
 }
 
 publishing {
+    repositories {
+        maven {
+            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+
+            credentials {
+                username = System.getenv('BTRACE_SONATYPE_USER')
+                password = System.getenv('BTRACE_SONATYPE_PWD')
+            }
+        }
+    }
+
     publications {
         agent(MavenPublication) {
             artifactId 'btrace-agent'
+            groupId 'io.btrace'
             artifact agentJar
             artifact agentSourcesJar {
                 classifier "source"
@@ -342,6 +362,7 @@ publishing {
 
         client(MavenPublication) {
             artifactId 'btrace-client'
+            groupId 'io.btrace'
             artifact clientJar
             artifact clientSourcesJar {
                 classifier "sources"
@@ -356,6 +377,7 @@ publishing {
 
         boot(MavenPublication) {
             artifactId 'btrace-boot'
+            groupId 'io.btrace'
             artifact bootJar
             artifact bootSourcesJar {
                 classifier "sources"
@@ -382,7 +404,19 @@ def addPomDetails(node) {
     licenseNode.appendNode('url', 'http://openjdk.java.net/legal/gplv2+ce.html')
 
     def developerNode = node.appendNode('developers').appendNode('developer')
-    developerNode.appendNode('id', 'yardus')
+    developerNode.appendNode('id', 'jbachorik')
     developerNode.appendNode('name', 'Jaroslav Bachorik')
     developerNode.appendNode('email', 'j.bachorik@btrace.io')
+}
+
+signing {
+    def signingKey = project.hasProperty('gpg.signing.key') ? project.property('gpg.signing.key') : System.getenv("GPG_SIGNING_KEY")
+    def signingPwd = project.hasProperty('gpg.signing.pwd') ? project.property('gpg.signing.pwd') : System.getenv("GPG_SIGNING_PWD")
+
+    if (signingKey != null && signingPwd != null) {
+        useInMemoryPgpKeys(signingKey, signingPwd)
+    }
+    sign publishing.publications.agent
+    sign publishing.publications.boot
+    sign publishing.publications.client
 }

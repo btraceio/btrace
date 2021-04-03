@@ -10,7 +10,7 @@ class Printer {
   // Output //
   ////////////
   private final PrintWriter writer;
-  private final ArrayList enabledBits = new ArrayList();
+  private final ArrayList<Boolean> enabledBits = new ArrayList<>();
 
   Printer() {
     writer = new PrintWriter(System.err);
@@ -31,7 +31,7 @@ class Printer {
   }
 
   boolean enabled() {
-    return (enabledBits.isEmpty() || ((Boolean) enabledBits.get(enabledBits.size() - 1)));
+    return (enabledBits.isEmpty() || enabledBits.get(enabledBits.size() - 1));
   }
 
   void pushEnableBit(boolean enabled) {

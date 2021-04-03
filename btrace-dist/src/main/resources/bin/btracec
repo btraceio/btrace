@@ -12,11 +12,18 @@ if [ -z "$BTRACE_HOME" -o ! -d "$BTRACE_HOME" ]; then
   BTRACE_HOME=$(dirname "$PRG")/..
   BTRACE_HOME=$(cd "$BTRACE_HOME" && pwd)
 fi
-
+JAVA_ARGS="-XX:+IgnoreUnrecognizedVMOptions"
+if [ -d "${JAVA_HOME}/jmods" ]; then
+  JAVA_ARGS="$JAVA_ARGS --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
+  JAVA_ARGS="$JAVA_ARGS --add-exports jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
+  JAVA_ARGS="$JAVA_ARGS --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"
+  JAVA_ARGS="$JAVA_ARGS --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED"
+  JAVA_ARGS="$JAVA_ARGS --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
+fi
 if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
   if [ -d "${JAVA_HOME}" ]; then
     if [ "$1" = "--version" ]; then
-      ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/libs/btrace-client.jar org.openjdk.btrace.client.Main --version
+      ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${BTRACE_HOME}/libs/btrace-client.jar org.openjdk.btrace.client.Main --version
       exit 0
     fi
     TOOLS_JAR="$JAVA_HOME/lib/tools.jar"
@@ -47,7 +54,7 @@ if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
       exit 1
     fi
 
-    ${JAVA_HOME}/bin/java -cp ${BTRACE_HOME}/libs/btrace-client.jar:${TOOLS_JAR} org.openjdk.btrace.compiler.Compiler $*
+    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${BTRACE_HOME}/libs/btrace-client.jar:${TOOLS_JAR} org.openjdk.btrace.compiler.Compiler $*
   else
     echo "Please set a valid JAVA_HOME before running this script"
     exit 1

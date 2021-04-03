@@ -50,7 +50,7 @@ public @interface Event {
     CLASS("java.lang.Class"),
     THREAD("java.lang.Thread");
 
-    private String type;
+    private final String type;
 
     FieldType(String type) {
       this.type = type;
@@ -80,7 +80,7 @@ public @interface Event {
     /** @see jdk.jfr.Unsigned */
     UNSIGNED,
     /** No additional field kind specification */
-    NONE;
+    NONE
   }
 
   /** Event field definition */

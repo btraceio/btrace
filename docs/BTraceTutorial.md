@@ -1,4 +1,4 @@
-# BTrace Tutorial
+# BTrace Tutorial (BTrace 2.2.0)
 
 ## 1. Hello World
 
@@ -9,10 +9,10 @@ Demonstrates the BTrace ability to instrument a class.
 
 #### HelloWorld Class
 
-``` java
+```java
 package extra;
 
-abstract public class HelloWorld extends HelloWorldBase {
+public abstract class HelloWorld extends HelloWorldBase {
     protected int field = 0;
 
     public static void main(String[] args) throws Exception {
@@ -30,27 +30,27 @@ abstract public class HelloWorld extends HelloWorldBase {
     }
 
     private void callA(String a, int b) {
-	field++;
+        field++;
         callB(callC(a, b));
-	field--;
+        field--;
     }
 
     private void callB(String s) {
-	field++;
+        field++;
         System.out.println("You want " + s);
-	field--;
+        field--;
     }
 
-    abstract protected String callC(String a, int b);
+    protected abstract String callC(String a, int b);
 }
 
 final class HelloWorldExt extends HelloWorld {
     @Override
     protected String callC(String a, int b) {
-	try {
+        try {
             field++;
             String s = a + "-" + b;
-            for(int i=0;i<100;i++) {
+            for (int i = 0; i < 100; i++) {
                 s = callD(s);
             }
             return s;
@@ -61,7 +61,7 @@ final class HelloWorldExt extends HelloWorld {
 }
 
 abstract class HelloWorldBase {
-    final protected String callD(String s) {
+    protected final String callD(String s) {
         return "# " + s;
     }
 }
@@ -72,7 +72,7 @@ abstract class HelloWorldBase {
 1. Run the HelloWorld application
 2. Get the HelloWorld application PID via `jps` command
 3. Run `btrace <PID> <HelloWorldTrace.java>`
-4. Proceed with the HelloWrold application
+4. Proceed with the HelloWorld application
 5. Watch messages being printed
 
 You will repeat these steps while gradually enhancing the used BTrace script
@@ -138,12 +138,23 @@ This needs to be done in order to launch the Java application with BTrace agent.
 
 Rather than regular *javac* the BTrace compiler is used - causing the script to be validated at compile time and prevent reporting verify errors at runtime.
 
+##### Inspecting the compiled trace scripts
+
+BTrace compiler will, by default, create a binary trace representation which packages the trace class file together with some metadata designed to make the
+trace loading and application faster. These packages are not directly readable by tools like `javap` and one must use `btracep` instead.
+The syntax is straightforward - `./btracep <binary trace file>`. The tool will print out
+* trace name
+* verification status (trusted or not)
+* transformation status (will cause class retransformation or not)
+* all probe handlers (all `@OnProbe`, `@OnTimer` etc. definitions)
+* ASM-ified version of the associated "data holder" class - the class contains the information that needs to be globally accessible from instrumented code
+
 #### Lesson 2 - Tracing methods
 
 This is the main purpose of BTrace - inject a custom code to custom locations to give the insights about the internal state and dynamics of the application.
 
 1. Getting just the information that any method is being executed
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -157,7 +168,7 @@ public class HelloWorldTrace {
 ```
 
 2. Get the method names
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -171,7 +182,7 @@ public class HelloWorldTrace {
 ```
 
 3. Intercept only a particular method
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -185,7 +196,7 @@ public class HelloWorldTrace {
 ```
 
 4. Intercept only a particular method with name matching the handler name
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -201,7 +212,7 @@ public class HelloWorldTrace {
 5. Intercept methods with names matching certain patterns
 __Note:__ you can use pattern matching for the class names, too
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -216,7 +227,7 @@ public class HelloWorldTrace {
 
 6. Intercept methods with names matching certain patterns and inspect their parameters
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -232,7 +243,7 @@ public class HelloWorldTrace {
 ```
 
 7. Intercept method with names matching certain patterns and discover their signatures
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -249,7 +260,7 @@ public class HelloWorldTrace {
 
 __Note:__ 'extra.HelloWorldBase.callD()' doesn't show up - it is defined in the superclass of 'extra.HelloWorld' and therefore not intercepted.
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -266,7 +277,7 @@ public class HelloWorldTrace {
 
 __Note:__ The order of the un-annotated parameters must correspond to the order of the traced method parameters. Annotated parameters may be placed anywhere.
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -280,13 +291,13 @@ public class HelloWorldTrace {
 }
 ```
 
-10. Intercpet method with a particular name and signature but don't capture the method arguments. Here you will need to decifer the VM method signature to get java like method signature. See the @OnMethod.type() javadoc for the java like signature format.
+10. Intercept method with a particular name and signature but don't capture the method arguments. Here you will need to decifer the VM method signature to get java like method signature. See the @OnMethod.type() javadoc for the java like signature format.
 
 Eg. having the VM method signature in form of (Ljava/lang/String;I)V will translate to "void (java.lang.String, int)"
 
 __Note:__ We are using overloaded method here and specifying the signature helps BTrace determine which method should be instrumented
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -302,7 +313,7 @@ public class HelloWorldTrace {
 11. Intercept method with a particular name and capture its return value
 `location=@Location(Kind.RETURN)` sets up the instrumentation to be inserted just before the method exits
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -317,7 +328,7 @@ public class HelloWorldTrace {
 
 12. Inspect the content of an instance variable in the method declaring class
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -333,7 +344,7 @@ public class HelloWorldTrace {
 
 Or retrieve the `java.lang.Field` instance first and perform a check before trying to retrieve the field value.
 
-``` java
+```java
 package helloworld;
 import java.lang.Class;
 import java.lang.reflect.Field;
@@ -357,7 +368,7 @@ public class HelloWorldTrace {
 
 __Note:__ Need to use @Location(Kind.RETURN) to be able to capture the execution duration
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -379,7 +390,7 @@ __Note:__ @ProbeMethodName and @ProbeClassName refer to the context method and c
 
 __Note:__ You can use the 'type' annotation parameter in @OnMethod annotation to restrict the context methods and in @Location to restrict the traced method invocations
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -401,7 +412,7 @@ public class HelloWorldTrace {
 
 15. Measuring the duration of methods invoked from inside a particular method
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -427,7 +438,7 @@ __Note:__ The captured parameters pertain to the invoked method rather than the 
 
 __Note:__ The @Self annotated parameter captures the context instance and @TargetInstance annotated parameter captures the instance the method is invoked on
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -460,7 +471,7 @@ Called when the traced application is about to exit. Allows to capture the exit 
 
 __Note:__ The signature of the handler method __MUST__ be 'void (int)'
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -479,7 +490,7 @@ Called whenever an exception is thrown from anywhere in the BTrace handlers.
 
 __Note:__ The signature of the handler method __MUST__ be 'void (java.lang.Throwable)'
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -500,7 +511,7 @@ __Note:__ The annotation parameter takes the interval value in milliseconds
 
 __Note:__ The signature of the handler method __MUST__ be 'void ()'
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -517,7 +528,7 @@ public class HelloWorldTrace {
 
 Used to raise events from external clients (eg. the command line client). The annotation takes a String parameter which is the event name. When not provided the event is considered to be 'unnamed'.
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -531,7 +542,7 @@ public class HelloWorldTrace {
 ```
 or
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -556,7 +567,7 @@ The sampling implementation in BTrace guarantees that at least one invocation of
 
 __Note:__ Even though the 'callD' method is executed 100 times we will get only ~10 hits - as dictated by the 'mean' parameter.
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -573,13 +584,13 @@ public class HelloWorldTrace {
 
 2. Let the sampler mean parameter be adjusted dynamically by keeping to the overhead target
 
-__Note:__ In this case the 'mean' parameter actually specify the lowest number of nanoseconds the average interval between interception should be
+__Note:__ In this case the 'mean' parameter actually specifies the lowest number of nanoseconds the average interval between interceptions should be
 
 __Note:__ Because the adaptive sampling needs to collect timestamps in order to maintain the overhead target the lowest value for the 'mean' parameter is 180 (cca. 60ns for getting start/stop timestamp pair multiplied by the safety margin of 3) 
 
 __Note:__ The 'callD' method is very short and the number of iteration is rather limited - we will most probably get only one hit here
 
-``` java
+```java
 package helloworld;
 import ...;
 
@@ -590,6 +601,91 @@ public class HelloWorldTrace {
     @OnMethod(clazz="/extra\\.HelloWorld.*/", method="callD")
     public static void onMethod(@ProbeMethodName(fqn = true) String pmn) {
         println("Hello from method " + pmn + " : " + (cntr++));
+    }
+}
+```
+
+#### Lesson 5 - JFR events
+
+Since BTrace 2.1.0 it is possible to define and use JFR dynamic events directly from the BTrace scripts. This gives immediate access to the high-performance
+event recording engine built directly in JVM. Being able to observe the script defined events in the bigger context of full application/JVM is an additional
+benefit when comparing to the 'standard' BTrace way of writing the information to stdout or a dedicated text file.
+
+##### Define and use a regular JFR event
+
+A new dynamic event type in BTrace is defined via a `JfrEvent.Factory` instance configured by `@Event` aannotation.
+The annotation defines the event metadata and event fields.
+
+###### Event Metadata
+
+* **name** - global event name
+* **label** - a pretty printed event name
+* **description** - long description
+* **category** - arbitrary category in 'directory' format (eg. 'Application/SQL/Updates')
+* **stacktrace** - whether the event should collect stacktrace or not
+
+###### Field definition
+
+The `fields` argument of the `@Event` annotation defines the array of event fields where each field is defined with the help
+of `@Event.Field` annotation.
+The fields can only be of a supported type (Java primitives + String, Class and Thread) and don't support arrays/lists. 
+
+###### Using the event
+
+`BTraceUtils` has been enhanced with the following methods to support working with JFR events:
+* **prepareEvent(eventFactory)** - prepares a new event using the given factory
+* **begin(event)** - calls `begin()` event method to start measuring the event time span
+* **end(event)** - calls `end()` event method to stop measuring the event time span
+* **setEventField(event, field, value)** - sets a field value
+* **commit(event)** - tries and commits the event
+
+###### Example
+```java
+@BTrace public class JfrEventsProbe {
+    @Event(
+        name = "CustomEvent",
+        label = "Custom Event",
+        fields = {
+            @Event.Field(type = Event.FieldType.INT, name = "a"),
+            @Event.Field(type = Event.FieldType.STRING, name = "b")
+        }
+    )
+    private static JfrEvent.Factory customEventFactory;
+
+    @OnMethod(clazz = "/.*/", method = "/.*/")
+    public static void onMethod() {
+        JfrEvent event = prepareEvent(customEventFactory);
+        setEventField(event, "a", 10);
+        setEventField(event, "b", "hello");
+        commit(event);
+    }
+}
+```
+
+##### Define and use a periodic JFR event
+
+A periodic JFR event is automatically generated by JFR at a given time interval or at beginning/end of a JFR chunk.
+
+###### Periodic event handler
+
+A periodic event is defined by an event handler - it is a method by `@PeriodEvent` annotation, pretty much like `@OnMethod` or `@OnTimer` handlers.
+Similarly to the regular events the annotation defines the event metadata and the event fields.
+In addition to that the annotation defines the period which can be a time unit like `10 s` or `100 ms` or it can be one of
+`everyChunk`, `beginChunk` or `endChunk`.
+
+The handler method takes one parameter of `JfrEvent` type. The value of this parameter can be used in the `BTraceUtils` JFR
+specific methods.
+
+
+###### Example
+```java
+@BTrace public class JfrEventsProbe {
+    @PeriodicEvent(name = "PeriodicEvent", fields = @Event.Field(type = Event.FieldType.INT, name = "ts", kind = @Event.Field.Kind(name = Event.FieldKind.TIMESTAMP)), period = "1 s")
+    public static void onPeriod(JfrEvent event) {
+        if (shouldCommit(event)) {
+            setEventField(event, "ts", 1);
+            commit(event);
+        }
     }
 }
 ```
