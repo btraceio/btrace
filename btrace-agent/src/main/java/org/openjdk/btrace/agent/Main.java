@@ -832,7 +832,6 @@ public final class Main {
       if (isDebug()) {
         debugPrint("starting server at " + port);
       }
-      System.setProperty("btrace.port", String.valueOf(port));
       System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
 
       String scriptOutputFile = settings.getOutputFile();
@@ -840,6 +839,7 @@ public final class Main {
         System.setProperty("btrace.output", scriptOutputFile);
       }
       ss = new ServerSocket(port);
+      System.setProperty("btrace.port", String.valueOf(ss.getLocalPort()));
     } catch (IOException ioexp) {
       ioexp.printStackTrace();
       return;
