@@ -338,8 +338,8 @@ publishing {
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 
             credentials {
-                username = System.getenv('BTRACE_SONATYPE_USER')
-                password = System.getenv('BTRACE_SONATYPE_PWD')
+                username = project.hasProperty("sonatype.user") ? project.property("sonatype.user") : System.getenv('BTRACE_SONATYPE_USER')
+                password = project.hasProperty("sonatype.password") ? project.property("sonatype.password") : System.getenv('BTRACE_SONATYPE_PWD')
             }
         }
     }
@@ -350,13 +350,13 @@ publishing {
             groupId 'io.btrace'
             artifact agentJar
             artifact agentSourcesJar {
-                classifier "source"
+                classifier "sources"
             }
             artifact agentJavadocJar {
                 classifier "javadoc"
             }
             pom.withXml {
-                addPomDetails(asNode())
+                addPomDetails(asNode(), 'btrace-agent')
             }
         }
 
@@ -371,7 +371,7 @@ publishing {
                 classifier "javadoc"
             }
             pom.withXml {
-                addPomDetails(asNode())
+                addPomDetails(asNode(), 'btrace-client')
             }
         }
 
@@ -386,14 +386,16 @@ publishing {
                 classifier "javadoc"
             }
             pom.withXml {
-                addPomDetails(asNode())
+                addPomDetails(asNode(), 'btrace-boot')
             }
         }
     }
 }
 
-def addPomDetails(node) {
+def addPomDetails(node, name) {
+    node.appendNode('name', name)
     node.appendNode('url', 'https://github.com/btraceio/btrace')
+    node.appendNode('description', 'BTrace: A safe, dynamic tracing tool for the Java platform')
     def scmNode = node.appendNode('scm');
     scmNode.appendNode('url', 'https://github.com/btraceio/btrace')
     scmNode.appendNode('connection', 'scm:git:https://github.com/btraceio/btrace.git')
