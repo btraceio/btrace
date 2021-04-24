@@ -8,9 +8,15 @@ description 'A JMH benchmark to assert the overhead imposed by various types of 
 def env = System.getenv()
 def javaHome = env['JAVA_HOME']
 
+configurations {
+  benchmark.extendsFrom(implementation)
+}
+
+configurations.benchmark.canBeResolved(true)
+
 dependencies {
-  compile project(path: ":btrace-dist", configuration: "shadow")
-  compile project(":btrace-compiler")
+  implementation project(path: ":btrace-dist", configuration: "shadow")
+  implementation project(":btrace-compiler")
   jmh project(":btrace-instr")
   jmh project(":btrace-runtime")
   jmh project(":btrace-statsd")
@@ -24,7 +30,7 @@ task btracec(type: JavaExec) {
   outputs.dir "${buildDir}/classes/java/main"
 
   environment('BTRACE_HOME', "$projectDir")
-  classpath configurations.compile
+  classpath configurations.benchmark
   main 'org.openjdk.btrace.compiler.Compiler'
   args '-d'
   args "${buildDir}/classes/java/main/"

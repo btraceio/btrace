@@ -20,18 +20,21 @@ sourceSets {
 }
 
 dependencies {
-    compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
-    compile(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
-    compile group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc7'
-    compile project(':btrace-core')
-    compile project(':btrace-runtime')
-    compile project(':btrace-compiler')
-    compile project(':btrace-statsd')
-    testCompile project(':btrace-client')
+    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    implementation(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
+    implementation group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc7'
+    implementation project(':btrace-core')
+    implementation project(':btrace-runtime')
+    implementation project(':btrace-compiler')
+    implementation project(':btrace-statsd')
+    implementation project(':btrace-services-api')
+
+    testImplementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+    testImplementation project(':btrace-client')
     testImplementation 'org.mockito:mockito-core:3.8.0'
     testImplementation 'org.mockito:mockito-inline:3.8.0'
 
-    test_extensionCompile project(':btrace-client')
+    test_extensionImplementation project(':btrace-client')
 }
 
 compileJava11_dummyJava {
@@ -96,11 +99,16 @@ task compileTestProbes {
     }
 }
 
-test {
+task buildDistForTest {
     onlyIf {
-        new File("${testBTraceLibs}/btrace-client.jar").exists()
+        ! new File("${testBTraceLibs}/btrace-client.jar").exists()
     }
-    dependsOn cleanTest, buildEventsJar, buildTestExtensionJar
+}
+
+buildDistForTest.dependsOn(':btrace-dist:build')
+
+test {
+    dependsOn cleanTest, buildEventsJar, buildDistForTest, buildTestExtensionJar
     inputs.files compileTestProbes.outputs
     //inputs.files buildDTrace.outputs
     testLogging.showStandardStreams = true

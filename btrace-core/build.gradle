@@ -6,11 +6,11 @@ plugins {
 
 dependencies {
     // https://mvnrepository.com/artifact/org.jctools/jctools-core
-    compile(group: 'org.jctools', name: 'jctools-core', version: '3.3.0')
+    implementation(group: 'org.jctools', name: 'jctools-core', version: '3.3.0')
 
     // https://mvnrepository.com/artifact/org.ow2.asm/asm
-    compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
-    compile(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    implementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
 }
 
 compileJava {

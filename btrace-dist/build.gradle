@@ -1,5 +1,4 @@
 plugins {
-    id 'maven'
     id 'maven-publish'
     id "com.jfrog.bintray" version "1.8.5"
     id "com.github.johnrengelman.shadow" version "6.1.0"
@@ -20,10 +19,16 @@ def distBase = "${project.buildDir}/resources/main"
 def distTarget = "${distBase}/v${project.version}"
 def libsDir = new File("${distTarget}/libs")
 
+configurations {
+    runtime.extendsFrom(implementation)
+}
+
+configurations.runtime.canBeResolved(true)
+
 dependencies {
-    compile project(':btrace-agent')
-    compile project(':btrace-client')
-    compile project(':btrace-compiler')
+    implementation project(':btrace-agent')
+    implementation project(':btrace-client')
+    implementation project(':btrace-compiler')
 }
 
 jar {
@@ -74,7 +79,7 @@ task agentJar(type: ShadowJar) {
                it.path == 'org/openjdk/btrace/core/messages.properties'
     }
 
-    configurations = [project.configurations.compile]
+    configurations = [project.configurations.runtime]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
 }
@@ -120,7 +125,7 @@ task bootJar(type: ShadowJar) {
                 it.path.startsWith('org/openjdk/btrace/statsd/')
     }
 
-    configurations = [project.configurations.compile]
+    configurations = [project.configurations.runtime]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
 }
@@ -149,7 +154,7 @@ task clientJar(type: ShadowJar) {
 
     exclude 'org/openjdk/btrace/agent/**'
 
-    configurations = [project.configurations.compile]
+    configurations = [project.configurations.runtime]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
 }
@@ -260,7 +265,7 @@ test {
         title = "btrace-${name}"
         source = sourceSets.main.allJava
         destinationDir = file("${project.docsDir}/${name}/javadoc")
-        classpath = files(compileJava.destinationDir) + configurations.compile.asFileTree
+        classpath = files(compileJava.destinationDir) + configurations.runtime.asFileTree
         exclude excludes["${name}"]
         options.addStringOption('Xdoclint:all,-missing', '-quiet')
         failOnError false

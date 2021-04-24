@@ -3,9 +3,14 @@ plugins {
 }
 
 dependencies {
-    compile project(':btrace-core')
-    compile project(':btrace-compiler')
-    compile project(':btrace-instr')
+    // https://mvnrepository.com/artifact/org.ow2.asm/asm
+    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    implementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+
+    implementation files("${JAVA_8_HOME}/lib/tools.jar")
+    implementation project(':btrace-core')
+    implementation project(':btrace-compiler')
+    implementation project(':btrace-instr')
 }
 
 jar {

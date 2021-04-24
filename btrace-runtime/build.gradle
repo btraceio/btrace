@@ -52,6 +52,13 @@ compileJava15Java {
 }
 
 dependencies {
+    // https://mvnrepository.com/artifact/org.jctools/jctools-core
+    implementation(group: 'org.jctools', name: 'jctools-core', version: '3.3.0')
+
+    // https://mvnrepository.com/artifact/org.ow2.asm/asm
+    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    implementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+
     java9Implementation files(sourceSets.main.output.classesDirs) {
         builtBy compileJava
     }
@@ -64,15 +71,19 @@ dependencies {
 
     java9Implementation project(':btrace-core')
     java9Implementation project(':btrace-services')
+    java9Implementation project(':btrace-services-api')
 
     java11Implementation project(':btrace-core')
     java11Implementation project(':btrace-services')
+    java11Implementation project(':btrace-services-api')
 
     java15Implementation project(':btrace-core')
     java15Implementation project(':btrace-services')
+    java15Implementation project(':btrace-services-api')
 
-    compile project(':btrace-core')
-    compile project(':btrace-services')
+    implementation project(':btrace-core')
+    implementation project(':btrace-services')
+    implementation project(':btrace-services-api')
 
     testImplementation 'org.mockito:mockito-core:3.8.0'
     testImplementation 'org.mockito:mockito-inline:3.8.0'
