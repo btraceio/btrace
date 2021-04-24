@@ -199,6 +199,13 @@ task buildTgz(type: Tar) {
     compression = Compression.GZIP
 }
 
+task copyExtensions(type: Copy) {
+    from "${project.rootDir}/btrace-extensions/btrace-hdr-histogram/build/libs/btrace-hdr-histogram.jar"
+    into "${libsDir}/ext"
+}
+
+copyExtensions.dependsOn(':btrace-extensions:btrace-hdr-histogram:shadowJar')
+
 ospackage {
     packageName = 'btrace'
     release = 1
@@ -238,7 +245,7 @@ buildZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
 buildSdkmanZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
 buildDeb.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
 buildRpm.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib
-build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
+build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm, copyExtensions
 
 test {
     doLast {

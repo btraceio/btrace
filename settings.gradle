@@ -1,23 +1,22 @@
+import java.nio.file.Files
+import java.util.stream.Collectors
+
 rootProject.name = 'btrace-ng'
 
+def rootPath = rootDir.toPath()
 // Find the directories containing a "build.gradle" file in the root directory
 // of the project. That is, every directory containing a "build.gradle" will
 // be automatically the subproject of this project.
-def subDirs = rootDir.listFiles(new FileFilter() {
-    public boolean accept(File file) {
-        if (!file.isDirectory()) {
-            return false
-        }
-        if (file.name == 'buildSrc') {
-            return false
-        }
-        return new File(file, 'build.gradle').isFile()
-    }
-});
+def subDirs = Files.walk(rootPath)
+        .filter(path -> Files.isDirectory(path))
+        .filter(path -> path.toFile().name != 'buildSrc')
+        .filter(path -> Files.exists(path.resolve('build.gradle')))
+        .collect(Collectors.toList())
 
-subDirs.each { File dir ->
-    if (dir.name.startsWith("btrace-")) {
-        include dir.name
+subDirs.each { dir ->
+    def relativePath = rootPath.relativize(dir)
+    if (relativePath.toString().startsWith("btrace-")) {
+        include relativePath.toString().replace('/', ':')
     }
     include "benchmarks:agent-benchmark"
     include "benchmarks:runtime-benchmarks"

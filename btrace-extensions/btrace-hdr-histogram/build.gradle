@@ -1,0 +1,19 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "6.1.0"
+}
+
+dependencies {
+    implementation 'org.hdrhistogram:HdrHistogram:2.1.12'
+}
+
+shadowJar {
+    classifier = null
+    version = null
+    manifest {
+        attributes(
+                "BTrace-Extension-ID": "hdr-histogram",
+                "BTrace-Extension-Version": "1.0",
+                "BTrace-Extension-Exports": "org.openjdk.btrace.extensions.hdrhistogram,org.HdrHistogram"
+        )
+    }
+}
