@@ -1,4 +1,4 @@
-package org.openjdk.btrace.instr;
+package org.openjdk.btrace.core;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -9,8 +9,12 @@ import java.util.List;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
 
-final class BTraceBCPClassLoader extends URLClassLoader {
-  BTraceBCPClassLoader(SharedSettings settings) {
+public final class BTraceBCPClassLoader extends URLClassLoader {
+  public BTraceBCPClassLoader() {
+    this(SharedSettings.GLOBAL);
+  }
+
+  public BTraceBCPClassLoader(SharedSettings settings) {
     super(getBCPUrls(settings), null);
   }
 

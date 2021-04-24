@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class ExtensionRepository {
-  private static final String REPOSITORY_LOCATION_KEY = "btrace.extensions.dir";
+  public static final String REPOSITORY_LOCATION_KEY = "btrace.extensions.dir";
   private static final ExtensionRepository INSTANCE = new ExtensionRepository();
 
   private final Map<String, ExtensionEntry> extensionsById = new HashMap<>();
@@ -40,8 +40,8 @@ public final class ExtensionRepository {
               new CodeSource(
                   Paths.get(clzUrlStr.substring(0, idx)).toUri().toURL(), (CodeSigner[]) null);
         }
-        URL libsLocation = source.getLocation();
-        repoDir = new File(libsLocation.toURI()).toPath().getParent().resolve("ext");
+        URL jarLocation = source.getLocation();
+        repoDir = new File(jarLocation.toURI()).toPath().getParent().resolve("ext");
       }
       if (Files.exists(repoDir) && Files.isDirectory(repoDir)) {
         Files.walkFileTree(
