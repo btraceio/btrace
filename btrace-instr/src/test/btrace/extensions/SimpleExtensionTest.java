@@ -24,5 +24,7 @@ public class SimpleExtensionTest {
     fld += 10;
     Service s = newService();
     s.doit("step[4]=" + fld);
+
+    failing();
   }
 }

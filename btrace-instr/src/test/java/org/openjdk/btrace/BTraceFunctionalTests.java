@@ -25,11 +25,6 @@
 
 package org.openjdk.btrace;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -42,6 +37,8 @@ import jdk.jfr.consumer.RecordingFile;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A set of end-to-end functional tests.
@@ -376,6 +373,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
           assertTrue(stdout.contains("step[2]"));
           assertTrue(stdout.contains("step[3]=10"));
           assertTrue(stdout.contains("step[4]=20"));
+          assertTrue(stdout.contains("ERROR") && stdout.contains("java.lang.RuntimeException"));
+          assertEquals(0, retcode);
         });
   }
 }

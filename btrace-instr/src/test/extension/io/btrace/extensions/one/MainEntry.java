@@ -26,4 +26,8 @@ public class MainEntry {
     public static Service newService() {
         return new Service();
     }
+
+    public static void failing() {
+        throw new RuntimeException();
+    }
 }
