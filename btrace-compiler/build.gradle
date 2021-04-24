@@ -6,7 +6,7 @@ dependencies {
     implementation files("${JAVA_8_HOME}/lib/tools.jar")
     implementation project(path: ':btrace-core')
     implementation project(path: ':btrace-runtime')
-    implementation project(path: ':btrace-instr')
+    runtimeOnly project(path: ':btrace-instr')
 
     testImplementation project(path: ':btrace-instr')
 }

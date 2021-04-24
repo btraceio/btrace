@@ -47,7 +47,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.extensions.ExtensionEntry;
 import org.openjdk.btrace.core.extensions.ExtensionRepository;
-import org.openjdk.btrace.instr.Constants;
+import org.openjdk.btrace.core.Constants;
 
 /** @author Jaroslav Bachorik */
 public class Postprocessor extends ClassVisitor {
