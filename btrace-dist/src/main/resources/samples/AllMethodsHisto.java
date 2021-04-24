@@ -27,7 +27,7 @@
 import org.openjdk.btrace.core.annotations.*;
 import static org.openjdk.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.extensions.hdrhistogram.ConcurrentHistogramFactory;
+import org.openjdk.btrace.extensions.hdrhistogram.Histograms;
 import org.HdrHistogram.ConcurrentHistogram;
 
 /**
@@ -37,7 +37,7 @@ import org.HdrHistogram.ConcurrentHistogram;
  */
 @BTrace
 public class AllMethodsHisto {
-    private static final ConcurrentHistogram HISTOGRAM = ConcurrentHistogramFactory.newInstance(4);
+    private static final ConcurrentHistogram HISTOGRAM = Histograms.newConcurrentHistogram(4);
 
     @OnMethod(
             clazz = "/javax\\.swing\\..*/",
