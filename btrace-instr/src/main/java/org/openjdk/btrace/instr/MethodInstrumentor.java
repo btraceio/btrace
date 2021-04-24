@@ -37,7 +37,6 @@ import java.util.Map;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.runtime.Interval;
 

@@ -25,6 +25,8 @@
 
 package org.openjdk.btrace;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -37,8 +39,6 @@ import jdk.jfr.consumer.RecordingFile;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A set of end-to-end functional tests.

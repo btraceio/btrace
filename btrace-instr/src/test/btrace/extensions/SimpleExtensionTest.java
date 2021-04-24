@@ -12,9 +12,9 @@ import org.openjdk.btrace.core.annotations.*;
 public class SimpleExtensionTest {
   @OnMethod(clazz = "resources.Main", method = "callA")
   public static void noargs(@Self Object self) {
-            String[] arr = MainEntry.aaa(6);
-            arr[1] = "hello";
-            arr[2] = "world";
+    String[] arr = MainEntry.aaa(6);
+    arr[1] = "hello";
+    arr[2] = "world";
     ext_test("step[1]");
     MainEntry i = createInstance();
     println("xxx");

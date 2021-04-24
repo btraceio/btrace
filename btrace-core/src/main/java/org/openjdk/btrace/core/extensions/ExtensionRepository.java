@@ -1,7 +1,5 @@
 package org.openjdk.btrace.core.extensions;
 
-import org.openjdk.btrace.core.DebugSupport;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -33,14 +31,14 @@ public final class ExtensionRepository {
         CodeSource source = ExtensionRepository.class.getProtectionDomain().getCodeSource();
         if (source == null) {
           String clzUrlStr =
-                  ClassLoader.getSystemResource(
-                          ExtensionRepository.class.getName().replace('.', '/') + ".class")
-                          .toString();
+              ClassLoader.getSystemResource(
+                      ExtensionRepository.class.getName().replace('.', '/') + ".class")
+                  .toString();
           clzUrlStr = clzUrlStr.replace("jar:file:", "");
           int idx = clzUrlStr.lastIndexOf("!");
           source =
-                  new CodeSource(
-                          Paths.get(clzUrlStr.substring(0, idx)).toUri().toURL(), (CodeSigner[]) null);
+              new CodeSource(
+                  Paths.get(clzUrlStr.substring(0, idx)).toUri().toURL(), (CodeSigner[]) null);
         }
         URL libsLocation = source.getLocation();
         repoDir = new File(libsLocation.toURI()).toPath().getParent().resolve("ext");
