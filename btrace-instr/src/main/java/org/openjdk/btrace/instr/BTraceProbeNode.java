@@ -44,10 +44,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.VerifierException;
+import org.openjdk.btrace.core.*;
 import org.openjdk.btrace.core.comm.RetransformClassNotification;
 
 /** @author Jaroslav Bachorik */

@@ -613,7 +613,9 @@ public final class Main {
     }
 
     addPreconfLibs(libs);
-    System.setProperty(ExtensionRepository.REPOSITORY_LOCATION_KEY, Paths.get(bootPath).getParent().resolve("ext").toString());
+    System.setProperty(
+        ExtensionRepository.REPOSITORY_LOCATION_KEY,
+        Paths.get(bootPath).getParent().resolve("ext").toString());
   }
 
   @SuppressWarnings("JavaReflectionMemberAccess")

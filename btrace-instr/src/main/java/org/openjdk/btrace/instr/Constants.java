@@ -113,6 +113,9 @@ public abstract class Constants {
   public static final String THREAD_LOCAL_DESC = "L" + THREAD_LOCAL_INTERNAL + ";";
   public static final Type THREAD_LOCAL_TYPE = Type.getType(ThreadLocal.class);
 
+  public static final String EXTENSION_BOOTSTRAP_INTERNAL =
+      "org/openjdk/btrace/runtime/ExtensionBootstrap";
+
   // BTrace specific stuff
   public static final String BTRACE_UTILS = Type.getInternalName(BTraceUtils.class);
 

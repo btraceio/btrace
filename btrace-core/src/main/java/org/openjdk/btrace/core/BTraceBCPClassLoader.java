@@ -6,8 +6,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.SharedSettings;
 
 public final class BTraceBCPClassLoader extends URLClassLoader {
   public BTraceBCPClassLoader() {

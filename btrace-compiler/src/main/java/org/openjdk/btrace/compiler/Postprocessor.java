@@ -47,6 +47,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.extensions.ExtensionEntry;
 import org.openjdk.btrace.core.extensions.ExtensionRepository;
+import org.openjdk.btrace.instr.Constants;
 
 /** @author Jaroslav Bachorik */
 public class Postprocessor extends ClassVisitor {
@@ -110,7 +111,10 @@ public class Postprocessor extends ClassVisitor {
   public FieldVisitor visitField(
       int access, String name, String desc, String signature, Object value) {
     Type fldType = Type.getType(desc);
-    String fieldDesc = ExtensionRepository.getInstance().getExtensionForType(fldType.getClassName()) != null ? generalizeType(fldType).getDescriptor() : desc;
+    String fieldDesc =
+        ExtensionRepository.getInstance().getExtensionForType(fldType.getClassName()) != null
+            ? generalizeType(fldType).getDescriptor()
+            : desc;
 
     if (!shortSyntax) return super.visitField(access, name, fieldDesc, signature, value);
 
@@ -818,7 +822,7 @@ public class Postprocessor extends ClassVisitor {
             dsc,
             new Handle(
                 Opcodes.H_INVOKESTATIC,
-                "org/openjdk/btrace/runtime/ExtensionBootstrap",
+                Constants.EXTENSION_BOOTSTRAP_INTERNAL,
                 "bootstrapInvoke",
                 BOOTSTRAP_METHOD_TYPE.toMethodDescriptorString(),
                 false),
@@ -828,7 +832,8 @@ public class Postprocessor extends ClassVisitor {
             opcode);
       } else {
         Type fieldType = Type.getType(descriptor);
-        if (ExtensionRepository.getInstance().getExtensionForType(fieldType.getClassName()) != null) {
+        if (ExtensionRepository.getInstance().getExtensionForType(fieldType.getClassName())
+            != null) {
           fieldType = generalizeType(fieldType);
         }
         super.visitFieldInsn(opcode, owner, name, fieldType.getDescriptor());
@@ -848,7 +853,7 @@ public class Postprocessor extends ClassVisitor {
             // Capture 'this' as 0-th argument
             Type[] newArgTypes = new Type[argTypes.length + 1];
             System.arraycopy(argTypes, 0, newArgTypes, 1, argTypes.length);
-            newArgTypes[0] = Type.getType(Object.class);
+            newArgTypes[0] = Constants.OBJECT_TYPE;
             argTypes = newArgTypes;
             descriptor = Type.getMethodDescriptor(retType, argTypes);
           }
@@ -883,7 +888,7 @@ public class Postprocessor extends ClassVisitor {
     ExtensionRepository extensionRepository = ExtensionRepository.getInstance();
     if (type.getSort() == Type.OBJECT) {
       if (extensionRepository.getExtensionForType(type.getClassName()) != null) {
-        type = Type.getType(Object.class);
+        type = Constants.OBJECT_TYPE;
       }
     }
     if (type.getSort() == Type.ARRAY) {
