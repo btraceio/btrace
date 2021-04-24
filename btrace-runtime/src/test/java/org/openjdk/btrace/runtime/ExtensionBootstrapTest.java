@@ -8,6 +8,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
@@ -66,6 +67,14 @@ class ExtensionBootstrapTest {
         Modifier.isStatic(targetMethod.getModifiers())
             ? Opcodes.INVOKESTATIC
             : Opcodes.INVOKEVIRTUAL;
+    if (opcode == Opcodes.INVOKEVIRTUAL) {
+      // need to add the receiver instance as the 0-th element
+      Type[] argTypes = Type.getArgumentTypes(descriptor);
+      Type[] newArgTypes = new Type[argTypes.length + 1];
+      System.arraycopy(argTypes, 0, newArgTypes, 1, argTypes.length);
+      newArgTypes[0] = Type.getType(TestExtension.class);
+      descriptor = Type.getMethodDescriptor(Type.getType(type.returnType()), newArgTypes);
+    }
     CallSite site =
         ExtensionBootstrap.bootstrapInvoke(
             MethodHandles.lookup(),

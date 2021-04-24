@@ -55,11 +55,11 @@ public final class ExtensionBootstrap {
             typeArgOffset = 1;
           }
           // Restore the erased parameter types
-          for (int i = typeArgOffset; i < args.length; i++) {
-            if (!type.parameterType(i - typeArgOffset).isPrimitive()) {
+          for (int i = 0; i < args.length - typeArgOffset; i++) {
+            if (!type.parameterType(i).isPrimitive()) {
               type =
                   type.changeParameterType(
-                      i - typeArgOffset, getTypeClass(args[i], extClassLoader));
+                      i, getTypeClass(args[i + typeArgOffset], extClassLoader));
             }
           }
           // Restore the erased return type
