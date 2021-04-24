@@ -109,7 +109,10 @@ public class Postprocessor extends ClassVisitor {
   @Override
   public FieldVisitor visitField(
       int access, String name, String desc, String signature, Object value) {
-    if (!shortSyntax) return super.visitField(access, name, desc, signature, value);
+    Type fldType = Type.getType(desc);
+    String fieldDesc = ExtensionRepository.getInstance().getExtensionForType(fldType.getClassName()) != null ? generalizeType(fldType).getDescriptor() : desc;
+
+    if (!shortSyntax) return super.visitField(access, name, fieldDesc, signature, value);
 
     List<Attribute> attrs = new ArrayList<>();
     return new FieldVisitor(Opcodes.ASM7) {
@@ -137,7 +140,7 @@ public class Postprocessor extends ClassVisitor {
       @Override
       public void visitEnd() {
         FieldDescriptor fd =
-            new FieldDescriptor(access, name, desc, signature, value, attrs, annotations);
+            new FieldDescriptor(access, name, fieldDesc, signature, value, attrs, annotations);
         fields.add(fd);
         super.visitEnd();
       }
@@ -824,7 +827,11 @@ public class Postprocessor extends ClassVisitor {
             dsc,
             opcode);
       } else {
-        super.visitFieldInsn(opcode, owner, name, descriptor);
+        Type fieldType = Type.getType(descriptor);
+        if (ExtensionRepository.getInstance().getExtensionForType(fieldType.getClassName()) != null) {
+          fieldType = generalizeType(fieldType);
+        }
+        super.visitFieldInsn(opcode, owner, name, fieldType.getDescriptor());
       }
     }
 
