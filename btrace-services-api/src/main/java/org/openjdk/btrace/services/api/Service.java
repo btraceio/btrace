@@ -35,7 +35,10 @@ import org.openjdk.btrace.services.spi.SimpleService;
  * <p>For script-wide service instantiation use {@linkplain Injected} annotation.
  *
  * @author Jaroslav Bachorik
+ *
+ * @deprecated Will be removed in BTrace 3
  */
+@Deprecated
 public final class Service {
   /**
    * Creates a BTrace runtime aware service

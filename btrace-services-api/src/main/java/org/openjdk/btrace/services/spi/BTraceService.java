@@ -24,5 +24,9 @@
  */
 package org.openjdk.btrace.services.spi;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ * @deprecated Will be removed in BTrace 3
+ */
+@Deprecated
 public interface BTraceService {}

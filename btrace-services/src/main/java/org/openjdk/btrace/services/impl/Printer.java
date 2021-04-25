@@ -36,7 +36,9 @@ import org.openjdk.btrace.services.spi.RuntimeService;
  * extended to a grown-up printer service later on.
  *
  * @author Jaroslav Bachorik
+ *
  */
+@Deprecated
 public final class Printer extends RuntimeService {
   private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 

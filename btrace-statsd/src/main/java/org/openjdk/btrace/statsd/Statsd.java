@@ -52,7 +52,10 @@ import org.openjdk.btrace.services.spi.SimpleService;
  * </pre>
  *
  * @author Jaroslav Bachorik
+ *
+ * @deprecated Use the DatadogStatsd instead packaged as the btrace-dd-statsd extension
  */
+@Deprecated
 public final class Statsd extends SimpleService {
   private static final Charset CHARSET = StandardCharsets.US_ASCII;
   private final QManager qManager = new QManager();

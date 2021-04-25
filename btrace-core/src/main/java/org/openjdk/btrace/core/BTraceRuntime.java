@@ -967,6 +967,13 @@ public final class BTraceRuntime {
   }
 
   static void deadlocks(boolean stackTrace) {
+    String msg = deadlocksStr(stackTrace);
+    if (msg != null) {
+      getRt().send(msg);
+    }
+  }
+
+  static String deadlocksStr(boolean stackTrace) {
     ThreadMXBean mbean = getRt().getThreadMXBean();
     if (mbean.isSynchronizerUsageSupported()) {
       long[] tids = mbean.findDeadlockedThreads();
@@ -975,11 +982,11 @@ public final class BTraceRuntime {
         StringBuilder sb = new StringBuilder();
         for (ThreadInfo ti : infos) {
           sb.append("\"")
-              .append(ti.getThreadName())
-              .append("\"" + " Id=")
-              .append(ti.getThreadId())
-              .append(" in ")
-              .append(ti.getThreadState());
+                  .append(ti.getThreadName())
+                  .append("\"" + " Id=")
+                  .append(ti.getThreadId())
+                  .append(" in ")
+                  .append(ti.getThreadState());
           if (ti.getLockName() != null) {
             sb.append(" on lock=").append(ti.getLockName());
           }
@@ -991,10 +998,10 @@ public final class BTraceRuntime {
           }
           if (ti.getLockOwnerName() != null) {
             sb.append(INDENT)
-                .append(" owned by ")
-                .append(ti.getLockOwnerName())
-                .append(" Id=")
-                .append(ti.getLockOwnerId());
+                    .append(" owned by ")
+                    .append(ti.getLockOwnerName())
+                    .append(" Id=")
+                    .append(ti.getLockOwnerId());
             sb.append(LINE_SEPARATOR);
           }
 
@@ -1025,9 +1032,10 @@ public final class BTraceRuntime {
           }
           sb.append(LINE_SEPARATOR);
         }
-        getRt().send(sb.toString());
+        return sb.toString();
       }
     }
+    return null;
   }
 
   static int dtraceProbe(String s1, String s2, int i1, int i2) {
@@ -1181,6 +1189,10 @@ public final class BTraceRuntime {
 
   static ClassLoader getCallerClassloader(int stackDec) {
     return getRt().getCallerClassLoader(stackDec + 1);
+  }
+
+  static void sendMessage(String msg) {
+    getRt().send(msg);
   }
 
   public static Class<?> getCallerClass(int stackDec) {

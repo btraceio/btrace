@@ -26,7 +26,11 @@ package org.openjdk.btrace.services.spi;
 
 import org.openjdk.btrace.services.api.RuntimeContext;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ * @deprecated Will be removed in BTrace 3
+ */
+@Deprecated
 public abstract class RuntimeService implements BTraceService {
   protected final RuntimeContext rt;
 
