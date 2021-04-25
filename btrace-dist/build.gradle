@@ -200,11 +200,22 @@ task buildTgz(type: Tar) {
 }
 
 task copyExtensions(type: Copy) {
-    from "${project.rootDir}/btrace-extensions/btrace-hdr-histogram/build/libs/btrace-hdr-histogram.jar"
+    from("${project.rootDir}/btrace-extensions") {
+        include '**/*-ext.jar'
+    }
+
     into "${libsDir}/ext"
+
+    // Flatten the hierarchy by setting the path
+    // of all files to their respective basename
+    eachFile {
+        path = name
+    }
+
+    includeEmptyDirs = false
 }
 
-copyExtensions.dependsOn(':btrace-extensions:btrace-hdr-histogram:shadowJar')
+copyExtensions.dependsOn(':btrace-extensions:build')
 
 ospackage {
     packageName = 'btrace'

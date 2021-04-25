@@ -1,0 +1,9 @@
+build.dependsOn(
+    ':btrace-extensions:btrace-hdr-histogram:shadowJar',
+    ':btrace-extensions:btrace-dd-statsd:shadowJar'
+)
+
+clean.dependsOn(
+    ':btrace-extensions:btrace-hdr-histogram:clean',
+    ':btrace-extensions:btrace-dd-statsd:clean'
+)

@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    implementation 'org.hdrhistogram:HdrHistogram:2.1.12'
+    implementation group: 'com.datadoghq', name: 'java-dogstatsd-client', version: '2.11.0'
 }
 
 shadowJar {
@@ -11,9 +11,9 @@ shadowJar {
     version = null
     manifest {
         attributes(
-                "BTrace-Extension-ID": "hdr-histogram",
+                "BTrace-Extension-ID": "dogstatsd",
                 "BTrace-Extension-Version": "1.0",
-                "BTrace-Extension-Exports": "org.openjdk.btrace.extensions.hdrhistogram,org.HdrHistogram"
+                "BTrace-Extension-Exports": "com.timgroup.statsd"
         )
     }
 }
