@@ -91,10 +91,26 @@ public class Postprocessor extends ClassVisitor {
       isconstructor = true;
     }
 
+    if (isconstructor) {
+      // the script class needs as dummy default constructor
+      createDefaultConstructor();
+    }
+
     return new MethodConvertor(
         localVarOffset,
         isconstructor,
         super.visitMethod(access, name, desc, signature, exceptions));
+  }
+
+  private void createDefaultConstructor() {
+    MethodVisitor mv = super.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+    mv.visitCode();
+    // load 'this'
+    mv.visitVarInsn(Opcodes.ALOAD, 0);
+    // invoke super constructor
+    mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+    mv.visitMaxs(1, 1);
+    mv.visitEnd();
   }
 
   @Override
