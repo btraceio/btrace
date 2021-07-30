@@ -5,7 +5,7 @@ plugins {
     id "com.github.johnrengelman.shadow" version "6.1.0"
     id "nebula.ospackage" version "8.5.6"
     id "java"
-    id "io.sdkman.vendors" version "2.0.0"
+    id "io.sdkman.vendors" version "3.0.0"
     id "signing"
 }
 
