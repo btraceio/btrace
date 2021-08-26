@@ -1,5 +1,5 @@
 plugins {
-    id 'net.nemerosa.versioning' version '2.14.0'
+    id 'net.nemerosa.versioning' version '2.15.0'
 }
 
 sourceCompatibility = '11'
