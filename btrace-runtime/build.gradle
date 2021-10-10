@@ -62,17 +62,24 @@ dependencies {
         builtBy compileJava
     }
 
+    // https://mvnrepository.com/artifact/org.jctools/jctools-core
+    implementation(group: 'org.jctools', name: 'jctools-core', version: '3.3.0')
+
     java9Implementation project(':btrace-core')
+    java9Implementation project(':btrace-services-api')
     java9Implementation project(':btrace-services')
 
     java11Implementation project(':btrace-core')
+    java11Implementation project(':btrace-services-api')
     java11Implementation project(':btrace-services')
 
     java15Implementation project(':btrace-core')
+    java15Implementation project(':btrace-services-api')
     java15Implementation project(':btrace-services')
 
-    compile project(':btrace-core')
-    compile project(':btrace-services')
+    implementation project(':btrace-core')
+    implementation project(':btrace-services-api')
+    implementation project(':btrace-services')
 }
 
 jar {

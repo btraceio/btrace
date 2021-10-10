@@ -1,8 +1,12 @@
 dependencies {
-    compile files("${JAVA_8_HOME}/lib/tools.jar")
-    compile project(path: ':btrace-core')
-    compile project(path: ':btrace-runtime')
+    // https://mvnrepository.com/artifact/org.ow2.asm/asm
+    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    implementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+
+    implementation files("${JAVA_8_HOME}/lib/tools.jar")
+    implementation project(path: ':btrace-core')
+    implementation project(path: ':btrace-runtime')
     runtimeOnly project(path: ':btrace-instr')
 
-    testCompile project(path: ':btrace-instr')
+    testImplementation project(path: ':btrace-instr')
 }
