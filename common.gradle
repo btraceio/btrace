@@ -3,7 +3,7 @@
 //
 
 apply plugin: 'java'
-apply plugin: 'maven'
+//apply plugin: 'maven'
 apply plugin: 'idea'
 
 project.group = 'org.openjdk.btrace'
@@ -28,7 +28,6 @@ if (!project.hasProperty("JAVA_16_HOME")) {
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
     }
 }
 
@@ -49,7 +48,6 @@ repositories {
     // You may define additional repositories, or even remove "mavenCentral()".
     // Read more about repositories here:
     //   http://www.gradle.org/docs/current/userguide/dependency_management.html#sec:repositories
-    jcenter()
 }
 
 dependencies {
@@ -82,13 +80,13 @@ artifacts {
     archives javadocJar
 }
 
-configure(install.repositories.mavenInstaller) {
-    pom.project {
-        groupId = group ?: "org.openjdk.btrace"
-        artifactId = mavenArtifactId
-        version = version ?: "0"
-    }
-}
+//configure(install.repositories.mavenInstaller) {
+//    pom.project {
+//        groupId = group ?: "org.openjdk.btrace"
+//        artifactId = mavenArtifactId
+//        version = version ?: "0"
+//    }
+//}
 
 task createFolders(description: 'Creates the source folders if they do not exist.') doLast {
     sourceSets*.allSource*.srcDirs*.each { File srcDir ->
