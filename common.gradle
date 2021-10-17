@@ -3,7 +3,6 @@
 //
 
 apply plugin: 'java'
-//apply plugin: 'maven'
 apply plugin: 'idea'
 
 project.group = 'org.openjdk.btrace'
@@ -79,14 +78,6 @@ artifacts {
     archives sourcesJar
     archives javadocJar
 }
-
-//configure(install.repositories.mavenInstaller) {
-//    pom.project {
-//        groupId = group ?: "org.openjdk.btrace"
-//        artifactId = mavenArtifactId
-//        version = version ?: "0"
-//    }
-//}
 
 task createFolders(description: 'Creates the source folders if they do not exist.') doLast {
     sourceSets*.allSource*.srcDirs*.each { File srcDir ->
