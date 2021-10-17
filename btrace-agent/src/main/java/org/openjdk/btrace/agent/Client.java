@@ -541,7 +541,7 @@ abstract class Client implements CommandListener {
             for (Class<?> c : classes) {
               try {
                 inst.retransformClasses(c);
-              } catch (VerifyError e1) {
+              } catch (ClassFormatError | VerifyError e1) {
                 debugPrint("Class '" + c.getName() + "' verification failed");
                 debugPrint(e1);
                 try {
