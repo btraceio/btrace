@@ -17,7 +17,7 @@ sourceSets {
 dependencies {
     implementation group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}"
     implementation group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}"
-    implementation group: 'com.google.auto.service', name: 'auto-service', version: '1.0'
+    implementation group: 'com.google.auto.service', name: 'auto-service', version: '1.0.1'
 
     implementation project(':btrace-core')
     implementation project(':btrace-services-api')
