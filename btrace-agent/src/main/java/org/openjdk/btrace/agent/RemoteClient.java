@@ -33,10 +33,7 @@ import java.net.SocketException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.LockSupport;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.CircularBuffer;
-import org.openjdk.btrace.core.Function;
-import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.*;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.DisconnectCommand;
 import org.openjdk.btrace.core.comm.EventCommand;
@@ -77,9 +74,11 @@ class RemoteClient extends Client {
 
   static Client getClient(ClientContext ctx, Socket sock, Function<Client, Future<?>> initCallback)
       throws IOException {
+    SharedSettings settings = ctx.getSettings();
     ObjectInputStream ois = new ObjectInputStream(sock.getInputStream());
     ObjectOutputStream oos = new ObjectOutputStream(sock.getOutputStream());
-    SharedSettings settings = new SharedSettings();
+    DebugSupport debug = new DebugSupport(settings);
+
     while (true) {
       Command cmd = WireIO.read(ois);
       switch (cmd.getType()) {
@@ -90,9 +89,9 @@ class RemoteClient extends Client {
           }
         case Command.INSTRUMENT:
           {
+            debug.debug("got instrument command");
             try {
-              Client client =
-                  new RemoteClient(ctx, ois, oos, sock, (InstrumentCommand) cmd, settings);
+              Client client = new RemoteClient(ctx, ois, oos, sock, (InstrumentCommand) cmd);
               initCallback.apply(client).get();
               WireIO.write(oos, new StatusCommand(InstrumentCommand.STATUS_FLAG));
               return client;
@@ -137,15 +136,13 @@ class RemoteClient extends Client {
       ObjectInputStream ois,
       ObjectOutputStream oos,
       Socket sock,
-      InstrumentCommand cmd,
-      SharedSettings settings)
+      InstrumentCommand cmd)
       throws IOException {
     super(ctx);
     this.sock = sock;
     this.ois = ois;
     this.oos = oos;
-    this.settings.from(settings);
-    debugPrint("got instrument command");
+    this.settings.from(ctx.getSettings());
     Class<?> btraceClazz = loadClass(cmd);
     if (btraceClazz == null) {
       throw new RuntimeException("can not load BTrace class");
