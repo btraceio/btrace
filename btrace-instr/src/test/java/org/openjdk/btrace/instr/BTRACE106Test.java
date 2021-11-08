@@ -40,7 +40,7 @@ public class BTRACE106Test extends InstrumentorTestBase {
     checkTransformation(
         "ALOAD 0\n"
             + "LDC \"aMethod\"\n"
-            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n"
+            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o1 (Ljava/lang/Object;Ljava/lang/String;)V\n"
             + "LCONST_0\n"
             + "LSTORE 1\n"
             + "INVOKESTATIC java/lang/System.nanoTime ()J\n"
@@ -52,11 +52,11 @@ public class BTRACE106Test extends InstrumentorTestBase {
             + "ALOAD 0\n"
             + "LDC \"bMethod\"\n"
             + "LLOAD 1\n"
-            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o3 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
+            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o3 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
             + "ALOAD 0\n"
             + "LDC \"bMethod\"\n"
             + "LLOAD 1\n"
-            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$aux$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
+            + "INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V\n"
             + "MAXSTACK = 4\n"
             + "MAXLOCALS = 5");
   }

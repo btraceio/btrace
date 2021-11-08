@@ -97,7 +97,7 @@ public abstract class RuntimeTest {
         Path clientJarPath =
             projectRoot
                 .resolve("btrace-dist/build/resources/main")
-                .resolve(System.getProperty("project.version"))
+                .resolve("v" + System.getProperty("project.version"))
                 .resolve("libs/btrace-client.jar");
         Path eventsJarPath = projectRoot.resolve("btrace-instr/build/libs/events.jar");
         clientClassPath = clientJarPath.toString();

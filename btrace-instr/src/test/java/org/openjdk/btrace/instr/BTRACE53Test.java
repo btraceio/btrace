@@ -43,7 +43,7 @@ public class BTRACE53Test extends InstrumentorTestBase {
             + "LSUB\n"
             + "LSTORE 1\n"
             + "LLOAD 1\n"
-            + "INVOKESTATIC resources/DerivedClass.$btrace$org$openjdk$btrace$runtime$aux$BTRACE53$onInit (J)V\n"
+            + "INVOKESTATIC resources/DerivedClass.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE53$onInit (J)V\n"
             + "MAXSTACK = 4\n"
             + "MAXLOCALS = 5");
   }

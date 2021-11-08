@@ -47,7 +47,7 @@ public class BTRACE22Test extends InstrumentorTestBase {
             + "LSTORE 1\n"
             + "ALOAD 0\n"
             + "LLOAD 1\n"
-            + "INVOKESTATIC resources/issues/BTRACE22.$btrace$org$openjdk$btrace$runtime$aux$BTRACE22$tracker (Ljava/lang/Object;J)V\n"
+            + "INVOKESTATIC resources/issues/BTRACE22.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE22$tracker (Ljava/lang/Object;J)V\n"
             + "LOCALVARIABLE d D L1 L3 5\n"
             + "MAXSTACK = 6\n"
             + "MAXLOCALS = 7");

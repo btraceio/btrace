@@ -74,7 +74,7 @@ task buildEventsJar(type: Jar) {
 
 test {
     onlyIf {
-        new File("${projectDir}/../btrace-dist/build/resources/main/${project.version}/libs/btrace-client.jar").exists()
+        new File("${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/btrace-client.jar").exists()
     }
     dependsOn cleanTest, buildEventsJar
     inputs.files compileTestProbes.outputs
