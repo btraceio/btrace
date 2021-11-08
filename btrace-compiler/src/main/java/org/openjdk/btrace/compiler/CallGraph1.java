@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -188,26 +187,30 @@ final class CallGraph1 {
       }
     }
 
-    boolean changesMade = false;
     Set<Node> sortedNodes = new HashSet<>(checkingNodes.values());
-    do {
-      changesMade = false;
+    Deque<Node> toDelete = new ArrayDeque<>();
+    for (Node node : sortedNodes) {
+      if ((node.incoming.isEmpty() && !startingNodes.contains(node)) || node.outgoing.isEmpty()) {
+        toDelete.addLast(node);
+      }
+    }
 
-      Iterator<Node> iter = sortedNodes.iterator();
-      while (iter.hasNext()) {
-        Node n = iter.next();
-        if ((n.incoming.isEmpty() && !startingNodes.contains(n)) || n.outgoing.isEmpty()) {
-          changesMade = true;
-          for (Edge e : new HashSet<>(n.incoming)) {
-            e.delete();
-          }
-          for (Edge e : new HashSet<>(n.outgoing)) {
-            e.delete();
-          }
-          iter.remove();
+    while (!toDelete.isEmpty()) {
+      Node n = toDelete.removeFirst();
+      sortedNodes.remove(n);
+      for (Edge e : new HashSet<>(n.incoming)) {
+        e.delete();
+        if (e.from.incoming.isEmpty() && !startingNodes.contains(e.from)) {
+          toDelete.addLast(e.from);
         }
       }
-    } while (changesMade);
+      for (Edge e : new HashSet<>(n.outgoing)) {
+        e.delete();
+        if (e.to.outgoing.isEmpty()) {
+          toDelete.addLast(e.to);
+        }
+      }
+    }
     return sortedNodes;
   }
 

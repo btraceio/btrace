@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -188,26 +187,33 @@ public final class CallGraph {
       }
     }
 
-    boolean changesMade = false;
     Set<Node> sortedNodes = new HashSet<>(checkingNodes.values());
-    do {
-      changesMade = false;
+    // collect all terminal nodes
+    Deque<Node> terminalNodes = new ArrayDeque<>();
+    for (Node node : sortedNodes) {
+      if ((node.incoming.isEmpty() && !startingNodes.contains(node)) || node.outgoing.isEmpty()) {
+        terminalNodes.addLast(node);
+      }
+    }
 
-      Iterator<Node> iter = sortedNodes.iterator();
-      while (iter.hasNext()) {
-        Node n = iter.next();
-        if ((n.incoming.isEmpty() && !startingNodes.contains(n)) || n.outgoing.isEmpty()) {
-          changesMade = true;
-          for (Edge e : new HashSet<>(n.incoming)) {
-            e.delete();
-          }
-          for (Edge e : new HashSet<>(n.outgoing)) {
-            e.delete();
-          }
-          iter.remove();
+    // remove each terminal node from the graph and if the removal creates more terminal nodes
+    // add them all for processing
+    while (!terminalNodes.isEmpty()) {
+      Node n = terminalNodes.removeFirst();
+      sortedNodes.remove(n);
+      for (Edge e : new HashSet<>(n.incoming)) {
+        e.delete();
+        if (e.from.incoming.isEmpty() && !startingNodes.contains(e.from)) {
+          terminalNodes.addLast(e.from);
         }
       }
-    } while (changesMade);
+      for (Edge e : new HashSet<>(n.outgoing)) {
+        e.delete();
+        if (e.to.outgoing.isEmpty()) {
+          terminalNodes.addLast(e.to);
+        }
+      }
+    }
     return sortedNodes;
   }
 
