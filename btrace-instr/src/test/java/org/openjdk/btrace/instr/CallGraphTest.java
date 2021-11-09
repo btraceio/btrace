@@ -18,6 +18,19 @@ class CallGraphTest {
   }
 
   @Test
+  void hasNoCycleWithIsolatedNode() {
+    CallGraph callGraph = new CallGraph();
+    callGraph.addStarting(new CallGraph.Node("a"));
+    callGraph.addStarting(new CallGraph.Node("b"));
+    callGraph.addStarting(new CallGraph.Node("c"));
+
+    callGraph.addEdge("a", "d");
+    callGraph.addEdge("b", "d");
+
+    assertFalse(callGraph.hasCycle());
+  }
+
+  @Test
   void hasCycleFromRootNode() {
     CallGraph callGraph = new CallGraph();
     callGraph.addEdge("a", "b");

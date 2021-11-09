@@ -94,6 +94,10 @@ public final class CallGraph {
 
   public boolean hasCycle() {
     Set<Node> looped = findCycles();
+    if (looped.isEmpty()) {
+      return false;
+    }
+
     Set<Node> checkingSet = new HashSet<>(looped);
 
     checkingSet.retainAll(startingNodes);
@@ -155,7 +159,7 @@ public final class CallGraph {
     }
   }
 
-  private Set<Node> findCycles() {
+  private Set<Node>  findCycles() {
     if (nodes.size() < 2) return Collections.emptySet();
 
     Map<String, Node> checkingNodes = new HashMap<>();
@@ -203,13 +207,13 @@ public final class CallGraph {
       sortedNodes.remove(n);
       for (Edge e : new HashSet<>(n.incoming)) {
         e.delete();
-        if (e.from.incoming.isEmpty() && !startingNodes.contains(e.from)) {
+        if (e.from.outgoing.isEmpty()) {
           terminalNodes.addLast(e.from);
         }
       }
       for (Edge e : new HashSet<>(n.outgoing)) {
         e.delete();
-        if (e.to.outgoing.isEmpty()) {
+        if (e.to.incoming.isEmpty() && !startingNodes.contains(e.to)) {
           terminalNodes.addLast(e.to);
         }
       }
