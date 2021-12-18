@@ -44,7 +44,7 @@ import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.jfr.JfrEvent;
-import org.openjdk.btrace.runtime.aux.Auxilliary;
+import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 
 /**
  * Helper class used by BTrace built-in functions and also acts runtime "manager" for a specific
@@ -134,7 +134,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
       }
 
       Class<?> clz =
-          MethodHandles.privateLookupIn(Auxilliary.class, MethodHandles.lookup()).defineClass(code);
+          MethodHandles.privateLookupIn(Auxiliary.class, MethodHandles.lookup()).defineClass(code);
       // initialize the class by creating a dummy instance
       clz.getConstructor().newInstance();
       return clz;

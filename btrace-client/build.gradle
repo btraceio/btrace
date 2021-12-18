@@ -1,11 +1,17 @@
 plugins {
-    id 'net.nemerosa.versioning' version '2.6.1'
+    id 'net.nemerosa.versioning' version '2.14.0'
 }
 
 dependencies {
-    compile project(':btrace-core')
-    compile project(':btrace-compiler')
-    compile project(':btrace-instr')
+    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    implementation(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
+    implementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+
+    implementation files("${JAVA_8_HOME}/lib/tools.jar")
+
+    implementation project(':btrace-core')
+    implementation project(':btrace-compiler')
+    implementation project(':btrace-instr')
 }
 
 jar {

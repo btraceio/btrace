@@ -15,14 +15,17 @@ sourceSets {
 }
 
 dependencies {
-    compile(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
-    compile(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
-    compile group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc7'
-    compile project(':btrace-core')
-    compile project(':btrace-runtime')
-    compile project(':btrace-compiler')
-    compile project(':btrace-statsd')
-    testCompile project(':btrace-client')
+    implementation group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}"
+    implementation group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}"
+    implementation group: 'com.google.auto.service', name: 'auto-service', version: '1.0'
+
+    implementation project(':btrace-core')
+    implementation project(':btrace-services-api')
+    implementation project(':btrace-runtime')
+    implementation project(':btrace-compiler')
+    implementation project(':btrace-statsd')
+    testImplementation project(':btrace-client')
+    testImplementation group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}"
 }
 
 compileJava11_dummyJava {
@@ -71,7 +74,7 @@ task buildEventsJar(type: Jar) {
 
 test {
     onlyIf {
-        new File("${projectDir}/../btrace-dist/build/resources/main/${project.version}/libs/btrace-client.jar").exists()
+        new File("${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/btrace-client.jar").exists()
     }
     dependsOn cleanTest, buildEventsJar
     inputs.files compileTestProbes.outputs

@@ -55,7 +55,7 @@ import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.MethodID;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
-import org.openjdk.btrace.runtime.aux.Auxilliary;
+import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 import sun.misc.Unsafe;
 
 /** @author Jaroslav Bachorik */
@@ -193,7 +193,7 @@ public abstract class InstrumentorTestBase {
                   String[] interfaces) {
                 int idx = name.lastIndexOf('/');
                 name =
-                    Auxilliary.class.getPackage().getName().replace('.', '/')
+                    Auxiliary.class.getPackage().getName().replace('.', '/')
                         + '/'
                         + name.substring(idx + 1);
                 super.visit(version, access, name, signature, superName, interfaces);

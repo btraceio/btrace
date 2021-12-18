@@ -41,7 +41,7 @@ import org.openjdk.btrace.core.handlers.EventHandler;
 import org.openjdk.btrace.core.handlers.ExitHandler;
 import org.openjdk.btrace.core.handlers.LowMemoryHandler;
 import org.openjdk.btrace.core.handlers.TimerHandler;
-import org.openjdk.btrace.runtime.aux.Auxilliary;
+import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 import org.openjdk.btrace.services.api.RuntimeContext;
 
 /**
@@ -138,11 +138,11 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
     int idx = forClassName.lastIndexOf('/');
     if (idx > -1) {
       forClassName =
-          Auxilliary.class.getPackage().getName().replace('.', '/')
+          Auxiliary.class.getPackage().getName().replace('.', '/')
               + "/"
               + forClassName.substring(idx + 1);
     } else {
-      forClassName = Auxilliary.class.getPackage().getName().replace('.', '/') + "/" + forClassName;
+      forClassName = Auxiliary.class.getPackage().getName().replace('.', '/') + "/" + forClassName;
     }
 
     if (!uniqueClientClassNames) {

@@ -1,11 +1,9 @@
 plugins {
-    id 'maven'
     id 'maven-publish'
-    id "com.jfrog.bintray" version "1.8.5"
     id "com.github.johnrengelman.shadow" version "6.1.0"
-    id "nebula.ospackage" version "8.5.1"
+    id "nebula.ospackage" version "8.5.6"
     id "java"
-    id "io.sdkman.vendors" version "2.0.0"
+    id "io.sdkman.vendors" version "3.0.0"
     id "signing"
 }
 
@@ -20,10 +18,14 @@ def distBase = "${project.buildDir}/resources/main"
 def distTarget = "${distBase}/v${project.version}"
 def libsDir = new File("${distTarget}/libs")
 
+configurations {
+    artifact.extendsFrom implementation
+}
+
 dependencies {
-    compile project(':btrace-agent')
-    compile project(':btrace-client')
-    compile project(':btrace-compiler')
+    implementation project(':btrace-agent')
+    implementation project(':btrace-client')
+    implementation project(':btrace-compiler')
 }
 
 jar {
@@ -74,7 +76,7 @@ task agentJar(type: ShadowJar) {
                it.path == 'org/openjdk/btrace/core/messages.properties'
     }
 
-    configurations = [project.configurations.compile]
+    configurations = [project.configurations.artifact]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
 }
@@ -120,7 +122,7 @@ task bootJar(type: ShadowJar) {
                 it.path.startsWith('org/openjdk/btrace/statsd/')
     }
 
-    configurations = [project.configurations.compile]
+    configurations = [project.configurations.artifact]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
 }
@@ -149,7 +151,7 @@ task clientJar(type: ShadowJar) {
 
     exclude 'org/openjdk/btrace/agent/**'
 
-    configurations = [project.configurations.compile]
+    configurations = [project.configurations.artifact]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
 }
@@ -260,7 +262,7 @@ test {
         title = "btrace-${name}"
         source = sourceSets.main.allJava
         destinationDir = file("${project.docsDir}/${name}/javadoc")
-        classpath = files(compileJava.destinationDir) + configurations.compile.asFileTree
+        classpath = files(compileJava.destinationDir) + configurations.artifact.asFileTree
         exclude excludes["${name}"]
         options.addStringOption('Xdoclint:all,-missing', '-quiet')
         failOnError false
@@ -277,51 +279,13 @@ test {
     }
 }
 
-// Support for releasing to BinTray; see https://github.com/bintray/gradle-bintray-plugin
-// Add 'gradle.properties' file containing the following properties:
-// * bintray.user
-// * bintray.key
-// * gpg.passphrase
-bintray {
-    user = project.hasProperty("bintray.user") ? project.property("bintray.user") : System.getenv('BINTRAY_USER')
-    key = project.hasProperty("bintray.key") ? project.property("bintray.key") : System.getenv('BINTRAY_API_KEY')
-
-    publications = ['agent', 'client', 'boot']
-
-    dryRun = System.properties['bintrayUpload'] != null ? !(Boolean.getBoolean('bintrayUpload')) : true
-    publish = true
-
-    pkg {
-        repo = 'maven'
-        name = 'btrace'
-        desc = 'BTrace'
-        userOrg = 'btraceio'
-        websiteUrl = 'https://github.com/btraceio/btrace'
-        issueTrackerUrl = 'https://github.com/btraceio/btrace/issues'
-        vcsUrl = 'https://github.com/btraceio/btrace.git'
-        licenses = ['GPL-2.0+CE']
-        labels = []
-        publicDownloadNumbers = true
-        version {
-            name = project.version //Bintray logical version name
-            released  = new Date()
-            vcsTag = 'v' + project.version
-            //Optional configuration for GPG signing
-            gpg {
-                sign = project.hasProperty("gpg.passphrase") //Determines whether to GPG sign the files. The default is false
-                passphrase = sign ? project.property("gpg.passphrase") : "" //Optional. The passphrase for GPG signing'
-            }
-        }
-    }
-}
-
 sdkman {
-    api = "https://vendors.sdkman.io/"
     consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_API_KEY')
     consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
     candidate = "btrace"
     version = "${project.version}"
     url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-v${project.version}-sdkman-bin.zip"
+    hashtag = "btrace"
 }
 
 ["sdkReleaseVersion", "sdkAnnounceVersion"].forEach {
@@ -338,8 +302,8 @@ publishing {
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 
             credentials {
-                username = System.getenv('BTRACE_SONATYPE_USER')
-                password = System.getenv('BTRACE_SONATYPE_PWD')
+                username = project.hasProperty("sonatype.user") ? project.property("sonatype.user") : System.getenv('BTRACE_SONATYPE_USER')
+                password = project.hasProperty("sonatype.password") ? project.property("sonatype.password") : System.getenv('BTRACE_SONATYPE_PWD')
             }
         }
     }
@@ -350,13 +314,13 @@ publishing {
             groupId 'io.btrace'
             artifact agentJar
             artifact agentSourcesJar {
-                classifier "source"
+                classifier "sources"
             }
             artifact agentJavadocJar {
                 classifier "javadoc"
             }
             pom.withXml {
-                addPomDetails(asNode())
+                addPomDetails(asNode(), 'btrace-agent')
             }
         }
 
@@ -371,7 +335,7 @@ publishing {
                 classifier "javadoc"
             }
             pom.withXml {
-                addPomDetails(asNode())
+                addPomDetails(asNode(), 'btrace-client')
             }
         }
 
@@ -386,14 +350,16 @@ publishing {
                 classifier "javadoc"
             }
             pom.withXml {
-                addPomDetails(asNode())
+                addPomDetails(asNode(), 'btrace-boot')
             }
         }
     }
 }
 
-def addPomDetails(node) {
+def addPomDetails(node, name) {
+    node.appendNode('name', name)
     node.appendNode('url', 'https://github.com/btraceio/btrace')
+    node.appendNode('description', 'BTrace: A safe, dynamic tracing tool for the Java platform')
     def scmNode = node.appendNode('scm');
     scmNode.appendNode('url', 'https://github.com/btraceio/btrace')
     scmNode.appendNode('connection', 'scm:git:https://github.com/btraceio/btrace.git')

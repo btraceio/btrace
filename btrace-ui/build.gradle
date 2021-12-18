@@ -1,14 +1,14 @@
 plugins {
-    id 'net.nemerosa.versioning' version '2.6.1'
+    id 'net.nemerosa.versioning' version '2.14.0'
 }
 
 sourceCompatibility = '11'
 targetCompatibility = '11'
 
 dependencies {
-    compile project(':btrace-core')
-    compile project(':btrace-compiler')
-    compile project(':btrace-instr')
+    implementation project(':btrace-core')
+    implementation project(':btrace-compiler')
+    implementation project(':btrace-instr')
 }
 
 jar {

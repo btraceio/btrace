@@ -511,7 +511,8 @@ abstract class Client implements CommandListener {
             try {
               debugPrint("Attempting to retransform class: " + c.getName());
               inst.retransformClasses(c);
-            } catch (VerifyError e) {
+            } catch (ClassFormatError | VerifyError e) {
+              debugPrint("Class '" + c.getName() + "' verification failed");
               debugPrint(e);
               try {
                 onCommand(
@@ -531,7 +532,7 @@ abstract class Client implements CommandListener {
         } else {
           try {
             inst.retransformClasses(classes);
-          } catch (VerifyError e) {
+          } catch (ClassFormatError | VerifyError e) {
             /*
              * If the en-block retransformation fails because of verification retry classes one-by-one.
              * Otherwise all classes are rolled back to the original state and no instrumentation
@@ -540,7 +541,8 @@ abstract class Client implements CommandListener {
             for (Class<?> c : classes) {
               try {
                 inst.retransformClasses(c);
-              } catch (VerifyError e1) {
+              } catch (ClassFormatError | VerifyError e1) {
+                debugPrint("Class '" + c.getName() + "' verification failed");
                 debugPrint(e1);
                 try {
                   onCommand(
