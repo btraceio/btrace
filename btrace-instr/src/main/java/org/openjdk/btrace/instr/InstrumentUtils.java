@@ -100,16 +100,12 @@ public final class InstrumentUtils {
       return true;
     }
 
-    if (TypeUtils.isObjectOrAnyType(left)) {
-      return true;
-    }
-
-    if (isPrimitive(left)) {
-      return left.equals(right);
-    }
-
     if (TypeUtils.isVoid(left)) {
       return TypeUtils.isVoid(right);
+    }
+
+    if (TypeUtils.isAnyType(left)) {
+      return true;
     }
 
     if (exactTypeCheck) {
@@ -141,7 +137,9 @@ public final class InstrumentUtils {
          */
         if (!(isAnyType(args1[i])
             && (sort2 == Type.OBJECT || sort2 == Type.ARRAY || isPrimitive(args2[i])))) {
-          return isAssignable(args1[i], args2[i], cl, exactTypeCheck);
+          if (!isAssignable(args1[i], args2[i], cl, exactTypeCheck)) {
+            return false;
+          }
         }
       }
     }
@@ -227,7 +225,7 @@ public final class InstrumentUtils {
   }
 
   static BTraceClassWriter newClassWriter(BTraceClassReader reader, int flags) {
-    BTraceClassWriter cw = null;
+    BTraceClassWriter cw;
     cw =
         reader != null
             ? new BTraceClassWriter(reader.getClassLoader(), reader, flags)
@@ -252,7 +250,7 @@ public final class InstrumentUtils {
     return new BTraceClassReader(cl, is);
   }
 
-  static final String getActionPrefix(String className) {
+  static String getActionPrefix(String className) {
     return Constants.BTRACE_METHOD_PREFIX + className.replace('/', '$') + "$";
   }
 }

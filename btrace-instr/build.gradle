@@ -25,6 +25,7 @@ dependencies {
     implementation project(':btrace-compiler')
     implementation project(':btrace-statsd')
     testImplementation project(':btrace-client')
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
     testImplementation group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}"
 }
 
