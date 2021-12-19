@@ -29,6 +29,8 @@ import java.lang.instrument.Instrumentation;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
+import java.util.Set;
+
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
@@ -82,9 +84,20 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   private static final int V_String = 5;
   private static final int PERF_STRING_LIMIT = 256;
 
+  private final Set<JfrEventFactoryImpl> eventFactories;
+
   private static Perf perf;
 
-  public BTraceRuntimeImpl_8() {}
+  private final boolean hasJfr;
+  public BTraceRuntimeImpl_8() {
+    boolean jfr = false;
+    try {
+      Class.forName("jdk.jfr.Event");
+      jfr = true;
+    } catch (Throwable t) {}
+    hasJfr = jfr;
+    eventFactories = hasJfr ? new java.util.concurrent.CopyOnWriteArraySet<>() : null;
+  }
 
   public BTraceRuntimeImpl_8(
       String className,
@@ -93,6 +106,13 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       DebugSupport ds,
       Instrumentation inst) {
     super(className, args, cmdListener, ds, inst);
+    boolean jfr = false;
+    try {
+      Class.forName("jdk.jfr.Event");
+      jfr = true;
+    } catch (Throwable t) {}
+    hasJfr = jfr;
+    eventFactories = hasJfr ? new java.util.concurrent.CopyOnWriteArraySet<>() : null;
   }
 
   @Override
@@ -169,8 +189,23 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  public JfrEvent.Factory createEventFactory(JfrEvent.Template eventTemplate) {
+  public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
+    if (hasJfr) {
+      JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template, debug);
+      eventFactories.add(factory);
+      return factory;
+    }
     return () -> JfrEvent.EMPTY;
+  }
+
+  @Override
+  protected void cleanupRuntime() {
+    if (hasJfr) {
+      for (JfrEventFactoryImpl factory : eventFactories) {
+        factory.unregister();
+      }
+      eventFactories.clear();
+    }
   }
 
   @Override

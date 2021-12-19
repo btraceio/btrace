@@ -1,16 +1,5 @@
 package org.openjdk.btrace.runtime;
 
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.*;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.*;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import jdk.jfr.AnnotationElement;
 import jdk.jfr.BooleanFlag;
 import jdk.jfr.Category;
@@ -33,6 +22,33 @@ import jdk.jfr.Unsigned;
 import jdk.jfr.ValueDescriptor;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.jfr.JfrEvent;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.BOOLEANFLAG;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.DATAAMOUNT;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.FREQUENCY;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.MEMORYADDRESS;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.PERCENTAGE;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.TIMESPAN;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.TIMESTAMP;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.UNSIGNED;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.BOOLEAN;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.BYTE;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.CHAR;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.DOUBLE;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.FLOAT;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.INT;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.LONG;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.SHORT;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.STRING;
 
 final class JfrEventFactoryImpl implements JfrEvent.Factory {
   private static final Map<String, Class<?>> VALUE_TYPES;
@@ -88,30 +104,34 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
     }
 
     JfrEvent.Template.Field[] fields = template.getFields();
-    for (int i = 0; i < fields.length; i++) {
-      JfrEvent.Template.Field field = fields[i];
-      List<AnnotationElement> fieldAnnotations = new ArrayList<>();
-      if (field.getDescription() != null) {
-        fieldAnnotations.add(new AnnotationElement(Description.class, field.getDescription()));
-      }
-      if (field.getLabel() != null) {
-        fieldAnnotations.add(new AnnotationElement(Label.class, field.getLabel()));
-      }
-      if (field.getSpecificationName() != null) {
-        Class<? extends Annotation> annotationType =
-            SPECIFICATION_ANNOTATION_TYPES.get(field.getSpecificationName());
-        if (annotationType != null) {
-          fieldAnnotations.add(
-              new AnnotationElement(annotationType, field.getSpecificationValue()));
+    if (fields != null) {
+      for (int i = 0; i < fields.length; i++) {
+        JfrEvent.Template.Field field = fields[i];
+        List<AnnotationElement> fieldAnnotations = new ArrayList<>();
+        if (field.getDescription() != null) {
+          fieldAnnotations.add(new AnnotationElement(Description.class, field.getDescription()));
         }
-      }
-      ValueDescriptor vd =
-          new ValueDescriptor(VALUE_TYPES.get(field.getType()), field.getName(), fieldAnnotations);
+        if (field.getLabel() != null) {
+          fieldAnnotations.add(new AnnotationElement(Label.class, field.getLabel()));
+        }
+        if (field.getSpecificationName() != null) {
+          Class<? extends Annotation> annotationType =
+                  SPECIFICATION_ANNOTATION_TYPES.get(field.getSpecificationName());
+          if (annotationType != null) {
+            fieldAnnotations.add(
+                    new AnnotationElement(annotationType, field.getSpecificationValue()));
+          }
+        }
+        ValueDescriptor vd =
+                new ValueDescriptor(VALUE_TYPES.get(field.getType()), field.getName(), fieldAnnotations);
 
-      defFields.add(vd);
-      fieldIndex.put(field.getName(), i);
+        defFields.add(vd);
+        fieldIndex.put(field.getName(), i);
+      }
     }
+    debug.debug("Creating event factory: " + template.getName());
     eventFactory = EventFactory.create(defAnnotations, defFields);
+    debug.debug("Registering event factory: " + template.getName());
     eventFactory.register();
     if (template.getPeriod() != null && template.getPeriodicHandler() != null) {
       addJfrPeriodicEvent(template);

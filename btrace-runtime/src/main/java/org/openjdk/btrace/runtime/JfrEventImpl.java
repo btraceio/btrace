@@ -1,9 +1,10 @@
 package org.openjdk.btrace.runtime;
 
-import java.util.Map;
 import jdk.jfr.Event;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.jfr.JfrEvent;
+
+import java.util.Map;
 
 class JfrEventImpl extends JfrEvent {
   private final Event event;
@@ -110,7 +111,7 @@ class JfrEventImpl extends JfrEvent {
 
   private boolean checkField(String fieldName) {
     if (!fieldIndex.containsKey(fieldName)) {
-      DebugSupport.warning("Invalid event field: " + fieldName);
+      debug.warning("Invalid event field: " + fieldName);
       return false;
     }
     return true;
