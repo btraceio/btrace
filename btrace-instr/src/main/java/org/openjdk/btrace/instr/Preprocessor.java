@@ -250,8 +250,8 @@ final class Preprocessor {
       String name = null;
       String label = null;
       String desc = null;
-      String[] category = null;
-      InsnList fieldsInit = new InsnList();
+      InsnList categoryLoad = null;
+      InsnList fieldsInit = null;
       String handler = null;
       String period = null;
       boolean stacktrace = false;
@@ -279,7 +279,7 @@ final class Preprocessor {
             }
           case "category":
             {
-              category = (String[]) value;
+              categoryLoad = loadCategory((List<String>) value);
               break;
             }
           case "fields":
@@ -310,8 +310,16 @@ final class Preprocessor {
       eventsInit.add(new LdcInsnNode(name));
       eventsInit.add(label != null ? new LdcInsnNode(label) : new InsnNode(Opcodes.ACONST_NULL));
       eventsInit.add(desc != null ? new LdcInsnNode(desc) : new InsnNode(Opcodes.ACONST_NULL));
-      eventsInit.add(category != null ? new LdcInsnNode(label) : new InsnNode(Opcodes.ACONST_NULL));
-      eventsInit.add(fieldsInit);
+      if (categoryLoad != null) {
+        eventsInit.add(categoryLoad);
+      } else {
+        eventsInit.add(new InsnNode(Opcodes.ACONST_NULL));
+      }
+      if (fieldsInit != null) {
+        eventsInit.add(fieldsInit);
+      } else {
+        eventsInit.add(new InsnNode(Opcodes.ACONST_NULL));
+      }
       eventsInit.add(new LdcInsnNode(stacktrace));
       eventsInit.add(period != null ? new LdcInsnNode(period) : new InsnNode(Opcodes.ACONST_NULL));
       eventsInit.add(
@@ -340,6 +348,24 @@ final class Preprocessor {
               "Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;"));
     }
     clinit.instructions.insertBefore(clinitEntryPoint, eventsInit);
+  }
+
+  private InsnList loadCategory(List<String> values) {
+    if (values == null) {
+      return null;
+    }
+
+    InsnList insn = new InsnList();
+    insn.add(new LdcInsnNode(values.size()));
+    insn.add(new TypeInsnNode(Opcodes.ANEWARRAY, Constants.STRING_INTERNAL));
+    int cntr = 0;
+    for (String value : values) {
+      insn.add(new InsnNode(Opcodes.DUP));
+      insn.add(new LdcInsnNode(cntr++));
+      insn.add(new LdcInsnNode(value));
+      insn.add(new InsnNode(Opcodes.AASTORE));
+    }
+    return insn;
   }
 
   private InsnList loadFieldsDefs(List<AnnotationNode> fieldsDef) {
