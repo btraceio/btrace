@@ -32,6 +32,7 @@ import java.util.List;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.Self;
+import org.openjdk.btrace.core.types.AnyType;
 
 /** @author Jaroslav Bachorik */
 @BTrace
@@ -42,12 +43,12 @@ public class ArgsSigMatch {
   }
 
   @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "argsTypeMatch", exactTypeMatch = true)
-  public static void m2(@Self Object self, List<String> a) {
+  public static void m2(@Self AnyType self, List<String> a) {
     println("m2");
   }
 
   @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "argsTypeMatch", exactTypeMatch = true)
-  public static void m3(@Self Object self, ArrayList<String> a) {
+  public static void m3(@Self AnyType self, ArrayList<String> a) {
     println("m3");
   }
 }
