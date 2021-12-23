@@ -18,7 +18,7 @@ dependencies {
   jmh project(":btrace-instr")
   jmh project(":btrace-runtime")
   jmh project(":btrace-statsd")
-  jmh("org.openjdk.jmh:jmh-core:1.33")
+  jmh("org.openjdk.jmh:jmh-core:1.34")
   jmh("org.openjdk.jmh:jmh-generator-annprocess:1.33")
   compilerDeps project(path: ":btrace-dist", configuration: "shadow")
   compilerDeps project(":btrace-compiler")
