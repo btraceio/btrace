@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
+ * particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -27,28 +27,23 @@ package traces.onmethod;
 
 import static org.openjdk.btrace.core.BTraceUtils.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Location;
 import org.openjdk.btrace.core.annotations.OnMethod;
+import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.types.AnyType;
 
 /** @author Jaroslav Bachorik */
 @BTrace
-public class ArgsSigMatch {
-  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "argsTypeMatch")
-  public static void m1(@Self Object self, List<String> a) {
-    println("m1");
-  }
-
-  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "argsTypeMatch", exactTypeMatch = true)
-  public static void m2(@Self AnyType self, List<String> a) {
-    println("m2");
-  }
-
-  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "argsTypeMatch", exactTypeMatch = true)
-  public static void m3(@Self AnyType self, ArrayList<String> a) {
-    println("m3");
+public class ArgsReturnTypeNoMatch {
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "args",
+      type = "int (java.lang.String, long, java.lang.String[], int[])",
+      location = @Location(value = Kind.RETURN))
+  public static void args(
+      @Self Object self, @Return long retVal, String a, long b, String[] c, int[] d) {
+    println("args");
   }
 }

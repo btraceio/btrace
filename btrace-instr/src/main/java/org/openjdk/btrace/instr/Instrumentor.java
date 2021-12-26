@@ -1807,9 +1807,12 @@ public class Instrumentor extends ClassVisitor {
       return true;
     } else {
       String d = TypeUtils.declarationToDescriptor(decl);
-      Type[] args1 = Type.getArgumentTypes(d);
-      Type[] args2 = Type.getArgumentTypes(desc);
-      return InstrumentUtils.isAssignable(args1, args2, cl, exactTypeMatch);
+      Type[] argTypesLeft = Type.getArgumentTypes(d);
+      Type[] argTypesRight = Type.getArgumentTypes(desc);
+      Type retTypeLeft = Type.getReturnType(d);
+      Type retTypeRight = Type.getReturnType(desc);
+      return InstrumentUtils.isAssignable(retTypeLeft, retTypeRight, cl, exactTypeMatch)
+          && InstrumentUtils.isAssignable(argTypesLeft, argTypesRight, cl, exactTypeMatch);
     }
   }
 

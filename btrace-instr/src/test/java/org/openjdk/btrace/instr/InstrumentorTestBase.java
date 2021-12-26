@@ -25,8 +25,7 @@
 
 package org.openjdk.btrace.instr;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -229,6 +228,9 @@ public abstract class InstrumentorTestBase {
     String diff = diff();
     if (DEBUG) {
       System.err.println(diff);
+    }
+    if (expected.isEmpty()) {
+      assertTrue(diff.isEmpty());
     }
     assertEquals(expected, diff.substring(0, Math.min(diff.length(), expected.length())));
   }

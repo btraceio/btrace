@@ -139,7 +139,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnExit() throws Exception {
-    timeout = 1500;
+    timeout = 3500;
     test(
         "resources.Main",
         "btrace/OnExitTest.java",

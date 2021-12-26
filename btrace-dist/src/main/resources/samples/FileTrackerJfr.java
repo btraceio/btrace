@@ -47,8 +47,17 @@ import static org.openjdk.btrace.core.BTraceUtils.Jfr.*;
  * that is not tracked by this script.
  */
 @BTrace
-public class FileTracker {
-    @Event(name = "fileEvent", label = "BTrace File Event", description = "Sample BTrace file tracker", category = {"btrace", "samples"}, fields = "string fileName, string operation")
+public class FileTrackerJfr {
+    @Event(
+            name = "fileEvent",
+            label = "BTrace File Event",
+            description = "Sample BTrace file tracker",
+            category = {"btrace", "samples"},
+            fields = {
+                    @Event.Field(type = Event.FieldType.STRING, name = "fileName"),
+                    @Event.Field(type = Event.FieldType.STRING, name = "operation")
+            }
+    )
     private static JfrEvent.Factory eventFactory;
 
     @TLS
