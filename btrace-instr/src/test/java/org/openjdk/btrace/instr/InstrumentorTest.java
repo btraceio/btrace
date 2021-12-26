@@ -3140,7 +3140,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
     loadTargetClass("OnMethodTest");
     transform("onmethod/ArgsReturnTypeMatch");
     checkTransformation(
-            "DUP2\nLSTORE 6\nALOAD 0\nLLOAD 6\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\nINVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnTypeMatch$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)V");
+        "DUP2\nLSTORE 6\nALOAD 0\nLLOAD 6\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\nINVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnTypeMatch$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)V");
   }
 
   @Test
@@ -4257,7 +4257,14 @@ public class InstrumentorTest extends InstrumentorTestBase {
     loadTargetClass("OnMethodTest");
     transform("onmethod/StaticArgsSelf");
 
-    checkTransformation("");
+    checkTransformation(
+        "ACONST_NULL\n"
+            + "ALOAD 0\n"
+            + "LLOAD 1\n"
+            + "ALOAD 3\n"
+            + "ALOAD 4\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$StaticArgsSelf$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V\n"
+            + "MAXSTACK = 6");
   }
 
   @Test

@@ -25,6 +25,8 @@
 
 package org.openjdk.btrace.instr;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -54,8 +56,6 @@ import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 import sun.misc.Unsafe;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /** @author Jaroslav Bachorik */
 public abstract class InstrumentorTestBase {
