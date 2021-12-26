@@ -1,10 +1,9 @@
 package org.openjdk.btrace.runtime;
 
+import java.util.Map;
 import jdk.jfr.Event;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.jfr.JfrEvent;
-
-import java.util.Map;
 
 class JfrEventImpl extends JfrEvent {
   private final Event event;

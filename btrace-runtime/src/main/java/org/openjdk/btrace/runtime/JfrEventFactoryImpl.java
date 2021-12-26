@@ -1,5 +1,31 @@
 package org.openjdk.btrace.runtime;
 
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.BOOLEANFLAG;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.DATAAMOUNT;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.FREQUENCY;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.MEMORYADDRESS;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.PERCENTAGE;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.TIMESPAN;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.TIMESTAMP;
+import static org.openjdk.btrace.core.annotations.Event.FieldKind.UNSIGNED;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.BOOLEAN;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.BYTE;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.CHAR;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.DOUBLE;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.FLOAT;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.INT;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.LONG;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.SHORT;
+import static org.openjdk.btrace.core.annotations.Event.FieldType.STRING;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import jdk.jfr.AnnotationElement;
 import jdk.jfr.BooleanFlag;
 import jdk.jfr.Category;
@@ -22,33 +48,6 @@ import jdk.jfr.Unsigned;
 import jdk.jfr.ValueDescriptor;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.jfr.JfrEvent;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.BOOLEANFLAG;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.DATAAMOUNT;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.FREQUENCY;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.MEMORYADDRESS;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.PERCENTAGE;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.TIMESPAN;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.TIMESTAMP;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.UNSIGNED;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.BOOLEAN;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.BYTE;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.CHAR;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.DOUBLE;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.FLOAT;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.INT;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.LONG;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.SHORT;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.STRING;
 
 final class JfrEventFactoryImpl implements JfrEvent.Factory {
   private static final Map<String, Class<?>> VALUE_TYPES;
@@ -116,14 +115,15 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
         }
         if (field.getSpecificationName() != null) {
           Class<? extends Annotation> annotationType =
-                  SPECIFICATION_ANNOTATION_TYPES.get(field.getSpecificationName());
+              SPECIFICATION_ANNOTATION_TYPES.get(field.getSpecificationName());
           if (annotationType != null) {
             fieldAnnotations.add(
-                    new AnnotationElement(annotationType, field.getSpecificationValue()));
+                new AnnotationElement(annotationType, field.getSpecificationValue()));
           }
         }
         ValueDescriptor vd =
-                new ValueDescriptor(VALUE_TYPES.get(field.getType()), field.getName(), fieldAnnotations);
+            new ValueDescriptor(
+                VALUE_TYPES.get(field.getType()), field.getName(), fieldAnnotations);
 
         defFields.add(vd);
         fieldIndex.put(field.getName(), i);

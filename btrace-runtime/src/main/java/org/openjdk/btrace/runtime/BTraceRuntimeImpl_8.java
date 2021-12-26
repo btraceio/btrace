@@ -30,7 +30,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.util.Set;
-
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
@@ -89,12 +88,14 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   private static Perf perf;
 
   private final boolean hasJfr;
+
   public BTraceRuntimeImpl_8() {
     boolean jfr = false;
     try {
       Class.forName("jdk.jfr.Event");
       jfr = true;
-    } catch (Throwable t) {}
+    } catch (Throwable t) {
+    }
     hasJfr = jfr;
     eventFactories = hasJfr ? new java.util.concurrent.CopyOnWriteArraySet<>() : null;
   }
@@ -110,7 +111,8 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
     try {
       Class.forName("jdk.jfr.Event");
       jfr = true;
-    } catch (Throwable t) {}
+    } catch (Throwable t) {
+    }
     hasJfr = jfr;
     eventFactories = hasJfr ? new java.util.concurrent.CopyOnWriteArraySet<>() : null;
   }

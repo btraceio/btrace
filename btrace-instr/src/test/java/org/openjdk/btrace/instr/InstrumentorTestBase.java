@@ -25,9 +25,6 @@
 
 package org.openjdk.btrace.instr;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -57,6 +54,8 @@ import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 import sun.misc.Unsafe;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /** @author Jaroslav Bachorik */
 public abstract class InstrumentorTestBase {
@@ -229,6 +228,9 @@ public abstract class InstrumentorTestBase {
     String diff = diff();
     if (DEBUG) {
       System.err.println(diff);
+    }
+    if (expected.isEmpty()) {
+      assertTrue(diff.isEmpty());
     }
     assertEquals(expected, diff.substring(0, Math.min(diff.length(), expected.length())));
   }
