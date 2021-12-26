@@ -3136,6 +3136,21 @@ public class InstrumentorTest extends InstrumentorTestBase {
   }
 
   @Test
+  public void methodEntryArgsReturnTypeMatch() throws Exception {
+    loadTargetClass("OnMethodTest");
+    transform("onmethod/ArgsReturnTypeMatch");
+    checkTransformation(
+            "DUP2\nLSTORE 6\nALOAD 0\nLLOAD 6\nALOAD 1\nLLOAD 2\nALOAD 4\nALOAD 5\nINVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnTypeMatch$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)V");
+  }
+
+  @Test
+  public void methodEntryArgsReturnTypeNoMatch() throws Exception {
+    loadTargetClass("OnMethodTest");
+    transform("onmethod/ArgsReturnTypeNoMatch");
+    checkTransformation("");
+  }
+
+  @Test
   public void methodEntryArgsDurationLevel() throws Exception {
     loadTargetClass("OnMethodTest");
     transform("onmethod/leveled/ArgsDuration");
