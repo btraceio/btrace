@@ -303,7 +303,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
       releaseProps.load(new FileInputStream(new File(testJavaHome + File.separator + "release")));
       rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
     }
-    if (!rtVersion.startsWith("15.")) {
+    if (!isVersionSafe(rtVersion)) {
       // skip the test for 8.0.* because of missing support
       // skip all non-LTS versions (except the last one)
       // skip the test for JDK 11 since the latest version 11.0.9 and newer ends in SISGSEGV
@@ -361,5 +361,28 @@ public class BTraceFunctionalTests extends RuntimeTest {
             }
           }
         });
+  }
+
+  private static boolean isVersionSafe(String rtVersion) {
+    String[] versionParts = rtVersion.split("\\.");
+    int major = Integer.parseInt(versionParts[0]);
+    int update = Integer.parseInt(versionParts[2].replace("0_", ""));
+    if (major == 8) {
+      // before 8u272 there was no JFR support
+      if (update > 272) {
+        return true;
+      }
+    } else if (major > 9) { // in JDK 9 the dynamic JFR events are missing
+      if (major == 11) {
+        // 11.0.9 and 11.0.10 are containing a bug causing the JFR initialization from BTrace to go
+        // into infinte loop
+        if (update < 9 || update > 11) {
+          return true;
+        }
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 }

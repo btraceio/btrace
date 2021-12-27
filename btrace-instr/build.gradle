@@ -1,3 +1,6 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+
 apply plugin: 'java'
 
 buildscript {
@@ -82,5 +85,11 @@ test {
     //inputs.files buildDTrace.outputs
     testLogging.showStandardStreams = true
 
-    jvmArgs '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+    def props = new Properties()
+    props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
+    if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
+        jvmArgs "-Dproject.version=${project.version}"
+    } else {
+        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+    }
 }
