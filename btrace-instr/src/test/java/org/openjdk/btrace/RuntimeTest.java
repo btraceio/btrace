@@ -344,6 +344,16 @@ public abstract class RuntimeTest {
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }
+    if (Files.exists(Paths.get(System.getenv("TEST_JAVA_HOME"), "jmods"))) {
+      argVals.addAll(
+          1,
+          Arrays.asList(
+              "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
+              "--add-exports", "jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED",
+              "--add-exports", "jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
+              "--add-exports", "jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
+              "--add-exports", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"));
+    }
     ProcessBuilder pb = new ProcessBuilder(argVals);
 
     pb.environment().remove("JAVA_TOOL_OPTIONS");

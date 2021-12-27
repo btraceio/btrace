@@ -12,10 +12,11 @@ fi
 
 SDKMAN_BASE=$HOME/.sdkman/candidates/java
 
-JAVA_8_VERSION="8.0.282.hs-adpt"
+JAVA_8_VERSION="8.0.312-tem"
 JAVA_9_VERSION="9.0.4-open"
-JAVA_11_VERSION="11.0.9.hs-adpt"
-JAVA_16_VERSION="16.0.0.hs-adpt"
+JAVA_11_VERSION="11.0.13-tem"
+JAVA_16_VERSION="16.0.2-tem"
+JAVA_17_VERSION="17.0.1-tem"
 
 echo "Using SDKMAN version: ${SDKMAN_VER}"
 
@@ -40,6 +41,11 @@ echo "Installing Java 16"
 sdk install java $JAVA_16_VERSION 2>/dev/null || true
 export JAVA_16_HOME=$SDKMAN_BASE/$JAVA_16_VERSION
 echo "export JAVA_16_HOME=${JAVA_16_HOME}" >> .java.versions
+
+echo "Installing Java 17"
+sdk install java $JAVA_17_VERSION 2>/dev/null || true
+export JAVA_17_HOME=$SDKMAN_BASE/$JAVA_17_VERSION
+echo "export JAVA_17_HOME=${JAVA_17_HOME}" >> .java.versions
 
 
 echo "==="
