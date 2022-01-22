@@ -1,6 +1,6 @@
 plugins {
     id 'maven-publish'
-    id "com.github.johnrengelman.shadow" version "7.1.1"
+    id "com.github.johnrengelman.shadow" version "7.1.2"
     id "nebula.ospackage" version "9.0.0"
     id "java"
     id "io.sdkman.vendors" version "3.0.0"
