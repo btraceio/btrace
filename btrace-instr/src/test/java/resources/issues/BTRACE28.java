@@ -34,9 +34,9 @@ public class BTRACE28 {
         String resourceType = "resourceType";
         String contentType = "contentType";
         int indice, tempIndice;
-        byte tempArr[];
-        byte mainArr[] = new byte[0];
-        byte byteArr[] = new byte[65535];
+        byte[] tempArr;
+        byte[] mainArr = new byte[0];
+        byte[] byteArr = new byte[65535];
 
         StringBuilder sb = new StringBuilder();
 

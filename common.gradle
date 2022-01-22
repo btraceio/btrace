@@ -12,16 +12,16 @@ sourceCompatibility = '8'
 targetCompatibility = '8'
 
 if (!project.hasProperty("JAVA_8_HOME")) {
-    project.ext.setProperty("JAVA_8_HOME", System.getenv("JAVA_8_HOME"));
+    project.ext.setProperty("JAVA_8_HOME", System.getenv("JAVA_8_HOME"))
 }
 if (!project.hasProperty("JAVA_9_HOME")) {
-    project.ext.setProperty("JAVA_9_HOME", System.getenv("JAVA_9_HOME"));
+    project.ext.setProperty("JAVA_9_HOME", System.getenv("JAVA_9_HOME"))
 }
 if (!project.hasProperty("JAVA_11_HOME")) {
-    project.ext.setProperty("JAVA_11_HOME", System.getenv("JAVA_11_HOME"));
+    project.ext.setProperty("JAVA_11_HOME", System.getenv("JAVA_11_HOME"))
 }
 if (!project.hasProperty("JAVA_16_HOME")) {
-    project.ext.setProperty("JAVA_16_HOME", System.getenv("JAVA_16_HOME"));
+    project.ext.setProperty("JAVA_16_HOME", System.getenv("JAVA_16_HOME"))
 }
 
 buildscript {

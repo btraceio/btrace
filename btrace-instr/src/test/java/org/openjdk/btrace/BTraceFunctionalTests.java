@@ -369,17 +369,12 @@ public class BTraceFunctionalTests extends RuntimeTest {
     int update = Integer.parseInt(versionParts[2].replace("0_", ""));
     if (major == 8) {
       // before 8u272 there was no JFR support
-      if (update > 272) {
-        return true;
-      }
+        return update > 272;
     } else if (major > 9) { // in JDK 9 the dynamic JFR events are missing
       if (major == 11) {
         // 11.0.9 and 11.0.10 are containing a bug causing the JFR initialization from BTrace to go
         // into infinte loop
-        if (update < 9 || update > 11) {
-          return true;
-        }
-        return false;
+          return update < 9 || update > 11;
       }
       return true;
     }

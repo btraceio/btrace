@@ -251,7 +251,7 @@ public class PCPP {
     if (c == '"' || c == '\'') {
       return c + state.tok().sval + c;
     }
-    return new String(new char[] {c});
+    return String.valueOf(c);
   }
 
   private String nextWord() throws IOException {

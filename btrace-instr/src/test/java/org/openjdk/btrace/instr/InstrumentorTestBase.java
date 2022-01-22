@@ -220,7 +220,7 @@ public abstract class InstrumentorTestBase {
       PrintWriter pw = new PrintWriter(sw);
       CheckClassAdapter.verify(cr, true, pw);
       if (sw.toString().contains("AnalyzerException")) {
-        System.err.println(sw.toString());
+        System.err.println(sw);
         fail();
       }
     }
@@ -242,7 +242,7 @@ public abstract class InstrumentorTestBase {
     PrintWriter pw = new PrintWriter(sw);
     CheckClassAdapter.verify(cr, false, pw);
     if (sw.toString().contains("AnalyzerException")) {
-      System.err.println(sw.toString());
+      System.err.println(sw);
       fail();
     }
   }
