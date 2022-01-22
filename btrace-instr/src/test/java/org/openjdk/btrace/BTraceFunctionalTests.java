@@ -296,6 +296,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testJfr() throws Exception {
+      debugBTrace = true;
+      debugTestApp = true;
     String rtVersion = System.getProperty("java.runtime.version", "");
     String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
     if (testJavaHome != null) {
@@ -364,7 +366,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   private static boolean isVersionSafe(String rtVersion) {
-    String[] versionParts = rtVersion.split("\\.");
+    String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
     int major = Integer.parseInt(versionParts[0]);
     int update = Integer.parseInt(versionParts[2].replace("0_", ""));
     if (major == 8) {
