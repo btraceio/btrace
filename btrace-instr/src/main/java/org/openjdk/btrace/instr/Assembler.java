@@ -61,6 +61,10 @@ public final class Assembler {
     return this;
   }
 
+  public int storeAsNew() {
+    return mHelper.storeAsNew();
+  }
+
   public Assembler arrayLoad(Type type) {
     mv.visitInsn(type.getOpcode(IALOAD));
     return this;

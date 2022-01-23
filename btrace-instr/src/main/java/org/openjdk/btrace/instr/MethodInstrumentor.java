@@ -262,6 +262,16 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     return new LocalVarArgProvider(asm, index, type, ptr, boxValue);
   }
 
+  protected final ArgumentProvider sharedLocalVarArg(
+      int index,
+      Type type,
+      String methodName,
+      String paramName,
+      LocalParameterTracker localParameterTracker) {
+    return new SharedLocalVarArgProvider(
+        asm, index, type, methodName, paramName, localParameterTracker);
+  }
+
   protected final ArgumentProvider constArg(int index, Object val) {
     return new ConstantArgProvider(asm, index, val);
   }
@@ -422,7 +432,8 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
       specialArgsCount++;
     }
 
-    Type[] cleansedArgArray = new Type[actionArgTypes.length - specialArgsCount];
+    Type[] cleansedArgArray =
+        new Type[actionArgTypes.length - specialArgsCount - om.getLocalParameterDefs().size()];
     int[] cleansedArgIndex = new int[cleansedArgArray.length];
 
     int counter = 0;
@@ -433,7 +444,8 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
           && argIndex != om.getReturnParameter()
           && argIndex != om.getTargetInstanceParameter()
           && argIndex != om.getTargetMethodOrFieldParameter()
-          && argIndex != om.getDurationParameter()) {
+          && argIndex != om.getDurationParameter()
+          && !om.getLocalParameterDefs().containsKey(argIndex)) {
         cleansedArgArray[counter] = actionArgTypes[argIndex];
         cleansedArgIndex[counter] = argIndex;
         counter++;
@@ -623,6 +635,39 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     @Override
     public String toString() {
       return "LocalVar #" + ptr + " of type " + type + " (@" + getIndex() + ")";
+    }
+  }
+
+  private static class SharedLocalVarArgProvider extends ArgumentProvider {
+    private final Type type;
+    private final String methodName;
+    private final String paramName;
+    private final LocalParameterTracker localParameterTracker;
+
+    public SharedLocalVarArgProvider(
+        Assembler asm,
+        int index,
+        Type type,
+        String methodName,
+        String paramName,
+        LocalParameterTracker localParameterTracker) {
+      super(asm, index);
+      this.type = type;
+      this.methodName = methodName;
+      this.paramName = paramName;
+      this.localParameterTracker = localParameterTracker;
+    }
+
+    @Override
+    public void doProvide() {
+      int ptr =
+          localParameterTracker.getParameter(type.getInternalName(), methodName, paramName, asm);
+      asm.loadLocal(type, ptr);
+    }
+
+    @Override
+    public String toString() {
+      return "SharedLocalVar of type " + type + " (@" + getIndex() + ")";
     }
   }
 

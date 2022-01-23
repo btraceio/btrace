@@ -107,7 +107,7 @@ public class BTraceMBean implements DynamicMBean {
   }
 
   // internals only below this point
-  private static String getBeanName(Class<?>clazz) {
+  private static String getBeanName(Class<?> clazz) {
     BTrace info = clazz.getAnnotation(BTrace.class);
     String beanName = info.name();
     if (beanName.isEmpty()) {
@@ -116,7 +116,7 @@ public class BTraceMBean implements DynamicMBean {
     return beanName;
   }
 
-  public static boolean isMBean(Class<?>clazz) {
+  public static boolean isMBean(Class<?> clazz) {
     // if at least one field is annotated as @Property, we create MBean
     for (Field field : clazz.getDeclaredFields()) {
       if (field.isAnnotationPresent(Property.class)) {
@@ -143,7 +143,7 @@ public class BTraceMBean implements DynamicMBean {
     }
   }
 
-  private static Map<String, Field> getJMXAttributes(Class<?>clazz) {
+  private static Map<String, Field> getJMXAttributes(Class<?> clazz) {
     try {
       Map<String, Field> fields = new HashMap<>();
       for (Field field : clazz.getDeclaredFields()) {
@@ -300,7 +300,7 @@ public class BTraceMBean implements DynamicMBean {
         // FIXME: This is highly incomplete, revisit...
         // just enough to get Maps for now.
         if (t instanceof Class) {
-          Class<?>c = (Class<?>) t;
+          Class<?> c = (Class<?>) t;
           if (Profiler.class.isAssignableFrom(c)) {
             CompositeType record =
                 new CompositeType(

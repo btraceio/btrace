@@ -24,6 +24,8 @@
  */
 package org.openjdk.btrace.instr;
 
+import java.util.*;
+
 /**
  * A generalized super-class for various runtime classes representing the BTrace annotations
  *
@@ -37,9 +39,25 @@ abstract class SpecialParameterHolder {
   private int targetMethodOrFieldParameter = -1;
   private int targetInstanceParameter = -1;
   private int durationParameter = -1;
+  private final Map<Integer, LocalParameterDef> localParameterDefs = new HashMap<>();
 
   private boolean methodFqn = false;
   private boolean targetMethodFqn = false;
+
+  Map<Integer, LocalParameterDef> getLocalParameterDefs() {
+    return localParameterDefs;
+  }
+
+  void addLocalParameterDef(LocalParameterDef def) {
+    localParameterDefs.put(def.idx, def);
+  }
+
+  void setLocalParameterDefs(Map<Integer, LocalParameterDef> localParameterDefs) {
+    this.localParameterDefs.clear();
+    if (localParameterDefs != null) {
+      this.localParameterDefs.putAll(localParameterDefs);
+    }
+  }
 
   public final int getSelfParameter() {
     return selfParameter;

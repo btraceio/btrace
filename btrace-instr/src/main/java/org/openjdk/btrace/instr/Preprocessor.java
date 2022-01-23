@@ -38,22 +38,7 @@ import java.util.Set;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.FrameNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.*;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.annotations.Event;
@@ -501,6 +486,18 @@ final class Preprocessor {
     addJfrHandlerField(cn, mn);
 
     recalculateVars(mn);
+
+    if (mn instanceof BTraceMethodNode) {
+      BTraceMethodNode bmn = (BTraceMethodNode) mn;
+      OnMethod om = bmn.getOnMethod();
+      OnProbe op = bmn.getOnProbe();
+
+      if (om != null) {
+        om.setTargetDescriptor(mn.desc);
+      } else if (op != null) {
+        op.setTargetDescriptor(mn.desc);
+      }
+    }
   }
 
   private void makePublic(MethodNode mn) {
@@ -708,12 +705,16 @@ final class Preprocessor {
         if (mn instanceof BTraceMethodNode) {
           BTraceMethodNode bmn = (BTraceMethodNode) mn;
           OnMethod om = bmn.getOnMethod();
+          OnProbe op = bmn.getOnProbe();
 
           if (om != null
               && om.getTargetName().equals(mn.name)
               && om.getTargetDescriptor().equals(oldDesc)) {
             om.setReturnParameter(getReturnMethodParameter(mn));
-            om.setTargetDescriptor(mn.desc);
+          } else if (op != null
+              && op.getTargetName().equals(mn.name)
+              && op.getTargetDescriptor().equals(oldDesc)) {
+            op.setReturnParameter(getReturnMethodParameter(mn));
           }
         }
       }
@@ -724,6 +725,45 @@ final class Preprocessor {
     // ignore <init> and <clinit>
     if (mn.name.startsWith("<")) return;
 
+    Type retType = Type.getReturnType(mn.desc);
+    Type[] argTypes = Type.getArgumentTypes(mn.desc);
+    Type[] slotTypes = new Type[argTypes.length * 2];
+    Type[] lookupTypes = new Type[argTypes.length * 2];
+    int argsSize = 0;
+    int paramIdx = 0;
+    int slotIdx = argsSize;
+
+    if ((mn.access & Opcodes.ACC_STATIC) == 0) {
+      lookupTypes[0] = slotTypes[0] = Type.getObjectType(cn.name);
+      slotIdx = ++argsSize;
+    }
+
+    boolean checkForLocalParams = false;
+    if (mn.visibleParameterAnnotations != null) {
+      for (List<AnnotationNode> paramAnnotations : mn.visibleParameterAnnotations) {
+        try {
+          lookupTypes[slotIdx] = slotTypes[slotIdx] = argTypes[paramIdx];
+
+          if (paramAnnotations == null) {
+            continue;
+          }
+          for (AnnotationNode an : paramAnnotations) {
+            if (an.desc.equals(Constants.LOCAL_DESC)) {
+              argTypes[paramIdx] = Constants.VALUE_HOLDER_TYPE;
+              slotTypes[slotIdx] = Constants.VALUE_HOLDER_TYPE;
+              checkForLocalParams = true;
+              break;
+            }
+          }
+        } finally {
+          int size = argTypes[paramIdx].getSize();
+          argsSize += size;
+          slotIdx = argsSize;
+          paramIdx++;
+        }
+      }
+    }
+    mn.desc = Type.getMethodDescriptor(retType, argTypes);
     serviceLocals.clear(); // initialize the service locals for this particular method
 
     boolean checkFields =
@@ -750,7 +790,215 @@ final class Preprocessor {
       } else if (n.getOpcode() == retopcode
           && getClassifiers(mn).contains(MethodClassifier.RT_AWARE)) {
         addBTraceRuntimeExit(cn, (InsnNode) n, l);
+      } else if (type == AbstractInsnNode.VAR_INSN) {
+        if (checkForLocalParams) {
+          VarInsnNode varInsnNode = (VarInsnNode) n;
+          if (varInsnNode.var >= 0 && argsSize > varInsnNode.var) {
+            if (slotTypes[varInsnNode.var].equals(Constants.VALUE_HOLDER_TYPE)) {
+              replaceLocalParamUsage(mn, lookupTypes[varInsnNode.var], varInsnNode);
+            }
+          }
+        }
       }
+    }
+  }
+
+  private void replaceLocalParamUsage(MethodNode mn, Type origType, VarInsnNode n) {
+    switch (n.getOpcode()) {
+      case Opcodes.ILOAD:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          if (origType.equals(Type.BOOLEAN_TYPE)) {
+            mn.instructions.insert(
+                n,
+                new MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    Constants.VALUE_HOLDER_INTERNAL,
+                    "getBoolean",
+                    "()Z",
+                    false));
+          } else if (origType.equals(Type.BYTE_TYPE)) {
+            mn.instructions.insert(
+                n,
+                new MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    Constants.VALUE_HOLDER_INTERNAL,
+                    "getByte",
+                    "()B",
+                    false));
+          } else if (origType.equals(Type.CHAR_TYPE)) {
+            mn.instructions.insert(
+                n,
+                new MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    Constants.VALUE_HOLDER_INTERNAL,
+                    "getChar",
+                    "()C",
+                    false));
+          } else if (origType.equals(Type.INT_TYPE)) {
+            mn.instructions.insert(
+                n,
+                new MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    Constants.VALUE_HOLDER_INTERNAL,
+                    "getInt",
+                    "()I",
+                    false));
+          }
+          break;
+        }
+      case Opcodes.LLOAD:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          mn.instructions.insert(
+              n,
+              new MethodInsnNode(
+                  Opcodes.INVOKEVIRTUAL, Constants.VALUE_HOLDER_INTERNAL, "getLong", "()J", false));
+          break;
+        }
+      case Opcodes.FLOAD:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          mn.instructions.insert(
+              n,
+              new MethodInsnNode(
+                  Opcodes.INVOKEVIRTUAL,
+                  Constants.VALUE_HOLDER_INTERNAL,
+                  "getFloat",
+                  "()F",
+                  false));
+          break;
+        }
+      case Opcodes.DLOAD:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          mn.instructions.insert(
+              n,
+              new MethodInsnNode(
+                  Opcodes.INVOKEVIRTUAL,
+                  Constants.VALUE_HOLDER_INTERNAL,
+                  "getDouble",
+                  "()D",
+                  false));
+          break;
+        }
+      case Opcodes.ALOAD:
+        {
+          MethodInsnNode node =
+              new MethodInsnNode(
+                  Opcodes.INVOKEVIRTUAL,
+                  Constants.VALUE_HOLDER_INTERNAL,
+                  "getObject",
+                  "()Ljava/lang/Object;",
+                  false);
+          mn.instructions.insert(n, node);
+          mn.instructions.insert(
+              node, new TypeInsnNode(Opcodes.CHECKCAST, origType.getInternalName()));
+          break;
+        }
+      case Opcodes.ISTORE:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          InsnList insnList = new InsnList();
+          insnList.add(new InsnNode(Opcodes.SWAP));
+          if (origType.equals(Type.BOOLEAN_TYPE)) {
+            insnList.add(
+                new MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    Constants.VALUE_HOLDER_INTERNAL,
+                    "setBoolean",
+                    "(Z)V",
+                    false));
+          } else if (origType.equals(Type.BYTE_TYPE)) {
+            insnList.add(
+                new MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    Constants.VALUE_HOLDER_INTERNAL,
+                    "setByte",
+                    "(B)V",
+                    false));
+          } else if (origType.equals(Type.CHAR_TYPE)) {
+            insnList.add(
+                new MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    Constants.VALUE_HOLDER_INTERNAL,
+                    "setChar",
+                    "(C)V",
+                    false));
+          } else if (origType.equals(Type.INT_TYPE)) {
+            insnList.add(
+                new MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    Constants.VALUE_HOLDER_INTERNAL,
+                    "setInt",
+                    "(I)V",
+                    false));
+          }
+          mn.instructions.insert(n, insnList);
+          break;
+        }
+      case Opcodes.LSTORE:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          InsnList insnList = new InsnList();
+          insnList.add(new InsnNode(Opcodes.DUP2_X1));
+          insnList.add(
+              new MethodInsnNode(
+                  Opcodes.INVOKEVIRTUAL,
+                  Constants.VALUE_HOLDER_INTERNAL,
+                  "setLong",
+                  "(J)V",
+                  false));
+          insnList.add(new InsnNode(Opcodes.POP2));
+          mn.instructions.insert(n, insnList);
+          break;
+        }
+      case Opcodes.FSTORE:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          InsnList insnList = new InsnList();
+          insnList.add(new InsnNode(Opcodes.SWAP));
+          insnList.add(
+              new MethodInsnNode(
+                  Opcodes.INVOKEVIRTUAL,
+                  Constants.VALUE_HOLDER_INTERNAL,
+                  "setFloat",
+                  "(F)V",
+                  false));
+          mn.instructions.insert(n, insnList);
+          break;
+        }
+      case Opcodes.DSTORE:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          InsnList insnList = new InsnList();
+          insnList.add(new InsnNode(Opcodes.DUP2_X1));
+          insnList.add(
+              new MethodInsnNode(
+                  Opcodes.INVOKEVIRTUAL,
+                  Constants.VALUE_HOLDER_INTERNAL,
+                  "setDouble",
+                  "(D)V",
+                  false));
+          insnList.add(new InsnNode(Opcodes.POP2));
+          mn.instructions.insert(n, insnList);
+          break;
+        }
+      case Opcodes.ASTORE:
+        {
+          n.setOpcode(Opcodes.ALOAD);
+          InsnList insnList = new InsnList();
+          insnList.add(new InsnNode(Opcodes.SWAP));
+          insnList.add(
+              new MethodInsnNode(
+                  Opcodes.INVOKEVIRTUAL,
+                  Constants.VALUE_HOLDER_INTERNAL,
+                  "setObject",
+                  "(Ljava/lang/Object;)V",
+                  false));
+          mn.instructions.insert(n, insnList);
+          break;
+        }
     }
   }
 

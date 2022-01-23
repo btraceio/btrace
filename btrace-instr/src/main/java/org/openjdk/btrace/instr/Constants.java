@@ -29,28 +29,11 @@ import java.util.regex.Pattern;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Duration;
-import org.openjdk.btrace.core.annotations.Injected;
-import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.*;
 import org.openjdk.btrace.core.annotations.Level;
 import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.OnError;
-import org.openjdk.btrace.core.annotations.OnEvent;
-import org.openjdk.btrace.core.annotations.OnExit;
-import org.openjdk.btrace.core.annotations.OnLowMemory;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.OnProbe;
-import org.openjdk.btrace.core.annotations.OnTimer;
-import org.openjdk.btrace.core.annotations.PeriodicEvent;
-import org.openjdk.btrace.core.annotations.ProbeClassName;
-import org.openjdk.btrace.core.annotations.ProbeMethodName;
-import org.openjdk.btrace.core.annotations.Return;
-import org.openjdk.btrace.core.annotations.Sampled;
-import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.TargetInstance;
-import org.openjdk.btrace.core.annotations.TargetMethodOrField;
-import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.services.api.Service;
 
@@ -113,6 +96,10 @@ public abstract class Constants {
   public static final String THREAD_LOCAL_DESC = "L" + THREAD_LOCAL_INTERNAL + ";";
   public static final Type THREAD_LOCAL_TYPE = Type.getType(ThreadLocal.class);
 
+  public static final String VALUE_HOLDER_INTERNAL = "org/openjdk/btrace/runtime/ValueHolder";
+  public static final String VALUE_HOLDER_DESC = "Lorg/openjdk/btrace/runtime/ValueHolder;";
+  public static final Type VALUE_HOLDER_TYPE = Type.getType(VALUE_HOLDER_DESC);
+
   // BTrace specific stuff
   public static final String BTRACE_UTILS = Type.getInternalName(BTraceUtils.class);
 
@@ -162,6 +149,9 @@ public abstract class Constants {
   public static final String TARGETINSTANCE_DESC = Type.getDescriptor(TargetInstance.class);
 
   public static final String DURATION_DESC = Type.getDescriptor(Duration.class);
+
+  public static final String LOCAL_DESC = Type.getDescriptor(Local.class);
+  public static final Type LOCAL_TYPE = Type.getType(LOCAL_DESC);
 
   public static final String ARGSMAP_DESC = Type.getDescriptor(ArgsMap.class);
 

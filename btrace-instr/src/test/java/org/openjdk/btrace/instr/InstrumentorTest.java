@@ -2853,6 +2853,69 @@ public class InstrumentorTest extends InstrumentorTestBase {
   }
 
   @Test
+  public void methodEntryArgsReturnSharedLocal() throws Exception {
+    loadTargetClass("OnMethodTest");
+    transform("onmethod/ArgsReturnSharedLocal");
+    checkTransformation(
+        "ALOAD 0\n"
+            + "NEW org/openjdk/btrace/runtime/ValueHolder\n"
+            + "DUP\n"
+            + "INVOKESPECIAL org/openjdk/btrace/runtime/ValueHolder.<init> ()V\n"
+            + "ASTORE 6\n"
+            + "ALOAD 6\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnSharedLocal$args (Ljava/lang/Object;Lorg/openjdk/btrace/runtime/ValueHolder;)V\n"
+            + "DUP2\n"
+            + "LSTORE 7\n"
+            + "ALOAD 0\n"
+            + "LLOAD 7\n"
+            + "ALOAD 1\n"
+            + "LLOAD 2\n"
+            + "ALOAD 4\n"
+            + "ALOAD 5\n"
+            + "ALOAD 6\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnSharedLocal$argsReturn (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[ILorg/openjdk/btrace/runtime/ValueHolder;)V\n"
+            + "MAXSTACK = 11\n"
+            + "MAXLOCALS = 9");
+  }
+
+  @Test
+  public void methodEntryArgsReturnSharedLocalMulti() throws Exception {
+    loadTargetClass("OnMethodTest");
+    transform(
+        new String[] {"onmethod/ArgsReturnSharedLocal", "onmethod/ArgsReturnSharedLocal2"}, false);
+    checkTransformation(
+        "ALOAD 0\n"
+            + "NEW org/openjdk/btrace/runtime/ValueHolder\n"
+            + "DUP\n"
+            + "INVOKESPECIAL org/openjdk/btrace/runtime/ValueHolder.<init> ()V\n"
+            + "ASTORE 6\n"
+            + "ALOAD 6\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnSharedLocal$args (Ljava/lang/Object;Lorg/openjdk/btrace/runtime/ValueHolder;)V\n"
+            + "DUP2\n"
+            + "LSTORE 7\n"
+            + "ALOAD 0\n"
+            + "LLOAD 7\n"
+            + "ALOAD 1\n"
+            + "LLOAD 2\n"
+            + "ALOAD 4\n"
+            + "ALOAD 5\n"
+            + "ALOAD 6\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnSharedLocal2$argsReturn (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[ILorg/openjdk/btrace/runtime/ValueHolder;)V\n"
+            + "DUP2\n"
+            + "LSTORE 9\n"
+            + "ALOAD 0\n"
+            + "LLOAD 9\n"
+            + "ALOAD 1\n"
+            + "LLOAD 2\n"
+            + "ALOAD 4\n"
+            + "ALOAD 5\n"
+            + "ALOAD 6\n"
+            + "INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnSharedLocal$argsReturn (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[ILorg/openjdk/btrace/runtime/ValueHolder;)V\n"
+            + "MAXSTACK = 11\n"
+            + "MAXLOCALS = 11");
+  }
+
+  @Test
   public void methodEntryArgsReturnVoid() throws Exception {
     loadTargetClass("OnMethodTest");
     transform("onmethod/ArgsReturnVoid");

@@ -408,6 +408,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         omn.setTargetInstanceParameter(op.getTargetInstanceParameter());
         omn.setTargetMethodOrFieldFqn(op.isTargetMethodOrFieldFqn());
         omn.setTargetMethodOrFieldParameter(op.getTargetMethodOrFieldParameter());
+        omn.setLocalParameterDefs(op.getLocalParameterDefs());
         addOnMethod(omn);
       }
     }

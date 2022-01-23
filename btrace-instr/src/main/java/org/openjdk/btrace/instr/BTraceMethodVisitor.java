@@ -38,4 +38,8 @@ public class BTraceMethodVisitor extends MethodVisitor {
   public void insertFrameSameStack(Label l) {
     mHelper.insertFrameSameStack(l);
   }
+
+  MethodInstrumentorHelper getHelper() {
+    return mHelper;
+  }
 }

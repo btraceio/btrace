@@ -49,16 +49,20 @@ final class BTraceClassWriter extends ClassWriter {
   private final BTraceClassReader cr;
   private final Collection<MethodNode> cushionMethods = new HashSet<>();
 
+  private final LocalParameterTracker localParameterTracker;
+
   BTraceClassWriter(ClassLoader cl, int flags) {
     super(flags);
     targetCL = cl != null ? cl : ClassLoader.getSystemClassLoader();
     cr = null;
+    this.localParameterTracker = new LocalParameterTracker(cl);
   }
 
   BTraceClassWriter(ClassLoader cl, BTraceClassReader reader, int flags) {
     super(reader, flags);
     targetCL = cl != null ? cl : ClassLoader.getSystemClassLoader();
     cr = reader;
+    this.localParameterTracker = new LocalParameterTracker(cl);
   }
 
   public void addInstrumentor(BTraceProbe bp) {
@@ -70,7 +74,7 @@ final class BTraceClassWriter extends ClassWriter {
       synchronized (instrumentors) {
         Instrumentor top = instrumentors.peekLast();
         ClassVisitor parent = top != null ? top : this;
-        Instrumentor i = Instrumentor.create(cr, bp, parent, cl);
+        Instrumentor i = Instrumentor.create(cr, bp, parent, cl, localParameterTracker);
         if (i != null) {
           instrumentors.add(i);
         }

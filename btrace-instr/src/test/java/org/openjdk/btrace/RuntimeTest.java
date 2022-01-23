@@ -347,8 +347,7 @@ public abstract class RuntimeTest {
     if (Files.exists(Paths.get(System.getenv("TEST_JAVA_HOME"), "jmods"))) {
       argVals.addAll(
           1,
-          Arrays.asList(
-              "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
+          Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
     }
     ProcessBuilder pb = new ProcessBuilder(argVals);
 

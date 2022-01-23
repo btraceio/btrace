@@ -50,7 +50,7 @@ import org.openjdk.btrace.core.comm.RetransformClassNotification;
 public class BTraceProbePersisted implements BTraceProbe {
   static final int MAGIC = 0xbacecaca;
 
-  private static final int VERSION = 2;
+  private static final int VERSION = 3;
 
   final BTraceProbeSupport delegate;
   private final BTraceProbeFactory factory;
@@ -149,6 +149,11 @@ public class BTraceProbePersisted implements BTraceProbe {
           read_2(dis);
           break;
         }
+      case 3:
+        {
+          read_3(dis);
+          break;
+        }
       default:
         {
           throw new IOException("Unsupported version for persisted probe: " + version);
@@ -184,6 +189,22 @@ public class BTraceProbePersisted implements BTraceProbe {
     readServices(dis);
     readOnMethods(dis);
     readOnProbes(dis);
+    readCallees(dis);
+    readDataHolderClass(dis);
+    readFullData(dis);
+  }
+
+  /**
+   * Read in the structure for version 3
+   *
+   * @param dis data input stream
+   * @throws IOException
+   */
+  private void read_3(DataInputStream dis) throws IOException {
+    delegate.setClassName(dis.readUTF());
+    readServices(dis);
+    readOnMethods_3(dis);
+    readOnProbes_3(dis);
     readCallees(dis);
     readDataHolderClass(dis);
     readFullData(dis);
@@ -247,6 +268,48 @@ public class BTraceProbePersisted implements BTraceProbe {
     }
   }
 
+  private void readOnMethods_3(DataInputStream dis) throws IOException {
+    int num = dis.readInt();
+    for (int i = 0; i < num; i++) {
+      OnMethod om = new OnMethod(debug);
+      om.setClazz(dis.readUTF());
+      om.setMethod(dis.readUTF());
+      om.setExactTypeMatch(dis.readBoolean());
+      om.setTargetDescriptor(dis.readUTF());
+      om.setTargetName(dis.readUTF());
+      om.setType(dis.readUTF());
+      om.setClassNameParameter(dis.readInt());
+      om.setDurationParameter(dis.readInt());
+      om.setMethodParameter(dis.readInt());
+      om.setReturnParameter(dis.readInt());
+      om.setSelfParameter(dis.readInt());
+      om.setTargetInstanceParameter(dis.readInt());
+      om.setTargetMethodOrFieldParameter(dis.readInt());
+      om.setMethodFqn(dis.readBoolean());
+      om.setTargetMethodOrFieldFqn(dis.readBoolean());
+      om.setSamplerKind(Sampled.Sampler.valueOf(dis.readUTF()));
+      om.setSamplerMean(dis.readInt());
+      om.setLevel(dis.readBoolean() ? Level.fromString(dis.readUTF()) : null);
+      Location loc = new Location();
+      loc.setValue(Kind.valueOf(dis.readUTF()));
+      loc.setWhere(Where.valueOf(dis.readUTF()));
+      loc.setClazz(dis.readBoolean() ? dis.readUTF() : null);
+      loc.setField(dis.readBoolean() ? dis.readUTF() : null);
+      loc.setMethod(dis.readBoolean() ? dis.readUTF() : null);
+      loc.setType(dis.readBoolean() ? dis.readUTF() : null);
+      loc.setLine(dis.readInt());
+      om.setLocation(loc);
+      int localParamsCnt = dis.readInt();
+      for (int p = 0; p < localParamsCnt; p++) {
+        int idx = dis.readInt();
+        String name = dis.readUTF();
+        boolean mutable = dis.readBoolean();
+        om.addLocalParameterDef(new LocalParameterDef(idx, name, mutable));
+      }
+      delegate.addOnMethod(om);
+    }
+  }
+
   private void readOnProbes(DataInputStream dis) throws IOException {
     int num = dis.readInt();
     for (int i = 0; i < num; i++) {
@@ -264,6 +327,34 @@ public class BTraceProbePersisted implements BTraceProbe {
       op.setTargetMethodOrFieldParameter(dis.readInt());
       op.setMethodFqn(dis.readBoolean());
       op.setTargetMethodOrFieldFqn(dis.readBoolean());
+      delegate.addOnProbe(op);
+    }
+  }
+
+  private void readOnProbes_3(DataInputStream dis) throws IOException {
+    int num = dis.readInt();
+    for (int i = 0; i < num; i++) {
+      OnProbe op = new OnProbe();
+      op.setNamespace(dis.readUTF());
+      op.setName(dis.readUTF());
+      op.setTargetDescriptor(dis.readUTF());
+      op.setTargetName(dis.readUTF());
+      op.setClassNameParameter(dis.readInt());
+      op.setDurationParameter(dis.readInt());
+      op.setMethodParameter(dis.readInt());
+      op.setReturnParameter(dis.readInt());
+      op.setSelfParameter(dis.readInt());
+      op.setTargetInstanceParameter(dis.readInt());
+      op.setTargetMethodOrFieldParameter(dis.readInt());
+      op.setMethodFqn(dis.readBoolean());
+      op.setTargetMethodOrFieldFqn(dis.readBoolean());
+      int localParamsCnt = dis.readInt();
+      for (int p = 0; p < localParamsCnt; p++) {
+        int idx = dis.readInt();
+        String name = dis.readUTF();
+        boolean mutable = dis.readBoolean();
+        op.addLocalParameterDef(new LocalParameterDef(idx, name, mutable));
+      }
       delegate.addOnProbe(op);
     }
   }
@@ -351,6 +442,12 @@ public class BTraceProbePersisted implements BTraceProbe {
         dos.writeUTF(loc.getType());
       }
       dos.writeInt(loc.getLine());
+      dos.writeInt(om.getLocalParameterDefs().size());
+      for (LocalParameterDef parameterDef : om.getLocalParameterDefs().values()) {
+        dos.writeInt(parameterDef.idx);
+        dos.writeUTF(parameterDef.name);
+        dos.writeBoolean(parameterDef.mutable);
+      }
     }
   }
 
@@ -372,6 +469,12 @@ public class BTraceProbePersisted implements BTraceProbe {
       dos.writeInt(op.getTargetMethodOrFieldParameter());
       dos.writeBoolean(op.isMethodFqn());
       dos.writeBoolean(op.isTargetMethodOrFieldFqn());
+      dos.writeInt(op.getLocalParameterDefs().size());
+      for (LocalParameterDef parameterDef : op.getLocalParameterDefs().values()) {
+        dos.writeInt(parameterDef.idx);
+        dos.writeUTF(parameterDef.name);
+        dos.writeBoolean(parameterDef.mutable);
+      }
     }
   }
 

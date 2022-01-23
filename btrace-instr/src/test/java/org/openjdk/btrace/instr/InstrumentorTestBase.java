@@ -38,6 +38,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
@@ -252,12 +253,18 @@ public abstract class InstrumentorTestBase {
   }
 
   protected void transform(String traceName, boolean unsafe) throws Exception {
+    transform(new String[] {traceName}, unsafe);
+  }
+
+  protected void transform(String[] traceNames, boolean unsafe) throws Exception {
     settings.setTrusted(unsafe);
     BTraceClassReader cr = InstrumentUtils.newClassReader(cl, originalBC);
     BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
-    BTraceProbe btrace = loadTrace(traceName, unsafe);
+    for (String traceName : traceNames) {
+      BTraceProbe btrace = loadTrace(traceName, unsafe);
 
-    cw.addInstrumentor(btrace);
+      cw.addInstrumentor(btrace);
+    }
 
     transformedBC = cw.instrument();
 
@@ -272,7 +279,7 @@ public abstract class InstrumentorTestBase {
 
     //        load(traceName, cr.getJavaClassName());
 
-    System.err.println("==== " + traceName);
+    System.err.println("==== " + Arrays.toString(traceNames));
   }
 
   public static String asmify(byte[] bytecode) {

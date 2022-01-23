@@ -350,6 +350,26 @@ public class BTraceMethodNode extends MethodNode {
       ph.setTargetInstanceParameter(parameter);
     } else if (desc.equals(Constants.DURATION_DESC)) {
       ph.setDurationParameter(parameter);
+    } else if (desc.equals(Constants.LOCAL_DESC)) {
+      return new AnnotationVisitor(Opcodes.ASM9, av) {
+        private String paramName;
+        private boolean mutable = false;
+
+        @Override
+        public void visit(String name, Object value) {
+          if (name.equals("name")) {
+            paramName = (String) value;
+          } else if (name.equals("mutable")) {
+            mutable = (boolean) value;
+          }
+        }
+
+        @Override
+        public void visitEnd() {
+          ph.addLocalParameterDef(new LocalParameterDef(parameter, paramName, mutable));
+          super.visitEnd();
+        }
+      };
     }
     return av;
   }
