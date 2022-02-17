@@ -19,10 +19,6 @@ if "%JAVA_HOME%" == "" goto noJavaHome
 if exist "%JAVA_HOME%/jmods/" (
   set JAVA_ARGS="%JAVA_ARGS% -XX:+AllowRedefinitionToAddDeleteMethods"
   set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
-  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"
-  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED"
-  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
 )
 
 if "%1" == "--version" (

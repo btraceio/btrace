@@ -12,10 +12,6 @@ if "%JAVA_HOME%" == "" goto noJavaHome
   if exist "%JAVA_HOME%/jmods/" (
     set JAVA_ARGS="%JAVA_ARGS% -XX:+AllowRedefinitionToAddDeleteMethods"
     set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
-    set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-    set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"
-    set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED"
-    set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"
   )
   if "%1" == "--version" (
     %JAVA_HOME%\bin\java "%JAVA_ARGS%" -cp %BTRACE_HOME%/build/btrace-client.jar org.openjdk.btrace.client.Main --version
