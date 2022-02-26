@@ -348,11 +348,7 @@ public abstract class RuntimeTest {
       argVals.addAll(
           1,
           Arrays.asList(
-              "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
-              "--add-exports", "jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED",
-              "--add-exports", "jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
-              "--add-exports", "jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
-              "--add-exports", "jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED"));
+              "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
     }
     ProcessBuilder pb = new ProcessBuilder(argVals);
 
