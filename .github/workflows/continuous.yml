@@ -71,14 +71,14 @@ jobs:
         BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
         BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
     - name: Archive binary artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: binary-dist
         path: |
           btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
     - name: Archive reports
       if: always()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: reports
         path: |
