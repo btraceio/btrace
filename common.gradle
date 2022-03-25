@@ -6,7 +6,7 @@ apply plugin: 'java'
 apply plugin: 'idea'
 
 project.group = 'org.openjdk.btrace'
-project.version = '2.2.2'
+project.version = '2.3.0-SNAPSHOT'
 
 sourceCompatibility = '8'
 targetCompatibility = '8'
