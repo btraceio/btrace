@@ -107,8 +107,8 @@ public class BTraceMBean implements DynamicMBean {
   }
 
   // internals only below this point
-  private static String getBeanName(Class clazz) {
-    BTrace info = (BTrace) clazz.getAnnotation(BTrace.class);
+  private static String getBeanName(Class<?>clazz) {
+    BTrace info = clazz.getAnnotation(BTrace.class);
     String beanName = info.name();
     if (beanName.isEmpty()) {
       beanName = clazz.getName();
@@ -116,8 +116,8 @@ public class BTraceMBean implements DynamicMBean {
     return beanName;
   }
 
-  public static boolean isMBean(Class clazz) {
-    // if atleast one field is annotated as @Property, we create MBean
+  public static boolean isMBean(Class<?>clazz) {
+    // if at least one field is annotated as @Property, we create MBean
     for (Field field : clazz.getDeclaredFields()) {
       if (field.isAnnotationPresent(Property.class)) {
         return true;
@@ -129,7 +129,7 @@ public class BTraceMBean implements DynamicMBean {
   private static Object getFieldValue(Field field) {
     try {
       Object value = field.get(null);
-      OpenType ot = OpenTypeUtils.typeToOpenType(field.getGenericType());
+      OpenType<?> ot = OpenTypeUtils.typeToOpenType(field.getGenericType());
       if (ot != null) {
         return OpenTypeUtils.convertToOpenTypeValue(ot, value);
       } else {
@@ -143,7 +143,7 @@ public class BTraceMBean implements DynamicMBean {
     }
   }
 
-  private static Map<String, Field> getJMXAttributes(Class clazz) {
+  private static Map<String, Field> getJMXAttributes(Class<?>clazz) {
     try {
       Map<String, Field> fields = new HashMap<>();
       for (Field field : clazz.getDeclaredFields()) {
@@ -221,8 +221,7 @@ public class BTraceMBean implements DynamicMBean {
     if (cachedBeanInfo != null) {
       return cachedBeanInfo;
     }
-    SortedSet<String> names = new TreeSet<>();
-    names.addAll(attributes.keySet());
+    SortedSet<String> names = new TreeSet<>(attributes.keySet());
     MBeanAttributeInfo[] attrs = new MBeanAttributeInfo[names.size()];
     Iterator<String> it = names.iterator();
     for (int i = 0; i < attrs.length; i++) {
@@ -234,7 +233,7 @@ public class BTraceMBean implements DynamicMBean {
         description = name;
       }
       Descriptor descriptor = new DescriptorSupport();
-      OpenType ot = OpenTypeUtils.typeToOpenType(field.getGenericType());
+      OpenType<?> ot = OpenTypeUtils.typeToOpenType(field.getGenericType());
       if (ot != null) {
         descriptor.setField("openType", ot);
       }
@@ -250,7 +249,7 @@ public class BTraceMBean implements DynamicMBean {
               descriptor);
     }
 
-    BTrace info = (BTrace) clazz.getAnnotation(BTrace.class);
+    BTrace info = clazz.getAnnotation(BTrace.class);
     String description = info.description();
     if (description.isEmpty()) {
       description = "BTrace MBean : " + beanName;
@@ -268,7 +267,7 @@ public class BTraceMBean implements DynamicMBean {
 
   private static class OpenTypeUtils {
 
-    private static final Map<Class, OpenType> classToOpenTypes = new HashMap<>();
+    private static final Map<Class<?>, OpenType<?>> classToOpenTypes = new HashMap<>();
 
     static {
       classToOpenTypes.put(Byte.TYPE, SimpleType.BYTE);
@@ -296,12 +295,12 @@ public class BTraceMBean implements DynamicMBean {
       classToOpenTypes.put(Date.class, SimpleType.DATE);
     }
 
-    private static OpenType typeToOpenType(Type t) {
+    private static OpenType<?> typeToOpenType(Type t) {
       try {
         // FIXME: This is highly incomplete, revisit...
         // just enough to get Maps for now.
         if (t instanceof Class) {
-          Class c = (Class) t;
+          Class<?>c = (Class<?>) t;
           if (Profiler.class.isAssignableFrom(c)) {
             CompositeType record =
                 new CompositeType(

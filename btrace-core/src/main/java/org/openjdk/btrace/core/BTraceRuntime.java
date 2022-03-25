@@ -71,6 +71,7 @@ import org.openjdk.btrace.core.types.BTraceMap;
 import sun.misc.Unsafe;
 import sun.security.action.GetPropertyAction;
 
+@SuppressWarnings("deprecation")
 public final class BTraceRuntime {
   public static final String CMD_QUEUE_LIMIT_KEY = "org.openjdk.btrace.core.cmdQueueLimit";
   private static final boolean messageTimestamp = false;

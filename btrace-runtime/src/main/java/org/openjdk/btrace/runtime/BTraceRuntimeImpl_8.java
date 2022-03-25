@@ -49,6 +49,7 @@ import sun.reflect.Reflection;
  * @author Joachim Skeie (GC MBean support, advanced Deque manipulation)
  * @author KLynch
  */
+@SuppressWarnings("deprecation")
 public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   public static final class Factory extends BTraceRuntimeImplFactory<BTraceRuntimeImpl_8> {
     public Factory() {

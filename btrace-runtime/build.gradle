@@ -21,15 +21,15 @@ compileJava {
     sourceCompatibility = 8
     targetCompatibility = 8
     options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
+    options.forkOptions.executable = "${System.getenv("JAVA_8_HOME")}/bin/javac"
 }
 
 compileJava9Java {
     sourceCompatibility = 9
     targetCompatibility = 9
     options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_9_HOME")}/bin/javac"
-    options.forkOptions.javaHome = file("${project.property("JAVA_9_HOME")}")
+    options.forkOptions.executable = "${System.getenv("JAVA_11_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${System.getenv("JAVA_11_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
@@ -37,8 +37,8 @@ compileJava11Java {
     sourceCompatibility = 11
     targetCompatibility = 11
     options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
-    options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
+    options.forkOptions.executable = "${System.getenv("JAVA_11_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${System.getenv("JAVA_11_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
@@ -46,8 +46,8 @@ compileJava15Java {
     sourceCompatibility = 11
     targetCompatibility = 11
     options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_16_HOME")}/bin/javac"
-    options.forkOptions.javaHome = file("${project.property("JAVA_16_HOME")}")
+    options.forkOptions.executable = "${System.getenv("JAVA_17_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${System.getenv("JAVA_17_HOME")}")
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 

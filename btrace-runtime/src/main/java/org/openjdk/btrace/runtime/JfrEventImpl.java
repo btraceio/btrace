@@ -110,7 +110,7 @@ class JfrEventImpl extends JfrEvent {
 
   private boolean checkField(String fieldName) {
     if (!fieldIndex.containsKey(fieldName)) {
-      debug.warning("Invalid event field: " + fieldName);
+      DebugSupport.warning("Invalid event field: " + fieldName);
       return false;
     }
     return true;

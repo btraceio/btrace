@@ -53,7 +53,6 @@ import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreeScanner;
-import com.sun.tools.javac.tree.JCTree;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -582,8 +581,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     ModifiersTree mt = node.getModifiers();
     List<? extends AnnotationTree> annos = mt.getAnnotations();
     for (AnnotationTree at : annos) {
-      String annFqn = ((JCTree) at.getAnnotationType()).type.tsym.getQualifiedName().toString();
-      if (annFqn.equals(ON_ERROR_TYPE)) {
+      String annFqn = verifier.annotationName(at);
+      if (ON_ERROR_TYPE.equals(annFqn)) {
         return true;
       }
     }
@@ -594,8 +593,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     ModifiersTree mt = node.getModifiers();
     List<? extends AnnotationTree> annos = mt.getAnnotations();
     for (AnnotationTree at : annos) {
-      String annFqn = ((JCTree) at.getAnnotationType()).type.tsym.getQualifiedName().toString();
-      if (annFqn.equals(ON_EXIT_TYPE)) {
+      String annFqn = verifier.annotationName(at);
+      if (ON_EXIT_TYPE.equals(annFqn)) {
         return true;
       }
     }
@@ -606,8 +605,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     ModifiersTree mt = node.getModifiers();
     List<? extends AnnotationTree> annos = mt.getAnnotations();
     for (AnnotationTree at : annos) {
-      String annFqn = ((JCTree) at.getAnnotationType()).type.tsym.getQualifiedName().toString();
-      if (annFqn.startsWith("org.openjdk.btrace.core.annotations")) {
+      String annFqn = verifier.annotationName(at);
+      if (annFqn != null && annFqn.startsWith("org.openjdk.btrace.core.annotations")) {
         return true;
       }
     }
@@ -677,20 +676,11 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), t);
     Element e = verifier.getTreeUtils().getElement(tp);
     if (e == null) {
-      // hack to make JDK 7 symbol resolution working
-      if (t instanceof MethodInvocationTree) {
-        JCTree.JCExpression jce = ((JCTree.JCMethodInvocation) t).meth;
-        if (jce instanceof IdentifierTree) {
-          e = ((JCTree.JCIdent) jce).sym;
-        } else if (jce instanceof MemberSelectTree) {
-          e = ((JCTree.JCFieldAccess) jce).sym;
-        }
-      } else if (t instanceof JCTree.JCIdent) {
-        e = ((JCTree.JCIdent) t).sym;
-      } else if (t instanceof JCTree.JCNewClass) {
-        e = ((JCTree.JCIdent) ((JCTree.JCNewClass) t).clazz).sym;
-      } else if (t instanceof JCTree.JCThrow) {
-        e = ((JCTree.JCThrow) t).expr.type.tsym;
+      if (t.getKind() == Tree.Kind.NEW_CLASS) {
+        e = verifier.getTreeUtils().getElement(new TreePath(tp, ((NewClassTree) t).getIdentifier()));
+      }
+      if (t.getKind() == Tree.Kind.THROW) {
+        e = verifier.getTreeUtils().getElement(new TreePath(tp, ((ThrowTree) t).getExpression()));
       }
       if (e == null) {
         verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, t.toString());

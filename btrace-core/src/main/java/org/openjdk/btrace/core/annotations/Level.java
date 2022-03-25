@@ -52,7 +52,7 @@ public @interface Level {
    *
    * <p>Where <b>NUMBER</b> is a non-negative integer number.
    *
-   * @return
+   * @return the level
    */
   String value() default "";
 }

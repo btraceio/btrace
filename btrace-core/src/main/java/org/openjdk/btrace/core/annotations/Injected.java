@@ -40,7 +40,7 @@ public @interface Injected {
   /**
    * The injected service type
    *
-   * @return
+   * @return the service type
    */
   ServiceType value() default ServiceType.SIMPLE;
 
