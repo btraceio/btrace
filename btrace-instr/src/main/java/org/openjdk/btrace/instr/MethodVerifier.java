@@ -26,12 +26,10 @@ package org.openjdk.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Label;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.services.api.Service;
@@ -75,19 +73,23 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   private final Map<Label, Label> labels;
   private Object delayedClzLoad = null;
 
+  private final BitSet immutableLocalParams = new BitSet();
+  private final Map<Integer, Integer> idxToSlotMap = new HashMap<>();
+
   public MethodVerifier(
-      BTraceMethodNode parent,
-      int access,
-      String className,
-      String methodName,
-      String desc,
-      ClassLoader ctxClassLoader) {
+      BTraceMethodNode parent, int access, String className, String methodName, String desc) {
     super(parent, className, desc, ((access & ACC_STATIC) == ACC_STATIC));
     this.className = className;
     this.methodName = methodName;
     methodDesc = desc;
     this.access = access;
     labels = new HashMap<>();
+    int idx = 0;
+    int slot = ((access & ACC_STATIC) == 0) ? 1 : 0;
+    for (Type argType : Type.getArgumentTypes(desc)) {
+      idxToSlotMap.put(idx++, slot);
+      slot += argType.getSize();
+    }
   }
 
   static boolean isPrimitiveWrapper(String type) {
@@ -100,6 +102,29 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
 
   private BTraceMethodNode getParent() {
     return (BTraceMethodNode) mv;
+  }
+
+  @Override
+  public AnnotationVisitor visitParameterAnnotation(
+      int parameter, String descriptor, boolean visible) {
+    AnnotationVisitor av = super.visitParameterAnnotation(parameter, descriptor, visible);
+    return descriptor.endsWith("/Local;")
+        ? new AnnotationVisitor(Opcodes.ASM9, av) {
+          @Override
+          public void visit(String name, Object value) {
+            boolean mutable = false;
+            if (name.equals("mutable")) {
+              if (value instanceof Boolean) {
+                mutable = (boolean) value;
+              }
+              if (!mutable) {
+                immutableLocalParams.set(idxToSlotMap.get(parameter));
+              }
+            }
+            super.visit(name, value);
+          }
+        }
+        : av;
   }
 
   @Override
@@ -267,6 +292,11 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   public void visitVarInsn(int opcode, int var) {
     if (opcode == RET) {
       Verifier.reportError("no.try");
+    }
+    if (opcode >= ISTORE && opcode <= ASTORE) {
+      if (immutableLocalParams.get(var)) {
+        Verifier.reportError("write.to.immutable.parameter");
+      }
     }
     super.visitVarInsn(opcode, var);
   }

@@ -33,8 +33,8 @@ import org.openjdk.btrace.core.annotations.*;
 @BTrace
 public class ArgsReturnSharedLocal {
   @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args")
-  public static void args(@Self Object self, @Local(name = "msg", mutable = true) String msg) {
-    msg = "Hello world";
+  public static void args(@Self Object self, @Local(name = "depth", mutable = true) int depth) {
+    depth += 1;
   }
 
   @OnMethod(
@@ -48,7 +48,8 @@ public class ArgsReturnSharedLocal {
       long b,
       String[] c,
       int[] d,
-      @Local(name = "msg") String msg) {
-    println("args " + msg);
+      @Local(name = "depth", mutable = true) int depth) {
+    println("args " + depth);
+    depth -= 1;
   }
 }

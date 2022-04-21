@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,46 +22,33 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package resources;
 
-/**
- *
- * @author Jaroslav Bachorik
- */
-public class Main extends TestApp {
-    private String id = "xxx";
+package traces.onmethod;
 
-    public static void main(String[] args) throws Exception {
-        Main i = new Main();
-        i.start();
-    }
+import static org.openjdk.btrace.core.BTraceUtils.*;
 
-    @Override
-    protected void startWork() {
-        while (!Thread.currentThread().isInterrupted()) {
-            callA();
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
+import org.openjdk.btrace.core.annotations.*;
 
-    private void callA() {
-        print("i=" + callB(1, "Hello World"));
-    }
+/** @author Jaroslav Bachorik */
+@BTrace
+public class ArgsReturnSharedLocal {
+  @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args")
+  public static void args(@Self Object self, @Local(name = "depth", mutable = true) int depth) {
+    depth += 1;
+  }
 
-    private int callB(int i, String s) {
-        synchronized (this) {
-            print("[" + i + "] = " + s);
-            return i + 1;
-        }
-    }
-
-    @Override
-    public void print(String msg) {
-        System.out.println(msg);
-        System.out.flush();
-    }
+  @OnMethod(
+      clazz = "/.*\\.OnMethodTest/",
+      method = "args",
+      location = @Location(value = Kind.RETURN))
+  public static void argsReturn(
+      @Self Object self,
+      @Return long retVal,
+      String a,
+      long b,
+      String[] c,
+      int[] d,
+      @Local(name = "depth", mutable = true) int depth) {
+    println("args " + depth--);
+  }
 }

@@ -799,6 +799,15 @@ final class Preprocessor {
             }
           }
         }
+      } else if (type == AbstractInsnNode.IINC_INSN) {
+        if (checkForLocalParams) {
+          IincInsnNode iincInsnNode = (IincInsnNode) n;
+          if (iincInsnNode.var >= 0 && argsSize > iincInsnNode.var) {
+            if (slotTypes[iincInsnNode.var].equals(Constants.VALUE_HOLDER_TYPE)) {
+              replaceLocalParamUsage(mn, lookupTypes[iincInsnNode.var], iincInsnNode);
+            }
+          }
+        }
       }
     }
   }
@@ -998,6 +1007,75 @@ final class Preprocessor {
                   false));
           mn.instructions.insert(n, insnList);
           break;
+        }
+    }
+  }
+
+  private void replaceLocalParamUsage(MethodNode mn, Type origType, IincInsnNode n) {
+    if (origType != Type.INT_TYPE) {
+      return;
+    }
+    InsnList insnList = new InsnList();
+    insnList.add(new VarInsnNode(Opcodes.ALOAD, n.var)); // load the value holder [vh]
+    insnList.add(new InsnNode(Opcodes.DUP)); // [vh, vh]
+    insnList.add(
+        new MethodInsnNode(
+            Opcodes.INVOKEVIRTUAL,
+            Constants.VALUE_HOLDER_INTERNAL,
+            "getInt",
+            "()I",
+            false)); // [vh, val]
+    loadInt(insnList, n.incr); // [vh, val, incr]
+    insnList.add(new InsnNode(Opcodes.IADD)); // [vh, val]
+    insnList.add(
+        new MethodInsnNode(
+            Opcodes.INVOKEVIRTUAL, Constants.VALUE_HOLDER_INTERNAL, "setInt", "(I)V", false)); // []
+    // add the newly generated instructions
+    mn.instructions.insert(n, insnList);
+    // remove the unneeded iinc instruction node
+    mn.instructions.remove(n);
+  }
+
+  private void loadInt(InsnList insnList, int number) {
+    switch (number) {
+      case -1:
+        {
+          insnList.add(new InsnNode(Opcodes.ICONST_M1));
+          break;
+        }
+      case 0:
+        {
+          insnList.add(new InsnNode(Opcodes.ICONST_0));
+          break;
+        }
+      case 1:
+        {
+          insnList.add(new InsnNode(Opcodes.ICONST_1));
+          break;
+        }
+      case 2:
+        {
+          insnList.add(new InsnNode(Opcodes.ICONST_2));
+          break;
+        }
+      case 3:
+        {
+          insnList.add(new InsnNode(Opcodes.ICONST_3));
+          break;
+        }
+      case 4:
+        {
+          insnList.add(new InsnNode(Opcodes.ICONST_4));
+          break;
+        }
+      case 5:
+        {
+          insnList.add(new InsnNode(Opcodes.ICONST_5));
+          break;
+        }
+      default:
+        {
+          insnList.add(new LdcInsnNode(number));
         }
     }
   }

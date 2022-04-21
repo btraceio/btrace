@@ -170,7 +170,7 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
             if (e.getSimpleName().contentEquals("setEventField")) {
               String nameValue = node.getArguments().get(1).toString();
               if (!eventFieldNames.contains(nameValue)) {
-                reportError("jfr.event.invalid.field", node.getArguments().get(1));
+                reportError("jfr.event.invalid.field", node);
               }
             }
           }
@@ -320,6 +320,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     return super.visitForLoop(node, v);
   }
 
+  private final Set<String> immutableLocalParams = new HashSet<>();
+
   @Override
   public Void visitMethod(MethodTree node, Void v) {
     boolean oldInsideMethod = insideMethod;
@@ -352,6 +354,27 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
                 public Void visitAnnotation(AnnotationTree at, Void p) {
                   isInAnnotation = true;
                   try {
+                    if (at.getAnnotationType().toString().equals("Local")) {
+                      TypeElement te = (TypeElement) getElement(at.getAnnotationType());
+                      if (te.getQualifiedName()
+                          .contentEquals("org.openjdk.btrace.core.annotations.Local")) {
+                        boolean mutable = false;
+                        for (ExpressionTree et : at.getArguments()) {
+                          AssignmentTree asTree = (AssignmentTree) et;
+                          if (asTree.getVariable().toString().equals("mutable")) {
+                            if (asTree.getExpression().getKind() == Tree.Kind.BOOLEAN_LITERAL) {
+                              mutable = Boolean.parseBoolean(asTree.getExpression().toString());
+                              break;
+                            } else {
+                              reportError("literal.expected", asTree.getExpression());
+                            }
+                          }
+                        }
+                        if (!mutable) {
+                          immutableLocalParams.add(vt.getName().toString());
+                        }
+                      }
+                    }
                     return super.visitAnnotation(at, p);
                   } finally {
                     isInAnnotation = false;
@@ -394,6 +417,9 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
       }
     } finally {
       insideMethod = oldInsideMethod;
+      if (!insideMethod) {
+        immutableLocalParams.clear();
+      }
     }
   }
 
@@ -652,6 +678,10 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
         }
       } else {
         reportError("no.assignment", variable);
+      }
+    } else {
+      if (immutableLocalParams.contains(variable.toString())) {
+        reportError("write.to.immutable.parameter", variable);
       }
     }
   }

@@ -102,18 +102,19 @@ public class Verifier extends AbstractProcessor implements TaskListener {
     if (processingEnv == null) {
       return;
     }
+    ClassTree ct = null;
     TypeElement elem = e.getTypeElement();
     for (Tree t : e.getCompilationUnit().getTypeDecls()) {
       TreePath topLevel = new TreePath(e.getCompilationUnit());
       if (t.getKind() == Tree.Kind.CLASS) {
         if (elem.equals(getTreeUtils().getElement(new TreePath(topLevel, t)))) {
-          currentClass = (ClassTree) t;
+          ct = (ClassTree) t;
           break;
         }
       }
     }
-    if (currentClass != null) {
-      verify(currentClass, elem);
+    if (ct != null && ct != currentClass) {
+      verify(ct, elem);
     }
   }
 
@@ -225,16 +226,17 @@ public class Verifier extends AbstractProcessor implements TaskListener {
       if (e.getKind() != TaskEvent.Kind.ANALYZE) return;
       TypeElement elem = e.getTypeElement();
       TreePath topLevel = new TreePath(e.getCompilationUnit());
+      ClassTree ct = null;
       for (Tree t : e.getCompilationUnit().getTypeDecls()) {
         if (t.getKind() == Tree.Kind.CLASS) {
           if (elem.equals(getTreeUtils().getElement(new TreePath(topLevel, t)))) {
-            currentClass = (ClassTree) t;
+            ct = (ClassTree) t;
             break;
           }
         }
       }
-      if (currentClass != null) {
-        verify(currentClass, elem);
+      if (ct != null && ct != currentClass) {
+        verify(ct, elem);
       }
     }
 

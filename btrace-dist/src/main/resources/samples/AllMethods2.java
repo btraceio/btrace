@@ -41,11 +41,12 @@ public class AllMethods2 {
             clazz = "/javax\\.swing\\..*/",
             method = "/.*/"
     )
-    public static void m(@Self Object o, @ProbeClassName String probeClass, @ProbeMethodName String probeMethod, @Local(name = "msg", mutable = true) String msg) {
+    public static void m(@Self Object o, @ProbeClassName String probeClass, @ProbeMethodName String probeMethod, @Local(name = "depth", mutable = true) int depth) {
         printer.println("this = " + o);
         printer.print("entered " + probeClass);
         printer.println("." + probeMethod);
-        msg = "hello world";
+        printer.println("> depth = " + depth);
+        depth += 1;
     }
 
     @OnMethod(
@@ -53,7 +54,7 @@ public class AllMethods2 {
             method = "/.*/",
             location = @Location(Kind.RETURN)
     )
-    public static void m(@Self Object o, @Local(name = "msg") String msg) {
-        printer.println("msg = " + msg);
+    public static void m(@Self Object o, @Local(name = "depth", mutable = true) int depth) {
+        depth -= 1;
     }
 }

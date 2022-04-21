@@ -38,7 +38,17 @@ import static org.openjdk.btrace.core.BTraceUtils.*;
 public class OnMethodSharedVarTest {
     @OnMethod(clazz = "resources.Main", method = "/call.*/", location = @Location(Kind.ENTRY))
     public static void noargs_entry(@Local(name = "msg", mutable = true) String msg) {
-        msg = "local";
+        msg = "entry";
+    }
+
+    @OnMethod(clazz = "resources.Main", method = "callB", location = @Location(value = Kind.SYNC_ENTRY))
+    public static void callB_sync_entry(@Local(name = "msg", mutable = true) String msg) {
+        msg += "-" + "sync_entry";
+    }
+
+    @OnMethod(clazz = "resources.Main", method = "callB", location = @Location(value = Kind.SYNC_EXIT))
+    public static void callB_sync_exit(@Local(name = "msg", mutable = true) String msg) {
+        msg += "-" + "sync_exit";
     }
 
     @OnMethod(clazz = "resources.Main", method = "/call.*/", location = @Location(Kind.RETURN))

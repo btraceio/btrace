@@ -235,8 +235,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
             assertFalse(stdout.contains("FAILED"), "Script should not have failed");
             assertTrue(stderr.isEmpty(), "Non-empty stderr");
-            assertTrue(stdout.contains("[this, anytype(void), local]"));
-            assertTrue(stdout.contains("[this, 2, local]"));
+            assertTrue(stdout.contains("[this, anytype(void), entry]"));
+            assertTrue(stdout.contains("[this, 2, entry-sync_entry-sync_exit]"));
           }
         });
   }
