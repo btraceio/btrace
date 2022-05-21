@@ -36,7 +36,6 @@ import com.sun.source.tree.DoWhileLoopTree;
 import com.sun.source.tree.EnhancedForLoopTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.ForLoopTree;
-import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.MethodTree;
@@ -677,7 +676,10 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     Element e = verifier.getTreeUtils().getElement(tp);
     if (e == null) {
       if (t.getKind() == Tree.Kind.NEW_CLASS) {
-        e = verifier.getTreeUtils().getElement(new TreePath(tp, ((NewClassTree) t).getIdentifier()));
+        e =
+            verifier
+                .getTreeUtils()
+                .getElement(new TreePath(tp, ((NewClassTree) t).getIdentifier()));
       }
       if (t.getKind() == Tree.Kind.THROW) {
         e = verifier.getTreeUtils().getElement(new TreePath(tp, ((ThrowTree) t).getExpression()));
