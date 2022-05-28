@@ -24,9 +24,13 @@
  */
 package org.openjdk.btrace.instr;
 
-import java.util.HashMap;
+import java.lang.ref.PhantomReference;
+import java.lang.ref.ReferenceQueue;
 import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.openjdk.btrace.instr.ClassInfo.ClassName;
 
 /**
@@ -36,11 +40,42 @@ import org.openjdk.btrace.instr.ClassInfo.ClassName;
  * @author Jaroslav Bachorik
  */
 public final class ClassCache {
-  private final Map<ClassLoader, Map<ClassName, ClassInfo>> cacheMap = new WeakHashMap<>();
-  private final Map<ClassName, ClassInfo> bootstrapInfos = new HashMap<>(500);
+  private static final class ClassLoaderReference extends PhantomReference<ClassLoader> {
+    final String id;
+
+    public ClassLoaderReference(ClassLoader referent, ReferenceQueue<? super ClassLoader> q) {
+      super(referent, q);
+      this.id = getClKey(referent);
+    }
+  }
+
+  private final Map<ClassLoaderReference, ClassLoaderReference> loaderRefs =
+      new ConcurrentHashMap<>();
+  private final ReferenceQueue<ClassLoader> cleanupQueue = new ReferenceQueue<>();
+  private final ConcurrentMap<String, ConcurrentMap<ClassName, ClassInfo>> cacheMap =
+      new ConcurrentHashMap<>();
+  private final ConcurrentMap<ClassName, ClassInfo> bootstrapInfos = new ConcurrentHashMap<>(500);
+
+  private final Timer cleanupTimer = new Timer(true);
 
   public static ClassCache getInstance() {
     return Singleton.INSTANCE;
+  }
+
+  ClassCache(long cleanupPeriod) {
+    cleanupTimer.schedule(
+        new TimerTask() {
+          @Override
+          public void run() {
+            ClassLoaderReference ref = null;
+            while ((ref = (ClassLoaderReference) cleanupQueue.poll()) != null) {
+              cacheMap.remove(ref.id);
+              loaderRefs.remove(ref);
+            }
+          }
+        },
+        cleanupPeriod,
+        cleanupPeriod);
   }
 
   public ClassInfo get(Class<?> clz) {
@@ -58,26 +93,40 @@ public final class ClassCache {
     return get(cl, new ClassName(className));
   }
 
-  synchronized ClassInfo get(ClassLoader cl, ClassName className) {
-    Map<ClassName, ClassInfo> infos = getInfos(cl);
+  ClassInfo get(ClassLoader cl, ClassName className) {
+    ConcurrentMap<ClassName, ClassInfo> infos = getInfos(cl);
 
-    ClassInfo ci = infos.get(className);
-    if (ci == null) {
-      ci = new ClassInfo(this, cl, className);
-      infos.put(className, ci);
-    }
-    return ci;
+    return infos.computeIfAbsent(className, k -> new ClassInfo(ClassCache.this, cl, k));
   }
 
-  private synchronized Map<ClassName, ClassInfo> getInfos(ClassLoader cl) {
+  ConcurrentMap<ClassName, ClassInfo> getInfos(ClassLoader cl) {
     if (cl == null) {
       return bootstrapInfos;
     }
-    Map<ClassName, ClassInfo> infos = cacheMap.computeIfAbsent(cl, k -> new HashMap<>(500));
+    boolean[] rslt = new boolean[] {false};
+    ConcurrentMap<ClassName, ClassInfo> infos =
+        cacheMap.computeIfAbsent(
+            getClKey(cl),
+            k -> {
+              rslt[0] = true;
+              return new ConcurrentHashMap<>(500);
+            });
+    if (rslt[0]) {
+      ClassLoaderReference ref = new ClassLoaderReference(cl, cleanupQueue);
+      loaderRefs.put(ref, ref);
+    }
     return infos;
   }
 
+  private static String getClKey(ClassLoader cl) {
+    return cl.getClass().getName() + "@" + System.identityHashCode(cl);
+  }
+
+  int getSize() {
+    return cacheMap.size();
+  }
+
   private static final class Singleton {
-    private static final ClassCache INSTANCE = new ClassCache();
+    private static final ClassCache INSTANCE = new ClassCache(5000);
   }
 }

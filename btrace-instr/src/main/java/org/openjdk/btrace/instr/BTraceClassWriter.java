@@ -41,6 +41,9 @@ import org.objectweb.asm.tree.MethodNode;
  * allowing to plug-in instrumentation providers and instrument class in single invocation. Also, it
  * provides a smart and lightweight common supertype resolution method for computing frames.
  *
+ * The class is not thread-safe but since there is exactly one instance per instrumented class
+ * there is no chance of parallel access ever happening.
+ *
  * @author Jaroslav Bachorik
  */
 final class BTraceClassWriter extends ClassWriter {
@@ -67,39 +70,35 @@ final class BTraceClassWriter extends ClassWriter {
 
   public void addInstrumentor(BTraceProbe bp, ClassLoader cl) {
     if (cr != null && bp != null) {
-      synchronized (instrumentors) {
-        Instrumentor top = instrumentors.peekLast();
-        ClassVisitor parent = top != null ? top : this;
-        Instrumentor i = Instrumentor.create(cr, bp, parent, cl);
-        if (i != null) {
-          instrumentors.add(i);
-        }
+      Instrumentor top = instrumentors.peekLast();
+      ClassVisitor parent = top != null ? top : this;
+      Instrumentor i = Instrumentor.create(cr, bp, parent, cl);
+      if (i != null) {
+        instrumentors.add(i);
       }
     }
   }
 
   public byte[] instrument() {
     boolean hit = false;
-    synchronized (instrumentors) {
-      if (instrumentors.isEmpty()) return null;
+    if (instrumentors.isEmpty()) return null;
 
-      Instrumentor top = instrumentors.peekLast();
-      ClassVisitor cv =
-          new ClassVisitor(Opcodes.ASM7, top != null ? top : this) {
-            @Override
-            public void visitEnd() {
-              if (top != null && top.hasCushionMethods()) {
-                for (MethodNode m : cushionMethods) {
-                  m.accept(this);
-                }
+    Instrumentor top = instrumentors.peekLast();
+    ClassVisitor cv =
+        new ClassVisitor(Opcodes.ASM7, top != null ? top : this) {
+          @Override
+          public void visitEnd() {
+            if (top != null && top.hasCushionMethods()) {
+              for (MethodNode m : cushionMethods) {
+                m.accept(this);
               }
-              super.visitEnd();
             }
-          };
-      InstrumentUtils.accept(cr, cv);
-      for (Instrumentor i : instrumentors) {
-        hit |= i.hasMatch();
-      }
+            super.visitEnd();
+          }
+        };
+    InstrumentUtils.accept(cr, cv);
+    for (Instrumentor i : instrumentors) {
+      hit |= i.hasMatch();
     }
     return hit ? toByteArray() : null;
   }
