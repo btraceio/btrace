@@ -29,8 +29,9 @@ import java.lang.ref.ReferenceQueue;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.jctools.maps.NonBlockingHashMap;
+import org.jctools.maps.NonBlockingIdentityHashMap;
 import org.openjdk.btrace.instr.ClassInfo.ClassName;
 
 /**
@@ -50,11 +51,11 @@ public final class ClassCache {
   }
 
   private final Map<ClassLoaderReference, ClassLoaderReference> loaderRefs =
-      new ConcurrentHashMap<>();
+      new NonBlockingIdentityHashMap<>();
   private final ReferenceQueue<ClassLoader> cleanupQueue = new ReferenceQueue<>();
   private final ConcurrentMap<String, ConcurrentMap<ClassName, ClassInfo>> cacheMap =
-      new ConcurrentHashMap<>();
-  private final ConcurrentMap<ClassName, ClassInfo> bootstrapInfos = new ConcurrentHashMap<>(500);
+      new NonBlockingHashMap<>();
+  private final ConcurrentMap<ClassName, ClassInfo> bootstrapInfos = new NonBlockingHashMap<>(500);
 
   private final Timer cleanupTimer = new Timer(true);
 
@@ -109,7 +110,7 @@ public final class ClassCache {
             getClKey(cl),
             k -> {
               rslt[0] = true;
-              return new ConcurrentHashMap<>(500);
+              return new NonBlockingHashMap<>(500);
             });
     if (rslt[0]) {
       ClassLoaderReference ref = new ClassLoaderReference(cl, cleanupQueue);
