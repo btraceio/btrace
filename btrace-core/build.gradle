@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     // https://mvnrepository.com/artifact/org.jctools/jctools-core
-    implementation(group: 'org.jctools', name: 'jctools-core', version: '3.3.0')
+    implementation(group: 'org.jctools', name: 'jctools-core', version: '3.3.1-ea')
 
     // https://mvnrepository.com/artifact/org.ow2.asm/asm
     implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
