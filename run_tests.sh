@@ -7,7 +7,7 @@ echo "Building BTrace binary artifacts"
 ./gradlew -x test :btrace-dist:build
 
 mkdir -p build/reports
-for VERSION in 8 11 16 17 18; do
+for VERSION in 8 11 17 18 19 20; do
   declare home_string=JAVA_${VERSION}_HOME
   if [ -z "${!home_string}" ]; then
     echo "Skipping test for Java ${VERSINO}"

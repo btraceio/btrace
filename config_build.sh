@@ -12,11 +12,12 @@ fi
 
 SDKMAN_BASE=$HOME/.sdkman/candidates/java
 
-JAVA_8_VERSION="8.0.322-tem"
-JAVA_9_VERSION="9.0.4-open"
-JAVA_11_VERSION="11.0.14-tem"
-JAVA_17_VERSION="17.0.2-tem"
-JAVA_18_VERSION="18-amzn"
+JAVA_8_VERSION="8.0.332-tem"
+JAVA_11_VERSION="11.0.15-tem"
+JAVA_17_VERSION="17.0.3-tem"
+JAVA_18_VERSION="18.0.1-tem"
+JAVA_19_VERSION="19.ea.29-open"
+JAVA_20_VERSION="20.ea.4-open"
 
 echo "Using SDKMAN version: ${SDKMAN_VER}"
 
@@ -26,11 +27,6 @@ echo "Installing Java 8"
 sdk install java $JAVA_8_VERSION 2>/dev/null || true
 export JAVA_8_HOME=$SDKMAN_BASE/$JAVA_8_VERSION
 echo "export JAVA_8_HOME=${JAVA_8_HOME}" >> .java.versions
-
-echo "Installing Java 9"
-sdk install java $JAVA_9_VERSION 2>/dev/null || true
-export JAVA_9_HOME=$SDKMAN_BASE/$JAVA_9_VERSION
-echo "export JAVA_9_HOME=${JAVA_9_HOME}" >> .java.versions
 
 echo "Installing Java 11"
 sdk install java $JAVA_11_VERSION 2>/dev/null || true
@@ -46,6 +42,16 @@ echo "Installing Java 18"
 sdk install java $JAVA_18_VERSION 2>/dev/null || true
 export JAVA_18_HOME=$SDKMAN_BASE/$JAVA_18_VERSION
 echo "export JAVA_18_HOME=${JAVA_18_HOME}" >> .java.versions
+
+echo "Installing Java 19"
+sdk install java $JAVA_19_VERSION 2>/dev/null || true
+export JAVA_19_HOME=$SDKMAN_BASE/$JAVA_19_VERSION
+echo "export JAVA_19_HOME=${JAVA_19_HOME}" >> .java.versions
+
+echo "Installing Java 20"
+sdk install java $JAVA_20_VERSION 2>/dev/null || true
+export JAVA_20_HOME=$SDKMAN_BASE/$JAVA_20_VERSION
+echo "export JAVA_20_HOME=${JAVA_20_HOME}" >> .java.versions
 
 echo "==="
 echo "Load the configured java version via 'source .java.versions'"
