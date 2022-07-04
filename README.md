@@ -38,8 +38,7 @@ Your __JAVA_HOME__ must point to JDK 11 (eg. __JAVA_11_HOME__)
 #### Gradle
 ```sh
 cd <btrace>
-./gradlew build
-./gradlew buildDistributions
+./gradlew :btrace-dist:build
 ```
 The binary dist packages can be found in `<btrace>/btrace-dist/build/distributions` as the *.tar.gz, *.zip, *.rpm and *.deb files.
 The exploded binary folder which can be used right away is located at `<btrace>/btrace-dist/build/resources/main` which serves as the __BTRACE_HOME__ location.
