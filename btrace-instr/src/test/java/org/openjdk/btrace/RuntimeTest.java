@@ -344,11 +344,14 @@ public abstract class RuntimeTest {
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }
-    if (Files.exists(Paths.get(System.getenv("TEST_JAVA_HOME"), "jmods"))) {
+    String testJavaHome = System.getenv("TEST_JAVA_HOME");
+    if (testJavaHome == null) {
+      testJavaHome = System.getenv("JAVA_HOME");
+    }
+    if (Files.exists(Paths.get(testJavaHome, "jmods"))) {
       argVals.addAll(
           1,
-          Arrays.asList(
-              "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
+          Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
     }
     ProcessBuilder pb = new ProcessBuilder(argVals);
 
