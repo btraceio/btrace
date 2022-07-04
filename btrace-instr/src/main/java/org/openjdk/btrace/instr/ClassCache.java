@@ -27,9 +27,11 @@ package org.openjdk.btrace.instr;
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentMap;
+
 import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingIdentityHashMap;
 import org.openjdk.btrace.instr.ClassInfo.ClassName;
@@ -41,19 +43,45 @@ import org.openjdk.btrace.instr.ClassInfo.ClassName;
  * @author Jaroslav Bachorik
  */
 public final class ClassCache {
+  private static final class CacheKey {
+    public final String name;
+    public final int id;
+
+    private final int hashCode;
+
+    public CacheKey(String name, int id) {
+      this.name = name;
+      this.id = id;
+      this.hashCode = Objects.hash(name, id);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      CacheKey cacheKey = (CacheKey) o;
+      return id == cacheKey.id && name.equals(cacheKey.name);
+    }
+
+    @Override
+    public int hashCode() {
+      return hashCode;
+    }
+  }
+
   private static final class ClassLoaderReference extends PhantomReference<ClassLoader> {
-    final String id;
+    final CacheKey key;
 
     public ClassLoaderReference(ClassLoader referent, ReferenceQueue<? super ClassLoader> q) {
       super(referent, q);
-      this.id = getClKey(referent);
+      this.key = getCacheKey(referent);
     }
   }
 
   private final Map<ClassLoaderReference, ClassLoaderReference> loaderRefs =
       new NonBlockingIdentityHashMap<>();
   private final ReferenceQueue<ClassLoader> cleanupQueue = new ReferenceQueue<>();
-  private final ConcurrentMap<String, ConcurrentMap<ClassName, ClassInfo>> cacheMap =
+  private final ConcurrentMap<CacheKey, ConcurrentMap<ClassName, ClassInfo>> cacheMap =
       new NonBlockingHashMap<>();
   private final ConcurrentMap<ClassName, ClassInfo> bootstrapInfos = new NonBlockingHashMap<>(500);
 
@@ -70,7 +98,7 @@ public final class ClassCache {
           public void run() {
             ClassLoaderReference ref = null;
             while ((ref = (ClassLoaderReference) cleanupQueue.poll()) != null) {
-              cacheMap.remove(ref.id);
+              cacheMap.remove(ref.key);
               loaderRefs.remove(ref);
             }
           }
@@ -107,7 +135,7 @@ public final class ClassCache {
     boolean[] rslt = new boolean[] {false};
     ConcurrentMap<ClassName, ClassInfo> infos =
         cacheMap.computeIfAbsent(
-            getClKey(cl),
+            getCacheKey(cl),
             k -> {
               rslt[0] = true;
               return new NonBlockingHashMap<>(500);
@@ -119,8 +147,8 @@ public final class ClassCache {
     return infos;
   }
 
-  private static String getClKey(ClassLoader cl) {
-    return cl.getClass().getName() + "@" + System.identityHashCode(cl);
+  private static CacheKey getCacheKey(ClassLoader cl) {
+    return new CacheKey(cl.getClass().getName(), System.identityHashCode(cl));
   }
 
   int getSize() {
