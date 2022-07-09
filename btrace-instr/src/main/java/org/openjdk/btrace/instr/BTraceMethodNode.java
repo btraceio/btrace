@@ -29,7 +29,6 @@ import java.util.Set;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodNode;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Where;
@@ -41,7 +40,6 @@ public class BTraceMethodNode extends MethodNode {
   private final BTraceProbeNode cn;
   private final CallGraph graph;
   private final String methodId;
-  private final DebugSupport debug;
   private OnMethod om;
   private OnProbe op;
   private Location loc;
@@ -63,7 +61,6 @@ public class BTraceMethodNode extends MethodNode {
     this.cn = cn;
     graph = cn.getGraph();
     methodId = CallGraph.methodId(name, desc);
-    debug = cn.debug;
     isBTraceHandler = initBTraceHandler;
   }
 
@@ -90,7 +87,7 @@ public class BTraceMethodNode extends MethodNode {
       isBTraceHandler = true;
     }
     if (type.equals(Constants.ONMETHOD_DESC)) {
-      om = new OnMethod(this, debug);
+      om = new OnMethod(this);
       om.setTargetName(name);
       om.setTargetDescriptor(desc);
       return new AnnotationVisitor(Opcodes.ASM7, av) {

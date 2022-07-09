@@ -45,8 +45,6 @@
 package org.openjdk.btrace.instr;
 
 import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.annotations.Sampled;
 
 /**
@@ -59,7 +57,6 @@ import org.openjdk.btrace.core.annotations.Sampled;
  * @author A. Sundararajan
  */
 public final class OnMethod extends SpecialParameterHolder {
-  private final DebugSupport debug;
   private String clazz;
   private String method = "";
   private boolean exactTypeMatch;
@@ -81,17 +78,11 @@ public final class OnMethod extends SpecialParameterHolder {
   private BTraceMethodNode bmn;
 
   public OnMethod() {
-    this(new DebugSupport(SharedSettings.GLOBAL));
-  }
-
-  public OnMethod(DebugSupport debug) {
     // need this to deserialize from the probe descriptor
-    this.debug = debug;
   }
 
-  public OnMethod(BTraceMethodNode bmn, DebugSupport debug) {
+  public OnMethod(BTraceMethodNode bmn) {
     this.bmn = bmn;
-    this.debug = debug;
   }
 
   public void copyFrom(OnMethod other) {

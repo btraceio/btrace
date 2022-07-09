@@ -40,7 +40,6 @@ import jdk.internal.perf.Perf;
 import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
 import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
@@ -62,12 +61,8 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
 
     @Override
     public BTraceRuntimeImpl_9 getRuntime(
-        String className,
-        ArgsMap args,
-        CommandListener cmdListener,
-        DebugSupport ds,
-        Instrumentation inst) {
-      return new BTraceRuntimeImpl_9(className, args, cmdListener, ds, inst);
+        String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
+      return new BTraceRuntimeImpl_9(className, args, cmdListener, inst);
     }
 
     @Override
@@ -89,12 +84,8 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   public BTraceRuntimeImpl_9() {}
 
   public BTraceRuntimeImpl_9(
-      String className,
-      ArgsMap args,
-      CommandListener cmdListener,
-      DebugSupport ds,
-      Instrumentation inst) {
-    super(className, args, cmdListener, ds, fixExports(inst));
+      String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
+    super(className, args, cmdListener, fixExports(inst));
   }
 
   private static Instrumentation fixExports(Instrumentation instr) {

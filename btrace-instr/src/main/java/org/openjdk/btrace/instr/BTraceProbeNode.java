@@ -49,9 +49,13 @@ import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.VerifierException;
 import org.openjdk.btrace.core.comm.RetransformClassNotification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** @author Jaroslav Bachorik */
 public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
+  private static final Logger log = LoggerFactory.getLogger(BTraceProbeNode.class);
+
   final BTraceProbeSupport delegate;
 
   final BTraceProbeFactory factory;
@@ -75,10 +79,10 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     this.factory = factory;
     bcpResourceClassLoader = new BTraceBCPClassLoader(factory.getSettings());
     debug = new DebugSupport(factory.getSettings());
-    delegate = new BTraceProbeSupport(debug);
+    delegate = new BTraceProbeSupport();
     idmap = new HashMap<>();
     graph = new CallGraph();
-    prep = new Preprocessor(debug);
+    prep = new Preprocessor();
   }
 
   BTraceProbeNode(BTraceProbeFactory factory, byte[] code) {
@@ -193,8 +197,8 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   @Override
   public void unregister() {
     if (transformer != null && isTransforming()) {
-      if (debug.isDebug()) {
-        debug.debug("onExit: removing transformer for " + getClassName());
+      if (log.isDebugEnabled()) {
+        log.debug("onExit: removing transformer for {}", getClassName());
       }
       transformer.unregister(this);
     }
@@ -374,20 +378,28 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
     for (OnProbe op : delegate.onprobes()) {
       String ns = op.getNamespace();
-      if (debug.isDebug()) debug.debug("about to load probe descriptor for " + ns);
+      if (log.isDebugEnabled()) {
+        log.debug("about to load probe descriptor for namespace {}", ns);
+      }
       // load probe descriptor for this namespace
       ProbeDescriptor probeDesc = pdl.load(ns);
       if (probeDesc == null) {
-        if (debug.isDebug()) debug.debug("failed to find probe descriptor for " + ns);
+        if (log.isDebugEnabled()) {
+          log.debug("failed to find probe descriptor for namespace {}", ns);
+        }
         continue;
       }
       // find particular probe mappings using "local" name
       OnProbe foundProbe = probeDesc.findProbe(op.getName());
       if (foundProbe == null) {
-        if (debug.isDebug()) debug.debug("no probe mappings for " + op.getName());
+        if (log.isDebugEnabled()) {
+          log.debug("no probe mappings for {}", op.getName());
+        }
         continue;
       }
-      if (debug.isDebug()) debug.debug("found probe mappings for " + op.getName());
+      if (log.isDebugEnabled()) {
+        log.debug("found probe mappings for {}", op.getName());
+      }
       Collection<OnMethod> omColl = foundProbe.getOnMethods();
       for (OnMethod om : omColl) {
         // copy the info in a new OnMethod so that
@@ -395,7 +407,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         // Note that the probe descriptor cache is used
         // across BTrace sessions. So, we should not update
         // cached OnProbes (and their OnMethods).
-        OnMethod omn = new OnMethod(op.getMethodNode(), debug);
+        OnMethod omn = new OnMethod(op.getMethodNode());
         omn.copyFrom(om);
         omn.setTargetName(op.getTargetName());
         omn.setTargetDescriptor(op.getTargetDescriptor());
@@ -415,7 +427,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
   private ProbeDescriptorLoader getProbeDescriptorLoader() {
     String path = factory.getSettings().getProbeDescPath();
-    return new ProbeDescriptorLoader(path, debug);
+    return new ProbeDescriptorLoader(path);
   }
 
   private void initialize(byte[] code) {
@@ -433,23 +445,20 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   private void initialize(ClassReader cr) {
     try {
       Verifier v = new Verifier(this, factory.getSettings().isTrusted());
-      if (debug.isDebug()) {
-        debug.debug("verifying BTrace class ...");
-      }
+      log.debug("verifying BTrace class ...");
       cr.accept(v, ClassReader.SKIP_DEBUG);
-      if (debug.isDebug()) {
-        debug.debug("BTrace class " + getClassName() + " verified");
-        debug.debug("preprocessing BTrace class " + getClassName() + " ...");
+      if (log.isDebugEnabled()) {
+        String clzName = getClassName();
+        log.debug("BTrace class {} verified", clzName);
+        log.debug("preprocessing BTrace class {} ...", clzName);
       }
       prep.process(this);
-      if (debug.isDebug()) {
-        debug.debug("... preprocessed");
-      }
+      log.debug("... preprocessed");
       try {
         Class.forName("javax.xml.bind.JAXBException");
         mapOnProbes();
       } catch (ClassNotFoundException e) {
-        debug.debug("XML bindings are missing. @OnProbe support is disabled.");
+        log.debug("XML bindings are missing. @OnProbe support is disabled.", e);
       }
     } catch (VerifierException e) {
       verifierException = e;

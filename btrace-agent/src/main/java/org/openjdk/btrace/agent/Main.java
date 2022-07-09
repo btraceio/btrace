@@ -86,6 +86,8 @@ import org.openjdk.btrace.core.comm.WireIO;
 import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -98,8 +100,8 @@ public final class Main {
   public static final int BTRACE_DEFAULT_PORT = 2020;
   private static final Pattern KV_PATTERN = Pattern.compile(",");
   private static final SharedSettings settings = SharedSettings.GLOBAL;
-  private static final DebugSupport debug = new DebugSupport(settings);
-  private static final BTraceTransformer transformer = new BTraceTransformer(debug);
+  private static final BTraceTransformer transformer =
+      new BTraceTransformer(new DebugSupport(settings));
   // #BTRACE-42: Non-daemon thread prevents traced application from exiting
   private static final ThreadFactory qProcessorThreadFactory =
       r -> {
@@ -113,6 +115,8 @@ public final class Main {
   private static volatile ArgsMap argMap;
   private static volatile Instrumentation inst;
   private static volatile Long fileRollMilliseconds;
+
+  private static final Logger log = LoggerFactory.getLogger(Main.class);
 
   public static void premain(String args, Instrumentation inst) {
     main(args, inst);
@@ -131,16 +135,17 @@ public final class Main {
 
     try {
       loadArgs(args);
+      boolean isDebug = Boolean.parseBoolean(argMap.get(DEBUG));
       // set the debug level based on cmdline config
-      settings.setDebug(Boolean.parseBoolean(argMap.get(DEBUG)));
-      if (isDebug()) {
-        debugPrint("parsed command line arguments");
-      }
-      parseArgs();
+      settings.setDebug(isDebug);
+      DebugSupport.initLoggers(isDebug, log);
 
-      if (isDebug()) {
-        debugPrint("Adding class transformer");
-      }
+      log.debug("parsed command line arguments");
+      parseArgs();
+      // settings are all built-up; set the logging system properties accordingly
+      DebugSupport.initLoggers(settings.isDebug(), log);
+
+      log.debug("Adding class transformer");
       inst.addTransformer(transformer, true);
       int startedScripts = startScripts();
 
@@ -148,9 +153,7 @@ public final class Main {
       // noServer is defaulting to true if startup scripts are defined
       boolean noServer = tmp != null ? Boolean.parseBoolean(tmp) : hasScripts();
       if (noServer) {
-        if (isDebug()) {
-          debugPrint("noServer is true, server not started");
-        }
+        log.debug("noServer is true, server not started");
         return;
       }
       Thread agentThread =
@@ -170,15 +173,13 @@ public final class Main {
       BTraceRuntime.enter();
       try {
         agentThread.setDaemon(true);
-        if (isDebug()) {
-          debugPrint("starting agent thread");
-        }
+        log.debug("starting agent thread");
         agentThread.start();
       } finally {
         BTraceRuntime.leave();
       }
     } finally {
-      debugPrint("Agent init took: " + (System.nanoTime() - ts) + "ns");
+      log.debug("Agent init took: {}", (System.nanoTime() - ts) + "ns");
     }
   }
 
@@ -188,6 +189,16 @@ public final class Main {
         || argMap.containsKey(SCRIPT_OUTPUT_FILE);
   }
 
+  private static final class LogValue {
+    final String logLine;
+    final Throwable throwable;
+
+    public LogValue(String logLine, Throwable throwable) {
+      this.logLine = logLine;
+      this.throwable = throwable;
+    }
+  }
+
   private static void loadDefaultArguments(String config) {
     try {
       String propTarget = Constants.EMBEDDED_BTRACE_SECTION_HEADER + "agent.properties";
@@ -195,7 +206,7 @@ public final class Main {
       if (is != null) {
         Properties ps = new Properties();
         ps.load(is);
-        StringBuilder log = new StringBuilder();
+        StringBuilder logMsg = new StringBuilder();
         for (Map.Entry<Object, Object> entry : ps.entrySet()) {
           String keyConfig = "";
           String argKey = (String) entry.getKey();
@@ -224,13 +235,15 @@ public final class Main {
                     }
                   }
                   if (replace) {
-                    log.append("setting default agent argument '")
+                    logMsg
+                        .append("setting default agent argument '")
                         .append(argKey)
                         .append("' to '")
                         .append(scriptVal)
                         .append("'\n");
                   } else {
-                    log.append("augmenting default agent argument '")
+                    logMsg
+                        .append("augmenting default agent argument '")
                         .append(argKey)
                         .append("':'")
                         .append(argMap.get(argKey))
@@ -248,7 +261,8 @@ public final class Main {
                     // merge allowed calls from command line and agent.properties
                     String oldVal = argMap.get(argKey);
                     String newVal = oldVal + "|" + argVal;
-                    log.append("merging default agent argument '")
+                    logMsg
+                        .append("merging default agent argument '")
                         .append(argKey)
                         .append("':'")
                         .append(oldVal)
@@ -257,7 +271,8 @@ public final class Main {
                         .append("'");
                     argMap.put(argKey, newVal);
                   } else {
-                    log.append("argument '")
+                    logMsg
+                        .append("argument '")
                         .append(argKey)
                         .append("' is applicable only in sandboxed mode");
                   }
@@ -267,13 +282,14 @@ public final class Main {
               case BOOT_CLASS_PATH: // fall through
               case CONFIG:
                 {
-                  log.append("argument '").append(argKey).append("' is not overridable\n");
+                  logMsg.append("argument '").append(argKey).append("' is not overridable\n");
                   break;
                 }
               default:
                 {
                   if (!argMap.containsKey(argKey)) {
-                    log.append("applying default agent argument '")
+                    logMsg
+                        .append("applying default agent argument '")
                         .append(argKey)
                         .append("'='")
                         .append(argVal)
@@ -284,12 +300,15 @@ public final class Main {
             }
           }
         }
-        if (Boolean.parseBoolean(argMap.get(DEBUG))) {
-          DebugSupport.info(log.toString());
+        DebugSupport.initLoggers(Boolean.parseBoolean(argMap.get(DEBUG)), log);
+        if (log.isDebugEnabled()) {
+          log.debug(logMsg.toString());
         }
       }
     } catch (IOException e) {
-      debug.debug(e);
+      if (log.isDebugEnabled()) {
+        log.debug(e.toString(), e);
+      }
     }
   }
 
@@ -298,8 +317,8 @@ public final class Main {
 
     String p = argMap.get(STDOUT);
     boolean traceToStdOut = p != null && !"false".equals(p);
-    if (isDebug()) {
-      debugPrint("stdout is " + traceToStdOut);
+    if (log.isDebugEnabled()) {
+      log.debug("stdout is {}", traceToStdOut);
     }
 
     String script = argMap.get(SCRIPT);
@@ -307,10 +326,10 @@ public final class Main {
 
     if (script != null) {
       StringTokenizer tokenizer = new StringTokenizer(script, ":");
-      if (isDebug()) {
-        debugPrint(
-            ((tokenizer.countTokens() == 1) ? "initial script is " : "initial scripts are ")
-                + script);
+      if (log.isDebugEnabled()) {
+        log.debug(
+            ((tokenizer.countTokens() == 1) ? "initial script is {}" : "initial scripts are {}"),
+            script);
       }
       while (tokenizer.hasMoreTokens()) {
         if (loadBTraceScript(tokenizer.nextToken(), traceToStdOut)) {
@@ -321,8 +340,8 @@ public final class Main {
     if (scriptDir != null) {
       File dir = new File(scriptDir);
       if (dir.isDirectory()) {
-        if (isDebug()) {
-          debugPrint("found scriptdir: " + dir.getAbsolutePath());
+        if (log.isDebugEnabled()) {
+          log.debug("found scriptdir: {}", dir.getAbsolutePath());
         }
         File[] files = dir.listFiles();
         if (files != null) {
@@ -371,14 +390,14 @@ public final class Main {
 
     String libs = argMap.get(LIBS);
     String config = argMap.get(CONFIG);
-    processClasspaths(libs);
     loadDefaultArguments(config);
+    processClasspaths(libs);
 
     p = argMap.get(DEBUG);
     settings.setDebug(p != null && !"false".equals(p));
-    if (isDebug()) {
-      debugPrint("debugMode is " + settings.isDebug());
-    }
+    DebugSupport.initLoggers(settings.isDebug(), log);
+
+    log.debug("debugMode is {}", settings.isDebug());
 
     for (Map.Entry<String, String> e : argMap) {
       String key = e.getKey();
@@ -388,9 +407,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setRetransformStartup(Boolean.parseBoolean(p));
-              if (isDebug()) {
-                debugPrint(STARTUP_RETRANSFORM + " is " + settings.isRetransformStartup());
-              }
+              log.debug(STARTUP_RETRANSFORM + " is {}", settings.isRetransformStartup());
             }
             break;
           }
@@ -399,14 +416,12 @@ public final class Main {
             String dumpClassesVal = argMap.get(DUMP_CLASSES);
             if (dumpClassesVal != null) {
               boolean dumpClasses = Boolean.parseBoolean(dumpClassesVal);
-              if (isDebug()) {
-                debugPrint(DUMP_CLASSES + " is " + dumpClasses);
-              }
+              log.debug(DUMP_CLASSES + " is {}", dumpClasses);
               if (dumpClasses) {
                 String dumpDir = argMap.get(DUMP_DIR);
                 settings.setDumpDir(dumpDir != null ? dumpDir : ".");
                 if (isDebug()) {
-                  debugPrint(DUMP_DIR + " is " + dumpDir);
+                  log.debug(DUMP_DIR + " is {}", dumpDir);
                 }
               }
             }
@@ -416,9 +431,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               System.setProperty(BTraceRuntime.CMD_QUEUE_LIMIT_KEY, p);
-              if (isDebug()) {
-                debugPrint(CMD_QUEUE_LIMIT + " provided: " + p);
-              }
+              log.debug(CMD_QUEUE_LIMIT + " provided: {}", p);
             }
 
             break;
@@ -428,7 +441,7 @@ public final class Main {
             if (!p.isEmpty()) {
               settings.setTrackRetransforms(Boolean.parseBoolean(p));
               if (settings.isTrackRetransforms()) {
-                debugPrint(TRACK_RETRANSFORMS + " is on");
+                log.debug(TRACK_RETRANSFORMS + " is on");
               }
             }
             break;
@@ -437,9 +450,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setOutputFile(p);
-              if (isDebug()) {
-                debugPrint(SCRIPT_OUTPUT_FILE + " is " + p);
-              }
+              log.debug(SCRIPT_OUTPUT_FILE + " is {}", p);
             }
             break;
           }
@@ -447,9 +458,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setOutputDir(p);
-              if (isDebug()) {
-                debugPrint(SCRIPT_OUTPUT_DIR + " is " + p);
-              }
+              log.debug(SCRIPT_OUTPUT_DIR + " is {}", p);
             }
             break;
           }
@@ -465,9 +474,7 @@ public final class Main {
               }
               if (fileRollMilliseconds != null) {
                 settings.setFileRollMilliseconds(fileRollMilliseconds.intValue());
-                if (isDebug()) {
-                  debugPrint(FILE_ROLL_MILLISECONDS + " is " + fileRollMilliseconds);
-                }
+                log.debug(FILE_ROLL_MILLISECONDS + " is {}", fileRollMilliseconds);
               }
             }
             break;
@@ -492,9 +499,7 @@ public final class Main {
           {
             if (!p.isEmpty()) {
               settings.setTrusted(Boolean.parseBoolean(p));
-              if (isDebug()) {
-                debugPrint("trustedMode is " + settings.isTrusted());
-              }
+              log.debug("trustedMode is {}", settings.isTrusted());
             }
             break;
           }
@@ -507,7 +512,7 @@ public final class Main {
                 try {
                   settings.setStatsdPort(Integer.parseInt(parts[1].trim()));
                 } catch (NumberFormatException ex) {
-                  DebugSupport.warning("Invalid statsd port number: " + parts[1]);
+                  log.warn("Invalid statsd port number: {}", parts[1]);
                   // leave the port unconfigured
                 }
               } else if (parts.length == 1) {
@@ -519,17 +524,13 @@ public final class Main {
         case PROBE_DESC_PATH:
           {
             settings.setProbeDescPath(!p.isEmpty() ? p : ".");
-            if (isDebug()) {
-              debugPrint("probe descriptor path is " + settings.getProbeDescPath());
-            }
+            log.debug("probe descriptor path is {}", settings.getProbeDescPath());
             break;
           }
         case BOOT_CLASS_PATH:
           {
             settings.setBootClassPath(!p.isEmpty() ? p : "");
-            if (isDebug()) {
-              debugPrint("probe boot class path is " + settings.getBootClassPath());
-            }
+            log.debug("probe boot class path is {}", settings.getBootClassPath());
             break;
           }
 
@@ -538,9 +539,7 @@ public final class Main {
             if (key.startsWith("$")) {
               String pKey = key.substring(1);
               System.setProperty(pKey, p);
-              if (isDebug()) {
-                debugPrint("Setting system property: " + pKey + "=" + p);
-              }
+              log.debug("Setting system property: {}={}", pKey, p);
             }
           }
       }
@@ -564,58 +563,51 @@ public final class Main {
         bootClassPath = bootPath + File.pathSeparator + bootClassPath;
       }
     }
-    if (isDebug()) {
-      debugPrint("Bootstrap ClassPath: " + bootClassPath);
-    }
+    log.debug("Bootstrap ClassPath: {}", bootClassPath);
+
     StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
     try {
       while (tokenizer.hasMoreTokens()) {
         String path = tokenizer.nextToken();
         File f = new File(path);
         if (!f.exists()) {
-          DebugSupport.warning(
-              "BTrace bootstrap classpath resource [ " + path + "] does not exist");
+          log.warn("BTrace bootstrap classpath resource [{}] does not exist", path);
         } else {
           if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
             JarFile jf = asJarFile(f);
-            debugPrint("Adding jar: " + jf);
+            log.debug("Adding jar: {}", jf);
             inst.appendToBootstrapClassLoaderSearch(jf);
           } else {
-            debugPrint("ignoring boot classpath element '" + path + "' - only jar files allowed");
+            log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
           }
         }
       }
     } catch (IOException ex) {
-      debugPrint("adding to boot classpath failed!");
-      debugPrint(ex);
+      log.debug("adding to boot classpath failed!", ex);
       return;
     }
 
     String systemClassPath = argMap.get(SYSTEM_CLASS_PATH);
     if (systemClassPath != null) {
-      if (isDebug()) {
-        debugPrint("System ClassPath: " + systemClassPath);
-      }
+      log.debug("System ClassPath: {}", systemClassPath);
       tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
       try {
         while (tokenizer.hasMoreTokens()) {
           String path = tokenizer.nextToken();
           File f = new File(path);
           if (!f.exists()) {
-            DebugSupport.warning("BTrace system classpath resource [" + path + "] does not exist.");
+            log.warn("BTrace system classpath resource [{}] does not exist.", path);
           } else {
             if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
               JarFile jf = asJarFile(f);
               inst.appendToSystemClassLoaderSearch(jf);
             } else {
-              debugPrint(
-                  "ignoring system classpath element '" + path + "' - only jar files allowed");
+              log.debug("ignoring system classpath element '{}' - only jar files allowed", path);
             }
           }
         }
       } catch (IOException ex) {
-        debugPrint("adding to boot classpath failed!");
-        debugPrint(ex);
+        log.debug("adding to boot classpath failed!", ex);
         return;
       }
     }
@@ -662,13 +654,10 @@ public final class Main {
           appendToSysClassPath(libFolder);
         } else {
           if (libs != null && !libs.isEmpty()) {
-            DebugSupport.warning(
-                "Invalid 'libs' configuration ["
-                    + libs
-                    + "]. "
-                    + "Path '"
-                    + libFolder.toAbsolutePath()
-                    + "' does not exist.");
+            log.warn(
+                "Invalid 'libs' configuration [{}]. Path '{}' does not exist.",
+                libs,
+                libFolder.toAbsolutePath());
           }
         }
       }
@@ -692,8 +681,8 @@ public final class Main {
               public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
                   throws IOException {
                 if (file.toString().toLowerCase().endsWith(".jar")) {
-                  if (isDebug()) {
-                    debugPrint("Adding " + file + " to bootstrap classpath");
+                  if (log.isDebugEnabled()) {
+                    log.debug("Adding {} to bootstrap classpath", file);
                   }
                   inst.appendToBootstrapClassLoaderSearch(new JarFile(file.toFile()));
                 }
@@ -713,7 +702,7 @@ public final class Main {
               }
             });
       } catch (IOException e) {
-        debugPrint(e);
+        log.debug("Failed to enhance bootstrap classpath", e);
       }
     }
   }
@@ -735,8 +724,8 @@ public final class Main {
               public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
                   throws IOException {
                 if (file.toString().toLowerCase().endsWith(".jar")) {
-                  if (isDebug()) {
-                    debugPrint("Adding " + file + " to system classpath");
+                  if (log.isDebugEnabled()) {
+                    log.debug("Adding {} to system classpath", file);
                   }
                   inst.appendToSystemClassLoaderSearch(new JarFile(file.toFile()));
                 }
@@ -756,7 +745,7 @@ public final class Main {
               }
             });
       } catch (IOException e) {
-        debugPrint(e);
+        log.debug("Failed to enhance sytem classpath", e);
       }
     }
   }
@@ -774,8 +763,8 @@ public final class Main {
       }
 
       if (scriptName.endsWith(".java")) {
-        if (isDebug()) {
-          debugPrint("refusing " + filePath + " - script should be a pre-compiled class file");
+        if (log.isDebugEnabled()) {
+          log.debug("refusing {} - script should be a pre-compiled class file", filePath);
         }
         return false;
       }
@@ -802,12 +791,12 @@ public final class Main {
         return true;
       }
     } catch (NullPointerException e) {
-      if (isDebug()) {
-        debugPrint("script " + filePath + " does not exist!");
+      if (log.isDebugEnabled()) {
+        log.debug("script {} does not exist!", filePath, e);
       }
     } catch (RuntimeException | IOException | ExecutionException re) {
-      if (isDebug()) {
-        debugPrint(re);
+      if (log.isDebugEnabled()) {
+        log.debug("Failed to load BTrace script {}", filePath, re);
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -829,8 +818,8 @@ public final class Main {
     }
     ServerSocket ss;
     try {
-      if (isDebug()) {
-        debugPrint("starting server at " + port);
+      if (log.isDebugEnabled()) {
+        log.debug("starting server at port {}", port);
       }
       System.setProperty("btrace.wireio", String.valueOf(WireIO.VERSION));
 
@@ -847,18 +836,16 @@ public final class Main {
 
     while (true) {
       try {
-        if (isDebug()) {
-          debugPrint("waiting for clients");
-        }
+        log.debug("waiting for clients");
         Socket sock = ss.accept();
-        if (isDebug()) {
-          debugPrint("client accepted " + sock);
+        if (log.isDebugEnabled()) {
+          log.debug("client accepted {}", sock);
         }
         ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
         Client client = RemoteClient.getClient(ctx, sock, value -> handleNewClient(value));
       } catch (RuntimeException | IOException re) {
-        if (isDebug()) {
-          debugPrint(re);
+        if (log.isDebugEnabled()) {
+          log.debug("BTrace server failed", re);
         }
       }
     }
@@ -870,14 +857,14 @@ public final class Main {
           try {
             boolean entered = BTraceRuntime.enter();
             try {
-              client.debugPrint("new Client created " + client);
+              if (log.isDebugEnabled()) {
+                log.debug("new Client created {}", client);
+              }
               if (client.retransformLoaded()) {
                 client.getRuntime().send(new StatusCommand((byte) 1));
               }
             } catch (UnmodifiableClassException uce) {
-              if (isDebug()) {
-                debugPrint(uce);
-              }
+              log.debug("BTrace class retransformation failed", uce);
               client.getRuntime().send(new ErrorCommand(uce));
               client.getRuntime().send(new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
             } finally {
@@ -897,13 +884,5 @@ public final class Main {
 
   private static boolean isDebug() {
     return settings.isDebug();
-  }
-
-  private static void debugPrint(String msg) {
-    debug.debug(msg);
-  }
-
-  private static void debugPrint(Throwable th) {
-    debug.debug(th);
   }
 }

@@ -32,7 +32,6 @@ import java.security.AccessController;
 import java.util.Set;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import sun.misc.Perf;
@@ -58,12 +57,8 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
 
     @Override
     public BTraceRuntimeImpl_8 getRuntime(
-        String className,
-        ArgsMap args,
-        CommandListener cmdListener,
-        DebugSupport ds,
-        Instrumentation inst) {
-      return new BTraceRuntimeImpl_8(className, args, cmdListener, ds, inst);
+        String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
+      return new BTraceRuntimeImpl_8(className, args, cmdListener, inst);
     }
 
     @Override
@@ -102,12 +97,8 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   }
 
   public BTraceRuntimeImpl_8(
-      String className,
-      ArgsMap args,
-      CommandListener cmdListener,
-      DebugSupport ds,
-      Instrumentation inst) {
-    super(className, args, cmdListener, ds, inst);
+      String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
+    super(className, args, cmdListener, inst);
     boolean jfr = false;
     try {
       Class.forName("jdk.jfr.Event");
@@ -194,7 +185,7 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
     if (hasJfr) {
-      JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template, debug);
+      JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template);
       eventFactories.add(factory);
       return factory;
     }

@@ -3,10 +3,13 @@ package org.openjdk.btrace.runtime;
 import java.lang.instrument.Instrumentation;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class BTraceRuntimes {
+  private static final Logger log = LoggerFactory.getLogger(BTraceRuntimes.class);
+
   private static BTraceRuntimeImplFactory<?> FACTORY = null;
 
   static {
@@ -14,26 +17,26 @@ public final class BTraceRuntimes {
         loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_11$Factory")
             || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9$Factory")
             || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_8$Factory");
-    DebugSupport.SHARED.debug("BTraceRuntime loaded: " + loaded);
+    log.debug("BTraceRuntime loaded: {}", loaded);
     BTraceRuntimeAccess.registerRuntimeAccessor();
   }
 
   @SuppressWarnings("unchecked")
   private static boolean loadFactory(String clzName) {
     try {
-      DebugSupport.SHARED.debug("Attempting to load BTrace runtime implementation: " + clzName);
+      log.debug("Attempting to load BTrace runtime implementation: {}", clzName);
       Class<BTraceRuntimeImplFactory<?>> factoryClz =
           (Class<BTraceRuntimeImplFactory<?>>)
               ClassLoader.getSystemClassLoader().loadClass(clzName);
       BTraceRuntimeImplFactory<?> instance = factoryClz.getConstructor().newInstance();
       if (instance.isEnabled()) {
         FACTORY = instance;
-        DebugSupport.SHARED.debug("BTrace runtime implementation " + clzName + " is loaded");
+        log.debug("BTrace runtime implementation {} is loaded", clzName);
         return true;
       }
     } catch (ClassNotFoundException | UnsupportedClassVersionError ignored) {
     } catch (Exception e) {
-      DebugSupport.warning(e);
+      log.warn("Failed to load BTrace runtime implementation {}", clzName, e);
     }
     return false;
   }
@@ -43,11 +46,7 @@ public final class BTraceRuntimes {
   }
 
   public static BTraceRuntime.Impl getRuntime(
-      String className,
-      ArgsMap args,
-      CommandListener cmdListener,
-      DebugSupport ds,
-      Instrumentation inst) {
-    return FACTORY != null ? FACTORY.getRuntime(className, args, cmdListener, ds, inst) : null;
+      String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
+    return FACTORY != null ? FACTORY.getRuntime(className, args, cmdListener, inst) : null;
   }
 }

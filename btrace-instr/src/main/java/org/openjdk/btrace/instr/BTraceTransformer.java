@@ -41,6 +41,8 @@ import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The single entry point for class transformation.
@@ -54,6 +56,8 @@ import org.openjdk.btrace.core.DebugSupport;
  */
 @SuppressWarnings("RedundantThrows")
 public final class BTraceTransformer implements ClassFileTransformer {
+  private static final Logger log = LoggerFactory.getLogger(BTraceTransformer.class);
+
   private final DebugSupport debug;
   private final ReentrantReadWriteLock setupLock = new ReentrantReadWriteLock();
   private final Collection<BTraceProbe> probes = new ArrayList<>(3);
@@ -77,7 +81,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
     return ClassFilter.isSensitiveClass(name);
   }
 
-  public final void register(BTraceProbe p) {
+  public void register(BTraceProbe p) {
     try {
       setupLock.writeLock().lock();
       probes.add(p);
@@ -135,8 +139,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
       if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader()))
           && isSensitiveClass(className)) {
-        if (isDebug()) {
-          debugPrint("skipping transform for BTrace class " + className); // NOI18N
+        if (log.isDebugEnabled()) {
+          log.debug("skipping transform for BTrace class {}", className); // NOI18N
         }
         return null;
       }
@@ -145,7 +149,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
       boolean entered = BTraceRuntime.enter();
       try {
-        if (isDebug()) {
+        if (debug.isDumpClasses()) {
           debug.dumpClass(className.replace('.', '/') + "_orig", classfileBuffer);
         }
         BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
@@ -158,13 +162,13 @@ public final class BTraceTransformer implements ClassFileTransformer {
         byte[] transformed = cw.instrument();
         if (transformed == null) {
           // no instrumentation necessary
-          if (isDebug()) {
-            debugPrint("skipping class " + cr.getJavaClassName());
+          if (log.isDebugEnabled()) {
+            log.debug("skipping class {}", cr.getJavaClassName());
           }
           return classfileBuffer;
         } else {
-          if (isDebug()) {
-            debugPrint("transformed class " + cr.getJavaClassName());
+          if (log.isDebugEnabled()) {
+            log.error("transformed class {}", cr.getJavaClassName());
           }
           if (debug.isDumpClasses()) {
             debug.dumpClass(className.replace('.', '/'), transformed);
@@ -172,7 +176,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
         }
         return transformed;
       } catch (Throwable th) {
-        debugPrint(th);
+        log.debug("Failed to transform class {}", className, th);
         throw th;
       } finally {
         if (entered) {
@@ -182,18 +186,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
     } finally {
       setupLock.readLock().unlock();
     }
-  }
-
-  private boolean isDebug() {
-    return debug.isDebug();
-  }
-
-  private void debugPrint(String msg) {
-    debug.debug(msg);
-  }
-
-  private void debugPrint(Throwable th) {
-    debug.debug(th);
   }
 
   static class Filter {

@@ -11,8 +11,11 @@ import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.HandlerRepository;
 import org.openjdk.btrace.core.SharedSettings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class HandlerRepositoryImpl {
+  private static final Logger log = LoggerFactory.getLogger(HandlerRepositoryImpl.class);
 
   private static final Map<String, BTraceProbe> probeMap = new ConcurrentHashMap<>();
 
@@ -24,7 +27,7 @@ public final class HandlerRepositoryImpl {
     } catch (UnsupportedClassVersionError ignored) {
       // expected for pre Java 15 runtimes
     } catch (Throwable t) {
-      DebugSupport.warning(t);
+      log.warn("Unable to initialize BTrace Indy support", t);
     }
   }
 
@@ -61,7 +64,7 @@ public final class HandlerRepositoryImpl {
     if (debugSupport.isDumpClasses()) {
       try {
         String handlerPath = "/tmp/" + handlerClassName.replace('/', '_') + ".class";
-        debugSupport.debug("BTrace INDY handler dumped: " + handlerPath);
+        log.debug("BTrace INDY handler dumped: {}", handlerPath);
         Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
       } catch (IOException e) {
         e.printStackTrace();

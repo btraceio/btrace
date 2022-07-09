@@ -637,9 +637,11 @@ public abstract class RuntimeTest {
                 "-d",
                 "/tmp/btrace-test",
                 "-pd",
-                traceFile.getParentFile().getAbsolutePath(),
-                pid,
-                traceFile.getAbsolutePath()));
+                traceFile.getParentFile().getAbsolutePath()));
+    if (debugBTrace) {
+      argVals.add("-v");
+    }
+    argVals.addAll(Arrays.asList(pid, traceFile.getAbsolutePath()));
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }
@@ -706,7 +708,7 @@ public abstract class RuntimeTest {
                 while ((line = br.readLine()) != null) {
                   stdout.append(line).append('\n');
                   System.out.println("[btrace out] " + line);
-                  if (!(debugBTrace && line.contains("DEBUG:"))) {
+                  if (!(debugBTrace && line.contains("DEBUG"))) {
                     l.countDown();
                   }
                 }

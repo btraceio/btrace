@@ -41,7 +41,6 @@ public class ProbeLoaderUpgradeTest {
               @Override
               public void onCommand(Command cmd) throws IOException {}
             },
-            null,
             null);
 
     BTraceProbe bp;

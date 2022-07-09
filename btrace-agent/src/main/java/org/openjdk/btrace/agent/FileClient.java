@@ -36,12 +36,13 @@ import java.util.Enumeration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.PrintableCommand;
 import org.openjdk.btrace.instr.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents a local client communicated by trace file. The trace script is specified as a File of
@@ -51,6 +52,8 @@ import org.openjdk.btrace.instr.Constants;
  * @author J.Bachorik
  */
 class FileClient extends Client {
+  private static final Logger log = LoggerFactory.getLogger(FileClient.class);
+
   private final AtomicBoolean noOutputNotified = new AtomicBoolean(false);
 
   private boolean canLoadPack = true;
@@ -58,7 +61,7 @@ class FileClient extends Client {
   FileClient(ClientContext ctx, File scriptFile) throws IOException {
     super(ctx);
     if (!init(readScript(scriptFile))) {
-      DebugSupport.warning("Unable to load BTrace script " + scriptFile);
+      log.warn("Unable to load BTrace script {}", scriptFile);
     }
   }
 
@@ -80,7 +83,7 @@ class FileClient extends Client {
   }
 
   private boolean init(byte[] code) throws IOException {
-    InstrumentCommand cmd = new InstrumentCommand(code, argsMap, debug);
+    InstrumentCommand cmd = new InstrumentCommand(code, argsMap);
     boolean ret = loadClass(cmd, canLoadPack) != null;
     if (ret) {
       initialize();
@@ -91,8 +94,8 @@ class FileClient extends Client {
   @SuppressWarnings("RedundantThrows")
   @Override
   public void onCommand(Command cmd) throws IOException {
-    if (isDebug()) {
-      debugPrint("client " + getClassName() + ": got " + cmd);
+    if (log.isDebugEnabled()) {
+      log.debug("client {}: got {}", getClassName(), cmd);
     }
     switch (cmd.getType()) {
       case Command.EXIT:
@@ -102,7 +105,7 @@ class FileClient extends Client {
         if (cmd instanceof PrintableCommand) {
           if (out == null) {
             if (noOutputNotified.compareAndSet(false, true)) {
-              DebugSupport.warning("No output stream. DataCommand output is ignored.");
+              log.debug("No output stream. DataCommand output is ignored.");
             }
           } else {
             ((PrintableCommand) cmd).print(out);

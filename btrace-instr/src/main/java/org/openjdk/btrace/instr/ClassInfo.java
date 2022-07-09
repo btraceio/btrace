@@ -32,7 +32,8 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
-import org.openjdk.btrace.core.DebugSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Arbitrary class info type allowing access to supertype information also for not-already-loaded
@@ -41,6 +42,8 @@ import org.openjdk.btrace.core.DebugSupport;
  * @author Jaroslav Bachorik
  */
 public final class ClassInfo {
+  private static final Logger log = LoggerFactory.getLogger(ClassInfo.class);
+
   private static final ClassLoader SYS_CL = ClassLoader.getSystemClassLoader();
   private static volatile Method BSTRP_CHECK_MTD;
   private final String cLoaderId;
@@ -97,7 +100,7 @@ public final class ClassInfo {
         } catch (Throwable t) {
           // some containers can impose additional restrictions on loading resources and error on
           // unexpected state
-          DebugSupport.warning(t);
+          log.warn("Failed to get resource {}", rsrcName, t);
         }
         prev = cl;
         cl = cl.getParent();
@@ -113,7 +116,7 @@ public final class ClassInfo {
         return m.invoke(SYS_CL, className) != null;
       }
     } catch (Throwable t) {
-      DebugSupport.warning(t);
+      log.warn("Unable to check for class {} being loaded by bootstrap classloader", className, t);
     }
     return false;
   }
@@ -127,7 +130,7 @@ public final class ClassInfo {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
     } catch (Throwable t) {
-      DebugSupport.warning(t);
+      log.warn("Can not resolve method 'findBootstrapClassOrNull'", t);
     }
     BSTRP_CHECK_MTD = m;
     return BSTRP_CHECK_MTD;
@@ -212,14 +215,13 @@ public final class ClassInfo {
           }
           isAvailable = true;
         } catch (IllegalArgumentException | IOException e) {
-          DebugSupport.warning("Unable to load class: " + className);
-          DebugSupport.warning(e);
+          log.warn("Unable to load class: {}", className, e);
         }
       }
     } catch (Throwable t) {
       // some containers can impose additional restrictions on classloaders throwing exceptions when
       // not in expected state
-      DebugSupport.warning(t);
+      log.warn("Failed to load class {}", className, t);
     }
   }
 

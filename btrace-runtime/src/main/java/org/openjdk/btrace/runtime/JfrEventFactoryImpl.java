@@ -46,10 +46,13 @@ import jdk.jfr.Timespan;
 import jdk.jfr.Timestamp;
 import jdk.jfr.Unsigned;
 import jdk.jfr.ValueDescriptor;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.jfr.JfrEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class JfrEventFactoryImpl implements JfrEvent.Factory {
+  private static final Logger log = LoggerFactory.getLogger(JfrEventFactoryImpl.class);
+
   private static final Map<String, Class<?>> VALUE_TYPES;
   private static final Map<String, Class<? extends Annotation>> SPECIFICATION_ANNOTATION_TYPES;
 
@@ -80,10 +83,8 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
   private final Map<String, Integer> fieldIndex = new HashMap<>();
 
   private Runnable periodicHook = null;
-  private final DebugSupport debug;
 
-  JfrEventFactoryImpl(JfrEvent.Template template, DebugSupport debug) {
-    this.debug = debug;
+  JfrEventFactoryImpl(JfrEvent.Template template) {
     List<AnnotationElement> defAnnotations = new ArrayList<>();
     List<ValueDescriptor> defFields = new ArrayList<>();
     defAnnotations.add(new AnnotationElement(Name.class, template.getName()));
@@ -129,9 +130,13 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
         fieldIndex.put(field.getName(), i);
       }
     }
-    debug.debug("Creating event factory: " + template.getName());
+    if (log.isDebugEnabled()) {
+      log.debug("Creating event factory: {}", template.getName());
+    }
     eventFactory = EventFactory.create(defAnnotations, defFields);
-    debug.debug("Registering event factory: " + template.getName());
+    if (log.isDebugEnabled()) {
+      log.debug("Registering event factory: {}", template.getName());
+    }
     eventFactory.register();
     if (template.getPeriod() != null && template.getPeriodicHandler() != null) {
       addJfrPeriodicEvent(template);
@@ -140,7 +145,7 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
 
   @Override
   public JfrEvent newEvent() {
-    return new JfrEventImpl(eventFactory.newEvent(), fieldIndex, debug);
+    return new JfrEventImpl(eventFactory.newEvent(), fieldIndex);
   }
 
   private void addJfrPeriodicEvent(JfrEvent.Template template) {
@@ -178,7 +183,7 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
       String eMsg = e.getMessage();
       msg.append(eMsg.replace('/', '.'));
       msg.append("'");
-      DebugSupport.info(msg.toString());
+      log.info(msg.toString());
     } catch (Throwable ignored) {
     }
   }

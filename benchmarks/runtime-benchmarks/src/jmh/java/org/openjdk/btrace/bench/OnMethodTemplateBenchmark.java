@@ -23,8 +23,6 @@ package org.openjdk.btrace.bench;
 
 import java.util.concurrent.TimeUnit;
 import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
@@ -40,7 +38,7 @@ public class OnMethodTemplateBenchmark {
 
   @Setup
   public void setup() {
-    argsMap = new ArgsMap(new String[] {"arg1=val1"}, new DebugSupport(SharedSettings.GLOBAL));
+    argsMap = new ArgsMap(new String[] {"arg1=val1"});
   }
 
   @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)

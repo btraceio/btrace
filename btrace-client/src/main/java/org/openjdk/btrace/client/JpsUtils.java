@@ -4,13 +4,16 @@ import com.sun.tools.attach.VirtualMachine;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import org.openjdk.btrace.core.DebugSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.jvmstat.monitor.MonitoredHost;
 import sun.jvmstat.monitor.MonitoredVm;
 import sun.jvmstat.monitor.MonitoredVmUtil;
 import sun.jvmstat.monitor.VmIdentifier;
 
 final class JpsUtils {
+  private static final Logger log = LoggerFactory.getLogger(JpsUtils.class);
+
   static Integer findVmByName(String name) {
     try {
       return Integer.parseInt(name);
@@ -28,7 +31,7 @@ final class JpsUtils {
           }
         }
       } catch (Exception e) {
-        DebugSupport.warning(e);
+        log.warn("Unexpected exception", e);
       }
       return pid;
     }
@@ -57,7 +60,7 @@ final class JpsUtils {
         }
       }
     } catch (Exception e) {
-      DebugSupport.warning(e);
+      log.warn("Unexpected exception", e);
     }
     return vms;
   }

@@ -55,6 +55,8 @@ import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is an all-in-one wrapper for BTrace DSL methods
@@ -63,11 +65,14 @@ import org.openjdk.btrace.core.types.AnyType;
  * @author Jaroslav Bachorik
  */
 public class BTraceUtils {
+  private static final Logger log = LoggerFactory.getLogger(BTraceUtils.class);
+
   // standard stack depth decrement for figuring out the caller class calls
   private static final int STACK_DEC = 2;
 
   static {
     BTraceRuntime.initUnsafe();
+    log.info("BTraceUtils initialized");
   }
 
   // do not allow object creation!

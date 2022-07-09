@@ -30,14 +30,12 @@ import java.util.regex.Pattern;
 /** A simple argument map wrapper allowing indexed access */
 public final class ArgsMap implements Iterable<Map.Entry<String, String>> {
   private final LinkedHashMap<String, String> map;
-  private final DebugSupport debug;
 
-  public ArgsMap(Map<String, String> args, DebugSupport debug) {
+  public ArgsMap(Map<String, String> args) {
     map = args != null ? new LinkedHashMap<>(args) : new LinkedHashMap<>();
-    this.debug = debug;
   }
 
-  public ArgsMap(String[] argLine, DebugSupport debug) {
+  public ArgsMap(String[] argLine) {
     map = new LinkedHashMap<>();
     if (argLine != null) {
       for (String arg : argLine) {
@@ -49,28 +47,22 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>> {
         }
       }
     }
-    this.debug = debug;
   }
 
   public ArgsMap() {
-    this((Map<String, String>) null, DebugSupport.SHARED);
+    this((Map<String, String>) null);
   }
 
-  public ArgsMap(int initialCapacity, DebugSupport debug) {
+  public ArgsMap(int initialCapacity) {
     map = new LinkedHashMap<>(initialCapacity);
-    this.debug = debug;
   }
 
   public static ArgsMap merge(ArgsMap... maps) {
-    DebugSupport debug = null;
     Map<String, String> propMap = new LinkedHashMap<>();
     for (ArgsMap map : maps) {
-      if (debug == null) {
-        debug = map.debug;
-      }
       propMap.putAll(map.map);
     }
-    return new ArgsMap(propMap, debug);
+    return new ArgsMap(propMap);
   }
 
   public String get(String key) {
@@ -127,7 +119,7 @@ public final class ArgsMap implements Iterable<Map.Entry<String, String>> {
 
   @Override
   public String toString() {
-    return "ArgsMap{" + "map=" + map + ", debug=" + debug + '}';
+    return "ArgsMap{" + "map=" + map + '}';
   }
 
   public String template(String value) {

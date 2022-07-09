@@ -37,6 +37,8 @@ import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.PrintableCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
 
 /**
@@ -47,6 +49,8 @@ import sun.misc.Signal;
  */
 @SuppressWarnings("RedundantThrows")
 public final class Main {
+  private static final Logger log;
+
   public static final boolean TRACK_RETRANSFORM;
   public static final int BTRACE_DEFAULT_PORT = 2020;
   public static final String BTRACE_DEFAULT_HOST = "localhost";
@@ -61,18 +65,23 @@ public final class Main {
   private static String PROBE_DESC_PATH;
 
   static {
-    DEBUG = Boolean.getBoolean("com.sun.btrace.debug");
-    if (isDebug()) debugPrint("btrace debug mode is set");
+    DebugSupport.initLoggers(Boolean.getBoolean("com.sun.btrace.debug"), null);
+    // initialize the logger instance
+    log = LoggerFactory.getLogger(Main.class);
+
+    if (isDebug()) {
+      log.debug("btrace debug mode is set");
+    }
     TRACK_RETRANSFORM = Boolean.getBoolean("com.sun.btrace.trackRetransforms");
-    if (isDebug() && TRACK_RETRANSFORM) debugPrint("trackRetransforms flag is set");
+    if (TRACK_RETRANSFORM) log.debug("trackRetransforms flag is set");
     TRUSTED = Boolean.getBoolean("com.sun.btrace.unsafe");
     TRUSTED |= Boolean.getBoolean("com.sun.btrace.trusted");
-    if (isDebug() && TRUSTED) debugPrint("btrace trusted mode is set");
+    if (TRUSTED) log.debug("btrace trusted mode is set");
     DUMP_CLASSES = Boolean.getBoolean("com.sun.btrace.dumpClasses");
-    if (isDebug() && DUMP_CLASSES) debugPrint("dumpClasses flag is set");
+    if (DUMP_CLASSES) log.debug("dumpClasses flag is set");
     DUMP_DIR = System.getProperty("com.sun.btrace.dumpDir", ".");
     if (DUMP_CLASSES) {
-      if (isDebug()) debugPrint("dumpDir is " + DUMP_DIR);
+      if (log.isDebugEnabled()) log.debug("dumpDir is {}", DUMP_DIR);
     }
     PROBE_DESC_PATH = System.getProperty("com.sun.btrace.probeDescPath", ".");
     con = System.console();
@@ -142,32 +151,32 @@ public final class Main {
         if (args[count].equals("-p") && !portDefined) {
           try {
             port = Integer.parseInt(args[++count]);
-            if (isDebug()) debugPrint("accepting port " + port);
+            if (log.isDebugEnabled()) log.debug("accepting port {}", port);
           } catch (NumberFormatException nfe) {
             usage();
           }
           portDefined = true;
         } else if (args[count].equals("-u")) {
           TRUSTED = true;
-          if (isDebug()) debugPrint("btrace trusted mode is set");
+          log.debug("btrace trusted mode is set");
         } else if (args[count].equals("-o")) {
           OUTPUT_FILE = args[++count];
-          if (isDebug()) debugPrint("outputFile is " + OUTPUT_FILE);
+          if (log.isDebugEnabled()) log.debug("outputFile is {}", OUTPUT_FILE);
         } else if (args[count].equals("-d")) {
           DUMP_CLASSES = true;
           DUMP_DIR = args[++count];
-          if (isDebug()) debugPrint("dumpDir is " + DUMP_DIR);
+          if (log.isDebugEnabled()) log.debug("dumpDir is {}", DUMP_DIR);
         } else if (args[count].equals("-pd")) {
           PROBE_DESC_PATH = args[++count];
-          if (isDebug()) debugPrint("probeDescDir is " + PROBE_DESC_PATH);
+          if (log.isDebugEnabled()) log.debug("probeDescDir is {}", PROBE_DESC_PATH);
         } else if ((args[count].equals("-cp") || args[count].equals("-classpath"))
             && !classpathDefined) {
           classPath = args[++count];
-          if (isDebug()) debugPrint("accepting classpath " + classPath);
+          if (log.isDebugEnabled()) log.debug("accepting classpath {}", classPath);
           classpathDefined = true;
         } else if (args[count].equals("-I") && !includePathDefined) {
           includePath = args[++count];
-          if (isDebug()) debugPrint("accepting include path " + includePath);
+          if (log.isDebugEnabled()) log.debug("accepting include path {}", includePath);
           includePathDefined = true;
         } else if (args[count].equals("-statsd")) {
           statsdDef = args[++count];
@@ -177,7 +186,8 @@ public final class Main {
           host = args[++count];
           hostDefined = true;
         } else if (args[count].equals("-r")) {
-          if (isDebug()) debugPrint("reconnecting to an already active probe " + resumeProbe);
+          if (log.isDebugEnabled())
+            log.debug("reconnecting to an already active probe {}", resumeProbe);
           resumeProbe = args[++count];
           if (count < args.length - 2 && !args[count + 1].startsWith("-")) {
             probeCommand = args[++count].toLowerCase();
@@ -193,10 +203,10 @@ public final class Main {
                     + (probeCommandArg != null ? "(" + probeCommandArg + ")" : ""));
           }
         } else if (args[count].equals("-lp")) {
-          if (isDebug()) debugPrint("listing active probes");
+          log.debug("listing active probes");
           listProbes = true;
         } else if (args[count].equals("-x")) {
-          if (isDebug()) debugPrint("submitting probe in unattended mode");
+          log.debug("submitting probe in unattended mode");
           unattended = true;
         } else {
           usage();
@@ -211,11 +221,11 @@ public final class Main {
     }
 
     if (!portDefined) {
-      if (isDebug()) debugPrint("assuming default port " + port);
+      if (log.isDebugEnabled()) log.debug("assuming default port {}", port);
     }
 
     if (!classpathDefined) {
-      if (isDebug()) debugPrint("assuming default classpath '" + classPath + "'");
+      if (log.isDebugEnabled()) log.debug("assuming default classpath '{}'", classPath);
     }
 
     if (args.length < (count + 1)) {
@@ -227,7 +237,7 @@ public final class Main {
     if (pid == null) {
       errorExit("Unable to find JVM with either PID or name: " + pidArg, 1);
     } else {
-      DebugSupport.info("Attaching BTrace to PID: " + pid);
+      log.info("Attaching BTrace to PID: {}", pid);
     }
 
     try {
@@ -270,15 +280,15 @@ public final class Main {
         if (code == null) {
           errorExit("BTrace compilation failed", 1);
         }
-        if (isDebug()) {
-          debugPrint("Boot classpath: " + classPath);
+        if (log.isDebugEnabled()) {
+          log.debug("Boot classpath: {}", classPath);
         }
         if (!hostDefined) client.attach(pid.toString(), null, classPath);
         registerExitHook(client);
         if (con != null) {
           registerSignalHandler(client);
         }
-        if (isDebug()) debugPrint("submitting the BTrace program");
+        log.debug("submitting the BTrace program");
         CommandListener listener = createCommandListener(client);
 
         boolean isUnattended = unattended;
@@ -321,7 +331,7 @@ public final class Main {
   }
 
   private static void registerExitHook(Client client) {
-    if (isDebug()) debugPrint("registering shutdown hook");
+    log.debug("registering shutdown hook");
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread(
@@ -329,21 +339,21 @@ public final class Main {
                   if (!exiting) {
                     try {
                       if (!client.isDisconnected()) {
-                        if (isDebug()) debugPrint("sending exit command");
+                        log.debug("sending exit command");
                         client.sendExit(0);
                       } else {
-                        if (isDebug()) debugPrint("sending disconnect command");
+                        log.debug("sending disconnect command");
                         client.sendDisconnect();
                       }
                     } catch (IOException ioexp) {
-                      if (isDebug()) debugPrint(ioexp.toString());
+                      log.debug(ioexp.toString(), ioexp);
                     }
                   }
                 }));
   }
 
   private static void registerSignalHandler(Client client) {
-    if (isDebug()) debugPrint("registering signal handler for SIGINT");
+    log.debug("registering signal handler for SIGINT");
     Signal.handle(
         new Signal("INT"),
         sig -> {
@@ -361,14 +371,14 @@ public final class Main {
               case "1":
                 System.exit(0);
               case "2":
-                if (isDebug()) debugPrint("sending event command");
+                log.debug("sending event command");
                 client.sendEvent();
                 break;
               case "3":
                 con.printf("Please enter the event name: ");
                 String name = con.readLine();
                 if (name != null) {
-                  if (isDebug()) debugPrint("sending event command");
+                  log.debug("sending event command");
                   client.sendEvent(name);
                 }
                 break;
@@ -386,7 +396,7 @@ public final class Main {
                 break;
             }
           } catch (IOException ioexp) {
-            if (isDebug()) debugPrint(ioexp.toString());
+            log.debug(ioexp.toString(), ioexp);
           }
         });
   }
@@ -398,14 +408,6 @@ public final class Main {
 
   private static boolean isDebug() {
     return DEBUG;
-  }
-
-  private static boolean isUnsafe() {
-    return TRUSTED;
-  }
-
-  private static void debugPrint(String msg) {
-    System.out.println("DEBUG: " + msg);
   }
 
   private static void errorExit(String msg, int code) {

@@ -46,8 +46,12 @@ import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.core.comm.RetransformClassNotification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BTraceProbePersisted implements BTraceProbe {
+  private static final Logger log = LoggerFactory.getLogger(BTraceProbePersisted.class);
+
   static final int MAGIC = 0xbacecaca;
 
   private static final int VERSION = 2;
@@ -68,8 +72,8 @@ public class BTraceProbePersisted implements BTraceProbe {
   }
 
   private BTraceProbePersisted(BTraceProbeFactory f, BTraceProbeSupport delegate) {
-    debug = new DebugSupport(f.getSettings());
-    this.delegate = delegate != null ? delegate : new BTraceProbeSupport(debug);
+    this.debug = new DebugSupport(f.getSettings());
+    this.delegate = delegate != null ? delegate : new BTraceProbeSupport();
     factory = f;
     preverified = false;
   }
@@ -201,7 +205,7 @@ public class BTraceProbePersisted implements BTraceProbe {
       writeDataHolderClass(dos);
       writeFullData(dos);
     } catch (IOException e) {
-      debug.debug(e);
+      log.debug("Failed to write probe {}", getClassName(), e);
     }
   }
 
@@ -215,7 +219,7 @@ public class BTraceProbePersisted implements BTraceProbe {
   private void readOnMethods(DataInputStream dis) throws IOException {
     int num = dis.readInt();
     for (int i = 0; i < num; i++) {
-      OnMethod om = new OnMethod(debug);
+      OnMethod om = new OnMethod();
       om.setClazz(dis.readUTF());
       om.setMethod(dis.readUTF());
       om.setExactTypeMatch(dis.readBoolean());
@@ -449,7 +453,7 @@ public class BTraceProbePersisted implements BTraceProbe {
         verifyBytecode();
         return true;
       } catch (VerifierException e) {
-        debug.debug(e);
+        log.debug("Class '{}' verification failed", getClassName(), e);
       }
     }
     return false;
@@ -492,8 +496,8 @@ public class BTraceProbePersisted implements BTraceProbe {
   @Override
   public void unregister() {
     if (transformer != null && isTransforming()) {
-      if (debug.isDebug()) {
-        debug.debug("onExit: removing transformer for " + getClassName());
+      if (log.isDebugEnabled()) {
+        log.debug("onExit: removing transformer for {}", getClassName());
       }
       transformer.unregister(this);
     }

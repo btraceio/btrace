@@ -41,7 +41,6 @@ import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
 import jdk.jfr.EventType;
 import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
@@ -64,12 +63,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
     @Override
     public BTraceRuntimeImpl_11 getRuntime(
-        String className,
-        ArgsMap args,
-        CommandListener cmdListener,
-        DebugSupport ds,
-        Instrumentation inst) {
-      return new BTraceRuntimeImpl_11(className, args, cmdListener, ds, inst);
+        String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
+      return new BTraceRuntimeImpl_11(className, args, cmdListener, inst);
     }
 
     @Override
@@ -93,12 +88,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   public BTraceRuntimeImpl_11() {}
 
   public BTraceRuntimeImpl_11(
-      String className,
-      ArgsMap args,
-      CommandListener cmdListener,
-      DebugSupport ds,
-      Instrumentation inst) {
-    super(className, args, cmdListener, ds, fixExports(inst));
+      String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
+    super(className, args, cmdListener, fixExports(inst));
   }
 
   private static Instrumentation fixExports(Instrumentation instr) {
@@ -224,7 +215,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
-    JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template, debug);
+    JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template);
     eventFactories.add(factory);
     return factory;
   }
