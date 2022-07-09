@@ -52,14 +52,7 @@ import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.comm.RenameCommand;
-import org.openjdk.btrace.core.comm.RetransformationStartNotification;
-import org.openjdk.btrace.core.comm.StatusCommand;
+import org.openjdk.btrace.core.comm.*;
 import org.openjdk.btrace.instr.BTraceProbe;
 import org.openjdk.btrace.instr.BTraceProbeFactory;
 import org.openjdk.btrace.instr.BTraceProbePersisted;
@@ -338,13 +331,6 @@ abstract class Client implements CommandListener {
       errorExit(th);
       return null;
     }
-
-    if (probe.isClassRenamed()) {
-      if (isDebug()) {
-        debugPrint("class renamed to " + probe.getClassName());
-      }
-      onCommand(new RenameCommand(probe.getClassName()));
-    }
     if (isDebug()) {
       debugPrint("creating BTraceRuntime instance for " + probe.getClassName());
     }
@@ -357,12 +343,18 @@ abstract class Client implements CommandListener {
                     runtime.handleExit(0);
                   }
                 }));
+    if (probe.isClassRenamed()) {
+      if (isDebug()) {
+        debugPrint("class renamed to " + probe.getClassName());
+      }
+      sendCommand(new RenameCommand(probe.getClassName()));
+    }
     if (isDebug()) {
       debugPrint("created BTraceRuntime instance for " + probe.getClassName());
       debugPrint("sending Okay command");
     }
 
-    onCommand(new StatusCommand());
+    sendCommand(new StatusCommand());
 
     boolean entered = false;
     try {
@@ -391,9 +383,9 @@ abstract class Client implements CommandListener {
 
   private void errorExit(Throwable th) throws IOException {
     debugPrint("sending error command");
-    onCommand(new ErrorCommand(th));
+    sendCommand(new ErrorCommand(th));
     debugPrint("sending exit command");
-    onCommand(new ExitCommand(1));
+    sendCommand(new ExitCommand(1));
     closeAll();
   }
 
@@ -445,23 +437,15 @@ abstract class Client implements CommandListener {
   }
 
   private final void startRetransformClasses(int numClasses) {
-    try {
-      onCommand(new RetransformationStartNotification(numClasses));
-      if (isDebug()) {
-        debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
-      }
-    } catch (IOException e) {
-      debugPrint(e);
+    sendCommand(new RetransformationStartNotification(numClasses));
+    if (isDebug()) {
+      debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
     }
   }
 
   final void endRetransformClasses() {
-    try {
-      onCommand(new StatusCommand());
-      if (isDebug()) debugPrint("finished retransformClasses");
-    } catch (IOException e) {
-      debugPrint(e);
-    }
+    sendCommand(new StatusCommand());
+    if (isDebug()) debugPrint("finished retransformClasses");
   }
 
   // Internals only below this point
@@ -514,19 +498,13 @@ abstract class Client implements CommandListener {
             } catch (ClassFormatError | VerifyError e) {
               debugPrint("Class '" + c.getName() + "' verification failed");
               debugPrint(e);
-              try {
-                onCommand(
-                    new MessageCommand(
-                        "[BTRACE WARN] Class verification failed: "
-                            + c.getName()
-                            + " ("
-                            + e.getMessage()
-                            + ")"));
-              } catch (IOException ioException) {
-                if (isDebug()) {
-                  debug.debug(ioException);
-                }
-              }
+              sendCommand(
+                  new MessageCommand(
+                      "[BTRACE WARN] Class verification failed: "
+                          + c.getName()
+                          + " ("
+                          + e.getMessage()
+                          + ")"));
             }
           }
         } else {
@@ -544,19 +522,13 @@ abstract class Client implements CommandListener {
               } catch (ClassFormatError | VerifyError e1) {
                 debugPrint("Class '" + c.getName() + "' verification failed");
                 debugPrint(e1);
-                try {
-                  onCommand(
-                      new MessageCommand(
-                          "[BTRACE WARN] Class verification failed: "
-                              + c.getName()
-                              + " ("
-                              + e.getMessage()
-                              + ")"));
-                } catch (IOException ioException) {
-                  if (isDebug()) {
-                    debug.debug(ioException);
-                  }
-                }
+                sendCommand(
+                    new MessageCommand(
+                        "[BTRACE WARN] Class verification failed: "
+                            + c.getName()
+                            + " ("
+                            + e.getMessage()
+                            + ")"));
               }
             }
           }
@@ -564,6 +536,10 @@ abstract class Client implements CommandListener {
       }
     }
     return true;
+  }
+
+  protected void sendCommand(Command command) {
+    runtime.send(command);
   }
 
   static Client findClient(String uuid) {

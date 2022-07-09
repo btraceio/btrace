@@ -32,6 +32,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.LockSupport;
 import org.openjdk.btrace.core.*;
 import org.openjdk.btrace.core.comm.Command;
@@ -70,6 +71,13 @@ class RemoteClient extends Client {
   private volatile ObjectInputStream ois;
   private volatile ObjectOutputStream oos;
 
+  private final AtomicReferenceFieldUpdater<RemoteClient, Socket> sockUpdater =
+      AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, Socket.class, "sock");
+  private final AtomicReferenceFieldUpdater<RemoteClient, ObjectInputStream> oisUpdater =
+      AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, ObjectInputStream.class, "ois");
+  private final AtomicReferenceFieldUpdater<RemoteClient, ObjectOutputStream> oosUpdater =
+      AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, ObjectOutputStream.class, "oos");
+
   private final CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
 
   static Client getClient(ClientContext ctx, Socket sock, Function<Client, Future<?>> initCallback)
@@ -93,7 +101,7 @@ class RemoteClient extends Client {
             try {
               Client client = new RemoteClient(ctx, ois, oos, sock, (InstrumentCommand) cmd);
               initCallback.apply(client).get();
-              WireIO.write(oos, new StatusCommand(InstrumentCommand.STATUS_FLAG));
+              client.sendCommand(new StatusCommand(InstrumentCommand.STATUS_FLAG));
               return client;
             } catch (ExecutionException | InterruptedException e) {
               WireIO.write(oos, new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
@@ -102,10 +110,11 @@ class RemoteClient extends Client {
           }
         case Command.RECONNECT:
           {
-            Client client = Client.findClient(((ReconnectCommand) cmd).getProbeId());
+            String probeId = ((ReconnectCommand) cmd).getProbeId();
+            Client client = Client.findClient(probeId);
             if (client instanceof RemoteClient) {
               ((RemoteClient) client).reconnect(ois, oos, sock);
-              WireIO.write(oos, new StatusCommand(ReconnectCommand.STATUS_FLAG));
+              client.sendCommand(new StatusCommand(ReconnectCommand.STATUS_FLAG));
               return client;
             }
             WireIO.write(oos, new StatusCommand(-1 * ReconnectCommand.STATUS_FLAG));
@@ -212,7 +221,8 @@ class RemoteClient extends Client {
   @SuppressWarnings("RedundantThrows")
   @Override
   public void onCommand(Command cmd) throws IOException {
-    if (oos == null) {
+    ObjectOutputStream output = oos;
+    if (output == null) {
       if (!cmd.isUrgent()) {
         delayedCommands.add(cmd);
       }
@@ -224,9 +234,7 @@ class RemoteClient extends Client {
     try {
       boolean isConnected = true;
       try {
-        synchronized (oos) {
-          oos.reset();
-        }
+        output.reset();
       } catch (SocketException e) {
         isConnected = false;
       }
@@ -248,11 +256,17 @@ class RemoteClient extends Client {
     if (cmd == Command.NULL) {
       return true; // do not dispatch the NULL command
     }
+    ObjectOutputStream output = oos;
+    ObjectInputStream input = ois;
+    Socket socket = sock;
+    if (output == null) {
+      return false;
+    }
     try {
       switch (cmd.getType()) {
         case Command.EXIT:
           if (isConnected) {
-            WireIO.write(oos, cmd);
+            WireIO.write(output, cmd);
           }
           onExit(((ExitCommand) cmd).getExitCode());
           break;
@@ -260,23 +274,27 @@ class RemoteClient extends Client {
           {
             if (isConnected) {
               ((ListProbesCommand) cmd).setProbes(listProbes());
-              WireIO.write(oos, cmd);
+              WireIO.write(output, cmd);
             }
             break;
           }
         case Command.DISCONNECT:
           {
             ((DisconnectCommand) cmd).setProbeId(id.toString());
-            synchronized (oos) {
-              WireIO.write(oos, cmd);
-              oos.flush();
-              ois.close();
-              oos.close();
+            if (output != null) {
+              WireIO.write(output, cmd);
+              output.flush();
+              output.close();
+              oosUpdater.compareAndSet(this, output, null);
             }
-            sock.close();
-            ois = null;
-            oos = null;
-            sock = null;
+            if (input != null) {
+              input.close();
+              oisUpdater.compareAndSet(this, input, null);
+            }
+            if (socket != null) {
+              socket.close();
+              sockUpdater.compareAndSet(this, socket, null);
+            }
             break;
           }
         default:
@@ -301,27 +319,28 @@ class RemoteClient extends Client {
   }
 
   @Override
-  protected synchronized void closeAll() throws IOException {
+  protected void closeAll() throws IOException {
     super.closeAll();
 
-    if (oos != null) {
-      synchronized (oos) {
-        oos.close();
-      }
-      oos = null;
+    ObjectOutputStream output = oos;
+    if (output != null) {
+      output.close();
+      oosUpdater.compareAndSet(this, output, null);
     }
-    if (ois != null) {
-      ois.close();
-      ois = null;
+    ObjectInputStream input = ois;
+    if (input != null) {
+      input.close();
+      oisUpdater.compareAndSet(this, input, null);
     }
-    if (sock != null) {
-      sock.close();
-      sock = null;
+    Socket socket = sock;
+    if (socket != null) {
+      socket.close();
+      sockUpdater.compareAndSet(this, socket, null);
     }
   }
 
   void reconnect(ObjectInputStream ois, ObjectOutputStream oos, Socket socket) throws IOException {
-    sock = socket;
+    this.sock = socket;
     this.ois = ois;
     this.oos = oos;
     onCommand(Command.NULL);
