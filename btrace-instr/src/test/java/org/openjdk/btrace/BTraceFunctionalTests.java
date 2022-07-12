@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
@@ -363,6 +364,95 @@ public class BTraceFunctionalTests extends RuntimeTest {
         });
   }
 
+  @Test
+  public void testOnMethodUnattended() throws Exception {
+    debugBTrace = true;
+    debugTestApp = true;
+    TestApp testApp = launchTestApp("resources.Main");
+    File traceFile = locateTrace("btrace/OnMethodTest.java");
+
+    String pid = String.valueOf(testApp.getPid());
+    String[] probeId = new String[1];
+    AtomicBoolean hasError = new AtomicBoolean(false);
+    runBTrace(
+        new String[] {"-x", pid, traceFile.toString()},
+        new ProcessOutputProcessor() {
+          @Override
+          public boolean onStdout(int lineno, String line) {
+            if (lineno > 50) {
+              return false;
+            }
+            System.out.println("[btrace #" + lineno + "] " + line);
+            if (line.contains("BTrace Probe:")) {
+              probeId[0] = line.split(":")[1].trim();
+              return false;
+            }
+            return true;
+          }
+
+          @Override
+          public boolean onStderr(int lineno, String line) {
+            if (lineno > 10) {
+              return false;
+            }
+            System.err.println("[btrace #" + lineno + "] " + line);
+            hasError.set(true);
+            return true;
+          }
+        });
+
+    assertFalse(hasError.get());
+    assertNotNull(probeId[0]);
+
+    final boolean[] found = new boolean[] {false};
+    runBTrace(
+        new String[] {"-lp", pid},
+        new ProcessOutputProcessor() {
+          @Override
+          public boolean onStdout(int lineno, String line) {
+            System.out.println("[btrace #" + lineno + "] " + line);
+            if (lineno > 3) {
+              return false;
+            }
+            if (line.contains(probeId[0])) {
+              found[0] = true;
+              return false;
+            }
+            return true;
+          }
+
+          @Override
+          public boolean onStderr(int lineno, String line) {
+            System.err.println("[btrace #" + lineno + "] " + line);
+            return false;
+          }
+        });
+    assertTrue(found[0]);
+
+    found[0] = false;
+    runBTrace(
+        new String[] {"-r", probeId[0], "exit", pid},
+        new ProcessOutputProcessor() {
+          @Override
+          public boolean onStdout(int lineno, String line) {
+            System.out.println("===> " + line);
+            if (lineno > 3) {
+              return false;
+            }
+            if (line.contains(probeId[0])) {
+              found[0] = true;
+              return false;
+            }
+            return true;
+          }
+
+          @Override
+          public boolean onStderr(int lineno, String line) {
+            return false;
+          }
+        });
+  }
+
   private static boolean isVersionSafe(String rtVersion) {
     String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
     int major = Integer.parseInt(versionParts[0]);
@@ -373,7 +463,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     } else if (major > 9) { // in JDK 9 the dynamic JFR events are missing
       if (major == 11) {
         // 11.0.9 and 11.0.10 are containing a bug causing the JFR initialization from BTrace to go
-        // into infinte loop
+        // into infinite loop
         return update < 9 || update > 11;
       }
       return true;

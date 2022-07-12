@@ -419,7 +419,8 @@ public class Client {
     }
   }
 
-  void reconnect(String host, String resumeProbe, CommandListener listener) throws IOException {
+  void reconnect(String host, String resumeProbe, CommandListener listener, String[] command)
+      throws IOException {
     if (sock != null) {
       throw new IllegalStateException();
     }
@@ -467,6 +468,36 @@ public class Client {
                 if (statusCommand.getFlag() == ReconnectCommand.STATUS_FLAG) {
                   if (statusCommand.isSuccess()) {
                     DebugSupport.info("Reconnected to an active probe: " + resumeProbe);
+                    String probeCommand = command[0];
+                    String probeCommandArg = command[1];
+                    if (probeCommand != null) {
+                      debugPrint(
+                          "Executing remote command '"
+                              + probeCommand
+                              + "'"
+                              + (probeCommandArg != null ? "(" + probeCommandArg + ")" : ""));
+                      switch (probeCommand) {
+                        case "exit":
+                          {
+                            sendExit();
+                            break;
+                          }
+                        case "event":
+                          {
+                            if (probeCommandArg == null || probeCommandArg.equals("*")) {
+                              sendEvent();
+                            } else {
+                              sendEvent(probeCommandArg);
+                            }
+                            sendDisconnect();
+                            break;
+                          }
+                        default:
+                          {
+                            DebugSupport.warning("Unrecognized BTrace command " + probeCommand);
+                          }
+                      }
+                    }
                   } else {
                     DebugSupport.warning("Unable to reconnect to an active probe: " + resumeProbe);
                     System.exit(1);
