@@ -200,6 +200,12 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitLookupSwitchInsn(Label label, int[] ints, Label[] labels) {
     stack.pop();
+    SavedState state =
+        new SavedState(variableMapper, localTypes, stack, newLocals, SavedState.CONDITIONAL);
+    jumpTargetStates.put(label, state);
+    for (Label l : labels) {
+      jumpTargetStates.put(l, state);
+    }
     super.visitLookupSwitchInsn(label, ints, labels);
     pc++;
   }
@@ -207,6 +213,12 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitTableSwitchInsn(int i, int i1, Label label, Label... labels) {
     stack.pop();
+    SavedState state =
+        new SavedState(variableMapper, localTypes, stack, newLocals, SavedState.CONDITIONAL);
+    jumpTargetStates.put(label, state);
+    for (Label l : labels) {
+      jumpTargetStates.put(l, state);
+    }
     super.visitTableSwitchInsn(i, i1, label, labels);
     pc++;
   }
@@ -1603,14 +1615,6 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     private final SimulatedStack sStack;
     private final Collection<LocalVarSlot> newLocals;
     private final int kind;
-
-    SavedState(
-        VariableMapper mapper,
-        LocalVarTypes lvTypes,
-        SimulatedStack sStack,
-        Collection<LocalVarSlot> newLocals) {
-      this(mapper, lvTypes, sStack, newLocals, CONDITIONAL);
-    }
 
     SavedState(
         VariableMapper mapper,

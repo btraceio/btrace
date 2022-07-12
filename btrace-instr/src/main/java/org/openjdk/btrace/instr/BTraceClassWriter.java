@@ -41,7 +41,7 @@ import org.objectweb.asm.tree.MethodNode;
  * allowing to plug-in instrumentation providers and instrument class in single invocation. Also, it
  * provides a smart and lightweight common supertype resolution method for computing frames.
  *
- * The class is not thread-safe but since there is exactly one instance per instrumented class
+ * <p>The class is not thread-safe but since there is exactly one instance per instrumented class
  * there is no chance of parallel access ever happening.
  *
  * @author Jaroslav Bachorik
