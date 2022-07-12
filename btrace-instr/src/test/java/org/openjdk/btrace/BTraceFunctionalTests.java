@@ -296,8 +296,6 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testJfr() throws Exception {
-      debugBTrace = true;
-      debugTestApp = true;
     String rtVersion = System.getProperty("java.runtime.version", "");
     String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
     if (testJavaHome != null) {
@@ -371,12 +369,12 @@ public class BTraceFunctionalTests extends RuntimeTest {
     int update = versionParts.length == 3 ? Integer.parseInt(versionParts[2].replace("0_", "")) : 0;
     if (major == 8) {
       // before 8u272 there was no JFR support
-        return update > 272;
+      return update > 272;
     } else if (major > 9) { // in JDK 9 the dynamic JFR events are missing
       if (major == 11) {
         // 11.0.9 and 11.0.10 are containing a bug causing the JFR initialization from BTrace to go
         // into infinte loop
-          return update < 9 || update > 11;
+        return update < 9 || update > 11;
       }
       return true;
     }

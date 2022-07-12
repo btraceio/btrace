@@ -106,7 +106,7 @@ public class Verifier extends AbstractProcessor implements TaskListener {
     for (Tree t : e.getCompilationUnit().getTypeDecls()) {
       TreePath topLevel = new TreePath(e.getCompilationUnit());
       if (t.getKind() == Tree.Kind.CLASS) {
-          if (elem.equals(getTreeUtils().getElement(new TreePath(topLevel, t)))) {
+        if (elem.equals(getTreeUtils().getElement(new TreePath(topLevel, t)))) {
           currentClass = (ClassTree) t;
           break;
         }
