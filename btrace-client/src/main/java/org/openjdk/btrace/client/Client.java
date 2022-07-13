@@ -461,7 +461,10 @@ public class Client {
                     String probeCommandArg = command[1];
                     if (probeCommand != null) {
                       if (log.isDebugEnabled()) {
-                        log.debug("Executing remote command '{}'{}", probeCommand, (probeCommandArg != null ? "(" + probeCommandArg + ")" : ""));
+                        log.debug(
+                            "Executing remote command '{}'{}",
+                            probeCommand,
+                            (probeCommandArg != null ? "(" + probeCommandArg + ")" : ""));
                       }
                       switch (probeCommand) {
                         case "exit":
@@ -481,7 +484,7 @@ public class Client {
                           }
                         default:
                           {
-                            DebugSupport.warning("Unrecognized BTrace command " + probeCommand);
+                            log.warn("Unrecognized BTrace command {}", probeCommand);
                           }
                       }
                     }
@@ -573,7 +576,7 @@ public class Client {
                 listener.onCommand(cmd);
               } else {
                 StatusCommand statusCommand = (StatusCommand) cmd;
-                if (statusCommand.getFlag() == InstrumentCommand.STATUS_FLAG) {
+                if (statusCommand.getFlag() == StatusCommand.STATUS_FLAG) {
                   if (statusCommand.isSuccess()) {
                     log.info("Successfully started BTrace probe: {}", fileName);
                   } else {

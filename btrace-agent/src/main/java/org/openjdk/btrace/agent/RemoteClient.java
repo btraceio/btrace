@@ -104,10 +104,10 @@ class RemoteClient extends Client {
             try {
               Client client = new RemoteClient(ctx, ois, oos, sock, (InstrumentCommand) cmd);
               initCallback.apply(client).get();
-              client.sendCommand(new StatusCommand(InstrumentCommand.STATUS_FLAG));
+              client.sendCommand(new StatusCommand(StatusCommand.STATUS_FLAG));
               return client;
             } catch (ExecutionException | InterruptedException e) {
-              WireIO.write(oos, new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
+              WireIO.write(oos, new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
               throw new IOException(e);
             }
           }

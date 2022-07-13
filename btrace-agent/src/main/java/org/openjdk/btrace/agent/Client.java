@@ -51,6 +51,7 @@ import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;

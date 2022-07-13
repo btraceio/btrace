@@ -80,7 +80,6 @@ import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
 import org.openjdk.btrace.instr.BTraceTransformer;
@@ -866,7 +865,7 @@ public final class Main {
             } catch (UnmodifiableClassException uce) {
               log.debug("BTrace class retransformation failed", uce);
               client.getRuntime().send(new ErrorCommand(uce));
-              client.getRuntime().send(new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
+              client.getRuntime().send(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
             } finally {
               if (entered) {
                 BTraceRuntime.leave();

@@ -34,7 +34,6 @@ import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
 import org.openjdk.btrace.core.comm.PrintableCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.slf4j.Logger;
@@ -111,13 +110,13 @@ public final class Main {
     boolean listProbes = false;
     boolean unattended = false;
 
-    OUTER:
     for (int i = 0; i < args.length; i++) {
       String arg = args[i];
       switch (arg) {
         case "-v":
           DEBUG = true;
-          break OUTER;
+          DebugSupport.initLoggers(true, log);
+          break;
         case "--version":
           System.out.println(Messages.get("btrace.version"));
           return;
@@ -130,9 +129,10 @@ public final class Main {
           if (i < args.length - 1) {
             if (args[i + 1].equalsIgnoreCase("help")) {
               System.out.println(Messages.get("remote.commands.help"));
+              return;
             }
           }
-          return;
+          break;
       }
     }
 
@@ -195,12 +195,11 @@ public final class Main {
               probeCommandArg = args[++count];
             }
           }
-          if (isDebug() && probeCommand != null) {
-            debugPrint(
-                "executing probe command '"
-                    + probeCommand
-                    + "'"
-                    + (probeCommandArg != null ? "(" + probeCommandArg + ")" : ""));
+          if (probeCommand != null && log.isDebugEnabled()) {
+            log.debug(
+                "executing probe command '{}'{}",
+                probeCommand,
+                (probeCommandArg != null ? "(" + probeCommandArg + ")" : ""));
           }
         } else if (args[count].equals("-lp")) {
           log.debug("listing active probes");
@@ -300,7 +299,7 @@ public final class Main {
             cmd -> {
               if (isUnattended
                   && cmd.getType() == Command.STATUS
-                  && ((StatusCommand) cmd).getFlag() == InstrumentCommand.STATUS_FLAG) {
+                  && ((StatusCommand) cmd).getFlag() == StatusCommand.STATUS_FLAG) {
                 client.sendDisconnect();
               } else {
                 listener.onCommand(cmd);

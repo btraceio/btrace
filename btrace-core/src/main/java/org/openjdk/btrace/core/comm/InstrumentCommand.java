@@ -32,7 +32,6 @@ import java.util.Map;
 import org.openjdk.btrace.core.ArgsMap;
 
 public class InstrumentCommand extends Command {
-  public static final int STATUS_FLAG = 1;
 
   private byte[] code;
   private ArgsMap args;

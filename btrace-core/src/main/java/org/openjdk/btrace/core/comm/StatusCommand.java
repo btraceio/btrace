@@ -30,6 +30,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 public class StatusCommand extends Command {
+  public static final int STATUS_FLAG = 1;
   // custom flag
   private int flag;
 
