@@ -26,6 +26,11 @@ package org.openjdk.btrace.core;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import org.slf4j.Logger;
+import org.slf4j.impl.SimpleLogger;
 
 /**
  * Centralized support for logging various debug information.
@@ -33,24 +38,38 @@ import java.io.FileOutputStream;
  * @author Jaroslav Bachorik
  */
 public final class DebugSupport {
-  public static final DebugSupport SHARED = new DebugSupport(null);
+  public static void initLoggers(boolean debug, Logger logger) {
+    String logFile = System.getProperty("org.slf4j.simpleLogger.logFile");
+    System.setProperty("org.slf4j.simpleLogger.logFile", logFile != null ? logFile : "System.out");
+    String defaultLevel =
+        System.getProperty("org.slf4j.simpleLogger.log.org.openjdk.btrace", "info");
+    System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : defaultLevel);
+    try {
+      Method mthd = SimpleLogger.class.getDeclaredMethod("init");
+      mthd.setAccessible(true);
+      mthd.invoke(null);
+    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+      System.err.println("[btrace] Unable to reload logger config");
+    }
+    if (logger != null) {
+      try {
+        Field fld = logger.getClass().getDeclaredField("currentLogLevel");
+        fld.setAccessible(true);
+        fld.set(
+            logger,
+            debug
+                ? 10
+                : 20); // 10 is the 'debug' level for SLF4J SimpleLogger, 20 is the info level
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+        System.err.println("[btrace] Unable to set debug log level");
+      }
+    }
+  }
+
   private final SharedSettings settings;
 
   public DebugSupport(SharedSettings s) {
     settings = s != null ? s : SharedSettings.GLOBAL;
-  }
-
-  public static void info(String msg) {
-    System.out.println("btrace INFO: " + msg);
-  }
-
-  public static void warning(String msg) {
-    System.err.println("btrace WARNING: " + msg);
-  }
-
-  public static void warning(Throwable th) {
-    System.err.println("btrace WARNING: " + th);
-    th.printStackTrace(System.out);
   }
 
   public boolean isDebug() {
@@ -91,19 +110,6 @@ public final class DebugSupport {
       } catch (Exception exp) {
         exp.printStackTrace();
       }
-    }
-  }
-
-  public void debug(String msg) {
-    if (settings.isDebug()) {
-      System.out.println("btrace DEBUG: " + msg);
-    }
-  }
-
-  public void debug(Throwable th) {
-    if (settings.isDebug()) {
-      System.out.println("btrace DEBUG: " + th);
-      th.printStackTrace(System.out);
     }
   }
 }

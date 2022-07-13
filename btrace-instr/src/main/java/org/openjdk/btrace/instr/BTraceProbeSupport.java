@@ -32,26 +32,27 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class BTraceProbeSupport {
+  private static final Logger log = LoggerFactory.getLogger(BTraceProbeSupport.class);
+
   private final List<OnMethod> onMethods;
   private final List<OnProbe> onProbes;
   private final Map<String, String> serviceFields;
 
   private final Object filterLock = new Object();
-  private final DebugSupport debug;
   private volatile ClassFilter filter;
   private boolean trustedScript = false;
   private boolean classRenamed = false;
   private String className, origName;
 
-  BTraceProbeSupport(DebugSupport dbg) {
+  BTraceProbeSupport() {
     onMethods = new ArrayList<>();
     onProbes = new ArrayList<>();
     serviceFields = new HashMap<>();
-    debug = dbg;
   }
 
   void setClassName(String name) {
@@ -203,12 +204,12 @@ public final class BTraceProbeSupport {
       // without BTraceRuntime.enter(). Please look at the
       // static initializer code of trace class.
       BTraceRuntime.leave();
-      if (debug.isDebug()) {
-        debug.debug("about to defineClass " + getClassName(true));
+      if (log.isDebugEnabled()) {
+        log.debug("about to defineClass {}", getClassName(false));
       }
       Class<?> clz = rt.defineClass(code, isTransforming());
-      if (debug.isDebug()) {
-        debug.debug("defineClass succeeded for " + getClassName(false));
+      if (log.isDebugEnabled()) {
+        log.debug("defineClass succeeded for {}", getClassName(false));
       }
       return clz;
     } finally {

@@ -50,8 +50,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A factory class for {@link BTraceProbeNode} instances
@@ -59,8 +60,9 @@ import org.openjdk.btrace.core.SharedSettings;
  * @author Jaroslav Bachorik
  */
 public final class BTraceProbeFactory {
+  private static final Logger log = LoggerFactory.getLogger(BTraceProbeFactory.class);
+
   private final SharedSettings settings;
-  private final DebugSupport debug;
   private final boolean canLoadPack;
 
   public BTraceProbeFactory(SharedSettings settings) {
@@ -69,7 +71,6 @@ public final class BTraceProbeFactory {
 
   public BTraceProbeFactory(SharedSettings settings, boolean canLoadPack) {
     this.settings = settings;
-    debug = new DebugSupport(settings);
     this.canLoadPack = canLoadPack;
   }
 
@@ -104,7 +105,7 @@ public final class BTraceProbeFactory {
           bpp.read(dis);
           bp = bpp;
         } catch (IOException e) {
-          debug.debug(e);
+          log.debug("Failed to read BTrace pack", e);
         }
       }
     } else {
@@ -134,9 +135,7 @@ public final class BTraceProbeFactory {
         bp = new BTraceProbeNode(this, code);
       }
     } catch (IOException e) {
-      if (debug.isDebug()) {
-        debug.debug(e);
-      }
+      log.debug("Failed to create a probe", e);
     }
 
     applyArgs(bp, argsMap);

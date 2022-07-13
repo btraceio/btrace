@@ -79,6 +79,7 @@ task agentJar(type: ShadowJar) {
     configurations = [project.configurations.artifact]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
 
 task bootJar(type: ShadowJar) {
@@ -117,7 +118,7 @@ task bootJar(type: ShadowJar) {
             }
             return true
         }
-        return it.path.startsWith('org/openjdk/btrace/runtime/') ||
+        return it.path.startsWith("org/slf4j/") || it.path.startsWith('org/openjdk/btrace/runtime/') ||
                 it.path.startsWith('org/openjdk/btrace/services/') ||
                 it.path.startsWith('org/openjdk/btrace/statsd/')
     }
@@ -125,6 +126,7 @@ task bootJar(type: ShadowJar) {
     configurations = [project.configurations.artifact]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
 
 task clientJar(type: ShadowJar) {
@@ -154,6 +156,7 @@ task clientJar(type: ShadowJar) {
     configurations = [project.configurations.artifact]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
 
 task fixPermissions(type: Exec) {

@@ -39,7 +39,8 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
-import org.openjdk.btrace.core.DebugSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A method visitor providing support for introducing new local variables in bytecode recomputing
@@ -48,6 +49,8 @@ import org.openjdk.btrace.core.DebugSupport;
  */
 public final class InstrumentingMethodVisitor extends MethodVisitor
     implements MethodInstrumentorHelper {
+  private static final Logger log = LoggerFactory.getLogger(InstrumentingMethodVisitor.class);
+
   private static final Object TOP_EXT = -2;
   private final VariableMapper variableMapper;
   private final SimulatedStack stack = new SimulatedStack();
@@ -1325,7 +1328,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       return Constants.TOP_TYPE;
     }
     if (slotType instanceof Integer) {
-      DebugSupport.warning("Unknown slot type: " + slotType);
+      log.warn("Unknown slot type: {}", slotType);
       return Constants.OBJECT_TYPE;
     }
     return slotType != null ? Type.getObjectType((String) slotType) : Constants.OBJECT_TYPE;

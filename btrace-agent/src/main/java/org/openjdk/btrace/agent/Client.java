@@ -50,9 +50,16 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.*;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.ExitCommand;
+import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.MessageCommand;
+import org.openjdk.btrace.core.comm.RenameCommand;
+import org.openjdk.btrace.core.comm.RetransformationStartNotification;
+import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.instr.BTraceProbe;
 import org.openjdk.btrace.instr.BTraceProbeFactory;
 import org.openjdk.btrace.instr.BTraceProbePersisted;
@@ -66,6 +73,8 @@ import org.openjdk.btrace.instr.Instrumentor;
 import org.openjdk.btrace.instr.templates.impl.MethodTrackingExpander;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstract class that represents a BTrace client at the BTrace agent.
@@ -74,6 +83,8 @@ import org.openjdk.btrace.runtime.BTraceRuntimes;
  * @author J. Bachorik (j.bachorik@btrace.io)
  */
 abstract class Client implements CommandListener {
+  private static final Logger log = LoggerFactory.getLogger(Client.class);
+
   private static final Map<UUID, Client> CLIENTS = new ConcurrentHashMap<>();
   private static final Map<String, PrintWriter> WRITER_MAP = new HashMap<>();
   private static final Pattern SYSPROP_PTN = Pattern.compile("\\$\\{(.+?)}");
@@ -92,7 +103,6 @@ abstract class Client implements CommandListener {
 
   private final Instrumentation inst;
   final SharedSettings settings;
-  final DebugSupport debug;
   final ArgsMap argsMap;
   private final BTraceTransformer transformer;
   volatile PrintWriter out;
@@ -113,7 +123,6 @@ abstract class Client implements CommandListener {
     this.argsMap = argsMap;
     settings = s != null ? s : SharedSettings.GLOBAL;
     transformer = t;
-    debug = new DebugSupport(settings);
 
     setupWriter();
     CLIENTS.put(id, this);
@@ -144,7 +153,7 @@ abstract class Client implements CommandListener {
       String outputDir = settings.getOutputDir();
       String output = (outputDir != null ? outputDir + File.separator : "") + outputFile;
       outputFile = templateOutputFileName(output);
-      infoPrint("Redirecting output to " + outputFile);
+      log.info("Redirecting output to {}", outputFile);
     }
     out = WRITER_MAP.get(outputFile);
     if (out == null) {
@@ -159,7 +168,7 @@ abstract class Client implements CommandListener {
         } else {
           out =
               new PrintWriter(
-                  new BufferedWriter(TraceOutputWriter.fileWriter(new File(outputFile), settings)));
+                  new BufferedWriter(TraceOutputWriter.fileWriter(new File(outputFile))));
         }
       }
       WRITER_MAP.put(outputFile, out);
@@ -227,8 +236,8 @@ abstract class Client implements CommandListener {
               .replace("[default]", "");
 
       fName = replaceSysProps(fName);
-      if (dflt && settings.isDebug()) {
-        debugPrint("scriptOutputFile not specified. defaulting to " + fName);
+      if (dflt && log.isDebugEnabled()) {
+        log.debug("scriptOutputFile not specified. defaulting to {}", fName);
       }
     }
     return fName;
@@ -282,23 +291,23 @@ abstract class Client implements CommandListener {
 
       BTraceRuntime.leave();
       try {
-        debugPrint("onExit:");
-        debugPrint("cleaning up transformers");
+        log.debug("onExit:");
+        log.debug("cleaning up transformers");
         cleanupTransformers();
-        debugPrint("removing instrumentation");
+        log.debug("removing instrumentation");
         retransformLoaded();
-        debugPrint("closing all I/O");
+        log.debug("closing all I/O");
         Thread.sleep(300);
         try {
           closeAll();
         } catch (IOException e) {
           // ignore IOException when closing
         }
-        debugPrint("done");
+        log.debug("done");
       } catch (Throwable th) {
         // ExitException is expected here
         if (!th.getClass().getName().equals("ExitException")) {
-          debugPrint(th);
+          log.debug("Failed to gracefully exit BTrace probe", th);
           BTraceRuntime.handleException(th);
         }
       } finally {
@@ -319,7 +328,7 @@ abstract class Client implements CommandListener {
     try {
       probe = load(btraceCode, ArgsMap.merge(argsMap, args), canLoadPack);
       if (probe == null) {
-        debugPrint("Failed to load BTrace probe code");
+        log.debug("Failed to load BTrace probe code");
         return null;
       }
 
@@ -327,14 +336,14 @@ abstract class Client implements CommandListener {
         probe.checkVerified();
       }
     } catch (Throwable th) {
-      debugPrint(th);
+      log.debug("Filed to load BTrace probe code", th);
       errorExit(th);
       return null;
     }
-    if (isDebug()) {
-      debugPrint("creating BTraceRuntime instance for " + probe.getClassName());
+    if (log.isDebugEnabled()) {
+      log.debug("creating BTraceRuntime instance for {}", probe.getClassName());
     }
-    runtime = BTraceRuntimes.getRuntime(probe.getClassName(), args, this, debug, inst);
+    runtime = BTraceRuntimes.getRuntime(probe.getClassName(), args, this, inst);
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread(
@@ -344,14 +353,14 @@ abstract class Client implements CommandListener {
                   }
                 }));
     if (probe.isClassRenamed()) {
-      if (isDebug()) {
-        debugPrint("class renamed to " + probe.getClassName());
+      if (log.isDebugEnabled()) {
+        log.debug("class renamed to {}", probe.getClassName());
       }
       sendCommand(new RenameCommand(probe.getClassName()));
     }
-    if (isDebug()) {
-      debugPrint("created BTraceRuntime instance for " + probe.getClassName());
-      debugPrint("sending Okay command");
+    if (log.isDebugEnabled()) {
+      log.debug("created BTraceRuntime instance for {}", probe.getClassName());
+      log.debug("sending Okay command");
     }
 
     sendCommand(new StatusCommand());
@@ -361,7 +370,7 @@ abstract class Client implements CommandListener {
       entered = BTraceRuntimeAccess.enter(runtime);
       return probe.register(runtime, transformer);
     } catch (Throwable th) {
-      debugPrint(th);
+      log.debug("Failed to load BTrace probe", th);
       errorExit(th);
       return null;
     } finally {
@@ -382,9 +391,9 @@ abstract class Client implements CommandListener {
   }
 
   private void errorExit(Throwable th) throws IOException {
-    debugPrint("sending error command");
+    log.debug("sending error command");
     sendCommand(new ErrorCommand(th));
-    debugPrint("sending exit command");
+    log.debug("sending exit command");
     sendCommand(new ExitCommand(1));
     closeAll();
   }
@@ -398,22 +407,6 @@ abstract class Client implements CommandListener {
   // package privates below this point
   final boolean isInitialized() {
     return initialized;
-  }
-
-  private void infoPrint(String msg) {
-    DebugSupport.info(msg);
-  }
-
-  final boolean isDebug() {
-    return settings.isDebug();
-  }
-
-  final void debugPrint(String msg) {
-    debug.debug(msg);
-  }
-
-  final void debugPrint(Throwable th) {
-    debug.debug(th);
   }
 
   final BTraceRuntime.Impl getRuntime() {
@@ -438,30 +431,32 @@ abstract class Client implements CommandListener {
 
   private final void startRetransformClasses(int numClasses) {
     sendCommand(new RetransformationStartNotification(numClasses));
-    if (isDebug()) {
-      debugPrint("calling retransformClasses (" + numClasses + " classes to be retransformed)");
+    if (log.isDebugEnabled()) {
+      log.debug("calling retransformClasses ({} classes to be retransformed)", numClasses);
     }
   }
 
   final void endRetransformClasses() {
     sendCommand(new StatusCommand());
-    if (isDebug()) debugPrint("finished retransformClasses");
+    log.debug("finished retransformClasses");
   }
 
   // Internals only below this point
   private BTraceProbe load(byte[] buf, ArgsMap args, boolean canLoadPack) {
     BTraceProbeFactory f = new BTraceProbeFactory(settings, canLoadPack);
-    debugPrint("loading BTrace class");
+    log.debug("loading BTrace class");
     BTraceProbe cn = f.createProbe(buf, args);
 
     if (cn != null) {
-      if (isDebug()) {
-        if (cn.isVerified()) {
-          debugPrint("loaded '" + cn.getClassName() + "' successfully");
-        } else {
-          debugPrint(cn.getClassName() + " failed verification");
-          return null;
+      if (cn.isVerified()) {
+        if (log.isDebugEnabled()) {
+          log.debug("loaded '{}' successfully", cn.getClassName());
         }
+      } else {
+        if (log.isDebugEnabled()) {
+          log.debug("{} failed verification", cn.getClassName());
+        }
+        return null;
       }
     }
     return BTraceProbePersisted.from(cn);
@@ -473,13 +468,15 @@ abstract class Client implements CommandListener {
     }
     if (probe.isTransforming() && settings.isRetransformStartup()) {
       ArrayList<Class<?>> list = new ArrayList<>();
-      debugPrint("retransforming loaded classes");
-      debugPrint("filtering loaded classes");
+      log.debug("retransforming loaded classes");
+      log.debug("filtering loaded classes");
       ClassCache cc = ClassCache.getInstance();
       for (Class<?> c : inst.getAllLoadedClasses()) {
         if (c != null) {
           if (inst.isModifiableClass(c) && isCandidate(c)) {
-            debugPrint("candidate " + c + " added");
+            if (log.isDebugEnabled()) {
+              log.debug("candidate {} added", c);
+            }
             list.add(c);
           }
         }
@@ -490,14 +487,13 @@ abstract class Client implements CommandListener {
         Class<?>[] classes = new Class[size];
         list.toArray(classes);
         startRetransformClasses(size);
-        if (isDebug()) {
+        if (log.isDebugEnabled()) {
           for (Class<?> c : classes) {
             try {
-              debugPrint("Attempting to retransform class: " + c.getName());
+              log.debug("Attempting to retransform class: {}", c.getName());
               inst.retransformClasses(c);
             } catch (ClassFormatError | VerifyError e) {
-              debugPrint("Class '" + c.getName() + "' verification failed");
-              debugPrint(e);
+              log.debug("Class '{}' verification failed", c.getName(), e);
               sendCommand(
                   new MessageCommand(
                       "[BTRACE WARN] Class verification failed: "
@@ -520,8 +516,7 @@ abstract class Client implements CommandListener {
               try {
                 inst.retransformClasses(c);
               } catch (ClassFormatError | VerifyError e1) {
-                debugPrint("Class '" + c.getName() + "' verification failed");
-                debugPrint(e1);
+                log.debug("Class '{}' verification failed", c.getName(), e);
                 sendCommand(
                     new MessageCommand(
                         "[BTRACE WARN] Class verification failed: "

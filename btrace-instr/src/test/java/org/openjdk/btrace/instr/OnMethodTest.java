@@ -26,16 +26,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.SharedSettings;
 
 public class OnMethodTest {
   private ArgsMap instance;
 
   @BeforeEach
   public void setUp() {
-    DebugSupport debug = new DebugSupport(SharedSettings.GLOBAL);
-    instance = new ArgsMap(new String[] {"className=ClassA", "methodName=methodA"}, debug);
+    instance = new ArgsMap(new String[] {"className=ClassA", "methodName=methodA"});
   }
 
   @Test

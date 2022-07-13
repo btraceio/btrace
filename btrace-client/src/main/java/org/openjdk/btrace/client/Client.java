@@ -52,7 +52,6 @@ import org.objectweb.asm.Type;
 import org.openjdk.btrace.compiler.Compiler;
 import org.openjdk.btrace.core.Args;
 import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.annotations.DTrace;
 import org.openjdk.btrace.core.annotations.DTraceRef;
@@ -68,6 +67,8 @@ import org.openjdk.btrace.core.comm.ReconnectCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class represents a BTrace client. This can be used to create command line as well as a GUI
@@ -77,6 +78,7 @@ import org.openjdk.btrace.core.comm.WireIO;
  * @author A. Sundararajan
  */
 public class Client {
+  private static final Logger log = LoggerFactory.getLogger(Client.class);
 
   private static final String DTRACE_DESC;
   private static final String DTRACE_REF_DESC;
@@ -207,31 +209,31 @@ public class Client {
     if (fileName.endsWith(".java")) {
       Compiler compiler = new Compiler(includePath);
       classPath += File.pathSeparator + System.getProperty("java.class.path");
-      if (debug) {
-        debugPrint("compiling " + fileName);
+      if (log.isDebugEnabled()) {
+        log.debug("compiling {}", fileName);
       }
       Map<String, byte[]> classes = compiler.compile(file, err, ".", classPath);
       if (classes == null) {
-        err.println("btrace compilation failed!");
+        log.error("btrace compilation for script {} failed!", fileName);
         return null;
       }
 
       int size = classes.size();
       if (size != 1) {
-        err.println("no classes or more than one class");
+        log.error("no classes or more than one class in script {}", fileName);
         return null;
       }
       String name = classes.keySet().iterator().next();
       code = classes.get(name);
-      if (debug) {
-        debugPrint("compiled " + fileName);
+      if (log.isDebugEnabled()) {
+        log.debug("compiled {}", fileName);
       }
     } else if (fileName.endsWith(".class")) {
       int codeLen = (int) file.length();
       code = new byte[codeLen];
       try {
-        if (debug) {
-          debugPrint("reading " + fileName);
+        if (log.isDebugEnabled()) {
+          log.debug("reading {}", fileName);
         }
         try (FileInputStream fis = new FileInputStream(file)) {
           int off = 0;
@@ -243,8 +245,8 @@ public class Client {
             }
           } while (off < codeLen && len != -1);
         }
-        if (debug) {
-          debugPrint("read " + fileName);
+        if (log.isDebugEnabled()) {
+          log.debug("read {}", fileName);
         }
       } catch (IOException exp) {
         err.println(exp.getMessage());
@@ -274,7 +276,7 @@ public class Client {
         agentPath = new File(new URI(agentPath)).getAbsolutePath();
         attach(pid, agentPath, sysCp, bootCp);
       } else {
-        warn("Unable to prepare BTrace agent");
+        log.warn("Unable to prepare BTrace agent");
       }
     } catch (RuntimeException | IOException e) {
       throw e;
@@ -291,12 +293,12 @@ public class Client {
   public void attach(String pid, String agentPath, String sysCp, String bootCp) throws IOException {
     try {
       VirtualMachine vm = null;
-      if (debug) {
-        debugPrint("attaching to " + pid);
+      if (log.isDebugEnabled()) {
+        log.debug("attaching to {}", pid);
       }
       vm = VirtualMachine.attach(pid);
-      if (debug) {
-        debugPrint("checking port availability: " + port);
+      if (log.isDebugEnabled()) {
+        log.debug("checking port availability: {}", port);
       }
       Properties serverVmProps = vm.getSystemProperties();
       int serverPort = Integer.parseInt(serverVmProps.getProperty("btrace.port", "-1"));
@@ -317,12 +319,9 @@ public class Client {
         }
       }
 
-      if (debug) {
-        debugPrint("attached to " + pid);
-      }
-
-      if (debug) {
-        debugPrint("loading " + agentPath);
+      if (log.isDebugEnabled()) {
+        log.debug("attached to {}", pid);
+        log.debug("loading {}", agentPath);
       }
       String agentArgs = Args.PORT + "=" + port;
       if (statsdDef != null) {
@@ -358,12 +357,12 @@ public class Client {
         agentArgs += ",=" + Args.CMD_QUEUE_LIMIT + cmdQueueLimit;
       }
       agentArgs += "," + Args.PROBE_DESC_PATH + "=" + probeDescPath;
-      if (debug) {
-        debugPrint("agent args: " + agentArgs);
+      if (log.isDebugEnabled()) {
+        log.debug("agent args: {}", agentArgs);
       }
       vm.loadAgent(agentPath, agentArgs);
-      if (debug) {
-        debugPrint("loaded " + agentPath);
+      if (log.isDebugEnabled()) {
+        log.debug("loaded {}", agentPath);
       }
     } catch (RuntimeException | IOException re) {
       throw re;
@@ -377,32 +376,28 @@ public class Client {
       throw new IllegalStateException();
     }
     try {
-      if (debug) {
-        debugPrint("opening socket to " + port);
+      if (log.isDebugEnabled()) {
+        log.debug("opening socket to {}", port);
       }
       long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
       while (sock == null && System.nanoTime() <= timeout) {
         try {
           sock = new Socket(host, port);
         } catch (ConnectException e) {
-          if (debug) {
-            debugPrint("server not yet available; retrying ...");
-          }
+          log.debug("server not yet available; retrying ...");
           Thread.sleep(20);
         }
       }
 
       if (sock == null) {
-        debugPrint("server not available. exiting.");
+        log.debug("server not available. exiting.");
         System.exit(1);
       }
       oos = new ObjectOutputStream(sock.getOutputStream());
       WireIO.write(oos, new ListProbesCommand());
       ois = new ObjectInputStream(sock.getInputStream());
 
-      if (debug) {
-        debugPrint("entering into command loop");
-      }
+      log.debug("entering into command loop");
       commandLoop(
           cmd -> {
             if (cmd.getType() == Command.LIST_PROBES) {
@@ -425,36 +420,30 @@ public class Client {
       throw new IllegalStateException();
     }
     try {
-      if (debug) {
-        debugPrint("opening socket to " + port);
+      if (log.isDebugEnabled()) {
+        log.debug("opening socket to {}", port);
       }
       long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
       while (sock == null && System.nanoTime() <= timeout) {
         try {
           sock = new Socket(host, port);
         } catch (ConnectException e) {
-          if (debug) {
-            debugPrint("server not yet available; retrying ...");
-          }
+          log.debug("server not yet available; retrying ...");
           Thread.sleep(20);
         }
       }
 
       if (sock == null) {
-        debugPrint("server not available. exiting.");
+        log.debug("server not available. exiting.");
         System.exit(1);
       }
       oos = new ObjectOutputStream(sock.getOutputStream());
-      if (debug) {
-        debugPrint("reconnecting client");
-      }
+      log.debug("reconnecting client");
       WireIO.write(oos, new ReconnectCommand(resumeProbe));
 
       ois = new ObjectInputStream(sock.getInputStream());
 
-      if (debug) {
-        debugPrint("entering into command loop");
-      }
+      log.debug("entering into command loop");
       commandLoop(
           new CommandListener() {
             boolean statusReported = false;
@@ -467,15 +456,16 @@ public class Client {
                 StatusCommand statusCommand = (StatusCommand) cmd;
                 if (statusCommand.getFlag() == ReconnectCommand.STATUS_FLAG) {
                   if (statusCommand.isSuccess()) {
-                    DebugSupport.info("Reconnected to an active probe: " + resumeProbe);
+                    log.info("Reconnected to an active probe: {}", resumeProbe);
                     String probeCommand = command[0];
                     String probeCommandArg = command[1];
                     if (probeCommand != null) {
-                      debugPrint(
-                          "Executing remote command '"
-                              + probeCommand
-                              + "'"
-                              + (probeCommandArg != null ? "(" + probeCommandArg + ")" : ""));
+                      if (log.isDebugEnabled()) {
+                        log.debug(
+                            "Executing remote command '{}'{}",
+                            probeCommand,
+                            (probeCommandArg != null ? "(" + probeCommandArg + ")" : ""));
+                      }
                       switch (probeCommand) {
                         case "exit":
                           {
@@ -494,12 +484,12 @@ public class Client {
                           }
                         default:
                           {
-                            DebugSupport.warning("Unrecognized BTrace command " + probeCommand);
+                            log.warn("Unrecognized BTrace command {}", probeCommand);
                           }
                       }
                     }
                   } else {
-                    DebugSupport.warning("Unable to reconnect to an active probe: " + resumeProbe);
+                    log.warn("Unable to reconnect to an active probe: {}", resumeProbe);
                     System.exit(1);
                   }
                 } else {
@@ -537,29 +527,25 @@ public class Client {
     }
     submitDTrace(fileName, code, args, listener);
     try {
-      if (debug) {
-        debugPrint("opening socket to " + port);
+      if (log.isDebugEnabled()) {
+        log.debug("opening socket to {}", port);
       }
       long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
       while (sock == null && System.nanoTime() <= timeout) {
         try {
           sock = new Socket(host, port);
         } catch (ConnectException e) {
-          if (debug) {
-            debugPrint("server not yet available; retrying ...");
-          }
+          log.debug("server not yet available; retrying ...");
           Thread.sleep(20);
         }
       }
 
       if (sock == null) {
-        debugPrint("server not available. exiting.");
+        log.debug("server not available. exiting.");
         System.exit(1);
       }
       oos = new ObjectOutputStream(sock.getOutputStream());
-      if (debug) {
-        debugPrint("setting up client settings");
-      }
+      log.debug("setting up client settings");
       Map<String, Object> settings = new HashMap<>();
       settings.put(SharedSettings.DEBUG_KEY, debug);
       settings.put(SharedSettings.DUMP_DIR_KEY, dumpClasses ? dumpDir : "");
@@ -572,16 +558,14 @@ public class Client {
 
       ois = new ObjectInputStream(sock.getInputStream());
 
-      if (debug) {
-        debugPrint("sending instrument command: " + Arrays.deepToString(args));
+      if (log.isDebugEnabled()) {
+        log.debug("sending instrument command: {}", Arrays.deepToString(args));
       }
       SharedSettings sSettings = new SharedSettings();
       sSettings.from(settings);
-      WireIO.write(oos, new InstrumentCommand(code, args, new DebugSupport(sSettings)));
+      WireIO.write(oos, new InstrumentCommand(code, args));
 
-      if (debug) {
-        debugPrint("entering into command loop");
-      }
+      log.debug("entering into command loop");
       commandLoop(
           new CommandListener() {
             boolean statusReported = false;
@@ -592,11 +576,11 @@ public class Client {
                 listener.onCommand(cmd);
               } else {
                 StatusCommand statusCommand = (StatusCommand) cmd;
-                if (statusCommand.getFlag() == InstrumentCommand.STATUS_FLAG) {
+                if (statusCommand.getFlag() == StatusCommand.STATUS_FLAG) {
                   if (statusCommand.isSuccess()) {
-                    DebugSupport.info("Successfully started BTrace probe: " + fileName);
+                    log.info("Successfully started BTrace probe: {}", fileName);
                   } else {
-                    DebugSupport.warning("Failed to start BTrace probe: " + fileName);
+                    log.warn("Failed to start BTrace probe: {}", fileName);
                     System.exit(1);
                   }
                   statusReported = true;
@@ -718,12 +702,12 @@ public class Client {
     while (true) {
       try {
         Command cmd = WireIO.read(ois);
-        if (debug) {
-          debugPrint("received " + cmd);
+        if (log.isDebugEnabled()) {
+          log.debug("received command {}", cmd);
         }
         listener.onCommand(cmd);
         if (cmd.getType() == Command.EXIT) {
-          debugPrint("received EXIT cmd");
+          log.debug("received EXIT cmd");
           return;
         }
       } catch (IOException e) {
@@ -736,21 +720,13 @@ public class Client {
     }
   }
 
-  public void debugPrint(String msg) {
-    System.out.println("DEBUG: " + msg);
-  }
-
-  private void warn(String msg) {
-    System.out.println("WARNING: " + msg);
-  }
-
   private void warn(CommandListener listener, String msg) {
     try {
       msg = "WARNING: " + msg + "\n";
       listener.onCommand(new MessageCommand(msg));
     } catch (IOException exp) {
-      if (debug) {
-        exp.printStackTrace();
+      if (log.isDebugEnabled()) {
+        log.debug("Failed to send warning messge", exp);
       }
     }
   }

@@ -46,6 +46,8 @@ import org.openjdk.btrace.core.comm.ReconnectCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents a remote client communicated by socket.
@@ -54,6 +56,8 @@ import org.openjdk.btrace.core.comm.WireIO;
  */
 @SuppressWarnings("SynchronizeOnNonFinalField")
 class RemoteClient extends Client {
+  private static final Logger log = LoggerFactory.getLogger(RemoteClient.class);
+
   private final class DelayedCommandExecutor implements Function<Command, Boolean> {
     private final boolean isConnected;
 
@@ -85,7 +89,6 @@ class RemoteClient extends Client {
     SharedSettings settings = ctx.getSettings();
     ObjectInputStream ois = new ObjectInputStream(sock.getInputStream());
     ObjectOutputStream oos = new ObjectOutputStream(sock.getOutputStream());
-    DebugSupport debug = new DebugSupport(settings);
 
     while (true) {
       Command cmd = WireIO.read(ois);
@@ -97,14 +100,14 @@ class RemoteClient extends Client {
           }
         case Command.INSTRUMENT:
           {
-            debug.debug("got instrument command");
+            log.debug("got instrument command");
             try {
               Client client = new RemoteClient(ctx, ois, oos, sock, (InstrumentCommand) cmd);
               initCallback.apply(client).get();
-              client.sendCommand(new StatusCommand(InstrumentCommand.STATUS_FLAG));
+              client.sendCommand(new StatusCommand(StatusCommand.STATUS_FLAG));
               return client;
             } catch (ExecutionException | InterruptedException e) {
-              WireIO.write(oos, new StatusCommand(-1 * InstrumentCommand.STATUS_FLAG));
+              WireIO.write(oos, new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
               throw new IOException(e);
             }
           }
@@ -177,14 +180,14 @@ class RemoteClient extends Client {
                     switch (cmd.getType()) {
                       case Command.EXIT:
                         {
-                          debugPrint("received exit command");
+                          log.debug("received exit command");
                           onCommand(cmd);
 
                           return;
                         }
                       case Command.DISCONNECT:
                         {
-                          debugPrint("received disconnect command");
+                          log.debug("received disconnect command");
                           onCommand(cmd);
                           break;
                         }
@@ -199,13 +202,13 @@ class RemoteClient extends Client {
                           break;
                         }
                       default:
-                        if (isDebug()) {
-                          debugPrint("received " + cmd);
+                        if (log.isDebugEnabled()) {
+                          log.debug("received {}", cmd);
                         }
                         // ignore any other command
                     }
                   } catch (Exception exp) {
-                    debugPrint(exp);
+                    log.debug("Error while processing BTrace command", exp);
                     break;
                   }
                 }
@@ -214,7 +217,7 @@ class RemoteClient extends Client {
               }
             });
     cmdHandler.setDaemon(true);
-    debugPrint("starting client command handler thread");
+    log.debug("starting client command handler thread");
     cmdHandler.start();
   }
 
@@ -228,8 +231,8 @@ class RemoteClient extends Client {
       }
       return;
     }
-    if (isDebug()) {
-      debugPrint("client " + getClassName() + ": got " + cmd);
+    if (log.isDebugEnabled()) {
+      log.debug("client {}: got {}", getClassName(), cmd);
     }
     try {
       boolean isConnected = true;

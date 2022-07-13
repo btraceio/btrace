@@ -366,20 +366,22 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethodUnattended() throws Exception {
-    debugBTrace = true;
-    debugTestApp = true;
     TestApp testApp = launchTestApp("resources.Main");
     File traceFile = locateTrace("btrace/OnMethodTest.java");
 
     String pid = String.valueOf(testApp.getPid());
     String[] probeId = new String[1];
     AtomicBoolean hasError = new AtomicBoolean(false);
+    System.out.println("===> btrace -x");
+
+    // a workaround - for some reason the btrace output is not captured in the client in tests here
+    debugBTrace = true;
     runBTrace(
         new String[] {"-x", pid, traceFile.toString()},
         new ProcessOutputProcessor() {
           @Override
           public boolean onStdout(int lineno, String line) {
-            if (lineno > 50) {
+            if (lineno > 200) {
               return false;
             }
             System.out.println("[btrace #" + lineno + "] " + line);
@@ -405,6 +407,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     assertNotNull(probeId[0]);
 
     final boolean[] found = new boolean[] {false};
+    System.out.println("===> btrace -lp");
     runBTrace(
         new String[] {"-lp", pid},
         new ProcessOutputProcessor() {
@@ -430,13 +433,14 @@ public class BTraceFunctionalTests extends RuntimeTest {
     assertTrue(found[0]);
 
     found[0] = false;
+    System.out.println("===> btrace -r");
     runBTrace(
         new String[] {"-r", probeId[0], "exit", pid},
         new ProcessOutputProcessor() {
           @Override
           public boolean onStdout(int lineno, String line) {
-            System.out.println("===> " + line);
-            if (lineno > 3) {
+            System.out.println("[btrace #" + lineno + "] " + line);
+            if (lineno > 1000) {
               return false;
             }
             if (line.contains(probeId[0])) {

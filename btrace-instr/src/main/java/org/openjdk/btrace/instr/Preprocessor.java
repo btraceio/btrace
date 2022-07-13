@@ -186,16 +186,11 @@ final class Preprocessor {
   private final Map<String, AnnotationNode> eventFlds = new HashMap<>();
   private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
   private final Map<String, Integer> serviceLocals = new HashMap<>();
-  private final DebugSupport debug;
   private MethodNode clinit = null;
   private FieldNode rtField = null;
 
   private final Map<MethodNode, EnumSet<MethodClassifier>> classifierMap = new HashMap<>();
   private AbstractInsnNode clinitEntryPoint;
-
-  public Preprocessor(DebugSupport debug) {
-    this.debug = debug;
-  }
 
   public static AnnotationNode getAnnotation(FieldNode fn, Type annotation) {
     if (fn == null || (fn.visibleAnnotations == null && fn.invisibleAnnotations == null))

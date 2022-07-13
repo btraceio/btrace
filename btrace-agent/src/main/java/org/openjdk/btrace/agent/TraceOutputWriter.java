@@ -31,8 +31,9 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.SharedSettings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class represents various strategies available for dumping BTrace output to a file.
@@ -40,23 +41,20 @@ import org.openjdk.btrace.core.SharedSettings;
  * @author Jaroslav Bachorik
  */
 abstract class TraceOutputWriter extends Writer {
-  protected final DebugSupport debug;
+  private static final Logger log = LoggerFactory.getLogger(TraceOutputWriter.class);
 
-  protected TraceOutputWriter(SharedSettings settings) {
-    debug = new DebugSupport(settings);
-  }
+  protected TraceOutputWriter() {}
 
   /**
    * Plain file writer - all output will go to one specified file
    *
    * @param output The file to put the output to
-   * @param settings The settings storage
    * @return Returns an appropriate {@linkplain TraceOutputWriter} instance or NULL
    */
-  public static TraceOutputWriter fileWriter(File output, SharedSettings settings) {
+  public static TraceOutputWriter fileWriter(File output) {
     TraceOutputWriter instance = null;
     try {
-      instance = new SimpleFileOutput(output, settings);
+      instance = new SimpleFileWriter(output);
     } catch (IOException e) {
       // ignore
     }
@@ -95,12 +93,13 @@ abstract class TraceOutputWriter extends Writer {
     }
   }
 
-  private static class SimpleFileOutput extends TraceOutputWriter {
+  private static class SimpleFileWriter extends TraceOutputWriter {
+    private static final Logger log = LoggerFactory.getLogger(SimpleFileWriter.class);
+
     private final FileWriter delegate;
 
     @SuppressWarnings("DefaultCharset")
-    public SimpleFileOutput(File output, SharedSettings settings) throws IOException {
-      super(settings);
+    public SimpleFileWriter(File output) throws IOException {
       try {
         File parent = output.getParentFile();
         if (parent != null) {
@@ -108,7 +107,7 @@ abstract class TraceOutputWriter extends Writer {
         }
         delegate = new FileWriter(output);
       } catch (IOException e) {
-        debug.debug(e);
+        log.debug("Failed to create file output {}", output.getName(), e);
         throw e;
       }
     }
@@ -131,6 +130,7 @@ abstract class TraceOutputWriter extends Writer {
 
   @SuppressWarnings("DefaultCharset")
   private abstract static class RollingFileWriter extends TraceOutputWriter {
+    private static final Logger log = LoggerFactory.getLogger(RollingFileWriter.class);
     protected final SharedSettings settings;
     private final ReentrantReadWriteLock writerLock = new ReentrantReadWriteLock();
     private final String path, baseName;
@@ -139,7 +139,6 @@ abstract class TraceOutputWriter extends Writer {
     private int counter = 1;
 
     public RollingFileWriter(File output, SharedSettings settings) throws IOException {
-      super(settings);
       try {
         output.getParentFile().mkdirs();
         currentFileWriter = new FileWriter(output);
@@ -147,7 +146,7 @@ abstract class TraceOutputWriter extends Writer {
         baseName = output.getName();
         this.settings = settings;
       } catch (IOException e) {
-        debug.debug(e);
+        log.debug("Failed to create rolling file output {}", output.getName(), e);
         throw e;
       }
     }
@@ -191,7 +190,7 @@ abstract class TraceOutputWriter extends Writer {
         writerLock.writeLock().lock();
         currentFileWriter = getNextWriter();
       } catch (IOException e) {
-        debug.debug(e);
+        log.debug("Failed to roll over", e);
       } finally {
         writerLock.writeLock().unlock();
       }

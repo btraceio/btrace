@@ -35,7 +35,8 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.helpers.DefaultValidationEventHandler;
-import org.openjdk.btrace.core.DebugSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class loads BTrace probe descriptor XML files and caches the probe descriptions in a map.
@@ -44,6 +45,8 @@ import org.openjdk.btrace.core.DebugSupport;
  * @author A. Sundararajan
  */
 final class ProbeDescriptorLoader {
+  private static final Logger log = LoggerFactory.getLogger(ProbeDescriptorLoader.class);
+
   // cache for loaded probe descriptors
   private static final Map<String, ProbeDescriptor> probeDescMap;
 
@@ -53,30 +56,34 @@ final class ProbeDescriptorLoader {
 
   // directories to search probe descriptor XML files.
   private final String[] probeDescDirs;
-  private final DebugSupport debug;
 
-  ProbeDescriptorLoader(String probeDescPath, DebugSupport ds) {
+  ProbeDescriptorLoader(String probeDescPath) {
     // split probe descriptor path into directories
     probeDescDirs = probeDescPath != null ? probeDescPath.split(File.pathSeparator) : null;
-    debug = ds;
   }
 
   ProbeDescriptor load(String namespace) {
     // check in the cache
     ProbeDescriptor res = probeDescMap.get(namespace);
     if (res != null) {
-      if (debug.isDebug()) debug.debug("probe descriptor cache hit for " + namespace);
+      if (log.isDebugEnabled()) {
+        log.debug("probe descriptor cache hit for namespace {}", namespace);
+      }
       return res;
     } else {
       // load probe descriptor for the given namespace
       InputStream file = openDescriptor(namespace);
       if (file == null) {
-        if (debug.isDebug()) debug.debug("didn't find probe descriptor file " + namespace);
+        if (log.isDebugEnabled()) {
+          log.debug("didn't find probe descriptor file for namespace {}", namespace);
+        }
         return null;
       }
       ProbeDescriptor pd = load(file);
       if (pd != null) {
-        if (debug.isDebug()) debug.debug("read probe descriptor for " + namespace);
+        if (log.isDebugEnabled()) {
+          log.debug("read probe descriptor for namespace {}", namespace);
+        }
         probeDescMap.put(namespace, pd);
       }
       return pd;
@@ -94,7 +101,7 @@ final class ProbeDescriptorLoader {
       pd.setProbes(pd.getProbes());
       return pd;
     } catch (JAXBException exp) {
-      if (debug.isDebug()) debug.debug(exp);
+      log.debug("Failed to load a BTrace probe descriptor", exp);
       return null;
     }
   }
@@ -108,7 +115,9 @@ final class ProbeDescriptorLoader {
     if (is == null) {
       is = openDescriptorFromClassPath(namespace);
     }
-    if (is == null && debug.isDebug()) debug.debug("no probe descriptor found for " + namespace);
+    if (is == null && log.isDebugEnabled()) {
+      log.debug("no probe descriptor found for namespace {}", namespace);
+    }
     return is;
   }
 
@@ -116,17 +125,13 @@ final class ProbeDescriptorLoader {
     String desc = namespace.trim() + ".xml";
     for (String dir : probeDescDirs) {
       File f = new File(dir.trim(), desc);
-      if (debug.isDebug())
-        debug.debug(
-            "looking for probe descriptor file '"
-                + f.getPath()
-                + "' ("
-                + f.exists()
-                + ", "
-                + f.isFile()
-                + ")");
+      if (log.isDebugEnabled())
+        log.debug(
+            "looking for probe descriptor file '{}' ({}, {})", f.getPath(), f.exists(), f.isFile());
       if (f.exists() && f.isFile()) {
-        if (debug.isDebug()) debug.debug("probe descriptor for " + namespace + " is " + f);
+        if (log.isDebugEnabled()) {
+          log.debug("probe descriptor for namespace {} is {}", namespace, f);
+        }
         try {
           return new FileInputStream(f);
         } catch (FileNotFoundException e) {
@@ -139,7 +144,9 @@ final class ProbeDescriptorLoader {
 
   private InputStream openDescriptorFromClassPath(String namespace) {
     String target = Constants.EMBEDDED_BTRACE_SECTION_HEADER + namespace.trim() + ".xml";
-    if (debug.isDebug()) debug.debug("looking for probe descriptor file '" + target);
+    if (log.isDebugEnabled()) {
+      log.debug("looking for probe descriptor file '{}'", target);
+    }
     return ClassLoader.getSystemResourceAsStream(target);
   }
 }

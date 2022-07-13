@@ -80,7 +80,6 @@ import org.jctools.queues.MpscChunkedArrayQueue;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.Profiler;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.CommandListener;
@@ -95,6 +94,8 @@ import org.openjdk.btrace.core.handlers.LowMemoryHandler;
 import org.openjdk.btrace.core.handlers.TimerHandler;
 import org.openjdk.btrace.runtime.profiling.MethodInvocationProfiler;
 import org.openjdk.btrace.services.api.RuntimeContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class form multiple Java version specific implementation.
@@ -109,6 +110,8 @@ import org.openjdk.btrace.services.api.RuntimeContext;
  */
 @SuppressWarnings("unchecked")
 public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, RuntimeContext {
+  private static final Logger log = LoggerFactory.getLogger(BTraceRuntimeImplBase.class);
+
   private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
 
   private static final int CMD_QUEUE_LIMIT_DEFAULT = 100;
@@ -229,9 +232,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   private static volatile OperatingSystemMXBean operatingSystemMXBean;
 
   // Per-client state starts here.
-
-  protected final DebugSupport debug;
-
   // current thread's exception
   private final ThreadLocal<Throwable> currentException = new ThreadLocal<>();
 
@@ -395,7 +395,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   BTraceRuntimeImplBase() {
-    debug = new DebugSupport(null);
     args = null;
     queue = null;
     specQueueManager = null;
@@ -404,17 +403,12 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   BTraceRuntimeImplBase(
-      String className,
-      ArgsMap args,
-      CommandListener cmdListener,
-      DebugSupport ds,
-      Instrumentation inst) {
+      String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
     this.args = args;
     queue = new MpscChunkedArrayQueue<>(CMD_QUEUE_LIMIT);
     specQueueManager = new SpeculativeQueueManager();
     this.className = className;
     instrumentation = inst;
-    debug = ds != null ? ds : new DebugSupport(null);
 
     BTraceRuntimeAccess.addRuntime(className, this);
 
@@ -436,11 +430,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     cmdThread.start();
   }
 
-  @Override
-  public final void debugPrint(String msg) {
-    debug.debug(msg);
-  }
-
   protected final String getClassName() {
     return className;
   }
@@ -452,14 +441,16 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     } else {
       try {
         CMD_QUEUE_LIMIT = Integer.parseInt(maxQLen);
-        BTraceRuntimeAccess.debugPrint0("The cmd queue limit set to " + CMD_QUEUE_LIMIT);
+        if (log.isDebugEnabled()) {
+          log.debug("The cmd queue limit set to {}", CMD_QUEUE_LIMIT);
+        }
       } catch (NumberFormatException e) {
-        warning(
-            "\""
-                + maxQLen
-                + "\" is not a valid int number. "
-                + "Using the default cmd queue limit of "
-                + CMD_QUEUE_LIMIT_DEFAULT);
+        if (log.isDebugEnabled()) {
+          log.debug(
+              "\"{}\" is not a valid int number. " + "Using the default cmd queue limit of {}",
+              maxQLen,
+              CMD_QUEUE_LIMIT_DEFAULT);
+        }
         CMD_QUEUE_LIMIT = CMD_QUEUE_LIMIT_DEFAULT;
       }
     }
@@ -472,14 +463,18 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
       ErrorHandler[] errHandlers,
       ExitHandler[] eHandlers,
       LowMemoryHandler[] lmHandlers) {
-    debugPrint("init: clazz = " + clazz + ", cl = " + cl);
+    if (log.isDebugEnabled()) {
+      log.debug("init: clazz = {}, cl = {}", clazz, cl);
+    }
     if (clazz != null) {
       return;
     }
 
     clazz = cl;
 
-    debugPrint("init: timerHandlers = " + Arrays.deepToString(tHandlers));
+    if (log.isDebugEnabled()) {
+      log.debug("init: timerHandlers = {}", Arrays.deepToString(tHandlers));
+    }
     timerHandlers = tHandlers;
     eventHandlers = evHandlers;
     errorHandlers = errHandlers;
@@ -494,7 +489,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
         level.set(null, levelVal);
       }
     } catch (Throwable e) {
-      debugPrint("Instrumentation level setting not available");
+      log.debug("Instrumentation level setting not available", e);
     }
 
     BTraceMBean.registerMBean(clazz);
@@ -870,7 +865,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
         }
 
         if (btracePkg == null) {
-          warning("cannot load libbtrace.so, will miss DTrace probes from BTrace");
+          log.debug("cannot load libbtrace.so, will miss DTrace probes from BTrace");
           return;
         }
 
@@ -901,18 +896,10 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
           System.load(path);
           dtraceEnabled = true;
         } catch (LinkageError le1) {
-          warning("cannot load libbtrace.so, will miss DTrace probes from BTrace");
+          log.debug("cannot load libbtrace.so, will miss DTrace probes from BTrace");
         }
       }
     }
-  }
-
-  private static void warning(String msg) {
-    DebugSupport.warning(msg);
-  }
-
-  private static void warning(Throwable t) {
-    DebugSupport.warning(t);
   }
 
   private BTraceRuntimeImplBase getCurrent() {
@@ -1106,11 +1093,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     buf.append(File.separatorChar);
     buf.append(name);
     return buf.toString();
-  }
-
-  @Override
-  public final void debugPrint(Throwable t) {
-    debug.debug(t);
   }
 
   private static void initMemoryPoolList() {

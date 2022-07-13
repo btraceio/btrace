@@ -68,11 +68,15 @@ import org.openjdk.btrace.core.types.AnyType;
 import org.openjdk.btrace.core.types.BTraceCollection;
 import org.openjdk.btrace.core.types.BTraceDeque;
 import org.openjdk.btrace.core.types.BTraceMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 import sun.security.action.GetPropertyAction;
 
 @SuppressWarnings("deprecation")
 public final class BTraceRuntime {
+  private static final Logger log = LoggerFactory.getLogger(BTraceRuntime.class);
+
   public static final String CMD_QUEUE_LIMIT_KEY = "org.openjdk.btrace.core.cmdQueueLimit";
   private static final boolean messageTimestamp = false;
   private static final String LINE_SEPARATOR;
@@ -135,7 +139,7 @@ public final class BTraceRuntime {
         unsafe = Unsafe.getUnsafe();
       }
     } catch (SecurityException e) {
-      DebugSupport.warning("Unable to initialize Unsafe. BTrace will not function properly");
+      log.warn("Unable to initialize Unsafe. BTrace will not function properly");
     }
     return unsafe;
   }
@@ -505,7 +509,7 @@ public final class BTraceRuntime {
       return target.isAssignableFrom(objClass);
     } catch (ClassNotFoundException e) {
       // non-existing class
-      getRt().debugPrint(e);
+      log.debug("Class {} can not be found by classloader {}", className, cl, e);
       return false;
     }
   }
@@ -1197,10 +1201,6 @@ public final class BTraceRuntime {
    * instrumentation, clients)
    */
   public interface Impl {
-    void debugPrint(Throwable t);
-
-    void debugPrint(String msg);
-
     void send(String msg);
 
     void send(Command cmd);

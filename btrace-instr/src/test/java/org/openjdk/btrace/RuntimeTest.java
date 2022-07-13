@@ -402,7 +402,12 @@ public abstract class RuntimeTest {
                 "-d",
                 "/tmp/btrace-test"));
     argVals.addAll(Arrays.asList(args));
-    if (Files.exists(Paths.get(System.getenv("TEST_JAVA_HOME"), "jmods"))) {
+    String testJavaHome = System.getenv("TEST_JAVA_HOME");
+    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
+    if (testJavaHome == null) {
+      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
+    }
+    if (Files.exists(Paths.get(testJavaHome, "jmods"))) {
       argVals.addAll(
           1,
           Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
@@ -452,14 +457,14 @@ public abstract class RuntimeTest {
                 BufferedReader br =
                     new BufferedReader(
                         new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
-                int lineno = 0;
+                int lineno = 1;
                 String line = null;
                 while ((line = br.readLine()) != null) {
-                  if (debugBTrace && line.contains("DEBUG:")) {
-                    continue;
-                  }
-                  if (!outputProcessor.onStdout(++lineno, line)) {
+                  if (!outputProcessor.onStdout(lineno, line)) {
                     return;
+                  }
+                  if (!(debugBTrace && line.contains("DEBUG"))) {
+                    lineno++;
                   }
                 }
               } catch (Exception e) {
@@ -637,9 +642,11 @@ public abstract class RuntimeTest {
                 "-d",
                 "/tmp/btrace-test",
                 "-pd",
-                traceFile.getParentFile().getAbsolutePath(),
-                pid,
-                traceFile.getAbsolutePath()));
+                traceFile.getParentFile().getAbsolutePath()));
+    if (debugBTrace) {
+      argVals.add("-v");
+    }
+    argVals.addAll(Arrays.asList(pid, traceFile.getAbsolutePath()));
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }
@@ -706,7 +713,7 @@ public abstract class RuntimeTest {
                 while ((line = br.readLine()) != null) {
                   stdout.append(line).append('\n');
                   System.out.println("[btrace out] " + line);
-                  if (!(debugBTrace && line.contains("DEBUG:"))) {
+                  if (!(debugBTrace && line.contains("DEBUG"))) {
                     l.countDown();
                   }
                 }

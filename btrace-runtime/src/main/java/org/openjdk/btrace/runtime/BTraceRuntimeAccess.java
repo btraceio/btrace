@@ -34,7 +34,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.handlers.ErrorHandler;
 import org.openjdk.btrace.core.handlers.EventHandler;
@@ -43,6 +42,8 @@ import org.openjdk.btrace.core.handlers.LowMemoryHandler;
 import org.openjdk.btrace.core.handlers.TimerHandler;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 import org.openjdk.btrace.services.api.RuntimeContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class form multiple Java version specific implementation.
@@ -56,6 +57,8 @@ import org.openjdk.btrace.services.api.RuntimeContext;
  * @author KLynch
  */
 public abstract class BTraceRuntimeAccess implements RuntimeContext {
+  private static final Logger log = LoggerFactory.getLogger(BTraceRuntimeAccess.class);
+
   static final class RTWrapper {
     private BTraceRuntime.Impl rt = null;
 
@@ -247,24 +250,7 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
         | IllegalArgumentException
         | NoSuchFieldException
         | SecurityException e) {
-      DebugSupport.warning(e);
+      log.warn("Failed to register runtime accessor", e);
     }
-  }
-
-  static void debugPrint0(String msg) {
-    BTraceRuntimeImplBase rt = getCurrent();
-    if (rt != null) {
-      rt.debugPrint(msg);
-    } else {
-      DebugSupport.info(msg);
-    }
-  }
-
-  private static void warning(String msg) {
-    DebugSupport.warning(msg);
-  }
-
-  private static void warning(Throwable t) {
-    DebugSupport.warning(t);
   }
 }

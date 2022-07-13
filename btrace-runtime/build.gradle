@@ -62,6 +62,9 @@ dependencies {
         builtBy compileJava
     }
 
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
+
     // https://mvnrepository.com/artifact/org.jctools/jctools-core
     implementation(group: 'org.jctools', name: 'jctools-core', version: '3.3.0')
 
