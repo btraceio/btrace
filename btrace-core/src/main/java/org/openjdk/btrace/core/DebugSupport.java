@@ -80,6 +80,10 @@ public final class DebugSupport {
     return settings.isDumpClasses();
   }
 
+  public String getDumpClassDir() {
+    return settings.getDumpDir();
+  }
+
   public void dumpClass(String className, byte[] code) {
     if (settings.isDumpClasses()) {
       try {
