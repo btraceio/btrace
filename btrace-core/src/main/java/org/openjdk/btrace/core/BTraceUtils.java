@@ -72,7 +72,6 @@ public class BTraceUtils {
 
   static {
     BTraceRuntime.initUnsafe();
-    log.info("BTraceUtils initialized");
   }
 
   // do not allow object creation!
