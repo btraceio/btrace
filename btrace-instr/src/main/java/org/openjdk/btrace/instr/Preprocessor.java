@@ -238,6 +238,12 @@ final class Preprocessor {
       preprocessMethod(cn, mn);
     }
 
+    InsnList eventsInit = initJfrEventFields(cn);
+    clinit.instructions.insertBefore(clinitEntryPoint, eventsInit);
+  }
+
+  @SuppressWarnings("unchecked")
+  private InsnList initJfrEventFields(ClassNode cn) {
     InsnList eventsInit = new InsnList();
     for (Map.Entry<String, AnnotationNode> eventEntry : eventFlds.entrySet()) {
       String fieldName = eventEntry.getKey();
@@ -274,12 +280,12 @@ final class Preprocessor {
             }
           case "category":
             {
-              categoryLoad = loadCategory((List<String>) value);
+              categoryLoad = loadEventCategory((List<String>) value);
               break;
             }
           case "fields":
             {
-              fieldsInit = loadFieldsDefs((List<AnnotationNode>) value);
+              fieldsInit = loadEventFieldsDefs((List<AnnotationNode>) value);
               break;
             }
           case "stacktrace":
@@ -342,10 +348,10 @@ final class Preprocessor {
               eventEntry.getKey(),
               "Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;"));
     }
-    clinit.instructions.insertBefore(clinitEntryPoint, eventsInit);
+    return eventsInit;
   }
 
-  private InsnList loadCategory(List<String> values) {
+  private InsnList loadEventCategory(List<String> values) {
     if (values == null) {
       return null;
     }
@@ -363,7 +369,7 @@ final class Preprocessor {
     return insn;
   }
 
-  private InsnList loadFieldsDefs(List<AnnotationNode> fieldsDef) {
+  private InsnList loadEventFieldsDefs(List<AnnotationNode> fieldsDef) {
     InsnList insn = new InsnList();
     insn.add(new LdcInsnNode(fieldsDef.size()));
     insn.add(new TypeInsnNode(Opcodes.ANEWARRAY, JFR_EVENT_TEMPLATE_FIELD_INTERNAL));
@@ -371,13 +377,13 @@ final class Preprocessor {
     for (AnnotationNode fieldDef : fieldsDef) {
       insn.add(new InsnNode(Opcodes.DUP));
       insn.add(new LdcInsnNode(cntr++));
-      insn.add(loadFieldDef(fieldDef));
+      insn.add(loadEventFieldDef(fieldDef));
       insn.add(new InsnNode(Opcodes.AASTORE));
     }
     return insn;
   }
 
-  private InsnList loadFieldDef(AnnotationNode fieldDef) {
+  private InsnList loadEventFieldDef(AnnotationNode fieldDef) {
     InsnList insn = new InsnList();
     Iterator<Object> iter = fieldDef.values.iterator();
     String name = null;
