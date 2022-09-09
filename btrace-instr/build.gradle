@@ -31,7 +31,7 @@ dependencies {
     implementation project(':btrace-statsd')
 
     // https://mvnrepository.com/artifact/org.jctools/jctools-core
-    implementation(group: 'org.jctools', name: 'jctools-core', version: '3.3.0')
+    implementation(group: 'org.jctools', name: 'jctools-core', version: '4.0.1')
 
     testImplementation project(':btrace-client')
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
