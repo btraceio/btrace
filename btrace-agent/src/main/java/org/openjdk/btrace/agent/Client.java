@@ -150,7 +150,7 @@ abstract class Client implements CommandListener {
     if (outputFile == null || outputFile.equals("::null") || outputFile.equals("/dev/null")) return;
 
     if (!outputFile.equals("::stdout")) {
-      String outputDir = settings.getOutputDir();
+      String outputDir = settings.getScriptOutputDir();
       String output = (outputDir != null ? outputDir + File.separator : "") + outputFile;
       outputFile = templateOutputFileName(output);
       log.info("Redirecting output to {}", outputFile);

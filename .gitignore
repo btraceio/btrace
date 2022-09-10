@@ -39,3 +39,4 @@ gradle.properties
 gradle-wrapper.properties
 
 /.java.versions
+.DS_Store

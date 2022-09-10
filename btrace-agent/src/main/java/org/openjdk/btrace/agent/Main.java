@@ -39,8 +39,9 @@ import static org.openjdk.btrace.core.Args.NO_SERVER;
 import static org.openjdk.btrace.core.Args.PORT;
 import static org.openjdk.btrace.core.Args.PROBE_DESC_PATH;
 import static org.openjdk.btrace.core.Args.SCRIPT;
-import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_DIR;
+import static org.openjdk.btrace.core.Args.SCRIPT_DIR;
 import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_FILE;
+import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_DIR;
 import static org.openjdk.btrace.core.Args.STARTUP_RETRANSFORM;
 import static org.openjdk.btrace.core.Args.STATSD;
 import static org.openjdk.btrace.core.Args.STDOUT;
@@ -184,7 +185,7 @@ public final class Main {
 
   private static boolean hasScripts() {
     return argMap.containsKey(SCRIPT)
-        || argMap.containsKey(SCRIPT_OUTPUT_DIR)
+        || argMap.containsKey(SCRIPT_DIR)
         || argMap.containsKey(SCRIPT_OUTPUT_FILE);
   }
 
@@ -321,7 +322,7 @@ public final class Main {
     }
 
     String script = argMap.get(SCRIPT);
-    String scriptDir = argMap.get(SCRIPT_OUTPUT_DIR);
+    String scriptDir = argMap.get(SCRIPT_DIR);
 
     if (script != null) {
       StringTokenizer tokenizer = new StringTokenizer(script, ":");
@@ -453,11 +454,19 @@ public final class Main {
             }
             break;
           }
-        case SCRIPT_OUTPUT_DIR:
+          case SCRIPT_OUTPUT_DIR:
+          {
+            if (!p.isEmpty()) {
+              settings.setScriptOutputDir(p);
+              log.debug(SCRIPT_OUTPUT_DIR + " is {}", p);
+            }
+            break;
+          }
+        case SCRIPT_DIR:
           {
             if (!p.isEmpty()) {
               settings.setOutputDir(p);
-              log.debug(SCRIPT_OUTPUT_DIR + " is {}", p);
+              log.debug(SCRIPT_DIR + " is {}", p);
             }
             break;
           }

@@ -12,7 +12,8 @@ public final class Args {
   public static final String CMD_QUEUE_LIMIT = "cmdQueueLimit";
   public static final String TRACK_RETRANSFORMS = "trackRetransforms";
   public static final String SCRIPT_OUTPUT_FILE = "scriptOutputFile";
-  public static final String SCRIPT_OUTPUT_DIR = "scriptdir";
+  public static final String SCRIPT_OUTPUT_DIR = "scriptOutputDir";
+  public static final String SCRIPT_DIR = "scriptdir";
   public static final String FILE_ROLL_MILLISECONDS = "fileRollMilliseconds";
   public static final String FILE_ROLL_MAX_ROLLS = "fileRollMaxRolls";
   public static final String TRUSTED = "trusted";
