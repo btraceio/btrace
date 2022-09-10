@@ -750,6 +750,10 @@ public final class Main {
   }
 
   private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
+    if (!filePath.endsWith(".class")) {
+      return false;
+    }
+
     try {
       String scriptName = "";
       String scriptParent = "";
