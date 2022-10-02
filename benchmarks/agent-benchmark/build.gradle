@@ -1,6 +1,6 @@
 plugins {
   id 'java'
-  id("me.champeau.jmh") version "0.6.6"
+  id("me.champeau.jmh") version "0.6.8"
 }
 
 description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
