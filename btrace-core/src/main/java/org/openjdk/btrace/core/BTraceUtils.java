@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -3040,6 +3041,21 @@ public class BTraceUtils {
                 field.setAccessible(true);
                 return field;
               } catch (Exception exp) {
+                if(exp instanceof NoSuchFieldException) {
+                  Class superClass = clazz.getSuperclass();
+                  Field field = null;
+                  while (Objects.isNull(field) && Objects.nonNull(superClass)) {
+                    try {
+                      field = superClass.getDeclaredField(name);
+                    } catch (NoSuchFieldException e) {
+                      throw new RuntimeException(e);
+                    }
+                  }
+                  if (Objects.nonNull(field)) {
+                    field.setAccessible(true);
+                    return field;
+                  }
+                }
                 if (throwError) {
                   throw translate(exp);
                 } else {
