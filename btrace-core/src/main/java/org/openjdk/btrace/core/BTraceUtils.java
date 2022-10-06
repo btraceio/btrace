@@ -3048,7 +3048,7 @@ public class BTraceUtils {
                     try {
                       field = superClass.getDeclaredField(name);
                     } catch (NoSuchFieldException e) {
-                      throw new RuntimeException(e);
+                      // Ignore exception and keep looking up
                     }
                   }
                   if (Objects.nonNull(field)) {
