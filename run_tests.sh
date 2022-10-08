@@ -14,5 +14,5 @@ for VERSION in 8 11 17 18 19 20; do
     continue
   fi
   echo "Running tests with TEST_JAVA_HOME=${!home_string}"
-  TEST_JAVA_HOME=${!home_string} BTRACE_TEST_DEBUG="true" ./gradlew test | tee -a build/reports/test_java_$VERSION.out  || true
+  TEST_JAVA_HOME=${!home_string} BTRACE_TEST_DEBUG="false" ./gradlew test | tee -a build/reports/test_java_$VERSION.out  || true
 done
