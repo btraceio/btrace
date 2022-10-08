@@ -441,7 +441,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           @Override
           public boolean onStdout(int lineno, String line) {
             System.out.println("[btrace #" + lineno + "] " + line);
-            if (lineno > 1000) {
+            if (lineno > 100) {
               return false;
             }
             if (line.contains(probeId[0])) {

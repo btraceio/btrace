@@ -63,7 +63,8 @@ public final class HandlerRepositoryImpl {
 
     if (debugSupport.isDumpClasses()) {
       try {
-        String handlerPath = debugSupport.getDumpClassDir() + "/" + handlerClassName.replace('/', '_') + ".class";
+        String handlerPath =
+            debugSupport.getDumpClassDir() + "/" + handlerClassName.replace('/', '_') + ".class";
         log.debug("BTrace INDY handler dumped: {}", handlerPath);
         Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
       } catch (IOException e) {

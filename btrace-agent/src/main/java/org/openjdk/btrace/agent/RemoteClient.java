@@ -114,7 +114,9 @@ class RemoteClient extends Client {
         case Command.RECONNECT:
           {
             String probeId = ((ReconnectCommand) cmd).getProbeId();
+            log.debug("Attempting to reconnect client for probe {}", probeId);
             Client client = Client.findClient(probeId);
+            log.debug("Found client {}", client);
             if (client instanceof RemoteClient) {
               ((RemoteClient) client).reconnect(ois, oos, sock);
               client.sendCommand(new StatusCommand(ReconnectCommand.STATUS_FLAG));
@@ -237,7 +239,9 @@ class RemoteClient extends Client {
     try {
       boolean isConnected = true;
       try {
-        output.reset();
+        synchronized (output) {
+          output.reset();
+        }
       } catch (SocketException e) {
         isConnected = false;
       }
@@ -285,9 +289,11 @@ class RemoteClient extends Client {
           {
             ((DisconnectCommand) cmd).setProbeId(id.toString());
             if (output != null) {
-              WireIO.write(output, cmd);
-              output.flush();
-              output.close();
+              synchronized (output) {
+                WireIO.write(output, cmd);
+                output.flush();
+                output.close();
+              }
               oosUpdater.compareAndSet(this, output, null);
             }
             if (input != null) {
@@ -327,7 +333,9 @@ class RemoteClient extends Client {
 
     ObjectOutputStream output = oos;
     if (output != null) {
-      output.close();
+      synchronized (output) {
+        output.close();
+      }
       oosUpdater.compareAndSet(this, output, null);
     }
     ObjectInputStream input = ois;

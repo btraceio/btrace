@@ -438,10 +438,10 @@ public class Client {
         System.exit(1);
       }
       oos = new ObjectOutputStream(sock.getOutputStream());
-      log.debug("reconnecting client");
-      WireIO.write(oos, new ReconnectCommand(resumeProbe));
-
       ois = new ObjectInputStream(sock.getInputStream());
+
+      log.debug("reconnecting client {}", resumeProbe);
+      WireIO.write(oos, new ReconnectCommand(resumeProbe));
 
       log.debug("entering into command loop");
       commandLoop(

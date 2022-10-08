@@ -45,16 +45,19 @@ abstract public class TestApp implements TestPrinter {
         t.setDaemon(true);
         t.start();
 
-        String resp = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)).readLine();
-        System.out.println("Received " + resp + " - " + "done".equals(resp));
-        if ("done".equals(resp)) {
-            System.out.flush();
-            System.out.println(System.currentTimeMillis() + ":  Interrupting the worker thread");
-            t.interrupt();
-            System.out.println(System.currentTimeMillis() + ": Waiting for the worker thread to finish");
-            t.join();
-            System.out.println(System.currentTimeMillis() + ": Worker thread finished");
-        }
+        do {
+            String resp = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)).readLine();
+            System.out.println("Received " + resp + " - " + "done".contains(resp));
+            if ("done".contains(resp)) {
+                System.out.flush();
+                System.out.println(System.currentTimeMillis() + ":  Interrupting the worker thread");
+                t.interrupt();
+                System.out.println(System.currentTimeMillis() + ": Waiting for the worker thread to finish");
+                t.join();
+                System.out.println(System.currentTimeMillis() + ": Worker thread finished");
+                break;
+            }
+        } while (true);
     }
 
     private static long getPID() {
