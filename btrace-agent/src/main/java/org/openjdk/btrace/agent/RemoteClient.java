@@ -114,7 +114,9 @@ class RemoteClient extends Client {
         case Command.RECONNECT:
           {
             String probeId = ((ReconnectCommand) cmd).getProbeId();
+            log.debug("Attempting to reconnect client for probe {}", probeId);
             Client client = Client.findClient(probeId);
+            log.debug("Found client {}", client);
             if (client instanceof RemoteClient) {
               ((RemoteClient) client).reconnect(ois, oos, sock);
               client.sendCommand(new StatusCommand(ReconnectCommand.STATUS_FLAG));
