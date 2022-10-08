@@ -263,10 +263,23 @@ public abstract class RuntimeTest {
       Process client = attach(pid, testScript, cmdArgs, checkLines, stdout, stderr);
 
       System.out.println("Detached.");
-      pw.println("done");
-      pw.flush();
 
-      ret.set(client.waitFor());
+      int retries = 10;
+      boolean exitted = false;
+      while (!exitted && retries-- > 0) {
+        pw.println("done");
+        pw.flush();
+        exitted = client.waitFor(1, TimeUnit.SECONDS);
+        if (!exitted) {
+          System.out.println("... retrying ...");
+        }
+      }
+
+      if (!exitted) {
+        client.destroyForcibly();
+      }
+
+      ret.set(exitted ? client.exitValue() : -1);
 
       outT.join();
       errT.join();
