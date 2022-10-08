@@ -188,6 +188,7 @@ public abstract class RuntimeTest {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
       args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
     }
+    args.add("-Dbtrace.test=test");
     args.add(testApp);
 
     ProcessBuilder pb = new ProcessBuilder(args);

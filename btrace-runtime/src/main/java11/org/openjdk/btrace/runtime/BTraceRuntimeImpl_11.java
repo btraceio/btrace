@@ -100,7 +100,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
           Collections.emptySet(),
           Map.of(
               "jdk.internal.reflect", myModules,
-              "jdk.internal.perf", myModules),
+              "jdk.internal.perf", myModules,
+              "sun.security.action", myModules),
           Map.of("java.lang", myModules),
           Collections.emptySet(),
           Collections.emptyMap());

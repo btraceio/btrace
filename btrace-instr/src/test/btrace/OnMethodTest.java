@@ -56,6 +56,7 @@ public class OnMethodTest {
         dump(var + " [this, noargs]");
         dump("{" + get("id", self) + "}");
         var = "A";
+        println("prop: " + property("btrace.test"));
     }
 
     @OnMethod(clazz = "resources.Main", method = "callB")
@@ -64,6 +65,7 @@ public class OnMethodTest {
         ex--;
         dump(var + " [this, args]");
         var = "B";
+        println("prop: " + property("btrace.test"));
     }
 
     @OnTimer(500)
