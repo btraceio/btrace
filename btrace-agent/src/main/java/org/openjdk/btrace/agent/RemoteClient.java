@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author A. Sundararajan
  */
-@SuppressWarnings("SynchronizeOnNonFinalField")
+@SuppressWarnings({"SynchronizeOnNonFinalField", "SynchronizationOnLocalVariableOrMethodParameter"})
 class RemoteClient extends Client {
   private static final Logger log = LoggerFactory.getLogger(RemoteClient.class);
 
@@ -288,14 +288,12 @@ class RemoteClient extends Client {
         case Command.DISCONNECT:
           {
             ((DisconnectCommand) cmd).setProbeId(id.toString());
-            if (output != null) {
-              synchronized (output) {
-                WireIO.write(output, cmd);
-                output.flush();
-                output.close();
-              }
-              oosUpdater.compareAndSet(this, output, null);
+            synchronized (output) {
+              WireIO.write(output, cmd);
+              output.flush();
+              output.close();
             }
+            oosUpdater.compareAndSet(this, output, null);
             if (input != null) {
               input.close();
               oisUpdater.compareAndSet(this, input, null);
