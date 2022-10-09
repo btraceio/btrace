@@ -3036,26 +3036,26 @@ public class BTraceUtils {
     return AccessController.doPrivileged(
         (PrivilegedAction<Field>)
             () -> {
+              Field field = null;
+              Class<?> cClass = clazz;
               try {
-                Field field = clazz.getDeclaredField(name);
-                field.setAccessible(true);
-                return field;
-              } catch (Exception exp) {
-                if(exp instanceof NoSuchFieldException) {
-                  Class superClass = clazz.getSuperclass();
-                  Field field = null;
-                  while (Objects.isNull(field) && Objects.nonNull(superClass)) {
-                    try {
-                      field = superClass.getDeclaredField(name);
-                    } catch (NoSuchFieldException e) {
-                      // Ignore exception and keep looking up
-                    }
-                  }
-                  if (Objects.nonNull(field)) {
-                    field.setAccessible(true);
-                    return field;
+                while (Objects.isNull(field) && Objects.nonNull(cClass)) {
+                  try {
+                    field = cClass.getDeclaredField(name);
+                  } catch (NoSuchFieldException exp) {
+                    // Ignore the exception and continue looking for the parent class
+                    cClass = cClass.getSuperclass();
                   }
                 }
+
+                if (Objects.isNull(cClass)) {
+                  throw new NoSuchFieldException(name);
+                }
+
+                field.setAccessible(true);
+
+                return field;
+              } catch (Exception exp) {
                 if (throwError) {
                   throw translate(exp);
                 } else {
