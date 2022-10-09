@@ -54,6 +54,8 @@ jobs:
       uses: actions/checkout@v3
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
     - name: Build
       run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build -x test
     - name: Run Tests

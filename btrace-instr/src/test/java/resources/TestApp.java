@@ -53,7 +53,11 @@ abstract public class TestApp implements TestPrinter {
                 System.out.println(System.currentTimeMillis() + ":  Interrupting the worker thread");
                 t.interrupt();
                 System.out.println(System.currentTimeMillis() + ": Waiting for the worker thread to finish");
-                t.join();
+                t.join(1000);
+                if (t.isAlive()) {
+                    Thread.dumpStack();
+                    throw new RuntimeException("Dangling worker thread");
+                }
                 System.out.println(System.currentTimeMillis() + ": Worker thread finished");
                 break;
             }
