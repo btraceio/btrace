@@ -1,0 +1,61 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+
+apply plugin: 'java'
+
+sourceSets {
+    java11_dummy {
+        java {
+            srcDirs = ['src/main/java11_dummy']
+        }
+    }
+}
+
+dependencies {
+    testImplementation project(':btrace-instr')
+    testImplementation project(':btrace-dist')
+    testImplementation project(':btrace-client')
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.1")
+    testImplementation group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}"
+}
+
+compileJava11_dummyJava {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+    options.fork = true
+    options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
+    options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
+}
+
+compileTestJava {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+    options.fork = true
+    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
+}
+
+task buildEventsJar(type: Jar) {
+    inputs.files compileJava11_dummyJava
+    from files("${project.buildDir}/classes/java/java11_dummy")
+    archiveBaseName = "events"
+    archiveVersion = ""
+    archiveClassifier = ""
+}
+
+test {
+    onlyIf {
+        project.hasProperty("integration") &&
+        new File("${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/btrace-client.jar").exists()
+    }
+    dependsOn cleanTest, buildEventsJar
+
+    testLogging.showStandardStreams = true
+
+    def props = new Properties()
+    props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
+    if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
+        jvmArgs "-Dproject.version=${project.version}"
+    } else {
+        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+    }
+}
