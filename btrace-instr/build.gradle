@@ -11,7 +11,7 @@ buildscript {
 
 dependencies {
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '2.0.3'
     implementation group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}"
     implementation group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}"
     implementation group: 'com.google.auto.service', name: 'auto-service', version: '1.0.1'
