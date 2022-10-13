@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -3039,9 +3040,24 @@ public class BTraceUtils {
     return AccessController.doPrivileged(
         (PrivilegedAction<Field>)
             () -> {
+              Field field = null;
+              Class<?> cClass = clazz;
               try {
-                Field field = clazz.getDeclaredField(name);
+                while (Objects.isNull(field) && Objects.nonNull(cClass)) {
+                  try {
+                    field = cClass.getDeclaredField(name);
+                  } catch (NoSuchFieldException exp) {
+                    // Ignore the exception and continue looking for the parent class
+                    cClass = cClass.getSuperclass();
+                  }
+                }
+
+                if (Objects.isNull(cClass)) {
+                  throw new NoSuchFieldException(name);
+                }
+
                 field.setAccessible(true);
+
                 return field;
               } catch (Exception exp) {
                 if (throwError) {
