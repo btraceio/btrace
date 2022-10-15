@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +40,11 @@ public class InstrumentingMethodVisitorTest {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       LastVisitedFrame that = (LastVisitedFrame) o;
-      return type == that.type && nLocal == that.nLocal && nStack == that.nStack && Arrays.equals(local, that.local) && Arrays.equals(stack, that.stack);
+      return type == that.type
+          && nLocal == that.nLocal
+          && nStack == that.nStack
+          && Arrays.equals(local, that.local)
+          && Arrays.equals(stack, that.stack);
     }
 
     @Override
@@ -54,13 +57,18 @@ public class InstrumentingMethodVisitorTest {
 
     @Override
     public String toString() {
-      return "LastVisitedFrame{" +
-              "type=" + type +
-              ", nLocal=" + nLocal +
-              ", local=" + Arrays.toString(local) +
-              ", nStack=" + nStack +
-              ", stack=" + Arrays.toString(stack) +
-              '}';
+      return "LastVisitedFrame{"
+          + "type="
+          + type
+          + ", nLocal="
+          + nLocal
+          + ", local="
+          + Arrays.toString(local)
+          + ", nStack="
+          + nStack
+          + ", stack="
+          + Arrays.toString(stack)
+          + '}';
     }
   }
 
@@ -75,9 +83,13 @@ public class InstrumentingMethodVisitorTest {
         cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
     instance =
         new InstrumentingMethodVisitor(
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv, (type, nLocal, local, nStack, stack) -> {
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+            "test.Test",
+            "()V",
+            mv,
+            (type, nLocal, local, nStack, stack) -> {
               lastVisitedFrame = new LastVisitedFrame(type, nLocal, local, nStack, stack);
-        });
+            });
   }
 
   @AfterEach
@@ -1876,14 +1888,17 @@ public class InstrumentingMethodVisitorTest {
     instance.visitVarInsn(Opcodes.ASTORE, 2);
     instance.visitVarInsn(Opcodes.ALOAD, 2);
     instance.visitVarInsn(Opcodes.ILOAD, 1);
+    instance.visitJumpInsn(Opcodes.GOTO, l); // label needs to have jump target
     instance.visitLabel(l);
 
     instance.insertFrameReplaceStack(l, Type.getType(String.class), Type.FLOAT_TYPE);
-    LastVisitedFrame expected = new LastVisitedFrame(
+    LastVisitedFrame expected =
+        new LastVisitedFrame(
             Opcodes.F_NEW,
-            2, new Object[]{Opcodes.INTEGER, "java/lang/String"},
-            2, new Object[]{"java/lang/String", Opcodes.FLOAT}
-    );
+            2,
+            new Object[] {Opcodes.INTEGER, "java/lang/String"},
+            2,
+            new Object[] {"java/lang/String", Opcodes.FLOAT});
     assertEquals(expected, lastVisitedFrame);
   }
 
@@ -1896,14 +1911,17 @@ public class InstrumentingMethodVisitorTest {
     instance.visitVarInsn(Opcodes.ASTORE, 2);
     instance.visitVarInsn(Opcodes.ALOAD, 2);
     instance.visitVarInsn(Opcodes.ILOAD, 1);
+    instance.visitJumpInsn(Opcodes.GOTO, l); // label needs to have jump target
     instance.visitLabel(l);
 
     instance.insertFrameAppendStack(l, Type.FLOAT_TYPE);
-    LastVisitedFrame expected = new LastVisitedFrame(
+    LastVisitedFrame expected =
+        new LastVisitedFrame(
             Opcodes.F_NEW,
-            2, new Object[]{Opcodes.INTEGER, "java/lang/String"},
-            3, new Object[]{"java/lang/String", Opcodes.INTEGER, Opcodes.FLOAT}
-    );
+            2,
+            new Object[] {Opcodes.INTEGER, "java/lang/String"},
+            3,
+            new Object[] {"java/lang/String", Opcodes.INTEGER, Opcodes.FLOAT});
     assertEquals(expected, lastVisitedFrame);
   }
 
@@ -1916,14 +1934,17 @@ public class InstrumentingMethodVisitorTest {
     instance.visitVarInsn(Opcodes.ASTORE, 2);
     instance.visitVarInsn(Opcodes.ALOAD, 2);
     instance.visitVarInsn(Opcodes.ILOAD, 1);
+    instance.visitJumpInsn(Opcodes.GOTO, l); // label needs to have jump target
     instance.visitLabel(l);
 
     instance.insertFrameSameStack(l);
-    LastVisitedFrame expected = new LastVisitedFrame(
+    LastVisitedFrame expected =
+        new LastVisitedFrame(
             Opcodes.F_NEW,
-            2, new Object[]{Opcodes.INTEGER, "java/lang/String"},
-            2, new Object[]{"java/lang/String", Opcodes.INTEGER}
-    );
+            2,
+            new Object[] {Opcodes.INTEGER, "java/lang/String"},
+            2,
+            new Object[] {"java/lang/String", Opcodes.INTEGER});
     assertEquals(expected, lastVisitedFrame);
   }
 }

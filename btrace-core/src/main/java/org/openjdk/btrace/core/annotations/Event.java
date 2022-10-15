@@ -63,21 +63,37 @@ public @interface Event {
 
   /** Field kind */
   enum FieldKind {
-    /** @see jdk.jfr.Timestamp */
+    /**
+     * @see jdk.jfr.Timestamp
+     */
     TIMESTAMP,
-    /** @see jdk.jfr.Timespan */
+    /**
+     * @see jdk.jfr.Timespan
+     */
     TIMESPAN,
-    /** @see jdk.jfr.DataAmount */
+    /**
+     * @see jdk.jfr.DataAmount
+     */
     DATAAMOUNT,
-    /** @see jdk.jfr.Frequency */
+    /**
+     * @see jdk.jfr.Frequency
+     */
     FREQUENCY,
-    /** @see jdk.jfr.MemoryAddress */
+    /**
+     * @see jdk.jfr.MemoryAddress
+     */
     MEMORYADDRESS,
-    /** @see jdk.jfr.Percentage */
+    /**
+     * @see jdk.jfr.Percentage
+     */
     PERCENTAGE,
-    /** @see jdk.jfr.BooleanFlag */
+    /**
+     * @see jdk.jfr.BooleanFlag
+     */
     BOOLEANFLAG,
-    /** @see jdk.jfr.Unsigned */
+    /**
+     * @see jdk.jfr.Unsigned
+     */
     UNSIGNED,
     /** No additional field kind specification */
     NONE
@@ -92,19 +108,29 @@ public @interface Event {
       String value() default "";
     }
 
-    /** @return field type */
+    /**
+     * @return field type
+     */
     FieldType type();
 
-    /** @return field name */
+    /**
+     * @return field name
+     */
     String name();
 
-    /** @return field label */
+    /**
+     * @return field label
+     */
     String label() default "";
 
-    /** @return field description */
+    /**
+     * @return field description
+     */
     String description() default "";
 
-    /** @return additional field kind */
+    /**
+     * @return additional field kind
+     */
     Kind kind() default @Kind(name = FieldKind.NONE);
   }
 
