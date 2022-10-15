@@ -51,7 +51,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     implements MethodInstrumentorHelper {
   private static final Logger log = LoggerFactory.getLogger(InstrumentingMethodVisitor.class);
 
-  private static final Object TOP_EXT = -2;
+  static final Object TOP_EXT = -2;
   private final VariableMapper variableMapper;
   private final SimulatedStack stack = new SimulatedStack();
   private final List<Object> locals = new ArrayList<>();
@@ -60,16 +60,16 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   private final Set<Integer> frameOffsets = new HashSet<>();
   private final Map<Label, SavedState> jumpTargetStates = new HashMap<>();
   private final Map<Label, Set<Label>> tryCatchHandlerMap = new HashMap<>();
-  private final String owner, desc, name;
+  private final String owner;
+  private final String desc;
   private int argsSize = 0;
   private int localsTailPtr = 0;
   private int pc = 0, lastFramePc = Integer.MIN_VALUE;
 
   public InstrumentingMethodVisitor(
-      int access, String owner, String name, String desc, MethodVisitor mv) {
+          int access, String owner, String desc, MethodVisitor mv) {
     super(ASM7, mv);
     this.owner = owner;
-    this.name = name;
     this.desc = desc;
 
     initLocals((access & ACC_STATIC) == 0);
@@ -191,12 +191,13 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   }
 
   @Override
-  public void visitMultiANewArrayInsn(String type, int dims) {
+  public void visitMultiANewArrayInsn(String arrayTypeName, int dims) {
+    Type arrayType = Type.getObjectType(arrayTypeName);
     for (int i = 0; i < dims; i++) {
       stack.pop();
     }
-    stack.push(type);
-    super.visitMultiANewArrayInsn(type, dims);
+    stack.push(arrayType.getDescriptor());
+    super.visitMultiANewArrayInsn(arrayTypeName, dims);
     pc++;
   }
 
@@ -204,7 +205,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   public void visitLookupSwitchInsn(Label label, int[] ints, Label[] labels) {
     stack.pop();
     SavedState state =
-        new SavedState(variableMapper, localTypes, stack, newLocals, SavedState.CONDITIONAL);
+        new SavedState(localTypes, stack, newLocals, SavedState.CONDITIONAL);
     jumpTargetStates.put(label, state);
     for (Label l : labels) {
       jumpTargetStates.put(l, state);
@@ -217,7 +218,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   public void visitTableSwitchInsn(int i, int i1, Label label, Label... labels) {
     stack.pop();
     SavedState state =
-        new SavedState(variableMapper, localTypes, stack, newLocals, SavedState.CONDITIONAL);
+        new SavedState(localTypes, stack, newLocals, SavedState.CONDITIONAL);
     jumpTargetStates.put(label, state);
     for (Label l : labels) {
       jumpTargetStates.put(l, state);
@@ -313,8 +314,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     jumpTargetStates.put(
         label,
         new SavedState(
-            variableMapper,
-            localTypes,
+                localTypes,
             stack,
             newLocals,
             opcode == GOTO || opcode == JSR ? SavedState.UNCONDITIONAL : SavedState.CONDITIONAL));
@@ -397,8 +397,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       case ANEWARRAY:
         {
           stack.pop();
-
-          pushToStack(Type.getType("[L" + type + ";"));
+          Type elementType = type.endsWith(";") ? Type.getType(type) : Type.getObjectType(type);
+          Type arrayType = Type.getType("[" + elementType);
+          pushToStack(arrayType);
           break;
         }
       case INSTANCEOF:
@@ -621,7 +622,10 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
               if (typeStr.contains("/") && !typeStr.endsWith(";")) {
                 typeStr += ";";
               }
-              t = Type.getType(typeStr).getElementType();
+              // Type.getElementType() will give the non-array type which we don't want here
+              // For a multi-dimensional array the element type is the lower dimension array
+              typeStr = typeStr.substring(1);
+              t = Type.getType(typeStr);
             } else {
               t = Type.getObjectType(typeStr);
             }
@@ -836,6 +840,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         {
           popFromStack(Type.DOUBLE_TYPE);
           popFromStack(Type.DOUBLE_TYPE);
+          pushToStack(Type.DOUBLE_TYPE);
           break;
         }
       case I2L:
@@ -1069,7 +1074,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         if (!jumpTargetStates.containsKey(handler)) {
           jumpTargetStates.put(
               handler,
-              new SavedState(variableMapper, localTypes, stack, newLocals, SavedState.EXCEPTION));
+              new SavedState(localTypes, stack, newLocals, SavedState.EXCEPTION));
         }
       }
     }
@@ -1082,7 +1087,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   }
 
   @Override
-  public final void insertFrameReplaceStack(Label l, Type... stackTypes) {
+  public void insertFrameReplaceStack(Label l, Type... stackTypes) {
     if (pc == lastFramePc) {
       return;
     }
@@ -1375,7 +1380,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     }
   }
 
-  private static final class SimulatedStack {
+  static final class SimulatedStack {
     private static final int DEFAULT_CAPACITY = 16;
     private int stackPtr = 0;
     private int maxStack = 0;
@@ -1439,6 +1444,13 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     public Object peekX1() {
       if (stackPtr > 1) {
         return stack[stackPtr - 2];
+      }
+      return TOP;
+    }
+
+    public Object peek(int offset) {
+      if (stackPtr > offset) {
+        return stack[stackPtr - offset - 1];
       }
       return TOP;
     }
@@ -1613,23 +1625,36 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     static final int UNCONDITIONAL = 1;
     static final int EXCEPTION = 2;
 
-    private final VariableMapper mapper;
     private final LocalVarTypes lvTypes;
     private final SimulatedStack sStack;
     private final Collection<LocalVarSlot> newLocals;
     private final int kind;
 
     SavedState(
-        VariableMapper mapper,
         LocalVarTypes lvTypes,
         SimulatedStack sStack,
         Collection<LocalVarSlot> newLocals,
         int kind) {
-      this.mapper = mapper.mirror();
       this.lvTypes = new LocalVarTypes(lvTypes.toArray());
       this.sStack = new SimulatedStack(sStack.toArray());
       this.newLocals = new HashSet<>(newLocals);
       this.kind = kind;
     }
+  }
+
+  static final class Introspection {
+    final SimulatedStack stack;
+    final LocalVarTypes lvTypes;
+    final Collection<LocalVarSlot> newLocals;
+
+    private Introspection(InstrumentingMethodVisitor v) {
+      this.stack = new SimulatedStack(v.stack.toArray(false));
+      this.lvTypes = new LocalVarTypes(v.localTypes.toArray(false));
+      this.newLocals = new HashSet<>(v.newLocals);
+    }
+  }
+
+  Introspection introspect() {
+    return new Introspection(this);
   }
 }
