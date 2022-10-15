@@ -29,12 +29,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
  * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
-abstract public class AbstractClass {
-    protected AbstractClass(List lst) {
+public abstract class AbstractClass {
+  protected AbstractClass(List lst) {}
 
-    }
-    abstract public void doGet(String a, Map b);
+  public abstract void doGet(String a, Map b);
 }

@@ -26,7 +26,9 @@ package org.openjdk.btrace.core;
 
 import java.util.Map;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public final class SharedSettings {
   public static final String DEBUG_KEY = "debug";
   public static final String DUMP_DIR_KEY = "dumpDir";
