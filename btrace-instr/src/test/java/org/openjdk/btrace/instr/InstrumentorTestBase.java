@@ -57,7 +57,9 @@ import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 import sun.misc.Unsafe;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public abstract class InstrumentorTestBase {
   private static final boolean DEBUG = false;
   private static final SharedSettings settings = SharedSettings.GLOBAL;
