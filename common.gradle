@@ -30,11 +30,6 @@ buildscript {
     }
 }
 
-googleJavaFormat {
-    exclude '**/resources/**/*.java'
-    exclude '**/test/btrace/**.java'
-}
-
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 compileJava {
