@@ -493,7 +493,9 @@ public final class BTraceRuntime {
     return getRt().$(key);
   }
 
-  /** @see BTraceUtils#instanceOf(java.lang.Object, java.lang.String) */
+  /**
+   * @see BTraceUtils#instanceOf(java.lang.Object, java.lang.String)
+   */
   static boolean instanceOf(Object obj, String className) {
     if (obj instanceof AnyType) {
       // the only time we can have AnyType on stack
@@ -1155,34 +1157,46 @@ public final class BTraceRuntime {
     getRt().send(new GridDataCommand(name, aggregation.getData(), format));
   }
 
-  /** @see BTraceUtils.Profiling#newProfiler() */
+  /**
+   * @see BTraceUtils.Profiling#newProfiler()
+   */
   static Profiler newProfiler() {
     return getRt().newProfiler();
   }
 
-  /** @see BTraceUtils.Profiling#newProfiler(int) */
+  /**
+   * @see BTraceUtils.Profiling#newProfiler(int)
+   */
   static Profiler newProfiler(int expectedMethodCnt) {
     return getRt().newProfiler(expectedMethodCnt);
   }
 
-  /** @see BTraceUtils.Profiling#recordEntry(Profiler, java.lang.String) */
+  /**
+   * @see BTraceUtils.Profiling#recordEntry(Profiler, java.lang.String)
+   */
   static void recordEntry(Profiler profiler, String methodName) {
     profiler.recordEntry(methodName);
   }
 
   // profiling related methods
 
-  /** @see BTraceUtils.Profiling#recordExit(Profiler, java.lang.String, long) */
+  /**
+   * @see BTraceUtils.Profiling#recordExit(Profiler, java.lang.String, long)
+   */
   static void recordExit(Profiler profiler, String methodName, long duration) {
     profiler.recordExit(methodName, duration);
   }
 
-  /** @see BTraceUtils.Profiling#snapshot(Profiler) */
+  /**
+   * @see BTraceUtils.Profiling#snapshot(Profiler)
+   */
   static Profiler.Snapshot snapshot(Profiler profiler) {
     return profiler.snapshot();
   }
 
-  /** @see BTraceUtils.Profiling#snapshotAndReset(Profiler) */
+  /**
+   * @see BTraceUtils.Profiling#snapshotAndReset(Profiler)
+   */
   static Profiler.Snapshot snapshotAndReset(Profiler profiler) {
     return profiler.snapshot(true);
   }

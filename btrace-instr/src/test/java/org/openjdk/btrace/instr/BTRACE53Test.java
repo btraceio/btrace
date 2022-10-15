@@ -27,7 +27,9 @@ package org.openjdk.btrace.instr;
 
 import org.junit.jupiter.api.Test;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public class BTRACE53Test extends InstrumentorTestBase {
   @Test
   public void bytecodeValidation() throws Exception {

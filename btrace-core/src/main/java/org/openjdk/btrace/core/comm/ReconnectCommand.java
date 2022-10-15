@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-/** @since WireIO v.1 */
+/**
+ * @since WireIO v.1
+ */
 public class ReconnectCommand extends Command {
   public static final int STATUS_FLAG = 8;
 

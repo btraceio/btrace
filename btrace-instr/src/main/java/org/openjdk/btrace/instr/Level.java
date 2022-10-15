@@ -26,7 +26,9 @@ package org.openjdk.btrace.instr;
 
 import org.openjdk.btrace.runtime.Interval;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public class Level {
   private final Interval value;
 

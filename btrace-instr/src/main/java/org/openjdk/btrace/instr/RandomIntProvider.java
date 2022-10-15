@@ -28,7 +28,9 @@ import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.instr.random.SharedRandomIntProvider;
 import org.openjdk.btrace.instr.random.ThreadLocalRandomIntProvider;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 @SuppressWarnings("LiteralClassName")
 public abstract class RandomIntProvider {
   private static final RandomIntProvider rndIntProvider;

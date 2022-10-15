@@ -27,7 +27,9 @@ package org.openjdk.btrace.instr.random;
 import java.util.Random;
 import org.openjdk.btrace.instr.RandomIntProvider;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public final class SharedRandomIntProvider extends RandomIntProvider {
   private final Random rnd = new Random(System.nanoTime());
 

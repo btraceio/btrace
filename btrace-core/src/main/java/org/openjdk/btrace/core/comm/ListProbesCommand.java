@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/** @since WireIO v.1 */
+/**
+ * @since WireIO v.1
+ */
 public class ListProbesCommand extends Command implements PrintableCommand {
   private final List<String> probes = new ArrayList<>();
 

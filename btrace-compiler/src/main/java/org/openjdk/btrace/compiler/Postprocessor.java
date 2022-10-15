@@ -42,7 +42,9 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public class Postprocessor extends ClassVisitor {
   private final List<FieldDescriptor> fields = new ArrayList<>();
   private boolean shortSyntax = false;

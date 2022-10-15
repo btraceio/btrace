@@ -25,41 +25,40 @@
 package resources;
 
 /**
- *
  * @author Jaroslav Bachorik
  */
 public class Main extends TestApp {
-    private String id = "xxx";
+  private String id = "xxx";
 
-    public static void main(String[] args) throws Exception {
-        Main i = new Main();
-        i.start();
-    }
+  public static void main(String[] args) throws Exception {
+    Main i = new Main();
+    i.start();
+  }
 
-    @Override
-    protected void startWork() {
-        while (!Thread.currentThread().isInterrupted()) {
-            callA();
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
+  @Override
+  protected void startWork() {
+    while (!Thread.currentThread().isInterrupted()) {
+      callA();
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
+  }
 
-    private void callA() {
-        print("i=" + callB(1, "Hello World"));
-    }
+  private void callA() {
+    print("i=" + callB(1, "Hello World"));
+  }
 
-    private int callB(int i, String s) {
-        print("[" + i + "] = " + s);
-        return i + 1;
-    }
+  private int callB(int i, String s) {
+    print("[" + i + "] = " + s);
+    return i + 1;
+  }
 
-    @Override
-    public void print(String msg) {
-        System.out.println(msg);
-        System.out.flush();
-    }
+  @Override
+  public void print(String msg) {
+    System.out.println(msg);
+    System.out.flush();
+  }
 }

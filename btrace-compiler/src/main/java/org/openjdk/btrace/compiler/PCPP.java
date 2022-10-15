@@ -545,7 +545,9 @@ public class PCPP {
     return lastWord;
   }
 
-  /** @param isIfdef if true, we're processing #ifdef; if false, we're processing #ifndef. */
+  /**
+   * @param isIfdef if true, we're processing #ifdef; if false, we're processing #ifndef.
+   */
   private void handleIfdef(boolean isIfdef) throws IOException {
     // Next token is the name of the #ifdef
     String symbolName = nextWord();
@@ -576,7 +578,9 @@ public class PCPP {
     debugPrint(!enabledBeforePopping, "#endif/end-else");
   }
 
-  /** @param isIf if true, we're processing #if; if false, we're processing #elif. */
+  /**
+   * @param isIf if true, we're processing #if; if false, we're processing #elif.
+   */
   private void handleIf(boolean isIf) throws IOException {
     // System.out.println("IN HANDLE_" + (isIf ? "IF" : "ELIF") + " file \"" + filename() + " line "
     // + lineNumber());

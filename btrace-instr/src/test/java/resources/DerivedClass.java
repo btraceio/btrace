@@ -29,34 +29,32 @@ import java.util.ArrayList;
 import java.util.Map;
 
 /**
- *
  * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class DerivedClass extends AbstractClass {
-    private static volatile String defaultString;
-    static {
+  private static volatile String defaultString;
 
-        final String name = AbstractClass.class.getName();
-        try {
-            defaultString = "value1";
-        } catch (Throwable t1) {
-            try {
-                defaultString = "value2";
-            } catch (Throwable t2) {
-                defaultString = "value3";
-            }
-        }
-
-        defaultString = "value4";
-    }
-    
-    public DerivedClass() {
-        super(new ArrayList());
+  static {
+    final String name = AbstractClass.class.getName();
+    try {
+      defaultString = "value1";
+    } catch (Throwable t1) {
+      try {
+        defaultString = "value2";
+      } catch (Throwable t2) {
+        defaultString = "value3";
+      }
     }
 
-    @Override
-    public void doGet(String a, Map b) {
-        System.err.println(a);
-    }
+    defaultString = "value4";
+  }
 
+  public DerivedClass() {
+    super(new ArrayList());
+  }
+
+  @Override
+  public void doGet(String a, Map b) {
+    System.err.println(a);
+  }
 }

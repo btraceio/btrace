@@ -33,7 +33,9 @@ import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Where;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public class BTraceMethodNode extends MethodNode {
   public static final Comparator<MethodNode> COMPARATOR =
       (o1, o2) -> (o1.name + "#" + o1.desc).compareTo(o2.name + "#" + o2.desc);

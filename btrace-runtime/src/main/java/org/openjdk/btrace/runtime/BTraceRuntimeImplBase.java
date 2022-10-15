@@ -761,13 +761,17 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   // profiling related methods
-  /** @see BTraceUtils.Profiling#newProfiler() */
+  /**
+   * @see BTraceUtils.Profiling#newProfiler()
+   */
   @Override
   public final Profiler newProfiler() {
     return new MethodInvocationProfiler(600);
   }
 
-  /** @see BTraceUtils.Profiling#newProfiler(int) */
+  /**
+   * @see BTraceUtils.Profiling#newProfiler(int)
+   */
   @Override
   public final Profiler newProfiler(int expectedMethodCnt) {
     return new MethodInvocationProfiler(expectedMethodCnt);

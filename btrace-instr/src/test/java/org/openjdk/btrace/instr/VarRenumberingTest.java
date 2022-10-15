@@ -7,7 +7,9 @@ package org.openjdk.btrace.instr;
 
 import org.junit.jupiter.api.Test;
 
-/** @author jbachorik */
+/**
+ * @author jbachorik
+ */
 public class VarRenumberingTest extends InstrumentorTestBase {
   @Test
   public void bytecodeValidation() throws Exception {

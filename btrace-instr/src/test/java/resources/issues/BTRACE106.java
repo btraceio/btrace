@@ -25,17 +25,16 @@
 package resources.issues;
 
 /**
- *
  * @author Jaroslav Bachorik <jaroslav.bachorik@oracle.com>
  */
 @Deprecated
 public class BTRACE106 {
-    private void aMethod() {
-        System.out.println("A Method");
-    }
+  private void aMethod() {
+    System.out.println("A Method");
+  }
 
-    @Deprecated
-    private void bMethod() {
-        System.out.println("B Method");
-    }
+  @Deprecated
+  private void bMethod() {
+    System.out.println("B Method");
+  }
 }

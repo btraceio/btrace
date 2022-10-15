@@ -46,7 +46,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 @SuppressWarnings("ConstantConditions")
 public abstract class RuntimeTest {
   private static String cp = null;

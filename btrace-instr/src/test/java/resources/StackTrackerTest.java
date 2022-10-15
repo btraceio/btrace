@@ -25,40 +25,40 @@
 package resources;
 
 public class StackTrackerTest {
-    private static String testStatic(int a, Class<?> clz) {
-        int i = 10;
+  private static String testStatic(int a, Class<?> clz) {
+    int i = 10;
 
-        try {
-            int j = i + 10;
-            if (j > 10) {
-                consumeInt(j - 10);
-            } else {
-                consumeInt(j);
-            }
-            int x = 0;
-            out:
-            while (x++ < 10) {
-                consumeInt(x);
-                for(int z=x;z>=0;z--) {
-                    consumeInt(x);
-                    if (convertInt(z) == 1L) {
-                        break out;
-                    }
-                }
-            }
-            return "ok";
-        } catch (Throwable l) {
-
+    try {
+      int j = i + 10;
+      if (j > 10) {
+        consumeInt(j - 10);
+      } else {
+        consumeInt(j);
+      }
+      int x = 0;
+      out:
+      while (x++ < 10) {
+        consumeInt(x);
+        for (int z = x; z >= 0; z--) {
+          consumeInt(x);
+          if (convertInt(z) == 1L) {
+            break out;
+          }
         }
+      }
+      return "ok";
+    } catch (Throwable l) {
 
-        return "fail";
     }
 
-    private static void consumeInt(int x) {
-        System.out.println(x);
-    }
+    return "fail";
+  }
 
-    private static long convertInt(int x) {
-        return x + 1;
-    }
+  private static void consumeInt(int x) {
+    System.out.println(x);
+  }
+
+  private static long convertInt(int x) {
+    return x + 1;
+  }
 }

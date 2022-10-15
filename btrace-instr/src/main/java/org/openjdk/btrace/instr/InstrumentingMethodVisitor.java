@@ -76,7 +76,12 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     this(access, owner, desc, mv, (type, nLocal, local, nStack, stack) -> {});
   }
 
-  InstrumentingMethodVisitor(int access, String owner, String desc, MethodVisitor mv, FrameDiagnosticListener frameDiagnosticListener) {
+  InstrumentingMethodVisitor(
+      int access,
+      String owner,
+      String desc,
+      MethodVisitor mv,
+      FrameDiagnosticListener frameDiagnosticListener) {
     super(ASM9, mv);
     this.owner = owner;
     this.desc = desc;
@@ -1112,7 +1117,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     }
     lastFramePc = pc;
 
-    if (!frameOffsets.add(l.getOffset())) {
+    if (!frameOffsets.add(l.getOffset()) || !jumpTargetStates.containsKey(l)) {
       return;
     }
 
@@ -1135,7 +1140,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     }
     lastFramePc = pc;
 
-    if (!frameOffsets.add(l.getOffset())) {
+    if (!frameOffsets.add(l.getOffset()) || !jumpTargetStates.containsKey(l)) {
       return;
     }
 
@@ -1156,7 +1161,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       return;
     }
 
-    if (!frameOffsets.add(l.getOffset())) {
+    if (!frameOffsets.add(l.getOffset()) || !jumpTargetStates.containsKey(l)) {
       return;
     }
 
