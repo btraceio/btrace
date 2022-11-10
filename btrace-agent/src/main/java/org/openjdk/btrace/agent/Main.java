@@ -82,6 +82,7 @@ import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
+import org.openjdk.btrace.instr.BTraceProbeFactory;
 import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
@@ -750,7 +751,7 @@ public final class Main {
   }
 
   private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
-    if (!filePath.endsWith(".class")) {
+    if (!BTraceProbeFactory.canLoad(filePath)) {
       return false;
     }
 

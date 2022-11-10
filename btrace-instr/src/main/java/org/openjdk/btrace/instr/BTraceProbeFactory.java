@@ -48,6 +48,8 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.SharedSettings;
@@ -62,22 +64,37 @@ import org.slf4j.LoggerFactory;
 public final class BTraceProbeFactory {
   private static final Logger log = LoggerFactory.getLogger(BTraceProbeFactory.class);
 
+  private static final int CLASS_MAGIC = 0xCAFEBABE;
+
   private final SharedSettings settings;
-  private final boolean canLoadPack;
 
   public BTraceProbeFactory(SharedSettings settings) {
-    this(settings, true);
-  }
-
-  public BTraceProbeFactory(SharedSettings settings, boolean canLoadPack) {
     this.settings = settings;
-    this.canLoadPack = canLoadPack;
   }
 
   private static void applyArgs(BTraceProbe bp, ArgsMap argsMap) {
     if (bp != null && argsMap != null && !argsMap.isEmpty()) {
       bp.applyArgs(argsMap);
     }
+  }
+
+  /**
+   * Check if a particular file can be loaded as a BTrace probe. Currently only the plain class file
+   * and BTrace probe pack are supported.
+   *
+   * @param filePath the file path
+   * @return {@literal true} if a BTrace probe can be recornstructed from data in the given file
+   */
+  public static boolean canLoad(String filePath) {
+    if (filePath == null) {
+      return false;
+    }
+    try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
+      int magic = dis.readInt();
+      return magic == CLASS_MAGIC || magic == BTraceProbePersisted.MAGIC;
+    } catch (IOException ignored) {
+    }
+    return false;
   }
 
   SharedSettings getSettings() {
@@ -97,16 +114,13 @@ public final class BTraceProbeFactory {
             | ((code[2] & 0xff) << 8)
             | ((code[3] & 0xff));
     if (mgc == BTraceProbePersisted.MAGIC) {
-      if (canLoadPack) {
-        BTraceProbePersisted bpp = new BTraceProbePersisted(this);
-        try (DataInputStream dis =
-            new DataInputStream(
-                new ByteArrayInputStream(Arrays.copyOfRange(code, 4, code.length)))) {
-          bpp.read(dis);
-          bp = bpp;
-        } catch (IOException e) {
-          log.debug("Failed to read BTrace pack", e);
-        }
+      BTraceProbePersisted bpp = new BTraceProbePersisted(this);
+      try (DataInputStream dis =
+          new DataInputStream(new ByteArrayInputStream(Arrays.copyOfRange(code, 4, code.length)))) {
+        bpp.read(dis);
+        bp = bpp;
+      } catch (IOException e) {
+        log.debug("Failed to read BTrace pack", e);
       }
     } else {
       bp = new BTraceProbeNode(this, code);

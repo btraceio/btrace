@@ -24,14 +24,11 @@
  */
 package tests;
 
-import org.junit.jupiter.api.Assertions;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
@@ -48,6 +45,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Assertions;
 
 /** @author Jaroslav Bachorik */
 @SuppressWarnings("ConstantConditions")

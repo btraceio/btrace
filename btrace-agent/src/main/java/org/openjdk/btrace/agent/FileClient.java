@@ -84,7 +84,7 @@ class FileClient extends Client {
 
   private boolean init(byte[] code) throws IOException {
     InstrumentCommand cmd = new InstrumentCommand(code, argsMap);
-    boolean ret = loadClass(cmd, canLoadPack) != null;
+    boolean ret = loadClass(cmd) != null;
     if (ret) {
       initialize();
     }
