@@ -319,14 +319,10 @@ abstract class Client implements CommandListener {
   }
 
   final Class<?> loadClass(InstrumentCommand instr) throws IOException {
-    return loadClass(instr, true);
-  }
-
-  final Class<?> loadClass(InstrumentCommand instr, boolean canLoadPack) throws IOException {
     ArgsMap args = instr.getArguments();
     byte[] btraceCode = instr.getCode();
     try {
-      probe = load(btraceCode, ArgsMap.merge(argsMap, args), canLoadPack);
+      probe = load(btraceCode, ArgsMap.merge(argsMap, args));
       if (probe == null) {
         log.debug("Failed to load BTrace probe code");
         return null;
@@ -442,8 +438,8 @@ abstract class Client implements CommandListener {
   }
 
   // Internals only below this point
-  private BTraceProbe load(byte[] buf, ArgsMap args, boolean canLoadPack) {
-    BTraceProbeFactory f = new BTraceProbeFactory(settings, canLoadPack);
+  private BTraceProbe load(byte[] buf, ArgsMap args) {
+    BTraceProbeFactory f = new BTraceProbeFactory(settings);
     log.debug("loading BTrace class");
     BTraceProbe cn = f.createProbe(buf, args);
 
