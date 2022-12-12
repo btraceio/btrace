@@ -9,7 +9,7 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
 
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
-    implementation(group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.36')
+    implementation(group: 'org.slf4j', name: 'slf4j-simple', version: '2.0.6')
 
     // https://mvnrepository.com/artifact/org.jctools/jctools-core
     implementation(group: 'org.jctools', name: 'jctools-core', version: '4.0.1')
