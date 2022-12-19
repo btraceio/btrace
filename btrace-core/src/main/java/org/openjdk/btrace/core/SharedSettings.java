@@ -39,6 +39,7 @@ public final class SharedSettings {
   public static final String FILEROLL_INTERVAL_KEY = "fileRollMilliseconds";
   public static final String FILEROLL_MAXROLLS_KEY = "fileRollMaxRolls";
   public static final String OUTPUT_FILE_KEY = "scriptOutputFile";
+  public static final String OUTPUT_DIR_KEY = "scriptOutputDir";
 
   public static final SharedSettings GLOBAL = new SharedSettings();
 
@@ -55,7 +56,8 @@ public final class SharedSettings {
   private int fileRollMilliseconds = Integer.MIN_VALUE;
   private int fileRollMaxRolls = 5; // default hold max 100 logs
   private String outputFile;
-  private String outputDir;
+  private String scriptDir;
+  private String scriptOutputDir;
   private String clientName;
 
   public void from(Map<String, Object> params) {
@@ -109,6 +111,10 @@ public final class SharedSettings {
     if (s != null && !s.isEmpty()) {
       outputFile = s;
     }
+    s = (String) params.get(OUTPUT_DIR_KEY);
+    if (s != null && !s.isEmpty()) {
+      scriptOutputDir = s;
+    }
   }
 
   public void from(SharedSettings other) {
@@ -118,7 +124,8 @@ public final class SharedSettings {
     fileRollMilliseconds = other.fileRollMilliseconds;
     fileRollMaxRolls = other.fileRollMaxRolls;
     outputFile = other.outputFile;
-    outputDir = other.outputDir;
+    scriptDir = other.scriptDir;
+    scriptOutputDir = other.scriptOutputDir;
     probeDescPath = other.probeDescPath;
     bootClassPath = other.bootClassPath;
     retransformStartup = other.retransformStartup;
@@ -226,6 +233,10 @@ public final class SharedSettings {
     retransformStartup = val;
   }
 
+  public String getScriptDir() {
+    return scriptDir;
+  }
+
   public String getOutputFile() {
     return outputFile;
   }
@@ -234,12 +245,12 @@ public final class SharedSettings {
     this.outputFile = outputFile;
   }
 
-  public String getOutputDir() {
-    return outputDir;
+  public String getScriptOutputDir() {
+    return scriptOutputDir;
   }
 
-  public void setOutputDir(String p) {
-    outputDir = p;
+  public void setScriptOutputDir(String scriptOutputDir) {
+    this.scriptOutputDir = scriptOutputDir;
   }
 
   public String getClientName() {

@@ -12,11 +12,10 @@ fi
 
 SDKMAN_BASE=$HOME/.sdkman/candidates/java
 
-JAVA_8_VERSION="8.0.332-tem"
-JAVA_11_VERSION="11.0.15-tem"
-JAVA_17_VERSION="17.0.3-tem"
-JAVA_18_VERSION="18.0.1-tem"
-JAVA_19_VERSION="19.ea.29-open"
+JAVA_8_VERSION="8.0.352-tem"
+JAVA_11_VERSION="11.0.17-tem"
+JAVA_17_VERSION="17.0.5-tem"
+JAVA_19_VERSION="19.0.1-tem"
 JAVA_20_VERSION="20.ea.4-open"
 
 echo "Using SDKMAN version: ${SDKMAN_VER}"
@@ -37,11 +36,6 @@ echo "Installing Java 17"
 sdk install java $JAVA_17_VERSION 2>/dev/null || true
 export JAVA_17_HOME=$SDKMAN_BASE/$JAVA_17_VERSION
 echo "export JAVA_17_HOME=${JAVA_17_HOME}" >> .java.versions
-
-echo "Installing Java 18"
-sdk install java $JAVA_18_VERSION 2>/dev/null || true
-export JAVA_18_HOME=$SDKMAN_BASE/$JAVA_18_VERSION
-echo "export JAVA_18_HOME=${JAVA_18_HOME}" >> .java.versions
 
 echo "Installing Java 19"
 sdk install java $JAVA_19_VERSION 2>/dev/null || true

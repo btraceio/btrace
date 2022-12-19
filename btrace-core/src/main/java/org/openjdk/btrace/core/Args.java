@@ -6,13 +6,14 @@ public final class Args {
   public static final String BOOT_CLASS_PATH = "bootClassPath";
   public static final String CONFIG = "config";
   public static final String SCRIPT = "script";
+  public static final String SCRIPT_DIR = "scriptdir";
   public static final String STARTUP_RETRANSFORM = "startupRetransform";
   public static final String DUMP_DIR = "dumpDir";
   public static final String DUMP_CLASSES = "dumpClasses";
   public static final String CMD_QUEUE_LIMIT = "cmdQueueLimit";
   public static final String TRACK_RETRANSFORMS = "trackRetransforms";
   public static final String SCRIPT_OUTPUT_FILE = "scriptOutputFile";
-  public static final String SCRIPT_OUTPUT_DIR = "scriptdir";
+  public static final String SCRIPT_OUTPUT_DIR = "scriptOutputDir";
   public static final String FILE_ROLL_MILLISECONDS = "fileRollMilliseconds";
   public static final String FILE_ROLL_MAX_ROLLS = "fileRollMaxRolls";
   public static final String TRUSTED = "trusted";
