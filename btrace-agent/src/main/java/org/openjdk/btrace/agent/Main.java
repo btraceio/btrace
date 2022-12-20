@@ -39,6 +39,7 @@ import static org.openjdk.btrace.core.Args.NO_SERVER;
 import static org.openjdk.btrace.core.Args.PORT;
 import static org.openjdk.btrace.core.Args.PROBE_DESC_PATH;
 import static org.openjdk.btrace.core.Args.SCRIPT;
+import static org.openjdk.btrace.core.Args.SCRIPT_DIR;
 import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_DIR;
 import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_FILE;
 import static org.openjdk.btrace.core.Args.STARTUP_RETRANSFORM;
@@ -63,6 +64,8 @@ import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -184,9 +187,7 @@ public final class Main {
   }
 
   private static boolean hasScripts() {
-    return argMap.containsKey(SCRIPT)
-        || argMap.containsKey(SCRIPT_OUTPUT_DIR)
-        || argMap.containsKey(SCRIPT_OUTPUT_FILE);
+    return argMap.containsKey(SCRIPT) || argMap.containsKey(SCRIPT_DIR);
   }
 
   private static final class LogValue {
@@ -321,9 +322,20 @@ public final class Main {
       log.debug("stdout is {}", traceToStdOut);
     }
 
-    String script = argMap.get(SCRIPT);
-    String scriptDir = argMap.get(SCRIPT_OUTPUT_DIR);
+    List<String> scripts = locateScripts(argMap);
+    for (String script : scripts) {
+      if (loadBTraceScript(script, traceToStdOut)) {
+        scriptCount++;
+      }
+    }
+    return scriptCount;
+  }
 
+  static List<String> locateScripts(ArgsMap argsMap) {
+    String script = argsMap.get(SCRIPT);
+    String scriptDir = argsMap.get(SCRIPT_DIR);
+
+    List<String> scripts = new ArrayList<>();
     if (script != null) {
       StringTokenizer tokenizer = new StringTokenizer(script, ":");
       if (log.isDebugEnabled()) {
@@ -332,9 +344,7 @@ public final class Main {
             script);
       }
       while (tokenizer.hasMoreTokens()) {
-        if (loadBTraceScript(tokenizer.nextToken(), traceToStdOut)) {
-          scriptCount++;
-        }
+        scripts.add(tokenizer.nextToken());
       }
     }
     if (scriptDir != null) {
@@ -346,14 +356,12 @@ public final class Main {
         File[] files = dir.listFiles();
         if (files != null) {
           for (File file : files) {
-            if (loadBTraceScript(file.getAbsolutePath(), traceToStdOut)) {
-              scriptCount++;
-            }
+            scripts.add(file.getAbsolutePath());
           }
         }
       }
     }
-    return scriptCount;
+    return scripts;
   }
 
   private static void usage() {
@@ -457,7 +465,7 @@ public final class Main {
         case SCRIPT_OUTPUT_DIR:
           {
             if (!p.isEmpty()) {
-              settings.setOutputDir(p);
+              settings.setScriptOutputDir(p);
               log.debug(SCRIPT_OUTPUT_DIR + " is {}", p);
             }
             break;
@@ -780,11 +788,11 @@ public final class Main {
         clientSettings.setOutputFile("::stdout");
       } else {
         String traceOutput = clientSettings.getOutputFile();
-        String outDir = clientSettings.getOutputDir();
+        String outDir = clientSettings.getScriptOutputDir();
         if (traceOutput == null || traceOutput.length() == 0) {
           clientSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
           if (outDir == null || outDir.length() == 0) {
-            clientSettings.setOutputDir(scriptParent);
+            clientSettings.setScriptOutputDir(scriptParent);
           }
         }
       }
