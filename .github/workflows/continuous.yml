@@ -15,70 +15,100 @@ defaults:
     shell: bash
 
 jobs:
-  all:
+  build:
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Java 8
-      uses: actions/setup-java@v1
-      with:
-        java-version: 8
-    - name: Store JAVA_8_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_8_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-    - name: Store JAVA_16_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_16_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-    - name: Set up Java 17
-      uses: actions/setup-java@v1
-      with:
-        java-version: 17
-    - name: Store JAVA_17_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_17_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-    - name: Set up Java 18
-      uses: actions/setup-java@v1
-      with:
-        java-version: 18
-    - name: Store JAVA_18_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_18_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-    - name: Set up Java 19
-      uses: actions/setup-java@v1
-      with:
-        java-version: 19
-    - name: Store JAVA_19_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_19_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-    - name: Set up Java 11
-      uses: actions/setup-java@v1
-      with:
-        java-version: 11
-    - name: Store JAVA_11_HOME
-      run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
-    - name: Build
-      run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build -x test
-    - name: Run Tests
-      run: JAVA_HOME="$JAVA_11_HOME" ./run_tests.sh
-    - name: Deploy Maven
-      if: github.ref ==  'refs/heads/develop' || github.ref == 'refs/heads/master'
-      run: ./gradlew :btrace-dist:publish
-      env:
-        GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
-        GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
-        BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
-        BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
-    - name: Archive binary artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: binary-dist
-        path: |
-          btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
-    - name: Archive reports
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        name: reports
-        path: |
-          btrace-instr/build/reports/**/*
+      - name: Set up Java 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Store JAVA_8_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_8_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Set up Java 17
+        uses: actions/setup-java@v1
+        with:
+          java-version: 17
+      - name: Store JAVA_17_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_17_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Set up Java 19
+        uses: actions/setup-java@v1
+        with:
+          java-version: 19
+      - name: Store JAVA_19_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_19_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Set up Java 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - name: Store JAVA_11_HOME
+        run: JAVA_PATH=$(which java) && echo "JAVA_11_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Build
+        run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build -x test
+      - name: Upload temp build artifact
+        uses: actions/upload-artifact@v3
+        if: success()
+        with:
+          name: btrace-build
+          path: .
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java_version: [ 8u352+8, 11.0.17+7, 17.0.5+8, 19.0.1+11 ]
+    steps:
+      - name: Get build
+        uses: actions/download-artifact@v2
+        with:
+          name: btrace-build
+      - name: Prepare JDK ${{ matrix.java_version }}
+        run: |
+          wget -nv https://download.bell-sw.com/java/${{ matrix.java_version }}/bellsoft-jdk${{ matrix.java_version }}-linux-amd64.tar.gz -O jdk.tar.gz
+          tar xzf *.tar.gz
+          find . -type d -name 'jdk*' -maxdepth 1| xargs -I {} mv {} test_jdk
+      - name: Run Tests
+        run: |
+          chmod a+x gradlew
+          JAVA_HOME=$(pwd)/test_jdk ./gradlew test
+      - name: Upload temp build artifact
+        uses: actions/upload-artifact@v3
+        if: success()
+        with:
+          name: btrace-build
+          path: .
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get build
+        uses: actions/download-artifact@v2
+        with:
+          name: btrace-build
+      - name: Deploy Maven
+        if: github.ref ==  'refs/heads/develop' || github.ref == 'refs/heads/master'
+        run: ./gradlew :btrace-dist:publish
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
+          BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
+          BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
+      - name: Archive binary artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: binary-dist
+          path: |
+            btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
+      - name: Archive reports
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: reports
+          path: |
+            btrace-instr/build/reports/**/*
 

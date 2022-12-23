@@ -43,8 +43,8 @@ compileJava11Java {
 }
 
 compileJava15Java {
-    sourceCompatibility = 11
-    targetCompatibility = 11
+    sourceCompatibility = 15
+    targetCompatibility = 15
     options.fork = true
     options.forkOptions.executable = "${System.getenv("JAVA_17_HOME")}/bin/javac"
     options.forkOptions.javaHome = file("${System.getenv("JAVA_17_HOME")}")
