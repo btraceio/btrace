@@ -61,7 +61,7 @@ public class StackTrackingMethodVisitorTest extends InstrumentorTestBase {
     // just make sure that a sufficiently complex methods won't cause
     // any problems for tracking the stack
     reader.accept(
-        new ClassVisitor(Opcodes.ASM7) {
+        new ClassVisitor(Opcodes.ASM9) {
           private String clzName;
 
           @Override

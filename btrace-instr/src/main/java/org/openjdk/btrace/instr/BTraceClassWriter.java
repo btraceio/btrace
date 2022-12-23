@@ -85,7 +85,7 @@ final class BTraceClassWriter extends ClassWriter {
 
     Instrumentor top = instrumentors.peekLast();
     ClassVisitor cv =
-        new ClassVisitor(Opcodes.ASM7, top != null ? top : this) {
+        new ClassVisitor(Opcodes.ASM9, top != null ? top : this) {
           @Override
           public void visitEnd() {
             if (top != null && top.hasCushionMethods()) {

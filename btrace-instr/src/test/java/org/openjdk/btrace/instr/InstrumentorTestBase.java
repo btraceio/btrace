@@ -181,7 +181,7 @@ public abstract class InstrumentorTestBase {
       } catch (NoSuchMethodError e) {
         ClassWriter cw = new ClassWriter(0);
         ClassVisitor cv =
-            new ClassVisitor(Opcodes.ASM7, cw) {
+            new ClassVisitor(Opcodes.ASM9, cw) {
               @Override
               public void visit(
                   int version,

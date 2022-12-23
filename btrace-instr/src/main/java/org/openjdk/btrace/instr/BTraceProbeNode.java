@@ -75,7 +75,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   private VerifierException verifierException = null;
 
   private BTraceProbeNode(BTraceProbeFactory factory) {
-    super(Opcodes.ASM7);
+    super(Opcodes.ASM9);
     this.factory = factory;
     bcpResourceClassLoader = new BTraceBCPClassLoader(factory.getSettings());
     debug = new DebugSupport(factory.getSettings());
@@ -124,7 +124,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   @Override
   public FieldVisitor visitField(
       int access, String name, String desc, String signature, Object value) {
-    return new FieldVisitor(Opcodes.ASM7, super.visitField(access, name, desc, signature, value)) {
+    return new FieldVisitor(Opcodes.ASM9, super.visitField(access, name, desc, signature, value)) {
       @Override
       public AnnotationVisitor visitAnnotation(String type, boolean aVisible) {
         AnnotationVisitor av = super.visitAnnotation(type, aVisible);
@@ -225,7 +225,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     ClassVisitor cv = cw;
     if (onlyBcpMethods) {
       cv =
-          new ClassVisitor(Opcodes.ASM7, cw) {
+          new ClassVisitor(Opcodes.ASM9, cw) {
             @Override
             public MethodVisitor visitMethod(
                 int access, String name, String desc, String sig, String[] exceptions) {
@@ -482,7 +482,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
   private MethodNode copy(MethodNode n) {
     String[] exceptions = n.exceptions != null ? n.exceptions.toArray(new String[0]) : null;
-    MethodNode mn = new MethodNode(Opcodes.ASM7, n.access, n.name, n.desc, n.signature, exceptions);
+    MethodNode mn = new MethodNode(Opcodes.ASM9, n.access, n.name, n.desc, n.signature, exceptions);
     n.accept(mn);
     mn.access = Opcodes.ACC_STATIC | Opcodes.ACC_PRIVATE;
     mn.desc = mn.desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);

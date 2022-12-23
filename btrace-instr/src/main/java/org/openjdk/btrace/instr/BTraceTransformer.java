@@ -101,7 +101,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
         filter.remove(om);
         MethodNode cushionMethod =
             new MethodNode(
-                Opcodes.ASM7,
+                Opcodes.ASM9,
                 Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC,
                 Instrumentor.getActionMethodName(p, om.getTargetName()),
                 om.getTargetDescriptor(),

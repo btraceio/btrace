@@ -15,7 +15,7 @@ final class ProbeUpgradeVisitor_1_2 extends ClassVisitor {
   private static final String ANNOTATIONS_PREFIX_NEW = "Lorg/openjdk/btrace/core/annotations/";
 
   ProbeUpgradeVisitor_1_2(ClassVisitor cv) {
-    super(ASM7, cv);
+    super(ASM9, cv);
   }
 
   private String cName = null;
@@ -52,7 +52,7 @@ final class ProbeUpgradeVisitor_1_2 extends ClassVisitor {
     if (desc.contains("BTraceRuntime")) {
       desc = Constants.BTRACERTACCESS_DESC;
     }
-    return new FieldVisitor(ASM7, super.visitField(access, name, desc, signature, value)) {
+    return new FieldVisitor(ASM9, super.visitField(access, name, desc, signature, value)) {
       @Override
       public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
         if (desc.startsWith(ANNOTATIONS_PREFIX_OLD)) {
@@ -66,7 +66,7 @@ final class ProbeUpgradeVisitor_1_2 extends ClassVisitor {
   @Override
   public MethodVisitor visitMethod(
       int access, String name, String desc, String signature, String[] exceptions) {
-    return new MethodVisitor(ASM7, super.visitMethod(access, name, desc, signature, exceptions)) {
+    return new MethodVisitor(ASM9, super.visitMethod(access, name, desc, signature, exceptions)) {
       @Override
       public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
         if (desc.startsWith(ANNOTATIONS_PREFIX_OLD)) {

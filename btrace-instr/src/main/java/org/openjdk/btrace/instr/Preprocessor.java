@@ -483,7 +483,7 @@ final class Preprocessor {
     }
     cn.fields.add(
         new FieldNode(
-            Opcodes.ASM7,
+            Opcodes.ASM9,
             Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_VOLATILE,
             Constants.BTRACE_LEVEL_FLD,
             Constants.INT_DESC,
@@ -764,7 +764,7 @@ final class Preprocessor {
     }
     StackTrackingMethodVisitor v =
         new StackTrackingMethodVisitor(
-            new MethodVisitor(Opcodes.ASM7) {
+            new MethodVisitor(Opcodes.ASM9) {
               @Override
               public void visitMaxs(int maxStack, int maxLocals) {
                 super.visitMaxs(maxStack, maxLocals);
@@ -788,7 +788,7 @@ final class Preprocessor {
     if (clinit == null) {
       clinit =
           new MethodNode(
-              Opcodes.ASM7,
+              Opcodes.ASM9,
               (Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC),
               "<clinit>",
               "()V",
@@ -1101,7 +1101,7 @@ final class Preprocessor {
   private void addRuntimeNode(ClassNode cn) {
     rtField =
         new FieldNode(
-            Opcodes.ASM7,
+            Opcodes.ASM9,
             (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC),
             "runtime",
             Type.getDescriptor(BTraceRuntimeImplBase.class),
@@ -1221,7 +1221,7 @@ final class Preprocessor {
           String fldName = JFR_HANDLER_FIELD_PREFIX + mn.name;
           cn.fields.add(
               new FieldNode(
-                  Opcodes.ASM7,
+                  Opcodes.ASM9,
                   Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
                   fldName,
                   Constants.JFREVENTFACTORY_DESC,

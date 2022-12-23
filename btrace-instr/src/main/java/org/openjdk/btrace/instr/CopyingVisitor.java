@@ -1,6 +1,6 @@
 package org.openjdk.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.ASM7;
+import static org.objectweb.asm.Opcodes.ASM9;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -36,7 +36,7 @@ class CopyingVisitor extends ClassVisitor {
   public MethodVisitor visitMethod(
       int access, String name, String desc, String sig, String[] exceptions) {
     return new MethodVisitor(
-        ASM7,
+        ASM9,
         super.visitMethod(
             Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, getMethodName(name), desc, sig, exceptions)) {
       @Override

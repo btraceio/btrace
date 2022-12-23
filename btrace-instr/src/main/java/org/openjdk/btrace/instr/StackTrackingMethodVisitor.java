@@ -60,7 +60,7 @@ class StackTrackingMethodVisitor extends MethodVisitor {
 
   public StackTrackingMethodVisitor(
       MethodVisitor mv, String className, String desc, boolean isStatic) {
-    super(Opcodes.ASM7, mv);
+    super(Opcodes.ASM9, mv);
     Type[] args = Type.getArgumentTypes(desc);
     state = new State(isStatic ? null : new InstanceItem(Type.getObjectType(className)), args);
   }

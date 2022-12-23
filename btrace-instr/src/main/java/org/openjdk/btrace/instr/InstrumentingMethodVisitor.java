@@ -68,7 +68,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
 
   public InstrumentingMethodVisitor(
           int access, String owner, String desc, MethodVisitor mv) {
-    super(ASM7, mv);
+    super(ASM9, mv);
     this.owner = owner;
     this.desc = desc;
 

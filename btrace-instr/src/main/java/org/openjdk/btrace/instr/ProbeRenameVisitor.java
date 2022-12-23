@@ -11,7 +11,7 @@ final class ProbeRenameVisitor extends ClassVisitor {
   private final String newClassName;
 
   ProbeRenameVisitor(ClassVisitor classVisitor, String newClassName) {
-    super(Opcodes.ASM7, classVisitor);
+    super(Opcodes.ASM9, classVisitor);
     this.newClassName = newClassName.replace('.', '/');
   }
 
@@ -38,7 +38,7 @@ final class ProbeRenameVisitor extends ClassVisitor {
   public MethodVisitor visitMethod(
       int access, String name, String descriptor, String signature, String[] exceptions) {
     return new MethodVisitor(
-        Opcodes.ASM7, super.visitMethod(access, name, descriptor, signature, exceptions)) {
+        Opcodes.ASM9, super.visitMethod(access, name, descriptor, signature, exceptions)) {
       @Override
       public void visitTypeInsn(int opcode, String type) {
         super.visitTypeInsn(opcode, type.equals(oldClassName) ? newClassName : type);

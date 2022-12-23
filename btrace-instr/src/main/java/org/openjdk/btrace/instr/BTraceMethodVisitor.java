@@ -9,7 +9,7 @@ public class BTraceMethodVisitor extends MethodVisitor {
   private final MethodInstrumentorHelper mHelper;
 
   public BTraceMethodVisitor(MethodVisitor mv, MethodInstrumentorHelper mHelper) {
-    super(Opcodes.ASM7, mv);
+    super(Opcodes.ASM9, mv);
     this.mHelper = mHelper;
   }
 

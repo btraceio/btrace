@@ -68,7 +68,7 @@ public class Instrumentor extends ClassVisitor {
 
   private Instrumentor(
       ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
-    super(ASM7, cv);
+    super(ASM9, cv);
     this.cl = cl;
     this.bcn = bcn;
     BTraceRuntime.Impl rt = bcn.getRuntime();
@@ -183,7 +183,7 @@ public class Instrumentor extends ClassVisitor {
       methodVisitor = instrumentorFor(om, methodVisitor, mHelper, access, name, desc);
     }
 
-    return new MethodVisitor(ASM7, methodVisitor) {
+    return new MethodVisitor(ASM9, methodVisitor) {
       @Override
       public AnnotationVisitor visitAnnotation(String annoDesc, boolean visible) {
         for (OnMethod om : annotationMatchers) {
