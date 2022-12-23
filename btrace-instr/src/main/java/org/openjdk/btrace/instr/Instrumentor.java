@@ -173,7 +173,7 @@ public class Instrumentor extends ClassVisitor {
     methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
 
     InstrumentingMethodVisitor mHelper =
-        new InstrumentingMethodVisitor(access, className, name, desc, methodVisitor);
+        new InstrumentingMethodVisitor(access, className, desc, methodVisitor);
 
     methodVisitor = mHelper;
 

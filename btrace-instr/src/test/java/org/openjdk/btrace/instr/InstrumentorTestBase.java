@@ -59,7 +59,7 @@ import sun.misc.Unsafe;
 
 /** @author Jaroslav Bachorik */
 public abstract class InstrumentorTestBase {
-  private static final boolean DEBUG = true;
+  private static final boolean DEBUG = false;
   private static final SharedSettings settings = SharedSettings.GLOBAL;
   private static final BTraceProbeFactory factory = new BTraceProbeFactory(settings);
   private static Unsafe unsafe;
