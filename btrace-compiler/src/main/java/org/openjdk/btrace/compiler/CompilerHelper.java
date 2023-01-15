@@ -140,7 +140,7 @@ class CompilerHelper {
     OutputStream os = null;
     try {
       name = name.replace(".", "_") + ".class";
-      File f = new File("/tmp/" + name);
+      File f = new File(System.getProperty("java.io.tmpdir"), name);
       if (!f.exists()) {
         f.getParentFile().createNewFile();
       }
