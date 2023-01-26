@@ -54,7 +54,7 @@ sourceSets {
 
 shadowJar {
     include 'org/openjdk/btrace/dtrace/**/*'
-    classifier = null
+    archiveClassifier = null
 }
 
 sourcesJar {

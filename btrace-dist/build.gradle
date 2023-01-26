@@ -1,7 +1,7 @@
 plugins {
     id 'maven-publish'
     id "com.github.johnrengelman.shadow" version "7.1.2"
-    id "nebula.ospackage" version "9.1.1"
+    id "com.netflix.nebula.ospackage" version "11.0.0"
     id "java"
     id "io.sdkman.vendors" version "3.0.0"
     id "signing"
@@ -47,10 +47,10 @@ artifacts {
 
 task agentJar(type: ShadowJar) {
     group 'Build'
-    baseName = 'btrace-agent'
-    version = null
-    classifier = null
-    destinationDir = libsDir
+    archiveBaseName = 'btrace-agent'
+    archiveVersion = null
+    archiveClassifier = null
+    destinationDirectory = libsDir
 
     manifest {
         attributes(
@@ -84,10 +84,10 @@ task agentJar(type: ShadowJar) {
 
 task bootJar(type: ShadowJar) {
     group 'Build'
-    baseName = 'btrace-boot'
-    version = null
-    classifier = null
-    destinationDir = libsDir
+    archiveBaseName = 'btrace-boot'
+    archiveVersion = null
+    archiveClassifier = null
+    destinationDirectory = libsDir
 
 
     include {
@@ -131,10 +131,10 @@ task bootJar(type: ShadowJar) {
 
 task clientJar(type: ShadowJar) {
     group 'Build'
-    baseName = 'btrace-client'
-    version = null
-    classifier = null
-    destinationDir = libsDir
+    archiveBaseName = 'btrace-client'
+    archiveVersion = null
+    archiveClassifier = null
+    destinationDirectory = libsDir
 
     exclude 'afu/**'
     exclude 'javax/**'
@@ -176,26 +176,34 @@ task copyDtraceLib(type: Copy) {
 task buildZip(type: Zip) {
     from "${distTarget}"
     include "**/*"
-    archiveName "btrace-v${project.version}-bin.zip"
-    destinationDir(file("$project.buildDir/distributions"))
+
+    archiveBaseName = 'btrace'
+    archiveVersion = "v${project.version}"
+    archiveClassifier = "bin"
+    destinationDirectory = new File(project.buildDir, "distributions")
 }
 
 task buildSdkmanZip(type: Zip) {
     from "${distBase}"
     include "**/*"
-    archiveName "btrace-v${project.version}-sdkman-bin.zip"
-    destinationDir(file("$project.buildDir/distributions"))
+
+    archiveBaseName = 'btrace'
+    archiveVersion = "v${project.version}"
+    archiveClassifier = "sdkman-bin"
+    destinationDirectory = new File(project.buildDir, "distributions")
 }
 
 task buildTgz(type: Tar) {
-    archiveName "btrace-v${project.version}-bin.tar.gz"
     into ('/'){
         from "${distTarget}"
         include '**/*'
     }
 
-    destinationDir file("$project.buildDir/distributions")
-    extension 'tar.gz'
+    archiveBaseName = 'btrace'
+    archiveVersion = "v${project.version}"
+    archiveClassifier = "bin"
+    destinationDirectory = new File(project.buildDir, "distributions")
+    archiveExtension = 'tar.gz'
     compression = Compression.GZIP
 }
 
@@ -252,8 +260,8 @@ test {
         group 'Documentation'
         description "Build the btrace-${name} sources jar."
 
-        appendix "${name}"
-        classifier 'sources'
+        archiveAppendix = "${name}"
+        archiveClassifier = "sources"
         from sourceSets.main.allSource
         exclude excludes["${name}"]
     }
@@ -266,7 +274,7 @@ test {
         title = "btrace-${name}"
         source = sourceSets.main.allJava
         destinationDir = file("${project.docsDir}/${name}/javadoc")
-        classpath = files(compileJava.destinationDir) + configurations.artifact.asFileTree
+        classpath = files(compileJava.destinationDirectory) + configurations.artifact.asFileTree
         exclude excludes["${name}"]
         options.addStringOption('Xdoclint:all,-missing', '-quiet')
         failOnError false
@@ -277,8 +285,8 @@ test {
         group 'Documentation'
         description "Build the btrace-${name} javadoc jar."
 
-        appendix name
-        classifier 'javadoc'
+        archiveAppendix = "${name}"
+        archiveClassifier = "javadoc"
         from tasks["${name}Javadoc"].getOutputs()
     }
 }
@@ -318,10 +326,10 @@ publishing {
             groupId 'io.btrace'
             artifact agentJar
             artifact agentSourcesJar {
-                classifier "sources"
+                archiveClassifier = "sources"
             }
             artifact agentJavadocJar {
-                classifier "javadoc"
+                archiveClassifier = "javadoc"
             }
             pom.withXml {
                 addPomDetails(asNode(), 'btrace-agent')
@@ -333,10 +341,10 @@ publishing {
             groupId 'io.btrace'
             artifact clientJar
             artifact clientSourcesJar {
-                classifier "sources"
+                archiveClassifier = "sources"
             }
             artifact clientJavadocJar {
-                classifier "javadoc"
+                archiveClassifier = "javadoc"
             }
             pom.withXml {
                 addPomDetails(asNode(), 'btrace-client')
@@ -348,10 +356,10 @@ publishing {
             groupId 'io.btrace'
             artifact bootJar
             artifact bootSourcesJar {
-                classifier "sources"
+                archiveClassifier = "sources"
             }
             artifact bootJavadocJar {
-                classifier "javadoc"
+                archiveClassifier = "javadoc"
             }
             pom.withXml {
                 addPomDetails(asNode(), 'btrace-boot')
