@@ -44,9 +44,9 @@ task compileTestProbes {
 
         def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
         def compiler = loader.loadClass('org.openjdk.btrace.compiler.Compiler')
-        def rtCp = sourceSets.main.runtimeClasspath.collect { it.absolutePath }.join(':')
+        def rtCp = sourceSets.main.runtimeClasspath
 
-        def args = ["-cp", "${buildDir}/classes/java/test:${buildDir}/classes/java/java11_dummy:${rtCp}", "-d", "${buildDir}/classes"]
+        def args = ["-cp", rtCp.plus(files(buildDir.toPath().resolve("classes/java/test"), buildDir.toPath().resolve("classes/java/java11_dummy"))).getAsPath(), "-d", buildDir.toPath().resolve("classes")]
 
         def files = fileTree(dir: "src/test/btrace", include: '**/*.java', exclude: 'verifier/**/*.java').findAll {
             it != null
@@ -61,7 +61,6 @@ task compileTestProbes {
 test {
     dependsOn cleanTest
     inputs.files compileTestProbes.outputs
-    //inputs.files buildDTrace.outputs
     testLogging.showStandardStreams = true
 
     def props = new Properties()

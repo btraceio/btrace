@@ -60,7 +60,7 @@ jmhJar {
 
 jmh {
   duplicateClassesStrategy = DuplicatesStrategy.WARN
-  jvmArgsAppend = ["-Djmh.basedir=${project.buildDir}/..", "-Dproject.version=${project.version}"]
+  jvmArgsAppend = ["-Djmh.basedir=${project.buildDir.getParent()}", "-Dproject.version=${project.version}"]
 //  jmhVersion = '1.27'
   includes = ['org.openjdk.btrace.bench.ClassFilterBenchmark']
   verbosity = 'EXTRA'

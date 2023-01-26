@@ -416,7 +416,7 @@ public abstract class RuntimeTest {
                 "-cp",
                 eventsClassPath,
                 "-d",
-                "/tmp/btrace-test"));
+                Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
     argVals.addAll(Arrays.asList(args));
     String testJavaHome = System.getenv("TEST_JAVA_HOME");
     testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
@@ -512,7 +512,7 @@ public abstract class RuntimeTest {
                 "-cp",
                 eventsClassPath,
                 "-d",
-                "/tmp/btrace-test"));
+                Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
     argVals.addAll(Arrays.asList(args));
     if (Files.exists(Paths.get(System.getenv("TEST_JAVA_HOME"), "jmods"))) {
       argVals.addAll(
@@ -656,7 +656,7 @@ public abstract class RuntimeTest {
                 "-cp",
                 eventsClassPath,
                 "-d",
-                "/tmp/btrace-test",
+                Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString(),
                 "-pd",
                 traceFile.getParentFile().getAbsolutePath()));
     if (debugBTrace) {

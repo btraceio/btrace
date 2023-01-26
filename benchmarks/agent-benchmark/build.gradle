@@ -21,7 +21,7 @@ dependencies {
 task btracec(type: JavaExec) {
   group 'Build'
   inputs.files 'src/main/resources/scripts'
-  outputs.dir "${buildDir}/classes/java/main"
+  outputs.dir buildDir.toPath().resolve("classes/java/main")
 
   environment('BTRACE_HOME', "$projectDir")
   classpath configurations.implementation
@@ -53,8 +53,9 @@ jmh {
   fork = 2
   jvm = "${env['JAVA_HOME']}/bin/java"
   duplicateClassesStrategy = DuplicatesStrategy.WARN
-  def agent = "-javaagent:${project.buildDir}/../../../btrace-dist/build/resources/main/${project.version}/libs/btrace-agent.jar=stdout=true,noServer=true,debug=true,script=${project.buildDir}/classes/java/main/TraceScript.btclass"
-  println(agent)
-  jvmArgsAppend = ["\"-Djmh.basedir=${project.buildDir}/.. -Dproject.version=${project.version} -Xmx128m ${agent.toString()}\""]
+  def agentJarPath = tasks.getByPath(':btrace-dist:agentJar').outputs.getFiles().getSingleFile()
+  def scriptPath = buildDir.toPath().resolve('classes/java/main/TraceScript.btclass')
+  def agent = "-javaagent:${agentJarPath}=stdout=true,noServer=true,debug=true,script=${scriptPath}"
+  jvmArgsAppend = ["\"-Djmh.basedir=${buildDir.getParentFile()} -Dproject.version=${project.version} -Xmx128m ${agent}\""]
   includes = ['.*BTraceBench.*']
 }

@@ -25,8 +25,8 @@
 package org.openjdk.btrace.instr;
 
 import java.lang.reflect.Field;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -5635,7 +5635,7 @@ public class InstrumentorTest extends InstrumentorTestBase {
     loadTargetClass("OnMethodTest");
     transform("TLSTest");
 
-    Files.write(FileSystems.getDefault().getPath("/tmp/TLSTest.class"), traceCode);
+    Files.write(Paths.get(System.getProperty("java.io.tmpdir"), "TLSTest.class"), traceCode);
 
     checkTrace(
         "public static Lorg/openjdk/btrace/core/BTraceRuntime; runtime\n"
