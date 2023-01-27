@@ -1282,6 +1282,8 @@ public final class BTraceRuntime {
     JfrEvent.Factory createEventFactory(JfrEvent.Template template);
 
     int version();
+
+    String getClassName();
   }
 
   public interface BTraceRuntimeAccessor {

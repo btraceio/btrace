@@ -430,7 +430,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     cmdThread.start();
   }
 
-  protected final String getClassName() {
+  @Override
+  public final String getClassName() {
     return className;
   }
 
