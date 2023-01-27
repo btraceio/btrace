@@ -1,14 +1,12 @@
 plugins {
-    id 'net.nemerosa.versioning' version '2.15.1'
+    alias(libs.plugins.versioning)
 }
 
 dependencies {
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
-
-    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
-    implementation(group: 'org.ow2.asm', name: 'asm-tree', version: "${rootProject.asmVersion}")
-    implementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+    implementation libs.slf4j
+    implementation libs.asm
+    implementation libs.asm.tree
+    implementation libs.asm.util
 
     implementation files("${JAVA_8_HOME}/lib/tools.jar")
 

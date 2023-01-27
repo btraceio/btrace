@@ -1,6 +1,6 @@
 plugins {
   id 'java'
-  id("me.champeau.jmh") version "0.6.8"
+  alias(libs.plugins.jmh)
 }
 
 description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
@@ -18,8 +18,8 @@ dependencies {
   jmh project(":btrace-instr")
   jmh project(":btrace-runtime")
   jmh project(":btrace-statsd")
-  jmh("org.openjdk.jmh:jmh-core:1.36")
-  jmh("org.openjdk.jmh:jmh-generator-annprocess:1.36")
+  jmh libs.jmh
+  jmh libs.jmh.annprocess
   compilerDeps project(path: ":btrace-dist", configuration: "shadow")
   compilerDeps project(":btrace-compiler")
 }

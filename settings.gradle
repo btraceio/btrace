@@ -24,3 +24,48 @@ subDirs.each { File dir ->
     include "benchmarks:runtime-benchmarks"
 }
 
+dependencyResolutionManagement {
+    versionCatalogs {
+        libs {
+            // Families...
+            version('asm', '9.4')
+            version('jmh', '1.36')
+            version('jmhGradlePlugin', '0.6.5')
+            version('slf4j', '1.7.36')
+            version('jupiter', '5.9.1')
+
+            // *** Gradle plugins ***
+            plugin ('spotless', 'com.diffplug.spotless').version('6.11.0')
+            plugin ('versioning', 'net.nemerosa.versioning').version('2.15.1')
+            plugin ('ospackage', 'com.netflix.nebula.ospackage').version('11.0.0')
+            plugin ('shadow', 'com.github.johnrengelman.shadow').version('7.1.2')
+            plugin ('sdkman-vendors', 'io.sdkman.vendors').version('3.0.0')
+
+            plugin ('jmh', 'me.champeau.jmh').versionRef('jmhGradlePlugin')
+
+            // *** Libraries ***
+
+            // https://mvnrepository.com/artifact/com.google.auto.service
+            library ('autoService', 'com.google.auto.service', 'auto-service').version('1.0.1')
+            // https://mvnrepository.com/artifact/org.jctools
+            library ('jctools', 'org.jctools', 'jctools-core').version('4.0.1')
+
+
+            // https://mvnrepository.com/artifact/org.slf4j
+            library ('slf4j',  'org.slf4j', 'slf4j-api').versionRef('slf4j')
+            library ('slf4j-simple',  'org.slf4j', 'slf4j-simple').versionRef('slf4j')
+
+            // https://mvnrepository.com/artifact/org.ow2.asm
+            library ('asm',  'org.ow2.asm', 'asm').versionRef('asm')
+            library ('asm-tree',  'org.ow2.asm', 'asm-tree').versionRef('asm')
+            library ('asm-util',  'org.ow2.asm', 'asm-util').versionRef('asm')
+
+            // https://mvnrepository.com/artifact/org.openjdk.jmh
+            library ('jmh', 'org.openjdk.jmh', 'jmh-core').versionRef('jmh')
+            library ('jmh-annprocess', 'org.openjdk.jmh', 'jmh-generator-annprocess').versionRef('jmh')
+
+            // https://mvnrepository.com/artifact/org.junit.jupiter
+            library ('jupiter-params', 'org.junit.jupiter', 'junit-jupiter-params').versionRef('jupiter')
+        }
+    }
+}

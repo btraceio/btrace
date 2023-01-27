@@ -1,8 +1,6 @@
 dependencies {
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
-
-    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
+    implementation libs.slf4j
+    implementation libs.asm
 
     implementation files("${JAVA_8_HOME}/lib/tools.jar")
     implementation project(':btrace-core')

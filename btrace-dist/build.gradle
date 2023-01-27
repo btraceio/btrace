@@ -1,10 +1,10 @@
 plugins {
+    id 'java'
+    id 'signing'
     id 'maven-publish'
-    id "com.github.johnrengelman.shadow" version "7.1.2"
-    id "com.netflix.nebula.ospackage" version "11.0.0"
-    id "java"
-    id "io.sdkman.vendors" version "3.0.0"
-    id "signing"
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.ospackage)
+    alias(libs.plugins.sdkman.vendors)
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
