@@ -47,9 +47,9 @@ artifacts {
 
 task agentJar(type: ShadowJar) {
     group 'Build'
-    archiveBaseName = 'btrace-agent'
-    archiveVersion = null
-    archiveClassifier = null
+    archiveBaseName.set('btrace-agent')
+    archiveVersion.set('')
+    archiveClassifier.set('')
     destinationDirectory = libsDir
 
     manifest {
@@ -84,9 +84,9 @@ task agentJar(type: ShadowJar) {
 
 task bootJar(type: ShadowJar) {
     group 'Build'
-    archiveBaseName = 'btrace-boot'
-    archiveVersion = null
-    archiveClassifier = null
+    archiveBaseName.set('btrace-boot')
+    archiveVersion.set('')
+    archiveClassifier.set('')
     destinationDirectory = libsDir
 
 
@@ -131,9 +131,9 @@ task bootJar(type: ShadowJar) {
 
 task clientJar(type: ShadowJar) {
     group 'Build'
-    archiveBaseName = 'btrace-client'
-    archiveVersion = null
-    archiveClassifier = null
+    archiveBaseName.set('btrace-client')
+    archiveVersion.set('')
+    archiveClassifier.set('')
     destinationDirectory = libsDir
 
     exclude 'afu/**'
@@ -177,9 +177,9 @@ task buildZip(type: Zip) {
     from "${distTarget}"
     include "**/*"
 
-    archiveBaseName = 'btrace'
-    archiveVersion = "v${project.version}"
-    archiveClassifier = "bin"
+    archiveBaseName.set('btrace')
+    archiveVersion.set("v${project.version}")
+    archiveClassifier.set("bin")
     destinationDirectory = new File(project.buildDir, "distributions")
 }
 
@@ -187,9 +187,9 @@ task buildSdkmanZip(type: Zip) {
     from "${distBase}"
     include "**/*"
 
-    archiveBaseName = 'btrace'
-    archiveVersion = "v${project.version}"
-    archiveClassifier = "sdkman-bin"
+    archiveBaseName.set('btrace')
+    archiveVersion.set("v${project.version}")
+    archiveClassifier.set("sdkman-bin")
     destinationDirectory = new File(project.buildDir, "distributions")
 }
 
@@ -199,11 +199,11 @@ task buildTgz(type: Tar) {
         include '**/*'
     }
 
-    archiveBaseName = 'btrace'
-    archiveVersion = "v${project.version}"
-    archiveClassifier = "bin"
+    archiveBaseName.set('btrace')
+    archiveVersion.set("v${project.version}")
+    archiveClassifier.set("bin")
     destinationDirectory = new File(project.buildDir, "distributions")
-    archiveExtension = 'tar.gz'
+    archiveExtension.set('tar.gz')
     compression = Compression.GZIP
 }
 
