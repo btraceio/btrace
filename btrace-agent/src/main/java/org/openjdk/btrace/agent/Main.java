@@ -85,7 +85,6 @@ import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
 import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
@@ -143,44 +142,49 @@ public final class Main {
       settings.setDebug(isDebug);
       DebugSupport.initLoggers(isDebug, log);
 
-      log.debug("parsed command line arguments");
+      log.debug("parsed command line arguments: {}", argMap);
       parseArgs();
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
 
-      log.debug("Adding class transformer");
-      inst.addTransformer(transformer, true);
-      int startedScripts = startScripts();
-
       String tmp = argMap.get(NO_SERVER);
       // noServer is defaulting to true if startup scripts are defined
       boolean noServer = tmp != null ? Boolean.parseBoolean(tmp) : hasScripts();
+      Thread agentThread = null;
       if (noServer) {
         log.debug("noServer is true, server not started");
-        return;
+      } else {
+        agentThread =
+            new Thread(
+                    () -> {
+                      BTraceRuntime.enter();
+                      try {
+                        startServer();
+                      } finally {
+                        BTraceRuntime.leave();
+                      }
+                    });
       }
-      Thread agentThread =
-          new Thread(
-              () -> {
-                BTraceRuntime.enter();
-                try {
-                  startServer();
-                } finally {
-                  BTraceRuntime.leave();
-                }
-              });
       // force back-registration of BTraceRuntimeImpl in BTraceRuntime
+      //noinspection ResultOfMethodCallIgnored
       BTraceRuntimes.getDefault();
       // init BTraceRuntime
       BTraceRuntime.initUnsafe();
-      BTraceRuntime.enter();
-      try {
-        agentThread.setDaemon(true);
-        log.debug("starting agent thread");
-        agentThread.start();
-      } finally {
-        BTraceRuntime.leave();
+      if (agentThread != null) {
+        BTraceRuntime.enter();
+        try {
+          agentThread.setDaemon(true);
+          log.debug("starting agent thread");
+
+          agentThread.start();
+        } finally {
+          BTraceRuntime.leave();
+        }
       }
+
+      log.debug("Adding class transformer");
+      inst.addTransformer(transformer, true);
+      int startedScripts = startScripts();
     } finally {
       log.debug("Agent init took: {}", (System.nanoTime() - ts) + "ns");
     }
@@ -759,10 +763,6 @@ public final class Main {
   }
 
   private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
-    if (!BTraceProbeFactory.canLoad(filePath)) {
-      return false;
-    }
-
     try {
       String scriptName = "";
       String scriptParent = "";
@@ -854,7 +854,7 @@ public final class Main {
           log.debug("client accepted {}", sock);
         }
         ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
-        Client client = RemoteClient.getClient(ctx, sock, value -> handleNewClient(value));
+        Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
       } catch (RuntimeException | IOException re) {
         if (log.isDebugEnabled()) {
           log.debug("BTrace server failed", re);
