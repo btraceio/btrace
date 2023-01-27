@@ -1,6 +1,6 @@
 plugins {
   id 'java'
-  id("me.champeau.jmh") version "0.6.8"
+  alias(libs.plugins.jmh)
 }
 
 description 'A JMH benchmark to assert the overhead imposed by various types of BTrace instrumentation.'
@@ -11,11 +11,10 @@ def javaHome = env['JAVA_HOME']
 dependencies {
   implementation project(path: ":btrace-dist", configuration: "shadow")
   implementation project(":btrace-compiler")
-  jmh project(":btrace-instr")
-  jmh project(":btrace-runtime")
-  jmh project(":btrace-statsd")
-  jmh("org.openjdk.jmh:jmh-core:1.36")
-  jmh("org.openjdk.jmh:jmh-generator-annprocess:1.36")
+  jmh tasks.getByPath(':btrace-dist:bootJar').outputs.getFiles()
+
+  jmh libs.jmh
+  jmh libs.jmh.annprocess
 }
 
 task btracec(type: JavaExec) {

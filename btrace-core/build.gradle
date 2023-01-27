@@ -1,22 +1,15 @@
 import org.apache.tools.ant.filters.*
 
 plugins {
-    id 'net.nemerosa.versioning' version '2.15.1'
+    alias(libs.plugins.versioning)
 }
 
 dependencies {
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
-
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
-    implementation(group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.36')
-
-    // https://mvnrepository.com/artifact/org.jctools/jctools-core
-    implementation(group: 'org.jctools', name: 'jctools-core', version: '4.0.1')
-
-    // https://mvnrepository.com/artifact/org.ow2.asm/asm
-    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
-    implementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+    implementation libs.slf4j
+    implementation libs.slf4j.simple
+    implementation libs.jctools
+    implementation libs.asm
+    implementation libs.asm.util
 }
 
 compileJava {

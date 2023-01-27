@@ -1,9 +1,7 @@
 plugins {
     id "jacoco"
-    id "com.diffplug.spotless" version "6.13.0"
+    alias(libs.plugins.spotless)
 }
-
-project.ext.asmVersion = "9.4"
 
 repositories {
     mavenCentral()

@@ -1,7 +1,7 @@
 dependencies {
     // https://mvnrepository.com/artifact/org.ow2.asm/asm
-    implementation(group: 'org.ow2.asm', name: 'asm', version: "${rootProject.asmVersion}")
-    implementation(group: 'org.ow2.asm', name: 'asm-util', version: "${rootProject.asmVersion}")
+    implementation libs.asm
+    implementation libs.asm.util
 
     implementation files("${JAVA_8_HOME}/lib/tools.jar")
     implementation project(path: ':btrace-core')

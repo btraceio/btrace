@@ -2,8 +2,8 @@ import org.gradle.internal.os.OperatingSystem
 import org.gradle.internal.jvm.Jvm
 
 plugins {
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'java'
+    alias(libs.plugins.shadow)
 }
 
 def nativeHeadersDir = "${buildDir}/generated/native/include"
