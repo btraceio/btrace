@@ -24,5 +24,7 @@
  */
 package org.openjdk.btrace.services.spi;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public interface BTraceService {}

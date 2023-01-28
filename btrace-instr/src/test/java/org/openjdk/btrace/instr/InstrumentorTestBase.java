@@ -57,7 +57,9 @@ import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 import sun.misc.Unsafe;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public abstract class InstrumentorTestBase {
   private static final boolean DEBUG = false;
   private static final SharedSettings settings = SharedSettings.GLOBAL;
@@ -262,7 +264,8 @@ public abstract class InstrumentorTestBase {
     transformedBC = cw.instrument();
 
     if (transformedBC != null) {
-      try (OutputStream os = new FileOutputStream(new File(System.getProperty("java.io.tmpdir"), "dummy.class"))) {
+      try (OutputStream os =
+          new FileOutputStream(new File(System.getProperty("java.io.tmpdir"), "dummy.class"))) {
         os.write(transformedBC);
       }
     } else {
@@ -356,7 +359,9 @@ public abstract class InstrumentorTestBase {
     if (DEBUG) {
       System.err.println("=== Loaded Trace: " + bcn + "\n");
       System.err.println(asmify(this.traceCode));
-      Files.write(FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir"), "jingle.class"), traceCode);
+      Files.write(
+          FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir"), "jingle.class"),
+          traceCode);
     }
 
     bcn.checkVerified();

@@ -3,9 +3,7 @@ package org.openjdk.btrace.instr;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -116,8 +114,11 @@ public class InstrumentingMethodVisitorTest {
     String expected2 = "[[Ljava/lang/String;";
     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     cw.visit(Opcodes.ASM9, Opcodes.ACC_PUBLIC, "test.Test", null, null, null);
-    MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
-    InstrumentingMethodVisitor instance = new InstrumentingMethodVisitor(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
+    InstrumentingMethodVisitor instance =
+        new InstrumentingMethodVisitor(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
     mv = instance;
 
     mv.visitLdcInsn(1);
@@ -132,7 +133,6 @@ public class InstrumentingMethodVisitorTest {
 
     mv.visitMaxs(3, 0);
     mv.visitEnd();
-
   }
 
   @ParameterizedTest
@@ -140,8 +140,11 @@ public class InstrumentingMethodVisitorTest {
   void storeAsNew(Object value, Type type) {
     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     cw.visit(Opcodes.ASM9, Opcodes.ACC_PUBLIC, "test.Test", null, null, null);
-    MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
-    InstrumentingMethodVisitor instance = new InstrumentingMethodVisitor(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
+    InstrumentingMethodVisitor instance =
+        new InstrumentingMethodVisitor(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
     mv = instance;
 
     mv.visitLdcInsn(value);
@@ -156,14 +159,13 @@ public class InstrumentingMethodVisitorTest {
 
   private static Stream<Arguments> typeValues() {
     return Stream.of(
-            Arguments.of((byte)1, Type.BYTE_TYPE),
-            Arguments.of((short)1, Type.SHORT_TYPE),
-            Arguments.of((char)1, Type.CHAR_TYPE),
-            Arguments.of((int)1, Type.INT_TYPE),
-            Arguments.of(true, Type.BOOLEAN_TYPE),
-            Arguments.of((long)1, Type.LONG_TYPE),
-            Arguments.of((float)1, Type.FLOAT_TYPE),
-            Arguments.of((double)1, Type.DOUBLE_TYPE)
-    );
+        Arguments.of((byte) 1, Type.BYTE_TYPE),
+        Arguments.of((short) 1, Type.SHORT_TYPE),
+        Arguments.of((char) 1, Type.CHAR_TYPE),
+        Arguments.of((int) 1, Type.INT_TYPE),
+        Arguments.of(true, Type.BOOLEAN_TYPE),
+        Arguments.of((long) 1, Type.LONG_TYPE),
+        Arguments.of((float) 1, Type.FLOAT_TYPE),
+        Arguments.of((double) 1, Type.DOUBLE_TYPE));
   }
 }

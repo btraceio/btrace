@@ -98,6 +98,7 @@ public final class DebugSupport {
         if (index != -1) {
           dir += className.substring(0, index);
         }
+        System.out.println("===> " + dir);
         new File(dir).mkdirs();
         String file;
         if (index != -1) {
@@ -106,7 +107,6 @@ public final class DebugSupport {
           file = className;
         }
         file += ".class";
-        new File(dir).mkdirs();
         File out = new File(dir, file);
         try (FileOutputStream fos = new FileOutputStream(out)) {
           fos.write(code);

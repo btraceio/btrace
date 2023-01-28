@@ -5,6 +5,8 @@
 apply plugin: 'java'
 apply plugin: 'idea'
 
+apply from: "$rootDir/gradle/spotless.gradle"
+
 project.group = 'org.openjdk.btrace'
 project.version = '2.3.0-SNAPSHOT'
 

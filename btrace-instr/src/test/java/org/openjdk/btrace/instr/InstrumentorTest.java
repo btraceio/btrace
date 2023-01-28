@@ -30,7 +30,9 @@ import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public class InstrumentorTest extends InstrumentorTestBase {
   @BeforeAll
   public static void classSetup() throws Exception {

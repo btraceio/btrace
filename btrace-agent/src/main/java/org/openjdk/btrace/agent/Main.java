@@ -156,14 +156,14 @@ public final class Main {
       } else {
         agentThread =
             new Thread(
-                    () -> {
-                      BTraceRuntime.enter();
-                      try {
-                        startServer();
-                      } finally {
-                        BTraceRuntime.leave();
-                      }
-                    });
+                () -> {
+                  BTraceRuntime.enter();
+                  try {
+                    startServer();
+                  } finally {
+                    BTraceRuntime.leave();
+                  }
+                });
       }
       // force back-registration of BTraceRuntimeImpl in BTraceRuntime
       //noinspection ResultOfMethodCallIgnored

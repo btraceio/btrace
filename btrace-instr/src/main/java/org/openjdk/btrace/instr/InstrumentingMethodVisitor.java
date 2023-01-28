@@ -66,8 +66,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   private int localsTailPtr = 0;
   private int pc = 0, lastFramePc = Integer.MIN_VALUE;
 
-  public InstrumentingMethodVisitor(
-          int access, String owner, String desc, MethodVisitor mv) {
+  public InstrumentingMethodVisitor(int access, String owner, String desc, MethodVisitor mv) {
     super(ASM9, mv);
     this.owner = owner;
     this.desc = desc;
@@ -204,8 +203,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitLookupSwitchInsn(Label label, int[] ints, Label[] labels) {
     stack.pop();
-    SavedState state =
-        new SavedState(localTypes, stack, newLocals, SavedState.CONDITIONAL);
+    SavedState state = new SavedState(localTypes, stack, newLocals, SavedState.CONDITIONAL);
     jumpTargetStates.put(label, state);
     for (Label l : labels) {
       jumpTargetStates.put(l, state);
@@ -217,8 +215,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitTableSwitchInsn(int i, int i1, Label label, Label... labels) {
     stack.pop();
-    SavedState state =
-        new SavedState(localTypes, stack, newLocals, SavedState.CONDITIONAL);
+    SavedState state = new SavedState(localTypes, stack, newLocals, SavedState.CONDITIONAL);
     jumpTargetStates.put(label, state);
     for (Label l : labels) {
       jumpTargetStates.put(l, state);
@@ -314,7 +311,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     jumpTargetStates.put(
         label,
         new SavedState(
-                localTypes,
+            localTypes,
             stack,
             newLocals,
             opcode == GOTO || opcode == JSR ? SavedState.UNCONDITIONAL : SavedState.CONDITIONAL));
@@ -1073,8 +1070,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       for (Label handler : handlers) {
         if (!jumpTargetStates.containsKey(handler)) {
           jumpTargetStates.put(
-              handler,
-              new SavedState(localTypes, stack, newLocals, SavedState.EXCEPTION));
+              handler, new SavedState(localTypes, stack, newLocals, SavedState.EXCEPTION));
         }
       }
     }

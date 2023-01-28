@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
+apply from: "$rootDir/gradle/spotless.gradle"
+
 repositories {
     mavenCentral()
 }
@@ -21,20 +23,5 @@ task mergedJavadoc(type: Javadoc, description: 'Creates Javadoc from all the pro
     }
     classpath.from {
         subprojects*.configurations*.compile*.copyRecursive({ !(it instanceof ProjectDependency) })*.resolve()
-    }
-}
-
-spotless {
-    java {
-        target 'src/*/java/**/*.java'
-        // note: you can use an empty string for all the imports you didn't specify explicitly, and '\\#` prefix for static imports
-        importOrder('java', 'javax', 'org.openjdk.btrace', '', '\\#org.openjdk.btrace', '\\#')
-        removeUnusedImports()
-
-        googleJavaFormat()   // has its own section below
-
-        formatAnnotations()  // fixes formatting of type annotations, see below
-
-        licenseHeader '/* (C) $YEAR */' // or licenseHeaderFile
     }
 }
