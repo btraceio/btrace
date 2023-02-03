@@ -32,7 +32,7 @@ dependencyResolutionManagement {
             version('jmh', '1.36')
             version('jmhGradlePlugin', '0.6.5')
             version('slf4j', '1.7.36')
-            version('jupiter', '5.9.1')
+            version('junit', '5.9.1')
 
             // *** Gradle plugins ***
             plugin ('spotless', 'com.diffplug.spotless').version('6.11.0')
@@ -65,7 +65,8 @@ dependencyResolutionManagement {
             library ('jmh-annprocess', 'org.openjdk.jmh', 'jmh-generator-annprocess').versionRef('jmh')
 
             // https://mvnrepository.com/artifact/org.junit.jupiter
-            library ('jupiter-params', 'org.junit.jupiter', 'junit-jupiter-params').versionRef('jupiter')
+            library ('junit', 'org.junit', 'junit-bom').versionRef('junit')
+            library ('junit-jupiter', 'org.junit.jupiter', 'junit-jupiter').versionRef('junit')
         }
     }
 }

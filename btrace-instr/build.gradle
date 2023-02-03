@@ -19,7 +19,7 @@ dependencies {
 
     testImplementation libs.asm.util
     testImplementation libs.slf4j.simple
-    testImplementation libs.jupiter.params
+    testImplementation libs.junit.jupiter
     testImplementation project(':btrace-client')
 }
 
