@@ -22,6 +22,12 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 8
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
       - name: Build BTrace
         run: ./gradlew -x test build
       - name: Upload build data
@@ -42,6 +48,12 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
       - name: Download build data
         uses: actions/download-artifact@v3
         with:
