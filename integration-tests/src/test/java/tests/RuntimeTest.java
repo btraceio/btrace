@@ -79,55 +79,26 @@ public abstract class RuntimeTest {
       forceDebugVal = System.getenv("BTRACE_TEST_DEBUG");
     }
     forceDebug = Boolean.parseBoolean(forceDebugVal);
-    URL url =
-        BTraceFunctionalTests.class
-            .getClassLoader()
-            .getResource("org/openjdk/btrace/instr/Instrumentor.class");
-    String path = url.toString();
-    path = path.replace("jar:file:", "");
-    int idx = path.indexOf('!');
-    if (idx > -1) {
-      path = path.substring(0, idx);
-    }
-    File f = new File(path);
-    while (f != null) {
-      if (f.getName().equals("build") || f.getName().equals("out")) {
-        break;
-      }
-      f = f.getParentFile();
-    }
-    if (f != null) {
-      projectRoot = f.getAbsoluteFile().toPath().resolve("../..");
-      Path clientJarPath =
-          projectRoot
-              .resolve("btrace-dist/build/resources/main")
-              .resolve("v" + System.getProperty("project.version"))
-              .resolve("libs/btrace-client.jar");
-      Path eventsJarPath = projectRoot.resolve("integration-tests/build/libs/events.jar");
-      clientClassPath = clientJarPath.toString();
-      eventsClassPath = eventsJarPath.toString();
-      // client jar needs to take precedence in order for the agent.jar inferring code to work
-      cp =
-          clientJarPath
-              + File.pathSeparator
-              + projectRoot.resolve("integration-tests/build/classes/java/test");
-    }
+    Path libsPath = Paths.get(System.getProperty("btrace.libs"));
+    projectRoot = Paths.get(System.getProperty("project.dir"));
+    Path clientJarPath = libsPath.resolve("btrace-client.jar");
+    Path eventsJarPath = projectRoot.resolve("build/libs/events.jar");
+    clientClassPath = clientJarPath.toString();
+    eventsClassPath = eventsJarPath.toString();
+    // client jar needs to take precedence in order for the agent.jar inferring code to work
+    cp =
+        clientJarPath
+            + File.pathSeparator
+            + projectRoot.resolve("build/classes/java/test")
+            + File.pathSeparator
+            + eventsClassPath;
+
     Assertions.assertNotNull(projectRoot);
     Assertions.assertNotNull(clientClassPath);
 
     String toolsjar = null;
 
-    String jHome = System.getenv("TEST_JAVA_HOME");
-    if (jHome == null) {
-      String targetVersion = System.getenv("TEST_JAVA_VERSION");
-      if (targetVersion != null) {
-        jHome = System.getenv("JAVA_" + targetVersion + "_HOME");
-      }
-    }
-    if (jHome == null) {
-      jHome = System.getProperty("java.home").replace("/jre", "");
-    }
-    javaHome = jHome;
+    javaHome = System.getProperty("java.home").replace("/jre", "");
 
     Path toolsJarPath = Paths.get(javaHome, "lib", "tools.jar");
     if (Files.exists(toolsJarPath)) {
@@ -595,7 +566,7 @@ public abstract class RuntimeTest {
   }
 
   public File locateTrace(String trace) {
-    Path start = projectRoot.resolve("integration-tests/src");
+    Path start = projectRoot.resolve("src");
     AtomicReference<Path> tracePath = new AtomicReference<>();
     try {
       Files.walkFileTree(

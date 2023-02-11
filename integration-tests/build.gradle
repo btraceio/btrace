@@ -3,32 +3,14 @@ import java.nio.file.Paths
 
 apply plugin: 'java'
 
-sourceSets {
-    java11_dummy {
-        java {
-            srcDirs = ['src/main/java11_dummy']
-        }
-    }
-}
-
-compileJava11_dummyJava {
-    sourceCompatibility = 8
-    targetCompatibility = 8
-    options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
-    options.forkOptions.javaHome = file("${project.property("JAVA_11_HOME")}")
-}
-
 compileTestJava {
     sourceCompatibility = 8
     targetCompatibility = 8
-    options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
 }
 
 task buildEventsJar(type: Jar) {
-    inputs.files compileJava11_dummyJava
-    from files("${project.buildDir}/classes/java/java11_dummy")
+    inputs.files compileJava
+    from files("${project.buildDir}/classes/java/main")
     archiveBaseName = "events"
     archiveVersion = ""
     archiveClassifier = ""
@@ -46,8 +28,8 @@ test {
     def props = new Properties()
     props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
     if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
-        jvmArgs "-Dproject.version=${project.version}"
+        jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
     } else {
-        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
     }
 }
