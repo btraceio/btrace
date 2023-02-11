@@ -32,6 +32,7 @@ jobs:
           path: |
             btrace-dist/build
   test:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         java: [8, 11, 17, 20]
