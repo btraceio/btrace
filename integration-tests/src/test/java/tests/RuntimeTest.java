@@ -29,7 +29,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -389,7 +388,7 @@ public abstract class RuntimeTest {
   }
 
   protected Path locateAgent() {
-    Path start = projectRoot.resolve("btrace-dist/build/resources/main");
+    Path start = projectRoot.resolve("../btrace-dist/build/resources/main");
     Path[] tracePath = new Path[1];
     try {
       Files.walkFileTree(
@@ -733,11 +732,7 @@ public abstract class RuntimeTest {
   }
 
   public File locateTrace(String trace) {
-    Path start =
-        projectRoot.resolve(
-            trace.endsWith(".class")
-                ? "build/classes/traces"
-                : "src");
+    Path start = projectRoot.resolve(trace.endsWith(".class") ? "build/classes/traces" : "src");
     Path[] tracePath = new Path[1];
     try {
       Files.walkFileTree(

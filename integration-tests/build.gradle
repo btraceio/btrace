@@ -15,13 +15,12 @@ task compileTestProbes {
     }
     dependsOn compileTestJava
     doLast {
-        def path = project(':integration-tests').sourceSets.test.runtimeClasspath
-
-        def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
+        def clientJar = projectDir.toPath().resolve("../btrace-dist/build/resources/main/v${project.version}/libs/btrace-client.jar")
+        def loader = new URLClassLoader(new URL[]{new URL("file://${clientJar}")})
         def compiler = loader.loadClass('org.openjdk.btrace.compiler.Compiler')
         def rtCp = sourceSets.test.runtimeClasspath
 
-        def args = ["-cp", rtCp.plus(files(buildDir.toPath().resolve("classes/java/test"), buildDir.toPath().resolve("classes/java/java11_dummy"))).getAsPath(), "-d", buildDir.toPath().resolve("classes")]
+        def args = ["-cp", rtCp.plus(files(clientJar, buildDir.toPath().resolve("classes/java/test"), buildDir.toPath().resolve("classes/java/java11_dummy"))).getAsPath(), "-d", buildDir.toPath().resolve("classes")]
 
         def files = fileTree(dir: "src/test/btrace", include: '**/*.java', exclude: 'verifier/**/*.java').findAll {
             it != null
