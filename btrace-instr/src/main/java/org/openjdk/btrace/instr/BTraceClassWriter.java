@@ -87,6 +87,17 @@ final class BTraceClassWriter extends ClassWriter {
     ClassVisitor cv =
         new ClassVisitor(Opcodes.ASM9, top != null ? top : this) {
           @Override
+          public void visit(
+              int version,
+              int access,
+              String name,
+              String signature,
+              String superName,
+              String[] interfaces) {
+            super.visit(Math.max(version, 52), access, name, signature, superName, interfaces);
+          }
+
+          @Override
           public void visitEnd() {
             if (top != null && top.hasCushionMethods()) {
               for (MethodNode m : cushionMethods) {

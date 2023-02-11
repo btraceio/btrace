@@ -62,6 +62,7 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("java/lang/Boolean");
     SENSITIVE_CLASSES.add("java/lang/Byte");
     SENSITIVE_CLASSES.add("java/lang/Class");
+    SENSITIVE_CLASSES.add("java/lang/Float");
     SENSITIVE_CLASSES.add("java/lang/Math");
     SENSITIVE_CLASSES.add("java/lang/MethodHandleNatives");
     SENSITIVE_CLASSES.add("java/lang/MethodHandles$Lookup");
@@ -71,6 +72,7 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("java/lang/String");
     SENSITIVE_CLASSES.add("java/lang/StringLatin1");
     SENSITIVE_CLASSES.add("java/lang/ThreadLocal");
+    SENSITIVE_CLASSES.add("java/lang/Throwable");
     SENSITIVE_CLASSES.add("java/lang/VerifyError");
     SENSITIVE_CLASSES.add("java/lang/WeakPairMap");
     SENSITIVE_CLASSES.add("java/lang/WeakPairMap$Pair$Weak");
@@ -78,13 +80,17 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("java/lang/ref/Cleaner");
     SENSITIVE_CLASSES.add("java/lang/ref/Cleaner$1");
     SENSITIVE_CLASSES.add("java/lang/ref/PhantomReference");
+    SENSITIVE_CLASSES.add("java/lang/ref/Reference");
     SENSITIVE_CLASSES.add("java/lang/ref/ReferenceQueue");
     SENSITIVE_CLASSES.add("java/lang/ref/SoftReference");
     SENSITIVE_CLASSES.add("java/lang/ref/WeakReference");
     SENSITIVE_CLASSES.add("java/lang/reflect/Modifier");
+    SENSITIVE_CLASSES.add("java/util/AbstractMap");
+    SENSITIVE_CLASSES.add("java/util/Arrays");
     SENSITIVE_CLASSES.add("java/util/Objects");
     SENSITIVE_CLASSES.add("java/util/Timer");
     SENSITIVE_CLASSES.add("java/util/concurrent/ConcurrentHashMap");
+    SENSITIVE_CLASSES.add("java/util/WeakHashMap");
 
     SENSITIVE_CLASSES.add("jdk/internal/misc/Unsafe");
     SENSITIVE_CLASSES.add("jdk/internal/ref/");

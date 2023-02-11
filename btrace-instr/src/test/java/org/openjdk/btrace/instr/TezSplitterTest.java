@@ -8,7 +8,8 @@ public class TezSplitterTest extends InstrumentorTestBase {
     originalBC = loadTargetClass("classdata/TezSplitter");
     transform("issues/TezSplitter");
     checkTransformation(
-        "ICONST_4\n"
+        "// class version 52.0 (52)\n"
+            + "ICONST_4\n"
             + "ANEWARRAY java/lang/Object\n"
             + "DUP\n"
             + "ICONST_0\n"

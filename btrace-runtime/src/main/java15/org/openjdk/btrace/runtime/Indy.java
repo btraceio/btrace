@@ -53,6 +53,9 @@ public final class Indy {
       }
 
       return new ConstantCallSite(mh);
+    } catch (Throwable t) {
+      System.err.println("[BTRACE] Failed to link probe handler: " + probeClassName + "." + name + ": " + t.toString());
+      return new ConstantCallSite(MethodHandles.dropArguments(NOOP_HANDLE, 0, type.parameterArray()));
     } finally {
       if (!failedLinking) {
         relinker.relink();
