@@ -15,7 +15,7 @@ defaults:
     shell: bash
 
 jobs:
-  all:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Java 8
@@ -30,6 +30,10 @@ jobs:
           java-version: 17
       - name: Store JAVA_17_HOME
         run: JAVA_PATH=$(which java) && echo "JAVA_17_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Set up Java 19
+        uses: actions/setup-java@v1
+        with:
+          java-version: 19
       - name: Store JAVA_19_HOME
         run: JAVA_PATH=$(which java) && echo "JAVA_19_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
       - name: Set up Java 11
@@ -45,27 +49,106 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Build
-        run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build -x test
-      - name: Run Tests
-        run: JAVA_HOME="$JAVA_11_HOME" ./run_tests.sh
-      - name: Deploy Maven
-        if: github.ref ==  'refs/heads/develop' || github.ref == 'refs/heads/master'
-        run: ./gradlew :btrace-dist:publish
-        env:
-          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
-          GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
-          BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
-          BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
-      - name: Archive binary artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: binary-dist
-          path: |
-            btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
-      - name: Archive reports
+        run: JAVA_HOME="$JAVA_11_HOME" ./gradlew build
+      - name: Upload build data
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: reports
+          name: build
+          retention-days: 1
           path: |
-            btrace-instr/build/reports/**/*
+            btrace-dist/build
+      - name: Archive test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: |
+            **/reports/**/*
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        java: [ 8, 11, 17, 19 ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Set up Java ${{ matrix.java }}
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: Set up Java environment
+        run: |
+          JAVA_PATH=$(which java)
+          echo "JAVA_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+          echo "JAVA_8_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+      - name: Download build data
+        uses: actions/download-artifact@v3
+        with:
+          name: build
+          path: btrace-dist/build
+      - name: Run tests
+        run: |
+          ./gradlew -Pintegration :integration-tests:test
+      - name: Integration test reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-test-reports
+          path: |
+            integration-tests/build/reports/**/*
+      - name: Archive binary artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          if: success()
+          name: btrace-dist
+          path: |
+            btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
+
+  publish:
+    if: github.ref ==  'refs/heads/develop' || github.ref == 'refs/heads/master'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+    - name: Set up Java 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - name: Set up Java environment
+      run: |
+        JAVA_PATH=$(which java)
+        echo "JAVA_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+        echo "JAVA_8_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
+    - name: Download build data
+      uses: actions/download-artifact@v3
+      with:
+        name: build
+    - name: Deploy Maven
+      run: ./gradlew :btrace-dist:publish
+      env:
+        GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+        GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
+        BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
+        BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
+
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+      - name: Cleanup temporary artifacts
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: build

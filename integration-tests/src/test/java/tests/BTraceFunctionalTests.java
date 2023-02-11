@@ -456,9 +456,15 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   private static boolean isVersionSafe(String rtVersion) {
+      System.out.println("===> version: " + rtVersion);
     String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
     int major = Integer.parseInt(versionParts[0]);
-    int update = versionParts.length == 3 ? Integer.parseInt(versionParts[2].replace("0_", "")) : 0;
+    String updateStr = versionParts.length == 3 ? versionParts[2].replace("0_", "") : "0";
+    int idx = updateStr.indexOf('-');
+    if (idx > -1) {
+        updateStr = updateStr.substring(0, idx);
+    }
+    int update = Integer.parseInt(updateStr);
     if (major == 8) {
       // before 8u272 there was no JFR support
       return update > 272;
