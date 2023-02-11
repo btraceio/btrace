@@ -1,0 +1,7 @@
+ALOAD 0
+ALOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSigMatch$m3 (Ljava/lang/Object;Ljava/util/ArrayList;)V
+ALOAD 0
+ALOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSigMatch$m1 (Ljava/lang/Object;Ljava/util/List;)V
+MAXSTACK = 2

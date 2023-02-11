@@ -1,0 +1,10 @@
+DUP2
+LSTORE 5
+ALOAD 0
+LLOAD 5
+LLOAD 1
+ALOAD 3
+ALOAD 4
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$StaticArgsReturn$args (Ljava/lang/String;JJ[Ljava/lang/String;[I)V
+MAXSTACK = 9
+MAXLOCALS = 7

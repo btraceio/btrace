@@ -1,0 +1,307 @@
+ALOAD 0
+LDC "<init>"
+LDC 41
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+LDC "<init>"
+LDC 42
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+ALOAD 0
+LDC "<init>"
+LDC 43
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "<init>"
+LDC 45
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+LDC "<init>"
+LDC 46
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+ALOAD 0
+LDC "<init>"
+LDC 47
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "noargs"
+LDC 50
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ACONST_NULL
+LDC "noargs$static"
+LDC 53
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ALOAD 0
+LDC "args"
+LDC 57
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ACONST_NULL
+LDC "args$static"
+LDC 61
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ACONST_NULL
+LDC "callTopLevelStatic"
+LDC 65
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ACONST_NULL
+LDC "callTopLevelStatic"
+LDC 66
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ACONST_NULL
+LDC "callTargetStatic"
+LDC 70
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+LDC "callTopLevel"
+LDC 74
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+ALOAD 0
+LDC "callTarget"
+LDC 78
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ALOAD 0
+LDC "exception"
+LDC 83
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "exception"
+LDC 84
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L2
+L3
+LINENUMBER 85 L3
+ALOAD 0
+LDC "exception"
+LDC 85
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L4
+LINENUMBER 87 L4
+ALOAD 0
+LDC "exception"
+LDC 87
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L5
+LOCALVARIABLE e Ljava/io/IOException; L3 L4 1
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+MAXSTACK = 4
+ALOAD 0
+LDC "uncaught"
+LDC 90
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "array"
+LDC 94
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "array"
+LDC 96
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "array"
+LDC 97
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "array"
+LDC 98
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+LDC "field"
+LDC 101
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+ALOAD 0
+LDC "field"
+LDC 102
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "newObject"
+LDC 105
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "newObject"
+LDC 106
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ALOAD 0
+LDC "newArray"
+LDC 109
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "newArray"
+LDC 110
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "newArray"
+LDC 111
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "newArray"
+LDC 112
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "newArray"
+LDC 113
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ALOAD 0
+LDC "casts"
+LDC 116
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "casts"
+LDC 117
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "casts"
+LDC 119
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "casts"
+LDC 120
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "casts"
+LDC 122
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L5
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE c Ljava/util/Map; L1 L6 1
+LOCALVARIABLE d Ljava/util/HashMap; L2 L6 2
+MAXSTACK = 3
+LDC "sync"
+LDC 125
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+ALOAD 0
+LDC "sync"
+LDC 126
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "sync"
+LDC 127
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "sync"
+LDC 128
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L7
+L8
+LOCALVARIABLE this Lresources/OnMethodTest; L4 L8 0
+MAXSTACK = 3
+LDC "callTopLevel1"
+LDC 131
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+ALOAD 0
+LDC "callTopLevel1"
+LDC 132
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "calLTargetX"
+LDC 136
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ALOAD 0
+LDC "argsMultiReturn"
+LDC 140
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "argsMultiReturn"
+LDC 141
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "argsMultiReturn"
+LDC 144
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L3
+IFLE L4
+L5
+LINENUMBER 145 L5
+ALOAD 0
+LDC "argsMultiReturn"
+LDC 145
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L4
+LINENUMBER 149 L4
+ALOAD 0
+LDC "argsMultiReturn"
+LDC 149
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L6
+L7
+LINENUMBER 150 L7
+ALOAD 0
+LDC "argsMultiReturn"
+LDC 150
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L8
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L8 0
+LOCALVARIABLE a Ljava/lang/String; L0 L8 1
+LOCALVARIABLE b J L0 L8 2
+LOCALVARIABLE c [Ljava/lang/String; L0 L8 4
+LOCALVARIABLE d [I L0 L8 5
+ALOAD 0
+LDC "staticField"
+LDC 161
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "staticField"
+LDC 162
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+LDC "syncM"
+LDC 165
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+ALOAD 0
+LDC "syncM"
+LDC 166
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "syncM"
+LDC 167
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "syncM"
+LDC 168
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L7
+L8
+LOCALVARIABLE this Lresources/OnMethodTest; L4 L8 0
+MAXSTACK = 3
+ALOAD 0
+LDC "argsTypeMatch"
+LDC 173
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 3
+ALOAD 0
+LDC "caught"
+LDC 178
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "caught"
+LDC 179
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L2
+L3
+LINENUMBER 180 L3
+ALOAD 0
+LDC "caught"
+LDC 180
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L4
+LINENUMBER 182 L4
+ALOAD 0
+LDC "caught"
+LDC 182
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
+RETURN
+L5
+LOCALVARIABLE e Ljava/lang/RuntimeException; L3 L4 1
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+MAXSTACK = 4
+MAXLOCALS = 2

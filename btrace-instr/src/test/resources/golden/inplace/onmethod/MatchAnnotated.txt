@@ -1,0 +1,3 @@
+ALOAD 0
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MatchAnnotated$args (Ljava/lang/Object;)V
+MAXSTACK = 1

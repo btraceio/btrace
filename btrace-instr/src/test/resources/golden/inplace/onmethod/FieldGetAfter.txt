@@ -1,0 +1,11 @@
+DUP
+ASTORE 1
+DUP
+ISTORE 2
+ALOAD 0
+ALOAD 1
+LDC "field int resources.OnMethodTest#field"
+ILOAD 2
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldGetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 6
+MAXLOCALS = 3

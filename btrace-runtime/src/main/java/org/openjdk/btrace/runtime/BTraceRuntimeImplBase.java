@@ -425,7 +425,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
                 leave();
                 disabled = true;
               }
-            });
+            },
+            "BTrace Command Dispatcher");
     cmdThread.setDaemon(true);
     cmdThread.start();
   }
@@ -1026,8 +1027,11 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
             @Override
             public void run() {
               if (mthd != null) {
+
                 try {
+
                   mthd.invoke(null, (Object[]) null);
+
                 } catch (Throwable th) {
                   th.printStackTrace();
                 }

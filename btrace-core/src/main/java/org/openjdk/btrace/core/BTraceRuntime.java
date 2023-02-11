@@ -97,6 +97,9 @@ public final class BTraceRuntime {
   private static volatile BTraceRuntimeAccessor rtAccessor = () -> null;
   private static final String INDENT = "    ";
 
+  private static final ThreadLocal<Boolean> linkingFlag =
+      ThreadLocal.withInitial(() -> Boolean.FALSE);
+
   static {
     LINE_SEPARATOR = System.getProperty("line.separator");
   }
@@ -490,7 +493,9 @@ public final class BTraceRuntime {
     return getRt().$(key);
   }
 
-  /** @see BTraceUtils#instanceOf(java.lang.Object, java.lang.String) */
+  /**
+   * @see BTraceUtils#instanceOf(java.lang.Object, java.lang.String)
+   */
   static boolean instanceOf(Object obj, String className) {
     if (obj instanceof AnyType) {
       // the only time we can have AnyType on stack
@@ -1312,5 +1317,16 @@ public final class BTraceRuntime {
     BTraceAtomicLong(long initVal) {
       super(initVal);
     }
+  }
+
+  // used from instrumentation
+  public static boolean isLinking() {
+    return linkingFlag.get();
+  }
+
+  public static boolean setLinking(boolean isLinking) {
+    boolean prev = linkingFlag.get();
+    linkingFlag.set(isLinking);
+    return prev;
   }
 }

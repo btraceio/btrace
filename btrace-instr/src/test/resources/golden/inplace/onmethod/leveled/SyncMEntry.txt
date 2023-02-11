@@ -1,0 +1,26 @@
+TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncMEntry.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L6
+DUP
+ASTORE 2
+ALOAD 0
+LDC "syncM"
+ALOAD 2
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$SyncMEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V
+L6
+FRAME FULL [resources/OnMethodTest java/lang/Object] [java/lang/Object]
+L7
+LINENUMBER 167 L7
+GOTO L8
+FRAME SAME1 java/lang/Throwable
+ASTORE 3
+ALOAD 3
+L8
+LINENUMBER 168 L8
+L5
+FRAME SAME1 java/lang/Throwable
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0
+MAXSTACK = 4
+MAXLOCALS = 4

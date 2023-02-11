@@ -59,40 +59,41 @@ public class ClassFilter {
     MethodVisitor.class.getClassLoader();
     Attribute.class.getClassLoader();
 
+    SENSITIVE_CLASSES.add("java/lang/Boolean");
+    SENSITIVE_CLASSES.add("java/lang/Byte");
+    SENSITIVE_CLASSES.add("java/lang/Class");
+    SENSITIVE_CLASSES.add("java/lang/Math");
+    SENSITIVE_CLASSES.add("java/lang/MethodHandleNatives");
+    SENSITIVE_CLASSES.add("java/lang/MethodHandles$Lookup");
+    SENSITIVE_CLASSES.add("java/lang/Module");
+    SENSITIVE_CLASSES.add("java/lang/Number");
     SENSITIVE_CLASSES.add("java/lang/Object");
     SENSITIVE_CLASSES.add("java/lang/String");
-    SENSITIVE_CLASSES.add("java/lang/Shutdown");
+    SENSITIVE_CLASSES.add("java/lang/StringLatin1");
     SENSITIVE_CLASSES.add("java/lang/ThreadLocal");
     SENSITIVE_CLASSES.add("java/lang/VerifyError");
-    SENSITIVE_CLASSES.add("java/lang/instrument/");
-    SENSITIVE_CLASSES.add("java/lang/invoke/");
-    SENSITIVE_CLASSES.add("java/lang/ref/");
-    SENSITIVE_CLASSES.add("java/lang/concurrent/");
-    SENSITIVE_CLASSES.add("sun/reflect");
-    SENSITIVE_CLASSES.add("sun/misc/Unsafe");
-    SENSITIVE_CLASSES.add("sun/security/");
-    SENSITIVE_CLASSES.add("org/openjdk/btrace/");
-    SENSITIVE_CLASSES.add("com/sun/proxy/");
-    SENSITIVE_CLASSES.add("sun/instrument/");
-    SENSITIVE_CLASSES.add("java/lang/ClassValue");
-    SENSITIVE_CLASSES.add("java/lang/Throwable$PrintStreamOrWriter");
-    SENSITIVE_CLASSES.add("java/lang/Throwable$WrappedPrintStream");
-    SENSITIVE_CLASSES.add("java/lang/StackTraceElement");
-    SENSITIVE_CLASSES.add("java/lang/StackWalker");
+    SENSITIVE_CLASSES.add("java/lang/WeakPairMap");
     SENSITIVE_CLASSES.add("java/lang/WeakPairMap$Pair$Weak");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/");
-    SENSITIVE_CLASSES.add("java/nio/charset/");
-    SENSITIVE_CLASSES.add("java/nio/HeapCharBuffer");
-    SENSITIVE_CLASSES.add("java/nio/CharBuffer");
-    SENSITIVE_CLASSES.add("java/nio/Buffer");
-    SENSITIVE_CLASSES.add("java/nio/ByteBuffer");
-    SENSITIVE_CLASSES.add("java/nio/HeapByteBuffer");
-    SENSITIVE_CLASSES.add("jdk/internal/misc/");
-    SENSITIVE_CLASSES.add("jdk/internal/reflect/GeneratedConstructorAccessor1");
-    SENSITIVE_CLASSES.add("sun/invoke/");
-    SENSITIVE_CLASSES.add("java/lang/");
-    SENSITIVE_CLASSES.add("java/util/");
-    SENSITIVE_CLASSES.add("com/sun/");
+    SENSITIVE_CLASSES.add("java/lang/invoke/");
+    SENSITIVE_CLASSES.add("java/lang/ref/Cleaner");
+    SENSITIVE_CLASSES.add("java/lang/ref/Cleaner$1");
+    SENSITIVE_CLASSES.add("java/lang/ref/PhantomReference");
+    SENSITIVE_CLASSES.add("java/lang/ref/ReferenceQueue");
+    SENSITIVE_CLASSES.add("java/lang/ref/SoftReference");
+    SENSITIVE_CLASSES.add("java/lang/ref/WeakReference");
+    SENSITIVE_CLASSES.add("java/lang/reflect/Modifier");
+    SENSITIVE_CLASSES.add("java/util/Objects");
+    SENSITIVE_CLASSES.add("java/util/Timer");
+    SENSITIVE_CLASSES.add("java/util/concurrent/ConcurrentHashMap");
+
+    SENSITIVE_CLASSES.add("jdk/internal/misc/Unsafe");
+    SENSITIVE_CLASSES.add("jdk/internal/ref/");
+    SENSITIVE_CLASSES.add("jdk/internal/util/");
+
+    SENSITIVE_CLASSES.add("org/openjdk/btrace/");
+
+    SENSITIVE_CLASSES.add("sun/invoke/util/");
+    SENSITIVE_CLASSES.add("sun/misc/Unsafe");
   }
 
   private final List<OnMethod> onMethods;

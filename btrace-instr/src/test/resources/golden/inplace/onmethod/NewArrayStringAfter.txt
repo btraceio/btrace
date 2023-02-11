@@ -1,0 +1,10 @@
+DUP
+ALOAD 0
+ALOAD 3
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayStringAfter$args (Ljava/lang/Object;[Ljava/lang/String;)V
+ASTORE 4
+ASTORE 5
+LOCALVARIABLE c [Ljava/lang/String; L3 L5 4
+LOCALVARIABLE d [[Ljava/lang/String; L4 L5 5
+MAXSTACK = 3
+MAXLOCALS = 6

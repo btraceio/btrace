@@ -1,0 +1,25 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/FieldGetAfterStatic.$btrace$$level : I
+ICONST_1
+ISUB
+DUP
+ISTORE 1
+IFLT L1
+L1
+FRAME APPEND [I]
+ILOAD 1
+IFLT L2
+DUP2
+LSTORE 2
+ALOAD 0
+ACONST_NULL
+LDC "static field long resources.OnMethodTest#sField"
+LLOAD 2
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldGetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V
+L2
+FRAME SAME1 J
+L3
+LINENUMBER 162 L3
+L4
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
+MAXSTACK = 7
+MAXLOCALS = 4

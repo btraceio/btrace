@@ -1,0 +1,12 @@
+DUP
+ASTORE 1
+ALOAD 0
+LDC "resources.OnMethodTest"
+LDC "exception"
+ALOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$Throw$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+ASTORE 2
+ALOAD 2
+LOCALVARIABLE e Ljava/io/IOException; L2 L3 2
+MAXSTACK = 5
+MAXLOCALS = 3

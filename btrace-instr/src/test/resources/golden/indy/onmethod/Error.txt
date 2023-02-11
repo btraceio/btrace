@@ -1,0 +1,20 @@
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+FRAME SAME1 java/lang/Throwable
+INVOKESTATIC org/openjdk/btrace/core/BTraceRuntime.isLinking ()Z
+IFNE L2
+DUP
+ASTORE 1
+ALOAD 0
+LDC "uncaught"
+ALOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$Error$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/Error"
+]
+L2
+FRAME SAME1 java/lang/Throwable
+ATHROW
+MAXSTACK = 4
+MAXLOCALS = 2

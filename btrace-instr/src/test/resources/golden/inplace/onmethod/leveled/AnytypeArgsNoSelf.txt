@@ -1,0 +1,25 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/AnytypeArgsNoSelf.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L0
+ICONST_4
+ANEWARRAY java/lang/Object
+DUP
+ICONST_0
+ALOAD 1
+AASTORE
+DUP
+ICONST_1
+LLOAD 2
+INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;
+AASTORE
+DUP
+ICONST_2
+ALOAD 4
+AASTORE
+DUP
+ICONST_3
+ALOAD 5
+AASTORE
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AnytypeArgsNoSelf$argsNoSelf ([Ljava/lang/Object;)V
+FRAME SAME
+MAXSTACK = 5

@@ -1,0 +1,20 @@
+LCONST_0
+LSTORE 6
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 8
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 8
+LSUB
+LSTORE 6
+DUP2
+LSTORE 10
+ALOAD 0
+LLOAD 10
+LLOAD 6
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
+MAXSTACK = 12
+MAXLOCALS = 12

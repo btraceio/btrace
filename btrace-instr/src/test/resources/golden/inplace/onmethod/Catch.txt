@@ -1,0 +1,15 @@
+DUP
+ALOAD 0
+ALOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$Catch$args (Ljava/lang/Object;Ljava/io/IOException;)V
+FRAME FULL [resources/OnMethodTest java/io/IOException] [java/io/IOException]
+ASTORE 2
+L3
+LINENUMBER 85 L3
+ALOAD 2
+L4
+LINENUMBER 87 L4
+L5
+LOCALVARIABLE e Ljava/io/IOException; L3 L4 2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+MAXLOCALS = 3

@@ -40,7 +40,7 @@ public class Line {
   @OnMethod(
       clazz = "/.*\\.OnMethodTest/",
       method = "field",
-      location = @Location(value = Kind.LINE, line = 84))
+      location = @Location(value = Kind.LINE, line = 101))
   public static void args(@Self Object self, @ProbeMethodName String pmn, int line) {
     println("args");
   }

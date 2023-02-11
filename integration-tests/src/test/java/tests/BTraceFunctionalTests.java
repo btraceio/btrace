@@ -63,7 +63,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
   @Test
   public void testOSMBean() throws Exception {
     isUnsafe = true;
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OSMBeanTest.java",
         2,
@@ -79,7 +79,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
   @Test
   public void testOnProbe() throws Exception {
     if (Files.exists(Paths.get(javaHome, "jre"))) {
-      test(
+      testDynamic(
           "resources.Main",
           "btrace/OnProbeTest.java",
           5,
@@ -99,7 +99,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnTimer() throws Exception {
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OnTimerTest.java",
         10,
@@ -117,7 +117,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnTimerArg() throws Exception {
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OnTimerArgTest.java",
         new String[] {"timer=500"},
@@ -137,7 +137,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
   @Test
   public void testOnExit() throws Exception {
     timeout = 3500;
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OnExitTest.java",
         5,
@@ -150,7 +150,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethod() throws Exception {
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OnMethodTest.java",
         10,
@@ -169,8 +169,25 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testTraceAll() throws Exception {
+    testStartup(
+        "resources.Main",
+        "traces/TraceAllTest.class",
+        null,
+        20,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed: " + stdout);
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("[invocations="), stdout);
+          }
+        });
+  }
+
+  @Test
   public void testOnMethodLevel() throws Exception {
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OnMethodLevelTest.java",
         new String[] {"level=200"},
@@ -190,7 +207,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
   @Test
   public void testOnMethodTrackRetransform() throws Exception {
     trackRetransforms = true;
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OnMethodTest.java",
         2,
@@ -206,7 +223,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethodReturn() throws Exception {
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OnMethodReturnTest.java",
         5,
@@ -224,7 +241,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethodSubclass() throws Exception {
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/OnMethodSubclassTest.java",
         5,
@@ -241,7 +258,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
   @Test
   public void testProbeArgs() throws Exception {
     isUnsafe = true;
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/ProbeArgsTest.java",
         new String[] {"arg1", "arg2=val2"},
@@ -261,7 +278,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testPerfCounter() throws Exception {
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/PerfCounterTest.java",
         5,
@@ -277,7 +294,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testReflection() throws Exception {
-    test(
+    testDynamic(
         "resources.Main",
         "btrace/issues/BTRACE400.java",
         5,
@@ -309,57 +326,56 @@ public class BTraceFunctionalTests extends RuntimeTest {
       System.err.println("Skipping test for JDK " + rtVersion);
       return;
     }
-    testWithJfr(
-        "resources.Main",
-        "btrace/JfrTest.java",
-        10,
-        new ResultValidator() {
-          @Override
-          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
-            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
-            assertTrue(stderr.isEmpty(), "Non-empty stderr");
-            assertNotNull(jfrFile);
-            try {
-              RecordingFile f = new RecordingFile(Paths.get(jfrFile));
-              boolean hasPeriodicType = false,
-                  hasPeriodicValue = false,
-                  hasCustomType = false,
-                  hasCustomValue = false;
-              for (EventType et : f.readEventTypes()) {
-                if (et.getName().equals("periodic")) {
-                  hasPeriodicType = true;
-                } else if (et.getName().equals("custom")) {
-                  hasCustomType = true;
-                }
-                if (hasPeriodicType && hasCustomType) {
-                  while (f.hasMoreEvents()) {
-                    RecordedEvent e = f.readEvent();
-                    if (e.getEventType().getName().equals("periodic")) {
-                      hasPeriodicValue = true;
-                    } else if (e.getEventType().getName().equals("custom")) {
-                      hasCustomValue = true;
-                    }
-                    if (hasPeriodicValue && hasCustomValue) {
-                      return;
-                    }
-                  }
-                  break;
-                }
+
+    // start JFR recording
+    startJfr = true;
+    ResultValidator validator =
+        (stdout, stderr, retcode, jfrFile) -> {
+          assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+          assertTrue(stderr.isEmpty(), "Non-empty stderr");
+          assertNotNull(jfrFile);
+          try {
+            RecordingFile f = new RecordingFile(Paths.get(jfrFile));
+            boolean hasPeriodicType = false,
+                hasPeriodicValue = false,
+                hasCustomType = false,
+                hasCustomValue = false;
+            for (EventType et : f.readEventTypes()) {
+              if (et.getName().equals("periodic")) {
+                hasPeriodicType = true;
+              } else if (et.getName().equals("custom")) {
+                hasCustomType = true;
               }
-              fail(
-                  "periodic type ok: "
-                      + hasPeriodicType
-                      + ", periodic value ok: "
-                      + hasPeriodicValue
-                      + ", custom type ok: "
-                      + hasCustomType
-                      + ", custom value ok: "
-                      + hasCustomValue);
-            } catch (IOException e) {
-              throw new RuntimeException(e);
+              if (hasPeriodicType && hasCustomType) {
+                while (f.hasMoreEvents()) {
+                  RecordedEvent e = f.readEvent();
+                  if (e.getEventType().getName().equals("periodic")) {
+                    hasPeriodicValue = true;
+                  } else if (e.getEventType().getName().equals("custom")) {
+                    hasCustomValue = true;
+                  }
+                  if (hasPeriodicValue && hasCustomValue) {
+                    return;
+                  }
+                }
+                break;
+              }
             }
+            fail(
+                "periodic type ok: "
+                    + hasPeriodicType
+                    + ", periodic value ok: "
+                    + hasPeriodicValue
+                    + ", custom type ok: "
+                    + hasCustomType
+                    + ", custom value ok: "
+                    + hasCustomValue);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
           }
-        });
+        };
+    testDynamic("resources.Main", "btrace/JfrTest.java", 10, validator);
+    testStartup("resources.Main", "traces/JfrTest.class", 20, validator);
   }
 
   @Test

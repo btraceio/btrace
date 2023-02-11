@@ -1,0 +1,7 @@
+LDC "public long resources.OnMethodTest#args(java.lang.String, long, java.lang.String[], int[])"
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsNoSelf$argsNoSelf (Ljava/lang/String;Ljava/lang/String;J[Ljava/lang/String;[I)V
+MAXSTACK = 6

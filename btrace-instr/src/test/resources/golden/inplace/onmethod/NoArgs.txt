@@ -1,0 +1,2 @@
+ALOAD 0
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NoArgs$argsEmpty (Ljava/lang/Object;)V

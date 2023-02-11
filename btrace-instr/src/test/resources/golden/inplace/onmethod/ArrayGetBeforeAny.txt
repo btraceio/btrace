@@ -1,0 +1,11 @@
+DUP2
+ISTORE 3
+ASTORE 4
+ALOAD 0
+ALOAD 4
+ILOAD 3
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArrayGetBeforeAny$args (Ljava/lang/Object;Ljava/lang/Object;I)V
+ISTORE 5
+LOCALVARIABLE b I L2 L4 5
+MAXSTACK = 5
+MAXLOCALS = 6

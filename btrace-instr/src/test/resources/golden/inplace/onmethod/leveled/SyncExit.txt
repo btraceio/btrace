@@ -1,0 +1,37 @@
+TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
+L6
+LINENUMBER 127 L6
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncExit.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L7
+DUP
+ASTORE 2
+ALOAD 0
+LDC "resources.OnMethodTest"
+ALOAD 2
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V
+L7
+FRAME FULL [resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest]
+GOTO L8
+ASTORE 3
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncExit.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L9
+DUP
+ASTORE 4
+ALOAD 0
+LDC "resources.OnMethodTest"
+ALOAD 4
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$SyncExit$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V
+L9
+FRAME FULL [resources/OnMethodTest java/lang/Object T java/lang/Throwable] [java/lang/Object]
+ALOAD 3
+L8
+LINENUMBER 128 L8
+FRAME CHOP 3
+L5
+FRAME SAME1 java/lang/Throwable
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0
+MAXSTACK = 4
+MAXLOCALS = 5

@@ -64,7 +64,7 @@ public class Instrumentor extends ClassVisitor {
 
   private String className, superName;
 
-  private final boolean useHiddenClasses;
+  private final boolean useInvokeDynamic;
 
   private Instrumentor(
       ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
@@ -74,7 +74,8 @@ public class Instrumentor extends ClassVisitor {
     BTraceRuntime.Impl rt = bcn.getRuntime();
     // 'rt' is null only during instrumentation tests; we want to default to in-situ instrumentation
     // there
-    useHiddenClasses = rt != null && rt.version() >= 15;
+    useInvokeDynamic =
+        (rt == null && Boolean.getBoolean("btrace.indy")) || (rt != null && rt.version() >= 15);
     applicableOnMethods = applicables;
   }
 
@@ -121,14 +122,14 @@ public class Instrumentor extends ClassVisitor {
   public MethodVisitor visitMethod(
       int access, String name, String desc, String signature, String[] exceptions) {
 
-    List<OnMethod> appliedOnMethods = new ArrayList<>();
-
     if (applicableOnMethods.isEmpty()
         || (access & ACC_ABSTRACT) != 0
-        || name.startsWith(Constants.BTRACE_METHOD_PREFIX)) {
+        || name.startsWith(Constants.BTRACE_METHOD_PREFIX)
+        || (className.equals("java/util/Arrays") && name.equals("hashCode"))) {
       return super.visitMethod(access, name, desc, signature, exceptions);
     }
 
+    List<OnMethod> appliedOnMethods = new ArrayList<>();
     Set<OnMethod> annotationMatchers = new HashSet<>();
 
     for (OnMethod om : applicableOnMethods) {
@@ -300,17 +301,21 @@ public class Instrumentor extends ClassVisitor {
               }
               Label l = levelCheckBefore(om, bcn.getClassName(true));
               if (where == Where.BEFORE) {
-                loadArguments(
-                    localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                    localVarArg(
-                        om.getTargetInstanceParameter(),
-                        Constants.OBJECT_TYPE,
-                        argsIndex[INSTANCE_PTR]),
-                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                generateLinkingGuardedBlock(
+                    asm,
+                    () -> {
+                      loadArguments(
+                          localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
+                          localVarArg(
+                              om.getTargetInstanceParameter(),
+                              Constants.OBJECT_TYPE,
+                              argsIndex[INSTANCE_PTR]),
+                          constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                invokeBTraceAction(asm, om);
+                      invokeBTraceAction(asm, om);
+                    });
               }
               if (l != null) {
                 mv.visitLabel(l);
@@ -333,38 +338,42 @@ public class Instrumentor extends ClassVisitor {
               ValidationResult vr =
                   validateArguments(om, actionArgTypes, new Type[] {Type.INT_TYPE});
               if (vr.isValid()) {
-                Label l = levelCheckAfter(om, bcn.getClassName(true));
+                generateLinkingGuardedBlock(
+                    asm,
+                    () -> {
+                      Label l = levelCheckAfter(om, bcn.getClassName(true));
 
-                int retValIndex = -1;
-                Type actionArgRetType =
-                    om.getReturnParameter() != -1
-                        ? actionArgTypes[om.getReturnParameter()]
-                        : Type.VOID_TYPE;
-                if (om.getReturnParameter() != -1) {
-                  asm.dupArrayValue(opcode);
-                  retValIndex = storeNewLocal(retType);
-                }
+                      int retValIndex = -1;
+                      Type actionArgRetType =
+                          om.getReturnParameter() != -1
+                              ? actionArgTypes[om.getReturnParameter()]
+                              : Type.VOID_TYPE;
+                      if (om.getReturnParameter() != -1) {
+                        asm.dupArrayValue(opcode);
+                        retValIndex = storeNewLocal(retType);
+                      }
 
-                loadArguments(
-                    localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                    localVarArg(
-                        om.getTargetInstanceParameter(),
-                        Constants.OBJECT_TYPE,
-                        argsIndex[INSTANCE_PTR]),
-                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    localVarArg(
-                        om.getReturnParameter(),
-                        retType,
-                        retValIndex,
-                        TypeUtils.isAnyType(actionArgRetType)),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
-                invokeBTraceAction(asm, om);
+                      loadArguments(
+                          localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
+                          localVarArg(
+                              om.getTargetInstanceParameter(),
+                              Constants.OBJECT_TYPE,
+                              argsIndex[INSTANCE_PTR]),
+                          constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          localVarArg(
+                              om.getReturnParameter(),
+                              retType,
+                              retValIndex,
+                              TypeUtils.isAnyType(actionArgRetType)),
+                          selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                      invokeBTraceAction(asm, om);
 
-                if (l != null) {
-                  mv.visitLabel(l);
-                  insertFrameSameStack(l);
-                }
+                      if (l != null) {
+                        mv.visitLabel(l);
+                        insertFrameSameStack(l);
+                      }
+                    });
               }
             }
           }
@@ -405,20 +414,25 @@ public class Instrumentor extends ClassVisitor {
               Label l = levelCheckBefore(om, bcn.getClassName(true));
 
               if (where == Where.BEFORE) {
-                loadArguments(
-                    localVarArg(
-                        om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
-                    localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                    localVarArg(
-                        vr.getArgIdx(VALUE_PTR),
-                        elementType,
-                        argsIndex[VALUE_PTR],
-                        TypeUtils.isAnyType(argElementType)),
-                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                Type argType = argElementType;
+                generateLinkingGuardedBlock(
+                    asm,
+                    () -> {
+                      loadArguments(
+                          localVarArg(
+                              om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
+                          localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
+                          localVarArg(
+                              vr.getArgIdx(VALUE_PTR),
+                              elementType,
+                              argsIndex[VALUE_PTR],
+                              TypeUtils.isAnyType(argType)),
+                          constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                invokeBTraceAction(asm, om);
+                      invokeBTraceAction(asm, om);
+                    });
               }
               if (l != null) {
                 mv.visitLabel(l);
@@ -441,31 +455,37 @@ public class Instrumentor extends ClassVisitor {
               ValidationResult vr =
                   validateArguments(om, actionArgTypes, new Type[] {Type.INT_TYPE, elementType});
               if (vr.isValid()) {
-                int elementIdx = vr.getArgIdx(VALUE_PTR);
-                Type argElementType = elementIdx > -1 ? actionArgTypes[elementIdx] : Type.VOID_TYPE;
+                generateLinkingGuardedBlock(
+                    asm,
+                    () -> {
+                      int elementIdx = vr.getArgIdx(VALUE_PTR);
+                      Type argElementType =
+                          elementIdx > -1 ? actionArgTypes[elementIdx] : Type.VOID_TYPE;
 
-                Label l = levelCheckAfter(om, bcn.getClassName(true));
+                      Label l = levelCheckAfter(om, bcn.getClassName(true));
 
-                loadArguments(
-                    localVarArg(
-                        om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
-                    localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
-                    localVarArg(
-                        vr.getArgIdx(VALUE_PTR),
-                        elementType,
-                        argsIndex[VALUE_PTR],
-                        TypeUtils.isAnyType(argElementType)),
-                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    isStatic()
-                        ? constArg(om.getSelfParameter(), null)
-                        : localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
+                      loadArguments(
+                          localVarArg(
+                              om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
+                          localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
+                          localVarArg(
+                              vr.getArgIdx(VALUE_PTR),
+                              elementType,
+                              argsIndex[VALUE_PTR],
+                              TypeUtils.isAnyType(argElementType)),
+                          constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          isStatic()
+                              ? constArg(om.getSelfParameter(), null)
+                              : localVarArg(
+                                  om.getSelfParameter(), Type.getObjectType(className), 0));
 
-                invokeBTraceAction(asm, om);
-                if (l != null) {
-                  mv.visitLabel(l);
-                  insertFrameSameStack(l);
-                }
+                      invokeBTraceAction(asm, om);
+                      if (l != null) {
+                        mv.visitLabel(l);
+                        insertFrameSameStack(l);
+                      }
+                    });
               }
             }
           }
@@ -534,9 +554,27 @@ public class Instrumentor extends ClassVisitor {
                   }
                 };
 
-            loadArguments(actionArgs);
+            if (Type.getReturnType(om.getTargetDescriptor()).getSort() != Type.VOID) {
+              // augmented return requires special handling
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    loadArguments(actionArgs);
 
-            invokeBTraceAction(asm, om);
+                    invokeBTraceAction(asm, om);
+                  },
+                  () -> {
+                    asm.loadLocal(returnType, returnVarIndex);
+                  });
+            } else {
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    loadArguments(actionArgs);
+
+                    invokeBTraceAction(asm, om);
+                  });
+            }
           }
 
           @Override
@@ -547,7 +585,7 @@ public class Instrumentor extends ClassVisitor {
 
               /*
                * Generate a synthetic method id for the method call.
-               * It will be diferent from the 'native' method id
+               * It will be different from the 'native' method id
                * in order to prevent double accounting for one hit.
                */
               int parentMid = MethodID.getMethodId(className, name, desc);
@@ -695,24 +733,28 @@ public class Instrumentor extends ClassVisitor {
             ValidationResult vr =
                 validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
             if (vr.isValid()) {
-              int index = -1;
-              Label l = levelCheck(om, bcn.getClassName(true));
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    int index = -1;
+                    Label l = levelCheck(om, bcn.getClassName(true));
 
-              if (om.getTargetInstanceParameter() != -1) {
-                asm.dup();
-                index = storeAsNew();
-              }
-              loadArguments(
-                  localVarArg(om.getTargetInstanceParameter(), exctype, index),
-                  constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                  constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                  selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                    if (om.getTargetInstanceParameter() != -1) {
+                      asm.dup();
+                      index = storeAsNew();
+                    }
+                    loadArguments(
+                        localVarArg(om.getTargetInstanceParameter(), exctype, index),
+                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                        constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                        selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-              invokeBTraceAction(asm, om);
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
+                    invokeBTraceAction(asm, om);
+                    if (l != null) {
+                      mv.visitLabel(l);
+                      insertFrameSameStack(l);
+                    }
+                  });
             }
           }
         }; // </editor-fold>
@@ -730,26 +772,32 @@ public class Instrumentor extends ClassVisitor {
               ValidationResult vr =
                   validateArguments(om, actionArgTypes, new Type[] {Constants.STRING_TYPE});
               if (vr.isValid()) {
-                int castTypeIndex = -1;
-                Label l = levelCheck(om, bcn.getClassName(true));
+                generateLinkingGuardedBlock(
+                    asm,
+                    () -> {
+                      int castTypeIndex = -1;
+                      Label l = levelCheck(om, bcn.getClassName(true));
 
-                if (!vr.isAny()) {
-                  asm.dup();
-                  castTypeIndex = storeAsNew();
-                }
-                loadArguments(
-                    constArg(vr.getArgIdx(0), castType.getClassName()),
-                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)),
-                    localVarArg(
-                        om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, castTypeIndex));
+                      if (!vr.isAny()) {
+                        asm.dup();
+                        castTypeIndex = storeAsNew();
+                      }
+                      loadArguments(
+                          constArg(vr.getArgIdx(0), castType.getClassName()),
+                          constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          selfArg(om.getSelfParameter(), Type.getObjectType(className)),
+                          localVarArg(
+                              om.getTargetInstanceParameter(),
+                              Constants.OBJECT_TYPE,
+                              castTypeIndex));
 
-                invokeBTraceAction(asm, om);
-                if (l != null) {
-                  mv.visitLabel(l);
-                  insertFrameSameStack(l);
-                }
+                      invokeBTraceAction(asm, om);
+                      if (l != null) {
+                        mv.visitLabel(l);
+                        insertFrameSameStack(l);
+                      }
+                    });
               }
             }
           }
@@ -813,17 +861,21 @@ public class Instrumentor extends ClassVisitor {
               if (om.getSamplerKind() != Sampled.Sampler.None) {
                 MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
               }
-              Label l = levelCheck(om, bcn.getClassName(true));
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    Label l = levelCheck(om, bcn.getClassName(true));
 
-              if (numActionArgs == 0) {
-                invokeBTraceAction(asm, om);
-              } else {
-                injectBtrace();
-              }
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
+                    if (numActionArgs == 0) {
+                      invokeBTraceAction(asm, om);
+                    } else {
+                      injectBtrace();
+                    }
+                    if (l != null) {
+                      mv.visitLabel(l);
+                      insertFrameSameStack(l);
+                    }
+                  });
               if (om.getSamplerKind() != Sampled.Sampler.None) {
                 MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
               }
@@ -856,40 +908,46 @@ public class Instrumentor extends ClassVisitor {
           @Override
           protected void onErrorReturn() {
             if (vr.isValid()) {
-              int throwableIndex = -1;
-
               MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
 
-              if (om.getTargetInstanceParameter() != -1) {
-                asm.dup();
-                throwableIndex = storeAsNew();
-              }
-
-              ArgumentProvider[] actionArgs = new ArgumentProvider[5];
-
-              actionArgs[0] =
-                  localVarArg(
-                      om.getTargetInstanceParameter(), Constants.THROWABLE_TYPE, throwableIndex);
-              actionArgs[1] = constArg(om.getClassNameParameter(), className.replace('/', '.'));
-              actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
-              actionArgs[3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
-              actionArgs[4] =
-                  new ArgumentProvider(asm, om.getDurationParameter()) {
-                    @Override
-                    public void doProvide() {
-                      MethodTrackingExpander.DURATION.insert(mv);
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    int throwableIndex = -1;
+                    if (om.getTargetInstanceParameter() != -1) {
+                      asm.dup();
+                      throwableIndex = storeAsNew();
                     }
-                  };
 
-              Label l = levelCheck(om, bcn.getClassName(true));
+                    ArgumentProvider[] actionArgs = new ArgumentProvider[5];
 
-              loadArguments(vr, actionArgTypes, isStatic(), actionArgs);
+                    actionArgs[0] =
+                        localVarArg(
+                            om.getTargetInstanceParameter(),
+                            Constants.THROWABLE_TYPE,
+                            throwableIndex);
+                    actionArgs[1] =
+                        constArg(om.getClassNameParameter(), className.replace('/', '.'));
+                    actionArgs[2] = constArg(om.getMethodParameter(), getName(om.isMethodFqn()));
+                    actionArgs[3] = selfArg(om.getSelfParameter(), Type.getObjectType(className));
+                    actionArgs[4] =
+                        new ArgumentProvider(asm, om.getDurationParameter()) {
+                          @Override
+                          public void doProvide() {
+                            MethodTrackingExpander.DURATION.insert(mv);
+                          }
+                        };
 
-              invokeBTraceAction(asm, om);
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
+                    Label l = levelCheck(om, bcn.getClassName(true));
+
+                    loadArguments(vr, actionArgTypes, isStatic(), actionArgs);
+
+                    invokeBTraceAction(asm, om);
+                    if (l != null) {
+                      mv.visitLabel(l);
+                      insertFrameSameStack(l);
+                    }
+                  });
               MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
             }
           }
@@ -950,30 +1008,32 @@ public class Instrumentor extends ClassVisitor {
                   asm.dup();
                   calledInstanceIndex = storeAsNew();
                 }
-
                 Label l = levelCheckBefore(om, bcn.getClassName(true));
-
                 if (where == Where.BEFORE) {
-                  loadArguments(
-                      isStaticAccess
-                          ? constArg(om.getTargetInstanceParameter(), null)
-                          : localVarArg(
-                              om.getTargetInstanceParameter(),
-                              Constants.OBJECT_TYPE,
-                              calledInstanceIndex),
-                      constArg(
-                          om.getTargetMethodOrFieldParameter(),
-                          getMethodOrFieldName(
-                              om.isTargetMethodOrFieldFqn(),
-                              opcode,
-                              targetClassName,
-                              targetFieldName,
-                              desc)),
-                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                      selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                  generateLinkingGuardedBlock(
+                      asm,
+                      () -> {
+                        loadArguments(
+                            isStaticAccess
+                                ? constArg(om.getTargetInstanceParameter(), null)
+                                : localVarArg(
+                                    om.getTargetInstanceParameter(),
+                                    Constants.OBJECT_TYPE,
+                                    calledInstanceIndex),
+                            constArg(
+                                om.getTargetMethodOrFieldParameter(),
+                                getMethodOrFieldName(
+                                    om.isTargetMethodOrFieldFqn(),
+                                    opcode,
+                                    targetClassName,
+                                    targetFieldName,
+                                    desc)),
+                            constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                            constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                            selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                  invokeBTraceAction(asm, om);
+                        invokeBTraceAction(asm, om);
+                      });
                 }
                 if (l != null) {
                   mv.visitLabel(l);
@@ -1003,27 +1063,32 @@ public class Instrumentor extends ClassVisitor {
                   returnValIndex = storeAsNew();
                 }
 
-                loadArguments(
-                    isStaticAccess
-                        ? constArg(om.getTargetInstanceParameter(), null)
-                        : localVarArg(
-                            om.getTargetInstanceParameter(),
-                            Constants.OBJECT_TYPE,
-                            calledInstanceIndex),
-                    constArg(
-                        om.getTargetMethodOrFieldParameter(),
-                        getMethodOrFieldName(
-                            om.isTargetMethodOrFieldFqn(),
-                            opcode,
-                            targetClassName,
-                            targetFieldName,
-                            desc)),
-                    localVarArg(om.getReturnParameter(), fldType, returnValIndex),
-                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                int fldIndex = returnValIndex;
+                generateLinkingGuardedBlock(
+                    asm,
+                    () -> {
+                      loadArguments(
+                          isStaticAccess
+                              ? constArg(om.getTargetInstanceParameter(), null)
+                              : localVarArg(
+                                  om.getTargetInstanceParameter(),
+                                  Constants.OBJECT_TYPE,
+                                  calledInstanceIndex),
+                          constArg(
+                              om.getTargetMethodOrFieldParameter(),
+                              getMethodOrFieldName(
+                                  om.isTargetMethodOrFieldFqn(),
+                                  opcode,
+                                  targetClassName,
+                                  targetFieldName,
+                                  desc)),
+                          localVarArg(om.getReturnParameter(), fldType, fldIndex),
+                          constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                invokeBTraceAction(asm, om);
+                      invokeBTraceAction(asm, om);
+                    });
                 if (l != null) {
                   mv.visitLabel(l);
                   insertFrameSameStack(l);
@@ -1072,27 +1137,31 @@ public class Instrumentor extends ClassVisitor {
                 Label l = levelCheckBefore(om, bcn.getClassName(true));
 
                 if (where == Where.BEFORE) {
-                  loadArguments(
-                      localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
-                      isStaticAccess
-                          ? constArg(om.getTargetInstanceParameter(), null)
-                          : localVarArg(
-                              om.getTargetInstanceParameter(),
-                              Constants.OBJECT_TYPE,
-                              calledInstanceIndex),
-                      constArg(
-                          om.getTargetMethodOrFieldParameter(),
-                          getMethodOrFieldName(
-                              om.isTargetMethodOrFieldFqn(),
-                              opcode,
-                              targetClassName,
-                              targetFieldName,
-                              desc)),
-                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                      selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                  generateLinkingGuardedBlock(
+                      asm,
+                      () -> {
+                        loadArguments(
+                            localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
+                            isStaticAccess
+                                ? constArg(om.getTargetInstanceParameter(), null)
+                                : localVarArg(
+                                    om.getTargetInstanceParameter(),
+                                    Constants.OBJECT_TYPE,
+                                    calledInstanceIndex),
+                            constArg(
+                                om.getTargetMethodOrFieldParameter(),
+                                getMethodOrFieldName(
+                                    om.isTargetMethodOrFieldFqn(),
+                                    opcode,
+                                    targetClassName,
+                                    targetFieldName,
+                                    desc)),
+                            constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                            constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                            selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                  invokeBTraceAction(asm, om);
+                        invokeBTraceAction(asm, om);
+                      });
                 }
                 if (l != null) {
                   mv.visitLabel(l);
@@ -1114,33 +1183,37 @@ public class Instrumentor extends ClassVisitor {
               ValidationResult vr = validateArguments(om, actionArgTypes, new Type[] {fieldType});
 
               if (vr.isValid()) {
-                Label l = levelCheckAfter(om, bcn.getClassName(true));
+                generateLinkingGuardedBlock(
+                    asm,
+                    () -> {
+                      Label l = levelCheckAfter(om, bcn.getClassName(true));
 
-                loadArguments(
-                    localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
-                    isStaticAccess
-                        ? constArg(om.getTargetInstanceParameter(), null)
-                        : localVarArg(
-                            om.getTargetInstanceParameter(),
-                            Constants.OBJECT_TYPE,
-                            calledInstanceIndex),
-                    constArg(
-                        om.getTargetMethodOrFieldParameter(),
-                        getMethodOrFieldName(
-                            om.isTargetMethodOrFieldFqn(),
-                            opcode,
-                            targetClassName,
-                            targetFieldName,
-                            desc)),
-                    constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                      loadArguments(
+                          localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
+                          isStaticAccess
+                              ? constArg(om.getTargetInstanceParameter(), null)
+                              : localVarArg(
+                                  om.getTargetInstanceParameter(),
+                                  Constants.OBJECT_TYPE,
+                                  calledInstanceIndex),
+                          constArg(
+                              om.getTargetMethodOrFieldParameter(),
+                              getMethodOrFieldName(
+                                  om.isTargetMethodOrFieldFqn(),
+                                  opcode,
+                                  targetClassName,
+                                  targetFieldName,
+                                  desc)),
+                          constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                invokeBTraceAction(asm, om);
-                if (l != null) {
-                  mv.visitLabel(l);
-                  insertFrameSameStack(l);
-                }
+                      invokeBTraceAction(asm, om);
+                      if (l != null) {
+                        mv.visitLabel(l);
+                        insertFrameSameStack(l);
+                      }
+                    });
               }
             }
           }
@@ -1160,23 +1233,25 @@ public class Instrumentor extends ClassVisitor {
           }
 
           private void callAction(String cName) {
-            if (vr.isValid()) {
-              Label l = levelCheck(om, bcn.getClassName(true));
+            generateLinkingGuardedBlock(
+                asm,
+                () -> {
+                  Label l = levelCheck(om, bcn.getClassName(true));
 
-              loadArguments(
-                  constArg(vr.getArgIdx(0), cName),
-                  constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                  constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                  selfArg(om.getSelfParameter(), Type.getObjectType(className)),
-                  localVarArg(
-                      om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, castTypeIndex));
+                  loadArguments(
+                      constArg(vr.getArgIdx(0), cName),
+                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                      selfArg(om.getSelfParameter(), Type.getObjectType(className)),
+                      localVarArg(
+                          om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, castTypeIndex));
 
-              invokeBTraceAction(asm, om);
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
-            }
+                  invokeBTraceAction(asm, om);
+                  if (l != null) {
+                    mv.visitLabel(l);
+                    insertFrameSameStack(l);
+                  }
+                });
           }
 
           @Override
@@ -1198,13 +1273,11 @@ public class Instrumentor extends ClassVisitor {
 
           @Override
           protected void onAfterTypeCheck(int opcode, String desc) {
-            if (opcode == INSTANCEOF) {
+            if (where == Where.AFTER && opcode == INSTANCEOF) {
               castType = Type.getObjectType(desc);
               vr = validateArguments(om, actionArgTypes, new Type[] {Constants.STRING_TYPE});
               if (vr.isValid()) {
-                if (where == Where.AFTER) {
-                  callAction(castType.getClassName());
-                }
+                callAction(castType.getClassName());
               }
             }
           }
@@ -1239,14 +1312,22 @@ public class Instrumentor extends ClassVisitor {
           @Override
           protected void onBeforeLine(int line) {
             if ((line == onLine || onLine == -1) && where == Where.BEFORE) {
-              callOnLine(line);
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    callOnLine(line);
+                  });
             }
           }
 
           @Override
           protected void onAfterLine(int line) {
             if ((line == onLine || onLine == -1) && where == Where.AFTER) {
-              callOnLine(line);
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    callOnLine(line);
+                  });
             }
           }
         }; // </editor-fold>
@@ -1273,18 +1354,22 @@ public class Instrumentor extends ClassVisitor {
                 ValidationResult vr =
                     validateArguments(om, actionArgTypes, new Type[] {Constants.STRING_TYPE});
                 if (vr.isValid()) {
-                  Label l = levelCheck(om, bcn.getClassName(true));
-                  loadArguments(
-                      constArg(vr.getArgIdx(0), extName),
-                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                      selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                  generateLinkingGuardedBlock(
+                      asm,
+                      () -> {
+                        Label l = levelCheck(om, bcn.getClassName(true));
+                        loadArguments(
+                            constArg(vr.getArgIdx(0), extName),
+                            constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                            constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                            selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                  invokeBTraceAction(asm, om);
-                  if (l != null) {
-                    mv.visitLabel(l);
-                    insertFrameSameStack(l);
-                  }
+                        invokeBTraceAction(asm, om);
+                        if (l != null) {
+                          mv.visitLabel(l);
+                          insertFrameSameStack(l);
+                        }
+                      });
                 }
               }
             }
@@ -1302,24 +1387,28 @@ public class Instrumentor extends ClassVisitor {
                 ValidationResult vr =
                     validateArguments(om, actionArgTypes, new Type[] {Constants.STRING_TYPE});
                 if (vr.isValid()) {
-                  int returnValIndex = -1;
-                  Label l = levelCheck(om, bcn.getClassName(true));
-                  if (om.getReturnParameter() != -1) {
-                    asm.dupValue(instType);
-                    returnValIndex = storeAsNew();
-                  }
-                  loadArguments(
-                      constArg(vr.getArgIdx(0), extName),
-                      localVarArg(om.getReturnParameter(), instType, returnValIndex),
-                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                      selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                  generateLinkingGuardedBlock(
+                      asm,
+                      () -> {
+                        int returnValIndex = -1;
+                        Label l = levelCheck(om, bcn.getClassName(true));
+                        if (om.getReturnParameter() != -1) {
+                          asm.dupValue(instType);
+                          returnValIndex = storeAsNew();
+                        }
+                        loadArguments(
+                            constArg(vr.getArgIdx(0), extName),
+                            localVarArg(om.getReturnParameter(), instType, returnValIndex),
+                            constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                            constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                            selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                  invokeBTraceAction(asm, om);
-                  if (l != null) {
-                    mv.visitLabel(l);
-                    insertFrameSameStack(l);
-                  }
+                        invokeBTraceAction(asm, om);
+                        if (l != null) {
+                          mv.visitLabel(l);
+                          insertFrameSameStack(l);
+                        }
+                      });
                 }
               }
             }
@@ -1342,19 +1431,23 @@ public class Instrumentor extends ClassVisitor {
                     validateArguments(
                         om, actionArgTypes, new Type[] {Constants.STRING_TYPE, Type.INT_TYPE});
                 if (vr.isValid()) {
-                  Label l = levelCheck(om, bcn.getClassName(true));
-                  loadArguments(
-                      constArg(vr.getArgIdx(0), extName),
-                      constArg(vr.getArgIdx(1), dims),
-                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                      selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                  generateLinkingGuardedBlock(
+                      asm,
+                      () -> {
+                        Label l = levelCheck(om, bcn.getClassName(true));
+                        loadArguments(
+                            constArg(vr.getArgIdx(0), extName),
+                            constArg(vr.getArgIdx(1), dims),
+                            constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                            constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                            selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                  invokeBTraceAction(asm, om);
-                  if (l != null) {
-                    mv.visitLabel(l);
-                    insertFrameSameStack(l);
-                  }
+                        invokeBTraceAction(asm, om);
+                        if (l != null) {
+                          mv.visitLabel(l);
+                          insertFrameSameStack(l);
+                        }
+                      });
                 }
               }
             }
@@ -1378,25 +1471,29 @@ public class Instrumentor extends ClassVisitor {
                     validateArguments(
                         om, actionArgTypes, new Type[] {Constants.STRING_TYPE, Type.INT_TYPE});
                 if (vr.isValid()) {
-                  int returnValIndex = -1;
-                  Label l = levelCheck(om, bcn.getClassName(true));
-                  if (om.getReturnParameter() != -1) {
-                    asm.dupValue(instType);
-                    returnValIndex = storeAsNew();
-                  }
-                  loadArguments(
-                      constArg(vr.getArgIdx(0), extName),
-                      constArg(vr.getArgIdx(1), dims),
-                      localVarArg(om.getReturnParameter(), instType, returnValIndex),
-                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                      selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                  generateLinkingGuardedBlock(
+                      asm,
+                      () -> {
+                        int returnValIndex = -1;
+                        Label l = levelCheck(om, bcn.getClassName(true));
+                        if (om.getReturnParameter() != -1) {
+                          asm.dupValue(instType);
+                          returnValIndex = storeAsNew();
+                        }
+                        loadArguments(
+                            constArg(vr.getArgIdx(0), extName),
+                            constArg(vr.getArgIdx(1), dims),
+                            localVarArg(om.getReturnParameter(), instType, returnValIndex),
+                            constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                            constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                            selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                  invokeBTraceAction(asm, om);
-                  if (l != null) {
-                    mv.visitLabel(l);
-                    insertFrameSameStack(l);
-                  }
+                        invokeBTraceAction(asm, om);
+                        if (l != null) {
+                          mv.visitLabel(l);
+                          insertFrameSameStack(l);
+                        }
+                      });
                 }
               }
             }
@@ -1476,18 +1573,21 @@ public class Instrumentor extends ClassVisitor {
           protected void onMethodReturn(int opcode) {
             if (vr.isValid() || vr.isAny()) {
               MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
-
-              Label l = levelCheck(om, bcn.getClassName(true));
-              if (numActionArgs == 0) {
-                invokeBTraceAction(asm, om);
-              } else {
-                callAction(opcode);
-              }
-              MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    Label l = levelCheck(om, bcn.getClassName(true));
+                    if (numActionArgs == 0) {
+                      invokeBTraceAction(asm, om);
+                    } else {
+                      callAction(opcode);
+                    }
+                    MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
+                    if (l != null) {
+                      mv.visitLabel(l);
+                      insertFrameSameStack(l);
+                    }
+                  });
             }
           }
 
@@ -1537,39 +1637,43 @@ public class Instrumentor extends ClassVisitor {
           @Override
           protected void onBeforeSyncEntry() {
             if (vr.isValid()) {
-              Label l = levelCheckBefore(om, bcn.getClassName(true));
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    Label l = levelCheckBefore(om, bcn.getClassName(true));
 
-              if (om.getTargetInstanceParameter() != -1) {
+                    if (om.getTargetInstanceParameter() != -1) {
 
-                if (isSyncMethod) {
-                  if (!isStatic) {
-                    storedObjIdx = 0;
-                  } else {
-                    asm.ldc(Type.getObjectType(className));
-                    storedObjIdx = storeAsNew();
-                  }
-                } else {
-                  asm.dup();
-                  storedObjIdx = storeAsNew();
-                }
-              }
+                      if (isSyncMethod) {
+                        if (!isStatic) {
+                          storedObjIdx = 0;
+                        } else {
+                          asm.ldc(Type.getObjectType(className));
+                          storedObjIdx = storeAsNew();
+                        }
+                      } else {
+                        asm.dup();
+                        storedObjIdx = storeAsNew();
+                      }
+                    }
 
-              if (where == Where.BEFORE) {
-                loadArguments(
-                    vr,
-                    actionArgTypes,
-                    isStatic(),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
-                    localVarArg(
-                        om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, storedObjIdx),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
-                invokeBTraceAction(asm, om);
-              }
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
+                    if (where == Where.BEFORE) {
+                      loadArguments(
+                          vr,
+                          actionArgTypes,
+                          isStatic(),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                          localVarArg(
+                              om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, storedObjIdx),
+                          selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                      invokeBTraceAction(asm, om);
+                    }
+                    if (l != null) {
+                      mv.visitLabel(l);
+                      insertFrameSameStack(l);
+                    }
+                  });
             }
           }
 
@@ -1577,23 +1681,27 @@ public class Instrumentor extends ClassVisitor {
           protected void onAfterSyncEntry() {
             if (where == Where.AFTER) {
               if (vr.isValid()) {
-                Label l = levelCheckAfter(om, bcn.getClassName(true));
+                generateLinkingGuardedBlock(
+                    asm,
+                    () -> {
+                      Label l = levelCheckAfter(om, bcn.getClassName(true));
 
-                loadArguments(
-                    vr,
-                    actionArgTypes,
-                    isStatic(),
-                    constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                    constArg(om.getClassNameParameter(), className.replace("/", ".")),
-                    localVarArg(
-                        om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, storedObjIdx),
-                    selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                      loadArguments(
+                          vr,
+                          actionArgTypes,
+                          isStatic(),
+                          constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                          constArg(om.getClassNameParameter(), className.replace("/", ".")),
+                          localVarArg(
+                              om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, storedObjIdx),
+                          selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-                invokeBTraceAction(asm, om);
-                if (l != null) {
-                  mv.visitLabel(l);
-                  insertFrameSameStack(l);
-                }
+                      invokeBTraceAction(asm, om);
+                      if (l != null) {
+                        mv.visitLabel(l);
+                        insertFrameSameStack(l);
+                      }
+                    });
               }
             }
           }
@@ -1640,29 +1748,33 @@ public class Instrumentor extends ClassVisitor {
             if (!vr.isValid()) {
               return;
             }
-            Label l = levelCheckBefore(om, bcn.getClassName(true));
+            generateLinkingGuardedBlock(
+                asm,
+                () -> {
+                  Label l = levelCheckBefore(om, bcn.getClassName(true));
 
-            if (om.getTargetInstanceParameter() != -1) {
-              if (isSyncMethod) {
-                if (!isStatic) {
-                  storedObjIdx = 0;
-                } else {
-                  asm.ldc(Type.getObjectType(className));
-                  storedObjIdx = storeAsNew();
-                }
-              } else {
-                asm.dup();
-                storedObjIdx = storeAsNew();
-              }
-            }
-            if (where == Where.BEFORE) {
-              loadActionArgs();
-              invokeBTraceAction(asm, om);
-            }
-            if (l != null) {
-              mv.visitLabel(l);
-              insertFrameSameStack(l);
-            }
+                  if (om.getTargetInstanceParameter() != -1) {
+                    if (isSyncMethod) {
+                      if (!isStatic) {
+                        storedObjIdx = 0;
+                      } else {
+                        asm.ldc(Type.getObjectType(className));
+                        storedObjIdx = storeAsNew();
+                      }
+                    } else {
+                      asm.dup();
+                      storedObjIdx = storeAsNew();
+                    }
+                  }
+                  if (where == Where.BEFORE) {
+                    loadActionArgs();
+                    invokeBTraceAction(asm, om);
+                  }
+                  if (l != null) {
+                    mv.visitLabel(l);
+                    insertFrameSameStack(l);
+                  }
+                });
           }
 
           @Override
@@ -1671,8 +1783,12 @@ public class Instrumentor extends ClassVisitor {
               return;
             }
             if (where == Where.AFTER) {
-              loadActionArgs();
-              invokeBTraceAction(asm, om);
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    loadActionArgs();
+                    invokeBTraceAction(asm, om);
+                  });
             }
           }
 
@@ -1701,24 +1817,30 @@ public class Instrumentor extends ClassVisitor {
             ValidationResult vr =
                 validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
             if (vr.isValid()) {
-              int throwableIndex = -1;
-              Label l = levelCheck(om, bcn.getClassName(true));
-              if (om.getTargetInstanceParameter() != -1) {
-                asm.dup();
-                throwableIndex = storeAsNew();
-              }
-              loadArguments(
-                  localVarArg(
-                      om.getTargetInstanceParameter(), Constants.THROWABLE_TYPE, throwableIndex),
-                  constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                  constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                  selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+              generateLinkingGuardedBlock(
+                  asm,
+                  () -> {
+                    int throwableIndex = -1;
+                    Label l = levelCheck(om, bcn.getClassName(true));
+                    if (om.getTargetInstanceParameter() != -1) {
+                      asm.dup();
+                      throwableIndex = storeAsNew();
+                    }
+                    loadArguments(
+                        localVarArg(
+                            om.getTargetInstanceParameter(),
+                            Constants.THROWABLE_TYPE,
+                            throwableIndex),
+                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                        constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                        selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
-              invokeBTraceAction(asm, om);
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
+                    invokeBTraceAction(asm, om);
+                    if (l != null) {
+                      mv.visitLabel(l);
+                      insertFrameSameStack(l);
+                    }
+                  });
             }
           }
         }; // </editor-fold>
@@ -1728,7 +1850,7 @@ public class Instrumentor extends ClassVisitor {
 
   @Override
   public void visitEnd() {
-    if (!useHiddenClasses) {
+    if (!useInvokeDynamic) {
       bcn.copyHandlers(
           new CopyingVisitor(className, false, this) {
             @Override
@@ -1748,8 +1870,34 @@ public class Instrumentor extends ClassVisitor {
     return getActionMethodName(bcn, name);
   }
 
+  private void generateLinkingGuardedBlock(Assembler asm, Runnable block) {
+    if (useInvokeDynamic) {
+      Label l = new Label();
+      asm.invokeStatic(Constants.BTRACERT_INTERNAL, "isLinking", "()Z").jump(IFNE, l);
+      block.run();
+      asm.label(l).insertFrameSameStack(l);
+    } else {
+      block.run();
+    }
+  }
+
+  private void generateLinkingGuardedBlock(Assembler asm, Runnable block, Runnable elseBlock) {
+    if (useInvokeDynamic) {
+      Label l = new Label();
+      Label l1 = new Label();
+      asm.invokeStatic(Constants.BTRACERT_INTERNAL, "isLinking", "()Z").jump(IFNE, l);
+      block.run();
+      asm.jump(GOTO, l1);
+      asm.label(l).insertFrameSameStack(l);
+      elseBlock.run();
+      asm.label(l1).insertFrameSameStack(l);
+    } else {
+      block.run();
+    }
+  }
+
   private void invokeBTraceAction(Assembler asm, OnMethod om) {
-    if (useHiddenClasses) {
+    if (useInvokeDynamic) {
       MethodType mt =
           MethodType.methodType(
               CallSite.class,
@@ -1817,6 +1965,6 @@ public class Instrumentor extends ClassVisitor {
   }
 
   boolean hasCushionMethods() {
-    return !useHiddenClasses;
+    return !useInvokeDynamic;
   }
 }

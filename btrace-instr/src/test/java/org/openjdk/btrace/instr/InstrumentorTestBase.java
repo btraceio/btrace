@@ -36,8 +36,11 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +74,8 @@ public abstract class InstrumentorTestBase {
   protected byte[] transformedBC;
   protected byte[] traceCode;
   private static ClassLoader cl;
+
+  protected static boolean regenerateGoldenFiles = Boolean.getBoolean("regenerate.golden");
 
   static {
     try {
@@ -119,6 +124,7 @@ public abstract class InstrumentorTestBase {
       mapFld.setAccessible(true);
 
       AtomicInteger last = (AtomicInteger) lastFld.get(null);
+      @SuppressWarnings("unchecked")
       Map<String, Integer> map = (Map<String, Integer>) mapFld.get(null);
 
       last.set(1);
@@ -212,6 +218,41 @@ public abstract class InstrumentorTestBase {
 
   protected void checkTransformation(String expected) throws IOException {
     checkTransformation(expected, true);
+  }
+
+  protected void checkTransformation(String testCase, String qualifier) throws IOException {
+    org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(transformedBC);
+
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    CheckClassAdapter.verify(cr, true, pw);
+    if (sw.toString().contains("AnalyzerException")) {
+      System.err.println(sw);
+      fail();
+    }
+
+    String diff = diff();
+    if (testCase.isEmpty()) {
+      assertTrue(diff.isEmpty());
+    }
+    int blankLineIdx = diff.indexOf(System.lineSeparator() + System.lineSeparator());
+    if (blankLineIdx > -1) {
+      diff = diff.substring(0, blankLineIdx);
+    }
+    Path goldenFile =
+        Paths.get(
+            System.getProperty("project.test.resources"), "golden", qualifier, testCase + ".txt");
+    if (regenerateGoldenFiles) {
+      Files.createDirectories(goldenFile.getParent());
+      Files.write(goldenFile, diff.getBytes(StandardCharsets.UTF_8));
+    } else {
+      if (Files.exists(goldenFile)) {
+        String expected = new String(Files.readAllBytes(goldenFile));
+        assertEquals(expected, diff.substring(0, Math.min(diff.length(), expected.length())));
+      } else {
+        throw new RuntimeException("Missing golden file: " + goldenFile);
+      }
+    }
   }
 
   protected void checkTransformation(String expected, boolean verify) throws IOException {

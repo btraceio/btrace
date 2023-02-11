@@ -1,0 +1,10 @@
+DUP
+ASTORE 3
+ALOAD 0
+LDC "casts"
+LDC "java.util.HashMap"
+ALOAD 3
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$InstanceofAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
+FRAME APPEND [java/util/Map java/util/HashMap java/util/HashMap]
+MAXSTACK = 5
+MAXLOCALS = 4

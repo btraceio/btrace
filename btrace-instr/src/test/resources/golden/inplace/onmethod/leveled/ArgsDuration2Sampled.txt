@@ -1,0 +1,55 @@
+LCONST_0
+LSTORE 6
+ICONST_1
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitTimed (I)J
+DUP2
+LSTORE 8
+L2I
+ISTORE 10
+ILOAD 10
+IFEQ L1
+ICONST_1
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.getEndTs (I)J
+LLOAD 8
+LSUB
+LSTORE 6
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Sampled.$btrace$$level : I
+ICONST_5
+IF_ICMPGT L1
+DUP2
+LSTORE 11
+ALOAD 0
+LLOAD 11
+LLOAD 6
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2Sampled$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I] [J]
+ILOAD 10
+IFEQ L2
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Sampled.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L2
+DUP2
+LSTORE 13
+ALOAD 0
+LLOAD 13
+LLOAD 6
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2Sampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
+L2
+FRAME SAME1 J
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+LOCALVARIABLE a Ljava/lang/String; L0 L3 1
+LOCALVARIABLE b J L0 L3 2
+LOCALVARIABLE c [Ljava/lang/String; L0 L3 4
+LOCALVARIABLE d [I L0 L3 5
+MAXSTACK = 12
+MAXLOCALS = 15

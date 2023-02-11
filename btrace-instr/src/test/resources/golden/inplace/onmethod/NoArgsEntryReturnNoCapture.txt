@@ -1,0 +1,5 @@
+ALOAD 0
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NoArgsEntryReturnNoCapture$argsEmptyEntry (Ljava/lang/Object;)V
+ALOAD 0
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NoArgsEntryReturnNoCapture$argsEmptyReturn (Ljava/lang/Object;)V
+MAXSTACK = 3

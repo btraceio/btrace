@@ -1,0 +1,26 @@
+ICONST_1
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitAdaptive (I)Z
+ISTORE 6
+ILOAD 6
+IFEQ L0
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSampledAdaptive$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
+FRAME APPEND [I]
+ILOAD 6
+IFEQ L1
+ICONST_1
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.updateEndTs (I)V
+L1
+FRAME SAME1 J
+L2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0
+LOCALVARIABLE a Ljava/lang/String; L0 L2 1
+LOCALVARIABLE b J L0 L2 2
+LOCALVARIABLE c [Ljava/lang/String; L0 L2 4
+LOCALVARIABLE d [I L0 L2 5
+MAXSTACK = 6
+MAXLOCALS = 7

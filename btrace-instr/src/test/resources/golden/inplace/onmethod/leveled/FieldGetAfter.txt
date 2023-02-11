@@ -1,0 +1,27 @@
+DUP
+ASTORE 1
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/FieldGetAfter.$btrace$$level : I
+ICONST_1
+ISUB
+DUP
+ISTORE 2
+IFLT L1
+L1
+FRAME FULL [resources/OnMethodTest resources/OnMethodTest I] [resources/OnMethodTest resources/OnMethodTest]
+ILOAD 2
+IFLT L2
+DUP
+ISTORE 3
+ALOAD 0
+ALOAD 1
+LDC "field int resources.OnMethodTest#field"
+ILOAD 3
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldGetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V
+L2
+FRAME FULL [resources/OnMethodTest resources/OnMethodTest I] [resources/OnMethodTest I]
+L3
+LINENUMBER 102 L3
+L4
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
+MAXSTACK = 6
+MAXLOCALS = 4

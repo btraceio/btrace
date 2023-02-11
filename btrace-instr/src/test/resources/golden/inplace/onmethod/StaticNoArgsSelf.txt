@@ -1,0 +1,3 @@
+ACONST_NULL
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$StaticNoArgsSelf$argsEmpty (Ljava/lang/Object;)V
+MAXSTACK = 1

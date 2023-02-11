@@ -1,0 +1,4 @@
+ALOAD 0
+ACONST_NULL
+LDC "sField"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldGetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V

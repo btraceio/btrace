@@ -1,0 +1,9 @@
+DUP2
+LSTORE 1
+ALOAD 0
+ACONST_NULL
+LDC "static field long resources.OnMethodTest#sField"
+LLOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldGetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V
+MAXSTACK = 7
+MAXLOCALS = 3

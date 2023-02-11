@@ -1,0 +1,6 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticNoArgs.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L0
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$StaticNoArgs$argsEmpty ()V
+FRAME SAME
+MAXSTACK = 2

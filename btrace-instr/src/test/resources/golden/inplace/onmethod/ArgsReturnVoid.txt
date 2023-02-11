@@ -1,0 +1,7 @@
+ACONST_NULL
+ASTORE 1
+ALOAD 0
+ALOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnVoid$args (Ljava/lang/Object;Ljava/lang/Void;)V
+MAXSTACK = 2
+MAXLOCALS = 2

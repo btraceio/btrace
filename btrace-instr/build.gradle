@@ -51,6 +51,27 @@ task compileTestProbes {
     }
 }
 
+tasks.withType(Test) {
+    useJUnitPlatform()
+}
+
+task regenerateGoldenFiles(type: Test) {
+    inputs.files compileTestProbes.outputs
+    testLogging.showStandardStreams = true
+
+    def props = new Properties()
+    props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
+    if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
+        jvmArgs "-Dproject.test.resources=${sourceSets.test.resources.srcDirs[0]}", "-Dregenerate.golden=true", "-Dproject.version=${project.version}"
+    } else {
+        jvmArgs "-Dproject.test.resources=${sourceSets.test.resources.srcDirs[0]}", "-Dregenerate.golden=true", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+    }
+
+    filter {
+        includeTestsMatching "OnMethodInstrumentorTest"
+    }
+}
+
 test {
     dependsOn cleanTest
     inputs.files compileTestProbes.outputs
@@ -59,8 +80,8 @@ test {
     def props = new Properties()
     props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
     if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
-        jvmArgs "-Dproject.version=${project.version}"
+        jvmArgs "-Dproject.test.resources=${sourceSets.test.resources.srcDirs[0]}", "-Dregenerate.golden=${System.getProperty('regenerate.golden')}", "-Dproject.version=${project.version}"
     } else {
-        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+        jvmArgs "-Dproject.test.resources=${sourceSets.test.resources.srcDirs[0]}", "-Dregenerate.golden=${System.getProperty('regenerate.golden')}", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
     }
 }

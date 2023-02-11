@@ -1,0 +1,11 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L0
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsShared$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
+FRAME SAME
+MAXSTACK = 6

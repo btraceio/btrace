@@ -1,0 +1,11 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallNoArgs.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallNoArgs$args ()V
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J] [resources/OnMethodTest java/lang/String J]
+L2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0
+LOCALVARIABLE a Ljava/lang/String; L0 L2 1
+LOCALVARIABLE b J L0 L2 2
+MAXSTACK = 6

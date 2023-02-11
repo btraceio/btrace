@@ -35,15 +35,18 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.lang.management.ManagementFactory;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.objectweb.asm.ClassReader;
@@ -88,6 +91,19 @@ abstract class Client implements CommandListener {
   private static final Map<UUID, Client> CLIENTS = new ConcurrentHashMap<>();
   private static final Map<String, PrintWriter> WRITER_MAP = new HashMap<>();
   private static final Pattern SYSPROP_PTN = Pattern.compile("\\$\\{(.+?)}");
+  private static final ThreadFactory FLUSHER_THREAD_FACTORY =
+      r -> {
+        Thread result = new Thread(r, "BTrace FileClient Flusher");
+        result.setDaemon(true);
+        result.setUncaughtExceptionHandler(
+            new Thread.UncaughtExceptionHandler() {
+              @Override
+              public void uncaughtException(Thread t, Throwable e) {
+                e.printStackTrace();
+              }
+            });
+        return result;
+      };
 
   static {
     ClassFilter.class.getClassLoader();
@@ -109,7 +125,7 @@ abstract class Client implements CommandListener {
   private volatile BTraceRuntime.Impl runtime;
   private volatile String outputName;
   private BTraceProbe probe;
-  private Timer flusher;
+  private ScheduledExecutorService flusher;
   private volatile boolean initialized = false;
   private volatile boolean shuttingDown = false;
   final UUID id = UUID.randomUUID();
@@ -194,29 +210,27 @@ abstract class Client implements CommandListener {
 
     int flushSec = flushInterval;
     if (flushSec > -1) {
-      flusher = new Timer("BTrace FileClient Flusher", true);
+      flusher = Executors.newSingleThreadScheduledExecutor(FLUSHER_THREAD_FACTORY);
       flusher.scheduleAtFixedRate(
-          new TimerTask() {
-            @Override
-            public void run() {
-              try {
-                if (out != null) {
-                  boolean entered = BTraceRuntime.enter();
-                  try {
-                    out.flush();
-                  } finally {
-                    if (entered) {
-                      BTraceRuntime.leave();
-                    }
+          () -> {
+            try {
+              if (out != null) {
+                boolean entered = BTraceRuntime.enter();
+                try {
+                  out.flush();
+                } finally {
+                  if (entered) {
+                    BTraceRuntime.leave();
                   }
                 }
-              } catch (Throwable t) {
-                t.printStackTrace();
               }
+            } catch (Throwable t) {
+              t.printStackTrace();
             }
           },
           flushSec,
-          flushSec);
+          flushSec,
+          TimeUnit.SECONDS);
     } else {
       flusher = null;
     }
@@ -378,7 +392,7 @@ abstract class Client implements CommandListener {
 
   protected void closeAll() throws IOException {
     if (flusher != null) {
-      flusher.cancel();
+      flusher.shutdown();
     }
     if (out != null) {
       out.close();
@@ -501,7 +515,15 @@ abstract class Client implements CommandListener {
           }
         } else {
           try {
-            inst.retransformClasses(classes);
+            int inc = 256;
+            int offset = 0;
+            do {
+              //              System.out.println("===> [" + offset + ", " + Math.min(offset + inc,
+              // classes.length) + "]");
+              inst.retransformClasses(
+                  Arrays.copyOfRange(classes, offset, Math.min(offset + inc, classes.length)));
+              offset += inc;
+            } while (offset < classes.length);
           } catch (ClassFormatError | VerifyError e) {
             /*
              * If the en-block retransformation fails because of verification retry classes one-by-one.

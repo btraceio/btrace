@@ -1,0 +1,4 @@
+LDC "field"
+LDC 101
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0

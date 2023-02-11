@@ -1,0 +1,9 @@
+LSTORE 1
+LLOAD 1
+ALOAD 0
+ACONST_NULL
+LDC "sField"
+LLOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldSetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V
+MAXSTACK = 7
+MAXLOCALS = 3

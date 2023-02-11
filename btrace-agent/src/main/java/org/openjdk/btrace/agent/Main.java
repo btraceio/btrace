@@ -109,6 +109,13 @@ public final class Main {
       r -> {
         Thread result = new Thread(r, "BTrace Command Queue Processor");
         result.setDaemon(true);
+        result.setUncaughtExceptionHandler(
+            new Thread.UncaughtExceptionHandler() {
+              @Override
+              public void uncaughtException(Thread t, Throwable e) {
+                e.printStackTrace();
+              }
+            });
         return result;
       };
   private static final ExecutorService serializedExecutor =

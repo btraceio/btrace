@@ -586,4 +586,19 @@ public final class Assembler {
     }
     return this;
   }
+
+  public Assembler insertFrameReplaceStack(Label l, Type... stack) {
+    mHelper.insertFrameReplaceStack(l, stack);
+    return this;
+  }
+
+  public Assembler insertFrameAppendStack(Label l, Type... stack) {
+    mHelper.insertFrameAppendStack(l, stack);
+    return this;
+  }
+
+  public Assembler insertFrameSameStack(Label l) {
+    mHelper.insertFrameSameStack(l);
+    return this;
+  }
 }

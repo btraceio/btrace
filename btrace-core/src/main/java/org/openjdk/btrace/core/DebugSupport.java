@@ -98,7 +98,6 @@ public final class DebugSupport {
         if (index != -1) {
           dir += className.substring(0, index);
         }
-        System.out.println("===> " + dir);
         new File(dir).mkdirs();
         String file;
         if (index != -1) {

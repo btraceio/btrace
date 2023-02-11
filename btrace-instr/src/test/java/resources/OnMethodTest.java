@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
+// spotless:off
 package resources;
 
 import java.io.IOException;
@@ -181,3 +181,4 @@ public class OnMethodTest {
     }
   }
 }
+// spotless:on

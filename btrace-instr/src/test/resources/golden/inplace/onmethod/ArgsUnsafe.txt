@@ -1,0 +1,7 @@
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsUnsafe$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
+MAXSTACK = 6

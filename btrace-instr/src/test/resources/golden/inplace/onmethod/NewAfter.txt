@@ -1,0 +1,9 @@
+DUP
+ALOAD 0
+ALOAD 1
+LDC "java.util.HashMap"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NewAfter$args (Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V
+ASTORE 2
+LOCALVARIABLE m Ljava/util/Map; L1 L2 2
+MAXSTACK = 4
+MAXLOCALS = 3

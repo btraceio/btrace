@@ -1,0 +1,7 @@
+ACONST_NULL
+ALOAD 0
+LLOAD 1
+ALOAD 3
+ALOAD 4
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$StaticArgsSelf$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
+MAXSTACK = 6

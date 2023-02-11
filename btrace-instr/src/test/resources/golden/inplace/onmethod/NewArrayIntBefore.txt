@@ -1,0 +1,9 @@
+ALOAD 0
+LDC "int"
+ICONST_1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V
+ALOAD 0
+LDC "int"
+ICONST_2
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayIntBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V
+MAXSTACK = 5

@@ -59,7 +59,7 @@ public abstract class RuntimeTest {
   private static Path projectRoot = null;
   private static boolean forceDebug = false;
   /** Try starting JFR recording if available */
-  private boolean startJfr = false;
+  protected boolean startJfr = false;
   /** Display the otput from the test application */
   protected boolean debugTestApp = false;
   /** Run BTrace in debug mode */
@@ -115,34 +115,7 @@ public abstract class RuntimeTest {
     debugBTrace = false;
     isUnsafe = false;
     timeout = 10000L;
-  }
-
-  public void testWithJfr(String testApp, String testScript, int checkLines, ResultValidator v)
-      throws Exception {
-    startJfr = true;
-    test(testApp, testScript, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void testWithJfr(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
-      throws Exception {
-    startJfr = true;
-    testDynamic(testApp, testScript, cmdArgs, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void test(String testApp, String testScript, int checkLines, ResultValidator v)
-      throws Exception {
-    test(testApp, testScript, null, checkLines, v);
-  }
-
-  @SuppressWarnings("DefaultCharset")
-  public void test(
-      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
-      throws Exception {
-    testDynamic(testApp, testScript, cmdArgs, checkLines, v);
-    testStartup(testApp, testScript, cmdArgs, checkLines, v);
+    startJfr = false;
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -277,6 +250,11 @@ public abstract class RuntimeTest {
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
   }
 
+  public void testStartup(String testApp, String testScript, int checkLines, ResultValidator v)
+      throws Exception {
+    testStartup(testApp, testScript, null, checkLines, v);
+  }
+
   public void testStartup(
       String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
@@ -331,7 +309,6 @@ public abstract class RuntimeTest {
 
     StringBuilder stdout = new StringBuilder();
     StringBuilder stderr = new StringBuilder();
-    AtomicInteger ret = new AtomicInteger(-1);
 
     BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
@@ -382,7 +359,7 @@ public abstract class RuntimeTest {
                     continue;
                   }
                   if (l.contains("Server VM warning")
-                          || l.contains("XML libraries not available")) {
+                      || l.contains("XML libraries not available")) {
                     continue;
                   }
                   stderr.append(l).append(System.lineSeparator());
@@ -404,7 +381,11 @@ public abstract class RuntimeTest {
     testAppLatch.countDown();
     stdoutLatch.await();
 
-    v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
+    pw.println("done");
+    pw.flush();
+    int retcode = p.waitFor();
+
+    v.validate(stdout.toString(), stderr.toString(), retcode, jfrFile);
   }
 
   protected Path locateAgent() {

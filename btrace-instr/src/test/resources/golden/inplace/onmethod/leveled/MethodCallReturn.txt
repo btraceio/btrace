@@ -1,0 +1,23 @@
+LSTORE 4
+ASTORE 6
+ASTORE 7
+ALOAD 7
+ALOAD 6
+LLOAD 4
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturn.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L1
+DUP2
+LSTORE 8
+LLOAD 8
+ALOAD 6
+LLOAD 4
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallReturn$args (JLjava/lang/String;J)V
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest] [J]
+L2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0
+LOCALVARIABLE a Ljava/lang/String; L0 L2 1
+LOCALVARIABLE b J L0 L2 2
+MAXSTACK = 7
+MAXLOCALS = 10

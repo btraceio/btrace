@@ -1,0 +1,28 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayIntAfter.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L1
+DUP
+ALOAD 0
+ALOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayIntAfter$args (Ljava/lang/Object;[I)V
+FRAME SAME1 [I
+ASTORE 2
+L2
+LINENUMBER 110 L2
+ASTORE 3
+L3
+LINENUMBER 111 L3
+ASTORE 4
+L4
+LINENUMBER 112 L4
+ASTORE 5
+L5
+LINENUMBER 113 L5
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE a [I L2 L6 2
+LOCALVARIABLE b [[I L3 L6 3
+LOCALVARIABLE c [Ljava/lang/String; L4 L6 4
+LOCALVARIABLE d [[Ljava/lang/String; L5 L6 5
+MAXSTACK = 3
+MAXLOCALS = 6

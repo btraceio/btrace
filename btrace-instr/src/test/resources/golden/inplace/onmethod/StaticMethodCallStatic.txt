@@ -1,0 +1,11 @@
+LSTORE 4
+ASTORE 6
+ALOAD 6
+LLOAD 4
+LDC "static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)"
+LDC "resources.OnMethodTest"
+LDC "callTopLevelStatic"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$StaticMethodCallStatic$args (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+ALOAD 6
+LLOAD 4
+MAXLOCALS = 7

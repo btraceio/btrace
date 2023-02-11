@@ -1,0 +1,14 @@
+ICONST_1
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hit (I)Z
+ISTORE 6
+ILOAD 6
+IFEQ L0
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSampled$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
+FRAME APPEND [I]
+MAXSTACK = 6
+MAXLOCALS = 7

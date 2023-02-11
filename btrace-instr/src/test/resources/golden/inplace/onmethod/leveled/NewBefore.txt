@@ -1,0 +1,13 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewBefore.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L1
+ALOAD 0
+LDC "java.util.HashMap"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NewBefore$args (Ljava/lang/Object;Ljava/lang/String;)V
+L1
+FRAME SAME
+L2
+LINENUMBER 106 L2
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+LOCALVARIABLE m Ljava/util/Map; L2 L3 1

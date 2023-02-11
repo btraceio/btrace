@@ -1,0 +1,13 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Line.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L1
+LDC "field"
+LDC 101
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$Line$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L1
+FRAME SAME
+ALOAD 0
+L2
+LINENUMBER 102 L2
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0

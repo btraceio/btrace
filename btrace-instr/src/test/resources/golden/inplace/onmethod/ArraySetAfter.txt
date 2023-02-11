@@ -1,0 +1,12 @@
+ISTORE 4
+DUP2
+ISTORE 5
+ASTORE 6
+ILOAD 4
+ALOAD 0
+ALOAD 6
+ILOAD 5
+ILOAD 4
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArraySetAfter$args (Ljava/lang/Object;[III)V
+MAXSTACK = 4
+MAXLOCALS = 7

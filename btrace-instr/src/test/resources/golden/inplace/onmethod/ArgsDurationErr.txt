@@ -1,0 +1,19 @@
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+LCONST_0
+LSTORE 6
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 8
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J] [java/lang/Throwable]
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 8
+LSUB
+LSTORE 6
+DUP
+ASTORE 10
+ALOAD 0
+LLOAD 6
+ALOAD 10
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V
+ATHROW
+MAXSTACK = 5
+MAXLOCALS = 11

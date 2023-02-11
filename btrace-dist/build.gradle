@@ -159,6 +159,18 @@ task clientJar(type: ShadowJar) {
     relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
 
+task buildAll {
+    group = "build"
+    dependsOn agentJar, bootJar, clientJar
+}
+
+task rebuild {
+    group = "build"
+    dependsOn clean, buildAll
+}
+
+buildAll.shouldRunAfter clean
+
 task fixPermissions(type: Exec) {
     onlyIf {
         !OperatingSystem.current().isWindows()

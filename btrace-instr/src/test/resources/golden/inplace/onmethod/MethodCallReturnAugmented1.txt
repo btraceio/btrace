@@ -1,0 +1,12 @@
+LSTORE 4
+ASTORE 6
+ASTORE 7
+ALOAD 7
+ALOAD 6
+LLOAD 4
+LSTORE 8
+LLOAD 8
+ALOAD 6
+LLOAD 4
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallReturnAugmented1$args (JLjava/lang/String;J)J
+MAXLOCALS = 10

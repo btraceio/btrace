@@ -1,0 +1,18 @@
+LSTORE 1
+LLOAD 1
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/FieldSetBeforeStatic.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L1
+ALOAD 0
+ACONST_NULL
+LDC "sField"
+LLOAD 1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldSetBeforeStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V
+L1
+FRAME FULL [resources/OnMethodTest J] [J]
+L2
+LINENUMBER 162 L2
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+MAXSTACK = 7
+MAXLOCALS = 3
