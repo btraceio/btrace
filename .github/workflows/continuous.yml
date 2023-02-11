@@ -152,7 +152,7 @@ jobs:
       with:
         name: build
     - name: Deploy Maven
-      run: JAVA_HOME="$JAVA_11_HOME" ./gradlew :btrace-dist:publish
+      run: JAVA_HOME="$JAVA_11_HOME" ./gradlew -x test :btrace-dist:publish
       env:
         GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
