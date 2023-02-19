@@ -30,6 +30,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.impl.SimpleLogger;
 
 /**
@@ -107,6 +108,7 @@ public final class DebugSupport {
         }
         file += ".class";
         File out = new File(dir, file);
+        LoggerFactory.getLogger(DebugSupport.class).info("Dumping clz to {}", out.toString());
         try (FileOutputStream fos = new FileOutputStream(out)) {
           fos.write(code);
         }

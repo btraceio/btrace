@@ -163,12 +163,12 @@ public final class BTraceTransformer implements ClassFileTransformer {
         if (transformed == null) {
           // no instrumentation necessary
           if (log.isDebugEnabled()) {
-            log.debug("skipping class {}", cr.getJavaClassName());
+            log.warn("skipping class {}", cr.getJavaClassName());
           }
           return classfileBuffer;
         } else {
           if (log.isDebugEnabled()) {
-            log.error("transformed class {}", cr.getJavaClassName());
+            log.debug("transformed class {}", cr.getJavaClassName());
           }
           if (debug.isDumpClasses()) {
             debug.dumpClass(className.replace('.', '/'), transformed);

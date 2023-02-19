@@ -94,4 +94,14 @@ public class VariableMapperTest {
                 16))); // default mapping array size is 8 so going for double should trigger
     // overflow handling
   }
+
+  @Test
+  void testOverrideMapping() {
+    System.out.println("==> " + instance.remap(4, 1));
+    System.out.println("===> " + instance.remap(5, 1));
+    System.out.println("===> " + instance.remap(4, 2));
+
+    System.out.println("===> " + instance.map(4));
+    System.out.println("===> " + instance.map(5));
+  }
 }

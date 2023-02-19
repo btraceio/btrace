@@ -5,6 +5,19 @@ plugins {
     id 'java'
 }
 
+def downloadedJar = { url, name ->
+    File file = new File("$buildDir/download/${name}.jar")
+    file.parentFile.mkdirs()
+    if (!file.exists()) {
+        new URL(url).withInputStream { downloadStream ->
+            file.withOutputStream { fileOut ->
+                fileOut << downloadStream
+            }
+        }
+    }
+    files(file.absolutePath)
+}
+
 dependencies {
     implementation libs.slf4j
     implementation libs.asm
@@ -21,6 +34,11 @@ dependencies {
     testImplementation libs.slf4j.simple
     testImplementation libs.junit.jupiter
     testImplementation project(':btrace-client')
+
+    // https://mvnrepository.com/artifact/org.scala-lang/scala-library
+    testImplementation group: 'org.scala-lang', name: 'scala-library', version: '2.13.10'
+
+    testImplementation downloadedJar("https://github.com/renaissance-benchmarks/renaissance/releases/download/v0.14.1/renaissance-gpl-0.14.1.jar", "renaissance-gpl-0.14.1")
 }
 
 compileTestJava {

@@ -411,11 +411,19 @@ public abstract class InstrumentorTestBase {
   }
 
   protected byte[] loadTargetClass(String name) throws IOException {
-    originalBC = loadResource("/resources/" + name + ".class");
-    if (originalBC == null) {
-      originalBC = loadResource("/resources/" + name + ".clazz");
+    if (name.startsWith("/")) {
+      originalBC = loadResource(name);
+    } else {
+      originalBC = loadResource("/resources/" + name + ".class");
+      if (originalBC == null) {
+        originalBC = loadResource("/resources/" + name + ".clazz");
+      }
     }
     return originalBC;
+  }
+
+  protected void forceIndyDispatch(boolean force) {
+    System.setProperty("btrace.indy", Boolean.toString(force));
   }
 
   private byte[] loadResource(final String path) throws IOException {

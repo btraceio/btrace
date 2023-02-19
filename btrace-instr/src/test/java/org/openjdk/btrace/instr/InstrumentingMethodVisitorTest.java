@@ -104,7 +104,7 @@ public class InstrumentingMethodVisitorTest {
       "org/apache/spark/scheduler/SchedulerBackend"
     };
     Object[] locals =
-        InstrumentingMethodVisitor.computeFrameLocals(2, Arrays.asList(fromFrame), null, mapper);
+        InstrumentingMethodVisitor.computeFrameLocals("test", 2, Arrays.asList(fromFrame), null, mapper);
     assertArrayEquals(expected, locals);
   }
 
@@ -118,7 +118,7 @@ public class InstrumentingMethodVisitorTest {
         cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
     InstrumentingMethodVisitor instance =
         new InstrumentingMethodVisitor(
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
     mv = instance;
 
     mv.visitLdcInsn(1);
@@ -144,7 +144,7 @@ public class InstrumentingMethodVisitorTest {
         cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
     InstrumentingMethodVisitor instance =
         new InstrumentingMethodVisitor(
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
     mv = instance;
 
     mv.visitLdcInsn(value);

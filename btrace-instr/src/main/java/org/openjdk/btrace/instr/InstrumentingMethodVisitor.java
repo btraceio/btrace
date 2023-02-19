@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
@@ -61,14 +62,17 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   private final Map<Label, SavedState> jumpTargetStates = new HashMap<>();
   private final Map<Label, Set<Label>> tryCatchHandlerMap = new HashMap<>();
   private final String owner;
+  private final String name;
   private final String desc;
   private int argsSize = 0;
   private int localsTailPtr = 0;
   private int pc = 0, lastFramePc = Integer.MIN_VALUE;
+  private boolean ctrInvoked = false;
 
-  public InstrumentingMethodVisitor(int access, String owner, String desc, MethodVisitor mv) {
+  public InstrumentingMethodVisitor(int access, String owner, String name, String desc, MethodVisitor mv) {
     super(ASM9, mv);
     this.owner = owner;
+    this.name = name;
     this.desc = desc;
 
     initLocals((access & ACC_STATIC) == 0);
@@ -356,6 +360,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       pushToStack(ret);
     }
     if (opcode == INVOKESPECIAL && name.equals("<init>")) {
+      ctrInvoked = true;
       if (stack.peek() instanceof Label) {
         stack.pop();
         pushToStack(Type.getObjectType(owner));
@@ -414,6 +419,38 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     }
   }
 
+  private static class Mapping implements Comparable<Mapping> {
+    final int from;
+    final int to;
+
+    Mapping(int from, int to) {
+      this.from = from;
+      this.to = to;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      Mapping mapping = (Mapping) o;
+      return from == mapping.from && to == mapping.to;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(from, to);
+    }
+
+    @Override
+    public int compareTo(Mapping o) {
+      if (o == null) {
+        return 1;
+      }
+      return Integer.compare(this.from, o.from);
+    }
+  }
+
+  private Mapping lastMapping = null;
   @Override
   public void visitVarInsn(int opcode, int var) {
     int size = 1;
@@ -428,7 +465,11 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
           break;
         }
     }
-    var = variableMapper.remap(var, size);
+    int newVar = variableMapper.remap(var, size);
+    if (opcode == ASTORE || opcode == ISTORE || opcode == FSTORE || opcode == DSTORE || opcode == LSTORE) {
+      lastMapping = new Mapping(var, newVar);
+    }
+    var = newVar;
 
     boolean isPush = false;
     Type opType = null;
@@ -1010,7 +1051,20 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitLocalVariable(
       String name, String desc, String signature, Label start, Label end, int index) {
-    int newIndex = variableMapper.map(index);
+    if (index < argsSize) {
+      // no mappings for arguments
+      super.visitLocalVariable(name, desc, signature, start, end, index);
+      return;
+    }
+    int newIndex = 0xFFFFFFFF;
+    Map<Integer, Mapping> mapping = perLabelMappings.get(start);
+    if (mapping != null) {
+      Mapping value = mapping.get(index);
+      if (value != null) {
+        newIndex = value.to;
+      }
+    }
+
     if (newIndex != 0xFFFFFFFF) {
       super.visitLocalVariable(
           name, desc, signature, start, end, newIndex == Integer.MIN_VALUE ? 0 : newIndex);
@@ -1045,8 +1099,15 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     super.visitTryCatchBlock(start, end, handler, exception);
   }
 
+  private Map<Label, Integer> labelOrdering = new HashMap<>();
+  private Map<Label, Map<Integer, Mapping>> perLabelMappings = new HashMap<>();
   @Override
   public void visitLabel(Label label) {
+    labelOrdering.put(label, labelOrdering.size());
+    if (lastMapping != null) {
+      perLabelMappings.computeIfAbsent(label, k -> new HashMap<>()).put(lastMapping.from, lastMapping);
+      lastMapping = null;
+    }
     SavedState ss = jumpTargetStates.get(label);
     if (ss != null) {
       if (ss.kind != SavedState.CONDITIONAL) {
@@ -1142,6 +1203,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     Object[] localsArr = trimLocalVars(localTypes.toArray(true));
     Object[] stackSlots = stack.toArray(true);
 
+    if (localsArr[0] == UNINITIALIZED_THIS && ctrInvoked) {
+      localsArr[0] = owner;
+    }
     super.visitFrame(F_NEW, localsArr.length, localsArr, stackSlots.length, stackSlots);
   }
 
@@ -1193,11 +1257,16 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   }
 
   private Object[] computeFrameLocals() {
-    return computeFrameLocals(argsSize, locals, newLocals, variableMapper);
+    Object[] computed = computeFrameLocals(name, argsSize, locals, newLocals, variableMapper);
+    if ("<init>".equals(name) && !ctrInvoked) {
+      computed[0] = UNINITIALIZED_THIS;
+    }
+    return computed;
   }
 
   // package accessible for targeted tests
   static Object[] computeFrameLocals(
+      String methodName,
       int argsSize,
       List<Object> locals,
       Set<LocalVarSlot> newLocals,

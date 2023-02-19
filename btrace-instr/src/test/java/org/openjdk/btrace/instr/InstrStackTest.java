@@ -25,7 +25,7 @@ public class InstrStackTest {
         cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
     instance =
         new InstrumentingMethodVisitor(
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
   }
 
   @Test

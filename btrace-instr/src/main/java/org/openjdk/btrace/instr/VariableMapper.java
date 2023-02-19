@@ -6,6 +6,7 @@ public class VariableMapper {
   private static final int UNMASK = 0x1FFFFFFF;
   private static final int DOUBLE_SLOT_FLAG = 0x20000000;
   private static final int REMAP_FLAG = 0x40000000;
+  private static final int DOUBLE_SLOT_EXT_FLAG = 0x80000000;
   private static final int INVALID_MASK = 0xFFFFFFFF;
 
   private final int argsSize;
@@ -43,7 +44,7 @@ public class VariableMapper {
     }
     mapping[from] = to | REMAP_FLAG;
     if (padding > 0) {
-      mapping[from + padding] = Math.abs(to) + padding; // padding
+      mapping[from + padding] = (to + 1) | DOUBLE_SLOT_EXT_FLAG; // padding
     }
   }
 
@@ -62,11 +63,24 @@ public class VariableMapper {
     }
     int mappedVar = mapping[offset];
 
-    boolean isRemapped = ((mappedVar & REMAP_FLAG) != 0);
-    if (size == 2) {
+    boolean isRemapped = ((mappedVar & DOUBLE_SLOT_EXT_FLAG) == 0) && ((mappedVar & REMAP_FLAG) != 0);
+    if (isRemapped && size == 2) {
       if ((mappedVar & DOUBLE_SLOT_FLAG) == 0) {
         // no double slot mapping; must re-map
-        isRemapped = false;
+
+        // first try a shortcut when overwriting the single slot belonging to the last remapped variable
+        // in that case we can just do in-place change of the mapping and mark the following slot as the
+        // double-slot-extension and the full remapping is not necessary
+        if (unmask(mappedVar) == (nextMappedVar - 1)) {
+          mapping[offset] = mappedVar | DOUBLE_SLOT_FLAG;
+          int next = offset + 1;
+          if (next >= mapping.length) {
+            mapping = Arrays.copyOf(mapping, Math.max(mapping.length * 2, offset + 1));
+          }
+          mapping[next] = (unmask(mappedVar) + 1) | DOUBLE_SLOT_EXT_FLAG | REMAP_FLAG;
+        } else {
+          isRemapped = false;
+        }
       }
     }
     if (!isRemapped) {
@@ -111,7 +125,7 @@ public class VariableMapper {
   private int newVarIdxInternal(int size) {
     int var = nextMappedVar;
     nextMappedVar += size;
-    return var == 0 ? Integer.MIN_VALUE : var;
+    return var;
   }
 
   private int remapVar(int var, int size) {

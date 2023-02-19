@@ -33,6 +33,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -1012,13 +1014,14 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
       TimerHandler th = timerHandlers[index];
       tasks[index] =
           new TimerTask() {
-            final Method mthd;
+            final MethodHandle mthd;
 
             {
-              Method m = null;
+              MethodHandle m = null;
               try {
-                m = th.getMethod(clazz);
-              } catch (NoSuchMethodException e) {
+
+                m = MethodHandles.lookup().unreflect(th.getMethod(clazz));
+              } catch (NoSuchMethodException | IllegalAccessException e) {
                 e.printStackTrace();
               }
               mthd = m;
@@ -1029,9 +1032,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
               if (mthd != null) {
 
                 try {
-
-                  mthd.invoke(null, (Object[]) null);
-
+                  mthd.invokeExact();
                 } catch (Throwable th) {
                   th.printStackTrace();
                 }

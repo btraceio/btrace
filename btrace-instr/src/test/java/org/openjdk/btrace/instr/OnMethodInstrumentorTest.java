@@ -39,7 +39,7 @@ public class OnMethodInstrumentorTest extends InstrumentorTestBase {
   @ParameterizedTest
   @MethodSource("testTransformation")
   void testTransformationInplace(String caseName) throws Throwable {
-    System.setProperty("btrace.indy", "false");
+    forceIndyDispatch(false);
     loadTargetClass("OnMethodTest");
     String trace = "onmethod" + File.separator + caseName;
     transform(trace);
@@ -50,7 +50,7 @@ public class OnMethodInstrumentorTest extends InstrumentorTestBase {
   @ParameterizedTest
   @MethodSource("testTransformation")
   void testTransformationIndy(String caseName) throws Throwable {
-    System.setProperty("btrace.indy", "true");
+    forceIndyDispatch(true);
     try {
       loadTargetClass("OnMethodTest");
       String trace = "onmethod" + File.separator + caseName;
@@ -58,7 +58,7 @@ public class OnMethodInstrumentorTest extends InstrumentorTestBase {
 
       checkTransformation("onmethod" + File.separator + caseName, "indy");
     } finally {
-      System.setProperty("btrace.indy", "");
+      forceIndyDispatch(false);
     }
   }
 

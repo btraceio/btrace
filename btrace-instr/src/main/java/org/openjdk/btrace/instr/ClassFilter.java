@@ -100,6 +100,8 @@ public class ClassFilter {
 
     SENSITIVE_CLASSES.add("sun/invoke/util/");
     SENSITIVE_CLASSES.add("sun/misc/Unsafe");
+    SENSITIVE_CLASSES.add("sun/reflect/");
+    SENSITIVE_CLASSES.add("java/security/AccessController");
   }
 
   private final List<OnMethod> onMethods;
