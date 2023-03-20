@@ -38,7 +38,7 @@ dependencyResolutionManagement {
             plugin ('spotless', 'com.diffplug.spotless').version('6.11.0')
             plugin ('versioning', 'net.nemerosa.versioning').version('2.15.1')
             plugin ('ospackage', 'com.netflix.nebula.ospackage').version('11.0.0')
-            plugin ('shadow', 'com.github.johnrengelman.shadow').version('7.1.2')
+            plugin ('shadow', 'com.github.johnrengelman.shadow').version('8.1.1')
             plugin ('sdkman-vendors', 'io.sdkman.vendors').version('3.0.0')
 
             plugin ('jmh', 'me.champeau.jmh').versionRef('jmhGradlePlugin')
