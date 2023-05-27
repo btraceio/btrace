@@ -66,7 +66,7 @@ The [maven plugin](https://github.com/btraceio/btrace-maven) is providing easy c
 
 ## Contributing - !!! Important !!!
 
-Pull requests can be accepted only from the signers of [Oracle Contributor Agreement](http://www.oracle.com/technetwork/community/oca-486395.html)
+Pull requests can be accepted only from the signers of [Oracle Contributor Agreement](https://oca.opensource.oracle.com/)
 
 ### Deb Repository
 
