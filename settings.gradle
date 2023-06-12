@@ -46,7 +46,7 @@ dependencyResolutionManagement {
             // *** Libraries ***
 
             // https://mvnrepository.com/artifact/com.google.auto.service
-            library ('autoService', 'com.google.auto.service', 'auto-service').version('1.0.1')
+            library ('autoService', 'com.google.auto.service', 'auto-service').version('1.1.1')
             // https://mvnrepository.com/artifact/org.jctools
             library ('jctools', 'org.jctools', 'jctools-core').version('4.0.1')
 
