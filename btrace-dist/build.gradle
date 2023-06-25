@@ -144,8 +144,16 @@ task clientJar(type: ShadowJar) {
     exclude 'org/checkerframework/**'
     exclude 'org/codehaus/**'
 
-    exclude 'org/jctools/maps/**'
-    exclude 'org/jctools/util/**'
+    exclude {
+        it.path.startsWith('org/jctools/maps/') &&
+        !it.path.startsWith("org/jctools/maps/NonBlockingIdentityHashMap") &&
+        !it.path.startsWith("org/jctools/maps/NonBlockingHashMap")
+    }
+    exclude {
+        // 'org/jctools/util/**'
+        it.path.startsWith('org/jctools/util/') &&
+        !it.path.startsWith("org/jctools/util/UnsafeAccess")
+    }
     exclude 'META-INF/services/com.sun.*'
     exclude 'META-INF/services/javax.annotation.*'
 
