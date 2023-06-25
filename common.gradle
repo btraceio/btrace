@@ -26,6 +26,7 @@ if (!project.hasProperty("JAVA_16_HOME")) {
 
 buildscript {
     repositories {
+        jcenter()
         mavenCentral()
     }
 }
@@ -38,10 +39,8 @@ compileJava {
 }
 
 repositories {
+    jcenter()
     mavenCentral()
-    // You may define additional repositories, or even remove "mavenCentral()".
-    // Read more about repositories here:
-    //   http://www.gradle.org/docs/current/userguide/dependency_management.html#sec:repositories
 }
 
 dependencies {

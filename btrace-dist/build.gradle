@@ -11,6 +11,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.internal.os.OperatingSystem
 
 repositories {
+    jcenter()
     mavenCentral()
 }
 
