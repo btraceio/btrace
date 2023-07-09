@@ -51,9 +51,9 @@ class CompilerHelper {
     options.add("-g:lines");
     options.add("-deprecation");
     options.add("-source");
-    options.add("1.7");
+    options.add("8");
     options.add("-target");
-    options.add("1.7");
+    options.add("8");
     if (sourcePath != null) {
       options.add("-sourcepath");
       options.add(sourcePath);

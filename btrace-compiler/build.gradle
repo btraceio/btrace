@@ -3,7 +3,7 @@ dependencies {
     implementation libs.asm
     implementation libs.asm.util
 
-    implementation files("${JAVA_8_HOME}/lib/tools.jar")
+    implementation files("${getToolsJar()}")
     implementation project(path: ':btrace-core')
     implementation project(path: ':btrace-runtime')
     runtimeOnly project(path: ':btrace-instr')
