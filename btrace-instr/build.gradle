@@ -23,11 +23,15 @@ dependencies {
     testImplementation project(':btrace-client')
 }
 
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
 compileTestJava {
-    sourceCompatibility = 8
-    targetCompatibility = 8
     options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
+    options.forkOptions.executable = "${getJavac(8)}"
 }
 
 task compileTestProbes {

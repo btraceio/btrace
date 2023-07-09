@@ -25,15 +25,10 @@ BTrace can be used to dynamically trace a running Java program (similar to DTrac
 You will need the following applications installed
 
 * [Git](http://git-scm.com/downloads)
-* __JDKs__ - JDK 8, Java 9 and Java 11 are required to be available
 * (optionally, the default launcher is the bundled `gradlew` wrapper) [Gradle](http://gradle.org)
 
-In order to ease the pre-build config the `config_build.sh` script is provided. You should run it first as `source config_build.sh` to automatically download all required JDKs and set up the corresponding `JAVA_*_HOME` env variables.
 
 ### Build
-
-#### Java
-Your __JAVA_HOME__ must point to JDK 11 (eg. __JAVA_11_HOME__)
 
 #### Gradle
 ```sh

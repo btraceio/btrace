@@ -52,8 +52,6 @@ jobs:
 
     - name: Build BTrace
       run: |
-        ./config_build.sh
-        source .java.versions
         ./gradlew -x test build
 
     - name: Perform CodeQL Analysis

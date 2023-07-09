@@ -8,33 +8,38 @@ apply plugin: 'idea'
 project.group = 'org.openjdk.btrace'
 project.version = '2.3.0-SNAPSHOT'
 
-sourceCompatibility = '8'
-targetCompatibility = '8'
-
-if (!project.hasProperty("JAVA_8_HOME")) {
-    project.ext.setProperty("JAVA_8_HOME", System.getenv("JAVA_8_HOME"))
-}
-if (!project.hasProperty("JAVA_9_HOME")) {
-    project.ext.setProperty("JAVA_9_HOME", System.getenv("JAVA_9_HOME"))
-}
-if (!project.hasProperty("JAVA_11_HOME")) {
-    project.ext.setProperty("JAVA_11_HOME", System.getenv("JAVA_11_HOME"))
-}
-if (!project.hasProperty("JAVA_16_HOME")) {
-    project.ext.setProperty("JAVA_16_HOME", System.getenv("JAVA_16_HOME"))
-}
-
 buildscript {
     repositories {
         mavenCentral()
     }
 }
 
+ext.getToolsJar = {
+    return javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }.get().metadata.installationPath.file("lib/tools.jar")
+}
+
+ext.getJavac = { int version = 11 ->
+    return javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(version))
+    }.get().metadata.installationPath.file("bin/javac")
+}
+
+ext.getJavadoc = {
+    return javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }.get().metadata.installationPath.file("bin/javadoc")
+}
+
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 compileJava {
-    options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_8_HOME")}/bin/javac"
+    sourceCompatibility = 8
+    targetCompatibility = 8
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
 }
 
 repositories {
@@ -53,7 +58,8 @@ String mavenArtifactId = name
 
 javadoc {
     options.addStringOption('Xdoclint:all,-missing', '-quiet')
-    executable = "${JAVA_8_HOME}/bin/javadoc"
+    options.encoding("UTF-8")
+    executable = "${getJavadoc()}"
     failOnError true
 }
 

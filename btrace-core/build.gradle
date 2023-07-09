@@ -12,13 +12,6 @@ dependencies {
     implementation libs.asm.util
 }
 
-compileJava {
-    sourceCompatibility = 8
-    targetCompatibility = 8
-    options.fork = true
-    options.forkOptions.executable = "${project.property("JAVA_11_HOME")}/bin/javac"
-}
-
 processResources {
     filter ReplaceTokens, tokens: [
         "btrace.version": project.version,
