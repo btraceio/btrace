@@ -23,7 +23,7 @@ task btracec(type: JavaExec) {
   outputs.dir buildDir.toPath().resolve("classes/java/main")
 
   environment('BTRACE_HOME', "$projectDir")
-  classpath configurations.implementation
+  classpath configurations.runtimeClasspath
   mainClass = 'org.openjdk.btrace.compiler.Compiler'
   args '-d'
   args "${buildDir}/classes/java/main/"
@@ -31,6 +31,7 @@ task btracec(type: JavaExec) {
   args 'btclass'
   args fileTree(dir: "src/jmh/btrace", include: 'TraceScript.java')
 }
+compileJmhJava.dependsOn btracec
 jmhClasses.dependsOn btracec
 
 jmhJar {
@@ -54,7 +55,8 @@ jmh {
   duplicateClassesStrategy = DuplicatesStrategy.WARN
   def agentJarPath = tasks.getByPath(':btrace-dist:agentJar').outputs.getFiles().getSingleFile()
   def scriptPath = buildDir.toPath().resolve('classes/java/main/TraceScript.btclass')
-  def agent = "-javaagent:${agentJarPath}=stdout=true,noServer=true,debug=true,script=${scriptPath}"
-  jvmArgsAppend = ["\"-Djmh.basedir=${buildDir.getParentFile()} -Dproject.version=${project.version} -Xmx128m ${agent}\""]
+  def agent = "-javaagent:${agentJarPath}=stdout=false,noServer=true,debug=false,script=${scriptPath}"
+  jvmArgsAppend = ["-Djmh.basedir=${buildDir.getParentFile()}", "-Dproject.version=${project.version}", "-Xmx128m", "-agentpath:/tmp/libasyncProfiler.dylib=start,event=cpu,jfr=7,file=/tmp/btrace.jfr", "${agent}"]
   includes = ['.*BTraceBench.*']
+  profilers = ['stack']
 }
