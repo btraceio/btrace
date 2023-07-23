@@ -64,11 +64,6 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
-      - name: Set up Java environment
-        run: |
-          JAVA_PATH=$(which java)
-          echo "JAVA_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
-          echo "JAVA_8_HOME=${JAVA_PATH/\/bin\/java/\/}" >> $GITHUB_ENV
       - name: Download build data
         uses: actions/download-artifact@v3
         with:
