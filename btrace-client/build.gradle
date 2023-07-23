@@ -8,7 +8,10 @@ dependencies {
     implementation libs.asm.tree
     implementation libs.asm.util
 
-    implementation files("${getToolsJar()}")
+    def toolsJar = getToolsJar();
+    if (toolsJar.getAsFile().exists()) {
+        implementation files("${toolsJar}")
+    }
 
     implementation project(':btrace-core')
     implementation project(':btrace-compiler')

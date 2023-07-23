@@ -2,7 +2,10 @@ dependencies {
     implementation libs.slf4j
     implementation libs.asm
 
-    implementation files("${getToolsJar()}")
+    def toolsJar = getToolsJar();
+    if (toolsJar.getAsFile().exists()) {
+        implementation files("${toolsJar}")
+    }
     implementation project(':btrace-core')
     implementation project(':btrace-services-api')
     implementation project(':btrace-runtime')

@@ -109,10 +109,6 @@ public class BTraceBench {
   long sampleCounter;
   long durCounter;
 
-  LinkedBlockingQueue<String> l = new LinkedBlockingQueue<>();
-  PrintWriter pw;
-  CommandListener cl;
-
   @Setup
   public void setup() {
     MethodTracker.registerCounter(1, 10);
@@ -303,12 +299,12 @@ public class BTraceBench {
       Options opt =
           new OptionsBuilder()
               .addProfiler("stack")
-              .jvmArgsPrepend(
-                  "-javaagent:"
-                      + bc.agentJar
-                      + "=stdout=false,noServer=true,"
-                      + "script="
-                      + bc.scriptPath)
+//              .jvmArgsPrepend(
+//                  "-javaagent:"
+//                      + bc.agentJar
+//                      + "=stdout=false,noServer=true,"
+//                      + "script="
+//                      + bc.scriptPath)
               .include(".*" + BTraceBench.class.getSimpleName() + ".*test.*")
               .build();
 

@@ -38,6 +38,7 @@ task btracec(type: JavaExec) {
   args 'btclass'
   args fileTree(dir: "src/jmh/btrace", include: 'TraceScript.java')
 }
+compileJmhJava.dependsOn btracec
 jmhClasses.dependsOn btracec
 
 jmhJar {
