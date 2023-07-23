@@ -37,6 +37,7 @@ import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
 import org.slf4j.Logger;
@@ -67,12 +68,12 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   private int pc = 0, lastFramePc = Integer.MIN_VALUE;
 
   public InstrumentingMethodVisitor(
-          int access, String owner, String desc, MethodVisitor mv) {
+          int access, String owner, String name, String desc, MethodVisitor mv) {
     super(ASM9, mv);
     this.owner = owner;
     this.desc = desc;
 
-    initLocals((access & ACC_STATIC) == 0);
+    initLocals((access & ACC_STATIC) == 0, "<init>".equals(name));
     variableMapper = new VariableMapper(argsSize);
   }
 
@@ -1013,7 +1014,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitLocalVariable(
       String name, String desc, String signature, Label start, Label end, int index) {
-    int newIndex = variableMapper.map(index);
+    int newIndex = variableMapper.map(index, start);
     if (newIndex != 0xFFFFFFFF) {
       super.visitLocalVariable(
           name, desc, signature, start, end, newIndex == Integer.MIN_VALUE ? 0 : newIndex);
@@ -1050,6 +1051,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
 
   @Override
   public void visitLabel(Label label) {
+    variableMapper.noteLabel(label);
     SavedState ss = jumpTargetStates.get(label);
     if (ss != null) {
       if (ss.kind != SavedState.CONDITIONAL) {
@@ -1180,10 +1182,10 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     return idx;
   }
 
-  private void initLocals(boolean isInstance) {
+  private void initLocals(boolean isInstance, boolean isConstructor) {
     int nextMappedVar = 0;
     if (isInstance) {
-      locals.add(owner);
+      locals.add(isConstructor ? Opcodes.UNINITIALIZED_THIS : owner);
       nextMappedVar++;
       localsTailPtr++;
     }

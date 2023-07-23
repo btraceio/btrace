@@ -3,7 +3,6 @@ package org.openjdk.btrace.instr;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -48,25 +47,25 @@ public class InstrumentingMethodVisitorTest {
             new int[] {
               0,
               0,
-              1073741844,
-              1073741836,
-              1073741826,
-              1073741827,
-              1073741828,
-              1073741829,
-              1073741830,
-              1073741831,
-              1073741832,
-              1073741837,
-              1073741833,
-              1073741834,
-              1073741835,
-              1073741838,
-              1073741839,
-              1073741840,
-              1073741841,
-              1073741842,
-              1073741843,
+              -2147483628,
+              -2147483636,
+              -2147483646,
+              -2147483645,
+              -2147483644,
+              -2147483643,
+              -2147483642,
+              -2147483641,
+              -2147483640,
+              -2147483635,
+              -2147483639,
+              -2147483638,
+              -2147483637,
+              -2147483634,
+              -2147483633,
+              -2147483632,
+              -2147483631,
+              -2147483630,
+              -2147483629,
               0,
               0,
               0,
@@ -117,7 +116,7 @@ public class InstrumentingMethodVisitorTest {
     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     cw.visit(Opcodes.ASM9, Opcodes.ACC_PUBLIC, "test.Test", null, null, null);
     MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
-    InstrumentingMethodVisitor instance = new InstrumentingMethodVisitor(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
+    InstrumentingMethodVisitor instance = new InstrumentingMethodVisitor(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
     mv = instance;
 
     mv.visitLdcInsn(1);
@@ -141,7 +140,7 @@ public class InstrumentingMethodVisitorTest {
     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     cw.visit(Opcodes.ASM9, Opcodes.ACC_PUBLIC, "test.Test", null, null, null);
     MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
-    InstrumentingMethodVisitor instance = new InstrumentingMethodVisitor(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
+    InstrumentingMethodVisitor instance = new InstrumentingMethodVisitor(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
     mv = instance;
 
     mv.visitLdcInsn(value);

@@ -1,17 +1,27 @@
 package org.openjdk.btrace.instr;
 
+import org.objectweb.asm.Label;
+
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class VariableMapper {
   private static final int UNMASK = 0x1FFFFFFF;
-  private static final int DOUBLE_SLOT_FLAG = 0x20000000;
-  private static final int REMAP_FLAG = 0x40000000;
+  static final int DOUBLE_SLOT_FLAG = 0x20000000;
+  static final int DOUBLE_SLOT_FLAG_2 = 0x40000000;
+  static final int REMAP_FLAG = 0x80000000;
   private static final int INVALID_MASK = 0xFFFFFFFF;
 
   private final int argsSize;
 
   private int nextMappedVar = 0;
   private int[] mapping = new int[8];
+
+  private static final Label FIRST_LABEL = new Label();
+
+  private Label currentLabel = FIRST_LABEL;
+  private final Map<Label, int[]> labelMappings = new HashMap<>(16);
 
   public VariableMapper(int argsSize) {
     this.argsSize = argsSize;
@@ -36,14 +46,26 @@ public class VariableMapper {
     return new VariableMapper(argsSize, nextMappedVar, mapping);
   }
 
-  public void setMapping(int from, int to, int size) {
+  /**
+   * Creates a new scope for all the subsequent mappings.<br>
+   * @param label the scope label
+   */
+  public void noteLabel(Label label) {
+    labelMappings.put(currentLabel, Arrays.copyOf(mapping, nextMappedVar));
+    currentLabel = label;
+  }
+
+  void setMapping(int from, int to, int size) {
+    assert((to & REMAP_FLAG) != 0);
+
     int padding = size == 1 ? 0 : 1;
     if (mapping.length <= from + padding) {
       mapping = Arrays.copyOf(mapping, Math.max(mapping.length * 2, from + padding + 1));
     }
-    mapping[from] = to | REMAP_FLAG;
+    mapping[from] = to;
     if (padding > 0) {
-      mapping[from + padding] = Math.abs(to) + padding; // padding
+      assert(((to & DOUBLE_SLOT_FLAG) != 0));
+      mapping[from + padding] = unmask(to) | REMAP_FLAG | DOUBLE_SLOT_FLAG_2; // padding
     }
   }
 
@@ -61,25 +83,45 @@ public class VariableMapper {
       mapping = Arrays.copyOf(mapping, Math.max(mapping.length * 2, offset + 1));
     }
     int mappedVar = mapping[offset];
+    int unmasked = unmask(mappedVar);
 
     boolean isRemapped = ((mappedVar & REMAP_FLAG) != 0);
     if (size == 2) {
       if ((mappedVar & DOUBLE_SLOT_FLAG) == 0) {
-        // no double slot mapping; must re-map
+        // no double slot mapping over an int slot;
+        // must re-map unless the int slot is the last used one or there is a free double-ext slot
         isRemapped = false;
+      }
+    } else {
+      // size == 1
+      if ((mappedVar & DOUBLE_SLOT_FLAG_2) != 0) {
+        // no mapping over a previously 2-slot value
+        isRemapped = false;
+      } else if ((mappedVar & DOUBLE_SLOT_FLAG) != 0) {
+        // the previously second part of the double slot is free to reuse
+        mapping[unmasked + 1] = (unmasked + 1) | REMAP_FLAG;
       }
     }
     if (!isRemapped) {
       mappedVar = remapVar(newVarIdxInternal(size), size);
       setMapping(offset, mappedVar, size);
     }
-    int unmasked = unmask(mappedVar);
+
+    unmasked = unmask(mappedVar);
     // adjust the mapping pointer if remapping with variable occupying 2 slots
     nextMappedVar = Math.max(unmasked + size, nextMappedVar);
     return unmasked;
   }
 
   public int map(int var) {
+    return map(var, mapping);
+  }
+
+  public int map(int var, Label label) {
+    return map(var, labelMappings.getOrDefault(label, mapping));
+  }
+
+  private int map(int var, int[] currentMapping) {
     // if the var number is the result of current mapping (REMAP_FLAG is set)
     if (((var & REMAP_FLAG) != 0)) {
       return unmask(var);
@@ -89,11 +131,11 @@ public class VariableMapper {
 
     // only remap locals slots above method arguments
     if (offset >= 0) {
-      if (mapping.length <= offset) {
+      if (currentMapping.length <= offset) {
         // catch out of bounds mapping
         return 0xFFFFFFFF;
       }
-      int newVar = mapping[offset];
+      int newVar = currentMapping[offset];
       return (newVar & REMAP_FLAG) != 0 ? unmask(newVar) : 0xFFFFFFFF;
     }
     // method argument slots are not remapped
