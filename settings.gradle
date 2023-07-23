@@ -32,7 +32,7 @@ dependencyResolutionManagement {
             version('jmh', '1.36')
             version('jmhGradlePlugin', '0.7.1')
             version('slf4j', '1.7.36')
-            version('junit', '5.9.3')
+            version('junit', '5.10.0')
 
             // *** Gradle plugins ***
             plugin ('spotless', 'com.diffplug.spotless').version('6.11.0')
