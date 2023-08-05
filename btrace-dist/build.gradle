@@ -69,15 +69,16 @@ task agentJar(type: ShadowJar) {
         if (it.path.endsWith('.jar')) {
             return true
         }
-        return it.path.startsWith('org/openjdk/btrace/agent/') ||
-               it.path.startsWith('org/openjdk/btrace/instr/') ||
-               // include the messages resource bundle and class in the agent jar (bootstrap can't load resources)
-               it.path == 'org/openjdk/btrace/core/Messages.class' ||
-               it.path == 'org/openjdk/btrace/core/messages.properties'
+        return it.path.startsWith('org/jctools/') ||
+                it.path.startsWith('org/openjdk/btrace/agent/') ||
+                it.path.startsWith('org/openjdk/btrace/instr/') ||
+                // include the messages resource bundle and class in the agent jar (bootstrap can't load resources)
+                it.path == 'org/openjdk/btrace/core/Messages.class' ||
+                it.path == 'org/openjdk/btrace/core/messages.properties'
     }
 
     configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.agent.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
     relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
@@ -104,12 +105,6 @@ task bootJar(type: ShadowJar) {
             }
             return true
         }
-        if (it.path.startsWith('org/jctools/')) {
-            if (it.path.startsWith('org/jctools/map/')) {
-                return false
-            }
-            return true
-        }
         if (it.path.startsWith('org/objectweb/asm/')) {
             if (it.path.startsWith('org/objectweb/asm/commons/') ||
                 it.path.startsWith('org/objectweb/asm/util/') ||
@@ -119,12 +114,13 @@ task bootJar(type: ShadowJar) {
             return true
         }
         return it.path.startsWith("org/slf4j/") || it.path.startsWith('org/openjdk/btrace/runtime/') ||
+                it.path.startsWith('org/jctools/') ||
                 it.path.startsWith('org/openjdk/btrace/services/') ||
                 it.path.startsWith('org/openjdk/btrace/statsd/')
     }
 
     configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.torg.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
     relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
@@ -144,16 +140,6 @@ task clientJar(type: ShadowJar) {
     exclude 'org/checkerframework/**'
     exclude 'org/codehaus/**'
 
-    exclude {
-        it.path.startsWith('org/jctools/maps/') &&
-        !it.path.startsWith("org/jctools/maps/NonBlockingIdentityHashMap") &&
-        !it.path.startsWith("org/jctools/maps/NonBlockingHashMap")
-    }
-    exclude {
-        // 'org/jctools/util/**'
-        it.path.startsWith('org/jctools/util/') &&
-        !it.path.startsWith("org/jctools/util/UnsafeAccess")
-    }
     exclude 'META-INF/services/com.sun.*'
     exclude 'META-INF/services/javax.annotation.*'
 
