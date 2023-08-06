@@ -82,7 +82,7 @@ public final class BTraceProbeSupport {
   }
 
   boolean isTransforming() {
-    return onMethods.size() > 0;
+    return !onMethods.isEmpty();
   }
 
   Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr) {
