@@ -121,15 +121,7 @@ public final class Main {
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
-  public static void premain(String args, Instrumentation inst) {
-    main(args, inst);
-  }
-
-  public static void agentmain(String args, Instrumentation inst) {
-    main(args, inst);
-  }
-
-  private static synchronized void main(String args, Instrumentation inst) {
+  public static synchronized void main(String args, Instrumentation inst) {
     if (Main.inst != null) {
       return;
     } else {
@@ -555,50 +547,37 @@ public final class Main {
   }
 
   private static void processClasspaths(String libs) {
-    URL agentJar = Main.class.getResource("Main.class");
-    String bootPath = agentJar.toString().replace("jar:file:", "");
-    int idx = bootPath.indexOf("btrace-agent.jar");
-    if (idx > -1) {
-      bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
-    }
     String bootClassPath = argMap.get(BOOT_CLASS_PATH);
-    if (bootClassPath == null) {
-      bootClassPath = bootPath;
-    } else {
-      if (".".equals(bootClassPath)) {
-        bootClassPath = bootPath;
-      } else {
-        bootClassPath = bootPath + File.pathSeparator + bootClassPath;
-      }
-    }
     log.debug("Bootstrap ClassPath: {}", bootClassPath);
 
-    StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
-    try {
-      while (tokenizer.hasMoreTokens()) {
-        String path = tokenizer.nextToken();
-        File f = new File(path);
-        if (!f.exists()) {
-          log.warn("BTrace bootstrap classpath resource [{}] does not exist", path);
-        } else {
-          if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-            JarFile jf = asJarFile(f);
-            log.debug("Adding jar: {}", jf);
-            inst.appendToBootstrapClassLoaderSearch(jf);
+    if (bootClassPath != null) {
+      StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
+      try {
+        while (tokenizer.hasMoreTokens()) {
+          String path = tokenizer.nextToken();
+          File f = new File(path);
+          if (!f.exists()) {
+            log.warn("BTrace bootstrap classpath resource [{}] does not exist", path);
           } else {
-            log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
+            if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+              JarFile jf = asJarFile(f);
+              log.debug("Adding jar: {}", jf);
+              inst.appendToBootstrapClassLoaderSearch(jf);
+            } else {
+              log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
+            }
           }
         }
+      } catch (IOException ex) {
+        log.debug("adding to boot classpath failed!", ex);
+        return;
       }
-    } catch (IOException ex) {
-      log.debug("adding to boot classpath failed!", ex);
-      return;
     }
 
     String systemClassPath = argMap.get(SYSTEM_CLASS_PATH);
     if (systemClassPath != null) {
       log.debug("System ClassPath: {}", systemClassPath);
-      tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
+      StringTokenizer tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
       try {
         while (tokenizer.hasMoreTokens()) {
           String path = tokenizer.nextToken();
