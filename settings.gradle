@@ -28,7 +28,7 @@ dependencyResolutionManagement {
     versionCatalogs {
         libs {
             // Families...
-            version('asm', '9.4')
+            version('asm', '9.6')
             version('jmh', '1.36')
             version('jmhGradlePlugin', '0.7.1')
             version('slf4j', '1.7.36')
