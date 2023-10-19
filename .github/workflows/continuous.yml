@@ -23,7 +23,7 @@ jobs:
         with:
           java-version: 11
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
@@ -55,7 +55,7 @@ jobs:
         java: [ 8, 11, 17, 20 ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Setup Gradle
