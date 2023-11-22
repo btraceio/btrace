@@ -69,7 +69,7 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
 
     // https://mvnrepository.com/artifact/org.jctools/jctools-core
-    implementation(group: 'org.jctools', name: 'jctools-core', version: '4.0.1')
+    implementation(group: 'org.jctools', name: 'jctools-core', version: '4.0.2')
 
     java9Implementation project(':btrace-core')
     java9Implementation project(':btrace-services-api')
