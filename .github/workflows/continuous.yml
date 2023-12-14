@@ -32,7 +32,7 @@ jobs:
         run: ./gradlew build
       - name: Upload build data
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build
           retention-days: 1
@@ -40,7 +40,7 @@ jobs:
             btrace-dist/build
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: |
@@ -74,13 +74,13 @@ jobs:
           ./gradlew -Pintegration :integration-tests:test
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: integration-test-reports
           path: |
             integration-tests/build/reports/**/*
       - name: Archive binary artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           if: success()
           name: btrace-dist
