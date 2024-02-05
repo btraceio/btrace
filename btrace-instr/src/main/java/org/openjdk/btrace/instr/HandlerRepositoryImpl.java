@@ -62,16 +62,16 @@ public final class HandlerRepositoryImpl {
     probe.copyHandlers(visitor);
     byte[] data = writer.toByteArray();
 
-    if (debugSupport.isDumpClasses()) {
-      try {
-        String handlerPath =
-            debugSupport.getDumpClassDir() + "/" + handlerClassName.replace('/', '_') + ".class";
-        log.debug("BTrace INDY handler dumped: {}", handlerPath);
-        Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
+//    if (debugSupport.isDumpClasses()) {
+//      try {
+//        String handlerPath =
+//            debugSupport.getDumpClassDir() + "/" + handlerClassName.replace('/', '_') + ".class";
+//        log.debug("BTrace INDY handler dumped: {}", handlerPath);
+//        Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
+//      } catch (Throwable e) {
+//        e.printStackTrace();
+//      }
+//    }
 
     return data;
   }

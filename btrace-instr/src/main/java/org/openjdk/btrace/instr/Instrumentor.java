@@ -174,7 +174,7 @@ public class Instrumentor extends ClassVisitor {
     methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
 
     InstrumentingMethodVisitor mHelper =
-        new InstrumentingMethodVisitor(access, className, desc, methodVisitor);
+        new InstrumentingMethodVisitor(access, className, name, desc, methodVisitor);
 
     methodVisitor = mHelper;
 
@@ -783,15 +783,26 @@ public class Instrumentor extends ClassVisitor {
           }
 
           private void injectBtrace() {
-            loadArguments(
-                vr,
-                actionArgTypes,
-                isStatic(),
-                constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                selfArg(om.getSelfParameter(), Type.getObjectType(className)));
-
-            invokeBTraceAction(asm, om);
+            try {
+              Label l = new Label();
+              asm.invokeStatic(Constants.LINKING_FLAG_INTERNAL, "get", "()I");
+              // if the linking flag is 0, then we are not in a reentrant call
+              asm.jump(IFNE, l);
+              if (numActionArgs > 0) {
+                loadArguments(
+                        vr,
+                        actionArgTypes,
+                        isStatic(),
+                        constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                        selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+              }
+              invokeBTraceAction(asm, om);
+              asm.label(l);
+              insertFrameSameStack(l);
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
           }
 
           @Override
@@ -815,12 +826,7 @@ public class Instrumentor extends ClassVisitor {
                 MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
               }
               Label l = levelCheck(om, bcn.getClassName(true));
-
-              if (numActionArgs == 0) {
-                invokeBTraceAction(asm, om);
-              } else {
-                injectBtrace();
-              }
+              injectBtrace();
               if (l != null) {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);
