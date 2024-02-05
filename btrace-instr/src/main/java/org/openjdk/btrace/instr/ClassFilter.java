@@ -59,40 +59,79 @@ public class ClassFilter {
     MethodVisitor.class.getClassLoader();
     Attribute.class.getClassLoader();
 
+//    SENSITIVE_CLASSES.add("java/io/BufferedOutputStream");
+//    SENSITIVE_CLASSES.add("java/io/OutputStream");
+//    SENSITIVE_CLASSES.add("java/io/OutputStreamWriter");
+//    SENSITIVE_CLASSES.add("java/io/PrintStream");
+
+//    SENSITIVE_CLASSES.add("java/io/Writer");
+//    SENSITIVE_CLASSES.add("java/lang/ClassValue");
+//    SENSITIVE_CLASSES.add("java/lang/Byte");
+//    SENSITIVE_CLASSES.add("java/lang/Class");
+//    SENSITIVE_CLASSES.add("java/lang/ExceptionInInitializerError");
+    SENSITIVE_CLASSES.add("java/lang/Integer");
+    SENSITIVE_CLASSES.add("java/lang/Number");
+//    SENSITIVE_CLASSES.add("java/lang/Module");
     SENSITIVE_CLASSES.add("java/lang/Object");
+//    SENSITIVE_CLASSES.add("java/lang/Shutdown");
+//    SENSITIVE_CLASSES.add("java/lang/StackTraceElement");
     SENSITIVE_CLASSES.add("java/lang/String");
-    SENSITIVE_CLASSES.add("java/lang/Shutdown");
+    SENSITIVE_CLASSES.add("java/lang/StringUTF16");
+//    SENSITIVE_CLASSES.add("java/lang/System");
     SENSITIVE_CLASSES.add("java/lang/ThreadLocal");
-    SENSITIVE_CLASSES.add("java/lang/VerifyError");
+    SENSITIVE_CLASSES.add("java/lang/ThreadLocal$ThreadLocalMap");
+    SENSITIVE_CLASSES.add("java/lang/WeakPairMap");
+    SENSITIVE_CLASSES.add("java/lang/WeakPairMap$Pair$Weak");
+//    SENSITIVE_CLASSES.add("java/lang/LinkageError");
+//    SENSITIVE_CLASSES.add("java/lang/StackOverflowError");
+//    SENSITIVE_CLASSES.add("java/lang/StringLatin1");
+//    SENSITIVE_CLASSES.add("java/lang/Throwable$WrappedPrintStream");
+//    SENSITIVE_CLASSES.add("java/lang/Throwable$PrintStreamOrWriter");
+//    SENSITIVE_CLASSES.add("java/lang/");
+
     SENSITIVE_CLASSES.add("java/lang/instrument/");
     SENSITIVE_CLASSES.add("java/lang/invoke/");
     SENSITIVE_CLASSES.add("java/lang/ref/");
-    SENSITIVE_CLASSES.add("java/lang/concurrent/");
-    SENSITIVE_CLASSES.add("sun/reflect");
-    SENSITIVE_CLASSES.add("sun/misc/Unsafe");
-    SENSITIVE_CLASSES.add("sun/security/");
-    SENSITIVE_CLASSES.add("org/openjdk/btrace/");
-    SENSITIVE_CLASSES.add("com/sun/proxy/");
-    SENSITIVE_CLASSES.add("sun/instrument/");
-    SENSITIVE_CLASSES.add("java/lang/ClassValue");
-    SENSITIVE_CLASSES.add("java/lang/Throwable$PrintStreamOrWriter");
-    SENSITIVE_CLASSES.add("java/lang/Throwable$WrappedPrintStream");
-    SENSITIVE_CLASSES.add("java/lang/StackTraceElement");
-    SENSITIVE_CLASSES.add("java/lang/StackWalker");
-    SENSITIVE_CLASSES.add("java/lang/WeakPairMap$Pair$Weak");
-    SENSITIVE_CLASSES.add("java/util/concurrent/locks/");
-    SENSITIVE_CLASSES.add("java/nio/charset/");
-    SENSITIVE_CLASSES.add("java/nio/HeapCharBuffer");
-    SENSITIVE_CLASSES.add("java/nio/CharBuffer");
-    SENSITIVE_CLASSES.add("java/nio/Buffer");
-    SENSITIVE_CLASSES.add("java/nio/ByteBuffer");
-    SENSITIVE_CLASSES.add("java/nio/HeapByteBuffer");
-    SENSITIVE_CLASSES.add("jdk/internal/misc/");
-    SENSITIVE_CLASSES.add("jdk/internal/reflect/GeneratedConstructorAccessor1");
+//    SENSITIVE_CLASSES.add("java/lang/reflect/");
+//    SENSITIVE_CLASSES.add("java/nio/HeapCharBuffer");
+//    SENSITIVE_CLASSES.add("java/nio/charset/CoderResult");
+//    SENSITIVE_CLASSES.add("java/util/AbstractCollection");
+//    SENSITIVE_CLASSES.add("java/util/AbstractMap");
+//    SENSITIVE_CLASSES.add("java/util/AbstractSet");
+//    SENSITIVE_CLASSES.add("java/util/Arrays");
+//    SENSITIVE_CLASSES.add("java/util/ArrayDeque");
+//    SENSITIVE_CLASSES.add("java/util/ArrayList$Itr");
+//    SENSITIVE_CLASSES.add("java/util/ImmutableCollections$Set12");
+//    SENSITIVE_CLASSES.add("java/util/ImmutableCollections$Set12$1");
+//    SENSITIVE_CLASSES.add("java/util/Collections");
+//    SENSITIVE_CLASSES.add("java/util/Collections$UnmodifiableCollection");
+//    SENSITIVE_CLASSES.add("java/util/Collections$UnmodifiableCollection$1");
+
+//    SENSITIVE_CLASSES.add("java/util/HashMap");
+//    SENSITIVE_CLASSES.add("java/util/HashSet");
+
+//    SENSITIVE_CLASSES.add("java/util/Objects");
+
+//    SENSITIVE_CLASSES.add("java/util/concurrent/ConcurrentHashMap");
+//    SENSITIVE_CLASSES.add("java/nio/HeapCharBuffer");
+//    SENSITIVE_CLASSES.add("java/nio/charset/CoderResult");
+    SENSITIVE_CLASSES.add("java/util/concurrent/locks/LockSupport");
+    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer");
+    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer$ExclusiveNode");
+    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer$Node");
+    SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractOwnableSynchronizer");
+    SENSITIVE_CLASSES.add("java/util/concurrent/locks/ReentrantLock");
+
+//    SENSITIVE_CLASSES.add("java/util/concurrent/locks/ReentrantReadWriteLock$Sync");
+//    SENSITIVE_CLASSES.add("java/util/jar/Manifest");
+    SENSITIVE_CLASSES.add("jdk/internal/");
+//    SENSITIVE_CLASSES.add("sun/misc/Unsafe");
+
     SENSITIVE_CLASSES.add("sun/invoke/");
-    SENSITIVE_CLASSES.add("java/lang/");
-    SENSITIVE_CLASSES.add("java/util/");
-    SENSITIVE_CLASSES.add("com/sun/");
+//    SENSITIVE_CLASSES.add("sun/nio/ch/");
+//    SENSITIVE_CLASSES.add("sun/nio/cs/");
+//    SENSITIVE_CLASSES.add("sun/nio/fs/");
+    SENSITIVE_CLASSES.add("org/openjdk/btrace/");
   }
 
   private final List<OnMethod> onMethods;
