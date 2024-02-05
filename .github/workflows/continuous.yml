@@ -33,7 +33,7 @@ jobs:
         run: ./gradlew build
       - name: Upload build data
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build
           retention-days: 1
@@ -41,7 +41,7 @@ jobs:
             btrace-dist/build
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: |
@@ -67,7 +67,7 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: temurin
       - name: Download build data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build
           path: btrace-dist/build
@@ -76,15 +76,15 @@ jobs:
           ./gradlew -Pintegration :integration-tests:test
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: integration-test-reports
+          name: integration-test-reports-${{ matrix.java }}
           path: |
             integration-tests/build/reports/**/*
       - name: Archive binary artifacts
-        uses: actions/upload-artifact@v3
+        if: success() && matrix.java == '11'
+        uses: actions/upload-artifact@v4
         with:
-          if: success()
           name: btrace-dist
           path: |
             btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
@@ -106,7 +106,7 @@ jobs:
         java-version: 11
         distribution: temurin
     - name: Download build data
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build
     - name: Deploy Maven
