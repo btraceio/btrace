@@ -64,6 +64,16 @@ public final class BTraceTransformer implements ClassFileTransformer {
   private final Filter filter = new Filter();
   private final Collection<MethodNode> cushionMethods = new HashSet<>();
 
+  static {
+    Filter.class.getName();
+    ReentrantReadWriteLock.class.getName();
+    ReentrantReadWriteLock.WriteLock.class.getName();
+    ReentrantReadWriteLock.ReadLock.class.getName();
+    ArrayList.class.getName();
+    HashSet.class.getName();
+    HashMap.class.getName();
+  }
+
   public BTraceTransformer(DebugSupport d) {
     debug = d;
   }
@@ -133,10 +143,22 @@ public final class BTraceTransformer implements ClassFileTransformer {
       throws IllegalClassFormatException {
     try {
       setupLock.readLock().lock();
-      if (probes.isEmpty()) return null;
 
       className = className != null ? className : "<anonymous>";
 
+      if (className.equals("java/lang/invoke/MethodHandleNatives")) {
+        byte[] transformed = null;
+        try {
+          debug.dumpClass(className.replace('.', '/') + "_orig", classfileBuffer);
+          transformed = LinkerInstrumentor.addGuard(classfileBuffer);
+          debug.dumpClass(className.replace('.', '/'), transformed);
+        } catch (Throwable t) {
+          t.printStackTrace(System.out);
+        }
+        return transformed;
+      }
+
+      if (probes.isEmpty()) return null;
       if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader()))
           && isSensitiveClass(className)) {
         if (log.isDebugEnabled()) {

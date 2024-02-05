@@ -99,7 +99,7 @@ public class VariableMapper {
         isRemapped = false;
       } else if ((mappedVar & DOUBLE_SLOT_FLAG) != 0) {
         // the previously second part of the double slot is free to reuse
-        mapping[unmasked + 1] = (unmasked + 1) | REMAP_FLAG;
+        mapping[offset + 1] = (unmasked + 1) | REMAP_FLAG;
       }
     }
     if (!isRemapped) {

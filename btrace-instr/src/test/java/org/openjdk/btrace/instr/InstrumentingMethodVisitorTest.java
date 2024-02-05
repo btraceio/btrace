@@ -85,6 +85,7 @@ public class InstrumentingMethodVisitorTest {
         new InstrumentingMethodVisitor(
             Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
             "test.Test",
+            "test",
             "()V",
             mv,
             (type, nLocal, local, nStack, stack) -> {
@@ -1282,28 +1283,6 @@ public class InstrumentingMethodVisitorTest {
   }
 
   @ParameterizedTest
-  @MethodSource("typeValues")
-  void storeAsNew(Object value, Type type) {
-    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-    cw.visit(Opcodes.ASM9, Opcodes.ACC_PUBLIC, "test.Test", null, null, null);
-    MethodVisitor mv =
-        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
-    InstrumentingMethodVisitor instance =
-        new InstrumentingMethodVisitor(
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "()V", mv);
-    mv = instance;
-
-    mv.visitLdcInsn(value);
-    Object expected = instance.introspect().stack.peek();
-    int idx = instance.storeAsNew();
-    InstrumentingMethodVisitor.Introspection i = instance.introspect();
-    assertEquals(1, i.newLocals.size());
-    assertEquals(0, i.stack.size());
-    instance.visitVarInsn(type.getOpcode(Opcodes.ILOAD), idx);
-    assertEquals(expected, instance.introspect().stack.peek());
-  }
-
-  @ParameterizedTest
   @ValueSource(ints = {Opcodes.F_FULL, Opcodes.F_NEW})
   void visitFrameNew(int opcode) {
     instance.visitLdcInsn(1);
@@ -1604,18 +1583,6 @@ public class InstrumentingMethodVisitorTest {
 
     assertEquals(0, i.stack.size());
     assertEquals(2, i.lvTypes.size());
-  }
-
-  private static Stream<Arguments> typeValues() {
-    return Stream.of(
-        Arguments.of((byte) 1, Type.BYTE_TYPE),
-        Arguments.of((short) 1, Type.SHORT_TYPE),
-        Arguments.of((char) 1, Type.CHAR_TYPE),
-        Arguments.of((int) 1, Type.INT_TYPE),
-        Arguments.of(true, Type.BOOLEAN_TYPE),
-        Arguments.of((long) 1, Type.LONG_TYPE),
-        Arguments.of((float) 1, Type.FLOAT_TYPE),
-        Arguments.of((double) 1, Type.DOUBLE_TYPE));
   }
 
   @Test

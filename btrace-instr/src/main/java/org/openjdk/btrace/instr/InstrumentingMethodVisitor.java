@@ -72,13 +72,14 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   private int pc = 0, lastFramePc = Integer.MIN_VALUE;
   private final FrameDiagnosticListener frameDiagnosticListener;
 
-  public InstrumentingMethodVisitor(int access, String owner, String desc, MethodVisitor mv) {
-    this(access, owner, desc, mv, (type, nLocal, local, nStack, stack) -> {});
+  public InstrumentingMethodVisitor(int access, String owner, String name, String desc, MethodVisitor mv) {
+    this(access, owner, name, desc, mv, (type, nLocal, local, nStack, stack) -> {});
   }
 
   InstrumentingMethodVisitor(
       int access,
       String owner,
+      String name,
       String desc,
       MethodVisitor mv,
       FrameDiagnosticListener frameDiagnosticListener) {
@@ -386,7 +387,17 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       if (stack.peek() instanceof Label) {
         stack.pop();
         pushToStack(Type.getObjectType(owner));
+      } else {
+        Object obj = stack.peek();
+        // uninitialized this becomes initialized after call to super <init>
+        if (!(obj instanceof String)) {
+          locals.replaceAll(o -> o == UNINITIALIZED_THIS ? this.owner : o);
+          localTypes.resolveUnitializedThis(this.owner);
+        }
       }
+//      if (owner.startsWith("resources")) {
+//        System.out.println("===> " + owner + ":: " + Arrays.toString(localTypes.locals));
+//      }
     }
   }
 
@@ -847,11 +858,17 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       case LAND:
       case LOR:
       case LXOR:
+        {
+          popFromStack(Type.LONG_TYPE);
+          popFromStack(Type.LONG_TYPE);
+          pushToStack(Type.LONG_TYPE);
+          break;
+        }
       case LSHR:
       case LSHL:
       case LUSHR:
         {
-          popFromStack(Type.LONG_TYPE);
+          popFromStack(Type.INT_TYPE);
           popFromStack(Type.LONG_TYPE);
           pushToStack(Type.LONG_TYPE);
           break;
@@ -1547,6 +1564,13 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       replaceWith(vals);
     }
 
+    public void resolveUnitializedThis(String typeName) {
+      for (int i = 0; i <= lastVarPtr; i++) {
+        if (locals[i] == UNINITIALIZED_THIS) {
+          locals[i] = typeName;
+        }
+      }
+    }
     public void setType(int idx, Type t) {
       int padding = t.getSize() - 1;
       if ((idx + padding) >= locals.length) {

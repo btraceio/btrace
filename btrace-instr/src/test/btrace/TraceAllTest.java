@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
+ * particular file as subject to the Classpath exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -22,44 +22,36 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package resources;
+
+package traces;
+
+import org.openjdk.btrace.core.annotations.*;
+import org.openjdk.btrace.core.BTraceUtils;
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import java.util.concurrent.atomic.AtomicLong;
+
 
 /**
+ *
  * @author Jaroslav Bachorik
  */
-public class Main extends TestApp {
-  private String id = "xxx";
+@BTrace(trusted = false)
+public class TraceAllTest {
 
-  public static void main(String[] args) throws Exception {
-    Main i = new Main();
-    i.start();
-  }
+    private static final AtomicLong hitCnt = BTraceUtils.newAtomicLong(0);
 
-  @Override
-  protected void startWork() {
-    while (!Thread.currentThread().isInterrupted() && !finished.get()) {
-      callA();
-      try {
-        Thread.sleep(200);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
+    @OnMethod(clazz = "/.*/")
+    public static void doall(@ProbeMethodName(fqn = true) String pmn) {
+        BTraceUtils.getAndIncrement(hitCnt);
+//        BTraceUtils.println("invoked: " + pmn);
     }
-    Thread.currentThread().interrupt();
-  }
 
-  private void callA() {
-    print("i=" + callB(1, "Hello World"));
-  }
-
-  private int callB(int i, String s) {
-    print("[" + i + "] = " + s);
-    return i + 1;
-  }
-
-  @Override
-  public void print(String msg) {
-    System.out.println(msg);
-    System.out.flush();
-  }
+    @OnTimer(500)
+    public static void doRecurrent() {
+        long cnt = BTraceUtils.get(hitCnt);
+        if (cnt > 0) {
+            println("[invocations=" + cnt + "]");
+        }
+    }
 }

@@ -45,6 +45,10 @@ public final class BTraceRuntimes {
     return FACTORY != null ? FACTORY.getDefault() : null;
   }
 
+  public static BTraceRuntime.Impl getCurrent() {
+    return BTraceRuntime.getRt();
+  }
+
   public static BTraceRuntime.Impl getRuntime(
       String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
     return FACTORY != null ? FACTORY.getRuntime(className, args, cmdListener, inst) : null;

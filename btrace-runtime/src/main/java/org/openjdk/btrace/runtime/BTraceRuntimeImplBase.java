@@ -67,7 +67,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.LockSupport;
 import javax.management.ListenerNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.NotificationEmitter;
@@ -270,7 +269,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   private volatile NotificationListener memoryListener;
 
   // Command queue for the client
-  private final MpscChunkedArrayQueue<Command> queue;
+  private final CommandQueue queue;
 
   private static class SpeculativeQueueManager {
     // maximum number of speculative buffers
@@ -326,7 +325,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
       currentSpeculationId.set(id);
     }
 
-    void commit(int id, MpscChunkedArrayQueue<Command> result) {
+    void commit(int id, CommandQueue result) {
       validateId(id);
       currentSpeculationId.set(null);
       MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
@@ -405,7 +404,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   BTraceRuntimeImplBase(
       String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
     this.args = args;
-    queue = new MpscChunkedArrayQueue<>(CMD_QUEUE_LIMIT);
+    queue = new CommandQueue(CMD_QUEUE_LIMIT);
     specQueueManager = new SpeculativeQueueManager();
     this.className = className;
     instrumentation = inst;
@@ -430,7 +429,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     cmdThread.start();
   }
 
-  protected final String getClassName() {
+  @Override
+  public final String getClassName() {
     return className;
   }
 
@@ -992,16 +992,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   private void enqueue(Command cmd) {
-    int backoffCntr = 0;
-    while (!Thread.interrupted() && queue != null && !queue.relaxedOffer(cmd)) {
-      if (backoffCntr < 3000) {
-        Thread.yield();
-      } else if (backoffCntr < 3100) {
-        LockSupport.parkNanos(1_000_000);
-      } else {
-        LockSupport.parkNanos(100_000_000);
-      }
-      backoffCntr++;
+    if (queue != null) {
+      queue.enqueue(cmd);
     }
   }
 
@@ -1016,8 +1008,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
               Method m = null;
               try {
                 m = th.getMethod(clazz);
-              } catch (NoSuchMethodException e) {
-                e.printStackTrace();
+              } catch (Throwable t) {
+                t.printStackTrace();
               }
               mthd = m;
             }
