@@ -151,6 +151,7 @@ public abstract class RuntimeTest {
     }
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
+    args.add("-XX:+EnableDynamicAgentLoading");
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
