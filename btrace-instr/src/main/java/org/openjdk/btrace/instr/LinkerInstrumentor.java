@@ -8,6 +8,10 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
+/**
+ * This is used to inject code to set/unset linking flag to make sure no BTrace
+ * code is executed while invokedynamic is being linked.
+ */
 public final class LinkerInstrumentor {
     private static class LinkerMethodVisitor extends MethodVisitor {
         private final Label tryStart = new Label();
