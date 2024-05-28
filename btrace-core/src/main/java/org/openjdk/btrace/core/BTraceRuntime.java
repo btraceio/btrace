@@ -106,7 +106,7 @@ public final class BTraceRuntime {
 
   private BTraceRuntime() {}
 
-  public static Impl getRt() {
+  private static Impl getRt() {
     Impl rt = rtAccessor.getRt();
     return rt;
   }

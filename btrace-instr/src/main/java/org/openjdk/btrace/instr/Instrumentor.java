@@ -41,7 +41,6 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.MethodID;
@@ -301,6 +300,8 @@ public class Instrumentor extends ClassVisitor {
               }
               Label l = levelCheckBefore(om, bcn.getClassName(true));
               if (where == Where.BEFORE) {
+                Label l1 = asm.openLinkerCheck();
+
                 loadArguments(
                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
                     localVarArg(
@@ -312,6 +313,7 @@ public class Instrumentor extends ClassVisitor {
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                 invokeBTraceAction(asm, om);
+                asm.closeLinkerCheck(l1);
               }
               if (l != null) {
                 mv.visitLabel(l);
@@ -346,6 +348,8 @@ public class Instrumentor extends ClassVisitor {
                   retValIndex = storeNewLocal(retType);
                 }
 
+                Label l1 = asm.openLinkerCheck();
+
                 loadArguments(
                     localVarArg(vr.getArgIdx(INDEX_PTR), Type.INT_TYPE, argsIndex[INDEX_PTR]),
                     localVarArg(
@@ -361,6 +365,8 @@ public class Instrumentor extends ClassVisitor {
                         TypeUtils.isAnyType(actionArgRetType)),
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
                 invokeBTraceAction(asm, om);
+
+                asm.closeLinkerCheck(l1);
 
                 if (l != null) {
                   mv.visitLabel(l);
@@ -406,6 +412,8 @@ public class Instrumentor extends ClassVisitor {
               Label l = levelCheckBefore(om, bcn.getClassName(true));
 
               if (where == Where.BEFORE) {
+                Label l1 = asm.openLinkerCheck();
+
                 loadArguments(
                     localVarArg(
                         om.getTargetInstanceParameter(), arrayType, argsIndex[INSTANCE_PTR]),
@@ -420,6 +428,8 @@ public class Instrumentor extends ClassVisitor {
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                 invokeBTraceAction(asm, om);
+
+                asm.closeLinkerCheck(l1);
               }
               if (l != null) {
                 mv.visitLabel(l);
@@ -446,6 +456,7 @@ public class Instrumentor extends ClassVisitor {
                 Type argElementType = elementIdx > -1 ? actionArgTypes[elementIdx] : Type.VOID_TYPE;
 
                 Label l = levelCheckAfter(om, bcn.getClassName(true));
+                Label l1 = asm.openLinkerCheck();
 
                 loadArguments(
                     localVarArg(
@@ -463,6 +474,7 @@ public class Instrumentor extends ClassVisitor {
                         : localVarArg(om.getSelfParameter(), Type.getObjectType(className), 0));
 
                 invokeBTraceAction(asm, om);
+                asm.closeLinkerCheck(l1);
                 if (l != null) {
                   mv.visitLabel(l);
                   insertFrameSameStack(l);
@@ -535,9 +547,13 @@ public class Instrumentor extends ClassVisitor {
                   }
                 };
 
+            Label l1 = asm.openLinkerCheck();
+
             loadArguments(actionArgs);
 
             invokeBTraceAction(asm, om);
+
+            asm.closeLinkerCheck(l1);
           }
 
           @Override
@@ -703,6 +719,8 @@ public class Instrumentor extends ClassVisitor {
                 asm.dup();
                 index = storeAsNew();
               }
+              Label l1 = asm.openLinkerCheck();
+
               loadArguments(
                   localVarArg(om.getTargetInstanceParameter(), exctype, index),
                   constArg(om.getClassNameParameter(), className.replace('/', '.')),
@@ -710,6 +728,9 @@ public class Instrumentor extends ClassVisitor {
                   selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
               invokeBTraceAction(asm, om);
+
+              asm.closeLinkerCheck(l1);
+
               if (l != null) {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);
@@ -738,6 +759,9 @@ public class Instrumentor extends ClassVisitor {
                   asm.dup();
                   castTypeIndex = storeAsNew();
                 }
+
+                Label l1 = asm.openLinkerCheck();
+
                 loadArguments(
                     constArg(vr.getArgIdx(0), castType.getClassName()),
                     constArg(om.getClassNameParameter(), className.replace('/', '.')),
@@ -747,6 +771,9 @@ public class Instrumentor extends ClassVisitor {
                         om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, castTypeIndex));
 
                 invokeBTraceAction(asm, om);
+
+                asm.closeLinkerCheck(l1);
+
                 if (l != null) {
                   mv.visitLabel(l);
                   insertFrameSameStack(l);
@@ -783,26 +810,19 @@ public class Instrumentor extends ClassVisitor {
           }
 
           private void injectBtrace() {
-            try {
-              Label l = new Label();
-              asm.invokeStatic(Constants.LINKING_FLAG_INTERNAL, "get", "()I");
-              // if the linking flag is 0, then we are not in a reentrant call
-              asm.jump(IFNE, l);
-              if (numActionArgs > 0) {
-                loadArguments(
-                        vr,
-                        actionArgTypes,
-                        isStatic(),
-                        constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                        constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                        selfArg(om.getSelfParameter(), Type.getObjectType(className)));
-              }
-              invokeBTraceAction(asm, om);
-              asm.label(l);
-              insertFrameSameStack(l);
-            } catch (Throwable t) {
-                t.printStackTrace();
+            Label l1 = asm.openLinkerCheck();
+
+            if (numActionArgs > 0) {
+              loadArguments(
+                      vr,
+                      actionArgTypes,
+                      isStatic(),
+                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                      selfArg(om.getSelfParameter(), Type.getObjectType(className)));
             }
+            invokeBTraceAction(asm, om);
+            asm.closeLinkerCheck(l1);
           }
 
           @Override
@@ -890,13 +910,19 @@ public class Instrumentor extends ClassVisitor {
 
               Label l = levelCheck(om, bcn.getClassName(true));
 
+              Label l1 = asm.openLinkerCheck();
+
               loadArguments(vr, actionArgTypes, isStatic(), actionArgs);
 
               invokeBTraceAction(asm, om);
+
+              asm.closeLinkerCheck(l1);
+
               if (l != null) {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);
               }
+
               MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
             }
           }
@@ -961,6 +987,8 @@ public class Instrumentor extends ClassVisitor {
                 Label l = levelCheckBefore(om, bcn.getClassName(true));
 
                 if (where == Where.BEFORE) {
+                  Label l1 = asm.openLinkerCheck();
+
                   loadArguments(
                       isStaticAccess
                           ? constArg(om.getTargetInstanceParameter(), null)
@@ -981,6 +1009,7 @@ public class Instrumentor extends ClassVisitor {
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                   invokeBTraceAction(asm, om);
+                  asm.closeLinkerCheck(l1);
                 }
                 if (l != null) {
                   mv.visitLabel(l);
@@ -1010,6 +1039,7 @@ public class Instrumentor extends ClassVisitor {
                   returnValIndex = storeAsNew();
                 }
 
+                Label l1 = asm.openLinkerCheck();
                 loadArguments(
                     isStaticAccess
                         ? constArg(om.getTargetInstanceParameter(), null)
@@ -1031,6 +1061,7 @@ public class Instrumentor extends ClassVisitor {
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                 invokeBTraceAction(asm, om);
+                asm.closeLinkerCheck(l1);
                 if (l != null) {
                   mv.visitLabel(l);
                   insertFrameSameStack(l);
@@ -1079,6 +1110,7 @@ public class Instrumentor extends ClassVisitor {
                 Label l = levelCheckBefore(om, bcn.getClassName(true));
 
                 if (where == Where.BEFORE) {
+                  Label l1 = asm.openLinkerCheck();
                   loadArguments(
                       localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
                       isStaticAccess
@@ -1100,6 +1132,7 @@ public class Instrumentor extends ClassVisitor {
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                   invokeBTraceAction(asm, om);
+                  asm.closeLinkerCheck(l1);
                 }
                 if (l != null) {
                   mv.visitLabel(l);
@@ -1123,6 +1156,7 @@ public class Instrumentor extends ClassVisitor {
               if (vr.isValid()) {
                 Label l = levelCheckAfter(om, bcn.getClassName(true));
 
+                Label l1 = asm.openLinkerCheck();
                 loadArguments(
                     localVarArg(vr.getArgIdx(0), fieldType, fldValueIndex),
                     isStaticAccess
@@ -1144,6 +1178,7 @@ public class Instrumentor extends ClassVisitor {
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                 invokeBTraceAction(asm, om);
+                asm.closeLinkerCheck(l1);
                 if (l != null) {
                   mv.visitLabel(l);
                   insertFrameSameStack(l);
@@ -1170,6 +1205,7 @@ public class Instrumentor extends ClassVisitor {
             if (vr.isValid()) {
               Label l = levelCheck(om, bcn.getClassName(true));
 
+              Label l1 = asm.openLinkerCheck();
               loadArguments(
                   constArg(vr.getArgIdx(0), cName),
                   constArg(om.getClassNameParameter(), className.replace('/', '.')),
@@ -1179,6 +1215,7 @@ public class Instrumentor extends ClassVisitor {
                       om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, castTypeIndex));
 
               invokeBTraceAction(asm, om);
+              asm.closeLinkerCheck(l1);
               if (l != null) {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);
@@ -1229,6 +1266,7 @@ public class Instrumentor extends ClassVisitor {
             ValidationResult vr = validateArguments(om, actionArgTypes, new Type[] {Type.INT_TYPE});
             if (vr.isValid()) {
               Label l = levelCheck(om, bcn.getClassName(true));
+              Label l1 = asm.openLinkerCheck();
               loadArguments(
                   constArg(vr.getArgIdx(0), line),
                   constArg(om.getClassNameParameter(), className.replace('/', '.')),
@@ -1236,6 +1274,7 @@ public class Instrumentor extends ClassVisitor {
                   selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
               invokeBTraceAction(asm, om);
+              asm.closeLinkerCheck(l1);
               if (l != null) {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);
@@ -1281,6 +1320,7 @@ public class Instrumentor extends ClassVisitor {
                     validateArguments(om, actionArgTypes, new Type[] {Constants.STRING_TYPE});
                 if (vr.isValid()) {
                   Label l = levelCheck(om, bcn.getClassName(true));
+                  Label l1 = asm.openLinkerCheck();
                   loadArguments(
                       constArg(vr.getArgIdx(0), extName),
                       constArg(om.getClassNameParameter(), className.replace('/', '.')),
@@ -1288,6 +1328,7 @@ public class Instrumentor extends ClassVisitor {
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                   invokeBTraceAction(asm, om);
+                  asm.closeLinkerCheck(l1);
                   if (l != null) {
                     mv.visitLabel(l);
                     insertFrameSameStack(l);
@@ -1315,6 +1356,7 @@ public class Instrumentor extends ClassVisitor {
                     asm.dupValue(instType);
                     returnValIndex = storeAsNew();
                   }
+                  Label l1 = asm.openLinkerCheck();
                   loadArguments(
                       constArg(vr.getArgIdx(0), extName),
                       localVarArg(om.getReturnParameter(), instType, returnValIndex),
@@ -1323,6 +1365,7 @@ public class Instrumentor extends ClassVisitor {
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                   invokeBTraceAction(asm, om);
+                  asm.closeLinkerCheck(l1);
                   if (l != null) {
                     mv.visitLabel(l);
                     insertFrameSameStack(l);
@@ -1350,6 +1393,7 @@ public class Instrumentor extends ClassVisitor {
                         om, actionArgTypes, new Type[] {Constants.STRING_TYPE, Type.INT_TYPE});
                 if (vr.isValid()) {
                   Label l = levelCheck(om, bcn.getClassName(true));
+                  Label l1 = asm.openLinkerCheck();
                   loadArguments(
                       constArg(vr.getArgIdx(0), extName),
                       constArg(vr.getArgIdx(1), dims),
@@ -1358,6 +1402,7 @@ public class Instrumentor extends ClassVisitor {
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                   invokeBTraceAction(asm, om);
+                  asm.closeLinkerCheck(l1);
                   if (l != null) {
                     mv.visitLabel(l);
                     insertFrameSameStack(l);
@@ -1391,6 +1436,7 @@ public class Instrumentor extends ClassVisitor {
                     asm.dupValue(instType);
                     returnValIndex = storeAsNew();
                   }
+                  Label l1 = asm.openLinkerCheck();
                   loadArguments(
                       constArg(vr.getArgIdx(0), extName),
                       constArg(vr.getArgIdx(1), dims),
@@ -1400,6 +1446,7 @@ public class Instrumentor extends ClassVisitor {
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                   invokeBTraceAction(asm, om);
+                  asm.closeLinkerCheck(l1);
                   if (l != null) {
                     mv.visitLabel(l);
                     insertFrameSameStack(l);
@@ -1461,6 +1508,8 @@ public class Instrumentor extends ClassVisitor {
               retValIndex = storeAsNew();
             }
 
+            Label l1 = asm.openLinkerCheck();
+
             loadArguments(
                 vr,
                 actionArgTypes,
@@ -1477,6 +1526,7 @@ public class Instrumentor extends ClassVisitor {
                 });
 
             invokeBTraceAction(asm, om);
+            asm.closeLinkerCheck(l1);
           }
 
           @Override
@@ -1562,6 +1612,7 @@ public class Instrumentor extends ClassVisitor {
               }
 
               if (where == Where.BEFORE) {
+                Label l1 = asm.openLinkerCheck();
                 loadArguments(
                     vr,
                     actionArgTypes,
@@ -1572,6 +1623,7 @@ public class Instrumentor extends ClassVisitor {
                         om.getTargetInstanceParameter(), Constants.OBJECT_TYPE, storedObjIdx),
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
                 invokeBTraceAction(asm, om);
+                asm.closeLinkerCheck(l1);
               }
               if (l != null) {
                 mv.visitLabel(l);
@@ -1586,6 +1638,7 @@ public class Instrumentor extends ClassVisitor {
               if (vr.isValid()) {
                 Label l = levelCheckAfter(om, bcn.getClassName(true));
 
+                Label l1 = asm.openLinkerCheck();
                 loadArguments(
                     vr,
                     actionArgTypes,
@@ -1597,6 +1650,7 @@ public class Instrumentor extends ClassVisitor {
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
                 invokeBTraceAction(asm, om);
+                asm.closeLinkerCheck(l1);
                 if (l != null) {
                   mv.visitLabel(l);
                   insertFrameSameStack(l);
@@ -1663,8 +1717,10 @@ public class Instrumentor extends ClassVisitor {
               }
             }
             if (where == Where.BEFORE) {
+              Label l1 = asm.openLinkerCheck();
               loadActionArgs();
               invokeBTraceAction(asm, om);
+              asm.closeLinkerCheck(l1);
             }
             if (l != null) {
               mv.visitLabel(l);
@@ -1714,6 +1770,7 @@ public class Instrumentor extends ClassVisitor {
                 asm.dup();
                 throwableIndex = storeAsNew();
               }
+              Label l1 = asm.openLinkerCheck();
               loadArguments(
                   localVarArg(
                       om.getTargetInstanceParameter(), Constants.THROWABLE_TYPE, throwableIndex),
@@ -1722,6 +1779,7 @@ public class Instrumentor extends ClassVisitor {
                   selfArg(om.getSelfParameter(), Type.getObjectType(className)));
 
               invokeBTraceAction(asm, om);
+              asm.closeLinkerCheck(l1);
               if (l != null) {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);

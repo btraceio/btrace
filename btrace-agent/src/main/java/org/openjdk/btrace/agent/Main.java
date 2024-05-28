@@ -143,7 +143,6 @@ public final class Main {
       settings.setDebug(isDebug);
       DebugSupport.initLoggers(isDebug, log);
 
-      log.debug("parsed command line arguments: {}", argMap);
       parseArgs();
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
@@ -187,10 +186,11 @@ public final class Main {
       log.debug("Adding class transformer");
       inst.addTransformer(transformer, true);
       try {
+        // the MethodHandleNatives must be instrumented to track start-end of indy linking to avoid deadlocking
         Class<?> clz = ClassLoader.getSystemClassLoader().loadClass("java.lang.invoke.MethodHandleNatives");
         inst.retransformClasses(clz);
       } catch (Throwable t) {
-        //
+        log.debug("Failed to instrument MethodHandleNatives", t);
       }
       int startedScripts = startScripts();
     } finally {

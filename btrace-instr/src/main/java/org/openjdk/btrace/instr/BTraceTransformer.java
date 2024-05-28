@@ -64,16 +64,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
   private final Filter filter = new Filter();
   private final Collection<MethodNode> cushionMethods = new HashSet<>();
 
-  static {
-    Filter.class.getName();
-    ReentrantReadWriteLock.class.getName();
-    ReentrantReadWriteLock.WriteLock.class.getName();
-    ReentrantReadWriteLock.ReadLock.class.getName();
-    ArrayList.class.getName();
-    HashSet.class.getName();
-    HashMap.class.getName();
-  }
-
   public BTraceTransformer(DebugSupport d) {
     debug = d;
   }
@@ -153,7 +143,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
           transformed = LinkerInstrumentor.addGuard(classfileBuffer);
           debug.dumpClass(className.replace('.', '/'), transformed);
         } catch (Throwable t) {
-          t.printStackTrace(System.out);
+          log.debug("Failed to instrument indy linking", t);
         }
         return transformed;
       }
