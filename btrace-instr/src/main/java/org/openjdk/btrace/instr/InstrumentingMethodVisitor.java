@@ -395,9 +395,6 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
           localTypes.resolveUnitializedThis(this.owner);
         }
       }
-//      if (owner.startsWith("resources")) {
-//        System.out.println("===> " + owner + ":: " + Arrays.toString(localTypes.locals));
-//      }
     }
   }
 
