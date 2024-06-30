@@ -1,0 +1,53 @@
+LSTORE 4
+ASTORE 6
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticMethodCallStatic.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L2
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 6
+LLOAD 4
+LDC "static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)"
+LDC "resources.OnMethodTest"
+LDC "callTopLevelStatic"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$StaticMethodCallStatic$args (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+L2
+FRAME APPEND [resources/OnMethodTest J java/lang/String]
+ALOAD 6
+LLOAD 4
+L3
+LOCALVARIABLE a Ljava/lang/String; L0 L3 0
+LOCALVARIABLE b J L0 L3 1
+LOCALVARIABLE instance Lresources/OnMethodTest; L1 L3 3
+MAXLOCALS = 7
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$StaticMethodCallStatic$args(Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="callTopLevelStatic", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.CALL, clazz="/.*\\.OnMethodTest/", method="callTargetStatic"), enableAt=@Lorg/openjdk/btrace/core/annotations/Level;(value=">=1"))
+// annotable parameter count: 5 (visible)
+@Lorg/openjdk/btrace/core/annotations/TargetMethodOrField;(fqn=true) // parameter 2
+@Lorg/openjdk/btrace/core/annotations/ProbeClassName;() // parameter 3
+@Lorg/openjdk/btrace/core/annotations/ProbeMethodName;() // parameter 4
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticMethodCallStatic.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticMethodCallStatic.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticMethodCallStatic.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticMethodCallStatic.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 6

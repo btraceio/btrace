@@ -1,0 +1,58 @@
+TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncEntry.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L6
+DUP
+ASTORE 2
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L6
+ALOAD 0
+LDC "sync"
+ALOAD 2
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$SyncEntry$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V
+L6
+FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest]
+L7
+LINENUMBER 127 L7
+GOTO L8
+ASTORE 3
+ALOAD 3
+L8
+LINENUMBER 128 L8
+L5
+FRAME SAME1 java/lang/Throwable
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0
+MAXSTACK = 4
+MAXLOCALS = 4
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$SyncEntry$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="sync", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.SYNC_ENTRY), enableAt=@Lorg/openjdk/btrace/core/annotations/Level;(value=">=1"))
+// annotable parameter count: 3 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+@Lorg/openjdk/btrace/core/annotations/ProbeMethodName;() // parameter 1
+@Lorg/openjdk/btrace/core/annotations/TargetInstance;() // parameter 2
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncEntry.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncEntry.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncEntry.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncEntry.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 3

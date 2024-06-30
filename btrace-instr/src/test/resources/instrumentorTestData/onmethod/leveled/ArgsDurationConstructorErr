@@ -1,0 +1,122 @@
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+L2
+LINENUMBER 41 L2
+LCONST_0
+LSTORE 1
+LCONST_0
+LSTORE 3
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
+DUP
+ISTORE 5
+IFLE L0
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 3
+L0
+LINENUMBER 42 L0
+FRAME FULL [resources/OnMethodTest J J I] []
+L3
+LINENUMBER 43 L3
+L1
+FRAME SAME1 java/lang/Throwable
+ILOAD 5
+IFLE L4
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+L4
+FRAME SAME1 java/lang/Throwable
+DUP
+ASTORE 6
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 0
+LLOAD 1
+ALOAD 6
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V
+L5
+FRAME FULL [resources/OnMethodTest J J I java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0
+MAXSTACK = 5
+MAXLOCALS = 7
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+L2
+LINENUMBER 45 L2
+LCONST_0
+LSTORE 2
+LCONST_0
+LSTORE 4
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
+DUP
+ISTORE 6
+IFLE L0
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+L0
+LINENUMBER 46 L0
+FRAME FULL [resources/OnMethodTest java/lang/String J J I] []
+L3
+LINENUMBER 47 L3
+L1
+FRAME SAME1 java/lang/Throwable
+ILOAD 6
+IFLE L4
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+L4
+FRAME SAME1 java/lang/Throwable
+DUP
+ASTORE 7
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 0
+LLOAD 2
+ALOAD 7
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V
+L5
+FRAME FULL [resources/OnMethodTest java/lang/String J J I java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0
+LOCALVARIABLE a Ljava/lang/String; L2 L1 1
+MAXSTACK = 5
+MAXLOCALS = 8
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args(Ljava/lang/Object;JLjava/lang/Throwable;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="<init>", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.ERROR), enableAt=@Lorg/openjdk/btrace/core/annotations/Level;(value=">=1"))
+// annotable parameter count: 3 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+@Lorg/openjdk/btrace/core/annotations/Duration;() // parameter 1
+@Lorg/openjdk/btrace/core/annotations/TargetInstance;() // parameter 2
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 4
