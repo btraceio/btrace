@@ -1,0 +1,70 @@
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+LCONST_0
+LSTORE 1
+LCONST_0
+LSTORE 3
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorDuration.$btrace$$level : I
+DUP
+ISTORE 5
+IFLE L0
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 3
+FRAME APPEND [J J I]
+FRAME SAME1 java/lang/Throwable
+ILOAD 5
+IFLE L2
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+L2
+FRAME SAME1 java/lang/Throwable
+DUP
+ASTORE 6
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorDuration.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 0
+LDC "uncaught"
+LLOAD 1
+ALOAD 6
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ErrorDuration$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Throwable;)V
+L3
+FRAME FULL [resources/OnMethodTest J J I java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+MAXSTACK = 6
+MAXLOCALS = 7
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ErrorDuration$args(Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Throwable;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="uncaught", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.ERROR), enableAt=@Lorg/openjdk/btrace/core/annotations/Level;(value=">=1"))
+// annotable parameter count: 4 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+@Lorg/openjdk/btrace/core/annotations/ProbeMethodName;() // parameter 1
+@Lorg/openjdk/btrace/core/annotations/Duration;() // parameter 2
+@Lorg/openjdk/btrace/core/annotations/TargetInstance;() // parameter 3
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorDuration.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorDuration.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorDuration.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorDuration.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 5

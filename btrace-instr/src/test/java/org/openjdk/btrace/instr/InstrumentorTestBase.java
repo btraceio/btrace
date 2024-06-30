@@ -36,8 +36,12 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
@@ -210,11 +214,11 @@ public abstract class InstrumentorTestBase {
     }
   }
 
-  protected void checkTransformation(String expected) throws IOException {
-    checkTransformation(expected, true);
+  protected void checkTransformation(String name) throws IOException {
+    checkTransformation(name, true);
   }
 
-  protected void checkTransformation(String expected, boolean verify) throws IOException {
+  protected void checkTransformation(String name, boolean verify) throws IOException {
     org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(transformedBC);
 
     if (verify) {
@@ -231,10 +235,17 @@ public abstract class InstrumentorTestBase {
     if (DEBUG) {
       System.err.println(diff);
     }
-    if (expected.isEmpty()) {
-      assertTrue(diff.isEmpty());
+//    if (name.isEmpty()) {
+//      assertTrue(diff.isEmpty());
+//    }
+    Path target = Paths.get(System.getProperty("test.resources"), "instrumentorTestData", name);
+    if (Boolean.getBoolean("update.test.data")) {
+      Files.createDirectories(target.getParent());
+      Files.write(target, diff.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+    } else {
+      String expected = new String(Files.readAllBytes(target), StandardCharsets.UTF_8);
+      assertEquals(expected, diff);
     }
-    assertEquals(expected, diff.substring(0, Math.min(diff.length(), expected.length())));
   }
 
   protected void checkTrace(String expected) throws IOException {

@@ -1,0 +1,69 @@
+LSTORE 4
+ASTORE 6
+ASTORE 7
+ICONST_2
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitAdaptive (I)Z
+ISTORE 8
+ILOAD 8
+IFEQ L1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+ALOAD 0
+ALOAD 6
+LLOAD 4
+ALOAD 7
+LDC "special long resources.OnMethodTest#callTarget(java.lang.String, long)"
+LDC "resources.OnMethodTest"
+LDC "callTopLevel"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallSampledAdaptive$args (Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest I] []
+ALOAD 7
+ALOAD 6
+LLOAD 4
+ILOAD 8
+IFEQ L2
+ICONST_2
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.updateEndTs (I)V
+L2
+FRAME SAME1 J
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+LOCALVARIABLE a Ljava/lang/String; L0 L3 1
+LOCALVARIABLE b J L0 L3 2
+MAXSTACK = 8
+MAXLOCALS = 9
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallSampledAdaptive$args(Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="callTopLevel", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.CALL, clazz="/.*\\.OnMethodTest/", method="callTarget"))
+@Lorg/openjdk/btrace/core/annotations/Sampled;(kind=Lorg/openjdk/btrace/core/annotations/Sampled$Sampler;.Adaptive) // invisible
+// annotable parameter count: 7 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+@Lorg/openjdk/btrace/core/annotations/TargetInstance;() // parameter 3
+@Lorg/openjdk/btrace/core/annotations/TargetMethodOrField;(fqn=true) // parameter 4
+@Lorg/openjdk/btrace/core/annotations/ProbeClassName;() // parameter 5
+@Lorg/openjdk/btrace/core/annotations/ProbeMethodName;() // parameter 6
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallSampledAdaptive.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallSampledAdaptive.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallSampledAdaptive.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallSampledAdaptive.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 8

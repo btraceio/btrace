@@ -1,0 +1,62 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 0
+LDC "java.lang.String"
+ICONST_1
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L3
+FRAME FULL [resources/OnMethodTest [I [[I] [I]
+L4
+LINENUMBER 112 L4
+ICONST_1
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.$btrace$$level : I
+IF_ICMPLT L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 0
+LDC "java.lang.String"
+ICONST_2
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayStringBefore$args (Ljava/lang/Object;Ljava/lang/String;I)V
+L5
+FRAME FULL [resources/OnMethodTest [I [[I [Ljava/lang/String;] [I I]
+L6
+LINENUMBER 113 L6
+L7
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L7 0
+LOCALVARIABLE a [I L1 L7 1
+LOCALVARIABLE b [[I L2 L7 2
+LOCALVARIABLE c [Ljava/lang/String; L4 L7 3
+LOCALVARIABLE d [[Ljava/lang/String; L6 L7 4
+MAXSTACK = 5
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayStringBefore$args(Ljava/lang/Object;Ljava/lang/String;I)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="newArray", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.NEWARRAY, clazz="java.lang.String"), enableAt=@Lorg/openjdk/btrace/core/annotations/Level;(value=">=1"))
+// annotable parameter count: 3 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 3
