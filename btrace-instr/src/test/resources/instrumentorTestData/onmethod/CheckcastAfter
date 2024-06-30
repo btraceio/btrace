@@ -1,0 +1,55 @@
+DUP
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 0
+LDC "casts"
+ALOAD 2
+LDC "java.util.HashMap"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$CheckcastAfter$args (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;)V
+FRAME FULL [resources/OnMethodTest java/util/HashMap java/util/HashMap] [java/util/HashMap]
+ASTORE 3
+L3
+LINENUMBER 119 L3
+IFEQ L4
+L5
+LINENUMBER 120 L5
+L4
+LINENUMBER 122 L4
+FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap java/util/HashMap] []
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE c Ljava/util/Map; L1 L6 1
+LOCALVARIABLE d Ljava/util/HashMap; L3 L6 3
+MAXSTACK = 5
+MAXLOCALS = 4
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$CheckcastAfter$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="casts", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.CHECKCAST, where=Lorg/openjdk/btrace/core/annotations/Where;.AFTER))
+// annotable parameter count: 4 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+@Lorg/openjdk/btrace/core/annotations/ProbeMethodName;() // parameter 1
+@Lorg/openjdk/btrace/core/annotations/TargetInstance;() // parameter 2
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/CheckcastAfter.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/CheckcastAfter.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/CheckcastAfter.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/CheckcastAfter.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 4

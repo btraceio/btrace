@@ -558,81 +558,82 @@ public class Instrumentor extends ClassVisitor {
 
           @Override
           protected void onBeforeCallMethod(int opcode, String cOwner, String cName, String cDesc) {
-            if (matches(localClassName, cOwner.replace('/', '.'))
-                && matches(localMethodName, cName)
-                && typeMatches(loc.getType(), cDesc, om.isExactTypeMatch())) {
+            if (!generatingCode) {
+              try {
+                generatingCode = true;
+                if (matches(localClassName, cOwner.replace('/', '.'))
+                        && matches(localMethodName, cName)
+                        && typeMatches(loc.getType(), cDesc, om.isExactTypeMatch())) {
 
-              /*
-               * Generate a synthetic method id for the method call.
-               * It will be diferent from the 'native' method id
-               * in order to prevent double accounting for one hit.
-               */
-              int parentMid = MethodID.getMethodId(className, name, desc);
-              int mid = MethodID.getMethodId("c$" + parentMid + "$" + cOwner, cName, cDesc);
+                  /*
+                   * Generate a synthetic method id for the method call.
+                   * It will be different from the 'native' method id
+                   * in order to prevent double accounting for one hit.
+                   */
+                  int parentMid = MethodID.getMethodId(className, name, desc);
+                  int mid = MethodID.getMethodId("c$" + parentMid + "$" + cOwner, cName, cDesc);
 
-              String method =
-                  getMethodOrFieldName(om.isTargetMethodOrFieldFqn(), opcode, cOwner, cName, cDesc);
-              Type[] calledMethodArgs = Type.getArgumentTypes(cDesc);
-              addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
-              addExtraTypeInfo(om.getTargetInstanceParameter(), Type.getObjectType(cOwner));
-              if (where == Where.AFTER) {
-                addExtraTypeInfo(om.getReturnParameter(), Type.getReturnType(cDesc));
-              }
-              ValidationResult vr = validateArguments(om, actionArgTypes, calledMethodArgs);
-              if (vr.isValid()) {
-                boolean isStaticCall = (opcode == INVOKESTATIC);
-                if (!isStaticCall) {
-                  if (where == Where.BEFORE && cName.equals(Constants.CONSTRUCTOR)) {
-                    return;
+                  String method =
+                          getMethodOrFieldName(om.isTargetMethodOrFieldFqn(), opcode, cOwner, cName, cDesc);
+                  Type[] calledMethodArgs = Type.getArgumentTypes(cDesc);
+                  addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
+                  addExtraTypeInfo(om.getTargetInstanceParameter(), Type.getObjectType(cOwner));
+                  if (where == Where.AFTER) {
+                    addExtraTypeInfo(om.getReturnParameter(), Type.getReturnType(cDesc));
                   }
-                }
-                if (!generatingCode) {
-                  try {
-                    generatingCode = true;
+                  ValidationResult vr = validateArguments(om, actionArgTypes, calledMethodArgs);
+                  if (vr.isValid()) {
+                    boolean isStaticCall = (opcode == INVOKESTATIC);
+                    if (!isStaticCall) {
+                      if (where == Where.BEFORE && cName.equals(Constants.CONSTRUCTOR)) {
+                        return;
+                      }
+                    }
+
                     if (om.getDurationParameter() != -1) {
                       MethodTrackingExpander.ENTRY.insert(
-                          mv,
-                          MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                          MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                          MethodTrackingExpander.$TIMED,
-                          MethodTrackingExpander.$METHODID + "=" + mid,
-                          MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                              mv,
+                              MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
+                              MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
+                              MethodTrackingExpander.$TIMED,
+                              MethodTrackingExpander.$METHODID + "=" + mid,
+                              MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
                     } else {
                       MethodTrackingExpander.ENTRY.insert(
-                          mv,
-                          MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                          MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                          MethodTrackingExpander.$METHODID + "=" + mid,
-                          MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                              mv,
+                              MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
+                              MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
+                              MethodTrackingExpander.$METHODID + "=" + mid,
+                              MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
                     }
-                  } finally {
-                    generatingCode = false;
+
+                    Type[] argTypes = Type.getArgumentTypes(cDesc);
+                    boolean shouldBackup = !vr.isAny() || om.getTargetInstanceParameter() != -1;
+
+                    // will store the call args into local variables
+                    backupArgsIndices = shouldBackup ? backupStack(argTypes, isStaticCall) : new int[0];
+
+                    if (where == Where.BEFORE) {
+                      MethodTrackingExpander.TEST_SAMPLE.insert(
+                              mv, MethodTrackingExpander.$METHODID + "=" + mid);
+                      Label l = levelCheckBefore(om, bcn.getClassName(true));
+
+                      injectBtrace(vr, method, argTypes, Type.getReturnType(cDesc), isStaticCall);
+                      if (l != null) {
+                        mv.visitLabel(l);
+                        insertFrameSameStack(l);
+                      }
+                      MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
+                    }
+
+                    // put the call args back on stack so the method call can find them
+                    if (shouldBackup) {
+                      restoreStack(backupArgsIndices, argTypes, isStaticCall);
+                    }
                   }
                 }
-
-                Type[] argTypes = Type.getArgumentTypes(cDesc);
-                boolean shouldBackup = !vr.isAny() || om.getTargetInstanceParameter() != -1;
-
-                // will store the call args into local variables
-                backupArgsIndices = shouldBackup ? backupStack(argTypes, isStaticCall) : new int[0];
-
-                if (where == Where.BEFORE) {
-                  MethodTrackingExpander.TEST_SAMPLE.insert(
-                      mv, MethodTrackingExpander.$METHODID + "=" + mid);
-                  Label l = levelCheckBefore(om, bcn.getClassName(true));
-
-                  injectBtrace(vr, method, argTypes, Type.getReturnType(cDesc), isStaticCall);
-                  if (l != null) {
-                    mv.visitLabel(l);
-                    insertFrameSameStack(l);
-                  }
-                  MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
-                }
-
-                // put the call args back on stack so the method call can find them
-                if (shouldBackup) {
-                  restoreStack(backupArgsIndices, argTypes, isStaticCall);
-                }
+              } finally {
+                generatingCode = false;
               }
             }
           }

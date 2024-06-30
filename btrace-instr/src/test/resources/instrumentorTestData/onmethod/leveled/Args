@@ -1,0 +1,82 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L0
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$Args$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
+FRAME SAME
+MAXSTACK = 6
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$Args$args(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="args", enableAt=@Lorg/openjdk/btrace/core/annotations/Level;(value=">=1"))
+// annotable parameter count: 5 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+NEW java/lang/StringBuilder
+DUP
+INVOKESPECIAL java/lang/StringBuilder.<init> ()V
+LDC "this = "
+INVOKEVIRTUAL java/lang/StringBuilder.append (Ljava/lang/String;)Ljava/lang/StringBuilder;
+ALOAD 0
+INVOKEVIRTUAL java/lang/StringBuilder.append (Ljava/lang/Object;)Ljava/lang/StringBuilder;
+INVOKEVIRTUAL java/lang/StringBuilder.toString ()Ljava/lang/String;
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.cntr : Ljava/lang/ThreadLocal;
+INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;
+CHECKCAST java/lang/Integer
+INVOKEVIRTUAL java/lang/Integer.intValue ()I
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.str (I)Ljava/lang/String;
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.cntr : Ljava/lang/ThreadLocal;
+INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;
+CHECKCAST java/lang/Integer
+INVOKEVIRTUAL java/lang/Integer.intValue ()I
+ICONST_1
+IADD
+INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.cntr : Ljava/lang/ThreadLocal;
+SWAP
+INVOKEVIRTUAL java/lang/ThreadLocal.set (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+LDC "btrace.org/openjdk/btrace/runtime/auxiliary/Args.exported"
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.getPerfLong (Ljava/lang/String;)J
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.str (J)Ljava/lang/String;
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+LDC "btrace.org/openjdk/btrace/runtime/auxiliary/Args.exported"
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.getPerfLong (Ljava/lang/String;)J
+LCONST_1
+LADD
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X2
+POP
+LDC "btrace.org/openjdk/btrace/runtime/auxiliary/Args.exported"
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.putPerfLong (JLjava/lang/String;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 4
+MAXLOCALS = 6

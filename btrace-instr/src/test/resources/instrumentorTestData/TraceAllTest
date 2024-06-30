@@ -1,0 +1,157 @@
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+LDC "public void resources.OnMethodTest#<init>"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME FULL [resources/OnMethodTest] []
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+LDC "private void resources.OnMethodTest#<init>(java.lang.String)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME FULL [resources/OnMethodTest java/lang/String] []
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#noargs"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+MAXSTACK = 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public static void resources.OnMethodTest#noargs$static"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+MAXSTACK = 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public long resources.OnMethodTest#args(java.lang.String, long, java.lang.String[], int[])"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public static long resources.OnMethodTest#args$static(java.lang.String, long, java.lang.String[], int[])"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public static long resources.OnMethodTest#callTopLevelStatic(java.lang.String, long)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public long resources.OnMethodTest#callTopLevel(java.lang.String, long)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "private long resources.OnMethodTest#callTarget(java.lang.String, long)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#exception"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#uncaught"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#array(int)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#field"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#newObject"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#newArray"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#casts"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+LDC "public void resources.OnMethodTest#sync"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public long resources.OnMethodTest#callTopLevel1(java.lang.String, long)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "private long resources.OnMethodTest#calLTargetX(java.lang.String, long)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public long resources.OnMethodTest#argsMultiReturn(java.lang.String, long, java.lang.String[], int[])"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#staticField"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+LDC "public void resources.OnMethodTest#syncM"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public java.lang.String resources.OnMethodTest#argsTypeMatch(java.util.ArrayList)"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.OnMethodTest#caught"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
+FRAME SAME
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*/")
+// annotable parameter count: 1 (visible)
+@Lorg/openjdk/btrace/core/annotations/ProbeMethodName;(fqn=true) // parameter 0
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.hitCnt : Ljava/util/concurrent/atomic/AtomicLong;
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.getAndIncrement (Ljava/util/concurrent/atomic/AtomicLong;)J
+POP2
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 1

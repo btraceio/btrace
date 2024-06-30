@@ -1,0 +1,170 @@
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ServicesTest$testSimpleService ()V
+FRAME SAME
+MAXSTACK = 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "resources.OnMethodTest"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ServicesTest$testFieldInjection (Ljava/lang/String;)V
+FRAME SAME
+MAXSTACK = 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ServicesTest$testRuntimeService (Ljava/lang/String;J[Ljava/lang/String;[I)V
+FRAME SAME
+MAXSTACK = 5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 0
+LLOAD 1
+ALOAD 3
+ALOAD 4
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ServicesTest$testSingletonService (Ljava/lang/String;J[Ljava/lang/String;[I)V
+FRAME SAME
+MAXSTACK = 5
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ServicesTest$testRuntimeService(Ljava/lang/String;J[Ljava/lang/String;[I)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="resources.OnMethodTest", method="args")
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+NEW services/DummyRuntimeService
+DUP
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESPECIAL services/DummyRuntimeService.<init> (Lorg/openjdk/btrace/services/api/RuntimeContext;)V
+ASTORE 5
+ALOAD 5
+BIPUSH 10
+LDC "hello"
+INVOKEVIRTUAL services/DummyRuntimeService.doit (ILjava/lang/String;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 6
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ServicesTest$testSimpleService()V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="resources.OnMethodTest", method="noargs")
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+NEW services/DummySimpleService
+DUP
+INVOKESPECIAL services/DummySimpleService.<init> ()V
+ASTORE 0
+ALOAD 0
+LDC "hello"
+BIPUSH 10
+INVOKEVIRTUAL services/DummySimpleService.doit (Ljava/lang/String;I)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 1
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ServicesTest$testSingletonService(Ljava/lang/String;J[Ljava/lang/String;[I)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="resources.OnMethodTest", method="args$static")
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+NEW services/DummySimpleService
+DUP
+LDC "getInstance"
+INVOKESPECIAL services/DummySimpleService.<init> (Ljava/lang/String;)V
+ASTORE 5
+ALOAD 5
+LDC "hello"
+BIPUSH 10
+INVOKEVIRTUAL services/DummySimpleService.doit (Ljava/lang/String;I)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 6
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ServicesTest$testFieldInjection(Ljava/lang/String;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="resources.OnMethodTest", method="noargs$static")
+// annotable parameter count: 1 (visible)
+@Lorg/openjdk/btrace/core/annotations/ProbeClassName;() // parameter 0
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+NEW services/DummyRuntimeService
+DUP
+DUP
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESPECIAL services/DummyRuntimeService.<init> (Lorg/openjdk/btrace/services/api/RuntimeContext;)V
+ASTORE 1
+BIPUSH 10
+LDC "hey"
+INVOKEVIRTUAL services/DummyRuntimeService.doit (ILjava/lang/String;)V
+ALOAD 1
+BIPUSH 20
+LDC "ho"
+INVOKEVIRTUAL services/DummyRuntimeService.doit (ILjava/lang/String;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ServicesTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 4
+MAXLOCALS = 2
