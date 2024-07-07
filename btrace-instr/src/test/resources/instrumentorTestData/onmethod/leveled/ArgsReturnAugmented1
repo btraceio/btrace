@@ -1,9 +1,8 @@
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturn.$btrace$$level : I
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturnAugmented1.$btrace$$level : I
 ICONST_1
 IF_ICMPLT L1
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
-DUP2
 LSTORE 6
 ALOAD 0
 LLOAD 6
@@ -11,7 +10,7 @@ ALOAD 1
 LLOAD 2
 ALOAD 4
 ALOAD 5
-INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturn$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)V
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnAugmented1$args (Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)J
 L1
 FRAME SAME1 J
 L2
@@ -20,35 +19,40 @@ LOCALVARIABLE a Ljava/lang/String; L0 L2 1
 LOCALVARIABLE b J L0 L2 2
 LOCALVARIABLE c [Ljava/lang/String; L0 L2 4
 LOCALVARIABLE d [I L0 L2 5
-MAXSTACK = 10
+MAXSTACK = 8
 MAXLOCALS = 8
 
 // access flags 0xA
-private static $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturn$args(Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)V
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnAugmented1$args(Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)J
 @Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="args", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.RETURN), enableAt=@Lorg/openjdk/btrace/core/annotations/Level;(value=">=1"))
 // annotable parameter count: 6 (visible)
 @Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
 @Lorg/openjdk/btrace/core/annotations/Return;() // parameter 1
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturn.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturnAugmented1.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
 INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
 IFNE L0
-RETURN
+LLOAD 1
+LRETURN
 L0
 FRAME SAME
 LDC "args"
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturn.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+LLOAD 1
+LCONST_1
+LADD
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturnAugmented1.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
 INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
-RETURN
+LRETURN
 L1
 FRAME SAME1 java/lang/Throwable
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturn.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturnAugmented1.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
 DUP_X1
 SWAP
 INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturn.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+LLOAD 1
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturnAugmented1.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
 INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
-RETURN
-MAXSTACK = 3
+LRETURN
+MAXSTACK = 4
 MAXLOCALS = 8

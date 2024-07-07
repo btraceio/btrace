@@ -6,10 +6,10 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 8
 LSUB
 LSTORE 6
-DUP2
-LSTORE 10
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
+DUP2
+LSTORE 10
 ALOAD 0
 LLOAD 10
 LLOAD 6
@@ -19,8 +19,7 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
 L3
-FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J J] [J]
-FRAME CHOP 1
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J] [J]
 IFLE L4
 L5
 LINENUMBER 145 L5
@@ -28,10 +27,10 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 8
 LSUB
 LSTORE 6
-DUP2
-LSTORE 12
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L6
+DUP2
+LSTORE 12
 ALOAD 0
 LLOAD 12
 LLOAD 6
@@ -41,20 +40,19 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
 L6
-FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J T T J] [J]
+FRAME SAME1 J
 L4
 LINENUMBER 149 L4
-FRAME CHOP 3
 L7
 LINENUMBER 150 L7
 INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 8
 LSUB
 LSTORE 6
-DUP2
-LSTORE 14
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L8
+DUP2
+LSTORE 14
 ALOAD 0
 LLOAD 14
 LLOAD 6
@@ -64,7 +62,7 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
 L8
-FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J T T T T J] [J]
+FRAME SAME1 J
 L9
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L9 0
 LOCALVARIABLE a Ljava/lang/String; L0 L9 1

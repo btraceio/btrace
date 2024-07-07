@@ -6,10 +6,10 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 8
 LSUB
 LSTORE 6
-DUP2
-LSTORE 10
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+DUP2
+LSTORE 10
 ALOAD 0
 LLOAD 10
 LLOAD 6
@@ -19,11 +19,11 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
 L1
-FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J J] [J]
-DUP2
-LSTORE 12
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J] [J]
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
+DUP2
+LSTORE 12
 ALOAD 0
 LLOAD 12
 LLOAD 6
@@ -33,7 +33,7 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
 L2
-FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J J J] [J]
+FRAME SAME1 J
 L3
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
 LOCALVARIABLE a Ljava/lang/String; L0 L3 1

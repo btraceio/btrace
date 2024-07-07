@@ -36,17 +36,17 @@ FRAME SAME1 J
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDurationSampledMulti.$btrace$$level : I
 ICONST_1
 IF_ICMPLT L3
-DUP2
-LSTORE 14
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
+DUP2
+LSTORE 14
 LLOAD 14
 LLOAD 8
 ALOAD 6
 LLOAD 4
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V
 L3
-FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I J] [J]
+FRAME SAME1 J
 LSTORE 16
 ASTORE 18
 LCONST_0
@@ -81,17 +81,17 @@ FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resourc
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDurationSampledMulti.$btrace$$level : I
 ICONST_1
 IF_ICMPLT L6
-DUP2
-LSTORE 23
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L6
+DUP2
+LSTORE 23
 LLOAD 23
 LLOAD 8
 ALOAD 18
 LLOAD 16
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V
 L6
-FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I T T J java/lang/String J I I J] [J J]
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I I T T J java/lang/String J I I] [J J]
 LSTORE 25
 L7
 LINENUMBER 132 L7

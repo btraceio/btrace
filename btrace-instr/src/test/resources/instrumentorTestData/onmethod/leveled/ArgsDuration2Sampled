@@ -16,10 +16,10 @@ LSTORE 6
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Sampled.$btrace$$level : I
 ICONST_5
 IF_ICMPGT L1
-DUP2
-LSTORE 11
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+DUP2
+LSTORE 11
 ALOAD 0
 LLOAD 11
 LLOAD 6
@@ -29,16 +29,16 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2Sampled$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
 L1
-FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I J] [J]
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I] [J]
 ILOAD 10
 IFEQ L2
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Sampled.$btrace$$level : I
 ICONST_1
 IF_ICMPLT L2
-DUP2
-LSTORE 13
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
+DUP2
+LSTORE 13
 ALOAD 0
 LLOAD 13
 LLOAD 6
@@ -48,7 +48,7 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2Sampled$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
 L2
-FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T J] [J]
+FRAME SAME1 J
 L3
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
 LOCALVARIABLE a Ljava/lang/String; L0 L3 1

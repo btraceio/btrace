@@ -19,17 +19,17 @@ INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.getEndTs (I)J
 LLOAD 10
 LSUB
 LSTORE 8
-DUP2
-LSTORE 13
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+DUP2
+LSTORE 13
 LLOAD 13
 LLOAD 8
 ALOAD 6
 LLOAD 4
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V
 L1
-FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I J] [J]
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I] [J]
 LSTORE 15
 ASTORE 17
 ICONST_3
@@ -47,17 +47,17 @@ INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.getEndTs (I)J
 LLOAD 18
 LSUB
 LSTORE 8
-DUP2
-LSTORE 21
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
+DUP2
+LSTORE 21
 LLOAD 21
 LLOAD 8
 ALOAD 17
 LLOAD 15
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDurationSampledMulti$args (JJLjava/lang/String;J)V
 L2
-FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I T T J java/lang/String J I J] [J J]
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I T T J java/lang/String J I] [J J]
 LSTORE 23
 L3
 LINENUMBER 132 L3

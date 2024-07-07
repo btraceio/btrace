@@ -547,13 +547,9 @@ public class Instrumentor extends ClassVisitor {
                   }
                 };
 
-            Label l1 = asm.openLinkerCheck();
-
             loadArguments(actionArgs);
 
             invokeBTraceAction(asm, om);
-
-            asm.closeLinkerCheck(l1);
           }
 
           @Override
@@ -618,7 +614,11 @@ public class Instrumentor extends ClassVisitor {
                               mv, MethodTrackingExpander.$METHODID + "=" + mid);
                       Label l = levelCheckBefore(om, bcn.getClassName(true));
 
+                      Label l1 = asm.openLinkerCheck();
+
                       injectBtrace(vr, method, argTypes, Type.getReturnType(cDesc), isStaticCall);
+
+                      asm.closeLinkerCheck(l1);
                       if (l != null) {
                         mv.visitLabel(l);
                         insertFrameSameStack(l);
@@ -676,6 +676,8 @@ public class Instrumentor extends ClassVisitor {
                           om.isTargetMethodOrFieldFqn(), opcode, cOwner, cName, cDesc);
                   boolean withReturn =
                       om.getReturnParameter() != -1 && !returnType.equals(Type.VOID_TYPE);
+
+                  Label l1 = asm.openLinkerCheck();
                   if (withReturn) {
                     // store the return value to a local variable if not augmented return
                     if (Type.getReturnType(om.getTargetDescriptor()).getSort() == Type.VOID) {
@@ -686,6 +688,7 @@ public class Instrumentor extends ClassVisitor {
                   // will also retrieve the call args and the return value from the backup variables
                   injectBtrace(vr, method, calledMethodArgs, returnType, opcode == INVOKESTATIC);
 
+                  asm.closeLinkerCheck(l1);
                   if (l != null) {
                     mv.visitLabel(l);
                     insertFrameSameStack(l);
@@ -1482,6 +1485,8 @@ public class Instrumentor extends ClassVisitor {
               return;
             }
 
+            Label l1 = asm.openLinkerCheck();
+
             boolean boxReturnValue = false;
             Type probeRetType = getReturnType();
             if (om.getReturnParameter() != -1) {
@@ -1508,8 +1513,6 @@ public class Instrumentor extends ClassVisitor {
               }
               retValIndex = storeAsNew();
             }
-
-            Label l1 = asm.openLinkerCheck();
 
             loadArguments(
                 vr,

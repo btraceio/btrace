@@ -1,7 +1,7 @@
-DUP2
-LSTORE 5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+DUP2
+LSTORE 5
 ALOAD 0
 LLOAD 5
 LLOAD 1
@@ -9,7 +9,7 @@ ALOAD 3
 ALOAD 4
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$StaticArgsReturn$args (Ljava/lang/String;JJ[Ljava/lang/String;[I)V
 L1
-FRAME FULL [java/lang/String J [Ljava/lang/String; [I J] [J]
+FRAME SAME1 J
 L2
 LOCALVARIABLE a Ljava/lang/String; L0 L2 0
 LOCALVARIABLE b J L0 L2 1
