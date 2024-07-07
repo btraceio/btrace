@@ -23,7 +23,7 @@
  * questions.
  */
 
-package traces;
+package btrace;
 
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnProbe;

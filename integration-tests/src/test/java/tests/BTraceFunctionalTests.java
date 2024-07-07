@@ -150,8 +150,6 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethod() throws Exception {
-//    debugBTrace = true;
-//    debugTestApp = true;
     testDynamic(
         "resources.Main",
         "btrace/OnMethodTest.java",
@@ -176,7 +174,20 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testTraceAll() throws Exception {
-    testStartup(
+      String rtVersion = System.getProperty("java.runtime.version", "");
+      String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
+
+      if (testJavaHome != null) {
+          Properties releaseProps = new Properties();
+          releaseProps.load(
+                  Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
+          rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
+      }
+      if (!isVersionSafeForTraceAll(rtVersion)) {
+          System.err.println("Skipping test for JDK " + rtVersion);
+          return;
+      }
+      testStartup(
         "resources.Main",
         "traces/TraceAllTest.class",
         null,
@@ -325,7 +336,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
       rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
     }
-    if (!isVersionSafe(rtVersion)) {
+    if (!isVersionSafeForJfr(rtVersion)) {
       // skip the test for 8.0.* because of missing support
       // skip all non-LTS versions (except the last one)
       // skip the test for JDK 11 since the latest version 11.0.9 and newer ends in SISGSEGV
@@ -335,7 +346,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     testWithJfr(
         "resources.Main",
         "btrace/JfrTest.java",
-        10,
+        30,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -478,7 +489,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
         });
   }
 
-  private static boolean isVersionSafe(String rtVersion) {
+  private static boolean isVersionSafeForJfr(String rtVersion) {
       System.out.println("===> version: " + rtVersion);
     String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
     int major = Integer.parseInt(versionParts[0]);
@@ -501,4 +512,21 @@ public class BTraceFunctionalTests extends RuntimeTest {
     }
     return false;
   }
+
+    private static boolean isVersionSafeForTraceAll(String rtVersion) {
+        System.out.println("===> version: " + rtVersion);
+        String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
+        int major = Integer.parseInt(versionParts[0]);
+        String updateStr = versionParts.length == 3 ? versionParts[2].replace("0_", "") : "0";
+        int idx = updateStr.indexOf('-');
+        if (idx > -1) {
+            updateStr = updateStr.substring(0, idx);
+        }
+        int update = Integer.parseInt(updateStr);
+        // currently, an attempt to instrument all classes and methods will result in crash in jplis agent for JDK 17
+        if (major == 17) {
+            return false;
+        }
+        return true;
+    }
 }
