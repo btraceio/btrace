@@ -27,17 +27,17 @@ FRAME SAME1 J
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDuration.$btrace$$level : I
 ICONST_1
 IF_ICMPLT L3
-DUP2
-LSTORE 13
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
+DUP2
+LSTORE 13
 LLOAD 13
 LLOAD 8
 ALOAD 6
 LLOAD 4
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration$args (JJLjava/lang/String;J)V
 L3
-FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I J] [J]
+FRAME SAME1 J
 L4
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
 LOCALVARIABLE a Ljava/lang/String; L0 L4 1

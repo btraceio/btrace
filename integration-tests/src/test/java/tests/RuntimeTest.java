@@ -151,7 +151,7 @@ public abstract class RuntimeTest {
       String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
     testDynamic(testApp, testScript, cmdArgs, checkLines, v);
-    testStartup(testApp, testScript, cmdArgs, checkLines, v);
+    testStartup(testApp, testScript.replace(".java", ".class"), cmdArgs, checkLines, v);
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -164,6 +164,7 @@ public abstract class RuntimeTest {
   public void testDynamic(
       String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
+    System.out.println("=== Dynamic attach");
     if (forceDebug) {
       // force debug flags
       debugBTrace = true;
@@ -295,6 +296,7 @@ public abstract class RuntimeTest {
   public void testStartup(
       String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
+    System.out.println("=== On-Startup");
     Path agentPath = locateAgent();
     if (agentPath == null) {
       throw new RuntimeException("Missing btrace-agent.jar");
@@ -413,8 +415,13 @@ public abstract class RuntimeTest {
     outT.start();
     errT.start();
 
-    testAppLatch.countDown();
+    testAppLatch.await();
     stdoutLatch.await();
+
+    if (startJfr && pidStringRef.get() != null) {
+      ProcessBuilder jcmdPb = new ProcessBuilder("jcmd", pidStringRef.get(), "JFR.dump", "name=1");
+      jcmdPb.start().waitFor();
+    }
 
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
   }
@@ -763,43 +770,54 @@ public abstract class RuntimeTest {
 
   public File locateTrace(String trace) {
 //    Path start = projectRoot.resolve("src");
-    Path start = projectRoot.resolve("../btrace-instr/build/classes");
-    Path[] tracePath = new Path[1];
-    try {
-      Files.walkFileTree(
-          start,
-          new FileVisitor<Path>() {
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                throws IOException {
-              return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                throws IOException {
-              if (file.toString().endsWith(trace)) {
-                tracePath[0] = file;
-                return FileVisitResult.TERMINATE;
-              }
-              return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-              return FileVisitResult.TERMINATE;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc)
-                throws IOException {
-              return FileVisitResult.CONTINUE;
-            }
-          });
-    } catch (IOException e) {
-      e.printStackTrace();
+    List<Path> roots = new ArrayList<>();
+    if (trace.toLowerCase().endsWith(".java")) {
+      roots.add(projectRoot.resolve("src"));
+    } else {
+      roots.add(projectRoot.resolve("../btrace-instr/build/classes"));
+      roots.add(projectRoot.resolve("build/classes"));
     }
-    return tracePath[0] != null ? tracePath[0].toFile() : null;
+    Path[] tracePath = new Path[1];
+    for (Path start : roots) {
+      try {
+        Files.walkFileTree(
+                start,
+                new FileVisitor<Path>() {
+                  @Override
+                  public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                          throws IOException {
+                    return FileVisitResult.CONTINUE;
+                  }
+
+                  @Override
+                  public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                          throws IOException {
+                    if (file.toString().endsWith(trace)) {
+                      tracePath[0] = file;
+                      return FileVisitResult.TERMINATE;
+                    }
+                    return FileVisitResult.CONTINUE;
+                  }
+
+                  @Override
+                  public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                    return FileVisitResult.TERMINATE;
+                  }
+
+                  @Override
+                  public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                          throws IOException {
+                    return FileVisitResult.CONTINUE;
+                  }
+                });
+      } catch(IOException e){
+        e.printStackTrace();
+      }
+      if (tracePath[0] != null) {
+        return tracePath[0].toFile();
+      }
+    }
+    return null;
   }
 
   private Process attach(
