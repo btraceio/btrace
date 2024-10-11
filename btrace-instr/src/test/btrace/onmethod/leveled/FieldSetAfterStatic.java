@@ -47,7 +47,7 @@ public class FieldSetAfterStatic {
           @Location(
               value = Kind.FIELD_SET,
               clazz = "resources.OnMethodTest",
-              field = "sField",
+              field = "/^sField$/",
               where = Where.AFTER),
       enableAt = @Level(">=1"))
   public static void args(
