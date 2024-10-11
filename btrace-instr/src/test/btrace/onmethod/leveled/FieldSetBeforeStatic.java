@@ -42,7 +42,7 @@ public class FieldSetBeforeStatic {
   @OnMethod(
       clazz = "/.*\\.OnMethodTest/",
       method = "staticField",
-      location = @Location(value = Kind.FIELD_SET, clazz = "/.*\\.OnMethodTest/", field = "sField"),
+      location = @Location(value = Kind.FIELD_SET, clazz = "/.*\\.OnMethodTest/", field = "/^sField$/"),
       enableAt = @Level(">=1"))
   public static void args(
       @Self Object self,

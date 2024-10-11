@@ -966,8 +966,8 @@ public class Instrumentor extends ClassVisitor {
                           getMethodOrFieldName(
                               om.isTargetMethodOrFieldFqn(),
                               opcode,
-                              targetClassName,
-                              targetFieldName,
+                              owner,
+                              name,
                               desc)),
                       constArg(om.getClassNameParameter(), className.replace('/', '.')),
                       constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
@@ -1015,8 +1015,8 @@ public class Instrumentor extends ClassVisitor {
                         getMethodOrFieldName(
                             om.isTargetMethodOrFieldFqn(),
                             opcode,
-                            targetClassName,
-                            targetFieldName,
+                            owner,
+                            name,
                             desc)),
                     localVarArg(om.getReturnParameter(), fldType, returnValIndex),
                     constArg(om.getClassNameParameter(), className.replace('/', '.')),
@@ -1085,8 +1085,8 @@ public class Instrumentor extends ClassVisitor {
                           getMethodOrFieldName(
                               om.isTargetMethodOrFieldFqn(),
                               opcode,
-                              targetClassName,
-                              targetFieldName,
+                              owner,
+                              name,
                               desc)),
                       constArg(om.getClassNameParameter(), className.replace('/', '.')),
                       constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
@@ -1129,8 +1129,8 @@ public class Instrumentor extends ClassVisitor {
                         getMethodOrFieldName(
                             om.isTargetMethodOrFieldFqn(),
                             opcode,
-                            targetClassName,
-                            targetFieldName,
+                            owner,
+                            name,
                             desc)),
                     constArg(om.getClassNameParameter(), className.replace('/', '.')),
                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),

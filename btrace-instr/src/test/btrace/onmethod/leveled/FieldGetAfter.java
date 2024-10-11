@@ -47,8 +47,8 @@ public class FieldGetAfter {
       location =
           @Location(
               value = Kind.FIELD_GET,
-              clazz = "resources.OnMethodTest",
-              field = "field",
+              clazz = "/^resources.OnMethodTest$/",
+              field = "/^field$/",
               where = Where.AFTER),
       enableAt = @Level(">=1"))
   public static void args(

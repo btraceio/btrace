@@ -41,7 +41,7 @@ public class FieldSetBefore {
   @OnMethod(
       clazz = "/.*\\.OnMethodTest/",
       method = "field",
-      location = @Location(value = Kind.FIELD_SET, clazz = "/.*\\.OnMethodTest/", field = "field"))
+      location = @Location(value = Kind.FIELD_SET, clazz = "/.*\\.OnMethodTest/", field = "/^field$/"))
   public static void args(
       @Self Object self,
       @TargetInstance Object inst,
