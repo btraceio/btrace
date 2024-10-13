@@ -1,0 +1,45 @@
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+LDC "resources.issues.BTRACE28"
+LDC "<init>"
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE28$tracker(Ljava/lang/String;Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/BTRACE28"
+]
+L1
+FRAME FULL [resources/issues/BTRACE28] []
+L2
+LOCALVARIABLE this Lresources/issues/BTRACE28; L0 L2 0
+MAXSTACK = 2
+ASTORE 5
+ASTORE 6
+ASTORE 7
+ALOAD 7
+FRAME FULL [resources/issues/BTRACE28 java/lang/String java/lang/String java/lang/String java/lang/String [B [B java/lang/StringBuilder] [java/lang/Throwable]
+ASTORE 8
+ALOAD 8
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L11
+LDC "resources.issues.BTRACE28"
+LDC "serveResource"
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE28$tracker(Ljava/lang/String;Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/BTRACE28"
+]
+L11
+FRAME SAME
+L12
+LOCALVARIABLE e Ljava/lang/Throwable; L10 L9 8
+LOCALVARIABLE this Lresources/issues/BTRACE28; L3 L12 0
+LOCALVARIABLE param1 Ljava/lang/String; L3 L12 1
+LOCALVARIABLE param2 Ljava/lang/String; L3 L12 2
+LOCALVARIABLE resourceType Ljava/lang/String; L4 L12 3
+LOCALVARIABLE contentType Ljava/lang/String; L5 L12 4
+LOCALVARIABLE mainArr [B L6 L12 5
+LOCALVARIABLE byteArr [B L7 L12 6
+LOCALVARIABLE sb Ljava/lang/StringBuilder; L0 L12 7
+MAXLOCALS = 9

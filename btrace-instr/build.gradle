@@ -63,7 +63,10 @@ test {
     def props = new Properties()
     props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
     if (!props.getProperty("JAVA_VERSION")?.contains("1.8")) {
-        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED'
+        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions',
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+                '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED'
     }
     if (project.hasProperty("updateTestData")) {
         jvmArgs '-Dupdate.test.data=true'

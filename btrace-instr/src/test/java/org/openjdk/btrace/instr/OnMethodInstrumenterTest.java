@@ -34,9 +34,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Named;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -47,6 +45,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class OnMethodInstrumenterTest extends InstrumentorTestBase {
   private static final Map<String, String> targetClassMap = new HashMap<>();
   private static final Map<String, Boolean> verifyFlagMap = new HashMap<>();
+
+  private static Field instrHiddenClassesFlagFld = null;
 
   static {
     targetClassMap.put("onmethod/MatchDerived", "DerivedClass");
@@ -73,22 +73,22 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
 
   @BeforeAll
   public static void classSetup() throws Exception {
-    try {
-      Field f = RandomIntProvider.class.getDeclaredField("useBtraceEnter");
-      f.setAccessible(true);
-      f.setBoolean(null, false);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+    Field f = RandomIntProvider.class.getDeclaredField("useBtraceEnter");
+    f.setAccessible(true);
+    f.setBoolean(null, false);
+
+    instrHiddenClassesFlagFld = Instrumentor.class.getDeclaredField("useHiddenClassesInTest");
+    instrHiddenClassesFlagFld.setAccessible(true);
   }
 
   @ParameterizedTest
   @MethodSource("listTransformations")
-  void testTransformation(String trace, String targetClass, boolean verify) throws Exception {
+  void testTransformation(String trace, String targetClass, boolean verify, boolean useHiddenClasses) throws Exception {
+    instrHiddenClassesFlagFld.set(null, useHiddenClasses);
     loadTargetClass(targetClass);
     transform(trace);
 
-    checkTransformation(trace, verify);
+    checkTransformation((useHiddenClasses ? "dynamic" : "static") + "/" + trace, verify);
   }
 
   @SuppressWarnings("resource")
@@ -99,8 +99,11 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
               .map(root::relativize)
               .map(Path::toString)
               .map(p -> p.replace(".class", ""))
-              .map(p ->
-                Arguments.of(Named.of("Trace: " + p, p), Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)), Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)))
+              .flatMap(p ->
+                Stream.of(
+                        Arguments.of(Named.of("Trace: " + p, p), Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)), Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)), Named.of("Dispatcher: INVOKESTATIC", false)),
+                        Arguments.of(Named.of("Trace: " + p, p), Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)), Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)), Named.of("Dispatcher: INVOKEDYNAMIC", true))
+                )
               );
   }
 

@@ -1,0 +1,40 @@
+LCONST_0
+LSTORE 2
+LCONST_0
+LSTORE 4
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructor.$btrace$$level : I
+DUP
+ISTORE 6
+IFLE L1
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+FRAME FULL [resources/OnMethodTest java/lang/String J J I] []
+ILOAD 6
+IFLE L3
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+L3
+FRAME SAME
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructor.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L4
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+ALOAD 0
+LLOAD 2
+ALOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructor$args(Ljava/lang/Object;JLjava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructor"
+]
+L4
+FRAME SAME
+L5
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a Ljava/lang/String; L0 L5 1
+MAXSTACK = 4
+MAXLOCALS = 7
