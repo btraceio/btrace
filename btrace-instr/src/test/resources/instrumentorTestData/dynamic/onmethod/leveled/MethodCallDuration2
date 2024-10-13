@@ -1,0 +1,84 @@
+LSTORE 4
+ASTORE 6
+ASTORE 7
+LCONST_0
+LSTORE 8
+LCONST_0
+LSTORE 10
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2.$btrace$$level : I
+DUP
+ISTORE 12
+IFLE L1
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 10
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I] []
+ALOAD 7
+ALOAD 6
+LLOAD 4
+LSTORE 13
+ASTORE 15
+ASTORE 16
+ALOAD 16
+ALOAD 15
+LLOAD 13
+ILOAD 12
+IFLE L2
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 10
+LSUB
+LSTORE 8
+L2
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I J java/lang/String resources/OnMethodTest] [J]
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+DUP2
+LSTORE 17
+LLOAD 17
+LLOAD 8
+ALOAD 15
+LLOAD 13
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration2$args0(JJLjava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2"
+]
+L3
+FRAME SAME1 J
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2.$btrace$$level : I
+DUP
+ISTORE 19
+IFLE L4
+LCONST_0
+LSTORE 8
+L4
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I J java/lang/String resources/OnMethodTest T T I] [J]
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+DUP2
+LSTORE 20
+LLOAD 20
+LLOAD 8
+ALOAD 6
+LLOAD 4
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration2$args1(JJLjava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2"
+]
+L5
+FRAME SAME1 J
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE a Ljava/lang/String; L0 L6 1
+LOCALVARIABLE b J L0 L6 2
+MAXSTACK = 9
+MAXLOCALS = 22

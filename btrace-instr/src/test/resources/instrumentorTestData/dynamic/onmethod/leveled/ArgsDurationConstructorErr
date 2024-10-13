@@ -1,0 +1,101 @@
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+L2
+LINENUMBER 41 L2
+LCONST_0
+LSTORE 1
+LCONST_0
+LSTORE 3
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
+DUP
+ISTORE 5
+IFLE L0
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 3
+L0
+LINENUMBER 42 L0
+FRAME FULL [resources/OnMethodTest J J I] []
+L3
+LINENUMBER 43 L3
+L1
+FRAME SAME1 java/lang/Throwable
+ILOAD 5
+IFLE L4
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+L4
+FRAME SAME1 java/lang/Throwable
+DUP
+ASTORE 6
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 0
+LLOAD 1
+ALOAD 6
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args(Ljava/lang/Object;JLjava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr"
+]
+L5
+FRAME FULL [resources/OnMethodTest J J I java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0
+MAXSTACK = 5
+MAXLOCALS = 7
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+L2
+LINENUMBER 45 L2
+LCONST_0
+LSTORE 2
+LCONST_0
+LSTORE 4
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
+DUP
+ISTORE 6
+IFLE L0
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+L0
+LINENUMBER 46 L0
+FRAME FULL [resources/OnMethodTest java/lang/String J J I] []
+L3
+LINENUMBER 47 L3
+L1
+FRAME SAME1 java/lang/Throwable
+ILOAD 6
+IFLE L4
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+L4
+FRAME SAME1 java/lang/Throwable
+DUP
+ASTORE 7
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 0
+LLOAD 2
+ALOAD 7
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args(Ljava/lang/Object;JLjava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr"
+]
+L5
+FRAME FULL [resources/OnMethodTest java/lang/String J J I java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0
+LOCALVARIABLE a Ljava/lang/String; L2 L1 1
+MAXSTACK = 5
+MAXLOCALS = 8

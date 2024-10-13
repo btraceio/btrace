@@ -1,0 +1,28 @@
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 0
+ALOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSigMatch$m3(Ljava/lang/Object;Ljava/util/ArrayList;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsSigMatch"
+]
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+ALOAD 0
+ALOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSigMatch$m1(Ljava/lang/Object;Ljava/util/List;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsSigMatch"
+]
+L1
+LINENUMBER 173 L1
+FRAME SAME
+L2
+LOCALVARIABLE this Lresources/OnMethodTest; L1 L2 0
+LOCALVARIABLE l Ljava/util/ArrayList; L1 L2 1
+MAXSTACK = 2

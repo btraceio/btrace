@@ -36,7 +36,7 @@ public abstract class RandomIntProvider {
   private static final RandomIntProvider rndIntProvider;
   // for the testability purposes; BTraceRuntime initializes Unsafe instance
   // and fails under JUnit
-  private static final boolean useBtraceEnter = true;
+  private static boolean useBtraceEnter = true;
 
   static {
     boolean entered = false;

@@ -1,0 +1,43 @@
+LSTORE 4
+ASTORE 6
+ASTORE 7
+LCONST_0
+LSTORE 8
+ICONST_2
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitTimed (I)J
+DUP2
+LSTORE 10
+L2I
+ISTORE 12
+ALOAD 7
+ALOAD 6
+LLOAD 4
+ILOAD 12
+IFEQ L1
+ICONST_2
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.getEndTs (I)J
+LLOAD 10
+LSUB
+LSTORE 8
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+DUP2
+LSTORE 13
+LLOAD 13
+LLOAD 8
+ALOAD 6
+LLOAD 4
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDurationSampled$args(JJLjava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallDurationSampled"
+]
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J I] [J]
+L2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0
+LOCALVARIABLE a Ljava/lang/String; L0 L2 1
+LOCALVARIABLE b J L0 L2 2
+MAXSTACK = 9
+MAXLOCALS = 15
