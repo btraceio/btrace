@@ -18,27 +18,23 @@ public final class Indy {
       MethodHandles.Lookup caller, String name, MethodType type, String probeClassName)
       throws Exception {
     assert repository != null;
+    MethodHandle mh;
     try {
-      MethodHandle mh;
-      try {
-        byte[] classData =
-                repository.getProbeHandler(
-                        caller.lookupClass().getName(), probeClassName, name, type.toMethodDescriptorString());
+      byte[] classData =
+              repository.getProbeHandler(
+                      caller.lookupClass().getName(), probeClassName, name, type.toMethodDescriptorString());
 
-        caller =
-                caller.defineHiddenClass(classData, false, MethodHandles.Lookup.ClassOption.NESTMATE);
-        mh = caller.findStatic(caller.lookupClass(), name.substring(name.lastIndexOf("$") + 1), type);
-      } catch (Throwable t) {
-        // if unable to properly link just ignore the instrumentation
-        MethodHandle noopHandle =
-                MethodHandles.lookup().findStatic(Indy.class, "noop", MethodType.methodType(void.class));
-        mh = MethodHandles.dropArguments(noopHandle, 0, type.parameterArray());
-      }
-
-      return new ConstantCallSite(mh);
-    } finally {
-//      LinkingFlag.reset();
+      caller =
+              caller.defineHiddenClass(classData, false, MethodHandles.Lookup.ClassOption.NESTMATE);
+      mh = caller.findStatic(caller.lookupClass(), name.substring(name.lastIndexOf("$") + 1), type);
+    } catch (Throwable t) {
+      // if unable to properly link just ignore the instrumentation
+      MethodHandle noopHandle =
+              MethodHandles.lookup().findStatic(Indy.class, "noop", MethodType.methodType(void.class));
+      mh = MethodHandles.dropArguments(noopHandle, 0, type.parameterArray());
     }
+
+    return new ConstantCallSite(mh);
   }
 
   public static void noop() {}
