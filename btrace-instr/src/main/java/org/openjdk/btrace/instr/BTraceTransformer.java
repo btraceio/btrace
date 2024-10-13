@@ -136,6 +136,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
       className = className != null ? className : "<anonymous>";
 
+      // A special case for patching the Indy linking in order to be able to safely skip
+      // BTrace probes while linking is still in progress.
       if (className.equals("java/lang/invoke/MethodHandleNatives")) {
         byte[] transformed = null;
         try {

@@ -26,6 +26,7 @@
 package tests;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -176,13 +178,19 @@ public class BTraceFunctionalTests extends RuntimeTest {
   public void testTraceAll() throws Exception {
       String rtVersion = System.getProperty("java.runtime.version", "");
       String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
-
-      if (testJavaHome != null) {
-          Properties releaseProps = new Properties();
-          releaseProps.load(
-                  Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
-          rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
+      if (testJavaHome == null) {
+          testJavaHome = System.getenv("JAVA_HOME");
+          if (testJavaHome == null) {
+              testJavaHome = System.getProperty("java.home");
+          }
       }
+
+      assumeFalse(testJavaHome == null);
+
+      Properties releaseProps = new Properties();
+      releaseProps.load(
+              Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
+      rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
       if (!isVersionSafeForTraceAll(rtVersion)) {
           System.err.println("Skipping test for JDK " + rtVersion);
           return;
