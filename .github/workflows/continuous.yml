@@ -31,14 +31,23 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Build
         run: ./gradlew build
-      - name: Upload build data
+      - name: Upload dist build data
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build
+          name: dist-build
           retention-days: 1
           path: |
             btrace-dist/build
+            btrace-instr/build/classes/traces
+      - name: Upload test trace data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-trace
+          retention-days: 1
+          path: |
+            btrace-instr/build/classes/traces
       - name: Archive test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -77,8 +86,13 @@ jobs:
       - name: Download build data
         uses: actions/download-artifact@v4
         with:
-          name: build
+          name: dist-build
           path: btrace-dist/build
+      - name: Download test trace data
+        uses: actions/download-artifact@v4
+        with:
+          name: test-trace
+          path: btrace-instr/build/classes/traces
       - name: Run tests
         run: |
           set +x
