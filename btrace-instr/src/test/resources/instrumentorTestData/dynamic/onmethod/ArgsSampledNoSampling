@@ -1,0 +1,43 @@
+ICONST_1
+INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hit (I)Z
+ISTORE 6
+ILOAD 6
+IFEQ L0
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSampledNoSampling$argsSampled(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsSampledNoSampling"
+]
+FRAME APPEND [I]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSampledNoSampling$argsNoSampling(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsSampledNoSampling"
+]
+L1
+LINENUMBER 57 L1
+FRAME SAME
+L2
+LOCALVARIABLE this Lresources/OnMethodTest; L1 L2 0
+LOCALVARIABLE a Ljava/lang/String; L1 L2 1
+LOCALVARIABLE b J L1 L2 2
+LOCALVARIABLE c [Ljava/lang/String; L1 L2 4
+LOCALVARIABLE d [I L1 L2 5
+MAXSTACK = 6
+MAXLOCALS = 7

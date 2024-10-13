@@ -1,0 +1,22 @@
+DUP
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 0
+ALOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$Catch$args(Ljava/lang/Object;Ljava/io/IOException;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/Catch"
+]
+FRAME FULL [resources/OnMethodTest java/io/IOException] [java/io/IOException]
+ASTORE 2
+L3
+LINENUMBER 85 L3
+ALOAD 2
+L4
+LINENUMBER 87 L4
+L5
+LOCALVARIABLE e Ljava/io/IOException; L3 L4 2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+MAXLOCALS = 3

@@ -66,6 +66,8 @@ public class Instrumentor extends ClassVisitor {
 
   private final boolean useHiddenClasses;
 
+  private static boolean useHiddenClassesInTest = false;
+
   private Instrumentor(
       ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
     super(ASM9, cv);
@@ -74,7 +76,7 @@ public class Instrumentor extends ClassVisitor {
     BTraceRuntime.Impl rt = bcn.getRuntime();
     // 'rt' is null only during instrumentation tests; we want to default to in-situ instrumentation
     // there
-    useHiddenClasses = rt != null && rt.version() >= 15;
+    useHiddenClasses = useHiddenClassesInTest || (rt != null && rt.version() >= 15);
     applicableOnMethods = applicables;
   }
 

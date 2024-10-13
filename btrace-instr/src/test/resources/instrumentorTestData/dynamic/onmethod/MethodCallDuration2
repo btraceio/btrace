@@ -1,0 +1,60 @@
+LSTORE 4
+ASTORE 6
+ASTORE 7
+LCONST_0
+LSTORE 8
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 10
+ALOAD 7
+ALOAD 6
+LLOAD 4
+LSTORE 12
+ASTORE 14
+ASTORE 15
+ALOAD 15
+ALOAD 14
+LLOAD 12
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 10
+LSUB
+LSTORE 8
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+DUP2
+LSTORE 16
+LLOAD 16
+LLOAD 8
+ALOAD 14
+LLOAD 12
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration2$args0(JJLjava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2"
+]
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest J J J java/lang/String resources/OnMethodTest] [J]
+LCONST_0
+LSTORE 8
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+DUP2
+LSTORE 18
+LLOAD 18
+LLOAD 8
+ALOAD 6
+LLOAD 4
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration2$args1(JJLjava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2"
+]
+L2
+FRAME SAME1 J
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+LOCALVARIABLE a Ljava/lang/String; L0 L3 1
+LOCALVARIABLE b J L0 L3 2
+MAXSTACK = 9
+MAXLOCALS = 20
