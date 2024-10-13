@@ -29,49 +29,50 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 /**
- *
  * @author Jaroslav Bachorik
  */
-abstract public class TestApp implements TestPrinter {
-    final public void start() throws Exception {
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
+public abstract class TestApp implements TestPrinter {
+  public final void start() throws Exception {
+    Thread t =
+        new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
                 startWork();
-            }
-        }, "Worker Thread");
-        System.out.println("ready:" + getPID());
+              }
+            },
+            "Worker Thread");
+    System.out.println("ready:" + getPID());
+    System.out.flush();
+    t.setDaemon(true);
+    t.start();
+
+    do {
+      String resp =
+          new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)).readLine();
+      System.out.println("Received " + resp + " - " + "done".contains(resp));
+      if ("done".contains(resp)) {
         System.out.flush();
-        t.setDaemon(true);
-        t.start();
+        System.out.println(System.currentTimeMillis() + ":  Interrupting the worker thread");
+        t.interrupt();
+        System.out.println(
+            System.currentTimeMillis() + ": Waiting for the worker thread to finish");
+        t.join(1000);
+        if (t.isAlive()) {
+          Thread.dumpStack();
+          throw new RuntimeException("Dangling worker thread");
+        }
+        System.out.println(System.currentTimeMillis() + ": Worker thread finished");
+        break;
+      }
+    } while (true);
+  }
 
-        do {
-            String resp = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)).readLine();
-            System.out.println("Received " + resp + " - " + "done".contains(resp));
-            if ("done".contains(resp)) {
-                System.out.flush();
-                System.out.println(System.currentTimeMillis() + ":  Interrupting the worker thread");
-                t.interrupt();
-                System.out.println(System.currentTimeMillis() + ": Waiting for the worker thread to finish");
-                t.join(1000);
-                if (t.isAlive()) {
-                    Thread.dumpStack();
-                    throw new RuntimeException("Dangling worker thread");
-                }
-                System.out.println(System.currentTimeMillis() + ": Worker thread finished");
-                break;
-            }
-        } while (true);
-    }
+  private static long getPID() {
+    String processName = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+    return Long.parseLong(processName.split("@")[0]);
+  }
 
-    private static long getPID() {
-        String processName
-                = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
-        return Long.parseLong(processName.split("@")[0]);
-    }
-
-    /**
-     * The work here should be done repeatedly until the thread gets interrupted
-     */
-    abstract protected void startWork();
+  /** The work here should be done repeatedly until the thread gets interrupted */
+  protected abstract void startWork();
 }

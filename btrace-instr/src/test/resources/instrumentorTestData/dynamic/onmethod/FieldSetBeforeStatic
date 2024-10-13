@@ -1,0 +1,22 @@
+LSTORE 1
+LLOAD 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+ALOAD 0
+ACONST_NULL
+LDC "sField"
+LLOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$FieldSetBeforeStatic$args(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/FieldSetBeforeStatic"
+]
+L1
+FRAME FULL [resources/OnMethodTest J] [J]
+L2
+LINENUMBER 162 L2
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+MAXSTACK = 7
+MAXLOCALS = 3

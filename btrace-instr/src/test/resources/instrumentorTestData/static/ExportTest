@@ -1,0 +1,43 @@
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ExportTest$testArgs (Ljava/lang/String;J[Ljava/lang/String;[I)V
+FRAME SAME
+MAXSTACK = 5
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ExportTest$testArgs(Ljava/lang/String;J[Ljava/lang/String;[I)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="resources.OnMethodTest", method="args")
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ExportTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+ACONST_NULL
+LLOAD 1
+INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.push (Ljava/util/Deque;Ljava/lang/Object;)V
+ALOAD 0
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ExportTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+SWAP
+LDC "btrace.org/openjdk/btrace/runtime/auxiliary/ExportTest.name"
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.putPerfString (Ljava/lang/String;Ljava/lang/String;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ExportTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ExportTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ExportTest.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 5

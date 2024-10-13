@@ -3,6 +3,10 @@ import java.nio.file.Paths
 
 apply plugin: 'java'
 
+dependencies {
+    implementation project(':btrace-compiler')
+}
+
 compileTestJava {
     sourceCompatibility = 8
     targetCompatibility = 8
@@ -16,12 +20,33 @@ task buildEventsJar(type: Jar) {
     archiveClassifier = ""
 }
 
+task compileTestProbes {
+    dependsOn compileTestJava
+    doLast {
+        def path = project(':integration-tests').sourceSets.main.runtimeClasspath
+
+        def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
+        def compiler = loader.loadClass('org.openjdk.btrace.compiler.Compiler')
+        def rtCp = sourceSets.main.runtimeClasspath
+
+        def args = ["-cp", rtCp.plus(files(buildDir.toPath().resolve("classes/java/test"), buildDir.toPath().resolve("classes/java/java11_dummy"))).getAsPath(), "-d", buildDir.toPath().resolve("classes").toString()]
+
+        def files = fileTree(dir: "src/test/btrace", include: '**/*.java', exclude: 'verifier/**/*.java').findAll {
+            it != null
+        }.collect { it }
+
+        args.addAll(files)
+
+        compiler.main(args as String[])
+    }
+}
+
 test {
     onlyIf {
         project.hasProperty("integration") &&
         new File("${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/btrace-client.jar").exists()
     }
-    dependsOn cleanTest, buildEventsJar
+    dependsOn cleanTest, buildEventsJar, compileTestProbes
 
     testLogging.showStandardStreams = true
 

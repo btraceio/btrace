@@ -5,7 +5,7 @@
 A safe, dynamic tracing tool for the Java platform
 
 ## Version
-2.2.4
+~missing~
 
 ## Quick Summary
 BTrace is a safe, dynamic tracing tool for the Java platform.
@@ -37,6 +37,12 @@ cd <btrace>
 ```
 The binary dist packages can be found in `<btrace>/btrace-dist/build/distributions` as the *.tar.gz, *.zip, *.rpm and *.deb files.
 The exploded binary folder which can be used right away is located at `<btrace>/btrace-dist/build/resources/main` which serves as the __BTRACE_HOME__ location.
+
+##### Golden Files
+Some of the instrumentor related tests are using golden files. Therefore, it is necessary to update those files
+when the injected code is changed. This can be done with the help of passing in `updateTestData` Gradle property.
+Eg. running the tests like `./gradlew test -PupdateTestData` will regenerate all golden files which then must be
+checked in to the Git repository.
 
 
 ## Using BTrace

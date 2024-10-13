@@ -52,6 +52,7 @@ import org.openjdk.btrace.core.annotations.TargetInstance;
 import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.core.jfr.JfrEvent;
+import org.openjdk.btrace.runtime.LinkingFlag;
 import org.openjdk.btrace.services.api.Service;
 
 /**
@@ -112,6 +113,9 @@ public abstract class Constants {
   public static final String THREAD_LOCAL_INTERNAL = "java/lang/ThreadLocal";
   public static final String THREAD_LOCAL_DESC = "L" + THREAD_LOCAL_INTERNAL + ";";
   public static final Type THREAD_LOCAL_TYPE = Type.getType(ThreadLocal.class);
+
+  public static final Type LINKING_FLAG_TYPE = Type.getType(LinkingFlag.class);
+  public static final String LINKING_FLAG_INTERNAL = LINKING_FLAG_TYPE.getInternalName();
 
   // BTrace specific stuff
   public static final String BTRACE_UTILS = Type.getInternalName(BTraceUtils.class);

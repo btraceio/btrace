@@ -26,9 +26,8 @@
 package resources;
 
 /**
- *
  * @author Jaroslav Bachorik
  */
 public interface TestPrinter {
-    void print(String msg);
+  void print(String msg);
 }

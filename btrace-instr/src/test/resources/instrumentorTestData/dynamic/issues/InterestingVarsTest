@@ -1,0 +1,12 @@
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 0
+ALOAD 1
+ALOAD 2
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$InterestingVarsTest$entry(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/InterestingVarsTest"
+]
+FRAME SAME

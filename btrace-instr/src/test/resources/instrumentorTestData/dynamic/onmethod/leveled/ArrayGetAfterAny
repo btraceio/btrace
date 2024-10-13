@@ -1,0 +1,41 @@
+DUP2
+ASTORE 4
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArrayGetAfterAny.$btrace$$level : I
+ICONST_1
+ISUB
+DUP
+ISTORE 5
+IFLT L2
+FRAME FULL [resources/OnMethodTest I [I I [I I] [[I I]
+IALOAD
+ILOAD 5
+IFLT L3
+DUP
+ISTORE 6
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 0
+ILOAD 6
+INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
+ALOAD 4
+ILOAD 3
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArrayGetAfterAny$args(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArrayGetAfterAny"
+]
+L3
+FRAME FULL [resources/OnMethodTest I [I I [I I I] [I]
+ISTORE 7
+L4
+LINENUMBER 97 L4
+L5
+LINENUMBER 98 L5
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE a I L0 L6 1
+LOCALVARIABLE arr [I L1 L6 2
+LOCALVARIABLE b I L4 L6 7
+MAXSTACK = 5
+MAXLOCALS = 8

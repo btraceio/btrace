@@ -586,4 +586,17 @@ public final class Assembler {
     }
     return this;
   }
+
+  public Label openLinkerCheck() {
+    Label l = new Label();
+    invokeStatic(Constants.LINKING_FLAG_INTERNAL, "get", "()I");
+    // if the linking flag is 0, then we are not in a reentrant call
+    jump(IFNE, l);
+    return l;
+  }
+
+  public void closeLinkerCheck(Label l) {
+    label(l);
+    mHelper.insertFrameSameStack(l);
+  }
 }

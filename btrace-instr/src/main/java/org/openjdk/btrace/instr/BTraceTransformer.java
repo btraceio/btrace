@@ -133,10 +133,22 @@ public final class BTraceTransformer implements ClassFileTransformer {
       throws IllegalClassFormatException {
     try {
       setupLock.readLock().lock();
-      if (probes.isEmpty()) return null;
 
       className = className != null ? className : "<anonymous>";
 
+      if (className.equals("java/lang/invoke/MethodHandleNatives")) {
+        byte[] transformed = null;
+        try {
+          debug.dumpClass(className.replace('.', '/') + "_orig", classfileBuffer);
+          transformed = LinkerInstrumentor.addGuard(classfileBuffer);
+          debug.dumpClass(className.replace('.', '/'), transformed);
+        } catch (Throwable t) {
+          log.debug("Failed to instrument indy linking", t);
+        }
+        return transformed;
+      }
+
+      if (probes.isEmpty()) return null;
       if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader()))
           && isSensitiveClass(className)) {
         if (log.isDebugEnabled()) {

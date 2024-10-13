@@ -1,0 +1,72 @@
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+TRYCATCHBLOCK L0 L2 L2 java/lang/Throwable
+LCONST_0
+LSTORE 6
+LCONST_0
+LSTORE 8
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Err.$btrace$$level : I
+DUP
+ISTORE 10
+IFLE L0
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 8
+FRAME APPEND [J J I]
+FRAME SAME1 java/lang/Throwable
+ILOAD 10
+IFLE L3
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 8
+LSUB
+LSTORE 6
+L3
+FRAME SAME1 java/lang/Throwable
+DUP
+ASTORE 11
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Err.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L4
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+ALOAD 0
+LLOAD 6
+ALOAD 11
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2Err$args2(Ljava/lang/Object;JLjava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Err"
+]
+L4
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+L2
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I] [java/lang/Throwable]
+ILOAD 10
+IFLE L5
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 8
+LSUB
+LSTORE 6
+L5
+FRAME SAME1 java/lang/Throwable
+DUP
+ASTORE 12
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Err.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L6
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L6
+ALOAD 0
+LLOAD 6
+ALOAD 12
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2Err$args(Ljava/lang/Object;JLjava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Err"
+]
+L6
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+MAXSTACK = 5
+MAXLOCALS = 13

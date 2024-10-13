@@ -52,7 +52,9 @@ import org.openjdk.btrace.core.comm.RetransformClassNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   private static final Logger log = LoggerFactory.getLogger(BTraceProbeNode.class);
 

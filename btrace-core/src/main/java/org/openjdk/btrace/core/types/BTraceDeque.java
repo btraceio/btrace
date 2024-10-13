@@ -30,7 +30,9 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public class BTraceDeque<V> implements Deque<V>, BTraceCollection<V>, Cloneable {
   private final Deque<V> delegate;
 

@@ -1,0 +1,31 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Throw.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L2
+DUP
+ASTORE 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 0
+LDC "resources.OnMethodTest"
+LDC "exception"
+ALOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$Throw$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/Throw"
+]
+L2
+FRAME FULL [resources/OnMethodTest java/io/IOException] [java/io/IOException]
+FRAME FULL [resources/OnMethodTest] [java/io/IOException]
+ASTORE 2
+L3
+LINENUMBER 85 L3
+ALOAD 2
+L4
+LINENUMBER 87 L4
+L5
+LOCALVARIABLE e Ljava/io/IOException; L3 L4 2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+MAXSTACK = 5
+MAXLOCALS = 3

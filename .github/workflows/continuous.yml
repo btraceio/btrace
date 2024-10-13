@@ -31,14 +31,23 @@ jobs:
         uses: gradle/gradle-build-action@v3
       - name: Build
         run: ./gradlew build
-      - name: Upload build data
+      - name: Upload dist build data
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build
+          name: dist-build
           retention-days: 1
           path: |
             btrace-dist/build
+            btrace-instr/build/classes/traces
+      - name: Upload test trace data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-trace
+          retention-days: 1
+          path: |
+            btrace-instr/build/classes/traces
       - name: Archive test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -53,7 +62,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        java: [ 8, 11, 17, 21 ]
+        java: [ 8, 11, 17, 21, 23 ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,11 +75,16 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin
-      - name: Download build data
+      - name: Download dist build data
         uses: actions/download-artifact@v4
         with:
-          name: build
+          name: dist-build
           path: btrace-dist/build
+      - name: Download test trace data
+        uses: actions/download-artifact@v4
+        with:
+          name: test-trace
+          path: btrace-instr/build/classes/traces
       - name: Run tests
         run: |
           ./gradlew -Pintegration :integration-tests:test

@@ -1,0 +1,28 @@
+LCONST_0
+LSTORE 1
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 3
+DSTORE 5
+DLOAD 5
+DLOAD 5
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 0
+LLOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE22$tracker(Ljava/lang/Object;J)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/BTRACE22"
+]
+L3
+FRAME FULL [resources/issues/BTRACE22 J J D] [D]
+L4
+LOCALVARIABLE this Lresources/issues/BTRACE22; L0 L4 0
+LOCALVARIABLE d D L1 L4 5
+MAXSTACK = 6
+MAXLOCALS = 7

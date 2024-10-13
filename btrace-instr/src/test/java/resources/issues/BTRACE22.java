@@ -26,13 +26,12 @@
 package resources.issues;
 
 /**
- *
  * @author Jaroslav Bachorik jaroslav.bachorik@sun.com
  */
 public class BTRACE22 {
-    public double testDouble() {
-        double d = 12.4325 * 11.842;
-        System.err.println(d);
-        return d;
-    }
+  public double testDouble() {
+    double d = 12.4325 * 11.842;
+    System.err.println(d);
+    return d;
+  }
 }

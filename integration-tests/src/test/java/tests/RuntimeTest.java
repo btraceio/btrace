@@ -47,7 +47,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 @SuppressWarnings("ConstantConditions")
 public abstract class RuntimeTest {
   private static String cp = null;
@@ -126,7 +128,7 @@ public abstract class RuntimeTest {
       String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
     startJfr = true;
-    test(testApp, testScript, cmdArgs, checkLines, v);
+    testDynamic(testApp, testScript, cmdArgs, checkLines, v);
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -139,25 +141,45 @@ public abstract class RuntimeTest {
   public void test(
       String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
       throws Exception {
+    testDynamic(testApp, testScript, cmdArgs, checkLines, v);
+    testStartup(testApp, testScript.replace(".java", ".class"), cmdArgs, checkLines, v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void testDynamic(String testApp, String testScript, int checkLines, ResultValidator v)
+      throws Exception {
+    testDynamic(testApp, testScript, null, checkLines, v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void testDynamic(
+      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      throws Exception {
+    System.out.println("=== Dynamic attach");
     if (forceDebug) {
       // force debug flags
       debugBTrace = true;
       debugTestApp = true;
     }
+    String testJavaHome = System.getenv("TEST_JAVA_HOME");
+    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
+    if (testJavaHome == null) {
+      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
+    }
     String jfrFile = null;
-    List<String> args = new ArrayList<>(Arrays.asList(javaHome + "/bin/java", "-cp", cp));
+    List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
     }
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
     args.add("-XX:+EnableDynamicAgentLoading");
+    args.add("-XX:+UnlockDiagnosticVMOptions");
+//    args.add("-Xlog");
+
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
-    args.addAll(
-        Arrays.asList(
-            "-XX:+AllowRedefinitionToAddDeleteMethods", "-XX:+IgnoreUnrecognizedVMOptions"));
     if (startJfr) {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
       args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
@@ -262,6 +284,179 @@ public abstract class RuntimeTest {
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
   }
 
+  public void testStartup(
+      String testApp, String testScript, String[] cmdArgs, int checkLines, ResultValidator v)
+      throws Exception {
+    System.out.println("=== On-Startup");
+    Path agentPath = locateAgent();
+    if (agentPath == null) {
+      throw new RuntimeException("Missing btrace-agent.jar");
+    }
+    if (forceDebug) {
+      // force debug flags
+      debugBTrace = true;
+      debugTestApp = true;
+    }
+    String testJavaHome = System.getenv("TEST_JAVA_HOME");
+    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
+    if (testJavaHome == null) {
+      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
+    }
+    String jfrFile = null;
+    List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
+    if (attachDebugger) {
+      args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
+    }
+    args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
+    args.add("-XX:+IgnoreUnrecognizedVMOptions");
+    args.add("-XX:+UnlockDiagnosticVMOptions");
+//    args.add("-Xlog:exceptions");
+    // uncomment the following line to get extra JFR logs
+    //    args.add("-Xlog:jfr*=trace");
+    args.addAll(extraJvmArgs);
+    if (startJfr) {
+      jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
+      args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
+    }
+
+    String agentSetup =
+        "-javaagent:"
+            + agentPath
+            + "=script="
+            + locateTrace(testScript)
+            + ",scriptOutputFile=::stdout";
+    if (debugBTrace) {
+      agentSetup += ",debug=true,dumpClasses=true,dumpDir=/tmp/btrace";
+    }
+    args.add(agentSetup);
+    args.add(testApp);
+
+    ProcessBuilder pb = new ProcessBuilder(args);
+    pb.environment().remove("JAVA_TOOL_OPTIONS");
+
+    Process p = pb.start();
+    PrintWriter pw = new PrintWriter(p.getOutputStream());
+
+    StringBuilder stdout = new StringBuilder();
+    StringBuilder stderr = new StringBuilder();
+    AtomicInteger ret = new AtomicInteger(-1);
+
+    BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+    CountDownLatch testAppLatch = new CountDownLatch(1);
+    CountDownLatch stdoutLatch = new CountDownLatch(checkLines);
+    AtomicReference<String> pidStringRef = new AtomicReference<>();
+
+    Thread outT =
+        new Thread(
+            () -> {
+              try {
+                String l;
+                while ((l = stdoutReader.readLine()) != null) {
+                  stdout.append(l).append(System.lineSeparator());
+                  if (l.startsWith("ready:")) {
+                    pidStringRef.set(l.split("\\:")[1]);
+                    testAppLatch.countDown();
+                  } else {
+                    stdoutLatch.countDown();
+                  }
+                  if (debugTestApp) {
+                    System.out.println("[traced app] " + l);
+                  }
+                }
+
+              } catch (Exception e) {
+                e.printStackTrace(System.err);
+              }
+            },
+            "STDOUT Reader");
+    outT.setDaemon(true);
+
+    BufferedReader stderrReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+
+    Thread errT =
+        new Thread(
+            () -> {
+              try {
+                String l = null;
+                while ((l = stderrReader.readLine()) != null) {
+                  if (l.contains("SLF4J") || l.contains("Server VM warning") || l.contains("XML")) {
+                    continue;
+                  }
+                  stderr.append(l).append(System.lineSeparator());
+                  if (l.contains("Server VM warning")
+                      || l.contains("XML libraries not available")) {
+                    continue;
+                  }
+                  if (debugTestApp) {
+                    System.err.println("[traced app] " + l);
+                  }
+                  testAppLatch.countDown();
+                  for (int i = 0; i < checkLines; i++) {
+                    stdoutLatch.countDown();
+                  }
+                }
+              } catch (Exception e) {
+                e.printStackTrace(System.err);
+              }
+            },
+            "STDERR Reader");
+    errT.setDaemon(true);
+
+    outT.start();
+    errT.start();
+
+    testAppLatch.await();
+    stdoutLatch.await();
+
+    if (startJfr && pidStringRef.get() != null) {
+      ProcessBuilder jcmdPb = new ProcessBuilder("jcmd", pidStringRef.get(), "JFR.dump", "name=1");
+      jcmdPb.start().waitFor();
+    }
+
+    v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
+  }
+
+  protected Path locateAgent() {
+    Path start = projectRoot.resolve("../btrace-dist/build/resources/main");
+    Path[] tracePath = new Path[1];
+    try {
+      Files.walkFileTree(
+          start,
+          new FileVisitor<Path>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                throws IOException {
+              return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                throws IOException {
+              if (file.toString().endsWith("btrace-agent.jar")) {
+                tracePath[0] = file;
+                return FileVisitResult.TERMINATE;
+              }
+              return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+              return FileVisitResult.TERMINATE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                throws IOException {
+              return FileVisitResult.CONTINUE;
+            }
+          });
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return tracePath[0];
+  }
+
   public static final class TestApp {
     private int pid;
     private final CountDownLatch testAppLatch = new CountDownLatch(1);
@@ -345,8 +540,13 @@ public abstract class RuntimeTest {
       debugBTrace = true;
       debugTestApp = true;
     }
+    String testJavaHome = System.getenv("TEST_JAVA_HOME");
+    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
+    if (testJavaHome == null) {
+      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
+    }
     String jfrFile = null;
-    List<String> args = new ArrayList<>(Arrays.asList(javaHome + "/bin/java", "-cp", cp));
+    List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
     }
@@ -355,9 +555,6 @@ public abstract class RuntimeTest {
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
-    args.addAll(
-        Arrays.asList(
-            "-XX:+AllowRedefinitionToAddDeleteMethods", "-XX:+IgnoreUnrecognizedVMOptions"));
     if (startJfr) {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
       args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
@@ -567,43 +764,55 @@ public abstract class RuntimeTest {
   }
 
   public File locateTrace(String trace) {
-    Path start = projectRoot.resolve("src");
-    AtomicReference<Path> tracePath = new AtomicReference<>();
-    try {
-      Files.walkFileTree(
-          start,
-          new FileVisitor<Path>() {
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                throws IOException {
-              return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                throws IOException {
-              if (file.toString().endsWith(trace)) {
-                tracePath.set(file);
-                return FileVisitResult.TERMINATE;
-              }
-              return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-              return FileVisitResult.TERMINATE;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc)
-                throws IOException {
-              return FileVisitResult.CONTINUE;
-            }
-          });
-    } catch (IOException e) {
-      e.printStackTrace();
+//    Path start = projectRoot.resolve("src");
+    List<Path> roots = new ArrayList<>();
+    if (trace.toLowerCase().endsWith(".java")) {
+      roots.add(projectRoot.resolve("src"));
+    } else {
+      roots.add(projectRoot.resolve("../btrace-instr/build/classes"));
+      roots.add(projectRoot.resolve("build/classes"));
     }
-    return tracePath.get() != null ? tracePath.get().toFile() : null;
+    Path[] tracePath = new Path[1];
+    for (Path start : roots) {
+      try {
+        Files.walkFileTree(
+                start,
+                new FileVisitor<Path>() {
+                  @Override
+                  public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                          throws IOException {
+                    return FileVisitResult.CONTINUE;
+                  }
+
+                  @Override
+                  public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                          throws IOException {
+                    if (file.toString().endsWith(trace)) {
+                      tracePath[0] = file;
+                      return FileVisitResult.TERMINATE;
+                    }
+                    return FileVisitResult.CONTINUE;
+                  }
+
+                  @Override
+                  public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                    return FileVisitResult.TERMINATE;
+                  }
+
+                  @Override
+                  public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                          throws IOException {
+                    return FileVisitResult.CONTINUE;
+                  }
+                });
+      } catch(IOException e){
+        e.printStackTrace();
+      }
+      if (tracePath[0] != null) {
+        return tracePath[0].toFile();
+      }
+    }
+    return null;
   }
 
   private Process attach(
@@ -722,7 +931,7 @@ public abstract class RuntimeTest {
     return p;
   }
 
-  protected interface ResultValidator {
+  public interface ResultValidator {
     void validate(String stdout, String stderr, int retcode, String jfrFile);
   }
 }

@@ -5,7 +5,9 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.PrintWriter;
 
-/** @since WireIO v.1 */
+/**
+ * @since WireIO v.1
+ */
 public final class DisconnectCommand extends Command implements PrintableCommand {
   private String probeId = "";
 

@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package traces;
+package btrace;
 
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.OnExit;

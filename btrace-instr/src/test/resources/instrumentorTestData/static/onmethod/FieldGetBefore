@@ -1,0 +1,47 @@
+DUP
+ASTORE 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+ALOAD 0
+ALOAD 1
+LDC "field"
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldGetBefore$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V
+L1
+FRAME FULL [resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest resources/OnMethodTest]
+L2
+LINENUMBER 102 L2
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+MAXSTACK = 5
+MAXLOCALS = 2
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$FieldGetBefore$args(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="field", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.FIELD_GET, clazz="/.*\\.OnMethodTest/", field="/^field$/"))
+// annotable parameter count: 3 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+@Lorg/openjdk/btrace/core/annotations/TargetInstance;() // parameter 1
+@Lorg/openjdk/btrace/core/annotations/TargetMethodOrField;() // parameter 2
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/FieldGetBefore.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/FieldGetBefore.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/FieldGetBefore.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/FieldGetBefore.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 3

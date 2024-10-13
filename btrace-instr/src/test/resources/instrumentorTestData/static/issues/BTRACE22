@@ -1,0 +1,51 @@
+LCONST_0
+LSTORE 1
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 3
+DSTORE 5
+DLOAD 5
+DLOAD 5
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 0
+LLOAD 1
+INVOKESTATIC resources/issues/BTRACE22.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE22$tracker (Ljava/lang/Object;J)V
+L3
+FRAME FULL [resources/issues/BTRACE22 J J D] [D]
+L4
+LOCALVARIABLE this Lresources/issues/BTRACE22; L0 L4 0
+LOCALVARIABLE d D L1 L4 5
+MAXSTACK = 6
+MAXLOCALS = 7
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE22$tracker(Ljava/lang/Object;J)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.BTRACE22/", method="testDouble", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.RETURN))
+// annotable parameter count: 2 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+@Lorg/openjdk/btrace/core/annotations/Duration;() // parameter 1
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE22.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args empty"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE22.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE22.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE22.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN

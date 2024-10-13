@@ -1,0 +1,474 @@
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ICONST_4
+ANEWARRAY java/lang/Object
+DUP
+ICONST_0
+ALOAD 1
+AASTORE
+DUP
+ICONST_1
+ALOAD 2
+AASTORE
+DUP
+ICONST_2
+ILOAD 3
+INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
+AASTORE
+DUP
+ICONST_3
+ALOAD 4
+AASTORE
+INVOKESTATIC org/apache/hadoop/mapred/split/TezMapredSplitsGrouper.$btrace$org$openjdk$btrace$runtime$auxiliary$TezSplitter$getGroupedSplitsHook ([Ljava/lang/Object;)V
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ICONST_5
+ANEWARRAY java/lang/Object
+DUP
+ICONST_0
+ALOAD 1
+AASTORE
+DUP
+ICONST_1
+ALOAD 2
+AASTORE
+DUP
+ICONST_2
+ILOAD 3
+INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
+AASTORE
+DUP
+ICONST_3
+ALOAD 4
+AASTORE
+DUP
+ICONST_4
+ALOAD 5
+AASTORE
+INVOKESTATIC org/apache/hadoop/mapred/split/TezMapredSplitsGrouper.$btrace$org$openjdk$btrace$runtime$auxiliary$TezSplitter$getGroupedSplitsHook ([Ljava/lang/Object;)V
+FRAME SAME
+LSTORE 23
+LSTORE 25
+LSTORE 27
+LLOAD 25
+LLOAD 27
+LLOAD 27
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map I T T T T T T T T J J J] []
+LLOAD 25
+LLOAD 27
+LLOAD 23
+LLOAD 25
+LLOAD 25
+LLOAD 23
+LLOAD 25
+LLOAD 23
+LLOAD 27
+LLOAD 27
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map I T T T T T T I T J J J] []
+LLOAD 23
+LLOAD 27
+ISTORE 23
+ASTORE 24
+ALOAD 24
+ISTORE 25
+ISTORE 26
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map [Lorg/apache/hadoop/mapred/InputSplit; T T T T T T T T I [Lorg/apache/hadoop/mapred/InputSplit; I I] []
+ILOAD 26
+ILOAD 25
+ALOAD 24
+ILOAD 26
+ASTORE 27
+ALOAD 27
+ASTORE 28
+ALOAD 28
+ALOAD 27
+ILOAD 23
+IINC 23 1
+ALOAD 28
+IINC 26 1
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map] []
+LSTORE 23
+ISTORE 25
+ILOAD 25
+ISTORE 26
+ISTORE 27
+ASTORE 28
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T T T J I I I java/util/Iterator] []
+ALOAD 28
+ALOAD 28
+ILOAD 26
+ASTORE 28
+ISTORE 29
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T [Lorg/apache/hadoop/mapred/InputSplit; I J I I I java/util/Set I] []
+ILOAD 29
+ILOAD 29
+ASTORE 30
+ALOAD 28
+ALOAD 30
+ASTORE 31
+ALOAD 30
+ASTORE 32
+ALOAD 32
+ALOAD 32
+ASTORE 32
+ALOAD 32
+ASTORE 33
+ALOAD 33
+ISTORE 34
+ISTORE 35
+ILOAD 35
+ILOAD 34
+ALOAD 33
+ILOAD 35
+ASTORE 36
+ALOAD 36
+ASTORE 36
+ALOAD 28
+ALOAD 36
+IINC 35 1
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T [Lorg/apache/hadoop/mapred/InputSplit; I J I I I java/util/Set I org/apache/hadoop/mapred/InputSplit org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder [Ljava/lang/String;] []
+ALOAD 28
+ASTORE 33
+ALOAD 33
+ALOAD 33
+ASTORE 34
+ALOAD 34
+ASTORE 35
+ALOAD 35
+ALOAD 31
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T [Lorg/apache/hadoop/mapred/InputSplit; I J I I I java/util/Set I] []
+IINC 29 1
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T T T J I I I java/util/Set] []
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set] []
+LLOAD 23
+ILOAD 25
+ILOAD 26
+ILOAD 27
+ISTORE 29
+ILOAD 27
+ASTORE 30
+ASTORE 31
+ISTORE 32
+ISTORE 33
+ISTORE 34
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I] []
+ILOAD 29
+IINC 34 1
+ISTORE 35
+ASTORE 36
+ALOAD 36
+ALOAD 36
+ASTORE 37
+ALOAD 30
+ALOAD 31
+ALOAD 37
+ASTORE 38
+ALOAD 37
+ASTORE 39
+ALOAD 39
+ASTORE 40
+ALOAD 40
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I java/util/Iterator java/util/Map$Entry java/lang/String org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$LocationHolder org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder] []
+ALOAD 39
+ISTORE 41
+LSTORE 42
+ISTORE 44
+ALOAD 30
+ALOAD 40
+LLOAD 42
+ALOAD 40
+LSTORE 42
+IINC 44 1
+ALOAD 39
+ALOAD 39
+ASTORE 40
+ALOAD 40
+LLOAD 42
+ALOAD 40
+LLOAD 23
+ILOAD 44
+ILOAD 27
+ALOAD 39
+ILOAD 32
+LLOAD 42
+LLOAD 23
+ILOAD 44
+ILOAD 27
+ALOAD 39
+ILOAD 41
+IINC 35 1
+ALOAD 38
+ASTORE 45
+ALOAD 38
+ASTORE 45
+ILOAD 33
+ALOAD 30
+ASTORE 46
+ALOAD 46
+ALOAD 46
+ASTORE 47
+ALOAD 47
+ASTORE 48
+ALOAD 48
+ALOAD 48
+ASTORE 49
+ALOAD 49
+ISTORE 50
+ISTORE 51
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I java/util/Iterator java/util/Map$Entry java/lang/String org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$LocationHolder org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder I J I [Ljava/lang/String; java/util/Iterator org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder [Ljava/lang/String; [Ljava/lang/String; I I] []
+ILOAD 51
+ILOAD 50
+ALOAD 49
+ILOAD 51
+ASTORE 52
+ALOAD 52
+ALOAD 31
+ALOAD 52
+IINC 51 1
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I java/util/Iterator java/util/Map$Entry java/lang/String org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$LocationHolder org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder I J I [Ljava/lang/String; java/util/Iterator] []
+ALOAD 31
+ALOAD 45
+ASTORE 45
+ALOAD 30
+ALOAD 45
+ILOAD 33
+ALOAD 38
+ALOAD 38
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I java/util/Iterator java/util/Map$Entry java/lang/String org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$LocationHolder org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder I J I [Ljava/lang/String;] [L144 L144 I java/lang/String [Ljava/lang/String;]
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I java/util/Iterator java/util/Map$Entry java/lang/String org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$LocationHolder org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder I J I [Ljava/lang/String;] [L144 L144 I java/lang/String [Ljava/lang/String; java/lang/String]
+ASTORE 46
+ALOAD 30
+ASTORE 47
+ALOAD 47
+ALOAD 47
+ASTORE 48
+ALOAD 46
+ALOAD 48
+ALOAD 48
+ALOAD 38
+ALOAD 48
+IINC 29 1
+ALOAD 30
+ALOAD 46
+ALOAD 38
+ALOAD 46
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I] []
+ILOAD 33
+ILOAD 35
+ISTORE 33
+ILOAD 29
+ISTORE 36
+ILOAD 36
+ASTORE 37
+ASTORE 38
+ALOAD 38
+ALOAD 38
+ASTORE 39
+ALOAD 39
+ASTORE 40
+ALOAD 40
+ALOAD 40
+ASTORE 41
+ALOAD 41
+ALOAD 37
+ALOAD 41
+ALOAD 40
+ALOAD 37
+ILOAD 36
+ILOAD 36
+ALOAD 37
+ASTORE 38
+ASTORE 39
+ASTORE 40
+ALOAD 40
+ALOAD 40
+ASTORE 41
+ASTORE 42
+ALOAD 41
+ALOAD 41
+ASTORE 42
+ALOAD 38
+ALOAD 41
+ALOAD 42
+ALOAD 39
+ALOAD 42
+ALOAD 39
+ALOAD 42
+ILOAD 36
+ALOAD 39
+ASTORE 40
+ALOAD 37
+ISTORE 41
+ASTORE 42
+ALOAD 42
+ISTORE 43
+ISTORE 44
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I I java/util/Set java/util/Map java/util/Map java/util/HashSet I [Lorg/apache/hadoop/mapred/InputSplit; I I] []
+ILOAD 44
+ILOAD 43
+ALOAD 42
+ILOAD 44
+ASTORE 45
+ILOAD 41
+ALOAD 37
+ALOAD 45
+IINC 41 -1
+ALOAD 40
+ALOAD 45
+ASTORE 46
+ALOAD 45
+ASTORE 47
+ALOAD 47
+ALOAD 47
+ASTORE 47
+ALOAD 47
+ASTORE 48
+ALOAD 48
+ISTORE 49
+ISTORE 50
+ILOAD 50
+ILOAD 49
+ALOAD 48
+ILOAD 50
+ASTORE 51
+ALOAD 51
+ASTORE 51
+ALOAD 40
+ALOAD 38
+ALOAD 51
+IINC 50 1
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I I java/util/Set java/util/Map java/util/Map java/util/HashSet I [Lorg/apache/hadoop/mapred/InputSplit; I I org/apache/hadoop/mapred/InputSplit org/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder [Ljava/lang/String;] []
+ALOAD 40
+ASTORE 48
+ALOAD 48
+ALOAD 48
+ASTORE 49
+ALOAD 39
+ALOAD 49
+ALOAD 46
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I I java/util/Set java/util/Map java/util/Map java/util/HashSet I [Lorg/apache/hadoop/mapred/InputSplit; I I] []
+IINC 44 1
+ALOAD 37
+ALOAD 39
+FSTORE 42
+FLOAD 42
+LLOAD 23
+FLOAD 42
+LSTORE 53
+ILOAD 27
+FLOAD 42
+ISTORE 45
+LLOAD 55
+LLOAD 55
+LSTORE 23
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I I java/util/Set java/util/Map java/util/Map java/util/HashSet I F T T I T T T T T T T T T J] []
+ILOAD 45
+ILOAD 45
+ISTORE 27
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I I java/util/Set java/util/Map java/util/Map java/util/HashSet I F] []
+ILOAD 34
+ILOAD 29
+ILOAD 35
+LLOAD 23
+ILOAD 27
+FRAME FULL [org/apache/hadoop/mapred/split/TezMapredSplitsGrouper org/apache/hadoop/conf/Configuration [Lorg/apache/hadoop/mapred/InputSplit; I java/lang/String org/apache/hadoop/mapred/split/SplitSizeEstimator I java/lang/String java/lang/String [Ljava/lang/String; I J java/util/Map java/util/List T T T T T T I I J I I I java/util/Set I java/util/List java/util/Set I I I I] []
+ILOAD 32
+ILOAD 35
+ILOAD 25
+ISTORE 32
+ILOAD 34
+ILOAD 29
+ILOAD 35
+ILOAD 34
+ILOAD 29
+ILOAD 35
+ASTORE 35
+ALOAD 35
+ILOAD 29
+ALOAD 35
+LOCALVARIABLE lengthPerGroup J L42 L34 23
+LOCALVARIABLE maxLengthPerGroup J L43 L34 25
+LOCALVARIABLE minLengthPerGroup J L44 L34 27
+LOCALVARIABLE newSplit Lorg/apache/hadoop/mapred/split/TezGroupedSplit; L68 L70 28
+LOCALVARIABLE split Lorg/apache/hadoop/mapred/InputSplit; L66 L70 27
+LOCALVARIABLE i I L63 L60 23
+LOCALVARIABLE location Ljava/lang/String; L91 L94 36
+LOCALVARIABLE holder Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$LocationHolder; L98 L99 35
+LOCALVARIABLE location Ljava/lang/String; L97 L99 34
+LOCALVARIABLE splitHolder Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder; L85 L96 31
+LOCALVARIABLE locations [Ljava/lang/String; L86 L96 32
+LOCALVARIABLE split Lorg/apache/hadoop/mapred/InputSplit; L83 L96 30
+LOCALVARIABLE loc Ljava/lang/String; L153 L154 52
+LOCALVARIABLE locations [Ljava/lang/String; L149 L150 48
+LOCALVARIABLE splitH Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder; L148 L150 47
+LOCALVARIABLE groupedSplitHolder Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder; L162 L168 48
+LOCALVARIABLE location Ljava/lang/String; L120 L173 38
+LOCALVARIABLE holder Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$LocationHolder; L121 L173 39
+LOCALVARIABLE splitHolder Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder; L122 L173 40
+LOCALVARIABLE oldHeadIndex I L125 L173 41
+LOCALVARIABLE groupLength J L126 L173 42
+LOCALVARIABLE groupNumSplits I L127 L173 44
+LOCALVARIABLE groupLocation [Ljava/lang/String; L141 L173 45
+LOCALVARIABLE groupedSplit Lorg/apache/hadoop/mapred/split/TezGroupedSplit; L159 L173 46
+LOCALVARIABLE entry Ljava/util/Map$Entry; L117 L173 37
+LOCALVARIABLE splitHolder Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder; L185 L186 41
+LOCALVARIABLE locHolder Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$LocationHolder; L182 L183 40
+LOCALVARIABLE entry Ljava/util/Map$Entry; L181 L183 39
+LOCALVARIABLE rack Ljava/lang/String; L198 L202 42
+LOCALVARIABLE location Ljava/lang/String; L197 L202 41
+LOCALVARIABLE location Ljava/lang/String; L223 L226 51
+LOCALVARIABLE rack Ljava/lang/String; L228 L229 49
+LOCALVARIABLE splitHolder Lorg/apache/hadoop/mapred/split/TezMapredSplitsGrouper$SplitHolder; L217 L214 46
+LOCALVARIABLE locations [Ljava/lang/String; L218 L214 47
+LOCALVARIABLE split Lorg/apache/hadoop/mapred/InputSplit; L209 L214 45
+LOCALVARIABLE newLengthPerGroup J L235 L233 43
+LOCALVARIABLE newNumSplitsInGroup I L236 L233 45
+LOCALVARIABLE numRemainingSplits I L177 L174 36
+LOCALVARIABLE remainingSplits Ljava/util/Set; L178 L174 37
+LOCALVARIABLE locToRackMap Ljava/util/Map; L193 L174 38
+LOCALVARIABLE rackLocations Ljava/util/Map; L194 L174 39
+LOCALVARIABLE rackSet Ljava/util/HashSet; L205 L174 40
+LOCALVARIABLE numRackSplitsToGroup I L206 L174 41
+LOCALVARIABLE rackSplitReduction F L232 L174 42
+LOCALVARIABLE numFullGroupsCreated I L114 L248 35
+LOCALVARIABLE lengthPerGroup J L72 L257 23
+LOCALVARIABLE numNodeLocations I L73 L257 25
+LOCALVARIABLE numSplitsPerLocation I L74 L257 26
+LOCALVARIABLE numSplitsInGroup I L75 L257 27
+LOCALVARIABLE locSet Ljava/util/Set; L80 L257 28
+LOCALVARIABLE splitsProcessed I L105 L257 29
+LOCALVARIABLE group Ljava/util/List; L106 L257 30
+LOCALVARIABLE groupLocationSet Ljava/util/Set; L107 L257 31
+LOCALVARIABLE allowSmallGroups Z L108 L257 32
+LOCALVARIABLE doingRackLocal Z L109 L257 33
+LOCALVARIABLE iterations I L110 L257 34
+LOCALVARIABLE groupedSplits [Lorg/apache/hadoop/mapred/InputSplit; L252 L257 35
+MAXLOCALS = 57
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$TezSplitter$getGroupedSplitsHook([Ljava/lang/Object;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="org.apache.hadoop.mapred.split.TezMapredSplitsGrouper", method="getGroupedSplits")
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TezSplitter.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "here"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TezSplitter.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TezSplitter.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TezSplitter.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 1

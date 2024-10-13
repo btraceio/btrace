@@ -1,0 +1,26 @@
+DUP
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 0
+ALOAD 3
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayStringAfter$args(Ljava/lang/Object;[Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/NewArrayStringAfter"
+]
+FRAME FULL [resources/OnMethodTest [I [[I [Ljava/lang/String;] [[Ljava/lang/String;]
+ASTORE 4
+L4
+LINENUMBER 112 L4
+ASTORE 5
+L5
+LINENUMBER 113 L5
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE a [I L1 L6 1
+LOCALVARIABLE b [[I L2 L6 2
+LOCALVARIABLE c [Ljava/lang/String; L4 L6 4
+LOCALVARIABLE d [[Ljava/lang/String; L5 L6 5
+MAXSTACK = 3
+MAXLOCALS = 6

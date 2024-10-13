@@ -1,0 +1,23 @@
+apply plugin: 'com.diffplug.spotless'
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        // note: you can use an empty string for all the imports you didn't specify explicitly, and '\\#` prefix for static imports
+        importOrder('java', 'javax', 'org.openjdk.btrace', '', '\\#org.openjdk.btrace', '\\#')
+        removeUnusedImports()
+
+        googleJavaFormat()   // has its own section below
+
+        formatAnnotations()  // fixes formatting of type annotations, see below
+
+//        licenseHeader '/* (C) $YEAR */' // or licenseHeaderFile
+    }
+}
+
+tasks.register('formatCode') {
+    dependsOn 'spotlessApply'
+}
+check.configure {
+    dependsOn 'spotlessCheck'
+}

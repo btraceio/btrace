@@ -8,13 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * @author Jaroslav Bachorik <jaroslav.bachorik@oracle.com>
  */
 public class BTRACE87 {
-    private void containerMethod() {
-        List a = new ArrayList();
-        a.clear();
-        a.add("sample");
-    }
+  private void containerMethod() {
+    List a = new ArrayList();
+    a.clear();
+    a.add("sample");
+  }
 }

@@ -1,0 +1,52 @@
+DUP2
+ASTORE 4
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 0
+ALOAD 4
+ILOAD 3
+INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArrayGetBeforeAny$args (Ljava/lang/Object;Ljava/lang/Object;I)V
+FRAME FULL [resources/OnMethodTest I [I I [I] [[I I]
+IALOAD
+ISTORE 5
+L3
+LINENUMBER 97 L3
+L4
+LINENUMBER 98 L4
+L5
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a I L0 L5 1
+LOCALVARIABLE arr [I L1 L5 2
+LOCALVARIABLE b I L3 L5 5
+MAXSTACK = 5
+MAXLOCALS = 6
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$ArrayGetBeforeAny$args(Ljava/lang/Object;Ljava/lang/Object;I)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.OnMethodTest/", method="array", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.ARRAY_GET))
+// annotable parameter count: 3 (visible)
+@Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
+@Lorg/openjdk/btrace/core/annotations/TargetInstance;() // parameter 1
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArrayGetBeforeAny.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+LDC "args"
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArrayGetBeforeAny.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArrayGetBeforeAny.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+DUP_X1
+SWAP
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArrayGetBeforeAny.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+RETURN
+MAXSTACK = 3
+MAXLOCALS = 3

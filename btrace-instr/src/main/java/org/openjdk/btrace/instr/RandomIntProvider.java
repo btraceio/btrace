@@ -28,13 +28,15 @@ import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.instr.random.SharedRandomIntProvider;
 import org.openjdk.btrace.instr.random.ThreadLocalRandomIntProvider;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 @SuppressWarnings("LiteralClassName")
 public abstract class RandomIntProvider {
   private static final RandomIntProvider rndIntProvider;
   // for the testability purposes; BTraceRuntime initializes Unsafe instance
   // and fails under JUnit
-  private static final boolean useBtraceEnter = true;
+  private static boolean useBtraceEnter = true;
 
   static {
     boolean entered = false;

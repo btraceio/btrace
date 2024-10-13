@@ -1,0 +1,30 @@
+TRYCATCHBLOCK L0 L2 L2 java/lang/Throwable
+L3
+LINENUMBER 180 L3
+L4
+LINENUMBER 182 L4
+L2
+FRAME SAME1 java/lang/Throwable
+DUP
+ASTORE 2
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorCaught.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L5
+ALOAD 0
+LDC "caught"
+ALOAD 2
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ErrorCaught$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ErrorCaught"
+]
+L5
+FRAME FULL [resources/OnMethodTest T java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+LOCALVARIABLE e Ljava/lang/RuntimeException; L3 L4 1
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0
+MAXSTACK = 4
+MAXLOCALS = 3

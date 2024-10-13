@@ -34,7 +34,9 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** @author Jaroslav Bachorik */
+/**
+ * @author Jaroslav Bachorik
+ */
 public class Interval implements Comparable<Interval> {
   private static final Pattern INTERVAL_PATTERN = Pattern.compile("\\((\\d+)[,;]\\s*(\\d+)\\)");
   private static final Pattern COMP_PATTERN =

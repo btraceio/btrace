@@ -1,0 +1,32 @@
+ISTORE 4
+DUP2
+ISTORE 5
+ASTORE 6
+ILOAD 4
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArraySetBeforeAny.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+ALOAD 0
+ALOAD 6
+ILOAD 5
+ILOAD 4
+INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArraySetBeforeAny$args(Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArraySetBeforeAny"
+]
+L3
+FRAME FULL [resources/OnMethodTest I [I I I I [I] [[I I I]
+L4
+LINENUMBER 98 L4
+L5
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a I L0 L5 1
+LOCALVARIABLE arr [I L1 L5 2
+LOCALVARIABLE b I L2 L5 3
+MAXSTACK = 7
+MAXLOCALS = 7

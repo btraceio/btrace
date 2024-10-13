@@ -1,0 +1,28 @@
+LSTORE 4
+ASTORE 6
+ASTORE 7
+ALOAD 7
+ALOAD 6
+LLOAD 4
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+LSTORE 8
+ALOAD 6
+LLOAD 4
+LLOAD 8
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallReturnAugmented$args(Ljava/lang/String;JJ)J [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented"
+]
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest] [J]
+L2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0
+LOCALVARIABLE a Ljava/lang/String; L0 L2 1
+LOCALVARIABLE b J L0 L2 2
+MAXLOCALS = 10

@@ -1,0 +1,18 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticArgsSelf.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L0
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ACONST_NULL
+ALOAD 0
+LLOAD 1
+ALOAD 3
+ALOAD 4
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$StaticArgsSelf$args(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/StaticArgsSelf"
+]
+FRAME SAME
+MAXSTACK = 6
