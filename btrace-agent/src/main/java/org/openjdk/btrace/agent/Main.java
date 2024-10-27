@@ -398,8 +398,8 @@ public final class Main {
 
     String libs = argMap.get(LIBS);
     String config = argMap.get(CONFIG);
-    loadDefaultArguments(config);
     processClasspaths(libs);
+    loadDefaultArguments(config);
 
     p = argMap.get(DEBUG);
     settings.setDebug(p != null && !"false".equals(p));
