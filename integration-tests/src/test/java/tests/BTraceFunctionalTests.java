@@ -50,8 +50,8 @@ import org.junit.jupiter.api.Test;
  */
 public class BTraceFunctionalTests extends RuntimeTest {
   @BeforeAll
-  public static void classSetup() throws Exception {
-    setup();
+  public static void setup() throws Exception {
+    classSetup();
   }
 
   @BeforeEach

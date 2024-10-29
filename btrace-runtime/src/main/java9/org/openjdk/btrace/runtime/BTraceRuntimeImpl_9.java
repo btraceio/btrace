@@ -28,6 +28,7 @@ package org.openjdk.btrace.runtime;
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -40,6 +41,7 @@ import jdk.internal.perf.Perf;
 import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
 import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
@@ -81,11 +83,29 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
 
   private static Perf perf;
 
-  public BTraceRuntimeImpl_9() {}
+  private final Method findBootstrapOrNullMtd;
+
+  public BTraceRuntimeImpl_9() {
+    fixExports(BTraceRuntime.instrumentation);
+
+    Method m = null;
+    try {
+      m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
+      m.setAccessible(true);
+    } catch (NoSuchMethodException ignored) {}
+    findBootstrapOrNullMtd = m;
+  }
 
   public BTraceRuntimeImpl_9(
       String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
     super(className, args, cmdListener, fixExports(inst));
+
+    Method m = null;
+    try {
+      m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
+      m.setAccessible(true);
+    } catch (NoSuchMethodException ignored) {}
+    findBootstrapOrNullMtd = m;
   }
 
   private static Instrumentation fixExports(Instrumentation instr) {
@@ -228,6 +248,14 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
     return () -> JfrEvent.EMPTY;
+  }
+
+  @Override
+  public boolean isBootstrapClass(String className) {
+    try {
+      return findBootstrapOrNullMtd != null && findBootstrapOrNullMtd.invoke(null, className) != null;
+    } catch (IllegalAccessException | InvocationTargetException ignored) {}
+    return false;
   }
 
   private static Perf getPerf() {
