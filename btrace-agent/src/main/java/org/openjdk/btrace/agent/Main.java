@@ -169,6 +169,8 @@ public final class Main {
                   BTraceRuntime.leave();
                 }
               });
+      // set the fall-back instrumentation object to BTraceRuntime
+      BTraceRuntime.instrumentation = inst;
       // force back-registration of BTraceRuntimeImpl in BTraceRuntime
       BTraceRuntimes.getDefault();
       // init BTraceRuntime

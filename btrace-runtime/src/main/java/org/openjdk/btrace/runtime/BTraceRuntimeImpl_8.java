@@ -26,6 +26,8 @@
 package org.openjdk.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -85,6 +87,8 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
 
   private final boolean hasJfr;
 
+  private final Method findBootstrapOrNullMtd;
+
   public BTraceRuntimeImpl_8() {
     boolean jfr = false;
     try {
@@ -94,6 +98,13 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
     }
     hasJfr = jfr;
     eventFactories = hasJfr ? new java.util.concurrent.CopyOnWriteArraySet<>() : null;
+
+    Method m = null;
+    try {
+      m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
+      m.setAccessible(true);
+    } catch (NoSuchMethodException ignored) {}
+    findBootstrapOrNullMtd = m;
   }
 
   public BTraceRuntimeImpl_8(
@@ -107,6 +118,13 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
     }
     hasJfr = jfr;
     eventFactories = hasJfr ? new java.util.concurrent.CopyOnWriteArraySet<>() : null;
+
+    Method m = null;
+    try {
+      m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
+      m.setAccessible(true);
+    } catch (NoSuchMethodException ignored) {}
+    findBootstrapOrNullMtd = m;
   }
 
   @Override
@@ -190,6 +208,14 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       return factory;
     }
     return () -> JfrEvent.EMPTY;
+  }
+
+  @Override
+  public boolean isBootstrapClass(String className) {
+    try {
+      return findBootstrapOrNullMtd != null && findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
+    } catch (IllegalAccessException | InvocationTargetException ignored) {}
+    return false;
   }
 
   @Override

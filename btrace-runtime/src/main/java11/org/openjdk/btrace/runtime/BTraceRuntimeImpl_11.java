@@ -28,6 +28,7 @@ package org.openjdk.btrace.runtime;
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -41,6 +42,7 @@ import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
 import jdk.jfr.EventType;
 import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
@@ -85,28 +87,49 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   private final Set<JfrEventFactoryImpl> eventFactories =
       new java.util.concurrent.CopyOnWriteArraySet<>();
 
-  public BTraceRuntimeImpl_11() {}
+  private final Method findBootstrapOrNullMtd;
+
+  public BTraceRuntimeImpl_11() {
+    fixExports(BTraceRuntime.instrumentation);
+
+    Method m = null;
+    try {
+      m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
+      m.setAccessible(true);
+    } catch (NoSuchMethodException ignored) {}
+    findBootstrapOrNullMtd = m;
+  }
 
   public BTraceRuntimeImpl_11(
       String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
     super(className, args, cmdListener, fixExports(inst));
+
+    Method m = null;
+    try {
+      m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
+      m.setAccessible(true);
+    } catch (NoSuchMethodException ignored) {}
+    findBootstrapOrNullMtd = m;
   }
 
   private static Instrumentation fixExports(Instrumentation instr) {
     Set<Module> myModules = Collections.singleton(BTraceRuntimeImpl_11.class.getModule());
     if (instr != null) {
+      Module javaBaseMod = int.class.getModule();
+      Module jfrMod = EventType.class.getModule();
       instr.redefineModule(
-          String.class.getModule(),
-          Collections.emptySet(),
-          Map.of(
-              "jdk.internal.reflect", myModules,
-              "jdk.internal.perf", myModules,
-              "sun.security.action", myModules),
-          Map.of("java.lang", myModules),
-          Collections.emptySet(),
-          Collections.emptyMap());
+              javaBaseMod,
+              Collections.emptySet(),
+              Map.of(
+                      "java.lang", myModules,
+                      "jdk.internal.reflect", myModules,
+                      "jdk.internal.perf", myModules,
+                      "sun.security.action", myModules),
+              Map.of("java.lang", myModules),
+              Collections.emptySet(),
+              Collections.emptyMap());
       instr.redefineModule(
-          EventType.class.getModule(),
+          jfrMod, // jdk.jfr
           Collections.emptySet(),
           Map.of("jdk.jfr.internal", myModules),
           Map.of("jdk.jfr", myModules),
@@ -219,6 +242,14 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template);
     eventFactories.add(factory);
     return factory;
+  }
+
+  @Override
+  public boolean isBootstrapClass(String className) {
+    try {
+      return findBootstrapOrNullMtd != null && findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
+    } catch (IllegalAccessException | InvocationTargetException ignored) {}
+    return false;
   }
 
   @Override

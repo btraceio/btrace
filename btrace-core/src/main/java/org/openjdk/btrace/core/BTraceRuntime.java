@@ -30,6 +30,7 @@ import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.lang.instrument.Instrumentation;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.LockInfo;
 import java.lang.management.MemoryMXBean;
@@ -96,6 +97,8 @@ public final class BTraceRuntime {
   // this field is 'back-set' by the agent at startup thus needs to remain non-final
   private static volatile BTraceRuntimeAccessor rtAccessor = () -> null;
   private static final String INDENT = "    ";
+
+  public static volatile Instrumentation instrumentation = null;
 
   static {
     LINE_SEPARATOR = System.getProperty("line.separator");
@@ -1048,6 +1051,10 @@ public final class BTraceRuntime {
     return getRt().createEventFactory(template);
   }
 
+  public static boolean isBootstrapClass(String className) {
+    return getRt().isBootstrapClass(className);
+  }
+
   // BTrace aggregation support
   static Aggregation newAggregation(AggregationFunction type) {
     return new Aggregation(type);
@@ -1282,6 +1289,8 @@ public final class BTraceRuntime {
     JfrEvent.Factory createEventFactory(JfrEvent.Template template);
 
     int version();
+
+    boolean isBootstrapClass(String className);
   }
 
   public interface BTraceRuntimeAccessor {
