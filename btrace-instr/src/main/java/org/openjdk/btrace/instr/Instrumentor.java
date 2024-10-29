@@ -41,6 +41,7 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.MethodID;
@@ -114,7 +115,7 @@ public class Instrumentor extends ClassVisitor {
       String[] interfaces) {
     className = name;
     this.superName = superName;
-    super.visit(version, access, name, signature, superName, interfaces);
+    super.visit(Math.max(Opcodes.V1_7, version), access, name, signature, superName, interfaces);
   }
 
   @Override
