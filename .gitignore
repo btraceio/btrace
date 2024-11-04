@@ -8,6 +8,9 @@
 *.war
 *.ear
 
+# Un-ignore specific files
+!btrace-instr/src/test/resources/packed/test-pack.jar
+
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
