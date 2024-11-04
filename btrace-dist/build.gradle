@@ -136,8 +136,8 @@ task agentJar(type: ShadowJar) {
 
     configurations = [project.configurations.artifact]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.agent.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.agent.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.agent.org.slf4j'
 }
 
 task bootJar(type: ShadowJar) {
@@ -151,9 +151,9 @@ task bootJar(type: ShadowJar) {
     include includes['boot']
 
     configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.torg.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.boot.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.boot.org.slf4j'
 }
 
 task clientJar(type: ShadowJar) {
@@ -166,9 +166,9 @@ task clientJar(type: ShadowJar) {
     include includes['client']
 
     configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.client.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.client.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.client.org.slf4j'
 }
 
 task fixPermissions(type: Exec) {
