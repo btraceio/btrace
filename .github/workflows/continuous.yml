@@ -28,7 +28,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v4
       - name: Build
         run: ./gradlew build
       - name: Upload build data
@@ -60,7 +60,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v4
       - name: Set up Java ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
@@ -99,7 +99,7 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v3
+      uses: gradle/actions/setup-gradle@v4
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
