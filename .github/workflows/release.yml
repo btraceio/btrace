@@ -27,6 +27,15 @@ jobs:
         with:
           java-version: 11
           distribution: temurin
+      - name: Deploy Maven
+        id: deploy_maven
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
+          BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
+          BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
+        run: |
+          ./gradlew :btrace-dist:publishAllPublicationsToMavenRepository
       - name: Build artifacts
         run: ./gradlew :btrace-dist:build
       - name: Create Release
@@ -42,15 +51,6 @@ jobs:
             btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.tar.gz
             btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.zip
             btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-sdkman-bin.zip
-      - name: Deploy Maven
-        id: deploy_maven
-        env:
-          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
-          GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
-          BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
-          BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
-        run: |
-          ./gradlew :btrace-dist:publishAllPublicationsToMavenRepository
       - name: Update SDKMan!
         id: update_sdkman
         env:
