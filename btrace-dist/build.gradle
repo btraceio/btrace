@@ -360,8 +360,8 @@ test {
 }
 
 sdkman {
-    consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_API_KEY')
-    consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
+    consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_KEY')
+    consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_TOKEN')
     candidate = "btrace"
     version = "${project.version}"
     url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-v${project.version}-sdkman-bin.zip"
