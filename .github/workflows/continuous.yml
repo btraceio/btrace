@@ -53,7 +53,9 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        java: [ 8, 11, 17, 21 ]
+        java: [ 8.0.432-tem, 11.0.25-tem, 17.0.13-tem, 21.0.5-tem, 23.0.1-tem, 24.ea.23-open ]
+    env:
+      TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,11 +63,17 @@ jobs:
         run: chmod +x gradlew
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-      - name: Set up Java ${{ matrix.java }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.java }}
-          distribution: temurin
+      - name: Prepare OS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl zip unzip
+      - name: Prepare JDK ${{ matrix.java_version }}
+        run: |
+          curl -s "https://get.sdkman.io" | bash
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          echo 'n' | sdk install java ${{ matrix.java }}
+          which java
+          echo 'y' | sdk install java 11.0.25-tem
       - name: Download build data
         uses: actions/download-artifact@v4
         with:
@@ -73,6 +81,7 @@ jobs:
           path: btrace-dist/build
       - name: Run tests
         run: |
+          set +x
           ./gradlew -Pintegration :integration-tests:test
       - name: Integration test reports
         if: always()
