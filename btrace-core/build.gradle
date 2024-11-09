@@ -1,5 +1,9 @@
 import org.apache.tools.ant.filters.*
 
+buildscript { scriptHandler ->
+    apply from: rootProject.file('buildSrc/shared.gradle'), to: scriptHandler
+}
+
 plugins {
     alias(libs.plugins.versioning)
 }

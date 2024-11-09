@@ -6,7 +6,7 @@ apply plugin: 'java'
 apply plugin: 'idea'
 
 project.group = 'org.openjdk.btrace'
-project.version = '2.2.4'
+project.version = '2.2.6'
 
 buildscript {
     repositories {

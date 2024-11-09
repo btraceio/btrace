@@ -18,6 +18,76 @@ def distBase = "${project.buildDir}/resources/main"
 def distTarget = "${distBase}/v${project.version}"
 def libsDir = new File("${distTarget}/libs")
 
+def includes = [:]
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
+includes['agent'] = {
+    if (it.directory) {
+        return true
+    }
+    if (it.path.endsWith('.jar')) {
+        return true
+    }
+    return it.path.startsWith('org/jctools/') ||
+            it.path.startsWith('org/openjdk/btrace/agent/') ||
+            it.path.startsWith('org/openjdk/btrace/instr/') ||
+            // include the messages resource bundle and class in the agent jar (bootstrap can't load resources)
+            it.path == 'org/openjdk/btrace/core/Messages.class' ||
+            it.path == 'org/openjdk/btrace/core/messages.properties'
+}
+
+includes['boot'] = {
+    if (it.directory) {
+        return true
+    }
+    if (it.path.endsWith('.jar')) {
+        return true
+    }
+    if (it.path.startsWith('org/openjdk/btrace/core/')) {
+        if (it.path == 'org/openjdk/btrace/core/Messages.class' || it.path == 'org/openjdk/btrace/core/messages.properties') {
+            // messages resource bundle&class are hoisted to agent and client jars
+            return false
+        }
+        return true
+    }
+    if (it.path.startsWith('org/objectweb/asm/')) {
+        if (it.path.startsWith('org/objectweb/asm/commons/') ||
+                it.path.startsWith('org/objectweb/asm/util/') ||
+                it.path.startsWith('org/objectweb/asm/xml/')) {
+            return false
+        }
+        return true
+    }
+    return it.path.startsWith("org/slf4j/") || it.path.startsWith('org/openjdk/btrace/runtime/') ||
+            it.path.startsWith('org/jctools/') ||
+            it.path.startsWith('org/openjdk/btrace/services/') ||
+            it.path.startsWith('org/openjdk/btrace/statsd/')
+}
+
+includes['client'] = {
+    if (it.directory) {
+        return true
+    }
+    if (it.path.endsWith('.jar')) {
+        return true
+    }
+    if (it.path.startsWith('org/openjdk/btrace')) {
+        return !it.path.startsWith('org/openjdk/btrace/agent')
+    }
+    if (it.path.startsWith('META-INF/services')) {
+        return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
+    }
+    return it.path.startsWith("org/slf4j") ||
+            it.path.startsWith('org/objectweb/asm') ||
+            it.path.startsWith('org/jctools')
+}
+
+
 configurations {
     artifact.extendsFrom implementation
 }
@@ -62,22 +132,10 @@ task agentJar(type: ShadowJar) {
         )
     }
 
-    include {
-        if (it.directory) {
-            return true
-        }
-        if (it.path.endsWith('.jar')) {
-            return true
-        }
-        return it.path.startsWith('org/openjdk/btrace/agent/') ||
-               it.path.startsWith('org/openjdk/btrace/instr/') ||
-               // include the messages resource bundle and class in the agent jar (bootstrap can't load resources)
-               it.path == 'org/openjdk/btrace/core/Messages.class' ||
-               it.path == 'org/openjdk/btrace/core/messages.properties'
-    }
+    include includes['agent']
 
     configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.agent.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
     relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
@@ -90,41 +148,10 @@ task bootJar(type: ShadowJar) {
     destinationDirectory = libsDir
 
 
-    include {
-        if (it.directory) {
-            return true
-        }
-        if (it.path.endsWith('.jar')) {
-            return true
-        }
-        if (it.path.startsWith('org/openjdk/btrace/core/')) {
-            if (it.path == 'org/openjdk/btrace/core/Messages.class' || it.path == 'org/openjdk/btrace/core/messages.properties') {
-                // messages resource bundle&class are hoisted to agent and client jars
-                return false
-            }
-            return true
-        }
-        if (it.path.startsWith('org/jctools/')) {
-            if (it.path.startsWith('org/jctools/map/')) {
-                return false
-            }
-            return true
-        }
-        if (it.path.startsWith('org/objectweb/asm/')) {
-            if (it.path.startsWith('org/objectweb/asm/commons/') ||
-                it.path.startsWith('org/objectweb/asm/util/') ||
-                it.path.startsWith('org/objectweb/asm/xml/')) {
-                return false
-            }
-            return true
-        }
-        return it.path.startsWith("org/slf4j/") || it.path.startsWith('org/openjdk/btrace/runtime/') ||
-                it.path.startsWith('org/openjdk/btrace/services/') ||
-                it.path.startsWith('org/openjdk/btrace/statsd/')
-    }
+    include includes['boot']
 
     configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.org.jctools'
     relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
     relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
@@ -136,35 +163,12 @@ task clientJar(type: ShadowJar) {
     archiveClassifier.set('')
     destinationDirectory = libsDir
 
-    exclude 'afu/**'
-    exclude 'javax/**'
-    exclude 'com/**'
-    exclude 'sun/**'
-    exclude 'org/relaxng/**'
-    exclude 'org/checkerframework/**'
-    exclude 'org/codehaus/**'
-
-    exclude {
-        it.path.startsWith('org/jctools/maps/') &&
-        !it.path.startsWith("org/jctools/maps/NonBlockingIdentityHashMap") &&
-        !it.path.startsWith("org/jctools/maps/NonBlockingHashMap")
-    }
-    exclude {
-        // 'org/jctools/util/**'
-        it.path.startsWith('org/jctools/util/') &&
-        !it.path.startsWith("org/jctools/util/UnsafeAccess")
-    }
-    exclude 'META-INF/services/com.sun.*'
-    exclude 'META-INF/services/javax.annotation.*'
-
-    exclude 'org/objectweb/asm/xml/**'
-
-    exclude 'org/openjdk/btrace/agent/**'
+    include includes['client']
 
     configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.client.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.client.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.client.org.slf4j'
 }
 
 task fixPermissions(type: Exec) {
@@ -264,28 +268,84 @@ test {
 }
 
 ['agent', 'boot', 'client'].each { name ->
-    tasks.create(name: "${name}SourcesJar", type: Jar) {
+    // Define a temporary directory for the sources
+    def tempDir = new File(buildDir, "tmp/${name}Sources")
+
+    // first, we will copy the classes and make sure there are no empty directories
+    tasks.create(name: "${name}CopySources", type: Copy) {
+        doFirst {
+            tempDir.deleteDir()  // Ensure the directory is clean
+        }
+
+        into tempDir
+
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        gradle.projectsEvaluated {
+            rootProject.childProjects.each { projectName, siblingProject ->
+                // Skip the current project to avoid duplication
+                if (siblingProject != project) {
+                    from(siblingProject.sourceSets.main.allSource) {
+                        include includes["${name}"]
+                        exclude 'META-INF/**'
+                    }
+                }
+            }
+        }
+
+        doLast {
+            // Recursively delete empty directories
+            def deleteEmptyDirs
+            deleteEmptyDirs = { dir ->
+                dir.eachDir { subDir ->
+                    deleteEmptyDirs(subDir)
+                    if (!subDir.listFiles().any()) {
+                        subDir.deleteDir()
+                    }
+                }
+            }
+            deleteEmptyDirs(tempDir)
+        }
+    }
+
+    // we will use the output of the previous task to crate the JAR
+    tasks.create(name: "${name}SourcesJar", type: Jar, dependsOn: "${name}CopySources") {
         group 'Documentation'
         description "Build the btrace-${name} sources jar."
 
         archiveAppendix = "${name}"
         archiveClassifier = "sources"
-        from sourceSets.main.allSource
-        exclude excludes["${name}"]
-    }
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
+        from tempDir
+    }
 
     tasks.create(name: "${name}Javadoc", type: Javadoc) {
         group 'Documentation'
         description "Generates Javadoc API documentation for the btrace-${name}."
 
         title = "btrace-${name}"
-        source = sourceSets.main.allJava
         destinationDir = file("${project.docsDir}/${name}/javadoc")
         classpath = files(compileJava.destinationDirectory) + configurations.artifact.asFileTree
-        exclude excludes["${name}"]
         options.addStringOption('Xdoclint:all,-missing', '-quiet')
         failOnError false
+
+        project.parent.subprojects.each { subproject ->
+            // Skip the current project to avoid duplication
+            if (subproject != project) {
+                // Add source from sibling projects based on filter
+                source subproject.sourceSets.main.java.matching {
+                    include includes["${name}"]
+                }
+            }
+        }
+
+        // Include classpath of all sibling projects
+        project.parent.subprojects.each { subproject ->
+            // Skip the current project to avoid duplication
+            if (subproject != project) {
+                classpath += subproject.sourceSets.main.compileClasspath
+            }
+        }
     }
 
 
@@ -300,8 +360,8 @@ test {
 }
 
 sdkman {
-    consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_API_KEY')
-    consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
+    consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_KEY')
+    consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_TOKEN')
     candidate = "btrace"
     version = "${project.version}"
     url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-v${project.version}-sdkman-bin.zip"

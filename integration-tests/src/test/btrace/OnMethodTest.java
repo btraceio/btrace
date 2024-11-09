@@ -68,6 +68,23 @@ public class OnMethodTest {
         println("prop: " + property("btrace.test"));
     }
 
+    @OnMethod(clazz = "+resources.Main", method = "startWork")
+    public static void onSubtype() {
+        println("subtype");
+    }
+
+    @OnMethod(clazz = "resources.Main", method = "/^call.*/",
+              location = @Location(value = Kind.FIELD_GET, clazz = "resources.Main", field = "/^s?[fF]ield$/"))
+    public static void fieldGet(@TargetMethodOrField(fqn = true) String fldName) {
+        println("fieldGet: " + fldName);
+    }
+
+    @OnMethod(clazz = "resources.Main", method = "/^call.*/",
+        location = @Location(value = Kind.FIELD_SET, clazz = "resources.Main", field = "/^s?[fF]ield$/"))
+    public static void fieldSet(@TargetMethodOrField(fqn = true) String fldName) {
+        println("fieldSet: " + fldName);
+    }
+
     @OnTimer(500)
     public static void doRecurrent() {
         long x = 10;

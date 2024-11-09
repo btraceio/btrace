@@ -65,7 +65,7 @@ import org.openjdk.btrace.core.annotations.BTrace;
  * @author A. Sundararajan
  */
 @SupportedAnnotationTypes("*")
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class Verifier extends AbstractProcessor implements TaskListener {
   private final List<String> classNames = new ArrayList<>();
   private final List<CompilationUnitTree> compUnits = new ArrayList<>();

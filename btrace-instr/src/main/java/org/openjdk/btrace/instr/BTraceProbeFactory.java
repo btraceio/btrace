@@ -49,6 +49,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import org.openjdk.btrace.core.ArgsMap;
@@ -83,16 +84,46 @@ public final class BTraceProbeFactory {
    * and BTrace probe pack are supported.
    *
    * @param filePath the file path
-   * @return {@literal true} if a BTrace probe can be recornstructed from data in the given file
+   * @return {@literal true} if a BTrace probe can be reconstructed from data in the given file
    */
   public static boolean canLoad(String filePath) {
+    return canLoad(filePath, null);
+  }
+
+  public static boolean canLoad(String filePath, ClassLoader cl) {
     if (filePath == null) {
       return false;
     }
-    try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-      int magic = dis.readInt();
-      return magic == CLASS_MAGIC || magic == BTraceProbePersisted.MAGIC;
+    Path path = Paths.get(filePath);
+    InputStream is = null;
+    try {
+      if (!Files.exists(path)) {
+        // try to load from the classpath
+        if (cl == null) {
+          cl = ClassLoader.getSystemClassLoader();
+        }
+        is = cl.getResourceAsStream("META-INF/btrace/" + filePath);
+      } else {
+        is = Files.newInputStream(path);
+      }
+      if (is != null) {
+        try {
+          try (DataInputStream dis = new DataInputStream(is)) {
+            int magic = dis.readInt();
+            return magic == CLASS_MAGIC || magic == BTraceProbePersisted.MAGIC;
+          }
+        } catch (IOException ignored) {
+          is = null;
+        }
+      }
     } catch (IOException ignored) {
+    } finally {
+      if (is != null) {
+        try {
+          is.close();
+        } catch (IOException ignored) {
+        }
+      }
     }
     return false;
   }

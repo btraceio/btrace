@@ -29,7 +29,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -69,11 +68,11 @@ public abstract class RuntimeTest {
   /** Track retransforming progress */
   protected boolean trackRetransforms = false;
   /** Provide extra JVM args */
-  protected List<String> extraJvmArgs = Collections.emptyList();
+  private static final List<String> extraJvmArgs = new ArrayList<>();
 
   protected boolean attachDebugger = false;
 
-  public static void setup() {
+  public static void classSetup() {
     String forceDebugVal = System.getProperty("btrace.test.debug");
     if (forceDebugVal == null) {
       forceDebugVal = System.getenv("BTRACE_TEST_DEBUG");
@@ -97,8 +96,18 @@ public abstract class RuntimeTest {
     Assertions.assertNotNull(clientClassPath);
 
     String toolsjar = null;
-
-    javaHome = System.getProperty("java.home").replace("/jre", "");
+    // TEST_JAVA_HOME has the highest precedence
+    javaHome = System.getenv("TEST_JAVA_HOME");
+    if (javaHome == null) {
+      javaHome = System.getenv("JAVA_HOME");
+    }
+    if (javaHome == null) {
+      javaHome = System.getProperty("java.home");
+    }
+    if (javaHome == null) {
+      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
+    }
+    javaHome = javaHome.replace("/jre", "");
 
     Path toolsJarPath = Paths.get(javaHome, "lib", "tools.jar");
     if (Files.exists(toolsJarPath)) {
@@ -151,6 +160,7 @@ public abstract class RuntimeTest {
     }
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
+    args.add("-XX:+EnableDynamicAgentLoading");
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
@@ -389,16 +399,12 @@ public abstract class RuntimeTest {
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
     argVals.addAll(Arrays.asList(args));
-    String testJavaHome = System.getenv("TEST_JAVA_HOME");
-    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
-    if (testJavaHome == null) {
-      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
-    }
-    if (Files.exists(Paths.get(testJavaHome, "jmods"))) {
+    if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
           1,
           Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
     }
+
     ProcessBuilder pb = new ProcessBuilder(argVals);
 
     pb.environment().remove("JAVA_TOOL_OPTIONS");
@@ -485,7 +491,7 @@ public abstract class RuntimeTest {
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
     argVals.addAll(Arrays.asList(args));
-    if (Files.exists(Paths.get(System.getenv("TEST_JAVA_HOME"), "jmods"))) {
+    if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
           1,
           Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
@@ -637,11 +643,7 @@ public abstract class RuntimeTest {
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
     }
-    String testJavaHome = System.getenv("TEST_JAVA_HOME");
-    if (testJavaHome == null) {
-      testJavaHome = System.getenv("JAVA_HOME");
-    }
-    if (Files.exists(Paths.get(testJavaHome, "jmods"))) {
+    if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
           1,
           Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));

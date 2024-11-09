@@ -50,8 +50,8 @@ import org.junit.jupiter.api.Test;
  */
 public class BTraceFunctionalTests extends RuntimeTest {
   @BeforeAll
-  public static void classSetup() throws Exception {
-    setup();
+  public static void setup() throws Exception {
+    classSetup();
   }
 
   @BeforeEach
@@ -153,7 +153,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     test(
         "resources.Main",
         "btrace/OnMethodTest.java",
-        10,
+        14,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -164,6 +164,10 @@ public class BTraceFunctionalTests extends RuntimeTest {
             assertTrue(stdout.contains("{xxx}"));
             assertTrue(stdout.contains("heap:init"));
             assertTrue(stdout.contains("prop: test"));
+            assertTrue(stdout.contains("fieldSet: field java.lang.String resources.Main#field"));
+            assertTrue(stdout.contains("fieldSet: static field java.lang.String resources.Main#sField"));
+            assertTrue(stdout.contains("fieldGet: field java.lang.String resources.Main#field"));
+            assertTrue(stdout.contains("fieldGet: static field java.lang.String resources.Main#sField"));
           }
         });
   }

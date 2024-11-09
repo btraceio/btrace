@@ -65,6 +65,6 @@ test {
     if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
         jvmArgs "-Dproject.version=${project.version}"
     } else {
-        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
     }
 }

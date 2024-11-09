@@ -1,11 +1,5 @@
 package org.openjdk.btrace.instr;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.DebugSupport;
@@ -13,6 +7,13 @@ import org.openjdk.btrace.core.HandlerRepository;
 import org.openjdk.btrace.core.SharedSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class HandlerRepositoryImpl {
   private static final Logger log = LoggerFactory.getLogger(HandlerRepositoryImpl.class);
@@ -45,7 +46,7 @@ public final class HandlerRepositoryImpl {
     BTraceProbe probe = probeMap.get(probeName);
     ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 
-    String handlerClassName = callerName.replace('.', '/');
+    String handlerClassName = callerName.replace('.', '/') + "$" + probeName.replace('/', '_');
     ClassVisitor visitor =
         new CopyingVisitor(handlerClassName, true, writer) {
           @Override

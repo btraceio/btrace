@@ -19,20 +19,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Java
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v4
         with:
           java-version: 11
+          distribution: temurin
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/actions/setup-gradle@v4
       - name: Build
         run: ./gradlew build
       - name: Upload build data
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build
           retention-days: 1
@@ -40,7 +41,7 @@ jobs:
             btrace-dist/build
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: |
@@ -52,20 +53,21 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        java: [ 8, 11, 17, 20 ]
+        java: [ 8, 11, 17, 21 ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/actions/setup-gradle@v4
       - name: Set up Java ${{ matrix.java }}
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: Download build data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build
           path: btrace-dist/build
@@ -74,15 +76,15 @@ jobs:
           ./gradlew -Pintegration :integration-tests:test
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: integration-test-reports
+          name: integration-test-reports-${{ matrix.java }}
           path: |
             integration-tests/build/reports/**/*
       - name: Archive binary artifacts
-        uses: actions/upload-artifact@v3
+        if: success() && matrix.java == '11'
+        uses: actions/upload-artifact@v4
         with:
-          if: success()
           name: btrace-dist
           path: |
             btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
@@ -93,21 +95,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
+      uses: gradle/actions/setup-gradle@v4
     - name: Set up Java
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v4
       with:
         java-version: 11
+        distribution: temurin
     - name: Download build data
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build
     - name: Deploy Maven
-      run: JAVA_HOME="$JAVA_11_HOME" ./gradlew -x test :btrace-dist:publish
+      run: ./gradlew -x test :btrace-dist:publish
       env:
         GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
@@ -119,6 +122,6 @@ jobs:
     needs: publish
     steps:
       - name: Cleanup temporary artifacts
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: build

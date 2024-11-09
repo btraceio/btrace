@@ -30,6 +30,8 @@ package resources;
  */
 public class Main extends TestApp {
     private String id = "xxx";
+    private String field;
+    private static String sField;
 
     public static void main(String[] args) throws Exception {
         Main i = new Main();
@@ -49,11 +51,13 @@ public class Main extends TestApp {
     }
 
     private void callA() {
+        field = "AAA";
+        sField = "BBB";
         print("i=" + callB(1, "Hello World"));
     }
 
     private int callB(int i, String s) {
-        print("[" + i + "] = " + s);
+        print("[" + i + "] = " + s + ", field = " + field + ", sField = " + sField);
         return i + 1;
     }
 

@@ -29,6 +29,10 @@ import java.io.Console;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Properties;
+
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.comm.Command;
@@ -83,8 +87,20 @@ public final class Main {
       if (log.isDebugEnabled()) log.debug("dumpDir is {}", DUMP_DIR);
     }
     PROBE_DESC_PATH = System.getProperty("com.sun.btrace.probeDescPath", ".");
-    con = System.console();
+    String javaVersion = getJavaVersion();
+    // In Java 22 the console will write standard output to stderr :shrug:
+    con = javaVersion == null || !javaVersion.startsWith("22") ? System.console() : null;
     out = getOutWriter(con);
+  }
+
+  private static String getJavaVersion() {
+    Properties props = new Properties();
+    try {
+      props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")));
+      return props.getProperty("JAVA_VERSION").replace("\"", "");
+    } catch (IOException ignored) {
+      return null;
+    }
   }
 
   @SuppressWarnings("DefaultCharset")

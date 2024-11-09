@@ -271,7 +271,7 @@ public class Postprocessor extends ClassVisitor {
         case Opcodes.DLOAD:
           {
             simulatedStack.push(Boolean.FALSE);
-            // long and double occoupy 2 stack slots; fall through
+            // long and double occupy 2 stack slots; fall through
           }
         case Opcodes.ILOAD:
         case Opcodes.FLOAD:
@@ -283,7 +283,7 @@ public class Postprocessor extends ClassVisitor {
         case Opcodes.DSTORE:
           {
             simulatedStack.poll();
-            // long and double occoupy 2 stack slots; fall through
+            // long and double occupy 2 stack slots; fall through
           }
         case Opcodes.ASTORE:
         case Opcodes.ISTORE:

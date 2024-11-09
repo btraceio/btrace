@@ -261,6 +261,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
       }
       Verifier.reportError("no.new.object", desc);
     }
+    super.visitTypeInsn(opcode, desc);
   }
 
   @Override

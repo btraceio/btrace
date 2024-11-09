@@ -24,16 +24,21 @@
  */
 package org.openjdk.btrace.instr;
 
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Arbitrary class info type allowing access to supertype information also for not-already-loaded
@@ -45,7 +50,7 @@ public final class ClassInfo {
   private static final Logger log = LoggerFactory.getLogger(ClassInfo.class);
 
   private static final ClassLoader SYS_CL = ClassLoader.getSystemClassLoader();
-  private static volatile Method BSTRP_CHECK_MTD;
+  private static volatile MethodHandle BSTRP_CHECK_MTD;
   private final String cLoaderId;
   private final ClassName classId;
 
@@ -109,31 +114,9 @@ public final class ClassInfo {
     }
   }
 
-  private static boolean isBootstrap(String className) {
-    try {
-      Method m = getCheckBootstrap();
-      if (m != null) {
-        return m.invoke(SYS_CL, className) != null;
-      }
-    } catch (Throwable t) {
-      log.warn("Unable to check for class {} being loaded by bootstrap classloader", className, t);
-    }
-    return false;
-  }
-
-  private static Method getCheckBootstrap() {
-    if (BSTRP_CHECK_MTD != null) {
-      return BSTRP_CHECK_MTD;
-    }
-    Method m = null;
-    try {
-      m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
-      m.setAccessible(true);
-    } catch (Throwable t) {
-      log.warn("Can not resolve method 'findBootstrapClassOrNull'", t);
-    }
-    BSTRP_CHECK_MTD = m;
-    return BSTRP_CHECK_MTD;
+  // package private only for testing purposes
+  static boolean isBootstrap(String className) {
+    return BTraceRuntime.isBootstrapClass(className);
   }
 
   /**

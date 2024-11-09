@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.net.URL;
+import java.net.URLClassLoader;
+
 import org.junit.jupiter.api.Test;
 
 class BTraceProbeFactoryTest {
@@ -40,5 +42,15 @@ class BTraceProbeFactoryTest {
     assertNotNull(rsrc);
 
     assertFalse(BTraceProbeFactory.canLoad(new File(rsrc.toURI()).getPath()));
+  }
+
+  @Test
+  void canLoadFromPack() throws Exception {
+    URL jarUrl = BTraceProbeFactoryTest.class.getResource("/packed/test-pack.jar");
+    assertNotNull(jarUrl);
+
+    try (URLClassLoader cl = new URLClassLoader(new URL[] {jarUrl})) {
+      assertTrue(BTraceProbeFactory.canLoad("io/btrace/btrace_test/AllMethods.class", cl));
+    }
   }
 }

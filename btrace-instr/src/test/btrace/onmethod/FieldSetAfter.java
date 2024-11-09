@@ -46,7 +46,7 @@ public class FieldSetAfter {
           @Location(
               value = Kind.FIELD_SET,
               clazz = "resources.OnMethodTest",
-              field = "field",
+              field = "/^field$/",
               where = Where.AFTER))
   public static void args(
       @Self Object self,
