@@ -37,6 +37,7 @@ jobs:
         with:
           draft: false
           prerelease: true
+          generate_release_notes: true
           files: |
             btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.tar.gz
             btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.zip
