@@ -35,8 +35,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          draft: true
-          prerelease: false
+          draft: false
+          prerelease: true
           files: |
             btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.tar.gz
             btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.zip
