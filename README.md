@@ -62,21 +62,3 @@ The [maven plugin](https://github.com/btraceio/btrace-maven) is providing easy c
 ## Contributing - !!! Important !!!
 
 Pull requests can be accepted only from the signers of [Oracle Contributor Agreement](https://oca.opensource.oracle.com/)
-
-### Deb Repository
-
-Using the command line, add the following to your /etc/apt/sources.list system config file:
-
-```
-echo "deb http://dl.bintray.com/btraceio/deb xenial universe" | sudo tee -a /etc/apt/sources.list
-```
-
-Or, add the repository URLs using the "Software Sources" admin UI:
-
-```
-deb http://dl.bintray.com/btraceio/deb xenial universe
-```
-
-### RPM Repository
-
-Grab the _*.repo_ file `wget https://bintray.com/btraceio/rpm/rpm -O bintray-btraceio-rpm.repo` and use it.
