@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
+ * particular file as subject to the Classpath exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -22,46 +22,22 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package resources;
 
-/**
- * @author Jaroslav Bachorik
- */
-public class Main extends TestApp {
-  private String id = "xxx";
-  private String field;
-  private static String sField;
+package traces;
 
-  public static void main(String[] args) throws Exception {
-    Main i = new Main();
-    i.start();
-  }
+import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.OnMethod;
+import org.openjdk.btrace.core.annotations.Self;
 
-  @Override
-  protected void startWork() {
-    while (!Thread.currentThread().isInterrupted()) {
-      callA();
-      try {
-        Thread.sleep(200);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+@BTrace
+public class ThreadStart {
+    @OnMethod(
+            clazz = "java.lang.Thread",
+            method = "start"
+    )
+    public static void onnewThread(@Self Thread t) {
+        println("starting " + Threads.name(t));
     }
-  }
-
-  private void callA() {
-    field = "AAA";
-    sField = "BBB";print("i=" + callB(1, "Hello World"));
-  }
-
-  private int callB(int i, String s) {
-    print("[" + i + "] = " + s + ", field = " + field + ", sField = " + sField);
-    return i + 1;
-  }
-
-  @Override
-  public void print(String msg) {
-    System.out.println(msg);
-    System.out.flush();
-  }
 }

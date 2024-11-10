@@ -40,7 +40,10 @@ import jdk.jfr.consumer.RecordingFile;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * A set of end-to-end functional tests.
@@ -176,7 +179,6 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testTraceAll() throws Exception {
-      String rtVersion = System.getProperty("java.runtime.version", "");
       String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
       if (testJavaHome == null) {
           testJavaHome = System.getenv("JAVA_HOME");
@@ -190,7 +192,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
       Properties releaseProps = new Properties();
       releaseProps.load(
               Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
-      rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
+      String rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
       if (!isVersionSafeForTraceAll(rtVersion)) {
           System.err.println("Skipping test for JDK " + rtVersion);
           return;
@@ -496,6 +498,40 @@ public class BTraceFunctionalTests extends RuntimeTest {
           }
         });
   }
+
+    @ParameterizedTest(name = "testThreadStart: dynamic={0}")
+    @ValueSource(booleans = {true, false})
+    public void testThreadStart(boolean dynamic) throws Exception {
+        if (dynamic) {
+            testDynamic(
+                    "resources.ThreadSpawner",
+                    "traces/ThreadStart.class",
+                    null,
+                    10,
+                    new ResultValidator() {
+                        @Override
+                        public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+                            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+                            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+                            assertTrue(stdout.contains("starting testThread"));
+                        }
+                    });
+        } else {
+            testStartup(
+                    "resources.ThreadSpawner",
+                    "traces/ThreadStart.class",
+                    null,
+                    10,
+                    new ResultValidator() {
+                        @Override
+                        public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+                            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+                            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+                            assertTrue(stdout.contains("starting testThread"));
+                        }
+                    });
+        }
+    }
 
   private static boolean isVersionSafeForJfr(String rtVersion) {
       System.out.println("===> version: " + rtVersion);
