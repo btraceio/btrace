@@ -114,7 +114,9 @@ jobs:
 
   publish:
     if: github.ref ==  'refs/heads/develop' || github.ref == 'refs/heads/master'
-    needs: test
+    needs: 
+      - test
+      - build
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -131,7 +133,7 @@ jobs:
     - name: Download build data
       uses: actions/download-artifact@v4
       with:
-        name: build
+        name: dist-build
     - name: Deploy Maven
       run: ./gradlew -x test :btrace-dist:publish
       env:
@@ -147,4 +149,4 @@ jobs:
       - name: Cleanup temporary artifacts
         uses: geekyeggo/delete-artifact@v5
         with:
-          name: build
+          name: dist-build
