@@ -31,10 +31,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Generate cache key
         id: cache-key
-        run: echo "key=${{ runner.os }}-gradle-1-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}" >> $GITHUB_ENV
-      - name: Export cache key as output
-        id: export-key
-        run: echo "::set-output name=cache-key::${{ env.key }}"
+        run: |
+          key="${{ runner.os }}-gradle-1-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}"
+          echo "key=${key}" >> $GITHUB_ENV
+          echo "cache-key=${key}" >> $GITHUB_OUTPUT
       - name: Cache Gradle
         uses: actions/cache@v3
         with:
@@ -71,7 +71,7 @@ jobs:
           path: |
             **/reports/**/*
     outputs:
-      cache-key: ${{ steps.export-key.outputs.cache-key }}
+      cache-key: ${{ steps.cache-key.outputs.cache-key }}
 
   test:
     needs: build
