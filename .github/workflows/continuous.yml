@@ -115,6 +115,8 @@ jobs:
         run: |
           set +x
           ./gradlew --no-daemon -Pintegration :integration-tests:test
+      - name: Check Gradle cache size
+        run: du -sh ~/.gradle/caches
       - name: Integration test reports
         if: always()
         uses: actions/upload-artifact@v4
