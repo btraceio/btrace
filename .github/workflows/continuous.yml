@@ -32,12 +32,14 @@ jobs:
       - name: Cache Gradle
         uses: actions/cache@v3
         with:
-          path: ~/.gradle/caches
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Build
-        run: ./gradlew build
+        run: ./gradlew --no-daemon build
       - name: Upload dist build data
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,7 +95,9 @@ jobs:
       - name: Cache Gradle
         uses: actions/cache@v3
         with:
-          path: ~/.gradle/caches
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
@@ -110,7 +114,7 @@ jobs:
       - name: Run tests
         run: |
           set +x
-          ./gradlew -Pintegration :integration-tests:test
+          ./gradlew --no-daemon -Pintegration :integration-tests:test
       - name: Integration test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -147,7 +151,9 @@ jobs:
     - name: Cache Gradle
       uses: actions/cache@v3
       with:
-        path: ~/.gradle/caches
+        path: |
+          ~/.gradle/caches/modules-2
+          ~/.gradle/wrapper
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
