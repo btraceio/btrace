@@ -24,7 +24,6 @@
  */
 package org.openjdk.btrace.agent;
 
-import static org.openjdk.btrace.core.Args.ALLOWED_CALLS;
 import static org.openjdk.btrace.core.Args.BOOT_CLASS_PATH;
 import static org.openjdk.btrace.core.Args.CMD_QUEUE_LIMIT;
 import static org.openjdk.btrace.core.Args.CONFIG;
@@ -266,29 +265,6 @@ public final class Main {
                   }
 
                   argMap.put(argKey, scriptVal);
-                  break;
-                }
-              case ALLOWED_CALLS:
-                {
-                  if (Boolean.parseBoolean(argMap.get(argKey))) {
-                    // merge allowed calls from command line and agent.properties
-                    String oldVal = argMap.get(argKey);
-                    String newVal = oldVal + "|" + argVal;
-                    logMsg
-                        .append("merging default agent argument '")
-                        .append(argKey)
-                        .append("':'")
-                        .append(oldVal)
-                        .append("' with '")
-                        .append(argVal)
-                        .append("'");
-                    argMap.put(argKey, newVal);
-                  } else {
-                    logMsg
-                        .append("argument '")
-                        .append(argKey)
-                        .append("' is applicable only in sandboxed mode");
-                  }
                   break;
                 }
               case SYSTEM_CLASS_PATH: // fall through
