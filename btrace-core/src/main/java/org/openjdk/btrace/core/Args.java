@@ -1,7 +1,6 @@
 package org.openjdk.btrace.core;
 
 public final class Args {
-  public static final String ALLOWED_CALLS = "allowedCalls";
   public static final String SYSTEM_CLASS_PATH = "systemClassPath";
   public static final String BOOT_CLASS_PATH = "bootClassPath";
   public static final String CONFIG = "config";
