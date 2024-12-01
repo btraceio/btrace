@@ -42,7 +42,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Build
-        run: ./gradlew --no-daemon build
+        run: ./gradlew --no-daemon --parallel --build-cache build
       - name: Upload dist build data
         if: always()
         uses: actions/upload-artifact@v4
@@ -117,7 +117,7 @@ jobs:
       - name: Run tests
         run: |
           set +x
-          ./gradlew --no-daemon -Pintegration :integration-tests:test
+          ./gradlew --no-daemon --parallel --build-cache  -Pintegration :integration-tests:test
       - name: Check Gradle cache size
         run: du -sh ~/.gradle/caches
       - name: Integration test reports
