@@ -32,6 +32,9 @@ jobs:
       - name: Generate cache key
         id: cache-key
         run: echo "key=${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}" >> $GITHUB_ENV
+      - name: Export cache key as output
+        id: export-key
+        run: echo "::set-output name=cache-key::${{ env.key }}"
       - name: Cache Gradle
         uses: actions/cache@v3
         with:
@@ -67,6 +70,8 @@ jobs:
           name: test-reports
           path: |
             **/reports/**/*
+    outputs:
+      cache-key: ${{ steps.export-key.outputs.cache-key }}
 
   test:
     needs: build
@@ -95,18 +100,13 @@ jobs:
           echo 'n' | sdk install java ${{ matrix.java }}
           which java
           echo 'y' | sdk install java 11.0.25-tem
-      - name: Use cache key from build job
-        run: |
-          echo "Cache key: ${{ needs.build.outputs.cache-key }}"
-        env:
-          CACHE_KEY: ${{ needs.build.outputs.cache-key }}
       - name: Cache Gradle
         uses: actions/cache@v3
         with:
           path: |
             ~/.gradle/caches/modules-2
             ~/.gradle/wrapper
-          key: ${CACHE_KEY}
+          key: ${{ needs.build.outputs.cache-key }}
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Download build data
@@ -158,18 +158,13 @@ jobs:
       with:
         java-version: 11
         distribution: temurin
-    - name: Use cache key from build job
-      run: |
-        echo "Cache key: ${{ needs.build.outputs.cache-key }}"
-      env:
-        CACHE_KEY: ${{ needs.build.outputs.cache-key }}
     - name: Cache Gradle
       uses: actions/cache@v3
       with:
         path: |
           ~/.gradle/caches/modules-2
           ~/.gradle/wrapper
-        key: ${CACHE_KEY}
+        key: ${{ needs.build.outputs.cache-key }}
         restore-keys: |
           ${{ runner.os }}-gradle-
     - name: Download build data
