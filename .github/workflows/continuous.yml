@@ -95,13 +95,18 @@ jobs:
           echo 'n' | sdk install java ${{ matrix.java }}
           which java
           echo 'y' | sdk install java 11.0.25-tem
+      - name: Use cache key from build job
+        run: |
+          echo "Cache key: ${{ needs.build.outputs.cache-key }}"
+        env:
+          CACHE_KEY: ${{ needs.build.outputs.cache-key }}
       - name: Cache Gradle
         uses: actions/cache@v3
         with:
           path: |
             ~/.gradle/caches/modules-2
             ~/.gradle/wrapper
-          key: ${{ env.key }}
+          key: ${CACHE_KEY}
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Download build data
@@ -153,13 +158,18 @@ jobs:
       with:
         java-version: 11
         distribution: temurin
+    - name: Use cache key from build job
+      run: |
+        echo "Cache key: ${{ needs.build.outputs.cache-key }}"
+      env:
+        CACHE_KEY: ${{ needs.build.outputs.cache-key }}
     - name: Cache Gradle
       uses: actions/cache@v3
       with:
         path: |
           ~/.gradle/caches/modules-2
           ~/.gradle/wrapper
-        key: ${{ env.key }}
+        key: ${CACHE_KEY}
         restore-keys: |
           ${{ runner.os }}-gradle-
     - name: Download build data
