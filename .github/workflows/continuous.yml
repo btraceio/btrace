@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        java: [ 8.0.432-tem, 11.0.25-tem, 17.0.13-tem, 21.0.5-tem, 23.0.1-tem, 24.ea.23-open ]
+        java: [ 8.0.432-tem, 11.0.25-tem, 17.0.13-tem, 21.0.5-tem, 23.0.1-tem, 24.ea.31-open, 25.ea.5-open ]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
