@@ -122,6 +122,7 @@ jobs:
       - name: Run tests
         run: |
           set +x
+          find btrace-dist/build -name 'btrace-client.jar'
           ./gradlew --no-daemon --parallel --build-cache  -Pintegration :integration-tests:test
       - name: Check Gradle cache size
         run: du -sh ~/.gradle/caches
