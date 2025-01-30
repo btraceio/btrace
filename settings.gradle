@@ -30,7 +30,7 @@ dependencyResolutionManagement {
             // Families...
             version('asm', '9.7.1')
             version('jmh', '1.36')
-            version('jmhGradlePlugin', '0.7.2')
+            version('jmhGradlePlugin', '0.7.3')
             version('slf4j', '1.7.36')
             version('junit', '5.11.3')
 
