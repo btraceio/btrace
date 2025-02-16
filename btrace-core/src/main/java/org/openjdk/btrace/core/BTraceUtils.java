@@ -87,7 +87,15 @@ public class BTraceUtils {
     BTraceRuntime.forEach(collection, consumer);
   }
 
+  public static <T> void forEach(MethodHandle consumer, T[] data) {
+    BTraceRuntime.forEach(data, consumer);
+  }
+
   public static <T> void forEach(Collection<T> collection, Consumer<T> consumer) {
+    throw new UnsupportedOperationException();
+  }
+
+  public static <T> void forEach(T[] data, Consumer<T> consumer) {
     throw new UnsupportedOperationException();
   }
 

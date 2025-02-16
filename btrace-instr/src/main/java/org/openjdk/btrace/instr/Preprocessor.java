@@ -139,6 +139,7 @@ final class Preprocessor {
       "(" + Constants.THROWABLE_DESC + ")" + Constants.VOID_DESC;
   private static final String BTRACE_UTILS_INTERNAL = "org/openjdk/btrace/core/BTraceUtils";
   private static final String FOREACH_COLLECTION_DESC = "(Ljava/util/Collection;Ljava/util/function/Consumer;)V";
+  private static final String FOREACH_ARRAY_DESC = "([Ljava/lang/Object;Ljava/util/function/Consumer;)V";
   private static final String RT_CTX_INTERNAL = "org/openjdk/btrace/services/api/RuntimeContext";
   private static final String RT_CTX_DESC = "L" + RT_CTX_INTERNAL + ";";
   private static final Type RT_CTX_TYPE = Type.getType(RT_CTX_DESC);
@@ -1256,27 +1257,52 @@ final class Preprocessor {
       if (n.getType() == AbstractInsnNode.METHOD_INSN) {
         MethodInsnNode min = (MethodInsnNode) n;
         if (min.getOpcode() == Opcodes.INVOKESTATIC &&
-            min.owner.equals(BTRACE_UTILS_INTERNAL) &&
-            min.name.equals("forEach")) {
-          if (min.desc.equals(FOREACH_COLLECTION_DESC)) {
-            AbstractInsnNode prev = min.getPrevious();
-            if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
-              InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
-              if (idin.name.equals("accept")) {
-                Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "methodRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
-                Handle lambda = ((Handle) idin.bsmArgs[1]);
-                InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
-                        "BTraceUtils#forEach",
-                        "(Ljava/util/Collection;)V",
-                        bootstrap,
-                        lambda.getOwner(),
-                        lambda.getName(),
-                        lambda.getDesc()
-                );
-                mn.instructions.insertBefore(idin, i1);
-                mn.instructions.remove(idin);
-                mn.instructions.remove(min);
+            min.owner.equals(BTRACE_UTILS_INTERNAL)) {
+          switch (min.name) {
+            case "forEach": {
+              AbstractInsnNode prev = min.getPrevious();
+              if (min.desc.equals(FOREACH_COLLECTION_DESC)) {
+                if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+                  InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
+                  if (idin.name.equals("accept")) {
+                    Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "methodRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
+                    Handle lambda = ((Handle) idin.bsmArgs[1]);
+                    InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
+                            "BTraceUtils#" + min.name,
+                            "(Ljava/util/Collection;)V",
+                            bootstrap,
+                            lambda.getOwner(),
+                            lambda.getName(),
+                            lambda.getDesc()
+                    );
+                    mn.instructions.insertBefore(idin, i1);
+                    mn.instructions.remove(idin);
+                    mn.instructions.remove(min);
+                    n = i1;
+                  }
+                }
+              } else if (min.desc.equals(FOREACH_ARRAY_DESC)) {
+                if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+                  InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
+                  if (idin.name.equals("accept")) {
+                    Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "methodRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
+                    Handle lambda = ((Handle) idin.bsmArgs[1]);
+                    InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
+                            "BTraceUtils#" + min.name,
+                            "([Ljava/lang/Object;)V",
+                            bootstrap,
+                            lambda.getOwner(),
+                            lambda.getName(),
+                            lambda.getDesc()
+                    );
+                    mn.instructions.insertBefore(idin, i1);
+                    mn.instructions.remove(idin);
+                    mn.instructions.remove(min);
+                    n = i1;
+                  }
+                }
               }
+              break;
             }
           }
         }

@@ -122,11 +122,13 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
     @Test
     public void testOnTimerWithMethodRef() throws Exception {
+      isUnsafe = true;
+      debugBTrace = true;
       attachDebugger = true;
       testDynamic(
             "resources.Main",
             "btrace/MethodRefProbe.java",
-            20,
+            500,
             new ResultValidator() {
                 @Override
                 public void validate(String stdout, String stderr, int retcode, String jfrFile) {

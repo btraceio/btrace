@@ -79,7 +79,7 @@ public final class Indy {
 
     // offset 12 - BTraceUtils#
     name = name.substring(12);
-    MethodHandle target = MethodHandles.publicLookup().findStatic(BTraceUtils.class, name, MethodType.methodType(void.class, MethodHandle.class, Collection.class));
+    MethodHandle target = MethodHandles.publicLookup().findStatic(BTraceUtils.class, name, MethodType.methodType(void.class, MethodHandle.class, type.parameterType(0)));
     target = target.bindTo(mh);
 
     return new ConstantCallSite(target);

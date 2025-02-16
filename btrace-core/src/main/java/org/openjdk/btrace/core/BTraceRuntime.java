@@ -1224,6 +1224,16 @@ public final class BTraceRuntime {
     }
   }
 
+  static <T> void forEach(T[] data, MethodHandle consumer) {
+    try {
+      for (T elem : data) {
+        consumer.invoke(elem);
+      }
+    } catch (Throwable t) {
+      log.warn("Failed iterating over array", t);
+    }
+  }
+
   // private methods below this point
   // raise DTrace USDT probe
   private static native int dtraceProbe0(String s1, String s2, int i1, int i2);

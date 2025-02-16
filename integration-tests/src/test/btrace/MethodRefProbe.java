@@ -32,7 +32,7 @@ import static org.openjdk.btrace.core.BTraceUtils.*;
  *
  * @author Jaroslav Bachorik
  */
-@BTrace
+@BTrace(trusted = true)
 public class MethodRefProbe {
     private static Deque<String> deque = newDeque();
 
@@ -40,6 +40,9 @@ public class MethodRefProbe {
     public static void args(@Self Object self, int i, String s) {
         push(deque, s);
         forEach(deque, MethodRefProbe::printStr1);
+
+        String[] x = new String[] {"one", "two"};
+        forEach(x, MethodRefProbe::printStr2);
     }
 
     public static void printStr1(String val) {
