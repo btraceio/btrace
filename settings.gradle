@@ -40,7 +40,7 @@ dependencyResolutionManagement {
             plugin ('ospackage', 'com.netflix.nebula.ospackage').version('11.10.0')
             plugin ('shadow', 'com.github.johnrengelman.shadow').version('8.1.1')
             plugin ('sdkman-vendors', 'io.sdkman.vendors').version('3.0.0')
-            plugin ('foojay-resolver', 'org.gradle.toolchains.foojay-resolver-convention').version('0.8.0')
+            plugin ('foojay-resolver', 'org.gradle.toolchains.foojay-resolver-convention').version('0.9.0')
 
             plugin ('jmh', 'me.champeau.jmh').versionRef('jmhGradlePlugin')
 
