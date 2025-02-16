@@ -139,9 +139,14 @@ class StackTrackingMethodVisitor extends MethodVisitor {
   }
 
   @Override
-  public void visitInvokeDynamicInsn(String string, String string1, Handle handle, Object... os) {
-    super.visitInvokeDynamicInsn(string, string1, handle, os);
+  public void visitInvokeDynamicInsn(String name, String desc, Handle handle, Object... args) {
+    // special handling for metafactory converting method reference to a functional interface instance
+    if (InstrumentUtils.isMethodRef(desc, handle)) {
+      state.push(new InstanceItem(Type.getMethodType(desc).getReturnType()));
+    }
+    super.visitInvokeDynamicInsn(name, desc, handle, args);
   }
+
 
   @Override
   public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itfc) {

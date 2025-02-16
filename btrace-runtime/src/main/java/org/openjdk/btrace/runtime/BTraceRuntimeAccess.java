@@ -126,6 +126,15 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
     runtimes.put(className, rt);
   }
 
+  public static void setUniqueClientClassNames(boolean value) {
+    try {
+      Field f = BTraceRuntimeAccess.class.getDeclaredField("uniqueClientClassNames");
+      f.setAccessible(true);
+      f.set(null, value);
+    } catch (Exception ignored) {
+    }
+  }
+
   /** Enter method is called by every probed method just before the probe actions start. */
   public static boolean enter(BTraceRuntime.Impl currentRt) {
     BTraceRuntimeImplBase current = (BTraceRuntimeImplBase) currentRt;

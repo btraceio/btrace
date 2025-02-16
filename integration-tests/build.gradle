@@ -55,6 +55,6 @@ test {
     if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
         jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
     } else {
-        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
     }
 }

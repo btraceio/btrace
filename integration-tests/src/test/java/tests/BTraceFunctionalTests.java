@@ -120,6 +120,24 @@ public class BTraceFunctionalTests extends RuntimeTest {
         });
   }
 
+    @Test
+    public void testOnTimerWithMethodRef() throws Exception {
+      attachDebugger = true;
+      testDynamic(
+            "resources.Main",
+            "btrace/MethodRefProbe.java",
+            20,
+            new ResultValidator() {
+                @Override
+                public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+                    assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+                    assertTrue(stderr.isEmpty(), "Non-empty stderr");
+                    assertTrue(stdout.contains("[1] Hello World"));
+                    assertTrue(stdout.contains("[2] Hello World"));
+                }
+            });
+    }
+
   @Test
   public void testOnTimerArg() throws Exception {
     testDynamic(

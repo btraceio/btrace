@@ -1820,16 +1820,15 @@ public class Instrumentor extends ClassVisitor {
     return getActionMethodName(bcn, name);
   }
 
+  private static final MethodType indyBoostrapMt = MethodType.methodType(
+          CallSite.class,
+          MethodHandles.Lookup.class,
+          String.class,
+          MethodType.class,
+          String.class);
+
   private void invokeBTraceAction(Assembler asm, OnMethod om) {
     if (useHiddenClasses) {
-      MethodType mt =
-          MethodType.methodType(
-              CallSite.class,
-              MethodHandles.Lookup.class,
-              String.class,
-              MethodType.class,
-              String.class);
-
       asm.invokeDynamic(
           getActionMethodName(om.getTargetName()),
           om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
@@ -1837,7 +1836,7 @@ public class Instrumentor extends ClassVisitor {
               H_INVOKESTATIC,
               "org/openjdk/btrace/runtime/Indy",
               "bootstrap",
-              mt.toMethodDescriptorString(),
+              indyBoostrapMt.toMethodDescriptorString(),
               false),
           bcn.getClassName(true));
     } else {

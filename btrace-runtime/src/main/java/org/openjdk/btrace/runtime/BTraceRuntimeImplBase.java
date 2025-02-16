@@ -1091,6 +1091,11 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     return buf.toString();
   }
 
+  @Override
+  public boolean isBootstrapClass(String className) {
+    return false;
+  }
+
   private static void initMemoryPoolList() {
     try {
       memPoolList =

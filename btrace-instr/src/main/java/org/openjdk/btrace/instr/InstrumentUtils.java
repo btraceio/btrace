@@ -36,6 +36,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
 
 /**
@@ -252,5 +253,9 @@ public final class InstrumentUtils {
 
   static String getActionPrefix(String className) {
     return Constants.BTRACE_METHOD_PREFIX + className.replace('/', '$') + "$";
+  }
+
+  static boolean isMethodRef(String desc, Handle handle) {
+    return "metafactory".equals(handle.getName()) && "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;".equals(handle.getDesc());
   }
 }

@@ -25,6 +25,9 @@
 
 package org.openjdk.btrace.instr;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,6 +38,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -46,6 +51,7 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.FrameNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LdcInsnNode;
@@ -131,6 +137,8 @@ final class Preprocessor {
       "(" + Constants.BTRACERTIMPL_DESC + ")" + Constants.BOOLEAN_DESC;
   private static final String BTRACERT_HANDLE_EXCEPTION_DESC =
       "(" + Constants.THROWABLE_DESC + ")" + Constants.VOID_DESC;
+  private static final String BTRACE_UTILS_INTERNAL = "org/openjdk/btrace/core/BTraceUtils";
+  private static final String FOREACH_COLLECTION_DESC = "(Ljava/util/Collection;Ljava/util/function/Consumer;)V";
   private static final String RT_CTX_INTERNAL = "org/openjdk/btrace/services/api/RuntimeContext";
   private static final String RT_CTX_DESC = "L" + RT_CTX_INTERNAL + ";";
   private static final Type RT_CTX_TYPE = Type.getType(RT_CTX_DESC);
@@ -156,6 +164,15 @@ final class Preprocessor {
   // with the name "btrace.<class name>.<field name>"
   private static final String BTRACE_COUNTER_PREFIX = "btrace.";
   private static final String JFR_HANDLER_FIELD_PREFIX = "$jfr$handler$";
+
+  private static final MethodType methodRefBootstrapMt = MethodType.methodType(
+          CallSite.class,
+          MethodHandles.Lookup.class,
+          String.class,
+          MethodType.class,
+          String.class,
+          String.class,
+          String.class);
 
   static {
     BOX_TYPE_MAP.put("I", Constants.INTEGER_BOXED_DESC);
@@ -500,6 +517,7 @@ final class Preprocessor {
     addBTraceErrorHandler(cn, mn);
     addBTraceRuntimeEnter(cn, mn);
     addJfrHandlerField(cn, mn);
+    substituteMethodRefOperations(cn, mn);
 
     recalculateVars(mn);
   }
@@ -1228,6 +1246,39 @@ final class Preprocessor {
                   null,
                   null));
           eventFlds.put(fldName, annotation);
+        }
+      }
+    }
+  }
+
+  private void substituteMethodRefOperations(ClassNode cn, MethodNode mn) {
+    for (AbstractInsnNode n = mn.instructions.getFirst(); n != null; n = n.getNext()) {
+      if (n.getType() == AbstractInsnNode.METHOD_INSN) {
+        MethodInsnNode min = (MethodInsnNode) n;
+        if (min.getOpcode() == Opcodes.INVOKESTATIC &&
+            min.owner.equals(BTRACE_UTILS_INTERNAL) &&
+            min.name.equals("forEach")) {
+          if (min.desc.equals(FOREACH_COLLECTION_DESC)) {
+            AbstractInsnNode prev = min.getPrevious();
+            if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+              InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
+              if (idin.name.equals("accept")) {
+                Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "methodRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
+                Handle lambda = ((Handle) idin.bsmArgs[1]);
+                InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
+                        "BTraceUtils#forEach",
+                        "(Ljava/util/Collection;)V",
+                        bootstrap,
+                        lambda.getOwner(),
+                        lambda.getName(),
+                        lambda.getDesc()
+                );
+                mn.instructions.insertBefore(idin, i1);
+                mn.instructions.remove(idin);
+                mn.instructions.remove(min);
+              }
+            }
+          }
         }
       }
     }

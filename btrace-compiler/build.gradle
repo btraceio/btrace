@@ -1,3 +1,6 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+
 dependencies {
     // https://mvnrepository.com/artifact/org.ow2.asm/asm
     implementation libs.asm
@@ -9,7 +12,24 @@ dependencies {
     }
     implementation project(path: ':btrace-core')
     implementation project(path: ':btrace-runtime')
+    implementation project(path: ':btrace-services-api')
     runtimeOnly project(path: ':btrace-instr')
 
     testImplementation project(path: ':btrace-instr')
+}
+
+test {
+    dependsOn cleanTest
+    testLogging.showStandardStreams = true
+
+    def props = new Properties()
+    props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
+    if (!props.getProperty("JAVA_VERSION")?.contains("1.8")) {
+        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions',
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+                '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED'
+    }
+    jvmArgs "-Dtest.resources=${projectDir}/src/test/resources"
+    jvmArgs "-Dproject.version=${project.version}"
 }

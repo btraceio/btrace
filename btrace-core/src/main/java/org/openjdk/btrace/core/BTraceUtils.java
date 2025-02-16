@@ -26,6 +26,7 @@
 package org.openjdk.btrace.core;
 
 import java.io.Serializable;
+import java.lang.invoke.MethodHandle;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
@@ -39,11 +40,14 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
+import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import jdk.jfr.Event;
@@ -56,6 +60,7 @@ import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
+import org.openjdk.btrace.core.types.BTraceCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,8 +83,15 @@ public class BTraceUtils {
   // do not allow object creation!
   private BTraceUtils() {}
 
-  // Thread and stack access
+  public static <T> void forEach(MethodHandle consumer, Collection<T> collection) {
+    BTraceRuntime.forEach(collection, consumer);
+  }
 
+  public static <T> void forEach(Collection<T> collection, Consumer<T> consumer) {
+    throw new UnsupportedOperationException();
+  }
+
+  // Thread and stack access
   /**
    * Tests whether this thread has been interrupted. The <i>interrupted status</i> of the thread is
    * unaffected by this method.

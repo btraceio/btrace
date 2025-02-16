@@ -27,6 +27,7 @@ package org.openjdk.btrace.instr;
 import java.util.Comparator;
 import java.util.Set;
 import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodNode;
 import org.openjdk.btrace.core.annotations.Kind;
@@ -263,6 +264,18 @@ public class BTraceMethodNode extends MethodNode {
     }
 
     return av;
+  }
+
+  @Override
+  public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle, Object... bootstrapMethodArguments) {
+    if (InstrumentUtils.isMethodRef(desc, bootstrapMethodHandle)) {
+      Handle h = (Handle)bootstrapMethodArguments[1];
+      h = new Handle(h.getTag(), cn.translateOwner(h.getOwner()), h.getName(), h.getDesc(), h.isInterface());
+      bootstrapMethodArguments[1] = h;
+
+      graph.addEdge(methodId, CallGraph.methodId(h.getName(), h.getDesc()));
+    }
+    super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
   }
 
   @Override

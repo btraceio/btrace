@@ -8,17 +8,19 @@ import org.openjdk.btrace.core.SharedSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 public final class HandlerRepositoryImpl {
   private static final Logger log = LoggerFactory.getLogger(HandlerRepositoryImpl.class);
 
   private static final Map<String, BTraceProbe> probeMap = new ConcurrentHashMap<>();
+  private static final Map<String, HandlerRepository.Handler> handlers = new ConcurrentHashMap<>();
 
   static {
     try {
@@ -37,42 +39,47 @@ public final class HandlerRepositoryImpl {
   }
 
   public static void unregisterProbe(BTraceProbe probe) {
-    probeMap.remove(probe.getClassName(true));
+    String key = probe.getClassName(true);
+    probeMap.remove(key);
+    handlers.remove(key);
   }
 
-  public static byte[] getProbeHandler(
-      String callerName, String probeName, String handlerName, String handlerDesc) {
-    DebugSupport debugSupport = new DebugSupport(SharedSettings.GLOBAL);
-    BTraceProbe probe = probeMap.get(probeName);
-    ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+  public static HandlerRepository.Handler getProbeHandler(
+          MethodHandles.Lookup caller, String probeName, Function<byte[], MethodHandles.Lookup> loader) {
+    return handlers.computeIfAbsent(probeName, k -> {
+      DebugSupport debugSupport = new DebugSupport(SharedSettings.GLOBAL);
+      BTraceProbe probe = probeMap.get(probeName);
+      ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 
-    String handlerClassName = callerName.replace('.', '/') + "$" + probeName.replace('/', '_');
-    ClassVisitor visitor =
-        new CopyingVisitor(handlerClassName, true, writer) {
-          @Override
-          protected String getMethodName(String name) {
-            int idx = name.lastIndexOf("$");
-            if (idx > -1) {
-              return name.substring(idx + 1);
-            }
-            return name;
-          }
-        };
+      String callerName = caller.lookupClass().getName();
+      String handlerClassName = callerName.replace('.', '/') + "$" + probeName.replace('/', '_');
+      ClassVisitor visitor =
+              new CopyingVisitor(handlerClassName, true, writer) {
+                @Override
+                protected String getMethodName(String name) {
+                  int idx = name.lastIndexOf("$");
+                  if (idx > -1) {
+                    return name.substring(idx + 1);
+                  }
+                  return name;
+                }
+              };
 
-    probe.copyHandlers(visitor);
-    byte[] data = writer.toByteArray();
+      probe.copyHandlers(visitor);
+      byte[] data = writer.toByteArray();
 
-    if (debugSupport.isDumpClasses()) {
-      try {
-        String handlerPath =
-            debugSupport.getDumpClassDir() + "/" + handlerClassName.replace('/', '_') + ".class";
-        log.debug("BTrace INDY handler dumped: {}", handlerPath);
-        Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
-      } catch (Throwable e) {
-        log.debug("Failed to dump BTrace INDY handler", e);
+      if (debugSupport.isDumpClasses()) {
+        try {
+          String handlerPath =
+                  debugSupport.getDumpClassDir() + "/" + handlerClassName.replace('/', '_') + ".class";
+          log.debug("BTrace INDY handler dumped: {}", handlerPath);
+          Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
+        } catch (Throwable e) {
+          log.debug("Failed to dump BTrace INDY handler", e);
+        }
       }
-    }
 
-    return data;
+      return new HandlerRepository.Handler(loader.apply(data));
+    });
   }
 }

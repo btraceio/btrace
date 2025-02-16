@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -23,7 +24,9 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.util.TraceClassVisitor;
 import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 
 class CompilerHelper {
   private final boolean generatePack;
@@ -42,6 +45,9 @@ class CompilerHelper {
       Writer err,
       String sourcePath,
       String classPath) {
+    // turn off the unique client name generation as it is undesired during compilation
+    BTraceRuntimeAccess.setUniqueClientClassNames(false);
+
     // to collect errors, warnings etc.
     DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
 
@@ -103,7 +109,7 @@ class CompilerHelper {
             // temp hack; need turn off verifier
             SharedSettings.GLOBAL.setTrusted(true);
 
-            String[] pathElements = classPath.split(File.pathSeparator);
+            String[] pathElements = classPath != null ? classPath.split(File.pathSeparator) : new String[0];
             List<URL> urlElements = new ArrayList<>(pathElements.length);
 
             for (String pathElement : pathElements) {
@@ -134,6 +140,13 @@ class CompilerHelper {
       }
     }
     return result;
+  }
+
+  public static String asmify(byte[] bytecode) {
+    StringWriter sw = new StringWriter();
+    TraceClassVisitor acv = new TraceClassVisitor(new PrintWriter(sw));
+    new org.objectweb.asm.ClassReader(bytecode).accept(acv, 0);
+    return sw.toString();
   }
 
   private void dump(String name, byte[] code) {

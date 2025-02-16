@@ -95,14 +95,6 @@ public class Compiler {
       usage();
     }
 
-    // turn off the unique client name generation as it is undesired during compilation
-    try {
-      Field f = BTraceRuntimeAccess.class.getDeclaredField("uniqueClientClassNames");
-      f.setAccessible(true);
-      f.set(null, false);
-    } catch (Exception ignored) {
-    }
-
     String classPath = ".";
     String outputDir = ".";
     String includePath = null;

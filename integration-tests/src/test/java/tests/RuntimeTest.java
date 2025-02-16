@@ -193,6 +193,15 @@ public abstract class RuntimeTest {
       jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
       args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
     }
+    if (Files.exists(Paths.get(javaHome, "jmods"))) {
+      args.addAll(
+        1,
+        Arrays.asList(
+          "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
+          "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+        )
+      );
+    }
     args.add("-Dbtrace.test=test");
     args.add(testApp);
 
@@ -599,7 +608,11 @@ public abstract class RuntimeTest {
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
           1,
-          Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
+          Arrays.asList(
+                  "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
+                  "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+          )
+      );
     }
 
     ProcessBuilder pb = new ProcessBuilder(argVals);
@@ -690,8 +703,12 @@ public abstract class RuntimeTest {
     argVals.addAll(Arrays.asList(args));
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
-          1,
-          Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
+        1,
+        Arrays.asList(
+          "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
+          "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+        )
+      );
     }
     ProcessBuilder pb = new ProcessBuilder(argVals);
 
@@ -847,6 +864,7 @@ public abstract class RuntimeTest {
                 traceFile.getParentFile().getAbsolutePath()));
     if (debugBTrace) {
       argVals.add("-v");
+      argVals.addAll(Arrays.asList("-d", "/tmp/btrace"));
     }
     argVals.addAll(Arrays.asList(pid, traceFile.getAbsolutePath()));
     if (cmdArgs != null) {
@@ -854,8 +872,12 @@ public abstract class RuntimeTest {
     }
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
-          1,
-          Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
+        1,
+        Arrays.asList(
+          "--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
+          "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+        )
+      );
     }
     ProcessBuilder pb = new ProcessBuilder(argVals);
 

@@ -31,6 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.lang.instrument.Instrumentation;
+import java.lang.invoke.MethodHandle;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.LockInfo;
 import java.lang.management.MemoryMXBean;
@@ -1211,6 +1212,16 @@ public final class BTraceRuntime {
 
   public static Class<?> getCallerClass(int stackDec) {
     return getRt().getCallerClass(stackDec + 1);
+  }
+
+  static <T> void forEach(Collection<T> collection, MethodHandle consumer) {
+    try {
+      for (T elem : collection) {
+        consumer.invoke(elem);
+      }
+    } catch (Throwable t) {
+      log.warn("Failed iterating over collection", t);
+    }
   }
 
   // private methods below this point
