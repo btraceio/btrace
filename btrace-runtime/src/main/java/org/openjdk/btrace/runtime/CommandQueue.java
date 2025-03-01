@@ -44,7 +44,7 @@ final class CommandQueue {
         long tsCutOff = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1);
         while (!Thread.interrupted() && !queue.relaxedOffer(cmd)) {
             if (backoffCntr < 3000) {
-                Thread.yield();
+                LockSupport.parkNanos(5_000);
             } else if (backoffCntr < 3100) {
                 LockSupport.parkNanos(1_000_000);
             }

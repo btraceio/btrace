@@ -67,6 +67,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 import javax.management.ListenerNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.NotificationEmitter;
@@ -367,7 +368,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
         if (exitting.get()) return 0;
         try {
           if (i < 3000) {
-            Thread.yield();
+            LockSupport.parkNanos(5_000);
           } else if (i < 3100) {
             Thread.sleep(1);
           } else {

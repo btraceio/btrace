@@ -22,6 +22,7 @@
 
 package traces;
 
+import org.openjdk.btrace.core.BTraceUtils;
 import org.openjdk.btrace.core.annotations.*;
 
 import java.util.Deque;
@@ -45,9 +46,32 @@ public class MethodRefProbe {
     private static void printStr(String val) {
         println("===> " + val);
     }
+    private static int map(String val) {
+        return strlen(val);
+    }
+    private static void printInt(int val) {
+        println("===> " + val);
+    }
+
+    public static java.util.LongSummaryStatistics reduceOp(String val, java.util.LongSummaryStatistics prev) {
+        addToSummaryStatistics(prev, strlen(val));
+        return prev;
+    }
+
+    private static boolean checkWithHello(String val) {
+        return indexOf(val, "Hello") > -1;
+    }
 
     @OnTimer(5000)
     public static void onTimer() {
         forEach(deque, MethodRefProbe::printStr);
+        forEach(BTraceUtils.map(deque, MethodRefProbe::map), MethodRefProbe::printInt);
+
+        java.util.LongSummaryStatistics stats = newSummaryStatistics();
+        stats = reduce(deque, stats, MethodRefProbe::reduceOp);
+        println("===> [5] stats: " + str(stats));
+
+        int s = size(filter(deque, MethodRefProbe::checkWithHello));
+        println("===> [6] filtered: " + s);
     }
 }

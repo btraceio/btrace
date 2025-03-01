@@ -8,6 +8,7 @@ import java.lang.invoke.MethodType;
 import java.util.Collection;
 
 import org.openjdk.btrace.core.BTraceUtils;
+import org.openjdk.btrace.core.CollectionUtils;
 import org.openjdk.btrace.core.HandlerRepository;
 
 /** Invoke-dynamic linking support class */
@@ -44,11 +45,11 @@ public final class Indy {
     return new ConstantCallSite(mh);
   }
 
-  public static CallSite methodRef(MethodHandles.Lookup caller, String name, MethodType type, String className, String methodName, String desc) throws Exception {
+  public static CallSite collectionsRef(MethodHandles.Lookup caller, String name, MethodType type, String className, String methodName, String desc) throws Exception {
     assert repository != null;
     MethodHandle mh = null;
     HandlerRepository.Handler loaded = null;
-    if (name.startsWith("BTraceUtils#")) {
+    if (name.startsWith("CollectionUtils#")) {
       try {
         if (!caller.toString().contains("/")) {
           mh = caller.findStatic(caller.lookupClass(), methodName, MethodType.fromMethodDescriptorString(desc, caller.lookupClass().getClassLoader()));
@@ -77,9 +78,8 @@ public final class Indy {
       return new ConstantCallSite(mh);
     }
 
-    // offset 12 - BTraceUtils#
-    name = name.substring(12);
-    MethodHandle target = MethodHandles.publicLookup().findStatic(BTraceUtils.class, name, MethodType.methodType(void.class, MethodHandle.class, type.parameterType(0)));
+    name = name.substring("CollectionUtils#".length());
+    MethodHandle target = MethodHandles.publicLookup().findStatic(CollectionUtils.class, name, MethodType.methodType(type.returnType(), MethodHandle.class, type.parameterArray()));
     target = target.bindTo(mh);
 
     return new ConstantCallSite(target);

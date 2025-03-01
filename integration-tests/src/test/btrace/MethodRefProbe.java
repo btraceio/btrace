@@ -42,7 +42,7 @@ public class MethodRefProbe {
         forEach(deque, MethodRefProbe::printStr1);
 
         String[] x = new String[] {"one", "two"};
-        forEach(x, MethodRefProbe::printStr2);
+        forEach(x, MethodRefProbe::printStr3);
     }
 
     public static void printStr1(String val) {
@@ -51,10 +51,39 @@ public class MethodRefProbe {
     public static void printStr2(String val) {
         println("===> [2] " + val);
     }
+    public static void printStr3(String val) {
+        println("===> [3] " + val);
+    }
+
+    public static void printInt(int val) {
+        println("===> [4] " + val);
+    }
+
+    public static int mapToInt(String val) {
+        return strlen(val);
+    }
+
+    public static java.util.LongSummaryStatistics reduceOp(String val, java.util.LongSummaryStatistics prev) {
+        addToSummaryStatistics(prev, strlen(val));
+        return prev;
+    }
+
+    private static boolean checkWithHello(String val) {
+        return indexOf(val, "Hello") > -1;
+    }
 
     @OnTimer(1000)
     public static void onTimer() {
         println("Timer::");
         forEach(deque, MethodRefProbe::printStr2);
+
+        forEach(map(deque, MethodRefProbe::mapToInt), MethodRefProbe::printInt);
+
+        java.util.LongSummaryStatistics stats = newSummaryStatistics();
+        stats = reduce(deque, stats, MethodRefProbe::reduceOp);
+        println("===> [5] stats: " + str(stats));
+
+        int s = size(filter(deque, MethodRefProbe::checkWithHello));
+        println("===> [6] filtered: " + s);
     }
 }

@@ -59,6 +59,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.openjdk.btrace.core.aggregation.Aggregation;
 import org.openjdk.btrace.core.aggregation.AggregationFunction;
 import org.openjdk.btrace.core.aggregation.AggregationKey;
+import org.openjdk.btrace.core.collections.CollectionFactory;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.GridDataCommand;
@@ -1214,6 +1215,7 @@ public final class BTraceRuntime {
     return getRt().getCallerClass(stackDec + 1);
   }
 
+  // Functional collection support
   static <T> void forEach(Collection<T> collection, MethodHandle consumer) {
     try {
       for (T elem : collection) {
@@ -1233,6 +1235,29 @@ public final class BTraceRuntime {
       log.warn("Failed iterating over array", t);
     }
   }
+
+  static <T> Collection<T> filter(Collection<T> collection, MethodHandle test) {
+    return CollectionFactory.filteredCollection(collection, test);
+  }
+
+  static <T, R> Collection<R> map(Collection<T> collection, MethodHandle mapper) {
+    return CollectionFactory.mappedCollection(collection, mapper);
+  }
+
+  static <T,R> R reduce(Collection<T> collection, MethodHandle reducer, R identity) {
+    R rslt = identity;
+    for (T elem : collection) {
+      try {
+        //noinspection unchecked
+        rslt = (R)reducer.invoke(elem, rslt);
+      } catch (Throwable t) {
+        log.warn("Failed reduction of element " + BTraceUtils.str(elem), t);
+      }
+    }
+    return rslt;
+  }
+
+  // ---
 
   // private methods below this point
   // raise DTrace USDT probe

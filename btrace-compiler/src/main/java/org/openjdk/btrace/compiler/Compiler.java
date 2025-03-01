@@ -106,6 +106,7 @@ public class Compiler {
     boolean outputDirDefined = false;
     boolean includePathDefined = false;
     boolean trustedDefined = false;
+    boolean allowExperimental = false;
 
     for (; ; ) {
       if (args[count].charAt(0) == '-') {

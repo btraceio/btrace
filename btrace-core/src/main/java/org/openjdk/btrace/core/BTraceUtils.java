@@ -46,21 +46,23 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import jdk.jfr.Event;
 import org.openjdk.btrace.core.aggregation.Aggregation;
 import org.openjdk.btrace.core.aggregation.AggregationFunction;
 import org.openjdk.btrace.core.aggregation.AggregationKey;
+import org.openjdk.btrace.core.annotations.Experimental;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
-import org.openjdk.btrace.core.types.BTraceCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,19 +85,42 @@ public class BTraceUtils {
   // do not allow object creation!
   private BTraceUtils() {}
 
-  public static <T> void forEach(MethodHandle consumer, Collection<T> collection) {
-    BTraceRuntime.forEach(collection, consumer);
+  // LongSummary
+  public static LongSummaryStatistics newSummaryStatistics() {
+    return new LongSummaryStatistics();
   }
 
-  public static <T> void forEach(MethodHandle consumer, T[] data) {
-    BTraceRuntime.forEach(data, consumer);
+  public static void addToSummaryStatistics(LongSummaryStatistics stats, long val) {
+    stats.accept(val);
   }
 
+  public static void combineSummaryStatistics(LongSummaryStatistics src, LongSummaryStatistics target) {
+    target.combine(src);
+  }
+
+  // Functional collection support
+  @Experimental
   public static <T> void forEach(Collection<T> collection, Consumer<T> consumer) {
     throw new UnsupportedOperationException();
   }
 
+  @Experimental
   public static <T> void forEach(T[] data, Consumer<T> consumer) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Experimental
+  public static <T> Collection<T> filter(Collection<T> collection, Predicate<T> test) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Experimental
+  public static <T, R> Collection<R> map(Collection<T> collection, Function<T, R> mapper) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Experimental
+  public static <T, R> R reduce(Collection<T> collection, R identity, BiFunction<T, R, R> reducer) {
     throw new UnsupportedOperationException();
   }
 

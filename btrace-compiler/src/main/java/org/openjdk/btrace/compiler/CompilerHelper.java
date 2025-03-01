@@ -181,7 +181,7 @@ class CompilerHelper {
    */
   private boolean containsErrors(DiagnosticCollector<?> diagnostics) {
     for (Diagnostic<?> diagnostic : diagnostics.getDiagnostics()) {
-      if (diagnostic.getKind() == Kind.ERROR) {
+      if (diagnostic.getKind() == Kind.ERROR || diagnostic.getKind() == Kind.WARNING) {
         return true;
       }
     }

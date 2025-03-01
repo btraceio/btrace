@@ -56,7 +56,7 @@ jmh {
   def agentJarPath = tasks.getByPath(':btrace-dist:agentJar').outputs.getFiles().getSingleFile()
   def scriptPath = buildDir.toPath().resolve('classes/java/main/TraceScript.btclass')
   def agent = "-javaagent:${agentJarPath}=stdout=false,noServer=true,debug=false,script=${scriptPath}"
-  jvmArgsAppend = ["-Djmh.basedir=${buildDir.getParentFile()}", "-Dproject.version=${project.version}", "-Xmx128m", "-agentpath:/tmp/libasyncProfiler.dylib=start,event=cpu,jfr=7,file=/tmp/btrace.jfr", "${agent}"]
+  jvmArgsAppend = ["-Djmh.basedir=${buildDir.getParentFile()}", "-Dproject.version=${project.version}", "-Xmx128m", "${agent}"]
   includes = ['.*BTraceBench.*']
   profilers = ['stack']
 }

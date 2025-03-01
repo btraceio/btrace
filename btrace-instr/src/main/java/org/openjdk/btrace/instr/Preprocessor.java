@@ -140,6 +140,9 @@ final class Preprocessor {
   private static final String BTRACE_UTILS_INTERNAL = "org/openjdk/btrace/core/BTraceUtils";
   private static final String FOREACH_COLLECTION_DESC = "(Ljava/util/Collection;Ljava/util/function/Consumer;)V";
   private static final String FOREACH_ARRAY_DESC = "([Ljava/lang/Object;Ljava/util/function/Consumer;)V";
+  private static final String MAP_COLLECTION_DESC = "(Ljava/util/Collection;Ljava/util/function/Function;)Ljava/util/Collection;";
+  private static final String REDUCE_COLLECTION_DESC = "(Ljava/util/Collection;Ljava/lang/Object;Ljava/util/function/BiFunction;)Ljava/lang/Object;";
+  private static final String FILTER_COLLECTION_DESC = "(Ljava/util/Collection;Ljava/util/function/Predicate;)Ljava/util/Collection;";
   private static final String RT_CTX_INTERNAL = "org/openjdk/btrace/services/api/RuntimeContext";
   private static final String RT_CTX_DESC = "L" + RT_CTX_INTERNAL + ";";
   private static final Type RT_CTX_TYPE = Type.getType(RT_CTX_DESC);
@@ -1261,45 +1264,134 @@ final class Preprocessor {
           switch (min.name) {
             case "forEach": {
               AbstractInsnNode prev = min.getPrevious();
-              if (min.desc.equals(FOREACH_COLLECTION_DESC)) {
-                if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
-                  InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
-                  if (idin.name.equals("accept")) {
-                    Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "methodRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
-                    Handle lambda = ((Handle) idin.bsmArgs[1]);
-                    InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
-                            "BTraceUtils#" + min.name,
-                            "(Ljava/util/Collection;)V",
-                            bootstrap,
-                            lambda.getOwner(),
-                            lambda.getName(),
-                            lambda.getDesc()
-                    );
-                    mn.instructions.insertBefore(idin, i1);
-                    mn.instructions.remove(idin);
-                    mn.instructions.remove(min);
-                    n = i1;
+              switch (min.desc) {
+                case FOREACH_COLLECTION_DESC: {
+                  if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+                    InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
+                    if (idin.name.equals("accept")) {
+                      Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "collectionsRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
+                      Handle lambda = ((Handle) idin.bsmArgs[1]);
+                      InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
+                              "CollectionUtils#" + min.name,
+                              "(Ljava/util/Collection;)V",
+                              bootstrap,
+                              lambda.getOwner(),
+                              lambda.getName(),
+                              lambda.getDesc()
+                      );
+                      mn.instructions.insertBefore(idin, i1);
+                      mn.instructions.remove(idin);
+                      mn.instructions.remove(min);
+                      n = i1;
+                    }
                   }
+                  break;
                 }
-              } else if (min.desc.equals(FOREACH_ARRAY_DESC)) {
-                if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
-                  InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
-                  if (idin.name.equals("accept")) {
-                    Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "methodRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
-                    Handle lambda = ((Handle) idin.bsmArgs[1]);
-                    InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
-                            "BTraceUtils#" + min.name,
-                            "([Ljava/lang/Object;)V",
-                            bootstrap,
-                            lambda.getOwner(),
-                            lambda.getName(),
-                            lambda.getDesc()
-                    );
-                    mn.instructions.insertBefore(idin, i1);
-                    mn.instructions.remove(idin);
-                    mn.instructions.remove(min);
-                    n = i1;
+                case FOREACH_ARRAY_DESC: {
+                  if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+                    InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
+                    if (idin.name.equals("accept")) {
+                      Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "collectionsRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
+                      Handle lambda = ((Handle) idin.bsmArgs[1]);
+                      InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
+                              "CollectionUtils#" + min.name,
+                              "([Ljava/lang/Object;)V",
+                              bootstrap,
+                              lambda.getOwner(),
+                              lambda.getName(),
+                              lambda.getDesc()
+                      );
+                      mn.instructions.insertBefore(idin, i1);
+                      mn.instructions.remove(idin);
+                      mn.instructions.remove(min);
+                      n = i1;
+                    }
                   }
+                  break;
+                }
+              }
+              break;
+            }
+            case "map": {
+              AbstractInsnNode prev = min.getPrevious();
+              switch (min.desc) {
+                case MAP_COLLECTION_DESC: {
+                  if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+                    InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
+                    if (idin.name.equals("apply")) {
+                      Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "collectionsRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
+                      Handle lambda = ((Handle) idin.bsmArgs[1]);
+                      InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
+                              "CollectionUtils#" + min.name,
+                              "(Ljava/util/Collection;)Ljava/util/Collection;",
+                              bootstrap,
+                              lambda.getOwner(),
+                              lambda.getName(),
+                              lambda.getDesc()
+                      );
+                      mn.instructions.insertBefore(idin, i1);
+                      mn.instructions.remove(idin);
+                      mn.instructions.remove(min);
+                      n = i1;
+                    }
+                  }
+                  break;
+                }
+              }
+              break;
+            }
+            case "reduce": {
+              AbstractInsnNode prev = min.getPrevious();
+              switch (min.desc) {
+                case REDUCE_COLLECTION_DESC: {
+                  if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+                    InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
+                    if (idin.name.equals("apply")) {
+                      Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "collectionsRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
+                      Handle lambda = ((Handle) idin.bsmArgs[1]);
+                      InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
+                              "CollectionUtils#" + min.name,
+                              "(Ljava/util/Collection;Ljava/lang/Object;)Ljava/lang/Object;",
+                              bootstrap,
+                              lambda.getOwner(),
+                              lambda.getName(),
+                              lambda.getDesc()
+                      );
+                      mn.instructions.insertBefore(idin, i1);
+                      mn.instructions.remove(idin);
+                      mn.instructions.remove(min);
+                      n = i1;
+                    }
+                  }
+                  break;
+                }
+              }
+              break;
+            }
+            case "filter": {
+              AbstractInsnNode prev = min.getPrevious();
+              switch (min.desc) {
+                case FILTER_COLLECTION_DESC: {
+                  if (prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+                    InvokeDynamicInsnNode idin = (InvokeDynamicInsnNode) prev;
+                    if (idin.name.equals("test")) {
+                      Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "org/openjdk/btrace/runtime/Indy", "collectionsRef", methodRefBootstrapMt.toMethodDescriptorString(), false);
+                      Handle lambda = ((Handle) idin.bsmArgs[1]);
+                      InvokeDynamicInsnNode i1 = new InvokeDynamicInsnNode(
+                              "BTraceUtils#" + min.name,
+                              "(Ljava/util/Collection;)Ljava/util/Collection;",
+                              bootstrap,
+                              lambda.getOwner(),
+                              lambda.getName(),
+                              lambda.getDesc()
+                      );
+                      mn.instructions.insertBefore(idin, i1);
+                      mn.instructions.remove(idin);
+                      mn.instructions.remove(min);
+                      n = i1;
+                    }
+                  }
+                  break;
                 }
               }
               break;

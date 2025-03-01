@@ -66,6 +66,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Experimental;
 import org.openjdk.btrace.core.annotations.Injected;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.OnError;
@@ -146,6 +147,10 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     if (e != null
         && (e.getKind() == ElementKind.METHOD || e.getKind() == ElementKind.CONSTRUCTOR)) {
       String name = e.getSimpleName().toString();
+
+      if (e.getAnnotation(Experimental.class) != null) {
+        reportWarning("BTrace experiemental feature in use. It may get removed at any time.", node);
+      }
 
       // allow constructor calls
       if (name.equals("<init>")) {
@@ -668,6 +673,21 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
       verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg, e);
     } else {
       verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
+    }
+  }
+
+  private void reportWarning(String msg, Tree node) {
+    SourcePositions srcPos = verifier.getSourcePositions();
+    CompilationUnitTree compUnit = verifier.getCompilationUnit();
+    if (compUnit != null) {
+      long pos = srcPos.getStartPosition(compUnit, node);
+      long line = compUnit.getLineMap().getLineNumber(pos);
+      String name = compUnit.getSourceFile().getName();
+      Element e = getElement(node);
+      msg = String.format("%s:%d:%s [%s]", name, line, msg, e);
+      verifier.getMessager().printMessage(Diagnostic.Kind.WARNING, msg, e);
+    } else {
+      verifier.getMessager().printMessage(Diagnostic.Kind.WARNING, msg);
     }
   }
 

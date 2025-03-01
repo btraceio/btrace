@@ -124,7 +124,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
     public void testOnTimerWithMethodRef() throws Exception {
       isUnsafe = true;
       debugBTrace = true;
-      attachDebugger = true;
+//      attachDebugger = true;
       testDynamic(
             "resources.Main",
             "btrace/MethodRefProbe.java",
@@ -136,6 +136,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
                     assertTrue(stderr.isEmpty(), "Non-empty stderr");
                     assertTrue(stdout.contains("[1] Hello World"));
                     assertTrue(stdout.contains("[2] Hello World"));
+                    assertTrue(stdout.contains("[3]"));
                 }
             });
     }
