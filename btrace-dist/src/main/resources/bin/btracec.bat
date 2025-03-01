@@ -11,7 +11,7 @@ if not exist "%BTRACE_HOME%\libs\btrace-client.jar" goto noBTraceHome
 if "%JAVA_HOME%" == "" goto noJavaHome
   if exist "%JAVA_HOME%/jmods/" (
     set JAVA_ARGS="%JAVA_ARGS% -XX:+AllowRedefinitionToAddDeleteMethods"
-    set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
+    set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED"
   )
   if "%1" == "--version" (
     %JAVA_HOME%\bin\java "%JAVA_ARGS%" -cp %BTRACE_HOME%/build/btrace-client.jar org.openjdk.btrace.client.Main --version
