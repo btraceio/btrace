@@ -71,22 +71,14 @@ public class Aggregation implements Cloneable {
    * @param data the value to be added
    */
   public void add(AggregationKey key, long data) {
-    AggregationValue aggregationValue = values.get(key);
-    if (aggregationValue == null) {
-      aggregationValue = type.newValue();
-      AggregationValue existing = values.putIfAbsent(key, aggregationValue);
-      if (existing != null) {
-        aggregationValue = existing;
-      }
-    }
-    aggregationValue.add(data);
+    // Use computeIfAbsent to atomically get or create the aggregation value
+    values.computeIfAbsent(key, k -> type.newValue()).add(data);
   }
 
   /** Resets all values in the aggregation to their default. */
   public void clear() {
-    for (AggregationValue value : values.values()) {
-      value.clear();
-    }
+    // Use parallelStream for better performance on large collections
+    values.values().parallelStream().forEach(AggregationValue::clear);
   }
 
   /**
@@ -100,23 +92,30 @@ public class Aggregation implements Cloneable {
   public void truncate(int count) {
     if (count == 0) {
       values.clear();
-    } else {
-      List<Map.Entry<AggregationKey, AggregationValue>> sortedContents = sort();
+      return;
+    }
 
-      int collectionSize = sortedContents.size();
-      int numberToRemove = collectionSize - Math.abs(count);
-      if (numberToRemove < 0) {
-        return;
+    int absCount = Math.abs(count);
+    int collectionSize = values.size();
+
+    if (collectionSize <= absCount) {
+      // Nothing to remove
+      return;
+    }
+
+    // Sort entries by value
+    List<Map.Entry<AggregationKey, AggregationValue>> sortedContents = sort();
+
+    // Determine which entries to keep based on count
+    if (count > 0) {
+      // Keep largest values, remove smallest
+      for (int i = 0; i < collectionSize - absCount; i++) {
+        values.remove(sortedContents.get(i).getKey());
       }
-      List<Map.Entry<AggregationKey, AggregationValue>> removeContents;
-      if (count > 0) {
-        // Remove from the start of the list
-        removeContents = sortedContents.subList(0, numberToRemove);
-      } else {
-        removeContents = sortedContents.subList(collectionSize - numberToRemove, collectionSize);
-      }
-      for (Entry<AggregationKey, AggregationValue> removeContent : removeContents) {
-        values.remove(removeContent.getKey());
+    } else {
+      // Keep smallest values, remove largest
+      for (int i = collectionSize - 1; i >= absCount; i--) {
+        values.remove(sortedContents.get(i).getKey());
       }
     }
   }

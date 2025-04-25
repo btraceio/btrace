@@ -24,6 +24,8 @@
  */
 package org.openjdk.btrace.core.aggregation;
 
+import java.util.concurrent.atomic.LongAdder;
+
 /**
  * Aggregation function for computing the mean value.
  *
@@ -33,27 +35,28 @@ package org.openjdk.btrace.core.aggregation;
  */
 class Average implements AggregationValue {
 
-  long sum = 0;
-  int count = 0;
+  private final LongAdder sum = new LongAdder();
+  private final LongAdder count = new LongAdder();
 
   @Override
-  public synchronized void clear() {
-    sum = 0;
-    count = 0;
+  public void clear() {
+    sum.reset();
+    count.reset();
   }
 
   @Override
-  public synchronized void add(long delta) {
-    sum += delta;
-    count++;
+  public void add(long delta) {
+    sum.add(delta);
+    count.increment();
   }
 
   @Override
-  public synchronized long getValue() {
-    if (count == 0) {
+  public long getValue() {
+    long currentCount = count.sum();
+    if (currentCount == 0) {
       return 0; // Avoid division by zero
     }
-    return (int) (sum / count);
+    return (int) (sum.sum() / currentCount);
   }
 
   @Override

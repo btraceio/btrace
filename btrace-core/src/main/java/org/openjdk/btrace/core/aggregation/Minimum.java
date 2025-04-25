@@ -24,6 +24,8 @@
  */
 package org.openjdk.btrace.core.aggregation;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * Aggregation function for computing the minimum value.
  *
@@ -33,23 +35,26 @@ package org.openjdk.btrace.core.aggregation;
  */
 class Minimum implements AggregationValue {
 
-  long min = Long.MAX_VALUE;
+  private final AtomicLong min = new AtomicLong(Long.MAX_VALUE);
 
   @Override
-  public synchronized void clear() {
-    min = Integer.MAX_VALUE;
+  public void clear() {
+    min.set(Long.MAX_VALUE);
   }
 
   @Override
-  public synchronized void add(long value) {
-    if (value < min) {
-      min = value;
+  public void add(long value) {
+    while (true) {
+      long current = min.get();
+      if (value >= current || min.compareAndSet(current, value)) {
+        break;
+      }
     }
   }
 
   @Override
-  public synchronized long getValue() {
-    return min;
+  public long getValue() {
+    return min.get();
   }
 
   @Override

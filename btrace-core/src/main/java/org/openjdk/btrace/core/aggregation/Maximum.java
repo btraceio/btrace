@@ -24,6 +24,8 @@
  */
 package org.openjdk.btrace.core.aggregation;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * Aggregation function for computing the maximum value.
  *
@@ -33,23 +35,26 @@ package org.openjdk.btrace.core.aggregation;
  */
 class Maximum implements AggregationValue {
 
-  long max = Long.MIN_VALUE;
+  private final AtomicLong max = new AtomicLong(Long.MIN_VALUE);
 
   @Override
-  public synchronized void clear() {
-    max = Integer.MIN_VALUE;
+  public void clear() {
+    max.set(Long.MIN_VALUE);
   }
 
   @Override
-  public synchronized void add(long value) {
-    if (value > max) {
-      max = value;
+  public void add(long value) {
+    while (true) {
+      long current = max.get();
+      if (value <= current || max.compareAndSet(current, value)) {
+        break;
+      }
     }
   }
 
   @Override
-  public synchronized long getValue() {
-    return max;
+  public long getValue() {
+    return max.get();
   }
 
   @Override
