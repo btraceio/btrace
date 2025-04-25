@@ -14,32 +14,28 @@ buildscript {
     }
 }
 
+// Define utility functions for tools.jar and other JDK tools
 ext.getToolsJar = {
     return javaToolchains.compilerFor {
         languageVersion.set(JavaLanguageVersion.of(11))
     }.get().metadata.installationPath.file("lib/tools.jar")
 }
 
-ext.getJavac = { int version = 11 ->
-    return javaToolchains.compilerFor {
-        languageVersion.set(JavaLanguageVersion.of(version))
-    }.get().metadata.installationPath.file("bin/javac")
-}
-
-ext.getJavadoc = {
-    return javaToolchains.compilerFor {
-        languageVersion.set(JavaLanguageVersion.of(8))
-    }.get().metadata.installationPath.file("bin/javadoc")
-}
-
-[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
-
-compileJava {
+// Set source/target compatibility for all Java compilation
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
     sourceCompatibility = 8
     targetCompatibility = 8
+    // Use Java 11 compiler for all compilation
     javaCompiler = javaToolchains.compilerFor {
         languageVersion.set(JavaLanguageVersion.of(11))
     }
+}
+
+// Configure Javadoc tasks
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
 }
 
 repositories {
@@ -57,9 +53,10 @@ dependencies {
 String mavenArtifactId = name
 
 javadoc {
-    options.addStringOption('Xdoclint:all,-missing', '-quiet')
-    options.encoding("UTF-8")
-    executable = "${getJavadoc()}"
+    // Use Java 8 toolchain for Javadoc generation
+    javadocTool = javaToolchains.javadocToolFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
     failOnError true
 }
 

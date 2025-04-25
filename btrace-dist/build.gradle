@@ -8,7 +8,6 @@ plugins {
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.gradle.internal.os.OperatingSystem
 
 repositories {
     mavenCentral()
@@ -115,69 +114,62 @@ artifacts {
     archives file("${distTarget}/libs/btrace-agent.jar")
 }
 
-task agentJar(type: ShadowJar) {
-    group 'Build'
-    archiveBaseName.set('btrace-agent')
-    archiveVersion.set('')
-    archiveClassifier.set('')
-    destinationDirectory = libsDir
+// Define component-specific configurations
+def componentConfigs = [
+    'agent': [
+        manifestAttributes: [
+            "Premain-Class": "org.openjdk.btrace.agent.Main",
+            "Agent-Class": "org.openjdk.btrace.agent.Main",
+            "Can-Redefine-Classes": true,
+            "Can-Retransform-Classes": true,
+            "Boot-Class-Path": "btrace-boot.jar"
+        ],
+        jctoolsPrefix: 'org.openjdk.btrace.libs.agent.org.jctools'
+    ],
+    'boot': [
+        manifestAttributes: [:],
+        jctoolsPrefix: 'org.openjdk.btrace.libs.boot.org.jctools'
+    ],
+    'client': [
+        manifestAttributes: [:],
+        jctoolsPrefix: 'org.openjdk.btrace.libs.client.org.jctools'
+    ]
+]
 
-    manifest {
-        attributes(
-                "Premain-Class": "org.openjdk.btrace.agent.Main",
-                "Agent-Class": "org.openjdk.btrace.agent.Main",
-                "Can-Redefine-Classes": true,
-                "Can-Retransform-Classes": true,
-                "Boot-Class-Path": "btrace-boot.jar"
-        )
+// Create JAR tasks for each component
+['agent', 'boot', 'client'].each { name ->
+    task "${name}Jar"(type: ShadowJar) {
+        group 'Build'
+        archiveBaseName.set("btrace-${name}")
+        archiveVersion.set('')
+        archiveClassifier.set('')
+        destinationDirectory = libsDir
+
+        // Add manifest attributes if defined
+        if (componentConfigs[name].manifestAttributes) {
+            manifest {
+                attributes(componentConfigs[name].manifestAttributes)
+            }
+        }
+
+        include includes[name]
+
+        configurations = [project.configurations.artifact]
+        relocate 'org.jctools', componentConfigs[name].jctoolsPrefix
+        relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+        relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
     }
-
-    include includes['agent']
-
-    configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.agent.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
-}
-
-task bootJar(type: ShadowJar) {
-    group 'Build'
-    archiveBaseName.set('btrace-boot')
-    archiveVersion.set('')
-    archiveClassifier.set('')
-    destinationDirectory = libsDir
-
-
-    include includes['boot']
-
-    configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
-}
-
-task clientJar(type: ShadowJar) {
-    group 'Build'
-    archiveBaseName.set('btrace-client')
-    archiveVersion.set('')
-    archiveClassifier.set('')
-    destinationDirectory = libsDir
-
-    include includes['client']
-
-    configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.client.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.client.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.client.org.slf4j'
 }
 
 task fixPermissions(type: Exec) {
     onlyIf {
-        !OperatingSystem.current().isWindows()
+        !System.getProperty("os.name").toLowerCase().contains("windows")
     }
-    commandLine 'chmod', '500', "${distTarget}/bin/btrace"
-    commandLine 'chmod', '500', "${distTarget}/bin/btracec"
-    commandLine 'chmod', '500', "${distTarget}/bin/btracer"
+    // Use a single commandLine call with all files to fix permissions
+    commandLine 'chmod', '500', 
+        "${distTarget}/bin/btrace",
+        "${distTarget}/bin/btracec",
+        "${distTarget}/bin/btracer"
 }
 
 task copyDtraceLib(type: Copy) {
@@ -272,7 +264,7 @@ test {
     def tempDir = new File(buildDir, "tmp/${name}Sources")
 
     // first, we will copy the classes and make sure there are no empty directories
-    tasks.create(name: "${name}CopySources", type: Copy) {
+    task "${name}CopySources"(type: Copy) {
         doFirst {
             tempDir.deleteDir()  // Ensure the directory is clean
         }
@@ -307,8 +299,8 @@ test {
         }
     }
 
-    // we will use the output of the previous task to crate the JAR
-    tasks.create(name: "${name}SourcesJar", type: Jar, dependsOn: "${name}CopySources") {
+    // we will use the output of the previous task to create the JAR
+    task "${name}SourcesJar"(type: Jar, dependsOn: "${name}CopySources") {
         group 'Documentation'
         description "Build the btrace-${name} sources jar."
 
@@ -319,7 +311,7 @@ test {
         from tempDir
     }
 
-    tasks.create(name: "${name}Javadoc", type: Javadoc) {
+    task "${name}Javadoc"(type: Javadoc) {
         group 'Documentation'
         description "Generates Javadoc API documentation for the btrace-${name}."
 
@@ -349,7 +341,7 @@ test {
     }
 
 
-    tasks.create(name: "${name}JavadocJar", type: Jar) {
+    task "${name}JavadocJar"(type: Jar) {
         group 'Documentation'
         description "Build the btrace-${name} javadoc jar."
 
@@ -389,48 +381,17 @@ publishing {
     }
 
     publications {
-        agent(MavenPublication) {
-            artifactId 'btrace-agent'
-            groupId 'io.btrace'
-            artifact agentJar
-            artifact agentSourcesJar {
-                archiveClassifier = "sources"
-            }
-            artifact agentJavadocJar {
-                archiveClassifier = "javadoc"
-            }
-            pom.withXml {
-                addPomDetails(asNode(), 'btrace-agent')
-            }
-        }
-
-        client(MavenPublication) {
-            artifactId 'btrace-client'
-            groupId 'io.btrace'
-            artifact clientJar
-            artifact clientSourcesJar {
-                archiveClassifier = "sources"
-            }
-            artifact clientJavadocJar {
-                archiveClassifier = "javadoc"
-            }
-            pom.withXml {
-                addPomDetails(asNode(), 'btrace-client')
-            }
-        }
-
-        boot(MavenPublication) {
-            artifactId 'btrace-boot'
-            groupId 'io.btrace'
-            artifact bootJar
-            artifact bootSourcesJar {
-                archiveClassifier = "sources"
-            }
-            artifact bootJavadocJar {
-                archiveClassifier = "javadoc"
-            }
-            pom.withXml {
-                addPomDetails(asNode(), 'btrace-boot')
+        // Create publications for each component using a loop
+        ['agent', 'boot', 'client'].each { name ->
+            "$name"(MavenPublication) {
+                artifactId "btrace-$name"
+                groupId 'io.btrace'
+                artifact tasks["${name}Jar"]
+                artifact(tasks["${name}SourcesJar"])
+                artifact(tasks["${name}JavadocJar"])
+                pom.withXml {
+                    addPomDetails(asNode(), "btrace-$name")
+                }
             }
         }
     }
@@ -462,7 +423,9 @@ signing {
     if (signingKey != null && signingPwd != null) {
         useInMemoryPgpKeys(signingKey, signingPwd)
     }
-    sign publishing.publications.agent
-    sign publishing.publications.boot
-    sign publishing.publications.client
+
+    // Sign all publications using a loop
+    ['agent', 'boot', 'client'].each { name ->
+        sign publishing.publications."$name"
+    }
 }
