@@ -65,7 +65,9 @@ includes['boot'] = {
     return it.path.startsWith("org/slf4j/") || it.path.startsWith('org/openjdk/btrace/runtime/') ||
             it.path.startsWith('org/jctools/') ||
             it.path.startsWith('org/openjdk/btrace/services/') ||
-            it.path.startsWith('org/openjdk/btrace/statsd/')
+            it.path.startsWith('org/openjdk/btrace/statsd/') ||
+            it.path.startsWith('org/openjdk/btrace/extensions/hdrhistogram/') ||
+            it.path.startsWith('org/HdrHistogram/')
 }
 
 includes['client'] = {
@@ -83,7 +85,8 @@ includes['client'] = {
     }
     return it.path.startsWith("org/slf4j") ||
             it.path.startsWith('org/objectweb/asm') ||
-            it.path.startsWith('org/jctools')
+            it.path.startsWith('org/jctools') ||
+            it.path.startsWith('org/openjdk/btrace/extensions/hdrhistogram')
 }
 
 
@@ -95,6 +98,7 @@ dependencies {
     implementation project(':btrace-agent')
     implementation project(':btrace-client')
     implementation project(':btrace-compiler')
+    implementation project(':btrace-extensions:btrace-hdr-histogram')
 }
 
 jar {
@@ -158,6 +162,7 @@ def componentConfigs = [
         relocate 'org.jctools', componentConfigs[name].jctoolsPrefix
         relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
         relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+        relocate 'org.HdrHistogram', 'org.openjdk.btrace.libs.org.HdrHistogram'
     }
 }
 

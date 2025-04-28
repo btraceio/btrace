@@ -14,6 +14,7 @@ dependencies {
     implementation libs.jctools
     implementation libs.asm
     implementation libs.asm.util
+    implementation libs.hdrhistogram
 }
 
 processResources {

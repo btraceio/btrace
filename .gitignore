@@ -42,3 +42,6 @@ gradle.properties
 gradle-wrapper.properties
 
 /.java.versions
+
+.vscode
+.history

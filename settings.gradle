@@ -19,10 +19,11 @@ subDirs.each { File dir ->
     if (dir.name.startsWith("btrace-")) {
         include dir.name
     }
-    include "integration-tests"
-    include "benchmarks:agent-benchmark"
-    include "benchmarks:runtime-benchmarks"
 }
+include "integration-tests"
+include "benchmarks:agent-benchmark"
+include "benchmarks:runtime-benchmarks"
+include "btrace-extensions:btrace-hdr-histogram"
 
 dependencyResolutionManagement {
     versionCatalogs {
@@ -68,6 +69,9 @@ dependencyResolutionManagement {
             // https://mvnrepository.com/artifact/org.junit.jupiter
             library ('junit', 'org.junit', 'junit-bom').versionRef('junit')
             library ('junit-jupiter', 'org.junit.jupiter', 'junit-jupiter').versionRef('junit')
+
+            // https://mvnrepository.com/artifact/org.hdrhistogram
+            library ('hdrhistogram', 'org.hdrhistogram', 'HdrHistogram').version('2.1.12')
         }
     }
 }

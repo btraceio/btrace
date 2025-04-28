@@ -689,3 +689,166 @@ specific methods.
     }
 }
 ```
+
+#### Lesson 6 - HDRHistogram Support
+
+BTrace provides support for HDR Histogram, a high dynamic range histogram implementation that supports recording and analyzing sampled data value counts across a configurable integer value range with configurable value precision. HDR Histogram is particularly useful for measuring latency and other performance metrics.
+
+##### Creating and Using HDR Histograms
+
+BTrace exposes the HDR Histogram functionality through the `HdrHistogram` class, which provides methods for creating, recording values, and analyzing statistics.
+
+###### Creating a Histogram
+
+To create a new HDR Histogram, use the `create` method:
+
+```java
+private static HdrHistogram.HdrHistogramHandle handle = HdrHistogram.create("method-latency");
+```
+
+This creates a new histogram with the name "method-latency" using default settings. You can also specify the lowest trackable value, highest trackable value, and number of significant value digits:
+
+```java
+private static HdrHistogram.HdrHistogramHandle handle = HdrHistogram.create(
+    "method-latency",  // name
+    1L,                // lowest trackable value
+    3600000000L,       // highest trackable value (1 hour in nanoseconds)
+    3                  // number of significant digits
+);
+```
+
+###### Recording Values
+
+To record a value in the histogram, use the `recordValue` method:
+
+```java
+HdrHistogram.recordValue(handle, value);
+```
+
+You can also record values with an expected interval between samples:
+
+```java
+HdrHistogram.recordValueWithExpectedInterval(handle, value, expectedIntervalBetweenValueSamples);
+```
+
+###### Analyzing Statistics
+
+BTrace provides several methods to analyze histogram statistics:
+
+```java
+// Basic statistics
+long minValue = HdrHistogram.getMinValue(handle);
+long maxValue = HdrHistogram.getMaxValue(handle);
+double mean = HdrHistogram.getMean(handle);
+double stdDeviation = HdrHistogram.getStdDeviation(handle);
+long totalCount = HdrHistogram.getTotalCount(handle);
+
+// Percentile values
+long p50 = HdrHistogram.getValueAtPercentile(handle, 50.0);
+long p90 = HdrHistogram.getValueAtPercentile(handle, 90.0);
+long p99 = HdrHistogram.getValueAtPercentile(handle, 99.0);
+
+// Memory usage
+long footprint = HdrHistogram.getEstimatedFootprintInBytes(handle);
+
+// Configuration
+long highestTrackableValue = HdrHistogram.getHighestTrackableValue(handle);
+int significantDigits = HdrHistogram.getNumberOfSignificantValueDigits(handle);
+```
+
+###### Managing Histograms
+
+You can manage histograms using these methods:
+
+```java
+// Reset the histogram
+HdrHistogram.reset(handle);
+
+// Destroy the histogram when no longer needed
+HdrHistogram.destroy(handle);
+
+// Get a handle to an existing histogram by name
+HdrHistogram.HdrHistogramHandle existing = HdrHistogram.get("method-latency");
+```
+
+##### Example: Measuring Method Latency
+
+Here's a complete example that measures the execution time of methods in the java.io package:
+
+```java
+import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.Location;
+import org.openjdk.btrace.core.annotations.OnMethod;
+import org.openjdk.btrace.core.annotations.OnTimer;
+import org.openjdk.btrace.core.annotations.ProbeClassName;
+import org.openjdk.btrace.core.annotations.ProbeMethodName;
+import org.openjdk.btrace.core.annotations.TLS;
+
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+@BTrace
+public class HdrHistogramSample {
+    private static HdrHistogram.HdrHistogramHandle handle = HdrHistogram.create(
+        "method-latency",
+        1L,                // lowest trackable value
+        3600000000L,       // highest trackable value (1 hour in nanoseconds)
+        3                  // number of significant digits
+    );
+
+    @TLS
+    private static long startTime;
+
+    @OnMethod(
+        clazz="/java\\.io\\..*/",
+        method="/.*/")
+    public static void onMethodEntry(@ProbeClassName String className, @ProbeMethodName String methodName) {
+        startTime = timeNanos();
+    }
+
+    @OnMethod(
+        clazz="/java\\.io\\..*/",
+        method="/.*/" ,
+        location=@Location(Kind.RETURN))
+    public static void onMethodReturn(@ProbeClassName String className, @ProbeMethodName String methodName) {
+        long executionTime = timeNanos() - startTime;
+        HdrHistogram.recordValue(handle, executionTime);
+    }
+
+    @OnTimer(5000)
+    public static void onTimer() {
+        // Print detailed statistics every 5 seconds
+        println("Min value: " + HdrHistogram.getMinValue(handle));
+        println("Max value: " + HdrHistogram.getMaxValue(handle));
+        println("Mean value: " + HdrHistogram.getMean(handle));
+        println("StdDeviation: " + HdrHistogram.getStdDeviation(handle));
+        println("Total count: " + HdrHistogram.getTotalCount(handle));
+        
+        // Print percentiles
+        println("50th percentile: " + HdrHistogram.getValueAtPercentile(handle, 50.0));
+        println("90th percentile: " + HdrHistogram.getValueAtPercentile(handle, 90.0));
+        println("99th percentile: " + HdrHistogram.getValueAtPercentile(handle, 99.0));
+        
+        // Print memory footprint
+        println("Estimated footprint: " + HdrHistogram.getEstimatedFootprintInBytes(handle));
+    }
+}
+```
+
+This script:
+
+1. Creates an HDR Histogram with custom configuration
+2. Records the start time when a method is entered
+3. Calculates and records the execution time when the method returns
+4. Prints detailed statistics every 5 seconds, including:
+   * Basic statistics (min, max, mean, standard deviation)
+   * Percentile values (50th, 90th, 99th)
+   * Memory footprint
+
+##### Best Practices
+
+1. Choose appropriate trackable value ranges and significant digits based on your use case
+2. Use `recordValueWithExpectedInterval` when you know the expected interval between samples
+3. Reset histograms periodically if you want to analyze data in time windows
+4. Destroy histograms when they are no longer needed to free up memory
+5. Use the appropriate time unit (nanoseconds, milliseconds, etc.) based on your measurement needs

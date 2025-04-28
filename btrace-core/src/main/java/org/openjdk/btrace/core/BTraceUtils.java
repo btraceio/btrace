@@ -42,11 +42,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import jdk.jfr.Event;
+
+import org.HdrHistogram.Histogram;
 import org.openjdk.btrace.core.aggregation.Aggregation;
 import org.openjdk.btrace.core.aggregation.AggregationFunction;
 import org.openjdk.btrace.core.aggregation.AggregationKey;
@@ -58,6 +60,8 @@ import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jdk.jfr.Event;
 
 /**
  * This class is an all-in-one wrapper for BTrace DSL methods
@@ -3359,8 +3363,8 @@ public class BTraceUtils {
      * Returns <tt>true</tt> if and only if the current thread holds the monitor lock on the
      * specified object.
      *
-     * <p>This method is designed to allow a program to assert that the current thread already holds
-     * a specified lock:
+     * <p>This method is designed to allow a program to assert that the current thread already holds a
+     * specified lock:
      *
      * <pre>
      *     assert Thread.holdsLock(obj);
@@ -3535,8 +3539,8 @@ public class BTraceUtils {
      * Compiles the given regular expression into a pattern with the given flags.
      *
      * @param regex The expression to be compiled
-     * @param flags Match flags, a bit mask that may include {@link Pattern#CASE_INSENSITIVE},
-     *     {@link Pattern#MULTILINE}, {@link Pattern#DOTALL}, {@link Pattern#UNICODE_CASE}, {@link
+     * @param flags Match flags, a bit mask that may include {@link Pattern#CASE_INSENSITIVE}, {@link
+     *     Pattern#MULTILINE}, {@link Pattern#DOTALL}, {@link Pattern#UNICODE_CASE}, {@link
      *     Pattern#CANON_EQ}, {@link Pattern#UNIX_LINES}, {@link Pattern#LITERAL} and {@link
      *     Pattern#COMMENTS}
      * @throws IllegalArgumentException If bit values other than those corresponding to the defined
@@ -4748,6 +4752,302 @@ public class BTraceUtils {
   }
 
   /*
+   * HDR Histogram related BTrace utility methods
+   * @since 2.2.6
+   */
+  public static class HdrHistogram {
+    private static final Map<String, HdrHistogramHandle> handles = new ConcurrentHashMap<>();
+
+    /**
+     * A handle class that encapsulates both a histogram and a recorder.
+     * This allows for seamless usage of both histogram and recorder functionality.
+     */
+    public static class HdrHistogramHandle {
+        private final String name;
+        private final Histogram histogram;
+
+        private HdrHistogramHandle(String name, Histogram histogram) {
+            this.name = name;
+            this.histogram = histogram;
+        }
+
+        /**
+         * Records a value in the histogram.
+         *
+         * @param value the value to record
+         */
+        void recordValue(long value) {
+            histogram.recordValue(value);
+        }
+
+        /**
+         * Gets the name of this handle.
+         *
+         * @return the name
+         */
+        String getName() {
+            return name;
+        }
+
+        /**
+         * Gets the histogram associated with this handle.
+         *
+         * @return the histogram
+         */
+        Histogram getHistogram() {
+            return histogram;
+        }
+
+        /**
+         * Resets the histogram.
+         */
+        void reset() {
+            histogram.reset();
+        }
+
+        void destroy() {
+          reset();
+          handles.remove(name);
+        }
+
+        /**
+         * Prints statistics for both the histogram and the recorder.
+         */
+        void printStatistics() {
+          StringBuilder buf = new StringBuilder("=== HDR Histogram: ").append(name).append(" ===\n");
+          buf.append("Min value: ").append(histogram.getMinValue()).append('\n')
+             .append("Max value: ").append(histogram.getMaxValue()).append('\n')
+             .append("Mean value: ").append(histogram.getMean()).append('\n')
+             .append("StdDeviation: ").append(histogram.getStdDeviation()).append('\n')
+             .append("50th percentile: ").append(histogram.getValueAtPercentile(50.0)).append('\n')
+             .append("90th percentile: ").append(histogram.getValueAtPercentile(90.0)).append('\n')
+             .append("99th percentile: ").append(histogram.getValueAtPercentile(99.0)).append('\n')
+             .append("99.9th percentile: ").append(histogram.getValueAtPercentile(99.9)).append('\n')
+             .append("99.99th percentile: ").append(histogram.getValueAtPercentile(99.99)).append('\n')
+             .append("99.999th percentile: ").append(histogram.getValueAtPercentile(99.999)).append('\n')
+             .append("Total count: ").append(histogram.getTotalCount()).append('\n');
+          print(buf);
+        }
+    }
+
+    /**
+     * Creates a new HDR Histogram with default parameters.
+     * The default parameters are:
+     * - lowest trackable value: 1
+     * - highest trackable value: 3600000000L (1 hour in nanoseconds)
+     * - number of significant digits: 3
+     *
+     * @param name the name of the histogram
+     * @return a handle to the created histogram
+     * @throws NullPointerException if name is null
+     */
+    public static HdrHistogramHandle create(String name) {
+        return create(name, 1L, 3600000000L, 3);
+    }
+
+    /**
+     * Creates a new HDR Histogram with specified parameters.
+     * The histogram will track values between lowestTrackableValue and highestTrackableValue
+     * with the specified number of significant digits.
+     *
+     * @param name the name of the histogram
+     * @param lowestTrackableValue the lowest value that can be tracked (must be >= 1)
+     * @param highestTrackableValue the highest value that can be tracked (must be > lowestTrackableValue)
+     * @param numberOfSignificantValueDigits the number of significant decimal digits to which the histogram will maintain value resolution and separation (must be between 0 and 5)
+     * @return a handle to the created histogram
+     * @throws NullPointerException if name is null
+     * @throws IllegalArgumentException if lowestTrackableValue < 1
+     * @throws IllegalArgumentException if highestTrackableValue <= lowestTrackableValue
+     * @throws IllegalArgumentException if numberOfSignificantValueDigits is not between 0 and 5
+     */
+    public static HdrHistogramHandle create(String name, long lowestTrackableValue, long highestTrackableValue, int numberOfSignificantValueDigits) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        if (lowestTrackableValue < 1) {
+            throw new IllegalArgumentException("lowestTrackableValue must be >= 1");
+        }
+        if (highestTrackableValue <= lowestTrackableValue) {
+            throw new IllegalArgumentException("highestTrackableValue must be > lowestTrackableValue");
+        }
+        if (numberOfSignificantValueDigits < 0 || numberOfSignificantValueDigits > 5) {
+            throw new IllegalArgumentException("numberOfSignificantValueDigits must be between 0 and 5");
+        }
+
+        Histogram histogram = new Histogram(lowestTrackableValue, highestTrackableValue, numberOfSignificantValueDigits);
+        HdrHistogramHandle handle = new HdrHistogramHandle(name, histogram);
+        handles.put(name, handle);
+        return handle;
+    }
+
+    /**
+     * Gets an existing HDR Histogram handle by name.
+     *
+     * @param name the name of the handle
+     * @return the handle, or null if no handle with the specified name exists
+     */
+    public static HdrHistogramHandle get(String name) {
+        return handles.get(name);
+    }
+
+    /**
+     * Records a value in the histogram and recorder associated with the specified handle.
+     *
+     * @param handle the handle to the histogram and recorder
+     * @param value the value to record
+     */
+    public static void recordValue(HdrHistogramHandle handle, long value) {
+        if (handle != null) {
+            handle.recordValue(value);
+        }
+    }
+
+    /**
+     * Prints statistics for the histogram and recorder associated with the specified handle.
+     *
+     * @param handle the handle to the histogram and recorder
+     */
+    public static void printStatistics(HdrHistogramHandle handle) {
+        if (handle != null) {
+            handle.printStatistics();
+        }
+    }
+
+    /**
+     * Resets the histogram and recorder associated with the specified handle.
+     *
+     * @param handle the handle to the histogram and recorder
+     */
+    public static void reset(HdrHistogramHandle handle) {
+        if (handle != null) {
+            handle.reset();
+        }
+    }
+    /**
+     * Destroys the histogram and recorder associated with the specified handle.
+     *
+     * @param handle the handle to the histogram and recorder
+     */
+    public static void destroy(HdrHistogramHandle handle) {
+        if (handle != null) {
+            handle.destroy();
+        }
+    }
+
+    public static long startTimeStamp(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getStartTimeStamp();
+      } else {
+        return Long.MIN_VALUE;
+      }
+    }
+
+    public static long getMinValue(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getMinValue();
+      } else {
+        return Long.MAX_VALUE;
+      }
+    }
+
+    public static long getMaxValue(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getMaxValue();
+      } else {
+        return Long.MIN_VALUE;
+      }
+    }
+
+    public static double getMean(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getMean();
+      } else {
+        return Double.NaN;
+      }
+    }
+
+    public static double getStdDeviation(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getStdDeviation();
+      } else {
+        return Double.NaN;
+      }
+    }
+
+    public static long getValueAtPercentile(HdrHistogramHandle handle, double percentile) {
+      if (handle != null) {
+        return handle.getHistogram().getValueAtPercentile(percentile);
+      } else {
+        return Long.MIN_VALUE;
+      }
+    }
+
+    public static long getTotalCount(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getTotalCount();
+      } else {
+        return 0;
+      }
+    }
+
+    /**
+     * Records a value in the histogram, correcting for coordinated omission if expectedIntervalBetweenValueSamples is provided.
+     * This is particularly useful for latency measurements where values may exceed the expected interval between samples.
+     *
+     * @param handle the histogram handle
+     * @param value the value to record
+     * @param expectedIntervalBetweenValueSamples the expected interval between value samples
+     */
+    public static void recordValueWithExpectedInterval(HdrHistogramHandle handle, long value, long expectedIntervalBetweenValueSamples) {
+      if (handle != null) {
+        handle.getHistogram().recordValueWithExpectedInterval(value, expectedIntervalBetweenValueSamples);
+      }
+    }
+
+    /**
+     * Gets the estimated memory footprint of the histogram in bytes.
+     *
+     * @param handle the histogram handle
+     * @return the estimated memory footprint in bytes
+     */
+    public static long getEstimatedFootprintInBytes(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getEstimatedFootprintInBytes();
+      } else {
+        return 0;
+      }
+    }
+
+    /**
+     * Gets the highest trackable value for the histogram.
+     *
+     * @param handle the histogram handle
+     * @return the highest trackable value
+     */
+    public static long getHighestTrackableValue(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getHighestTrackableValue();
+      } else {
+        return 0;
+      }
+    }
+
+    /**
+     * Gets the number of significant value digits maintained by the histogram.
+     *
+     * @param handle the histogram handle
+     * @return the number of significant value digits
+     */
+    public static int getNumberOfSignificantValueDigits(HdrHistogramHandle handle) {
+      if (handle != null) {
+        return handle.getHistogram().getNumberOfSignificantValueDigits();
+      } else {
+        return 0;
+      }
+    }
+  }
+
+  /*
    * Wraps the aggregations related BTrace utility methods
    * @since 1.2
    */
@@ -4846,9 +5146,9 @@ public class BTraceUtils {
      * Removes all aggregated values from the aggregation except for the largest or smallest <code>
      * abs(count)</code> elements.
      *
-     * <p>If <code>count</code> is positive, the largest aggregated values in the aggregation will
-     * be preserved. If <code>count</code> is negative the smallest values will be preserved. If
-     * <code>count</code> is zero then all elements will be removed.
+     * <p>If <code>count</code> is positive, the largest aggregated values in the aggregation will be
+     * preserved. If <code>count</code> is negative the smallest values will be preserved. If <code>
+     * count</code> is zero then all elements will be removed.
      *
      * <p>Behavior is intended to be similar to the dtrace <code>trunc()</code> function.
      *
@@ -5030,8 +5330,8 @@ public class BTraceUtils {
      * .
      *
      * @param ref reference object whose referent is returned.
-     * @return The object to which the reference refers, or <code>null</code> if the reference
-     *     object has been cleared.
+     * @return The object to which the reference refers, or <code>null</code> if the reference object
+     *     has been cleared.
      */
     public static Object deref(Reference ref) {
       if (ref.getClass().getClassLoader() == null) {
@@ -5209,7 +5509,7 @@ public class BTraceUtils {
      * @param throwException whether to throw exception on failing to find field or not
      * @return the <code>Field</code> object for the specified field in this class
      */
-    public static Field field(Class clazz, String name, boolean throwException) {
+    public static Field field(Class<?> clazz, String name, boolean throwException) {
       return getField(clazz, name, throwException);
     }
 
@@ -5223,7 +5523,7 @@ public class BTraceUtils {
      * @param name the name of the field
      * @return the <code>Field</code> object for the specified field in this class
      */
-    public static Field field(Class clazz, String name) {
+    public static Field field(Class<?> clazz, String name) {
       return field(clazz, name, true);
     }
 
@@ -5797,7 +6097,7 @@ public class BTraceUtils {
      *
      * @param clazz Class whose static fields are printed.
      */
-    public static void printStaticFields(Class clazz) {
+    public static void printStaticFields(Class<?> clazz) {
       printStaticFields(clazz, false);
     }
 
@@ -5809,7 +6109,7 @@ public class BTraceUtils {
      * @param clazz Class whose static fields are printed.
      * @param classNamePrefix flag to tell whether to prefix field names names by class name or not.
      */
-    public static void printStaticFields(Class clazz, boolean classNamePrefix) {
+    public static void printStaticFields(Class<?> clazz, boolean classNamePrefix) {
       StringBuilder buf = new StringBuilder();
       buf.append('{');
       addStaticFieldValues(buf, clazz, classNamePrefix);

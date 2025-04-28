@@ -1,0 +1,20 @@
+// No need to apply 'java' plugin as it's already applied by common.gradle
+apply plugin: 'java-library'
+
+dependencies {
+    api project(':btrace-core')
+    implementation libs.hdrhistogram
+}
+
+sourceSets {
+    main {
+        java {
+            exclude '**/samples/**'
+        }
+    }
+}
+
+jar {
+    archiveBaseName = 'btrace-hdr-histogram'
+    archiveClassifier = 'ext'
+}

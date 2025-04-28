@@ -459,8 +459,68 @@ public class BTraceFunctionalTests extends RuntimeTest {
         });
   }
 
+  @Test
+  public void testHdrHistogram() throws Exception {
+    debugBTrace = true;
+    test(
+        "resources.Main",
+        "btrace/HdrHistogramSample.java",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("method-latency"), "Should contain histogram name");
+            assertTrue(stdout.contains("Min value:"), "Should contain min value");
+            assertTrue(stdout.contains("Max value:"), "Should contain max value");
+            assertTrue(stdout.contains("Mean value:"), "Should contain mean value");
+            assertTrue(stdout.contains("Total count:"), "Should contain total count");
+          }
+        });
+  }
+
+  @Test
+  public void testHdrHistogramExtended() throws Exception {
+    debugBTrace = true;
+    test(
+        "resources.Main",
+        "btrace/HdrHistogramExtendedTest.java",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            
+            // Verify histogram creation and basic operations
+            assertTrue(stdout.contains("Custom histogram created"), "Should confirm histogram creation");
+            assertTrue(stdout.contains("Value recorded"), "Should confirm value recording");
+            
+            // Verify statistics
+            assertTrue(stdout.contains("Min value:"), "Should contain min value");
+            assertTrue(stdout.contains("Max value:"), "Should contain max value");
+            assertTrue(stdout.contains("Mean value:"), "Should contain mean value");
+            assertTrue(stdout.contains("StdDeviation:"), "Should contain standard deviation");
+            assertTrue(stdout.contains("Total count:"), "Should contain total count");
+            
+            // Verify percentiles
+            assertTrue(stdout.contains("50th percentile:"), "Should contain 50th percentile");
+            assertTrue(stdout.contains("90th percentile:"), "Should contain 90th percentile");
+            assertTrue(stdout.contains("99th percentile:"), "Should contain 99th percentile");
+            
+            // Verify memory footprint
+            assertTrue(stdout.contains("Estimated footprint:"), "Should contain memory footprint");
+            
+            // Verify reset and destroy
+            assertTrue(stdout.contains("Histogram reset"), "Should confirm histogram reset");
+            assertTrue(stdout.contains("Histogram destroyed"), "Should confirm histogram destroy");
+          }
+        });
+  }
+
   private static boolean isVersionSafe(String rtVersion) {
-      System.out.println("===> version: " + rtVersion);
+    System.out.println("===> version: " + rtVersion);
     String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
     int major = Integer.parseInt(versionParts[0]);
     String updateStr = versionParts.length == 3 ? versionParts[2].replace("0_", "") : "0";
