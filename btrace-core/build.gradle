@@ -6,6 +6,7 @@ buildscript { scriptHandler ->
 
 plugins {
     alias(libs.plugins.versioning)
+    alias(libs.plugins.jmh)
 }
 
 dependencies {
@@ -14,6 +15,20 @@ dependencies {
     implementation libs.jctools
     implementation libs.asm
     implementation libs.asm.util
+
+    jmh libs.jmh
+    jmh libs.jmh.annprocess
+}
+
+jmh {
+    warmupIterations = 3
+    iterations = 5
+    fork = 2
+    threads = 1
+    timeUnit = 'ms'
+    def jmhIncludeProp = project.findProperty('jmhInclude')
+    includes = jmhIncludeProp ? [jmhIncludeProp] : ['.*BinaryProtocol.*']
+    benchmarkMode = ['avgt', 'thrpt']
 }
 
 processResources {
