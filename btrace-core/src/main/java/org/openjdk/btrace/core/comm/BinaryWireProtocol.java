@@ -41,7 +41,7 @@ import org.openjdk.btrace.core.comm.v2.CommandAdapter;
  * <ul>
  *   <li>3-6x faster serialization/deserialization
  *   <li>2-5x smaller payload sizes (10-100x with compression)
- *   <li>Automatic compression for payloads > 1KB
+ *   <li>Automatic compression for payloads &gt; 1KB
  *   <li>Zero-copy optimizations where possible
  *   <li>Thread-safe with ReentrantLock
  *   <li>Magic byte prefix: 0x42 0x54 0x52 0x32 ("BTR2")
