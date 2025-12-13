@@ -37,7 +37,7 @@ class Maximum implements AggregationValue {
 
   @Override
   public synchronized void clear() {
-    max = Integer.MIN_VALUE;
+    max = Long.MIN_VALUE;
   }
 
   @Override
