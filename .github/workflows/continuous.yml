@@ -36,7 +36,7 @@ jobs:
           echo "key=${key}" >> $GITHUB_ENV
           echo "cache-key=${key}" >> $GITHUB_OUTPUT
       - name: Cache Gradle
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -107,7 +107,7 @@ jobs:
           which java
           echo 'y' | sdk install java 11.0.25-tem
       - name: Cache Gradle
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -165,7 +165,7 @@ jobs:
         java-version: 11
         distribution: temurin
     - name: Cache Gradle
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       with:
         path: |
           ~/.gradle/caches/modules-2
