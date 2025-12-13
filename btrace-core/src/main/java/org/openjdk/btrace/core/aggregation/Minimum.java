@@ -37,7 +37,7 @@ class Minimum implements AggregationValue {
 
   @Override
   public synchronized void clear() {
-    min = Integer.MAX_VALUE;
+    min = Long.MAX_VALUE;
   }
 
   @Override
