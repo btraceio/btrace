@@ -60,7 +60,7 @@ public enum ProtocolVersion {
    *   <li>Magic byte prefix: 0x42 0x54 0x52 0x32 ("BTR2")
    *   <li>3-6x faster serialization
    *   <li>2-5x smaller payloads (10-100x with compression)
-   *   <li>Automatic deflate compression for payloads > 1KB
+   *   <li>Automatic deflate compression for payloads &gt; 1KB
    *   <li>Zero-copy optimizations where possible
    * </ul>
    */
