@@ -84,7 +84,11 @@ public class MessageCommand extends DataCommand {
 
     int ptr = 0;
     while (ptr < len) {
-      ptr += in.read(bytes, ptr, len - ptr);
+      int bytesRead = in.read(bytes, ptr, len - ptr);
+      if (bytesRead == -1) {
+        throw new IOException("Unexpected end of stream");
+      }
+      ptr += bytesRead;
     }
 
     msg = new String(bytes, StandardCharsets.UTF_8);

@@ -6,6 +6,8 @@ buildscript { scriptHandler ->
 
 plugins {
     alias(libs.plugins.versioning)
+    alias(libs.plugins.jmh)
+    id 'jacoco'
 }
 
 dependencies {
@@ -14,6 +16,20 @@ dependencies {
     implementation libs.jctools
     implementation libs.asm
     implementation libs.asm.util
+
+    jmh libs.jmh
+    jmh libs.jmh.annprocess
+}
+
+jmh {
+    warmupIterations = 3
+    iterations = 5
+    fork = 2
+    threads = 1
+    timeUnit = 'ms'
+    def jmhIncludeProp = project.findProperty('jmhInclude')
+    includes = jmhIncludeProp ? [jmhIncludeProp] : ['.*BinaryProtocol.*']
+    benchmarkMode = ['avgt', 'thrpt']
 }
 
 processResources {
@@ -21,4 +37,30 @@ processResources {
         "btrace.version": project.version,
         "hash"          : versioning.info.commit
     ]
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    // Focus on v2 protocol package
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, include: [
+                '**/org/openjdk/btrace/core/comm/**/*.class'
+            ])
+        }))
+    }
+}
+
+test {
+    finalizedBy jacocoTestReport
 }
