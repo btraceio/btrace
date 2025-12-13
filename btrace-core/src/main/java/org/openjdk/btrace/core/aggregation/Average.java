@@ -53,7 +53,7 @@ class Average implements AggregationValue {
     if (count == 0) {
       return 0; // Avoid division by zero
     }
-    return (int) (sum / count);
+    return sum / count;
   }
 
   @Override
