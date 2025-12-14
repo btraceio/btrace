@@ -187,3 +187,4 @@ class InstrumentCommandTest {
     assertNull(cmdArgs.get("arg4"));
   }
 }
+
