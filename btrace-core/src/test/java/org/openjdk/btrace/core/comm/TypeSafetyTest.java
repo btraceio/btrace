@@ -226,3 +226,4 @@ class TypeSafetyTest {
     return clazz.cast(result);
   }
 }
+
