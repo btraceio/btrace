@@ -25,6 +25,7 @@
 
 package org.openjdk.btrace.runtime;
 
+import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -192,11 +193,11 @@ public class DOTWriter {
   // Exclude set of instances.
   private final Set<Object> excludeObjects = new HashSet<>();
   // Include List of classes.
-  private final List<Class> includeClasses = new ArrayList<>();
+  private final List<Class<?>> includeClasses = new ArrayList<>();
   // Include classes which matching name pattern
   private Pattern includeClassNames;
   // Exclude List of classes.
-  private final List<Class> excludeClasses = new ArrayList<>();
+  private final List<Class<?>> excludeClasses = new ArrayList<>();
   // Excluse classes with matching name pattern
   private Pattern excludeClassNames;
   // True if collections should be expanded.
@@ -208,7 +209,7 @@ public class DOTWriter {
 
   public DOTWriter(String fileName) {
     try {
-      dotStream = new PrintStream(fileName);
+      dotStream = new PrintStream(new FileOutputStream(fileName), true, StandardCharsets.UTF_8.name());
     } catch (Throwable ignored) {
     }
 
@@ -450,7 +451,7 @@ public class DOTWriter {
   }
 
   // Add classes to the include list.
-  public void includeClasses(Class... clazzes) {
+  public void includeClasses(Class<?>... clazzes) {
     includeClasses.addAll(Arrays.asList(clazzes));
     filtering = true;
   }
@@ -461,7 +462,7 @@ public class DOTWriter {
   }
 
   // Adds classes to the exclude list.
-  public void excludeClasses(Class... clazzes) {
+  public void excludeClasses(Class<?>... clazzes) {
     excludeClasses.addAll(Arrays.asList(clazzes));
     filtering = true;
   }
@@ -583,7 +584,7 @@ public class DOTWriter {
     }
 
     if (!includeClasses.isEmpty()) {
-      for (Class clazz : includeClasses) {
+      for (Class<?> clazz : includeClasses) {
         if (clazz.isInstance(object)) return true;
       }
 
@@ -599,7 +600,7 @@ public class DOTWriter {
     }
 
     if (!excludeClasses.isEmpty()) {
-      for (Class clazz : excludeClasses) {
+      for (Class<?> clazz : excludeClasses) {
         if (clazz.isInstance(object)) return false;
       }
     }
