@@ -257,7 +257,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   private LowMemoryHandler[] lowMemoryHandlers;
 
   // map of client event handling methods
-  private Map<String, Method> eventHandlerMap;
+  private volatile Map<String, Method> eventHandlerMap;
   private Map<String, LowMemoryHandler> lowMemoryHandlerMap;
 
   // timer to run profile provider actions
@@ -332,13 +332,18 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
       if (sb != null) {
         result.addAll(sb);
         sb.clear();
+        speculativeQueues.remove(id);
       }
     }
 
     void discard(int id) {
       validateId(id);
       currentSpeculationId.set(null);
-      speculativeQueues.get(id).clear();
+      MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
+      if (sb != null) {
+        sb.clear();
+        speculativeQueues.remove(id);
+      }
     }
 
     // -- Internals only below this point
@@ -384,7 +389,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   // interface to read perf counters of this process
   protected static final PerfReader perfReader = createPerfReaderImpl();
   // performance counters created by this client
-  protected static final Map<String, ByteBuffer> counters = new HashMap<>();
+  protected static final Map<String, ByteBuffer> counters = new ConcurrentHashMap<>();
 
   private static final BTraceRuntimeImplFactory<BTraceRuntime.Impl> factory = null;
 
@@ -541,20 +546,29 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   @Override
   public final void handleEvent(EventCommand ecmd) {
     if (eventHandlers != null) {
-      if (eventHandlerMap == null) {
-        eventHandlerMap = new HashMap<>();
-        for (EventHandler eh : eventHandlers) {
-          try {
-            String eventName = args.template(eh.getEvent());
-            eventHandlerMap.put(eventName, eh.getMethod(clazz));
-          } catch (NoSuchMethodException ignored) {
+      Map<String, Method> localMap = eventHandlerMap;
+      if (localMap == null) {
+        synchronized (this) {
+          if (eventHandlerMap == null) {
+            Map<String, Method> m = new HashMap<>();
+            for (EventHandler eh : eventHandlers) {
+              try {
+                String eventName = args.template(eh.getEvent());
+                m.put(eventName, eh.getMethod(clazz));
+              } catch (NoSuchMethodException ignored) {
+              }
+            }
+            eventHandlerMap = m;
+            localMap = m;
+          } else {
+            localMap = eventHandlerMap;
           }
         }
       }
       String event = ecmd.getEvent();
       event = event != null ? event : EventHandler.ALL_EVENTS;
 
-      Method eventHandler = eventHandlerMap.get(event);
+      Method eventHandler = localMap.get(event);
       if (eventHandler != null) {
         BTraceRuntimeAccess.doWithCurrent(
             (Callable<Void>)
