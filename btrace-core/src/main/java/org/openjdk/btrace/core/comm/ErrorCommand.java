@@ -49,7 +49,12 @@ public class ErrorCommand extends Command implements PrintableCommand {
 
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
-    cause = (Throwable) in.readObject();
+    Object obj = in.readObject();
+    if (obj != null && !(obj instanceof Throwable)) {
+      throw new IOException(
+          "Invalid data type: expected Throwable, got " + obj.getClass().getName());
+    }
+    cause = (Throwable) obj;
   }
 
   public Throwable getCause() {
