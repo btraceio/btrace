@@ -166,7 +166,7 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
                           JfrEvent event = newEvent();
                           return handlerMethod.invoke(null, event);
                         } catch (Throwable t) {
-                          t.printStackTrace(System.out);
+                          log.warn("Periodic JFR handler invocation failed", t);
                           throw t;
                         }
                       } else {
@@ -178,7 +178,6 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
       FlightRecorder.addPeriodicEvent(eClz, hook);
       periodicHook = hook;
     } catch (ClassNotFoundException e) {
-      e.printStackTrace();
       StringBuilder msg = new StringBuilder("Unable to register periodic JFR event of type '");
       String eMsg = e.getMessage();
       msg.append(eMsg.replace('/', '.'));
