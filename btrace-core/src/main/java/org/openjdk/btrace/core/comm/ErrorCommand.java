@@ -64,6 +64,11 @@ public class ErrorCommand extends Command implements PrintableCommand {
   @Override
   public void print(PrintWriter out) {
     out.append("! ERROR\n");
-    getCause().printStackTrace(out);
+    Throwable cause = getCause();
+    if (cause != null) {
+      cause.printStackTrace(out);
+    } else {
+      out.append("(No exception information available)\n");
+    }
   }
 }

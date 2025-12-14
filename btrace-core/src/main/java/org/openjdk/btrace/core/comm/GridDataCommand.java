@@ -114,6 +114,9 @@ public class GridDataCommand extends DataCommand {
   private Map<Integer, Integer> getColumnWidth(List<Object[]> objects) {
     Map<Integer, Integer> columnWidth = new LinkedHashMap<>();
     for (Object[] obj : objects) {
+      if (obj == null) {
+        continue;
+      }
       for (int column = 0; column < obj.length; ++column) {
         int length = obj[column].toString().length();
         Integer width = 0;
@@ -137,7 +140,9 @@ public class GridDataCommand extends DataCommand {
       }
       Map<Integer, Integer> columnWidth = getColumnWidth(data);
       for (Object[] dataRow : data) {
-
+        if (dataRow == null) {
+          continue;
+        }
         // Convert histograms to strings, and pretty-print multi-line text
         Object[] printRow = dataRow.clone();
         for (int i = 0; i < printRow.length; i++) {
