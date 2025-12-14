@@ -4,15 +4,16 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @since WireIO v.1
  */
 public class ListProbesCommand extends Command implements PrintableCommand {
-  private final List<String> probes = new ArrayList<>();
+  // CopyOnWriteArrayList ensures safe iteration during concurrent updates without CME
+  private final List<String> probes = new CopyOnWriteArrayList<>();
 
   public ListProbesCommand() {
     super(Command.LIST_PROBES, true);
@@ -20,7 +21,9 @@ public class ListProbesCommand extends Command implements PrintableCommand {
 
   public void setProbes(Collection<String> probes) {
     this.probes.clear();
-    this.probes.addAll(probes);
+    if (probes != null && !probes.isEmpty()) {
+      this.probes.addAll(probes);
+    }
   }
 
   @Override

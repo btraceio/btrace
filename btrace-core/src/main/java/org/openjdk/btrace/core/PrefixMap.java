@@ -71,9 +71,7 @@ public class PrefixMap {
     }
 
     public void addReferencedNode(char ch, Node n) {
-      if (!refs.containsKey(ch)) {
-        refs.put(ch, n);
-      }
+      refs.putIfAbsent(ch, n);
     }
 
     public void setValue(CharSequence val) {
