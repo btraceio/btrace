@@ -133,7 +133,6 @@ public class GridDataCommand extends DataCommand {
 
   @Override
   public void print(PrintWriter out) {
-
     if (data != null) {
       if (name != null && !name.isEmpty()) {
         out.println(name);
