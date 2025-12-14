@@ -25,14 +25,29 @@ public final class BTraceRuntimes {
   private static boolean loadFactory(String clzName) {
     try {
       log.debug("Attempting to load BTrace runtime implementation: {}", clzName);
-      Class<BTraceRuntimeImplFactory<?>> factoryClz =
-          (Class<BTraceRuntimeImplFactory<?>>)
-              ClassLoader.getSystemClassLoader().loadClass(clzName);
-      BTraceRuntimeImplFactory<?> instance = factoryClz.getConstructor().newInstance();
-      if (instance.isEnabled()) {
-        FACTORY = instance;
-        log.debug("BTrace runtime implementation {} is loaded", clzName);
-        return true;
+      ClassLoader[] loaders = new ClassLoader[] {
+          Thread.currentThread().getContextClassLoader(),
+          BTraceRuntimes.class.getClassLoader(),
+          ClassLoader.getSystemClassLoader()
+      };
+      for (ClassLoader loader : loaders) {
+        if (loader == null) continue;
+        try {
+          @SuppressWarnings("unchecked")
+          Class<BTraceRuntimeImplFactory<?>> factoryClz =
+              (Class<BTraceRuntimeImplFactory<?>>) loader.loadClass(clzName);
+          BTraceRuntimeImplFactory<?> instance = factoryClz.getConstructor().newInstance();
+          if (instance.isEnabled()) {
+            FACTORY = instance;
+            log.debug("BTrace runtime implementation {} loaded via {}", clzName, loader);
+            return true;
+          }
+        } catch (ClassNotFoundException | UnsupportedClassVersionError e) {
+          // try next loader
+          if (log.isDebugEnabled()) {
+            log.debug("Loader {} could not load {}: {}", loader, clzName, e.toString());
+          }
+        }
       }
     } catch (ClassNotFoundException | UnsupportedClassVersionError ignored) {
     } catch (Exception e) {
