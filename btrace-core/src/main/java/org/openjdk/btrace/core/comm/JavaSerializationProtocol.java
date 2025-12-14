@@ -68,10 +68,24 @@ public class JavaSerializationProtocol implements WireProtocol {
   public JavaSerializationProtocol(InputStream inputStream, OutputStream outputStream)
       throws IOException {
     // ObjectOutputStream must be created BEFORE ObjectInputStream
-    // to avoid deadlock with stream headers
-    this.oos = new ObjectOutputStream(outputStream);
-    this.oos.flush(); // Write stream header immediately
-    this.ois = new ObjectInputStream(inputStream);
+    // to avoid deadlock with stream headers. If ObjectInputStream creation fails,
+    // ensure the already-created ObjectOutputStream is closed to avoid resource leak.
+    ObjectOutputStream tempOos = null;
+    try {
+      tempOos = new ObjectOutputStream(outputStream);
+      tempOos.flush(); // Write stream header immediately
+      this.oos = tempOos;
+      this.ois = new ObjectInputStream(inputStream);
+    } catch (IOException e) {
+      if (tempOos != null) {
+        try {
+          tempOos.close();
+        } catch (IOException closeEx) {
+          e.addSuppressed(closeEx);
+        }
+      }
+      throw e;
+    }
   }
 
   /**

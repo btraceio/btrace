@@ -116,7 +116,7 @@ public abstract class InstrumentorTestBase {
       traceCode = null;
       resetClassLoader();
 
-      Field lastFld = MethodID.class.getDeclaredField("lastMehodId");
+      Field lastFld = MethodID.class.getDeclaredField("lastMethodId");
       Field mapFld = MethodID.class.getDeclaredField("methodIds");
 
       lastFld.setAccessible(true);
