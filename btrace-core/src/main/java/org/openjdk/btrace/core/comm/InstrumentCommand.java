@@ -38,8 +38,17 @@ public class InstrumentCommand extends Command {
 
   public InstrumentCommand(byte[] code, ArgsMap args) {
     super(INSTRUMENT, true);
-    this.code = code;
-    this.args = args;
+    // Defensive copy of bytecode array to prevent external modification
+    this.code = code != null ? code.clone() : null;
+    // Create new ArgsMap by copying entries to prevent external modification
+    if (args != null) {
+      this.args = new ArgsMap(args.size());
+      for (Map.Entry<String, String> entry : args) {
+        this.args.put(entry.getKey(), entry.getValue());
+      }
+    } else {
+      this.args = null;
+    }
   }
 
   public InstrumentCommand(byte[] code, String[] args) {
@@ -81,7 +90,7 @@ public class InstrumentCommand extends Command {
   }
 
   public byte[] getCode() {
-    return code;
+    return code != null ? code.clone() : null;
   }
 
   public ArgsMap getArguments() {
