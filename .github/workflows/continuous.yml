@@ -125,6 +125,9 @@ jobs:
         with:
           name: test-trace
           path: btrace-instr/build/classes/traces
+      - name: Build btrace-instr jar
+        run: |
+          ./gradlew --no-daemon --parallel --build-cache :btrace-instr:jar
       - name: Run tests
         run: |
           set +x
