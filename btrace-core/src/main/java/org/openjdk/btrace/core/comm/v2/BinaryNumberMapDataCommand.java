@@ -12,6 +12,7 @@ import java.util.Map;
  */
 public class BinaryNumberMapDataCommand extends BinaryDataCommand {
     private Map<String, Number> data = new LinkedHashMap<>();
+    private static final NumberEncoding ENCODING = new NumberEncoding((byte)0, (byte)1, (byte)2, (byte)3, (byte)4);
 
     static {
         // Register this command type
@@ -40,27 +41,7 @@ public class BinaryNumberMapDataCommand extends BinaryDataCommand {
         // Write each map entry
         for (Map.Entry<String, Number> entry : data.entrySet()) {
             BinaryProtocol.writeString(out, entry.getKey());
-            
-            Number value = entry.getValue();
-            if (value == null) {
-                BinaryProtocol.writeByte(out, (byte) 0);
-            } else if (value instanceof Integer) {
-                BinaryProtocol.writeByte(out, (byte) 1);
-                BinaryProtocol.writeInt(out, (Integer) value);
-            } else if (value instanceof Long) {
-                BinaryProtocol.writeByte(out, (byte) 2);
-                BinaryProtocol.writeLong(out, (Long) value);
-            } else if (value instanceof Float) {
-                BinaryProtocol.writeByte(out, (byte) 3);
-                BinaryProtocol.writeFloat(out, (Float) value);
-            } else if (value instanceof Double) {
-                BinaryProtocol.writeByte(out, (byte) 4);
-                BinaryProtocol.writeDouble(out, (Double) value);
-            } else {
-                // Default to long for other number types
-                BinaryProtocol.writeByte(out, (byte) 2);
-                BinaryProtocol.writeLong(out, value.longValue());
-            }
+            ENCODING.writeNumber(out, entry.getValue());
         }
     }
 
@@ -79,29 +60,7 @@ public class BinaryNumberMapDataCommand extends BinaryDataCommand {
         for (int i = 0; i < size; i++) {
             String key = BinaryProtocol.readString(in);
             
-            byte type = BinaryProtocol.readByte(in);
-            Number value = null;
-            
-            switch (type) {
-                case 0: // null
-                    value = null;
-                    break;
-                case 1: // Integer
-                    value = BinaryProtocol.readInt(in);
-                    break;
-                case 2: // Long
-                    value = BinaryProtocol.readLong(in);
-                    break;
-                case 3: // Float
-                    value = BinaryProtocol.readFloat(in);
-                    break;
-                case 4: // Double
-                    value = BinaryProtocol.readDouble(in);
-                    break;
-                default:
-                    throw new IOException("Unsupported number type: " + type);
-            }
-            
+            Number value = ENCODING.readNumber(in);
             data.put(key, value);
         }
     }
