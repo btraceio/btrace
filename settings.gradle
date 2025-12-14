@@ -35,7 +35,7 @@ dependencyResolutionManagement {
             version('junit', '5.11.4')
 
             // *** Gradle plugins ***
-            plugin ('spotless', 'com.diffplug.spotless').version('6.11.0')
+            plugin ('spotless', 'com.diffplug.spotless').version('8.1.0')
             plugin ('versioning', 'net.nemerosa.versioning').version('2.15.1')
             plugin ('ospackage', 'com.netflix.nebula.ospackage').version('11.11.2')
             plugin ('publish', 'io.github.gradle-nexus.publish-plugin').version('2.0.0')
