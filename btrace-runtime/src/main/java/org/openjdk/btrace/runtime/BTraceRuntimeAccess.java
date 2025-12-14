@@ -200,7 +200,7 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
               m.setAccessible(true);
               return m.invoke(initValue);
             } catch (Exception e) {
-              e.printStackTrace();
+              log.warn("Failed to clone TLS initial value", e);
               return null;
             }
           }
