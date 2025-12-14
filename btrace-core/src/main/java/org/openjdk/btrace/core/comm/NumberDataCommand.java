@@ -69,6 +69,11 @@ public class NumberDataCommand extends DataCommand {
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     name = in.readUTF();
-    value = (Number) in.readObject();
+    Object obj = in.readObject();
+    if (obj != null && !(obj instanceof Number)) {
+      throw new IOException(
+          "Invalid data type: expected Number, got " + obj.getClass().getName());
+    }
+    value = (Number) obj;
   }
 }

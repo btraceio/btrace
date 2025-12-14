@@ -64,10 +64,21 @@ public class SetSettingsCommand extends Command {
   @Override
   protected void read(ObjectInput in) throws IOException, ClassNotFoundException {
     int size = in.readInt();
+    if (size < 0 || size > 10000) { // Reasonable limit to prevent memory exhaustion
+      throw new IOException("Invalid params size: " + size);
+    }
     for (int i = 0; i < size; i++) {
       String k = in.readUTF();
       Object v = in.readObject();
-
+      // Validate that value is a reasonable settings type
+      if (v != null
+          && !(v instanceof String)
+          && !(v instanceof Number)
+          && !(v instanceof Boolean)) {
+        throw new IOException(
+            "Invalid settings value type: expected String/Number/Boolean, got "
+                + v.getClass().getName());
+      }
       params.put(k, v);
     }
   }
