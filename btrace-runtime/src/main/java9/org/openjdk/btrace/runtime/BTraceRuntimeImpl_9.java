@@ -253,7 +253,8 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   @Override
   public boolean isBootstrapClass(String className) {
     try {
-      return findBootstrapOrNullMtd != null && findBootstrapOrNullMtd.invoke(null, className) != null;
+      return findBootstrapOrNullMtd != null
+          && findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
     } catch (IllegalAccessException | InvocationTargetException ignored) {}
     return false;
   }
