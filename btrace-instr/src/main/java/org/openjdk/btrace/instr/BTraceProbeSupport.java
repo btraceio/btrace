@@ -100,8 +100,8 @@ public final class BTraceProbeSupport {
       }
       // Check regex match
       if (om.isClassRegexMatcher() && !om.isClassAnnotationMatcher()) {
-        Pattern p = Pattern.compile(probeClass);
-        if (p.matcher(targetName).matches()) {
+        Pattern p = om.getClassPattern();
+        if (p != null && p.matcher(targetName).matches()) {
           applicables.add(om);
           continue;
         }
@@ -109,11 +109,13 @@ public final class BTraceProbeSupport {
       if (om.isClassAnnotationMatcher()) {
         Collection<String> annoTypes = cr.getAnnotationTypes();
         if (om.isClassRegexMatcher()) {
-          Pattern p = Pattern.compile(probeClass);
-          for (String annoType : annoTypes) {
-            if (p.matcher(annoType).matches()) {
-              applicables.add(om);
-              continue outer;
+          Pattern p = om.getClassPattern();
+          if (p != null) {
+            for (String annoType : annoTypes) {
+              if (p.matcher(annoType).matches()) {
+                applicables.add(om);
+                continue outer;
+              }
             }
           }
         } else {
