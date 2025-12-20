@@ -25,15 +25,6 @@
 
 package org.openjdk.btrace.instr;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -51,6 +42,16 @@ import org.openjdk.btrace.core.VerifierException;
 import org.openjdk.btrace.core.comm.RetransformClassNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * @author Jaroslav Bachorik
@@ -296,6 +297,11 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     return verifierException == null;
   }
 
+  @Override
+  public String getActionPrefix() {
+    return delegate.getActionPrefix();
+  }
+
   private VerifierException getVerifierException() {
     return verifierException;
   }
@@ -492,7 +498,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
         mn.signature != null
             ? mn.signature.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
             : null;
-    mn.name = InstrumentUtils.getActionPrefix(getClassName(true)) + mn.name;
+    mn.name = getActionPrefix() + mn.name;
     return mn;
   }
 
