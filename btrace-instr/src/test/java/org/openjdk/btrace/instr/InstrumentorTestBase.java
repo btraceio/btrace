@@ -25,8 +25,24 @@
 
 package org.openjdk.btrace.instr;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.util.TraceClassVisitor;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.MethodID;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
+import sun.misc.Unsafe;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -44,22 +60,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.util.CheckClassAdapter;
-import org.objectweb.asm.util.TraceClassVisitor;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.MethodID;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
-import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
-import sun.misc.Unsafe;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Jaroslav Bachorik
@@ -134,7 +137,8 @@ public abstract class InstrumentorTestBase {
   }
 
   protected static final void resetClassLoader() {
-    cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {};
+    cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {
+    };
   }
 
   protected void cleanup() {
@@ -187,23 +191,23 @@ public abstract class InstrumentorTestBase {
       } catch (NoSuchMethodError e) {
         ClassWriter cw = new ClassWriter(0);
         ClassVisitor cv =
-            new ClassVisitor(Opcodes.ASM9, cw) {
-              @Override
-              public void visit(
-                  int version,
-                  int access,
-                  String name,
-                  String signature,
-                  String superName,
-                  String[] interfaces) {
-                int idx = name.lastIndexOf('/');
-                name =
-                    Auxiliary.class.getPackage().getName().replace('.', '/')
-                        + '/'
-                        + name.substring(idx + 1);
-                super.visit(version, access, name, signature, superName, interfaces);
-              }
-            };
+                new ClassVisitor(Opcodes.ASM9, cw) {
+                  @Override
+                  public void visit(
+                          int version,
+                          int access,
+                          String name,
+                          String signature,
+                          String superName,
+                          String[] interfaces) {
+                    int idx = name.lastIndexOf('/');
+                    name =
+                            Auxiliary.class.getPackage().getName().replace('.', '/')
+                                    + '/'
+                                    + name.substring(idx + 1);
+                    super.visit(version, access, name, signature, superName, interfaces);
+                  }
+                };
         cr.accept(cv, ClassReader.SKIP_DEBUG);
         code = cw.toByteArray();
         Class<?> rtClz = Class.forName("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9");
@@ -404,17 +408,15 @@ public abstract class InstrumentorTestBase {
   }
 
   private byte[] loadFile(InputStream is) throws IOException {
-    byte[] result = new byte[0];
+    // ByteArrayOutputStream uses geometric growth (2× on resize)
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(8192);
+    byte[] buffer = new byte[8192];
+    int read;
 
-    byte[] buffer = new byte[1024];
-
-    int read = -1;
-    while ((read = is.read(buffer)) > 0) {
-      byte[] newresult = new byte[result.length + read];
-      System.arraycopy(result, 0, newresult, 0, result.length);
-      System.arraycopy(buffer, 0, newresult, result.length, read);
-      result = newresult;
+    while ((read = is.read(buffer)) != -1) {
+      baos.write(buffer, 0, read);  // Appends to internal buffer
     }
-    return result;
+
+    return baos.toByteArray();  // Single final copy
   }
 }
