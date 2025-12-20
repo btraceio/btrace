@@ -24,14 +24,15 @@
  */
 package org.openjdk.btrace.instr;
 
-import java.util.Comparator;
-import java.util.Set;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodNode;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Where;
+
+import java.util.Comparator;
+import java.util.Set;
 
 /**
  * @author Jaroslav Bachorik
@@ -76,7 +77,7 @@ public class BTraceMethodNode extends MethodNode {
       cn.addOnProbe(op);
     }
     if (isBTraceHandler) {
-      graph.addStarting(new CallGraph.Node(methodId));
+      graph.addStarting(methodId);
     }
     super.visitEnd();
   }

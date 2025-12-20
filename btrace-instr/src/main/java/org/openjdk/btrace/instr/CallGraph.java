@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
  */
 public final class CallGraph {
   private static final Pattern MID_SPLIT_PTN = Pattern.compile("::");
-  private final Set<Node> nodes = new HashSet<>();
+  private final Map<String, Node> nodes = new HashMap<>();  // O(1) lookup index
   private final Set<Node> startingNodes = new HashSet<>();
 
   public static String methodId(String name, String desc) {
@@ -57,39 +57,17 @@ public final class CallGraph {
   }
 
   public void addEdge(String fromId, String toId) {
-    Node fromNode = null;
-    Node toNode = null;
-    for (Node n : nodes) {
-      if (n.id.equals(fromId)) {
-        fromNode = n;
-      }
-      if (n.id.equals(toId)) {
-        toNode = n;
-      }
-      if (fromNode != null && toNode != null) break;
-    }
-    if (fromNode == null) {
-      fromNode = new Node(fromId);
-      nodes.add(fromNode);
-    }
-    if (toNode == null) {
-      toNode = new Node(toId);
-      nodes.add(toNode);
-    }
-    Edge e = new Edge(fromNode, toNode);
-    fromNode.addOutgoing(e);
-    toNode.addIncoming(e);
+    // O(1) lookup instead of O(n)
+    Node fromNode = nodes.computeIfAbsent(fromId, Node::new);
+    Node toNode = nodes.computeIfAbsent(toId, Node::new);
+
+    fromNode.addEdge(toNode);
   }
 
-  public void addStarting(Node n) {
-    for (Node orig : nodes) {
-      if (orig.equals(n)) {
-        startingNodes.add(orig);
-        return;
-      }
-    }
+  public void addStarting(String methodId) {
+    // O(1) lookup
+    Node n = nodes.computeIfAbsent(methodId, Node::new);
     startingNodes.add(n);
-    nodes.add(n);
   }
 
   public boolean hasCycle() {
@@ -132,28 +110,26 @@ public final class CallGraph {
   }
 
   private void collectOutgoings(String methodId, Set<String> closure) {
-    for (Node n : nodes) {
-      if (n.id.equals(methodId)) {
-        for (Edge e : n.outgoing) {
-          String id = e.to.id;
-          if (!closure.contains(id)) {
-            closure.add(id);
-            collectOutgoings(id, closure);
-          }
+    // O(1) lookup instead of O(n)
+    Node n = nodes.get(methodId);
+    if (n != null) {
+      for (Edge e : n.outgoing) {
+        if (!closure.contains(e.to.id)) {
+          closure.add(e.to.id);
+          collectOutgoings(e.to.id, closure);
         }
       }
     }
   }
 
   private void collectIncomings(String methodId, Set<String> closure) {
-    for (Node n : nodes) {
-      if (n.id.equals(methodId)) {
-        for (Edge e : n.incoming) {
-          String id = e.from.id;
-          if (!closure.contains(id)) {
-            closure.add(id);
-            collectIncomings(id, closure);
-          }
+    // O(1) lookup instead of O(n)
+    Node n = nodes.get(methodId);
+    if (n != null) {
+      for (Edge e : n.incoming) {
+        if (!closure.contains(e.from.id)) {
+          closure.add(e.from.id);
+          collectIncomings(e.from.id, closure);
         }
       }
     }
@@ -163,7 +139,7 @@ public final class CallGraph {
     if (nodes.size() < 2) return Collections.emptySet();
 
     Map<String, Node> checkingNodes = new HashMap<>();
-    for (Node n : nodes) {
+    for (Node n : nodes.values()) {
       Node newN = checkingNodes.get(n.id);
       if (newN == null) {
         newN = new Node(n.id);
@@ -244,6 +220,12 @@ public final class CallGraph {
 
     public void removeOutgoing(Edge e) {
       outgoing.remove(e);
+    }
+
+    public void addEdge(Node to) {
+      Edge edge = new Edge(this, to);
+      this.addOutgoing(edge);
+      to.addIncoming(edge);
     }
 
     @Override
