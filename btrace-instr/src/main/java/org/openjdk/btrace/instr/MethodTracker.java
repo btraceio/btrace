@@ -59,7 +59,7 @@ public final class MethodTracker {
       counters = Arrays.copyOf(counters, newLen);
       rLocks = Arrays.copyOf(rLocks, newLen);
       means = Arrays.copyOf(means, newLen);
-      origMeans = Arrays.copyOf(means, newLen);
+      origMeans = Arrays.copyOf(origMeans, newLen);
       samplers = Arrays.copyOf(samplers, newLen);
       tsArray = Arrays.copyOf(tsArray, newLen);
     }
