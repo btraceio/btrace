@@ -46,6 +46,12 @@ package org.openjdk.btrace.instr;
 
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.annotations.Sampled;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * This class is used to store data of the annotation OnMethod. We can not read the OnMethod
@@ -57,7 +63,11 @@ import org.openjdk.btrace.core.annotations.Sampled;
  * @author A. Sundararajan
  */
 public final class OnMethod extends SpecialParameterHolder {
+  private static final Logger log = LoggerFactory.getLogger(OnMethod.class);
+
   private String clazz;
+  private volatile Pattern compiledClassPattern;
+  private static final AtomicReferenceFieldUpdater<OnMethod, Pattern> compiledClassPatternUpdater = AtomicReferenceFieldUpdater.newUpdater(OnMethod.class, Pattern.class, "compiledClassPattern");
   private String method = "";
   private boolean exactTypeMatch;
   private String type = "";
@@ -119,6 +129,29 @@ public final class OnMethod extends SpecialParameterHolder {
       }
     }
     this.clazz = clazz;
+    this.compiledClassPattern = null;
+  }
+
+  public Pattern getClassPattern() {
+    if (!classRegexMatcher) {
+      return null;
+    }
+
+    if (compiledClassPattern == null) {
+      compiledClassPatternUpdater.updateAndGet(this, pattern -> {
+        if (pattern == null) {
+          try {
+            pattern = Pattern.compile(clazz);
+          } catch (PatternSyntaxException e) {
+            log.warn("Invalid regex pattern in OnMethod: {}, defaulting to '.*", clazz, e);
+            pattern = Pattern.compile(".*");
+          }
+        }
+        return pattern;
+      });
+    }
+
+    return compiledClassPattern;
   }
 
   public String getMethod() {
