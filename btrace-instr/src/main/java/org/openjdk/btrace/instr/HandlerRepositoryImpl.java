@@ -19,6 +19,7 @@ public final class HandlerRepositoryImpl {
   private static final Logger log = LoggerFactory.getLogger(HandlerRepositoryImpl.class);
 
   private static final Map<String, BTraceProbe> probeMap = new ConcurrentHashMap<>();
+  private static final Map<String, byte[]> handlerBytecodeCache = new ConcurrentHashMap<>();
 
   static {
     try {
@@ -37,42 +38,49 @@ public final class HandlerRepositoryImpl {
   }
 
   public static void unregisterProbe(BTraceProbe probe) {
-    probeMap.remove(probe.getClassName(true));
+    String probeName = probe.getClassName(true);
+    probeMap.remove(probeName);
+    String probePrefix = probeName + "#";
+    handlerBytecodeCache.keySet().removeIf(key -> key.startsWith(probePrefix));
   }
 
   public static byte[] getProbeHandler(
       String callerName, String probeName, String handlerName, String handlerDesc) {
-    DebugSupport debugSupport = new DebugSupport(SharedSettings.GLOBAL);
-    BTraceProbe probe = probeMap.get(probeName);
-    ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+    String cacheKey = probeName + "#" + handlerName + handlerDesc;
 
-    String handlerClassName = callerName.replace('.', '/') + "$" + probeName.replace('/', '_');
-    ClassVisitor visitor =
-        new CopyingVisitor(handlerClassName, true, writer) {
-          @Override
-          protected String getMethodName(String name) {
-            int idx = name.lastIndexOf("$");
-            if (idx > -1) {
-              return name.substring(idx + 1);
+    return handlerBytecodeCache.computeIfAbsent(cacheKey, k -> {
+      DebugSupport debugSupport = new DebugSupport(SharedSettings.GLOBAL);
+      BTraceProbe probe = probeMap.get(probeName);
+      ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+
+      String handlerClassName = callerName.replace('.', '/') + "$" + probeName.replace('/', '_');
+      ClassVisitor visitor =
+          new CopyingVisitor(handlerClassName, true, writer) {
+            @Override
+            protected String getMethodName(String name) {
+              int idx = name.lastIndexOf("$");
+              if (idx > -1) {
+                return name.substring(idx + 1);
+              }
+              return name;
             }
-            return name;
-          }
-        };
+          };
 
-    probe.copyHandlers(visitor);
-    byte[] data = writer.toByteArray();
+      probe.copyHandlers(visitor);
+      byte[] data = writer.toByteArray();
 
-    if (debugSupport.isDumpClasses()) {
-      try {
-        String handlerPath =
-            debugSupport.getDumpClassDir() + "/" + handlerClassName.replace('/', '_') + ".class";
-        log.debug("BTrace INDY handler dumped: {}", handlerPath);
-        Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
-      } catch (Throwable e) {
-        log.debug("Failed to dump BTrace INDY handler", e);
+      if (debugSupport.isDumpClasses()) {
+        try {
+          String handlerPath =
+              debugSupport.getDumpClassDir() + "/" + handlerClassName.replace('/', '_') + ".class";
+          log.debug("BTrace INDY handler dumped: {}", handlerPath);
+          Files.write(Paths.get(handlerPath), data, StandardOpenOption.CREATE);
+        } catch (Throwable e) {
+          log.debug("Failed to dump BTrace INDY handler", e);
+        }
       }
-    }
 
-    return data;
+      return data;
+    });
   }
 }
