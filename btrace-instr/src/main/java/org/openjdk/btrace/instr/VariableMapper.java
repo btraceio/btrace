@@ -7,6 +7,42 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class VariableMapper {
+  private static class CopyOnWriteArray {
+    private final int[] src;
+    private int[] copy = null;
+    private final int upperLimit;
+    CopyOnWriteArray(int[] src, int upperLimit) {
+      this.src = src;
+      this.upperLimit = upperLimit;
+    }
+
+    void force() {
+      copy = copy == null ? Arrays.copyOf(src, upperLimit) : copy;
+    }
+
+    int length() {
+      return copy == null ? upperLimit : copy.length;
+    }
+
+    void set(int pos, int value) {
+      if (copy == null) {
+        copy = Arrays.copyOf(src, Math.max(upperLimit, pos * 2));
+      }
+      if (pos >= copy.length) {
+        copy = Arrays.copyOf(copy, copy.length * 2);
+      }
+      copy[pos] = value;
+    }
+
+    int get(int pos) {
+      int[] target = copy != null ? copy : src;
+      if (pos >= target.length) {
+        throw new RuntimeException("Invalid variable index: " + pos + " - outside of (0, " + (target.length - 1) + ")");
+      }
+      return target[pos];
+    }
+  }
+
   private static final int UNMASK = 0x1FFFFFFF;
   static final int DOUBLE_SLOT_FLAG = 0x20000000;
   static final int DOUBLE_SLOT_FLAG_2 = 0x40000000;
@@ -16,16 +52,18 @@ public class VariableMapper {
   private final int argsSize;
 
   private int nextMappedVar = 0;
-  private int[] mapping = new int[8];
+  private int[] mapping;
 
   private static final Label FIRST_LABEL = new Label();
 
   private Label currentLabel = FIRST_LABEL;
-  private final Map<Label, int[]> labelMappings = new HashMap<>(16);
+  private final Map<Label, CopyOnWriteArray> labelMappings = new HashMap<>(16);
 
   public VariableMapper(int argsSize) {
     this.argsSize = argsSize;
     nextMappedVar = argsSize;
+    // Estimate: args + 8 locals + 16 instrumentation vars
+    this.mapping = new int[argsSize + 8 + 16];
   }
 
   VariableMapper(int argsSize, int nextMappedVar, int[] mapping) {
@@ -42,16 +80,12 @@ public class VariableMapper {
     return (var & INVALID_MASK) != 0;
   }
 
-  public VariableMapper mirror() {
-    return new VariableMapper(argsSize, nextMappedVar, mapping);
-  }
-
   /**
    * Creates a new scope for all the subsequent mappings.<br>
    * @param label the scope label
    */
   public void noteLabel(Label label) {
-    labelMappings.put(currentLabel, Arrays.copyOf(mapping, nextMappedVar));
+    labelMappings.put(currentLabel, new CopyOnWriteArray(mapping, nextMappedVar));
     currentLabel = label;
   }
 
@@ -79,6 +113,9 @@ public class VariableMapper {
       // self projection for method arguments
       return var;
     }
+    // materialize all copy-on-writes before we modify the backing array
+    labelMappings.forEach((k, v) -> v.force());
+    // ok, can continue with modifications
     if (offset >= mapping.length) {
       mapping = Arrays.copyOf(mapping, Math.max(mapping.length * 2, offset + 1));
     }
@@ -118,7 +155,28 @@ public class VariableMapper {
   }
 
   public int map(int var, Label label) {
-    return map(var, labelMappings.getOrDefault(label, mapping));
+    return map(var, labelMappings.getOrDefault(label, new CopyOnWriteArray(mapping, mapping.length)));
+  }
+
+  private int map(int var, CopyOnWriteArray currentMapping) {
+    // if the var number is the result of current mapping (REMAP_FLAG is set)
+    if (((var & REMAP_FLAG) != 0)) {
+      return unmask(var);
+    }
+
+    int offset = (var - argsSize);
+
+    // only remap locals slots above method arguments
+    if (offset >= 0) {
+      if (currentMapping.length() <= offset) {
+        // catch out of bounds mapping
+        return 0xFFFFFFFF;
+      }
+      int newVar = currentMapping.get(offset);
+      return (newVar & REMAP_FLAG) != 0 ? unmask(newVar) : 0xFFFFFFFF;
+    }
+    // method argument slots are not remapped
+    return var;
   }
 
   private int map(int var, int[] currentMapping) {
