@@ -1,8 +1,9 @@
 package org.openjdk.btrace.instr;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CallGraphTest {
 
@@ -20,9 +21,9 @@ class CallGraphTest {
   @Test
   void hasNoCycleWithIsolatedNode() {
     CallGraph callGraph = new CallGraph();
-    callGraph.addStarting(new CallGraph.Node("a"));
-    callGraph.addStarting(new CallGraph.Node("b"));
-    callGraph.addStarting(new CallGraph.Node("c"));
+    callGraph.addStarting("a");
+    callGraph.addStarting("b");
+    callGraph.addStarting("c");
 
     callGraph.addEdge("a", "d");
     callGraph.addEdge("b", "d");
@@ -39,7 +40,7 @@ class CallGraphTest {
     callGraph.addEdge("c", "d");
     callGraph.addEdge("c", "b");
     callGraph.addEdge("d", "a");
-    callGraph.addStarting(new CallGraph.Node("a"));
+    callGraph.addStarting("a");
 
     assertTrue(callGraph.hasCycle());
   }
@@ -53,7 +54,7 @@ class CallGraphTest {
     callGraph.addEdge("c", "d");
     callGraph.addEdge("c", "b");
     callGraph.addEdge("d", "b");
-    callGraph.addStarting(new CallGraph.Node("a"));
+    callGraph.addStarting("a");
 
     assertTrue(callGraph.hasCycle());
   }
