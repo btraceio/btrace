@@ -32,8 +32,8 @@ jobs:
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
-          BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
-          BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
+          SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
+          SONATYPE_PWD: ${{ secrets.SONATYPE_PASSWORD }}
         run: |
           ./gradlew :btrace-dist:publishAllPublicationsToMavenRepository
       - name: Build artifacts
