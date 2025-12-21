@@ -211,7 +211,7 @@ abstract class Client implements CommandListener {
                   }
                 }
               } catch (Throwable t) {
-                t.printStackTrace();
+                log.error("Error during periodic flush", t);
               }
             }
           },

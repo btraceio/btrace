@@ -87,7 +87,7 @@ abstract class TraceOutputWriter extends Writer {
       try {
         f.createNewFile();
       } catch (IOException e) {
-        e.printStackTrace();
+        log.debug("Failed to create directory: {}", f, e);
         // ignore and continue
       }
     }

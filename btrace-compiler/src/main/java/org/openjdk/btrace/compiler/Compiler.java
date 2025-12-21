@@ -40,6 +40,8 @@ import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Compiler for a BTrace program. Note that a BTrace program is a Java program that is specially
@@ -50,6 +52,8 @@ import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
  * @author A. Sundararajan
  */
 public class Compiler {
+  private static final Logger log = LoggerFactory.getLogger(Compiler.class);
+
   private final CompilerHelper compilerHelper;
   // null means no preprocessing isf done.
   public List<String> includeDirs;
@@ -197,7 +201,8 @@ public class Compiler {
         System.exit(1);
       }
     } catch (Throwable t) {
-      t.printStackTrace();
+      log.error("Compiler invocation failed", t);
+      System.err.println("ERROR: Compiler failed: " + t.getMessage());
       // fail
       System.exit(1);
     }

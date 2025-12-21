@@ -37,6 +37,8 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A hacked version of <a
@@ -46,6 +48,8 @@ import org.objectweb.asm.Type;
  * @author Jaroslav Bachorik
  */
 final class BTraceClassReader extends ClassReader {
+  private static final Logger log = LoggerFactory.getLogger(BTraceClassReader.class);
+
   private static final Method getAttributesMthd;
   private static final Method readAnnotationValuesMthd;
   private static final Field itemsFld;
@@ -70,7 +74,7 @@ final class BTraceClassReader extends ClassReader {
       f2 = ClassReader.class.getDeclaredField("maxStringLength");
       f2.setAccessible(true);
     } catch (Exception e) {
-      e.printStackTrace();
+      log.debug("Failed to initialize BTraceClassReader reflection fields", e);
     }
     getAttributesMthd = m1;
     readAnnotationValuesMthd = m2;
@@ -144,7 +148,7 @@ final class BTraceClassReader extends ClassReader {
         return readInt(items[1] - 7);
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      log.debug("Failed to read class major version", e);
     }
     return 51; // default to Java 7
   }
@@ -173,7 +177,7 @@ final class BTraceClassReader extends ClassReader {
         return (int) getAttributesMthd.invoke(this);
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      log.debug("Failed to get first attribute offset", e);
     }
     return -1;
   }
@@ -201,7 +205,7 @@ final class BTraceClassReader extends ClassReader {
         return (int) readAnnotationValuesMthd.invoke(this, null, off, null, buf);
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      log.debug("Failed to read annotation values", e);
     }
     return -1;
   }

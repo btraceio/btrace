@@ -395,7 +395,7 @@ public class BTraceMBean implements DynamicMBean {
           }
         }
       } catch (OpenDataException ode) {
-        ode.printStackTrace();
+        log.warn("Failed to convert type to OpenType", ode);
       }
 
       // nothing seems working...

@@ -714,7 +714,7 @@ public class Client {
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
         throw e;
       } catch (NullPointerException e) {
-        e.printStackTrace();
+        log.error("Unexpected null pointer during command processing", e);
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
       }
     }
