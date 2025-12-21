@@ -1,5 +1,6 @@
 dependencies {
-    // https://mvnrepository.com/artifact/org.ow2.asm/asm
+    implementation libs.slf4j
+    implementation libs.slf4j.simple
     implementation libs.asm
     implementation libs.asm.util
 

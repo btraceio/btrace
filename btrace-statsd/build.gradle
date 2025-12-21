@@ -1,4 +1,7 @@
 dependencies {
+    implementation libs.slf4j
+    implementation libs.slf4j.simple
+
     implementation project(':btrace-core')
     implementation project(':btrace-services-api')
 }
