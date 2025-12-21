@@ -13,6 +13,9 @@ def isSolaris = OperatingSystem.current() == OperatingSystem.SOLARIS
 def osArch = System.getProperty("os.arch")
 
 dependencies {
+    implementation libs.slf4j
+    implementation libs.slf4j.simple
+
     implementation project(':btrace-core')
 }
 
