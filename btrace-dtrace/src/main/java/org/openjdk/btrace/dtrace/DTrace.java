@@ -32,6 +32,8 @@ import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.MessageCommand;
 import org.opensolaris.os.dtrace.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple wrapper class around DTrace/Java API. This wrapper accepts a BTrace command listener,
@@ -42,6 +44,7 @@ import org.opensolaris.os.dtrace.*;
  */
 @SuppressWarnings("RedundantThrows")
 public class DTrace {
+  private static final Logger log = LoggerFactory.getLogger(DTrace.class);
 
   /**
    * Submits a D-script from given file and passes given argument array as DTrace macro arguments.
@@ -80,7 +83,7 @@ public class DTrace {
           try {
             listener.onCommand(new ErrorCommand(th));
           } catch (IOException ioexp) {
-            ioexp.printStackTrace();
+            log.error("Failed to send error command to listener", ioexp);
           }
         });
   }
@@ -94,7 +97,7 @@ public class DTrace {
             try {
               listener.onCommand(cmd);
             } catch (IOException ioexp) {
-              ioexp.printStackTrace();
+              log.error("Failed to send command to listener", ioexp);
             }
           }
 

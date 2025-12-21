@@ -39,6 +39,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A minimal pseudo-C-preprocessor derived from PCPP of the GlueGen project.
@@ -52,6 +54,7 @@ import java.util.Set;
  *     etc. are property printed.
  */
 public class PCPP {
+  private static final Logger log = LoggerFactory.getLogger(PCPP.class);
 
   private static final boolean disableDebugPrint = true;
   private final Printer printer;
@@ -115,7 +118,8 @@ public class PCPP {
 
       new PCPP(includePaths).run(reader, filename);
     } catch (IOException e) {
-      e.printStackTrace();
+      log.error("Preprocessor failed", e);
+      System.err.println("ERROR: Preprocessor failed: " + e.getMessage());
     }
   }
 
