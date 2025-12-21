@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 import org.objectweb.asm.Opcodes;
@@ -205,6 +206,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
   static class Filter {
     private final Map<String, Integer> nameMap = new HashMap<>();
     private final Map<Pattern, Integer> nameRegexMap = new HashMap<>();
+    private final Map<String, Pattern> patternCache = new ConcurrentHashMap<>();
     private boolean isFast = true;
     private boolean isRegex = false;
 
@@ -236,7 +238,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
         if (om.isClassRegexMatcher()) {
           isRegex = true;
           String name = om.getClazz().replace("\\.", "/");
-          addToMap(nameRegexMap, Pattern.compile(name));
+          Pattern pattern = patternCache.computeIfAbsent(name, Pattern::compile);
+          addToMap(nameRegexMap, pattern);
         } else {
           String name = om.getClazz().replace('.', '/');
           addToMap(nameMap, name);
@@ -248,7 +251,10 @@ public final class BTraceTransformer implements ClassFileTransformer {
       String name = om.getClazz().replace('.', '/');
       if (!(om.isSubtypeMatcher() || om.isClassAnnotationMatcher())) {
         if (om.isClassRegexMatcher()) {
-          removeFromMap(nameRegexMap, Pattern.compile(name));
+          Pattern pattern = patternCache.get(name);
+          if (pattern != null) {
+            removeFromMap(nameRegexMap, pattern);
+          }
         } else {
           removeFromMap(nameMap, name);
         }

@@ -38,6 +38,8 @@ import java.util.concurrent.Executors;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.services.spi.SimpleService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple way to submit <a href="https://github.com/etsy/statsd/">statsd</a> metrics.
@@ -54,6 +56,8 @@ import org.openjdk.btrace.services.spi.SimpleService;
  * @author Jaroslav Bachorik
  */
 public final class Statsd extends SimpleService {
+  private static final Logger log = LoggerFactory.getLogger(Statsd.class);
+
   private static final Charset CHARSET = StandardCharsets.US_ASCII;
   private final QManager qManager = new QManager();
   private final ExecutorService e =
@@ -106,8 +110,11 @@ public final class Statsd extends SimpleService {
               }
             }
           } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            log.error("StatsD client error", e);
           } finally {
+            if (ds != null && !ds.isClosed()) {
+              ds.close();
+            }
             if (entered) {
               BTraceRuntime.leave();
             }
