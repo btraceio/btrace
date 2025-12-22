@@ -150,7 +150,8 @@ public final class TypeUtils {
         return Type.getType("[D");
 
       default:
-        throw new RuntimeException("invalid array opcode");
+        throw new InstrumentationException(
+            String.format("Invalid array opcode in getArrayType: 0x%02X", arrayOpcode));
     }
   }
 
@@ -189,7 +190,8 @@ public final class TypeUtils {
         return Type.DOUBLE_TYPE;
 
       default:
-        throw new RuntimeException("invalid array opcode");
+        throw new InstrumentationException(
+            String.format("Invalid array opcode in getElementType: 0x%02X", arrayOpcode));
     }
   }
 

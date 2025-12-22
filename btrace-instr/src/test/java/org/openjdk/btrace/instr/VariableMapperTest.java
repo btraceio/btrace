@@ -59,7 +59,10 @@ public class VariableMapperTest {
 
   @Test
   public void testMapEmpty() {
-    assertTrue(VariableMapper.isInvalidMapping(instance.map(0)));
+    InstrumentationException ex =
+        assertThrows(InstrumentationException.class, () -> instance.map(0));
+    assertTrue(
+        ex.getMessage().contains("out of bounds") || ex.getMessage().contains("not remapped"));
   }
 
   @Test
@@ -89,11 +92,11 @@ public class VariableMapperTest {
 
   @Test
   public void mapOverflow() {
-    assertTrue(
-        VariableMapper.isInvalidMapping(
-            instance.map(
-                16))); // default mapping array size is 8 so going for double should trigger
-    // overflow handling
+    // default mapping array size is now larger, so going beyond it should trigger
+    // overflow handling with exception
+    InstrumentationException ex =
+        assertThrows(InstrumentationException.class, () -> instance.map(100));
+    assertTrue(ex.getMessage().contains("out of bounds"));
   }
 
   @Test
@@ -182,5 +185,41 @@ public class VariableMapperTest {
     assertEquals(10, vm.remap(6, 1));
     vm.noteLabel(l110);
     assertEquals(11, vm.remap(6, 2));
+  }
+
+  @Test
+  public void testMapOutOfBoundsWithContext() {
+    InstrumentationException ex =
+        assertThrows(InstrumentationException.class, () -> instance.map(100));
+    assertTrue(ex.getMessage().contains("var=100"));
+    assertTrue(ex.getMessage().contains("offset="));
+    assertTrue(ex.getMessage().contains("mappingSize="));
+  }
+
+  @Test
+  public void testMapUnmappedVariable() {
+    // Set up a variable that exists but isn't remapped
+    VariableMapper mapper = new VariableMapper(2);
+    // Remap variable 2 (first local), then try to map it back
+    // without having set the REMAP_FLAG
+    mapper.remap(2, 1); // This should create a mapping
+
+    // Now try to map a variable that's beyond what we've set up
+    InstrumentationException ex =
+        assertThrows(InstrumentationException.class, () -> mapper.map(3));
+    assertTrue(ex.getMessage().contains("not remapped") || ex.getMessage().contains("out of bounds"));
+  }
+
+  @Test
+  public void testExceptionMessageFormat() {
+    InstrumentationException ex =
+        assertThrows(InstrumentationException.class, () -> instance.map(50));
+
+    // Verify message contains all key debug fields
+    String msg = ex.getMessage();
+    assertTrue(msg.matches(".*var=\\d+.*"), "Should contain var field");
+    assertTrue(msg.matches(".*offset=\\d+.*"), "Should contain offset field");
+    assertTrue(msg.matches(".*mappingSize=\\d+.*"), "Should contain mappingSize field");
+    assertTrue(msg.matches(".*argsSize=\\d+.*"), "Should contain argsSize field");
   }
 }

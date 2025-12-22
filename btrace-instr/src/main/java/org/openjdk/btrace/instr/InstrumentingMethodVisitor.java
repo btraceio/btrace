@@ -1051,10 +1051,16 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitLocalVariable(
       String name, String desc, String signature, Label start, Label end, int index) {
-    int newIndex = variableMapper.map(index, start);
-    if (newIndex != 0xFFFFFFFF) {
+    try {
+      int newIndex = variableMapper.map(index, start);
       super.visitLocalVariable(
           name, desc, signature, start, end, newIndex == Integer.MIN_VALUE ? 0 : newIndex);
+    } catch (InstrumentationException e) {
+      throw new InstrumentationException(
+          String.format(
+              "Failed to map local variable '%s' (type=%s, index=%d, scope=%s): %s",
+              name, desc, index, start, e.getMessage()),
+          e);
     }
   }
 
@@ -1067,17 +1073,20 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       int[] index,
       String desc,
       boolean visible) {
-    Type t = Type.getType(desc);
-    int cnt = 0;
-    int[] newIndex = new int[index.length];
-    for (int i = 0; i < newIndex.length; ++i) {
-      int idx = variableMapper.map(index[i]);
-      if (idx != 0xFFFFFFFF) {
-        newIndex[cnt++] = idx;
+    try {
+      int[] newIndex = new int[index.length];
+      for (int i = 0; i < index.length; i++) {
+        newIndex[i] = variableMapper.map(index[i]);
       }
+      return super.visitLocalVariableAnnotation(
+          typeRef, typePath, start, end, newIndex, desc, visible);
+    } catch (InstrumentationException e) {
+      throw new InstrumentationException(
+          String.format(
+              "Failed to map local variable annotation (type=%s, indices=%s): %s",
+              desc, Arrays.toString(index), e.getMessage()),
+          e);
     }
-    return super.visitLocalVariableAnnotation(
-        typeRef, typePath, start, end, Arrays.copyOf(newIndex, cnt), desc, visible);
   }
 
   @Override
@@ -1258,8 +1267,8 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
             localsArr[++idx] = TOP_EXT;
           }
         } else {
-          int var = variableMapper.map(idx);
-          if (var != 0xFFFFFFFF) {
+          try {
+            int var = variableMapper.map(idx);
             localsArr[var] = e;
             if (e == LONG || e == DOUBLE) {
               int off = var + 1;
@@ -1269,6 +1278,10 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
               localsArr[off] = TOP_EXT;
               idx++;
             }
+          } catch (InstrumentationException ex) {
+            // Skip unmapped variables during frame computation - this is expected when
+            // variables haven't been remapped yet at certain instrumentation points
+            // Original behavior was to silently skip these with 0xFFFFFFFF check
           }
         }
         idx++;
