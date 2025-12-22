@@ -37,7 +37,8 @@ public class VariableMapper {
     int get(int pos) {
       int[] target = copy != null ? copy : src;
       if (pos >= target.length) {
-        throw new RuntimeException("Invalid variable index: " + pos + " - outside of (0, " + (target.length - 1) + ")");
+        throw new InstrumentationException(
+            String.format("Invalid variable index: %d (valid range: 0-%d)", pos, target.length - 1));
       }
       return target[pos];
     }
@@ -169,11 +170,19 @@ public class VariableMapper {
     // only remap locals slots above method arguments
     if (offset >= 0) {
       if (currentMapping.length() <= offset) {
-        // catch out of bounds mapping
-        return 0xFFFFFFFF;
+        throw new InstrumentationException(
+            String.format(
+                "Variable mapping out of bounds: var=%d, offset=%d, mappingSize=%d, argsSize=%d",
+                var, offset, currentMapping.length(), argsSize));
       }
       int newVar = currentMapping.get(offset);
-      return (newVar & REMAP_FLAG) != 0 ? unmask(newVar) : 0xFFFFFFFF;
+      if ((newVar & REMAP_FLAG) == 0) {
+        throw new InstrumentationException(
+            String.format(
+                "Variable not remapped: var=%d, offset=%d, mappedValue=0x%08X, argsSize=%d",
+                var, offset, newVar, argsSize));
+      }
+      return unmask(newVar);
     }
     // method argument slots are not remapped
     return var;
@@ -190,11 +199,19 @@ public class VariableMapper {
     // only remap locals slots above method arguments
     if (offset >= 0) {
       if (currentMapping.length <= offset) {
-        // catch out of bounds mapping
-        return 0xFFFFFFFF;
+        throw new InstrumentationException(
+            String.format(
+                "Variable mapping out of bounds: var=%d, offset=%d, mappingSize=%d, argsSize=%d",
+                var, offset, currentMapping.length, argsSize));
       }
       int newVar = currentMapping[offset];
-      return (newVar & REMAP_FLAG) != 0 ? unmask(newVar) : 0xFFFFFFFF;
+      if ((newVar & REMAP_FLAG) == 0) {
+        throw new InstrumentationException(
+            String.format(
+                "Variable not remapped: var=%d, offset=%d, mappedValue=0x%08X, argsSize=%d",
+                var, offset, newVar, argsSize));
+      }
+      return unmask(newVar);
     }
     // method argument slots are not remapped
     return var;

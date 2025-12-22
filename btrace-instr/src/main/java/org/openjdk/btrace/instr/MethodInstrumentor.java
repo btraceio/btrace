@@ -507,11 +507,8 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
     private final int[] argsIndex;
 
     public ValidationResult(boolean valid, int[] argsIndex) {
-      if (argsIndex == null) {
-        Thread.dumpStack();
-      }
-      isValid = valid;
-      this.argsIndex = argsIndex;
+      this.isValid = valid;
+      this.argsIndex = java.util.Objects.requireNonNull(argsIndex, "argsIndex must not be null");
     }
 
     public ValidationResult(boolean valid) {

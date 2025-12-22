@@ -341,7 +341,8 @@ public final class Assembler {
         mv.visitInsn(DUP2);
         break;
       default:
-        throw new RuntimeException("invalid signature");
+        throw new InstrumentationException(
+            String.format("Invalid bytecode signature in dupValue: %s", desc));
     }
     return this;
   }
