@@ -27,8 +27,7 @@ public class VariableMapper {
     void set(int pos, int value) {
       if (copy == null) {
         copy = Arrays.copyOf(src, Math.max(upperLimit, pos * 2));
-      }
-      if (pos >= copy.length) {
+      } else if (pos >= copy.length) {
         copy = Arrays.copyOf(copy, copy.length * 2);
       }
       copy[pos] = value;
