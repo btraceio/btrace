@@ -257,22 +257,32 @@ public static void handler() {
 ```java
 @OnMethod(...)
 public static void handler() {
-    myCustomMethod();  // ERROR: Cannot call user methods
-}
-
-private static void myCustomMethod() {
-    // ...
+    MyOtherClass.someMethod();  // ERROR: Cannot call external class methods
+    System.out.println("test");  // ERROR: Cannot call System methods
 }
 ```
 
 **Right:**
 ```java
-@OnMethod(...)
-public static void handler() {
-    // Inline the logic or use BTraceUtils methods
-    println(str(timeMillis()));
+@BTrace
+public class MyTrace {
+    @OnMethod(...)
+    public static void handler() {
+        // Call helper methods within same BTrace class - OK
+        myCustomMethod();
+
+        // Use BTraceUtils methods
+        println(str(timeMillis()));
+    }
+
+    private static void myCustomMethod() {
+        // Helper methods in same class are allowed
+        println("Helper method called");
+    }
 }
 ```
+
+**Note:** You CAN call private static methods within the same BTrace class. You CANNOT call methods from external classes (except BTraceUtils).
 
 ### 6. Catching exceptions
 
