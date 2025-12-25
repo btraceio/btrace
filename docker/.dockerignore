@@ -1,0 +1,16 @@
+# Exclude files not needed in Docker build context to optimize build speed
+
+# Samples (optional - can be excluded to reduce image size)
+# Uncomment the line below to exclude samples from the image
+# btrace/samples/
+
+# Windows batch files (not needed in Linux containers)
+btrace/bin/*.bat
+
+# Documentation files
+btrace/*.txt
+btrace/LICENSE*
+btrace/COPYRIGHT
+
+# Native libraries for other architectures (optional)
+# Keep only what's needed for the target platform

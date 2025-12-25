@@ -70,6 +70,25 @@ sudo rpm -i btrace-*.rpm
 sudo dpkg -i btrace-*.deb
 ```
 
+**Docker images:**
+```dockerfile
+# Copy BTrace into your application image
+FROM btrace/btrace:latest AS btrace
+FROM openjdk:11-jdk
+
+COPY --from=btrace /opt/btrace /opt/btrace
+ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:${BTRACE_HOME}/bin"
+
+# Your application...
+```
+
+Available variants:
+- `btrace/btrace:latest` - Debian-based (~25MB)
+- `btrace/btrace:latest-alpine` - Alpine-based (~15MB)
+- `btrace/btrace:latest-distroless` - Distroless (~10MB)
+
+See [docker/README.md](docker/README.md) for complete Docker documentation.
+
 ### Quick Start
 
 ```sh
