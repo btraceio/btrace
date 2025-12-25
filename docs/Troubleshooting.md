@@ -400,11 +400,15 @@ No methods matched for probe: ...
    jcmd <PID> VM.class_hierarchy | grep -A 5 MyClass
    ```
 
-2. **Check class loading order**
-   - BTrace only instruments classes loaded after attachment
-   - For classes loaded at startup, use agent mode:
+2. **Verify BTrace is retransforming loaded classes**
+   - BTrace scans ALL already-loaded classes when attaching
+   - It retransforms matching classes via `Instrumentation.retransformClasses()`
+   - It also listens for newly loaded classes
+   - If classes aren't being instrumented, check if they are modifiable:
    ```bash
-   java -javaagent:btrace-agent.jar=script=MyTrace.class MyApp
+   # Some classes cannot be retransformed (e.g., native methods, JVM internals)
+   # Use -v flag to see which classes are being instrumented
+   btrace -v <PID> script.java
    ```
 
 3. **Check class loader hierarchy**
