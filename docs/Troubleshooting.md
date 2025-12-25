@@ -951,10 +951,20 @@ For more K8s deployment patterns, see [Getting Started: K8s](GettingStarted.md#b
 ## Known Limitations
 
 ### Cannot instrument
-- Classes already transformed by other agents
-- Native methods
-- Classes in boot classpath (without `-u` unsafe mode)
-- Some JDK internal classes
+
+**Native methods:**
+- Methods implemented in native code cannot be instrumented (JVM limitation)
+
+**Sensitive classes (to avoid infinite recursion):**
+- Core classes BTrace depends on: `java.lang.Object`, `String`, `ThreadLocal`, `Integer`, `Number`
+- Package prefixes: `java.lang.instrument.*`, `java.lang.invoke.*`, `java.lang.ref.*`
+- Lock classes: `java.util.concurrent.locks.LockSupport`, `AbstractQueuedSynchronizer`, etc.
+- JDK internals: `jdk.internal.*`, `sun.invoke.*`
+- BTrace itself: `org.openjdk.btrace.*`
+
+**Classes annotated with @BTrace** (BTrace scripts themselves)
+
+**Note:** Classes already transformed by other agents CAN be retransformed. Boot classpath and JDK classes CAN be instrumented (except the sensitive classes listed above).
 
 ### Cannot trace
 - Very early VM initialization (use agent mode instead of attach mode)
