@@ -564,7 +564,7 @@ UnsupportedClassVersionError
 ```
 
 **Solutions:**
-- Ensure BTrace supports your Java version (BTrace supports Java 8-20)
+- Ensure BTrace supports your Java version (BTrace supports Java 8+)
 - Compile scripts with target version matching JVM
 - Check `JAVA_HOME` points to correct version
 
@@ -833,7 +833,7 @@ kind: ConfigMap
 metadata:
   name: btrace-scripts
 data:
-  trace-method.java: |
+  TraceMethod.java: |
     import org.openjdk.btrace.core.annotations.*;
     import static org.openjdk.btrace.core.BTraceUtils.*;
 
@@ -862,7 +862,7 @@ spec:
 
 Usage:
 ```bash
-kubectl exec <pod> -- btrace <PID> /btrace-scripts/trace-method.java
+kubectl exec <pod> -- btrace <PID> /btrace-scripts/TraceMethod.java
 ```
 
 ### Batch Tracing Across Pods
