@@ -231,7 +231,7 @@ public class MethodTrackingContext {
    * Can be called multiple times for different handlers - first call loads and caches the level,
    * subsequent calls reuse the cached value.
    *
-   * @param levelStr level match condition (e.g., ">=1")
+   * @param levelStr level match condition (e.g., {@code ">=1"})
    * @return Label to jump to if level check fails, or null if no check needed
    */
   public Label emitHandlerLevelCheck(String levelStr) {
