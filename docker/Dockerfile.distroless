@@ -1,0 +1,23 @@
+# BTrace Docker Image - Distroless variant
+# Minimal attack surface for production use with BTrace agent
+# Runtime JARs only, no shell or unnecessary tools
+FROM gcr.io/distroless/java11-debian11
+
+ARG BTRACE_VERSION=2.3.0-SNAPSHOT
+
+LABEL maintainer="BTrace Project <https://github.com/btraceio/btrace>" \
+      org.opencontainers.image.title="BTrace Distroless" \
+      org.opencontainers.image.description="Safe, dynamic tracing tool for the Java platform (Distroless variant)" \
+      org.opencontainers.image.url="https://github.com/btraceio/btrace" \
+      org.opencontainers.image.source="https://github.com/btraceio/btrace" \
+      org.opencontainers.image.version="${BTRACE_VERSION}" \
+      org.opencontainers.image.licenses="GPL-2.0-only WITH Classpath-exception-2.0"
+
+# Copy only BTrace runtime libraries (no shell scripts since distroless has no shell)
+COPY btrace/libs /opt/btrace/libs
+
+# Note: Distroless images don't support environment variables in the traditional way
+# Users should specify paths directly in their java command
+# Example: java -javaagent:/opt/btrace/libs/btrace-agent.jar=...
+
+WORKDIR /work
