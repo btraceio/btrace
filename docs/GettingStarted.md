@@ -375,15 +375,31 @@ docker exec -it <container-id> btrace <PID> script.java
 - BTrace must be available in container or mounted
 - Same user permissions as target JVM
 
-**Example Dockerfile:**
+**Example Dockerfile with official BTrace images:**
+```dockerfile
+# Option 1: Copy BTrace into your application image (recommended)
+FROM btrace/btrace:latest AS btrace
+FROM openjdk:11-jdk
+
+COPY --from=btrace /opt/btrace /opt/btrace
+ENV BTRACE_HOME=/opt/btrace
+ENV PATH=$PATH:$BTRACE_HOME/bin
+
+# Your application...
+COPY target/myapp.jar /app/
+ENTRYPOINT ["java", "-jar", "/app/myapp.jar"]
+```
+
+**Alternative: Manual installation (if not using official images):**
 ```dockerfile
 FROM openjdk:11-jdk
-# Install BTrace
 RUN curl -L https://github.com/btraceio/btrace/releases/download/v2.2.2/btrace-2.2.2.tar.gz \
     | tar -xz -C /opt/
 ENV BTRACE_HOME=/opt/btrace-2.2.2
 ENV PATH=$PATH:$BTRACE_HOME/bin
 ```
+
+See [docker/README.md](../docker/README.md) for more Docker usage patterns.
 
 ### Kubernetes Pods
 
@@ -433,8 +449,8 @@ spec:
         image: myapp:latest
 
       - name: btrace
-        image: openjdk:11-jdk
-        command: ["/bin/sh", "-c", "sleep infinity"]
+        image: btrace/btrace:latest-alpine  # Official BTrace Alpine image
+        command: ["/bin/sh", "-c", "while true; do sleep 30; done"]
         volumeMounts:
         - name: btrace-scripts
           mountPath: /scripts
@@ -445,6 +461,15 @@ spec:
 ```
 
 **Note:** Requires `shareProcessNamespace: true` to allow sidecar to see app container processes.
+
+**Using the sidecar:**
+```bash
+# Execute BTrace from sidecar
+kubectl exec <pod-name> -c btrace -- btrace $(pgrep -f myapp) /scripts/trace.btrace
+
+# View output
+kubectl logs <pod-name> -c btrace
+```
 
 ### Common Issues in K8s
 
