@@ -14,7 +14,7 @@ ILOAD 6
 IFEQ L2
 L1
 FRAME SAME
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args2Sampled.$btrace$$level : I
+ILOAD 7
 ICONST_1
 IF_ICMPLT L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -33,7 +33,7 @@ ILOAD 6
 IFEQ L4
 L3
 FRAME SAME
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args2Sampled.$btrace$$level : I
+ILOAD 7
 ICONST_1
 IF_ICMPLT L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
