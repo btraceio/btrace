@@ -41,7 +41,10 @@ public final class HandlerRepositoryImpl {
     String probeName = probe.getClassName(true);
     probeMap.remove(probeName);
     String probePrefix = probeName + "#";
-    handlerBytecodeCache.keySet().removeIf(key -> key.startsWith(probePrefix));
+    handlerBytecodeCache.keySet().removeIf(key -> {
+      int delimiterIndex = key.indexOf('#');
+      return delimiterIndex > 0 && key.substring(0, delimiterIndex).equals(probeName);
+    });
   }
 
   public static byte[] getProbeHandler(
