@@ -47,6 +47,7 @@ import org.openjdk.btrace.runtime.Interval;
  */
 public class MethodInstrumentor extends BTraceMethodVisitor {
   protected final Assembler asm;
+  protected MethodTrackingContext trackingCtx;
   MethodInstrumentor parent = null;
   private final int access;
   private final String parentClz;

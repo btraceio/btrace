@@ -23,10 +23,6 @@ FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J
 IFLE L4
 L5
 LINENUMBER 145 L5
-INVOKESTATIC java/lang/System.nanoTime ()J
-LLOAD 8
-LSUB
-LSTORE 6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L6
 DUP2
@@ -45,10 +41,6 @@ L4
 LINENUMBER 149 L4
 L7
 LINENUMBER 150 L7
-INVOKESTATIC java/lang/System.nanoTime ()J
-LLOAD 8
-LSUB
-LSTORE 6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L8
 DUP2

@@ -1,32 +1,32 @@
-LSTORE 4
-ASTORE 6
-ASTORE 7
 ICONST_0
-ISTORE 8
+ISTORE 4
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallSampled.$btrace$$level : I
 DUP
-ISTORE 9
+ISTORE 5
 IFLE L1
 ICONST_2
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hit (I)Z
-ISTORE 8
+ISTORE 4
 L1
-FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/String resources/OnMethodTest I I] []
-ILOAD 9
+FRAME FULL [resources/OnMethodTest java/lang/String J I I] [resources/OnMethodTest java/lang/String J]
+LSTORE 6
+ASTORE 8
+ASTORE 9
+ILOAD 5
 IFLE L2
-ILOAD 8
+ILOAD 4
 IFEQ L3
 L2
-FRAME SAME
+FRAME APPEND [J java/lang/String resources/OnMethodTest]
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallSampled.$btrace$$level : I
 ICONST_1
 IF_ICMPLT L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
-ALOAD 6
-LLOAD 4
-ALOAD 7
+ALOAD 8
+LLOAD 6
+ALOAD 9
 LDC "special long resources.OnMethodTest#callTarget(java.lang.String, long)"
 LDC "resources.OnMethodTest"
 LDC "callTopLevel"
@@ -38,9 +38,9 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 ]
 L3
 FRAME SAME
-ALOAD 7
-ALOAD 6
-LLOAD 4
+ALOAD 9
+ALOAD 8
+LLOAD 6
 L4
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
 LOCALVARIABLE a Ljava/lang/String; L0 L4 1
