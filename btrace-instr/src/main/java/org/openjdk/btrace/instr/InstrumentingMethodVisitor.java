@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
@@ -65,9 +66,11 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   private final Set<Integer> frameOffsets = new HashSet<>();
   private final Map<Label, SavedState> jumpTargetStates = new HashMap<>();
   private final Map<Label, Set<Label>> tryCatchHandlerMap = new HashMap<>();
+  private final Map<Integer, MethodTrackingContext> trackingContexts = new HashMap<>();
   private final String owner;
   private final String desc;
   private int argsSize = 0;
+  private boolean shouldCacheLevelVar = false;
   private int localsTailPtr = 0;
   private int pc = 0, lastFramePc = Integer.MIN_VALUE;
   private final FrameDiagnosticListener frameDiagnosticListener;
@@ -1225,6 +1228,20 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     localTypes.setType(var, t);
 
     return idx;
+  }
+
+  public void setShouldCacheLevelVar(boolean shouldCache) {
+    this.shouldCacheLevelVar = shouldCache;
+  }
+
+  public boolean shouldCacheLevelVar() {
+    return shouldCacheLevelVar;
+  }
+
+  @Override
+  public MethodTrackingContext getOrCreateTrackingContext(
+      int methodId, Supplier<MethodTrackingContext> factory) {
+    return trackingContexts.computeIfAbsent(methodId, k -> factory.get());
   }
 
   private void initLocals(boolean isInstance, boolean isConstructor) {
