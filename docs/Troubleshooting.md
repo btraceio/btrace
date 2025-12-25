@@ -838,6 +838,7 @@ data:
     import static org.openjdk.btrace.core.BTraceUtils.*;
 
     @BTrace
+    // Classname 'TraceMethod' must correspond to the file name 'TraceMethod.java'
     public class TraceMethod {
         @OnMethod(clazz = "com.example.Service", method = "process")
         public static void onProcess() {
