@@ -205,15 +205,17 @@ public static void handler() {
 }
 ```
 
-### 3. Unbounded loops
+### 3. Loops
 
 **Wrong:**
 ```java
 @OnMethod(...)
 public static void handler() {
-    while (true) {  // ERROR: Unbounded loop
-        // ...
-    }
+    // ERROR: All loops forbidden in safe mode
+    while (condition) { }
+    for (int i = 0; i < 100; i++) { }
+    do { } while (condition);
+    for (String s : collection) { }
 }
 ```
 
@@ -221,11 +223,12 @@ public static void handler() {
 ```java
 @OnMethod(...)
 public static void handler() {
-    for (int i = 0; i < 100; i++) {  // Bounded loop OK
-        // ...
-    }
+    // Use BTraceUtils methods instead
+    // For iteration, use unsafe mode (-u flag) if absolutely necessary
 }
 ```
+
+**Note:** ALL loop constructs (`for`, `while`, `do-while`, enhanced `for`) are forbidden in safe mode. Use `-u` (unsafe mode) only in controlled environments if loops are required.
 
 ### 4. File I/O operations
 

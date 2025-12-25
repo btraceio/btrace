@@ -577,7 +577,7 @@ BTrace scripts have safety restrictions:
 - No new threads
 - No new classes
 - No synchronization
-- No loops (except bounded)
+- No loops (for, while, do-while, enhanced for)
 - No external method calls
 - No file I/O (except via BTraceUtils)
 - No System.exit
