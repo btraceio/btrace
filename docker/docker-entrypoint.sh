@@ -40,8 +40,14 @@ if [ "${1#-}" != "$1" ] || [ "$1" = "btrace" ] || [ "$1" = "btracer" ] || [ "$1"
 fi
 
 # If first argument is a shell or starts with /, execute as-is
-if [ "$1" = "/bin/bash" ] || [ "$1" = "/bin/sh" ] || [ "${1:0:1}" = "/" ]; then
+if [ "$1" = "/bin/bash" ] || [ "$1" = "/bin/sh" ]; then
     exec "$@"
+else
+    case "$1" in
+        /*)
+            exec "$@"
+            ;;
+    esac
 fi
 
 # Default: execute the provided command
