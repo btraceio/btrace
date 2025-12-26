@@ -275,6 +275,11 @@ task buildDockerContext(type: Copy, dependsOn: [agentJar, bootJar, clientJar, co
             from "${projectDir}/../docker/docker-entrypoint.sh"
             into "${buildDir}/docker-context"
         }
+        // Copy .dockerignore to build context so Docker can use it
+        copy {
+            from "${projectDir}/../docker/.dockerignore"
+            into "${buildDir}/docker-context"
+        }
     }
 }
 
