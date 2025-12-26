@@ -125,6 +125,8 @@ public abstract class Constants {
 
   public static final String EXTENSION = Type.getInternalName(Extension.class);
 
+  public static final String EXTENSION_DESC = Type.getDescriptor(Extension.class);
+
   public static final String BTRACE_DESC = Type.getDescriptor(BTrace.class);
 
   public static final String ONMETHOD_DESC = Type.getDescriptor(OnMethod.class);
