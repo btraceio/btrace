@@ -138,6 +138,10 @@ final class Preprocessor {
   private static final String SERVICE_CTR_DESC =
       "(" + Constants.STRING_DESC + ")" + Constants.VOID_DESC;
 
+  // Extension-related constants
+  private static final String GET_EXTENSION_DESC =
+      "(" + Constants.CLASS_DESC + ")" + Constants.EXTENSION_DESC;
+
   private static final String JFR_EVENT_TEMPLATE_INTERNAL =
       "org/openjdk/btrace/core/jfr/JfrEvent$Template";
   private static final String JFR_EVENT_TEMPLATE_DESC = "L" + JFR_EVENT_TEMPLATE_INTERNAL + ";";
@@ -1495,6 +1499,20 @@ final class Preprocessor {
                 false));
         toInsert.add(new InsnNode(Opcodes.DUP));
       }
+    } else if (svcType.equals("EXTENSION")) {
+      // Extension: use registry-based lookup
+      // runtime.getExtension(ExtensionClass.class)
+      toInsert.add(getRuntimeImpl(cn));
+      toInsert.add(new LdcInsnNode(implType));
+      toInsert.add(
+          new MethodInsnNode(
+              Opcodes.INVOKEVIRTUAL,
+              Constants.BTRACERTBASE_INTERNAL,
+              "getExtension",
+              GET_EXTENSION_DESC,
+              false));
+      toInsert.add(new TypeInsnNode(Opcodes.CHECKCAST, implType.getInternalName()));
+      toInsert.add(new InsnNode(Opcodes.DUP));
     } else { // RuntimeService here
       if (fctryMethod == null || fctryMethod.isEmpty()) {
         toInsert.add(new TypeInsnNode(Opcodes.NEW, implType.getInternalName()));
