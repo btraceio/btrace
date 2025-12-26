@@ -30,9 +30,14 @@ if [ ! -d "$BTRACE_HOME" ]; then
 fi
 
 # Add BTrace bin to PATH if not already there
-if [[ ":$PATH:" != *":$BTRACE_HOME/bin:"* ]]; then
-    export PATH="$PATH:$BTRACE_HOME/bin"
-fi
+case ":$PATH:" in
+    *":$BTRACE_HOME/bin:"*)
+        # already in PATH, do nothing
+        ;;
+    *)
+        export PATH="$PATH:$BTRACE_HOME/bin"
+        ;;
+esac
 
 # If first argument is a btrace command, execute it directly
 if [ "${1#-}" != "$1" ] || [ "$1" = "btrace" ] || [ "$1" = "btracer" ] || [ "$1" = "btracec" ] || [ "$1" = "btracep" ]; then
