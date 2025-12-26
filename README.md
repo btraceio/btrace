@@ -59,6 +59,27 @@ Or, alternatively, you may install one of the *.rpm or *.deb packages
 
 For the detailed user guide, please, check the [Wiki](https://github.com/btraceio/btrace/wiki/Home).
 
+### Extensions and Permissions
+BTrace supports extensions (like StatsdExtension) that provide additional functionality. Extensions require explicit permissions for security:
+
+* **Default permissions** (always granted): MESSAGING, AGGREGATION, JFR_EVENTS, PROFILING
+* **Standard permissions** (granted unless denied): FILE_READ, SYSTEM_PROPS, THREAD_INFO, MEMORY_INFO
+* **Privileged permissions** (require explicit grant): FILE_WRITE, NETWORK, THREADS, NATIVE, EXEC, REFLECTION, CLASSLOADER, UNLIMITED_MEMORY
+
+Declare required permissions in your probe with `@RequestPermission`:
+```java
+@BTrace
+@RequestPermission(Permission.NETWORK)
+public class MyProbe { ... }
+```
+
+Grant permissions at runtime:
+```sh
+btrace --grant=NETWORK,THREADS <PID> MyProbe.class
+```
+
+See the [Tutorial](docs/BTraceTutorial.md) for detailed documentation.
+
 ### Maven Integration
 The [maven plugin](https://github.com/btraceio/btrace-maven) is providing easy compilation of __BTrace__ scripts as a part of the build process. As a bonus you can utilize the _BTrace Project Archetype_ to bootstrap developing __BTrace__ scripts.
 

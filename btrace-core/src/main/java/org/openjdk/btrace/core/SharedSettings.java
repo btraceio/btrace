@@ -139,7 +139,7 @@ public final class SharedSettings {
     }
   }
 
-  private static PermissionSet parsePermissions(String permissionString) {
+  public static PermissionSet parsePermissions(String permissionString) {
     if (permissionString == null || permissionString.isEmpty()) {
       return PermissionSet.empty();
     }
