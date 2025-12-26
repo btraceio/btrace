@@ -327,10 +327,11 @@ ENV JAVA_OPTS="--add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAME
 ./gradlew :btrace-dist:buildDockerImages
 
 # Or build manually
+VERSION=2.3.0-SNAPSHOT  # Set this to your BTrace version
 cd docker
-docker build -t btrace/btrace:local -f Dockerfile ../btrace-dist/build/resources/main/v2.3.0-SNAPSHOT
-docker build -t btrace/btrace:local-alpine -f Dockerfile.alpine ../btrace-dist/build/resources/main/v2.3.0-SNAPSHOT
-docker build -t btrace/btrace:local-distroless -f Dockerfile.distroless ../btrace-dist/build/resources/main/v2.3.0-SNAPSHOT
+docker build -t btrace/btrace:local -f Dockerfile ../btrace-dist/build/resources/main/v${VERSION}
+docker build -t btrace/btrace:local-alpine -f Dockerfile.alpine ../btrace-dist/build/resources/main/v${VERSION}
+docker build -t btrace/btrace:local-distroless -f Dockerfile.distroless ../btrace-dist/build/resources/main/v${VERSION}
 ```
 
 ## Supported Platforms
