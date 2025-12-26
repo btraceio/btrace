@@ -168,7 +168,7 @@ services:
       - ./scripts:/scripts
       - ./output:/output
     command: >
-      sh -c "sleep 5; btrace $(pgrep -f myapp) /scripts/trace.btrace"
+      sh -c 'sleep 5; btrace $(pgrep -f myapp) /scripts/trace.btrace'
 ```
 
 ## Image Selection Guide
