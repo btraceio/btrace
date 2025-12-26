@@ -699,6 +699,15 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     }
   }
 
+  /**
+   * Returns the script arguments map.
+   *
+   * @return the args map, or null if no arguments
+   */
+  public final ArgsMap getArgsMap() {
+    return args;
+  }
+
   // BTrace perf counter reading functions
   @Override
   public final int perfInt(String name) {
