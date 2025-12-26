@@ -1,0 +1,217 @@
+/*
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the Classpath exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package org.openjdk.btrace.dtrace;
+
+import java.io.File;
+import java.io.IOException;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.MessageCommand;
+import org.openjdk.btrace.core.extensions.Extension;
+import org.openjdk.btrace.core.extensions.ExtensionContext;
+import org.openjdk.btrace.core.extensions.ExtensionDescriptor;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.core.extensions.RequiresPermission;
+import org.opensolaris.os.dtrace.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * DTrace extension for BTrace.
+ *
+ * <p>Provides integration with Solaris DTrace for executing D-scripts from BTrace.
+ *
+ * <p>Use the following code to obtain an instance:
+ *
+ * <pre>
+ * <code>
+ * {@literal @}Injected(ServiceType.EXTENSION)
+ * private static DTraceExtension dtrace;
+ * </code>
+ * </pre>
+ */
+@ExtensionDescriptor(
+    name = "dtrace",
+    version = "1.0",
+    description = "DTrace integration for BTrace (Solaris only)")
+@RequiresPermission(value = Permission.NATIVE, reason = "Uses native DTrace API")
+@RequiresPermission(value = Permission.THREADS, reason = "DTrace consumer runs in background")
+public final class DTraceExtension extends Extension {
+  private static final Logger log = LoggerFactory.getLogger(DTraceExtension.class);
+
+  private volatile ExtensionContext ctx;
+  private volatile Consumer consumer;
+
+  @Override
+  public void initialize(ExtensionContext ctx) {
+    super.initialize(ctx);
+    this.ctx = ctx;
+  }
+
+  @Override
+  public void close() {
+    Consumer cons = this.consumer;
+    if (cons != null) {
+      try {
+        cons.close();
+      } catch (Exception e) {
+        log.debug("Error closing DTrace consumer", e);
+      }
+      this.consumer = null;
+    }
+  }
+
+  /**
+   * Submits a D-script from the given file.
+   *
+   * @param file D-script file to submit
+   * @param args DTrace macro arguments
+   * @throws DTraceException if compilation or execution fails
+   * @throws IOException if file cannot be read
+   */
+  public void submit(File file, String[] args) throws DTraceException, IOException {
+    Consumer cons = newConsumer(args);
+    cons.compile(file, args);
+    start(cons);
+  }
+
+  /**
+   * Submits a D-script string.
+   *
+   * @param program D-script as a string
+   * @param args DTrace macro arguments
+   * @throws DTraceException if compilation or execution fails
+   */
+  public void submit(String program, String[] args) throws DTraceException {
+    Consumer cons = newConsumer(args);
+    cons.compile(program, args);
+    start(cons);
+  }
+
+  private void start(Consumer cons) throws DTraceException {
+    cons.enable();
+    cons.go(
+        th -> {
+          send(new ErrorCommand(th));
+        });
+  }
+
+  private Consumer newConsumer(String[] args) throws DTraceException {
+    Consumer cons = new LocalConsumer();
+    this.consumer = cons;
+
+    cons.addConsumerListener(
+        new ConsumerAdapter() {
+          @Override
+          public void consumerStarted(ConsumerEvent ce) {
+            send(new DTraceStartCommand(ce));
+          }
+
+          @Override
+          public void consumerStopped(ConsumerEvent ce) {
+            Consumer c = ce.getSource();
+            Aggregate ag = null;
+            try {
+              ag = c.getAggregate();
+            } catch (DTraceException dexp) {
+              send(new ErrorCommand(dexp));
+            }
+            StringBuilder buf = new StringBuilder();
+            if (ag != null) {
+              for (Aggregation agg : ag.asMap().values()) {
+                String name = agg.getName();
+                if (name != null && name.length() > 0) {
+                  buf.append(name);
+                  buf.append('\n');
+                }
+                for (AggregationRecord rec : agg.asMap().values()) {
+                  buf.append('\t');
+                  buf.append(rec.getTuple());
+                  buf.append(" ");
+                  buf.append(rec.getValue());
+                  buf.append('\n');
+                }
+              }
+            }
+            String msg = buf.toString();
+            if (msg.length() > 0) {
+              send(new MessageCommand(msg));
+            }
+            send(new DTraceStopCommand(ce));
+            c.close();
+          }
+
+          @Override
+          public void dataReceived(DataEvent de) {
+            send(new DTraceDataCommand(de));
+          }
+
+          @Override
+          public void dataDropped(DropEvent de) {
+            send(new DTraceDropCommand(de));
+          }
+
+          @Override
+          public void errorEncountered(ErrorEvent ee) throws ConsumerException {
+            try {
+              super.errorEncountered(ee);
+            } catch (ConsumerException ce) {
+              send(new DTraceErrorCommand(ce, ee));
+              throw ce;
+            }
+          }
+        });
+
+    // open DTrace Consumer
+    cons.open();
+
+    // unused macro arguments are fine
+    cons.setOption(Option.argref, "");
+    // if no macro arg passed use "" or NULL
+    cons.setOption(Option.defaultargs, "");
+    // allow empty D-scripts
+    cons.setOption(Option.empty, "");
+    // be quiet! equivalent to DTrace's -q
+    cons.setOption(Option.quiet, "");
+    // undefined user land symbols are fine
+    cons.setOption(Option.unodefs, "");
+    // allow zero matching of probes (needed for late loading)
+    cons.setOption(Option.zdefs, "");
+    try {
+      int pid = Integer.parseInt(args[0]);
+      cons.grabProcess(pid);
+    } catch (Exception ignored) {
+    }
+    return cons;
+  }
+
+  private void send(Command cmd) {
+    ExtensionContext c = this.ctx;
+    if (c != null) {
+      c.send(cmd);
+    }
+  }
+}

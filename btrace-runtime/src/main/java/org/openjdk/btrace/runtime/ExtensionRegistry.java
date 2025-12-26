@@ -7,6 +7,8 @@ import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.extensions.ExtensionContext;
 import org.openjdk.btrace.core.extensions.ExtensionException;
 import org.openjdk.btrace.core.extensions.ExtensionMeta;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.core.extensions.PermissionSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,12 +101,21 @@ public final class ExtensionRegistry {
             extensionClass,
             clazz -> {
               try {
-                T instance = extensionClass.getDeclaredConstructor().newInstance();
+                // Create context first to get granted permissions
                 ExtensionContext ctx = contextFactory.createContext(scriptClassName);
+
+                // Check permissions before instantiation
+                checkPermissions(extensionClass, ctx.getPermissions());
+
+                T instance = extensionClass.getDeclaredConstructor().newInstance();
                 instance.initialize(ctx);
                 log.debug(
-                    "Initialized extension {} for script {}", extensionClass.getName(), scriptClassName);
+                    "Initialized extension {} for script {}",
+                    extensionClass.getName(),
+                    scriptClassName);
                 return instance;
+              } catch (ExtensionException e) {
+                throw e;
               } catch (Exception e) {
                 throw new ExtensionException(
                     "Failed to create extension " + extensionClass.getName(), e);
@@ -112,6 +123,36 @@ public final class ExtensionRegistry {
             });
 
     return (T) extension;
+  }
+
+  /**
+   * Checks that all required permissions are granted.
+   *
+   * @param extensionClass the extension class
+   * @param grantedPermissions the permissions granted to the script
+   * @throws ExtensionException if required permissions are missing
+   */
+  private void checkPermissions(
+      Class<? extends Extension> extensionClass, PermissionSet grantedPermissions) {
+    ExtensionMeta meta = registry.get(extensionClass);
+    if (meta == null) {
+      // Extension not discovered via ServiceLoader, extract meta directly
+      meta = ExtensionMeta.from(extensionClass);
+    }
+
+    PermissionSet required = meta.getRequiredPermissions();
+    for (Permission perm : Permission.values()) {
+      if (required.has(perm) && !grantedPermissions.has(perm)) {
+        throw new ExtensionException(
+            "Extension "
+                + meta.getName()
+                + " requires permission "
+                + perm
+                + " which is not granted. Use --grant="
+                + perm.name()
+                + " to enable.");
+      }
+    }
   }
 
   /**
