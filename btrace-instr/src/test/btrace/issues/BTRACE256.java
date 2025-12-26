@@ -3,14 +3,14 @@ package traces.issues;
 import org.openjdk.btrace.core.BTraceUtils;
 import org.openjdk.btrace.core.Profiler;
 import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.statsd.Statsd;
+import org.openjdk.btrace.statsd.StatsdExtension;
 
 @BTrace
 class BTRACE256 {
   @Property Profiler swingProfiler = BTraceUtils.Profiling.newProfiler();
 
-  @Injected(factoryMethod = "getInstance")
-  private Statsd sd;
+  @Injected(ServiceType.EXTENSION)
+  private StatsdExtension sd;
 
   @OnMethod(clazz = "/.*\\.BTRACE256/", method = "doStuff")
   void entry(@ProbeMethodName(fqn = true) String probeMethod) {
