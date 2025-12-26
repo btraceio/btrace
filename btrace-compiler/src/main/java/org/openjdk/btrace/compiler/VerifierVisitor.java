@@ -93,6 +93,7 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   private TypeMirror runtimeServiceTm = null;
   private TypeMirror simpleServiceTm = null;
   private TypeMirror serviceInjectorTm = null;
+  private TypeMirror extensionTm = null;
 
   private boolean isInAnnotation = false;
 
@@ -138,6 +139,11 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
             .getElementUtils()
             .getTypeElement("org.openjdk.btrace.services.api.Service")
             .asType();
+    TypeElement extensionElement =
+        verifier.getElementUtils().getTypeElement("org.openjdk.btrace.core.extensions.Extension");
+    if (extensionElement != null) {
+      extensionTm = extensionElement.asType();
+    }
   }
 
   @Override
@@ -185,6 +191,10 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
             reportError("service.injector.literals", node);
           }
 
+          return super.visitMethodInvocation(node, v);
+        }
+        // check extension calls
+        if (extensionTm != null && verifier.getTypeUtils().isSubtype(tm, extensionTm)) {
           return super.visitMethodInvocation(node, v);
         }
       }
@@ -513,6 +523,15 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
                 break;
               }
           }
+        }
+        if (vt.getInitializer() != null) {
+          reportError("injected.no.initializer", vt.getInitializer());
+        }
+      } else if (extensionTm != null && verifier.getTypeUtils().isSubtype(ve.asType(), extensionTm)) {
+        // Extension fields require @Injected annotation
+        Injected i = ve.getAnnotation(Injected.class);
+        if (i == null) {
+          reportError("missing.injected", vt);
         }
         if (vt.getInitializer() != null) {
           reportError("injected.no.initializer", vt.getInitializer());

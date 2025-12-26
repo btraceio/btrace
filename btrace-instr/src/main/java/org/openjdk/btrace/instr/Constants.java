@@ -48,6 +48,7 @@ import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Self;
+import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.annotations.TargetInstance;
 import org.openjdk.btrace.core.annotations.TargetMethodOrField;
 import org.openjdk.btrace.core.annotations.Where;
@@ -121,6 +122,8 @@ public abstract class Constants {
   public static final String BTRACE_UTILS = Type.getInternalName(BTraceUtils.class);
 
   public static final String SERVICE = Type.getInternalName(Service.class);
+
+  public static final String EXTENSION = Type.getInternalName(Extension.class);
 
   public static final String BTRACE_DESC = Type.getDescriptor(BTrace.class);
 
