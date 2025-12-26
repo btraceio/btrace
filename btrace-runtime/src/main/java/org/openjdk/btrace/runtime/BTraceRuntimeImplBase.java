@@ -80,6 +80,8 @@ import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.BTraceUtils;
 import org.openjdk.btrace.core.Profiler;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.ErrorCommand;
@@ -268,6 +270,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   // Memory MBean listener
   private volatile NotificationListener memoryListener;
 
+  // Extension registry for this runtime
+  private final ExtensionRegistry extensionRegistry;
+
   // Command queue for the client
   private final CommandQueue queue;
 
@@ -404,6 +409,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     specQueueManager = null;
     className = null;
     instrumentation = null;
+    extensionRegistry = null;
   }
 
   BTraceRuntimeImplBase(
@@ -413,6 +419,11 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     specQueueManager = new SpeculativeQueueManager();
     this.className = className;
     instrumentation = inst;
+    this.extensionRegistry =
+        new ExtensionRegistry(
+            scriptClassName ->
+                new ExtensionContextImpl(
+                    this, scriptClassName, SharedSettings.GLOBAL.getEffectivePermissions()));
 
     BTraceRuntimeAccess.addRuntime(className, this);
 
@@ -708,6 +719,20 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     return args;
   }
 
+  /**
+   * Gets or creates an extension instance for this runtime's script.
+   *
+   * @param extensionClass the extension class
+   * @param <T> the extension type
+   * @return the extension instance
+   */
+  public final <T extends Extension> T getExtension(Class<T> extensionClass) {
+    if (extensionRegistry == null) {
+      throw new IllegalStateException("Extension registry not initialized");
+    }
+    return extensionRegistry.getExtension(extensionClass, className);
+  }
+
   // BTrace perf counter reading functions
   @Override
   public final int perfInt(String name) {
@@ -867,6 +892,10 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   }
 
   protected void cleanupRuntime() {
+    // Release all extension instances for this script
+    if (extensionRegistry != null) {
+      extensionRegistry.releaseExtensions(className);
+    }
     // to be overridden by concrete implementations
   }
 
