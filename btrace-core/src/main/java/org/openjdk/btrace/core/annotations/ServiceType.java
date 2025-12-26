@@ -35,5 +35,9 @@ public enum ServiceType {
   /** A simple service; possibly a globally shared singleton */
   SIMPLE,
   /** A runtime-aware service; requires an instance per {@linkplain BTraceRuntime} */
-  RUNTIME
+  RUNTIME,
+  /**
+   * An extension; managed by the ExtensionRegistry with proper lifecycle and per-script isolation.
+   */
+  EXTENSION
 }
