@@ -21,20 +21,22 @@
  */
 package org.openjdk.btrace.instr;
 
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.openjdk.btrace.instr.ClassFilter.isSubTypeOf;
 
@@ -46,6 +48,7 @@ public final class BTraceProbeSupport {
   private final List<OnMethod> onMethods;
   private final List<OnProbe> onProbes;
   private final Map<String, String> serviceFields;
+  private final EnumSet<Permission> requiredPermissions;
 
   private final Object filterLock = new Object();
   private volatile ClassFilter filter;
@@ -57,6 +60,7 @@ public final class BTraceProbeSupport {
     onMethods = new ArrayList<>();
     onProbes = new ArrayList<>();
     serviceFields = new HashMap<>();
+    requiredPermissions = EnumSet.noneOf(Permission.class);
   }
 
   void setClassName(String name) {
@@ -178,6 +182,14 @@ public final class BTraceProbeSupport {
 
   void addServiceField(String fldName, String svcType) {
     serviceFields.put(fldName, svcType);
+  }
+
+  void addRequiredPermission(Permission permission) {
+    requiredPermissions.add(permission);
+  }
+
+  Set<Permission> getRequiredPermissions() {
+    return Collections.unmodifiableSet(requiredPermissions);
   }
 
   boolean willInstrument(Class clz) {

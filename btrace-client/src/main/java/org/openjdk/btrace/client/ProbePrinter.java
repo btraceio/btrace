@@ -6,9 +6,11 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.TraceClassVisitor;
 import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.extensions.Permission;
 import org.openjdk.btrace.instr.BTraceProbe;
 import org.openjdk.btrace.instr.BTraceProbeFactory;
 import org.openjdk.btrace.instr.OnMethod;
@@ -31,6 +33,11 @@ public final class ProbePrinter {
       System.out.println("Name: " + probe.getClassName(false));
       System.out.println("Verified: " + probe.isVerified());
       System.out.println("Transforming: " + probe.isTransforming());
+
+      Set<Permission> requiredPermissions = probe.getRequiredPermissions();
+      if (!requiredPermissions.isEmpty()) {
+        System.out.println("Required permissions: " + requiredPermissions);
+      }
 
       System.out.println("=== Probe handlers");
       for (OnMethod om : probe.onmethods()) {

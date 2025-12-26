@@ -76,4 +76,48 @@ public enum Permission {
   public boolean isPrivileged() {
     return ordinal() > MEMORY_INFO.ordinal();
   }
+
+  /**
+   * Returns a description of the security risk associated with this permission.
+   *
+   * @return risk description for user warning
+   */
+  public String getRiskDescription() {
+    switch (this) {
+      case MESSAGING:
+        return "Send messages to BTrace client. Low risk.";
+      case AGGREGATION:
+        return "Use aggregation functions. Low risk.";
+      case JFR_EVENTS:
+        return "Create JFR events. Low risk.";
+      case PROFILING:
+        return "Use profiling functions. Low risk.";
+      case FILE_READ:
+        return "Read files from disk. Risk: Information disclosure.";
+      case SYSTEM_PROPS:
+        return "Read system properties. Risk: Information disclosure.";
+      case THREAD_INFO:
+        return "Read thread information. Risk: Information disclosure.";
+      case MEMORY_INFO:
+        return "Read memory/GC information. Risk: Information disclosure.";
+      case FILE_WRITE:
+        return "Write files to disk. Risk: Data modification, disk exhaustion.";
+      case NETWORK:
+        return "Network I/O (sockets, HTTP). Risk: Data exfiltration, remote connections.";
+      case THREADS:
+        return "Create and manage threads. Risk: Resource exhaustion, concurrent operations.";
+      case NATIVE:
+        return "Call native code (JNI, Unsafe). Risk: JVM crashes, memory corruption.";
+      case EXEC:
+        return "Execute external processes. Risk: Arbitrary command execution.";
+      case REFLECTION:
+        return "Use reflection. Risk: Bypass access controls.";
+      case CLASSLOADER:
+        return "Access classloaders. Risk: Load arbitrary code.";
+      case UNLIMITED_MEMORY:
+        return "Unlimited buffer allocation. Risk: Memory exhaustion.";
+      default:
+        return "Unknown permission.";
+    }
+  }
 }

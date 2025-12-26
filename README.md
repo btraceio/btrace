@@ -108,6 +108,27 @@ For comprehensive documentation, tutorials, and guides:
 * **[Getting Started Guide](docs/GettingStarted.md)** - Get up and running in 5 minutes
 * **[BTrace Wiki](https://github.com/btraceio/btrace/wiki/Home)** - External wiki with additional resources
 
+### Extensions and Permissions
+BTrace supports extensions (like StatsdExtension) that provide additional functionality. Extensions require explicit permissions for security:
+
+* **Default permissions** (always granted): MESSAGING, AGGREGATION, JFR_EVENTS, PROFILING
+* **Standard permissions** (granted unless denied): FILE_READ, SYSTEM_PROPS, THREAD_INFO, MEMORY_INFO
+* **Privileged permissions** (require explicit grant): FILE_WRITE, NETWORK, THREADS, NATIVE, EXEC, REFLECTION, CLASSLOADER, UNLIMITED_MEMORY
+
+Declare required permissions in your probe with `@RequestPermission`:
+```java
+@BTrace
+@RequestPermission(Permission.NETWORK)
+public class MyProbe { ... }
+```
+
+Grant permissions at runtime:
+```sh
+btrace --grant=NETWORK,THREADS <PID> MyProbe.class
+```
+
+See the [Tutorial](docs/BTraceTutorial.md) for detailed documentation.
+
 ### Maven Integration
 
 The [BTrace Maven Plugin](https://github.com/btraceio/btrace-maven) enables:

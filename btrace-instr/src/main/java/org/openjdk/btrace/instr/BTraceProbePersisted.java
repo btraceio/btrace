@@ -34,6 +34,7 @@ import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.core.comm.RetransformClassNotification;
+import org.openjdk.btrace.core.extensions.Permission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +83,7 @@ public class BTraceProbePersisted implements BTraceProbe {
 
   static final int MAGIC = 0xbacecaca;
 
-  private static final int VERSION = 2;
+  private static final int VERSION = 3;
 
   final BTraceProbeSupport delegate;
   private final BTraceProbeFactory factory;
@@ -181,6 +182,11 @@ public class BTraceProbePersisted implements BTraceProbe {
           read_2(dis);
           break;
         }
+      case 3:
+        {
+          read_3(dis);
+          break;
+        }
       default:
         {
           throw new IOException("Unsupported version for persisted probe: " + version);
@@ -221,6 +227,23 @@ public class BTraceProbePersisted implements BTraceProbe {
     readFullData(dis);
   }
 
+  /**
+   * Read in the structure for version 3
+   *
+   * @param dis data input stream
+   * @throws IOException
+   */
+  private void read_3(DataInputStream dis) throws IOException {
+    delegate.setClassName(dis.readUTF());
+    readServices(dis);
+    readOnMethods(dis);
+    readOnProbes(dis);
+    readCallees(dis);
+    readPermissions(dis);
+    readDataHolderClass(dis);
+    readFullData(dis);
+  }
+
   public void write(DataOutputStream dos) {
     try {
       dos.writeInt(MAGIC);
@@ -230,6 +253,7 @@ public class BTraceProbePersisted implements BTraceProbe {
       writeOnMethods(dos);
       writeOnProbes(dos);
       writeCallees(dos);
+      writePermissions(dos);
       writeDataHolderClass(dos);
       writeFullData(dos);
     } catch (IOException e) {
@@ -324,6 +348,18 @@ public class BTraceProbePersisted implements BTraceProbe {
       for (int j = 0; j < callees; j++) {
         String to = dis.readUTF();
         calleeSet.add(to);
+      }
+    }
+  }
+
+  private void readPermissions(DataInputStream dis) throws IOException {
+    int cnt = dis.readInt();
+    for (int i = 0; i < cnt; i++) {
+      String permName = dis.readUTF();
+      try {
+        delegate.addRequiredPermission(Permission.valueOf(permName));
+      } catch (IllegalArgumentException e) {
+        log.warn("Unknown permission in probe: {}", permName);
       }
     }
   }
@@ -433,6 +469,14 @@ public class BTraceProbePersisted implements BTraceProbe {
           dos.writeUTF(c);
         }
       }
+    }
+  }
+
+  private void writePermissions(DataOutputStream dos) throws IOException {
+    Set<Permission> perms = delegate.getRequiredPermissions();
+    dos.writeInt(perms.size());
+    for (Permission perm : perms) {
+      dos.writeUTF(perm.name());
     }
   }
 
@@ -604,6 +648,11 @@ public class BTraceProbePersisted implements BTraceProbe {
   @Override
   public String getActionPrefix() {
     return delegate.getActionPrefix();
+  }
+
+  @Override
+  public Set<Permission> getRequiredPermissions() {
+    return delegate.getRequiredPermissions();
   }
 
   private void upgradeBytecode() {

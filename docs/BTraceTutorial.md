@@ -1,4 +1,4 @@
-# BTrace Tutorial (BTrace 2.2.6)
+# BTrace Tutorial (BTrace 2.3.0)
 
 ## 1. Hello World
 
@@ -112,6 +112,9 @@ The agent takes a list of comma separated arguments.
 * **startupRetransform** - enable retransform of all the loaded classes at attach (true/false)
 * **scriptdir** - the path to a directory containing scripts to be run at the agent startup
 * **scriptOutputFile** - the path to a file the btrace agent will store its output
+* **grant** - comma-separated list of permissions to grant (e.g. `grant=NETWORK,THREADS`)
+* **deny** - comma-separated list of permissions to deny (e.g. `deny=EXEC,NATIVE`)
+* **grantAll** - grant all permissions (true/false) - use with caution
 * **script** - colon separated list of tracing scripts to be run at the agent startup
 
 The scripts to be run must have already been compiled to bytecode (a *.class* file) by __btracec__.
@@ -688,4 +691,140 @@ specific methods.
         }
     }
 }
+```
+
+#### Lesson 6 - Extensions and Permissions
+
+BTrace supports extensions that provide additional functionality beyond the core tracing capabilities. Extensions can send metrics to external systems, integrate with DTrace, and more. To ensure safety, extensions require explicit permissions.
+
+##### Permission System
+
+BTrace uses a permission-based security model organized into three tiers:
+
+###### Default Permissions (always granted)
+These permissions are safe and always available:
+* **MESSAGING** - Send messages to BTrace client
+* **AGGREGATION** - Use aggregation functions
+* **JFR_EVENTS** - Create and use JFR events
+* **PROFILING** - Use profiling functions
+
+###### Standard Permissions (granted unless explicitly denied)
+These permissions allow read-only access to system information:
+* **FILE_READ** - Read files from disk (limited paths)
+* **SYSTEM_PROPS** - Read system properties
+* **THREAD_INFO** - Read thread information
+* **MEMORY_INFO** - Read memory and GC information
+
+###### Privileged Permissions (require explicit grant)
+These permissions have security implications and must be explicitly granted:
+* **FILE_WRITE** - Write files to disk
+* **NETWORK** - Network I/O (sockets, HTTP)
+* **THREADS** - Create and manage threads
+* **NATIVE** - Call native code (JNI, Unsafe)
+* **EXEC** - Execute external processes
+* **REFLECTION** - Use reflection
+* **CLASSLOADER** - Access classloaders
+* **UNLIMITED_MEMORY** - Unlimited buffer allocation
+
+##### Declaring Required Permissions
+
+Probes that use extensions must declare their required permissions using the `@RequestPermission` annotation:
+
+```java
+package myprobes;
+import org.openjdk.btrace.core.annotations.*;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.statsd.StatsdExtension;
+
+@BTrace
+@RequestPermission(Permission.NETWORK)
+@RequestPermission(Permission.THREADS)
+public class MetricsProbe {
+    @Injected(ServiceType.EXTENSION)
+    private static StatsdExtension statsd;
+
+    @OnMethod(clazz = "com.example.MyService", method = "process")
+    public static void onProcess(@Duration long duration) {
+        statsd.timing("service.process.duration", duration / 1_000_000);
+    }
+}
+```
+
+The compiler validates that all permissions required by the used extensions are declared. If a permission is missing, compilation fails with an error message.
+
+##### Granting Permissions at Runtime
+
+When running a probe that requires privileged permissions, you must explicitly grant them:
+
+###### Using the btrace client
+```bash
+btrace --grant=NETWORK,THREADS <pid> MetricsProbe.class
+```
+
+###### Using the Java agent
+```bash
+java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
+```
+
+###### Grant all permissions (use with caution)
+```bash
+btrace --grantAll <pid> MetricsProbe.class
+```
+or
+```bash
+java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grantAll=true ...
+```
+
+##### Permission Error Messages
+
+If a probe requires permissions that are not granted, BTrace will display a descriptive error message:
+
+```
+Probe requires permissions that are not granted:
+
+  - NETWORK
+    Network I/O (sockets, HTTP). Risk: Data exfiltration, remote connections.
+  - THREADS
+    Create and manage threads. Risk: Resource exhaustion, concurrent operations.
+
+To allow these permissions, use:
+  --grant=NETWORK,THREADS
+
+Or use --grantAll=true to allow all permissions (not recommended).
+```
+
+##### Inspecting Probe Permissions
+
+Use the `btracep` tool to inspect what permissions a compiled probe requires:
+
+```bash
+btracep MetricsProbe.class
+```
+
+The output will include a "Required permissions" line listing all permissions the probe needs.
+
+##### Using the StatsdExtension
+
+The StatsdExtension allows sending metrics to a StatsD server:
+
+```java
+@BTrace
+@RequestPermission(Permission.NETWORK)
+@RequestPermission(Permission.THREADS)
+public class StatsdExample {
+    @Injected(ServiceType.EXTENSION)
+    private static StatsdExtension statsd;
+
+    @OnMethod(clazz = "com.example.API", method = "handleRequest",
+              location = @Location(Kind.RETURN))
+    public static void onRequest(@Duration long duration) {
+        statsd.increment("api.requests");
+        statsd.timing("api.latency", duration / 1_000_000);
+    }
+}
+```
+
+Run with:
+```bash
+btrace --grant=NETWORK,THREADS -statsd localhost:8125 <pid> StatsdExample.class
 ```
