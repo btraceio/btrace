@@ -357,7 +357,7 @@ task buildDockerImageDistroless(type: Exec, dependsOn: buildDockerContext) {
         '-t', "btrace/btrace:${project.version}-distroless",
         '-t', "btrace/btrace:latest-distroless",
         '-f', 'Dockerfile.distroless',
-        "${buildDir}/docker-context"
+        file("${buildDir}/docker-context").absolutePath
     ]
 
     if (project.hasProperty('dockerBuildx')) {
