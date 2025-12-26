@@ -262,7 +262,7 @@ buildRpm.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, 
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
 
 // Docker build tasks
-task buildDockerContext(type: Copy, dependsOn: [processResources, fixPermissions]) {
+task buildDockerContext(type: Copy, dependsOn: [agentJar, bootJar, clientJar, copyDtraceLib, processResources, fixPermissions]) {
     group 'Docker'
     description 'Prepare Docker build context with BTrace distribution'
 
