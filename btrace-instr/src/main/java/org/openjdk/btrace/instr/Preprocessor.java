@@ -58,6 +58,7 @@ import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.annotations.Event;
 import org.openjdk.btrace.core.annotations.Return;
+import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
 
 /**
@@ -189,6 +190,7 @@ final class Preprocessor {
   private final Set<String> jfrHandlerNames = new HashSet<>();
   private final Map<String, AnnotationNode> eventFlds = new HashMap<>();
   private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
+  private final Map<String, String> injectedFldDescs = new HashMap<>();
   private final Map<String, Integer> serviceLocals = new HashMap<>();
   private MethodNode clinit = null;
   private FieldNode rtField = null;
@@ -560,6 +562,7 @@ final class Preprocessor {
       if (fn.invisibleAnnotations != null) fn.invisibleAnnotations.remove(an);
 
       injectedFlds.put(fn.name, an);
+      injectedFldDescs.put(fn.name, fn.desc);
       return null;
     }
     return fn;
@@ -1449,6 +1452,15 @@ final class Preprocessor {
     return ret;
   }
 
+  private boolean isExtensionType(Type type) {
+    try {
+      Class<?> clazz = Class.forName(type.getClassName());
+      return Extension.class.isAssignableFrom(clazz);
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
+  }
+
   private AbstractInsnNode updateInjectedUsage(
       ClassNode cn, FieldInsnNode fin, InsnList l, LocalVarGenerator lvg) {
     if (serviceLocals.containsKey(fin.name)) {
@@ -1479,6 +1491,10 @@ final class Preprocessor {
             break;
         }
       }
+    }
+    // Auto-detect extension types based on class hierarchy
+    if (svcType.equals("SIMPLE") && isExtensionType(implType)) {
+      svcType = "EXTENSION";
     }
     int varIdx = lvg.newVar(implType);
     if (svcType.equals("SIMPLE")) {
