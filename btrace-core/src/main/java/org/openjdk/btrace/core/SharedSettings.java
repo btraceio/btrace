@@ -25,6 +25,8 @@
 package org.openjdk.btrace.core;
 
 import java.util.Map;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.core.extensions.PermissionSet;
 
 /**
  * @author Jaroslav Bachorik
@@ -42,6 +44,9 @@ public final class SharedSettings {
   public static final String FILEROLL_MAXROLLS_KEY = "fileRollMaxRolls";
   public static final String OUTPUT_FILE_KEY = "scriptOutputFile";
   public static final String OUTPUT_DIR_KEY = "scriptOutputDir";
+  public static final String GRANT_PERMISSIONS_KEY = "grantPermissions";
+  public static final String DENY_PERMISSIONS_KEY = "denyPermissions";
+  public static final String GRANT_ALL_KEY = "grantAll";
 
   public static final SharedSettings GLOBAL = new SharedSettings();
 
@@ -61,6 +66,9 @@ public final class SharedSettings {
   private String scriptDir;
   private String scriptOutputDir;
   private String clientName;
+  private PermissionSet grantedPermissions = PermissionSet.empty();
+  private PermissionSet deniedPermissions = PermissionSet.empty();
+  private boolean grantAll = false;
 
   public void from(Map<String, Object> params) {
     Boolean b = (Boolean) params.get(DEBUG_KEY);
@@ -117,6 +125,37 @@ public final class SharedSettings {
     if (s != null && !s.isEmpty()) {
       scriptOutputDir = s;
     }
+    s = (String) params.get(GRANT_PERMISSIONS_KEY);
+    if (s != null && !s.isEmpty()) {
+      grantedPermissions = parsePermissions(s);
+    }
+    s = (String) params.get(DENY_PERMISSIONS_KEY);
+    if (s != null && !s.isEmpty()) {
+      deniedPermissions = parsePermissions(s);
+    }
+    b = (Boolean) params.get(GRANT_ALL_KEY);
+    if (b != null) {
+      grantAll = b;
+    }
+  }
+
+  private static PermissionSet parsePermissions(String permissionString) {
+    if (permissionString == null || permissionString.isEmpty()) {
+      return PermissionSet.empty();
+    }
+    PermissionSet result = PermissionSet.empty();
+    for (String name : permissionString.split(",")) {
+      String trimmed = name.trim().toUpperCase();
+      if (!trimmed.isEmpty()) {
+        try {
+          Permission p = Permission.valueOf(trimmed);
+          result = result.with(p);
+        } catch (IllegalArgumentException e) {
+          // Ignore invalid permission names
+        }
+      }
+    }
+    return result;
   }
 
   public void from(SharedSettings other) {
@@ -135,6 +174,9 @@ public final class SharedSettings {
     statsdPort = other.statsdPort;
     trackRetransforms = other.trackRetransforms;
     trusted = other.trusted;
+    grantedPermissions = other.grantedPermissions;
+    deniedPermissions = other.deniedPermissions;
+    grantAll = other.grantAll;
   }
 
   public boolean isDebug() {
@@ -261,5 +303,57 @@ public final class SharedSettings {
 
   public void setClientName(String clientName) {
     this.clientName = clientName;
+  }
+
+  public PermissionSet getGrantedPermissions() {
+    return grantedPermissions;
+  }
+
+  public void setGrantedPermissions(PermissionSet grantedPermissions) {
+    this.grantedPermissions = grantedPermissions;
+  }
+
+  public PermissionSet getDeniedPermissions() {
+    return deniedPermissions;
+  }
+
+  public void setDeniedPermissions(PermissionSet deniedPermissions) {
+    this.deniedPermissions = deniedPermissions;
+  }
+
+  public boolean isGrantAll() {
+    return grantAll;
+  }
+
+  public void setGrantAll(boolean grantAll) {
+    this.grantAll = grantAll;
+  }
+
+  /**
+   * Computes the effective permissions based on granted, denied, and grantAll settings.
+   *
+   * <p>Logic:
+   *
+   * <ul>
+   *   <li>If grantAll is true, all permissions are granted
+   *   <li>Otherwise, start with standard permissions (default + standard tier)
+   *   <li>Add explicitly granted permissions
+   *   <li>Remove explicitly denied permissions
+   * </ul>
+   *
+   * @return the effective permission set
+   */
+  public PermissionSet getEffectivePermissions() {
+    if (grantAll) {
+      return PermissionSet.all();
+    }
+    PermissionSet effective = PermissionSet.standard();
+    for (Permission p : grantedPermissions) {
+      effective = effective.with(p);
+    }
+    for (Permission p : deniedPermissions) {
+      effective = effective.without(p);
+    }
+    return effective;
   }
 }
