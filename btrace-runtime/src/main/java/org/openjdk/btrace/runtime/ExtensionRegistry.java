@@ -1,0 +1,156 @@
+package org.openjdk.btrace.runtime;
+
+import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.concurrent.ConcurrentHashMap;
+import org.openjdk.btrace.core.extensions.Extension;
+import org.openjdk.btrace.core.extensions.ExtensionContext;
+import org.openjdk.btrace.core.extensions.ExtensionException;
+import org.openjdk.btrace.core.extensions.ExtensionMeta;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Registry for BTrace extensions.
+ *
+ * <p>Manages extension discovery via ServiceLoader and per-script extension instances. Each script
+ * gets its own extension instances to ensure proper isolation.
+ */
+public final class ExtensionRegistry {
+  private static final Logger log = LoggerFactory.getLogger(ExtensionRegistry.class);
+
+  /** Global registry of discovered extensions (class -> metadata) */
+  private static final ConcurrentHashMap<Class<? extends Extension>, ExtensionMeta> registry =
+      new ConcurrentHashMap<>();
+
+  /** Per-script extension instances (scriptClassName -> (extensionClass -> instance)) */
+  private final ConcurrentHashMap<String, Map<Class<? extends Extension>, Extension>> instances =
+      new ConcurrentHashMap<>();
+
+  /** Context factory for creating extension contexts */
+  private final ExtensionContextFactory contextFactory;
+
+  /**
+   * Creates a new extension registry.
+   *
+   * @param contextFactory factory for creating extension contexts
+   */
+  public ExtensionRegistry(ExtensionContextFactory contextFactory) {
+    this.contextFactory = contextFactory;
+  }
+
+  /**
+   * Discovers extensions on the classpath using ServiceLoader.
+   *
+   * @param classLoader the classloader to use for discovery
+   */
+  public static void discover(ClassLoader classLoader) {
+    ServiceLoader<Extension> loader = ServiceLoader.load(Extension.class, classLoader);
+    for (Extension extension : loader) {
+      Class<? extends Extension> clazz = extension.getClass();
+      if (!registry.containsKey(clazz)) {
+        try {
+          ExtensionMeta meta = ExtensionMeta.from(clazz);
+          registry.put(clazz, meta);
+          log.debug("Discovered extension: {} v{}", meta.getName(), meta.getVersion());
+        } catch (ExtensionException e) {
+          log.warn("Failed to load extension {}: {}", clazz.getName(), e.getMessage());
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns the metadata for a registered extension.
+   *
+   * @param extensionClass the extension class
+   * @return extension metadata, or null if not registered
+   */
+  public static ExtensionMeta getMeta(Class<? extends Extension> extensionClass) {
+    return registry.get(extensionClass);
+  }
+
+  /**
+   * Checks if an extension class is registered.
+   *
+   * @param extensionClass the extension class
+   * @return true if registered
+   */
+  public static boolean isRegistered(Class<? extends Extension> extensionClass) {
+    return registry.containsKey(extensionClass);
+  }
+
+  /**
+   * Gets or creates an extension instance for the specified script.
+   *
+   * @param extensionClass the extension class
+   * @param scriptClassName the script class name
+   * @param <T> the extension type
+   * @return the extension instance
+   * @throws ExtensionException if extension cannot be instantiated or initialized
+   */
+  @SuppressWarnings("unchecked")
+  public <T extends Extension> T getExtension(Class<T> extensionClass, String scriptClassName) {
+    Map<Class<? extends Extension>, Extension> scriptExtensions =
+        instances.computeIfAbsent(scriptClassName, k -> new ConcurrentHashMap<>());
+
+    Extension extension =
+        scriptExtensions.computeIfAbsent(
+            extensionClass,
+            clazz -> {
+              try {
+                T instance = extensionClass.getDeclaredConstructor().newInstance();
+                ExtensionContext ctx = contextFactory.createContext(scriptClassName);
+                instance.initialize(ctx);
+                log.debug(
+                    "Initialized extension {} for script {}", extensionClass.getName(), scriptClassName);
+                return instance;
+              } catch (Exception e) {
+                throw new ExtensionException(
+                    "Failed to create extension " + extensionClass.getName(), e);
+              }
+            });
+
+    return (T) extension;
+  }
+
+  /**
+   * Releases all extension instances for a script.
+   *
+   * <p>Called when a BTrace script detaches. Closes all extensions to allow cleanup.
+   *
+   * @param scriptClassName the script class name
+   */
+  public void releaseExtensions(String scriptClassName) {
+    Map<Class<? extends Extension>, Extension> scriptExtensions = instances.remove(scriptClassName);
+    if (scriptExtensions != null) {
+      for (Map.Entry<Class<? extends Extension>, Extension> entry : scriptExtensions.entrySet()) {
+        try {
+          entry.getValue().close();
+          log.debug(
+              "Closed extension {} for script {}",
+              entry.getKey().getName(),
+              scriptClassName);
+        } catch (Exception e) {
+          log.warn(
+              "Error closing extension {} for script {}: {}",
+              entry.getKey().getName(),
+              scriptClassName,
+              e.getMessage());
+        }
+      }
+    }
+  }
+
+  /** Factory for creating extension contexts. */
+  @FunctionalInterface
+  public interface ExtensionContextFactory {
+    /**
+     * Creates an extension context for the specified script.
+     *
+     * @param scriptClassName the script class name
+     * @return new extension context
+     */
+    ExtensionContext createContext(String scriptClassName);
+  }
+}

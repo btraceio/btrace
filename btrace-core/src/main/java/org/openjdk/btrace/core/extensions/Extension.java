@@ -28,7 +28,8 @@ package org.openjdk.btrace.core.extensions;
  *   private Socket socket;
  *
  *   &#64;Override
- *   protected void initialize(ExtensionContext ctx) {
+ *   public void initialize(ExtensionContext ctx) {
+ *     super.initialize(ctx);
  *     socket = new Socket(...);
  *   }
  *
@@ -60,7 +61,7 @@ public abstract class Extension implements AutoCloseable {
    * @param ctx the extension context
    * @throws ExtensionException if initialization fails
    */
-  protected void initialize(ExtensionContext ctx) throws ExtensionException {
+  public void initialize(ExtensionContext ctx) throws ExtensionException {
     this.context = ctx;
   }
 
