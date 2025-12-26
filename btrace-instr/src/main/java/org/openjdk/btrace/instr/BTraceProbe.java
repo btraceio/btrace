@@ -44,11 +44,12 @@
  */
 package org.openjdk.btrace.instr;
 
+import java.util.Collection;
+import java.util.Set;
 import org.objectweb.asm.ClassVisitor;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
-
-import java.util.Collection;
+import org.openjdk.btrace.core.extensions.Permission;
 
 public interface BTraceProbe {
   /**
@@ -98,4 +99,10 @@ public interface BTraceProbe {
 
   BTraceRuntime.Impl getRuntime();
 
+  /**
+   * Returns the set of permissions required by this probe.
+   *
+   * @return unmodifiable set of required permissions
+   */
+  Set<Permission> getRequiredPermissions();
 }

@@ -28,10 +28,13 @@ import static org.openjdk.btrace.core.Args.BOOT_CLASS_PATH;
 import static org.openjdk.btrace.core.Args.CMD_QUEUE_LIMIT;
 import static org.openjdk.btrace.core.Args.CONFIG;
 import static org.openjdk.btrace.core.Args.DEBUG;
+import static org.openjdk.btrace.core.Args.DENY;
 import static org.openjdk.btrace.core.Args.DUMP_CLASSES;
 import static org.openjdk.btrace.core.Args.DUMP_DIR;
 import static org.openjdk.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
 import static org.openjdk.btrace.core.Args.FILE_ROLL_MILLISECONDS;
+import static org.openjdk.btrace.core.Args.GRANT;
+import static org.openjdk.btrace.core.Args.GRANT_ALL;
 import static org.openjdk.btrace.core.Args.HELP;
 import static org.openjdk.btrace.core.Args.LIBS;
 import static org.openjdk.btrace.core.Args.NO_SERVER;
@@ -529,6 +532,30 @@ public final class Main {
           {
             settings.setBootClassPath(!p.isEmpty() ? p : "");
             log.debug("probe boot class path is {}", settings.getBootClassPath());
+            break;
+          }
+        case GRANT:
+          {
+            if (!p.isEmpty()) {
+              settings.setGrantedPermissions(SharedSettings.parsePermissions(p));
+              log.debug("granted permissions: {}", settings.getGrantedPermissions());
+            }
+            break;
+          }
+        case DENY:
+          {
+            if (!p.isEmpty()) {
+              settings.setDeniedPermissions(SharedSettings.parsePermissions(p));
+              log.debug("denied permissions: {}", settings.getDeniedPermissions());
+            }
+            break;
+          }
+        case GRANT_ALL:
+          {
+            if (!p.isEmpty()) {
+              settings.setGrantAll(Boolean.parseBoolean(p));
+              log.debug("grantAll: {}", settings.isGrantAll());
+            }
             break;
           }
 

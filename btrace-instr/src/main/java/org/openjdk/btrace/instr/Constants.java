@@ -45,6 +45,8 @@ import org.openjdk.btrace.core.annotations.OnTimer;
 import org.openjdk.btrace.core.annotations.PeriodicEvent;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
+import org.openjdk.btrace.core.annotations.RequestPermission;
+import org.openjdk.btrace.core.annotations.RequestPermissions;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Self;
@@ -161,6 +163,11 @@ public abstract class Constants {
   public static final String KIND_DESC = Type.getDescriptor(Kind.class);
 
   public static final String INJECTED_DESC = Type.getDescriptor(Injected.class);
+
+  public static final String REQUEST_PERMISSION_DESC = Type.getDescriptor(RequestPermission.class);
+
+  public static final String REQUEST_PERMISSIONS_DESC =
+      Type.getDescriptor(RequestPermissions.class);
 
   public static final String RETURN_DESC = Type.getDescriptor(Return.class);
 

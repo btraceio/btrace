@@ -52,6 +52,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.openjdk.btrace.core.extensions.Permission;
 
 /**
  * @author Jaroslav Bachorik
@@ -316,6 +317,15 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
   void addOnProbe(OnProbe op) {
     delegate.addOnProbe(op);
+  }
+
+  void addRequiredPermission(Permission permission) {
+    delegate.addRequiredPermission(permission);
+  }
+
+  @Override
+  public Set<Permission> getRequiredPermissions() {
+    return delegate.getRequiredPermissions();
   }
 
   void setTrusted() {

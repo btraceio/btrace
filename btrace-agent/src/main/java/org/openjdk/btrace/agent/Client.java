@@ -40,17 +40,21 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.core.extensions.PermissionSet;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.ErrorCommand;
@@ -331,6 +335,17 @@ abstract class Client implements CommandListener {
       if (!settings.isTrusted()) {
         probe.checkVerified();
       }
+
+      // Check probe's required permissions against effective permissions
+      Set<Permission> required = probe.getRequiredPermissions();
+      if (!required.isEmpty()) {
+        PermissionSet effective = settings.getEffectivePermissions();
+        Set<Permission> missing =
+            required.stream().filter(p -> !effective.has(p)).collect(Collectors.toSet());
+        if (!missing.isEmpty()) {
+          throw new SecurityException(formatPermissionError(missing));
+        }
+      }
     } catch (Throwable th) {
       log.debug("Filed to load BTrace probe code", th);
       errorExit(th);
@@ -545,5 +560,20 @@ abstract class Client implements CommandListener {
   @Override
   public String toString() {
     return "BTrace Client: " + id + "[" + probe.getClassName() + "]";
+  }
+
+  private static String formatPermissionError(Set<Permission> missing) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Probe requires permissions that are not granted:\n\n");
+    for (Permission p : missing) {
+      sb.append("  - ").append(p.name()).append("\n");
+      sb.append("    ").append(p.getRiskDescription()).append("\n");
+    }
+    sb.append("\nTo allow these permissions, use:\n");
+    sb.append("  --grant=")
+        .append(missing.stream().map(Permission::name).collect(Collectors.joining(",")))
+        .append("\n");
+    sb.append("\nOr use --grantAll=true to allow all permissions (not recommended).\n");
+    return sb.toString();
   }
 }
