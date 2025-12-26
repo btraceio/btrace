@@ -34,6 +34,7 @@ import java.util.Set;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.annotations.Sampled;
+import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.services.api.Service;
 
 /**
@@ -198,13 +199,19 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
             // allow string concatenation via StringBuilder
           } else {
             List<StackItem> args = getMethodParams(desc, false);
-            if (!isServiceTarget(args.get(0))) {
+            if (!isServiceTarget(args.get(0)) && !isExtensionTarget(args.get(0))) {
               Verifier.reportError("no.method.calls", owner + "." + name + desc);
             }
           }
           break;
         case INVOKEINTERFACE:
-          Verifier.reportError("no.method.calls", owner + "." + name + desc);
+          {
+            // Allow interface calls on extension targets
+            List<StackItem> args = getMethodParams(desc, false);
+            if (!isExtensionTarget(args.get(0))) {
+              Verifier.reportError("no.method.calls", owner + "." + name + desc);
+            }
+          }
           break;
         case INVOKESPECIAL:
           if (owner.equals(Constants.OBJECT_INTERNAL) && name.equals(Constants.CONSTRUCTOR)) {
@@ -283,6 +290,23 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
     }
     for (StackItem p : si.getParents()) {
       if (isServiceTarget(p)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isExtensionTarget(StackItem si) {
+    if (si instanceof ResultItem) {
+      ResultItem ri = (ResultItem) si;
+      if (ri.getOwner().equals(Type.getInternalName(Extension.class))) {
+        return true;
+      } else if (ri.getOwner().equals(className) && getParent().isFieldInjected(ri.getName())) {
+        return true;
+      }
+    }
+    for (StackItem p : si.getParents()) {
+      if (isExtensionTarget(p)) {
         return true;
       }
     }
