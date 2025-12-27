@@ -560,6 +560,11 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
         // Collect permissions required by this extension
         collectExtensionPermissions(ve.asType());
       } else {
+        // If the Extension type mirror could not be resolved, report this instead of silently
+        // skipping extension field validation. This likely indicates a classpath issue.
+        if (extensionTm == null) {
+          reportError("extension.class.not.found", vt);
+        }
         vt.accept(jfrFieldNameCollector, null);
       }
     }
