@@ -1467,10 +1467,10 @@ final class Preprocessor {
       try {
         Class<?> clazz = Class.forName(className);
         return Extension.class.isAssignableFrom(clazz);
-      } catch (Throwable ex) {
+      } catch (ClassNotFoundException | LinkageError ex) {
         return logClassLoadingError(className, ex);
       }
-    } catch (Throwable e) {
+    } catch (LinkageError e) {
       return logClassLoadingError(className, e);
     }
   }
@@ -1480,7 +1480,7 @@ final class Preprocessor {
       log.warn("Class '{}' not found when checking extension type", className);
     } else if (error instanceof LinkageError) {
       log.warn(
-          "LinkageError loading class '{}' when checking extension type: {}",
+          "Failed to load class '{}' due to linkage error when checking extension type: {}",
           className,
           error.getMessage());
     } else {
@@ -1524,8 +1524,8 @@ final class Preprocessor {
       }
     }
     // Auto-detect extension types based on class hierarchy
-    if (svcType.equals("SIMPLE")
-        && isExtensionType(implType, Thread.currentThread().getContextClassLoader())) {
+    ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+    if (svcType.equals("SIMPLE") && isExtensionType(implType, contextClassLoader)) {
       svcType = "EXTENSION";
     }
     int varIdx = lvg.newVar(implType);
