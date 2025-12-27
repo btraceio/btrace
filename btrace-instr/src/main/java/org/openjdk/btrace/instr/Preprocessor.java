@@ -60,6 +60,8 @@ import org.openjdk.btrace.core.annotations.Event;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class preprocesses a compiled BTrace program. This is done after BTrace safety verification
@@ -81,6 +83,8 @@ import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
  *     publicly accessible
  */
 final class Preprocessor {
+  private static final Logger log = LoggerFactory.getLogger(Preprocessor.class);
+
   private static final String ANNOTATIONS_PREFIX = "org/openjdk/btrace/core/annotations/";
   private static final Type TLS_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "TLS;");
   private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
@@ -1452,11 +1456,43 @@ final class Preprocessor {
     return ret;
   }
 
-  private boolean isExtensionType(Type type) {
+  private boolean isExtensionType(Type type, ClassLoader classLoader) {
+    String className = type.getClassName();
     try {
-      Class<?> clazz = Class.forName(type.getClassName());
+      Class<?> clazz = Class.forName(className, false, classLoader);
       return Extension.class.isAssignableFrom(clazz);
     } catch (ClassNotFoundException e) {
+      // Try with the current class's classloader as fallback
+      try {
+        Class<?> clazz = Class.forName(className);
+        return Extension.class.isAssignableFrom(clazz);
+      } catch (ClassNotFoundException ex) {
+        log.warn("Class '{}' not found when checking extension type", className);
+        return false;
+      } catch (LinkageError ex) {
+        log.warn(
+            "LinkageError loading class '{}' when checking extension type: {}",
+            className,
+            ex.getMessage());
+        return false;
+      } catch (Exception ex) {
+        log.warn(
+            "Unexpected error loading class '{}' when checking extension type: {}",
+            className,
+            ex.getMessage());
+        return false;
+      }
+    } catch (LinkageError e) {
+      log.warn(
+          "LinkageError loading class '{}' when checking extension type: {}",
+          className,
+          e.getMessage());
+      return false;
+    } catch (Exception e) {
+      log.warn(
+          "Unexpected error loading class '{}' when checking extension type: {}",
+          className,
+          e.getMessage());
       return false;
     }
   }
@@ -1493,7 +1529,8 @@ final class Preprocessor {
       }
     }
     // Auto-detect extension types based on class hierarchy
-    if (svcType.equals("SIMPLE") && isExtensionType(implType)) {
+    if (svcType.equals("SIMPLE")
+        && isExtensionType(implType, Thread.currentThread().getContextClassLoader())) {
       svcType = "EXTENSION";
     }
     int varIdx = lvg.newVar(implType);
