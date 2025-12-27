@@ -756,8 +756,8 @@ final class Preprocessor {
           }
         }
       } else if (type == AbstractInsnNode.METHOD_INSN) {
-        MethodInsnNode min = (MethodInsnNode) n;
-        n = unfoldServiceInstantiation(cn, min, l);
+        MethodInsnNode minNode = (MethodInsnNode) n;
+        n = unfoldServiceInstantiation(cn, minNode, l);
       } else if (n.getOpcode() == retopcode
           && getClassifiers(mn).contains(MethodClassifier.RT_AWARE)) {
         addBTraceRuntimeExit(cn, (InsnNode) n, l);
@@ -1079,8 +1079,8 @@ final class Preprocessor {
       if (n.getOpcode() == Opcodes.RETURN) {
         AbstractInsnNode prev = n.getPrevious();
         if (prev != null && prev.getType() == AbstractInsnNode.METHOD_INSN) {
-          MethodInsnNode min = (MethodInsnNode) prev;
-          if (org.checkerframework.checker.units.qual.min.name.equals("leave")) {
+          MethodInsnNode minNode = (MethodInsnNode) prev;
+          if (minNode.name.equals("leave")) {
             // don't start the runtime if we are bailing out (BTraceRuntime.leave())
             continue;
           }
@@ -1264,12 +1264,16 @@ final class Preprocessor {
     }
     // <clinit> will always be guarded by BTrace error handler
     if (mn.name.equals("<clinit>")) {
-      return EnumSet.of(MethodClassifier.RT_AWARE);
+      classifiers = EnumSet.of(MethodClassifier.RT_AWARE);
+      classifierMap.put(mn, classifiers);
+      return classifiers;
     }
 
     // JFR event handlers will alwyas be guarded by BTrace error handler
     if (jfrHandlerNames.contains(mn.name)) {
-      return EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
+      classifiers = EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
+      classifierMap.put(mn, classifiers);
+      return classifiers;
     }
 
     List<AnnotationNode> annots = getAnnotations(mn);
@@ -1284,6 +1288,7 @@ final class Preprocessor {
         }
       }
     }
+    classifierMap.put(mn, classifiers);
     return classifiers;
   }
 
@@ -1302,11 +1307,11 @@ final class Preprocessor {
   private MethodInsnNode findBTraceRuntimeStart() {
     for (AbstractInsnNode n = clinit.instructions.getFirst(); n != null; n = n.getNext()) {
       if (n.getType() == AbstractInsnNode.METHOD_INSN) {
-        MethodInsnNode min = (MethodInsnNode) n;
-        if (min.getOpcode() == Opcodes.INVOKEVIRTUAL
-            && org.checkerframework.checker.units.qual.min.owner.equals(Constants.BTRACERTBASE_INTERNAL)
-            && org.checkerframework.checker.units.qual.min.name.equals("start")) {
-          return min;
+        MethodInsnNode minNode = (MethodInsnNode) n;
+        if (minNode.getOpcode() == Opcodes.INVOKEVIRTUAL
+            && minNode.owner.equals(Constants.BTRACERTBASE_INTERNAL)
+            && minNode.name.equals("start")) {
+          return minNode;
         }
       }
     }
@@ -1590,18 +1595,18 @@ final class Preprocessor {
   }
 
   private AbstractInsnNode unfoldServiceInstantiation(
-      ClassNode cn, MethodInsnNode min, InsnList l) {
-    if (org.checkerframework.checker.units.qual.min.owner.equals(SERVICE_INTERNAL)) {
-      AbstractInsnNode next = org.checkerframework.checker.units.qual.min.getNext();
-      switch (min.name) {
+      ClassNode cn, MethodInsnNode minNode, InsnList l) {
+    if (minNode.owner.equals(SERVICE_INTERNAL)) {
+      AbstractInsnNode next = minNode.getNext();
+      switch (minNode.name) {
         case "simple":
           {
-            Type[] args = Type.getArgumentTypes(min.desc);
+            Type[] args = Type.getArgumentTypes(minNode.desc);
             if (args.length == 1) {
-              AbstractInsnNode ldcType = min.getPrevious();
+              AbstractInsnNode ldcType = minNode.getPrevious();
               if (ldcType.getType() == AbstractInsnNode.LDC_INSN) {
                 // remove the original sequence
-                l.remove(min);
+                l.remove(minNode);
                 l.remove(ldcType);
                 if (next.getOpcode() == Opcodes.CHECKCAST) {
                   next = next.getNext();
@@ -1618,12 +1623,12 @@ final class Preprocessor {
                 l.insertBefore(next, toInsert);
               }
             } else if (args.length == 2) {
-              AbstractInsnNode ldcType = min.getPrevious();
+              AbstractInsnNode ldcType = minNode.getPrevious();
               AbstractInsnNode ldcFMethod = ldcType.getPrevious();
               if (ldcType.getType() == AbstractInsnNode.LDC_INSN
                   && ldcFMethod.getType() == AbstractInsnNode.LDC_INSN) {
                 // remove the original sequence
-                l.remove(min);
+                l.remove(minNode);
                 l.remove(ldcType);
                 l.remove(ldcFMethod);
                 if (next.getOpcode() == Opcodes.CHECKCAST) {
@@ -1649,12 +1654,12 @@ final class Preprocessor {
           }
         case "runtime":
           {
-            Type[] args = Type.getArgumentTypes(min.desc);
+            Type[] args = Type.getArgumentTypes(minNode.desc);
             if (args.length == 1) {
-              AbstractInsnNode ldcType = min.getPrevious();
+              AbstractInsnNode ldcType = minNode.getPrevious();
               if (ldcType.getType() == AbstractInsnNode.LDC_INSN) {
                 // remove the original sequence
-                l.remove(min);
+                l.remove(minNode);
                 l.remove(ldcType);
                 if (next.getOpcode() == Opcodes.CHECKCAST) {
                   next = next.getNext();
@@ -1678,7 +1683,7 @@ final class Preprocessor {
       }
       return next;
     }
-    return min;
+    return minNode;
   }
 
   private InsnList getReturnSequence(ClassNode cn, MethodNode mn, boolean addRuntimeExit) {
