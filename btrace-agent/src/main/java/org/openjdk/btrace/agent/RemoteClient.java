@@ -40,12 +40,14 @@ import org.openjdk.btrace.core.comm.DisconnectCommand;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.ListFailedExtensionsCommand;
 import org.openjdk.btrace.core.comm.ListProbesCommand;
 import org.openjdk.btrace.core.comm.PrintableCommand;
 import org.openjdk.btrace.core.comm.ReconnectCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
+import org.openjdk.btrace.runtime.ExtensionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,6 +134,13 @@ class RemoteClient extends Client {
             WireIO.write(oos, listProbesCommand);
             break;
           }
+        case Command.LIST_FAILED_EXTENSIONS:
+          {
+            ListFailedExtensionsCommand listFailedCmd = (ListFailedExtensionsCommand) cmd;
+            listFailedCmd.setFailedExtensions(ExtensionRegistry.getFailedExtensions());
+            WireIO.write(oos, listFailedCmd);
+            break;
+          }
         case Command.EXIT:
           {
             return null;
@@ -194,6 +203,11 @@ class RemoteClient extends Client {
                           break;
                         }
                       case Command.LIST_PROBES:
+                        {
+                          onCommand(cmd);
+                          break;
+                        }
+                      case Command.LIST_FAILED_EXTENSIONS:
                         {
                           onCommand(cmd);
                           break;
@@ -281,6 +295,15 @@ class RemoteClient extends Client {
           {
             if (isConnected) {
               ((ListProbesCommand) cmd).setProbes(listProbes());
+              WireIO.write(output, cmd);
+            }
+            break;
+          }
+        case Command.LIST_FAILED_EXTENSIONS:
+          {
+            if (isConnected) {
+              ((ListFailedExtensionsCommand) cmd).setFailedExtensions(
+                  ExtensionRegistry.getFailedExtensions());
               WireIO.write(output, cmd);
             }
             break;

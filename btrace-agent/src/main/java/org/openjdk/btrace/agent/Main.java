@@ -91,6 +91,7 @@ import org.openjdk.btrace.instr.BTraceProbeFactory;
 import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
+import org.openjdk.btrace.runtime.ExtensionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,6 +176,8 @@ public final class Main {
       BTraceRuntimes.getDefault();
       // init BTraceRuntime
       BTraceRuntime.initUnsafe();
+      // Discover extensions via ServiceLoader - critical for tracking failures
+      ExtensionRegistry.discover(ClassLoader.getSystemClassLoader());
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {

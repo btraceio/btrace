@@ -54,6 +54,7 @@ import org.openjdk.btrace.instr.Instrumentor;
 import org.openjdk.btrace.instr.MethodTrackingContext;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
+import org.openjdk.btrace.runtime.ExtensionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -376,6 +377,21 @@ abstract class Client implements CommandListener {
     }
 
     sendCommand(new StatusCommand());
+
+    // Warn about failed extensions
+    Map<String, String> failed = ExtensionRegistry.getFailedExtensions();
+    if (!failed.isEmpty()) {
+      StringBuilder warning = new StringBuilder();
+      warning.append("[BTRACE WARN] ").append(failed.size())
+             .append(" extension(s) failed to load:\n");
+      for (Map.Entry<String, String> entry : failed.entrySet()) {
+        String simpleName = entry.getKey().substring(entry.getKey().lastIndexOf('.') + 1);
+        warning.append("  - ").append(simpleName)
+               .append(": ").append(entry.getValue()).append("\n");
+      }
+      warning.append("Use 'btrace -le <PID>' for details.\n");
+      sendCommand(new MessageCommand(warning.toString()));
+    }
 
     boolean entered = false;
     try {
