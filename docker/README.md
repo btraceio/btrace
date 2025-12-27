@@ -7,7 +7,7 @@ Official Docker images for [BTrace](https://github.com/btraceio/btrace) - a safe
 ```dockerfile
 # Copy BTrace into your application image
 FROM btrace/btrace:2.3.0 AS btrace
-FROM openjdk:11-jdk
+FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
 ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:/opt/btrace/bin"
@@ -63,7 +63,7 @@ Most common - copy BTrace into your application image:
 
 ```dockerfile
 FROM btrace/btrace:2.3.0 AS btrace
-FROM openjdk:11-jdk
+FROM bellsoft/liberica-openjdk-debian:11-cds
 WORKDIR /app
 
 COPY target/myapp.jar /app/
@@ -234,7 +234,7 @@ kubectl create configmap btrace-scripts \
 
 ```dockerfile
 FROM btrace/btrace:2.3.0 AS btrace
-FROM openjdk:11-jdk
+FROM bellsoft/liberica-openjdk-debian:11-cds
 
 COPY --from=btrace /opt/btrace /opt/btrace
 ENV BTRACE_HOME=/opt/btrace PATH="${PATH}:${BTRACE_HOME}/bin"
