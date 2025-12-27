@@ -1471,6 +1471,7 @@ final class Preprocessor {
         return logClassLoadingError(className, ex);
       }
     } catch (LinkageError e) {
+      // No fallback for LinkageError - it indicates a fundamental class loading issue
       return logClassLoadingError(className, e);
     }
   }
@@ -1481,11 +1482,6 @@ final class Preprocessor {
     } else if (error instanceof LinkageError) {
       log.warn(
           "Failed to load class '{}' due to linkage error when checking extension type: {}",
-          className,
-          error.getMessage());
-    } else {
-      log.warn(
-          "Unexpected error loading class '{}' when checking extension type: {}",
           className,
           error.getMessage());
     }
