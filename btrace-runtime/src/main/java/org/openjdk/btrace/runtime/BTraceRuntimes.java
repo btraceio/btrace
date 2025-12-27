@@ -21,22 +21,35 @@ public final class BTraceRuntimes {
     BTraceRuntimeAccess.registerRuntimeAccessor();
   }
 
-  @SuppressWarnings("unchecked")
-  private static boolean loadFactory(String clzName) {
+  private static boolean loadFactory(String className) {
     try {
-      log.debug("Attempting to load BTrace runtime implementation: {}", clzName);
-      Class<BTraceRuntimeImplFactory<?>> factoryClz =
-          (Class<BTraceRuntimeImplFactory<?>>)
-              ClassLoader.getSystemClassLoader().loadClass(clzName);
-      BTraceRuntimeImplFactory<?> instance = factoryClz.getConstructor().newInstance();
-      if (instance.isEnabled()) {
-        FACTORY = instance;
-        log.debug("BTrace runtime implementation {} is loaded", clzName);
-        return true;
+      log.debug("Attempting to load BTrace runtime implementation: {}", className);
+      ClassLoader[] loaders = new ClassLoader[] {
+          Thread.currentThread().getContextClassLoader(),
+          BTraceRuntimes.class.getClassLoader(),
+          ClassLoader.getSystemClassLoader()
+      };
+      for (ClassLoader loader : loaders) {
+        if (loader == null) continue;
+        try {
+          @SuppressWarnings("unchecked") // generic cast due to dynamic classloading of a known API type
+          Class<BTraceRuntimeImplFactory<?>> factoryClz =
+              (Class<BTraceRuntimeImplFactory<?>>) loader.loadClass(className);
+          BTraceRuntimeImplFactory<?> instance = factoryClz.getConstructor().newInstance();
+          if (instance.isEnabled()) {
+            FACTORY = instance;
+            log.debug("BTrace runtime implementation {} loaded via {}", className, loader);
+            return true;
+          }
+        } catch (ClassNotFoundException | UnsupportedClassVersionError e) {
+          // try next loader
+          if (log.isDebugEnabled()) {
+            log.debug("Loader {} could not load {}: {}", loader, className, e.toString());
+          }
+        }
       }
-    } catch (ClassNotFoundException | UnsupportedClassVersionError ignored) {
     } catch (Exception e) {
-      log.warn("Failed to load BTrace runtime implementation {}", clzName, e);
+      log.error("Failed to load BTrace runtime implementation: {}", className, e);
     }
     return false;
   }

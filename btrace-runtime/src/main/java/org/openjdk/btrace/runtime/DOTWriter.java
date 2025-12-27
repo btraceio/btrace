@@ -305,7 +305,11 @@ public class DOTWriter {
     if (prop != null) {
       expandCollections(Boolean.parseBoolean(prop));
     }
-    prop = props.getProperty(DOTWRITER_PREFIX + "diaplayLinks");
+    // accept both the correct property and the legacy misspelling for compatibility
+    prop = props.getProperty(DOTWRITER_PREFIX + "displayLinks");
+    if (prop == null) {
+      prop = props.getProperty(DOTWRITER_PREFIX + "diaplayLinks");
+    }
     if (prop != null) {
       displayLinks(Boolean.parseBoolean(prop));
     }

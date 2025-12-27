@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'signing'
     id 'maven-publish'
+    id 'signing'
     alias(libs.plugins.shadow)
     alias(libs.plugins.ospackage)
     alias(libs.plugins.sdkman.vendors)
@@ -178,6 +178,8 @@ task fixPermissions(type: Exec) {
     commandLine 'chmod', '500', "${distTarget}/bin/btrace"
     commandLine 'chmod', '500', "${distTarget}/bin/btracec"
     commandLine 'chmod', '500', "${distTarget}/bin/btracer"
+
+    dependsOn processResources
 }
 
 task copyDtraceLib(type: Copy) {
@@ -260,6 +262,125 @@ buildSdkmanZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtrac
 buildDeb.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources
 buildRpm.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
+
+// Docker build tasks
+task buildDockerContext(type: Copy, dependsOn: [agentJar, bootJar, clientJar, copyDtraceLib, processResources, fixPermissions]) {
+    group 'Docker'
+    description 'Prepare Docker build context with BTrace distribution'
+
+    from "${distTarget}"
+    into "${buildDir}/docker-context/btrace"
+    fileMode = 0644
+
+    doLast {
+        // Copy entrypoint script
+        copy {
+            from "${projectDir}/../docker/docker-entrypoint.sh"
+            into "${buildDir}/docker-context"
+        }
+        // Copy .dockerignore to build context so Docker can use it
+        copy {
+            from "${projectDir}/../docker/.dockerignore"
+            into "${buildDir}/docker-context"
+        }
+    }
+}
+
+task buildDockerImage(type: Exec, dependsOn: buildDockerContext) {
+    group 'Docker'
+    description 'Build main Debian-based Docker image'
+
+    onlyIf {
+        project.hasProperty('dockerEnabled') &&
+        (project.hasProperty('dockerBuildx') ?
+            'docker buildx version'.execute().waitFor() == 0 :
+            'docker --version'.execute().waitFor() == 0)
+    }
+
+    workingDir "${projectDir}/../docker"
+
+    def buildArgs = [
+        'docker', 'build',
+        '--build-arg', "BTRACE_VERSION=${project.version}",
+        '-t', "btrace/btrace:${project.version}",
+        '-t', "btrace/btrace:latest",
+        '-f', 'Dockerfile',
+        "${buildDir}/docker-context"
+    ]
+
+    if (project.hasProperty('dockerBuildx')) {
+        buildArgs.add(1, 'buildx')
+        buildArgs.addAll(['--platform', 'linux/amd64,linux/arm64'])
+    }
+
+    commandLine buildArgs
+}
+
+task buildDockerImageAlpine(type: Exec, dependsOn: buildDockerContext) {
+    group 'Docker'
+    description 'Build Alpine-based Docker image'
+
+    onlyIf {
+        project.hasProperty('dockerEnabled') &&
+        (project.hasProperty('dockerBuildx') ?
+            'docker buildx version'.execute().waitFor() == 0 :
+            'docker --version'.execute().waitFor() == 0)
+    }
+
+    workingDir "${projectDir}/../docker"
+
+    def buildArgs = [
+        'docker', 'build',
+        '--build-arg', "BTRACE_VERSION=${project.version}",
+        '-t', "btrace/btrace:${project.version}-alpine",
+        '-t', "btrace/btrace:latest-alpine",
+        '-f', 'Dockerfile.alpine',
+        "${buildDir}/docker-context"
+    ]
+
+    if (project.hasProperty('dockerBuildx')) {
+        buildArgs.add(1, 'buildx')
+        buildArgs.addAll(['--platform', 'linux/amd64,linux/arm64'])
+    }
+
+    commandLine buildArgs
+}
+
+task buildDockerImageDistroless(type: Exec, dependsOn: buildDockerContext) {
+    group 'Docker'
+    description 'Build distroless Docker image'
+
+    onlyIf {
+        project.hasProperty('dockerEnabled') &&
+        (project.hasProperty('dockerBuildx') ?
+            'docker buildx version'.execute().waitFor() == 0 :
+            'docker --version'.execute().waitFor() == 0)
+    }
+
+    workingDir "${projectDir}/../docker"
+
+    def buildArgs = [
+        'docker', 'build',
+        '--build-arg', "BTRACE_VERSION=${project.version}",
+        '-t', "btrace/btrace:${project.version}-distroless",
+        '-t', "btrace/btrace:latest-distroless",
+        '-f', 'Dockerfile.distroless',
+        file("${buildDir}/docker-context").absolutePath
+    ]
+
+    if (project.hasProperty('dockerBuildx')) {
+        buildArgs.add(1, 'buildx')
+        buildArgs.addAll(['--platform', 'linux/amd64'])
+    }
+
+    commandLine buildArgs
+}
+
+task buildDockerImages {
+    group 'Docker'
+    description 'Build all Docker image variants'
+    dependsOn buildDockerImage, buildDockerImageAlpine, buildDockerImageDistroless
+}
 
 test {
     doLast {
@@ -377,13 +498,13 @@ sdkman {
 publishing {
     repositories {
         maven {
-            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 
             credentials {
-                username = project.hasProperty("sonatype.user") ? project.property("sonatype.user") : System.getenv('BTRACE_SONATYPE_USER')
-                password = project.hasProperty("sonatype.password") ? project.property("sonatype.password") : System.getenv('BTRACE_SONATYPE_PWD')
+                username = project.hasProperty("sonatype.user") ? project.property("sonatype.user") : System.getenv('SONATYPE_USER')
+                password = project.hasProperty("sonatype.password") ? project.property("sonatype.password") : System.getenv('SONATYPE_PASSWORD')
             }
         }
     }

@@ -175,7 +175,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     byte t = 0;
     int i = 0;
     synchronized (b) {
-      while ((t = b.get()) != '\0') {
+      while (b.hasRemaining() && (t = b.get()) != '\0') {
         buf[i++] = t;
       }
       b.rewind();
@@ -208,7 +208,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
       try {
         cmdHandler.onCommand(t);
       } catch (IOException e) {
-        e.printStackTrace(System.err);
+        log.warn("Command handler I/O error", e);
       }
       if (t.getType() == Command.EXIT) {
         exitSignal.set(true);
@@ -257,7 +257,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   private LowMemoryHandler[] lowMemoryHandlers;
 
   // map of client event handling methods
-  private Map<String, Method> eventHandlerMap;
+  private volatile Map<String, Method> eventHandlerMap;
   private Map<String, LowMemoryHandler> lowMemoryHandlerMap;
 
   // timer to run profile provider actions
@@ -332,13 +332,18 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
       if (sb != null) {
         result.addAll(sb);
         sb.clear();
+        speculativeQueues.remove(id);
       }
     }
 
     void discard(int id) {
       validateId(id);
       currentSpeculationId.set(null);
-      speculativeQueues.get(id).clear();
+      MpmcArrayQueue<Command> sb = speculativeQueues.get(id);
+      if (sb != null) {
+        sb.clear();
+        speculativeQueues.remove(id);
+      }
     }
 
     // -- Internals only below this point
@@ -384,7 +389,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   // interface to read perf counters of this process
   protected static final PerfReader perfReader = createPerfReaderImpl();
   // performance counters created by this client
-  protected static final Map<String, ByteBuffer> counters = new HashMap<>();
+  protected static final Map<String, ByteBuffer> counters = new ConcurrentHashMap<>();
 
   private static final BTraceRuntimeImplFactory<BTraceRuntime.Impl> factory = null;
 
@@ -541,20 +546,29 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   @Override
   public final void handleEvent(EventCommand ecmd) {
     if (eventHandlers != null) {
-      if (eventHandlerMap == null) {
-        eventHandlerMap = new HashMap<>();
-        for (EventHandler eh : eventHandlers) {
-          try {
-            String eventName = args.template(eh.getEvent());
-            eventHandlerMap.put(eventName, eh.getMethod(clazz));
-          } catch (NoSuchMethodException ignored) {
+      Map<String, Method> localMap = eventHandlerMap;
+      if (localMap == null) {
+        synchronized (this) {
+          if (eventHandlerMap == null) {
+            Map<String, Method> m = new HashMap<>();
+            for (EventHandler eh : eventHandlers) {
+              try {
+                String eventName = args.template(eh.getEvent());
+                m.put(eventName, eh.getMethod(clazz));
+              } catch (NoSuchMethodException ignored) {
+              }
+            }
+            eventHandlerMap = m;
+            localMap = m;
+          } else {
+            localMap = eventHandlerMap;
           }
         }
       }
       String event = ecmd.getEvent();
       event = event != null ? event : EventHandler.ALL_EVENTS;
 
-      Method eventHandler = eventHandlerMap.get(event);
+      Method eventHandler = localMap.get(event);
       if (eventHandler != null) {
         BTraceRuntimeAccess.doWithCurrent(
             (Callable<Void>)
@@ -735,7 +749,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
         try {
           dotWriterProps.load(is);
         } catch (IOException ioExp) {
-          ioExp.printStackTrace();
+          log.warn("Failed to load DOTWriter properties from classpath", ioExp);
         }
       }
       try {
@@ -746,7 +760,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
           dotWriterProps.load(is);
         }
       } catch (Exception exp) {
-        exp.printStackTrace();
+        log.warn("Failed to load DOTWriter properties from user home", exp);
       }
     }
   }
@@ -1009,7 +1023,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
               try {
                 m = th.getMethod(clazz);
               } catch (Throwable t) {
-                t.printStackTrace();
+                log.warn("Failed to acquire timer handler method", t);
               }
               mthd = m;
             }
@@ -1020,7 +1034,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
                 try {
                   mthd.invoke(null, (Object[]) null);
                 } catch (Throwable th) {
-                  th.printStackTrace();
+                  log.warn("Timer task execution failed", th);
                 }
               }
             }
@@ -1081,7 +1095,11 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     buf.append(File.separatorChar);
     buf.append("btrace");
     if (args != null && args.size() > 0) {
-      buf.append(args.get(0));
+      String arg0 = args.get(0);
+      String sanitized = sanitizePathSegment(arg0);
+      if (!sanitized.isEmpty()) {
+        buf.append(sanitized);
+      }
     }
     buf.append(File.separatorChar);
     buf.append(className);
@@ -1089,6 +1107,16 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     buf.append(File.separatorChar);
     buf.append(name);
     return buf.toString();
+  }
+
+  private static String sanitizePathSegment(String s) {
+    if (s == null) return "";
+    // replace path separators and control chars with underscore; allow alnum, dash, underscore, dot
+    String sanitized = s.replace(File.separatorChar, '_').replace('/', '_').replace('\\', '_');
+    sanitized = sanitized.replaceAll("[^a-zA-Z0-9._-]", "_");
+    // collapse multiple underscores
+    sanitized = sanitized.replaceAll("_+", "_");
+    return sanitized;
   }
 
   private static void initMemoryPoolList() {

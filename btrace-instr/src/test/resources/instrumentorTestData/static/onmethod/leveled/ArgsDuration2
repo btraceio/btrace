@@ -17,7 +17,7 @@ LSUB
 LSTORE 6
 L1
 FRAME SAME1 J
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2.$btrace$$level : I
+ILOAD 10
 ICONST_1
 IF_ICMPLT L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -34,7 +34,7 @@ ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
 L2
 FRAME SAME1 J
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2.$btrace$$level : I
+ILOAD 10
 ICONST_1
 IF_ICMPLT L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I

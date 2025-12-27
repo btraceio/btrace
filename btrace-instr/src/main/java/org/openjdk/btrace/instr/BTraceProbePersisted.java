@@ -21,18 +21,6 @@
  */
 package org.openjdk.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.*;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
@@ -48,6 +36,46 @@ import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.core.comm.RetransformClassNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.objectweb.asm.Opcodes.AASTORE;
+import static org.objectweb.asm.Opcodes.ACC_ENUM;
+import static org.objectweb.asm.Opcodes.ACC_INTERFACE;
+import static org.objectweb.asm.Opcodes.ACC_PRIVATE;
+import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
+import static org.objectweb.asm.Opcodes.ACC_STATIC;
+import static org.objectweb.asm.Opcodes.ACC_SYNCHRONIZED;
+import static org.objectweb.asm.Opcodes.ANEWARRAY;
+import static org.objectweb.asm.Opcodes.ASM9;
+import static org.objectweb.asm.Opcodes.ATHROW;
+import static org.objectweb.asm.Opcodes.BASTORE;
+import static org.objectweb.asm.Opcodes.CASTORE;
+import static org.objectweb.asm.Opcodes.DASTORE;
+import static org.objectweb.asm.Opcodes.FASTORE;
+import static org.objectweb.asm.Opcodes.IASTORE;
+import static org.objectweb.asm.Opcodes.INVOKEINTERFACE;
+import static org.objectweb.asm.Opcodes.INVOKESPECIAL;
+import static org.objectweb.asm.Opcodes.INVOKESTATIC;
+import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
+import static org.objectweb.asm.Opcodes.LASTORE;
+import static org.objectweb.asm.Opcodes.MONITORENTER;
+import static org.objectweb.asm.Opcodes.MONITOREXIT;
+import static org.objectweb.asm.Opcodes.NEW;
+import static org.objectweb.asm.Opcodes.NEWARRAY;
+import static org.objectweb.asm.Opcodes.PUTFIELD;
+import static org.objectweb.asm.Opcodes.PUTSTATIC;
+import static org.objectweb.asm.Opcodes.RET;
+import static org.objectweb.asm.Opcodes.SASTORE;
 
 public class BTraceProbePersisted implements BTraceProbe {
   private static final Logger log = LoggerFactory.getLogger(BTraceProbePersisted.class);
@@ -550,7 +578,7 @@ public class BTraceProbePersisted implements BTraceProbe {
             if (copiedMethods.contains(mid)) {
               return copyingVisitor.visitMethod(
                   ACC_PRIVATE | ACC_STATIC,
-                  InstrumentUtils.getActionPrefix(getClassName(true)) + name,
+                  getActionPrefix() + name,
                   desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
                   signature != null
                       ? signature.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
@@ -571,6 +599,11 @@ public class BTraceProbePersisted implements BTraceProbe {
   @Override
   public BTraceRuntime.Impl getRuntime() {
     return rt;
+  }
+
+  @Override
+  public String getActionPrefix() {
+    return delegate.getActionPrefix();
   }
 
   private void upgradeBytecode() {

@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
@@ -65,9 +66,11 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   private final Set<Integer> frameOffsets = new HashSet<>();
   private final Map<Label, SavedState> jumpTargetStates = new HashMap<>();
   private final Map<Label, Set<Label>> tryCatchHandlerMap = new HashMap<>();
+  private final Map<Integer, MethodTrackingContext> trackingContexts = new HashMap<>();
   private final String owner;
   private final String desc;
   private int argsSize = 0;
+  private boolean shouldCacheLevelVar = false;
   private int localsTailPtr = 0;
   private int pc = 0, lastFramePc = Integer.MIN_VALUE;
   private final FrameDiagnosticListener frameDiagnosticListener;
@@ -1051,10 +1054,16 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
   @Override
   public void visitLocalVariable(
       String name, String desc, String signature, Label start, Label end, int index) {
-    int newIndex = variableMapper.map(index, start);
-    if (newIndex != 0xFFFFFFFF) {
+    try {
+      int newIndex = variableMapper.map(index, start);
       super.visitLocalVariable(
           name, desc, signature, start, end, newIndex == Integer.MIN_VALUE ? 0 : newIndex);
+    } catch (InstrumentationException e) {
+      throw new InstrumentationException(
+          String.format(
+              "Failed to map local variable '%s' (type=%s, index=%d, scope=%s): %s",
+              name, desc, index, start, e.getMessage()),
+          e);
     }
   }
 
@@ -1067,17 +1076,20 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       int[] index,
       String desc,
       boolean visible) {
-    Type t = Type.getType(desc);
-    int cnt = 0;
-    int[] newIndex = new int[index.length];
-    for (int i = 0; i < newIndex.length; ++i) {
-      int idx = variableMapper.map(index[i]);
-      if (idx != 0xFFFFFFFF) {
-        newIndex[cnt++] = idx;
+    try {
+      int[] newIndex = new int[index.length];
+      for (int i = 0; i < index.length; i++) {
+        newIndex[i] = variableMapper.map(index[i]);
       }
+      return super.visitLocalVariableAnnotation(
+          typeRef, typePath, start, end, newIndex, desc, visible);
+    } catch (InstrumentationException e) {
+      throw new InstrumentationException(
+          String.format(
+              "Failed to map local variable annotation (type=%s, indices=%s): %s",
+              desc, Arrays.toString(index), e.getMessage()),
+          e);
     }
-    return super.visitLocalVariableAnnotation(
-        typeRef, typePath, start, end, Arrays.copyOf(newIndex, cnt), desc, visible);
   }
 
   @Override
@@ -1218,6 +1230,20 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     return idx;
   }
 
+  public void setShouldCacheLevelVar(boolean shouldCache) {
+    this.shouldCacheLevelVar = shouldCache;
+  }
+
+  public boolean shouldCacheLevelVar() {
+    return shouldCacheLevelVar;
+  }
+
+  @Override
+  public MethodTrackingContext getOrCreateTrackingContext(
+      int methodId, Supplier<MethodTrackingContext> factory) {
+    return trackingContexts.computeIfAbsent(methodId, k -> factory.get());
+  }
+
   private void initLocals(boolean isInstance, boolean isConstructor) {
     int nextMappedVar = 0;
     if (isInstance) {
@@ -1258,8 +1284,8 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
             localsArr[++idx] = TOP_EXT;
           }
         } else {
-          int var = variableMapper.map(idx);
-          if (var != 0xFFFFFFFF) {
+          try {
+            int var = variableMapper.map(idx);
             localsArr[var] = e;
             if (e == LONG || e == DOUBLE) {
               int off = var + 1;
@@ -1269,6 +1295,10 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
               localsArr[off] = TOP_EXT;
               idx++;
             }
+          } catch (InstrumentationException ex) {
+            // Skip unmapped variables during frame computation - this is expected when
+            // variables haven't been remapped yet at certain instrumentation points
+            // Original behavior was to silently skip these with 0xFFFFFFFF check
           }
         }
         idx++;

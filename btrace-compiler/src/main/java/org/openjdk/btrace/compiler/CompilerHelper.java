@@ -24,8 +24,11 @@ import javax.tools.JavaFileObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.SharedSettings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class CompilerHelper {
+  private static final Logger log = LoggerFactory.getLogger(CompilerHelper.class);
   private final boolean generatePack;
 
   // JSR 199 compiler
@@ -126,7 +129,8 @@ class CompilerHelper {
         }
       }
     } catch (IOException e) {
-      e.printStackTrace(perr);
+      log.error("Compilation failed", e);
+      perr.append("ERROR: Compilation failed: ").append(e.getMessage()).append("\n");
     } finally {
       try {
         manager.close();

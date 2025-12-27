@@ -49,8 +49,6 @@ import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.core.types.AnyType;
-import org.openjdk.btrace.instr.templates.TemplateExpanderVisitor;
-import org.openjdk.btrace.instr.templates.impl.MethodTrackingExpander;
 
 /**
  * This instruments a probed class with BTrace probe action class.
@@ -178,9 +176,27 @@ public class Instrumentor extends ClassVisitor {
     InstrumentingMethodVisitor mHelper =
         new InstrumentingMethodVisitor(access, className, name, desc, methodVisitor);
 
-    methodVisitor = mHelper;
+    // Count handlers with level checks to determine if caching is needed
+    long levelCheckCount =
+        appliedOnMethods.stream()
+            .filter(
+                om -> {
+                  String levelStr = getLevelStrSafe(om);
+                  return levelStr != null && !levelStr.isEmpty();
+                })
+            .count();
+    // Also count annotation matchers with level checks
+    long annotationMatcherLevelCount =
+        annotationMatchers.stream()
+            .filter(
+                om -> {
+                  String levelStr = getLevelStrSafe(om);
+                  return levelStr != null && !levelStr.isEmpty();
+                })
+            .count();
+    mHelper.setShouldCacheLevelVar((levelCheckCount + annotationMatcherLevelCount) > 1);
 
-    methodVisitor = new TemplateExpanderVisitor(methodVisitor, mHelper, bcn, className, name, desc);
+    methodVisitor = mHelper;
 
     for (OnMethod om : appliedOnMethods) {
       methodVisitor = instrumentorFor(om, methodVisitor, mHelper, access, name, desc);
@@ -497,6 +513,7 @@ public class Instrumentor extends ClassVisitor {
           int[] backupArgsIndices;
           private int returnVarIndex = -1;
           private boolean generatingCode = false;
+          private MethodTrackingContext trackingCtx;
 
           private void injectBtrace(
               ValidationResult vr,
@@ -546,7 +563,9 @@ public class Instrumentor extends ClassVisitor {
                 new ArgumentProvider(asm, om.getDurationParameter()) {
                   @Override
                   public void doProvide() {
-                    MethodTrackingExpander.DURATION.insert(mv);
+                    if (trackingCtx != null) {
+                      trackingCtx.emitDuration();
+                    }
                   }
                 };
 
@@ -589,21 +608,11 @@ public class Instrumentor extends ClassVisitor {
                       }
                     }
 
+                    trackingCtx = new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid);
                     if (om.getDurationParameter() != -1) {
-                      MethodTrackingExpander.ENTRY.insert(
-                              mv,
-                              MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                              MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                              MethodTrackingExpander.$TIMED,
-                              MethodTrackingExpander.$METHODID + "=" + mid,
-                              MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                      trackingCtx.emitEntry(true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                     } else {
-                      MethodTrackingExpander.ENTRY.insert(
-                              mv,
-                              MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                              MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                              MethodTrackingExpander.$METHODID + "=" + mid,
-                              MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                      trackingCtx.emitEntry(false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                     }
 
                     Type[] argTypes = Type.getArgumentTypes(cDesc);
@@ -613,8 +622,7 @@ public class Instrumentor extends ClassVisitor {
                     backupArgsIndices = shouldBackup ? backupStack(argTypes, isStaticCall) : new int[0];
 
                     if (where == Where.BEFORE) {
-                      MethodTrackingExpander.TEST_SAMPLE.insert(
-                              mv, MethodTrackingExpander.$METHODID + "=" + mid);
+                      trackingCtx.emitTestSample(false, mid);
                       Label l = levelCheckBefore(om, bcn.getClassName(true));
 
                       Label l1 = asm.openLinkerCheck();
@@ -626,7 +634,7 @@ public class Instrumentor extends ClassVisitor {
                         mv.visitLabel(l);
                         insertFrameSameStack(l);
                       }
-                      MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
+                      trackingCtx.emitElse();
                     }
 
                     // put the call args back on stack so the method call can find them
@@ -657,19 +665,15 @@ public class Instrumentor extends ClassVisitor {
               addExtraTypeInfo(om.getReturnParameter(), returnType);
               ValidationResult vr = validateArguments(om, actionArgTypes, calledMethodArgs);
               if (vr.isValid()) {
+                MethodTrackingContext trackingCtx = new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid);
                 if (om.getDurationParameter() == -1) {
-                  MethodTrackingExpander.EXIT.insert(
-                      mv, MethodTrackingExpander.$METHODID + "=" + mid);
+                  trackingCtx.emitExit(mid);
                 }
                 if (where == Where.AFTER) {
                   if (om.getDurationParameter() != -1) {
-                    MethodTrackingExpander.TEST_SAMPLE.insert(
-                        mv,
-                        MethodTrackingExpander.$TIMED,
-                        MethodTrackingExpander.$METHODID + "=" + mid);
+                    trackingCtx.emitTestSample(true, mid);
                   } else {
-                    MethodTrackingExpander.TEST_SAMPLE.insert(
-                        mv, MethodTrackingExpander.$METHODID + "=" + mid);
+                    trackingCtx.emitTestSample(false, mid);
                   }
 
                   Label l = levelCheckAfter(om, bcn.getClassName(true));
@@ -697,10 +701,10 @@ public class Instrumentor extends ClassVisitor {
                     insertFrameSameStack(l);
                   }
 
-                  MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
+                  trackingCtx.emitElse();
 
                   if (parent == null) {
-                    MethodTrackingExpander.RESET.insert(mv);
+                    trackingCtx.reset();
                   }
                 }
               }
@@ -809,11 +813,17 @@ public class Instrumentor extends ClassVisitor {
         return new MethodReturnInstrumentor(
             cl, mv, mHelper, className, superName, access, name, desc) {
           private final ValidationResult vr;
+          private MethodTrackingContext trackingCtx;
 
           {
             Type[] calledMethodArgs = Type.getArgumentTypes(getDescriptor());
             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
             vr = validateArguments(om, actionArgTypes, calledMethodArgs);
+            int mid = MethodID.getMethodId(className, name, desc);
+            trackingCtx =
+                mHelper.getOrCreateTrackingContext(
+                    mid,
+                    () -> new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid));
           }
 
           private void injectBtrace() {
@@ -836,11 +846,8 @@ public class Instrumentor extends ClassVisitor {
           protected void visitMethodPrologue() {
             if (vr.isValid() || vr.isAny()) {
               if (om.getSamplerKind() != Sampled.Sampler.None) {
-                MethodTrackingExpander.ENTRY.insert(
-                    mv,
-                    MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                    MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                    MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                int mid = MethodID.getMethodId(className, name, desc);
+                trackingCtx.emitEntry(false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
               }
             }
             super.visitMethodPrologue();
@@ -850,16 +857,17 @@ public class Instrumentor extends ClassVisitor {
           protected void onMethodEntry() {
             if (vr.isValid() || vr.isAny()) {
               if (om.getSamplerKind() != Sampled.Sampler.None) {
-                MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
+                int mid = MethodID.getMethodId(className, name, desc);
+                trackingCtx.emitTestSample(true, mid);
               }
-              Label l = levelCheck(om, bcn.getClassName(true));
+              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
               injectBtrace();
               if (l != null) {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);
               }
               if (om.getSamplerKind() != Sampled.Sampler.None) {
-                MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
+                trackingCtx.emitElse();
               }
             }
           }
@@ -868,7 +876,8 @@ public class Instrumentor extends ClassVisitor {
           protected void onMethodReturn(int opcode) {
             if (vr.isValid() || vr.isAny()) {
               if (om.getSamplerKind() == Sampled.Sampler.Adaptive) {
-                MethodTrackingExpander.EXIT.insert(mv);
+                int mid = MethodID.getMethodId(className, name, desc);
+                trackingCtx.emitExit(mid);
               }
             }
           }
@@ -880,19 +889,30 @@ public class Instrumentor extends ClassVisitor {
             cl, mv, mHelper, className, superName, access, name, desc) {
           final ValidationResult vr;
           private boolean generatingCode = false;
+          private MethodTrackingContext trackingCtx;
 
           {
             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
             addExtraTypeInfo(om.getTargetInstanceParameter(), Constants.THROWABLE_TYPE);
             vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+            int mid = MethodID.getMethodId(className, name, desc);
+            trackingCtx =
+                mHelper.getOrCreateTrackingContext(
+                    mid,
+                    () -> new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid));
           }
 
           @Override
           protected void onErrorReturn() {
             if (vr.isValid()) {
               int throwableIndex = -1;
+              int mid = MethodID.getMethodId(className, name, desc);
 
-              MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
+              // For error handlers with duration, compute duration directly without sampling/level checks
+              if (om.getDurationParameter() != -1) {
+                trackingCtx.resetDuration();
+                trackingCtx.computeDurationForErrorHandler();
+              }
 
               if (om.getTargetInstanceParameter() != -1) {
                 asm.dup();
@@ -911,11 +931,13 @@ public class Instrumentor extends ClassVisitor {
                   new ArgumentProvider(asm, om.getDurationParameter()) {
                     @Override
                     public void doProvide() {
-                      MethodTrackingExpander.DURATION.insert(mv);
+                      if (trackingCtx != null) {
+                        trackingCtx.emitDuration();
+                      }
                     }
                   };
 
-              Label l = levelCheck(om, bcn.getClassName(true));
+              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
 
               Label l1 = asm.openLinkerCheck();
 
@@ -929,8 +951,6 @@ public class Instrumentor extends ClassVisitor {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);
               }
-
-              MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
             }
           }
 
@@ -940,19 +960,11 @@ public class Instrumentor extends ClassVisitor {
               if (!generatingCode) {
                 try {
                   generatingCode = true;
+                  int mid = MethodID.getMethodId(className, name, desc);
                   if (om.getDurationParameter() != -1) {
-                    MethodTrackingExpander.ENTRY.insert(
-                        mv,
-                        MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                        MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                        MethodTrackingExpander.$TIMED,
-                        MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                    trackingCtx.emitEntry(true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                   } else {
-                    MethodTrackingExpander.ENTRY.insert(
-                        mv,
-                        MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                        MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                        MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                    trackingCtx.emitEntry(false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                   }
                 } finally {
                   generatingCode = false;
@@ -1475,12 +1487,18 @@ public class Instrumentor extends ClassVisitor {
 
           final ValidationResult vr;
           private boolean generatingCode = false;
+          private MethodTrackingContext trackingCtx;
 
           {
             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
             addExtraTypeInfo(om.getReturnParameter(), getReturnType());
 
             vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+            int mid = MethodID.getMethodId(className, name, desc);
+            trackingCtx =
+                mHelper.getOrCreateTrackingContext(
+                    mid,
+                    () -> new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid));
           }
 
           private void callAction(int retOpCode) {
@@ -1528,7 +1546,9 @@ public class Instrumentor extends ClassVisitor {
                 new ArgumentProvider(asm, om.getDurationParameter()) {
                   @Override
                   public void doProvide() {
-                    MethodTrackingExpander.DURATION.insert(mv);
+                    if (trackingCtx != null) {
+                      trackingCtx.emitDuration();
+                    }
                   }
                 });
 
@@ -1539,15 +1559,16 @@ public class Instrumentor extends ClassVisitor {
           @Override
           protected void onMethodReturn(int opcode) {
             if (vr.isValid() || vr.isAny()) {
-              MethodTrackingExpander.TEST_SAMPLE.insert(mv, MethodTrackingExpander.$TIMED);
+              int mid = MethodID.getMethodId(className, name, desc);
+              trackingCtx.emitTestSample(true, mid);
 
-              Label l = levelCheck(om, bcn.getClassName(true));
+              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
               if (numActionArgs == 0) {
                 invokeBTraceAction(asm, om);
               } else {
                 callAction(opcode);
               }
-              MethodTrackingExpander.ELSE_SAMPLE.insert(mv);
+              trackingCtx.emitElse();
               if (l != null) {
                 mv.visitLabel(l);
                 insertFrameSameStack(l);
@@ -1561,20 +1582,12 @@ public class Instrumentor extends ClassVisitor {
               try {
                 if (!generatingCode) {
                   generatingCode = true;
+                  int mid = MethodID.getMethodId(className, name, desc);
 
                   if (om.getDurationParameter() != -1) {
-                    MethodTrackingExpander.ENTRY.insert(
-                        mv,
-                        MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                        MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                        MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om),
-                        MethodTrackingExpander.$TIMED);
+                    trackingCtx.emitEntry(true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                   } else {
-                    MethodTrackingExpander.ENTRY.insert(
-                        mv,
-                        MethodTrackingExpander.$MEAN + "=" + om.getSamplerMean(),
-                        MethodTrackingExpander.$SAMPLER + "=" + om.getSamplerKind(),
-                        MethodTrackingExpander.$LEVEL + "=" + getLevelStrSafe(om));
+                    trackingCtx.emitEntry(false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                   }
                 }
               } finally {
@@ -1591,11 +1604,17 @@ public class Instrumentor extends ClassVisitor {
             cl, mv, mHelper, className, superName, access, name, desc) {
           int storedObjIdx = -1;
           final ValidationResult vr;
+          private MethodTrackingContext trackingCtx;
 
           {
             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
             addExtraTypeInfo(om.getTargetInstanceParameter(), Constants.OBJECT_TYPE);
             vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+            int mid = MethodID.getMethodId(className, name, desc);
+            trackingCtx =
+                mHelper.getOrCreateTrackingContext(
+                    mid,
+                    () -> new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid));
           }
 
           @Override
@@ -1679,11 +1698,17 @@ public class Instrumentor extends ClassVisitor {
             cl, mv, mHelper, className, superName, access, name, desc) {
           int storedObjIdx = -1;
           final ValidationResult vr;
+          private MethodTrackingContext trackingCtx;
 
           {
             addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
             addExtraTypeInfo(om.getTargetInstanceParameter(), Constants.OBJECT_TYPE);
             vr = validateArguments(om, actionArgTypes, Type.getArgumentTypes(getDescriptor()));
+            int mid = MethodID.getMethodId(className, name, desc);
+            trackingCtx =
+                mHelper.getOrCreateTrackingContext(
+                    mid,
+                    () -> new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid));
           }
 
           private void loadActionArgs() {
@@ -1698,7 +1723,9 @@ public class Instrumentor extends ClassVisitor {
                 new MethodInstrumentor.ArgumentProvider(asm, om.getDurationParameter()) {
                   @Override
                   public void doProvide() {
-                    MethodTrackingExpander.DURATION.insert(mv);
+                    if (trackingCtx != null) {
+                      trackingCtx.emitDuration();
+                    }
                   }
                 });
           }
@@ -1752,7 +1779,8 @@ public class Instrumentor extends ClassVisitor {
               return;
             }
             if (om.getDurationParameter() != -1) {
-              MethodTrackingExpander.ENTRY.insert(mv, MethodTrackingExpander.$TIMED);
+              int mid = MethodID.getMethodId(className, name, desc);
+              trackingCtx.emitEntry(true, Sampled.Sampler.None, 0, mid, "");
             }
           }
 
