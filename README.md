@@ -127,6 +127,11 @@ Grant permissions at runtime:
 btrace --grant=NETWORK,THREADS <PID> MyProbe.class
 ```
 
+If extensions fail to load, use `-le` to troubleshoot:
+```sh
+btrace -le <PID>
+```
+
 See the [Tutorial](docs/BTraceTutorial.md) for detailed documentation.
 
 ### Maven Integration

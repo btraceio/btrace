@@ -828,3 +828,46 @@ Run with:
 ```bash
 btrace --grant=NETWORK,THREADS -statsd localhost:8125 <pid> StatsdExample.class
 ```
+
+##### Troubleshooting Failed Extensions
+
+If extensions fail to load during agent initialization (for example, due to missing dependencies or configuration issues), BTrace will display a warning when you submit a probe:
+
+```
+[BTRACE WARN] 1 extension(s) failed to load:
+  - StatsdExtension: Missing @ExtensionDescriptor annotation
+Use 'btrace -le <PID>' for details.
+```
+
+###### Listing Failed Extensions
+
+Use the `-le` option to see detailed information about failed extensions:
+
+```bash
+btrace -le <pid>
+```
+
+This will display all extensions that failed to load and the reasons for their failures:
+
+```
+Failed Extensions:
+  1. org.openjdk.btrace.statsd.StatsdExtension: Connection refused to localhost:8125
+  2. org.openjdk.btrace.dtrace.DTraceExtension: DTrace not available on this platform
+```
+
+###### Interactive Menu
+
+When attached to a JVM in interactive mode (press Ctrl-C), you can also select option **7** to list failed extensions:
+
+```
+Please enter your option:
+        1. exit
+        2. send an event
+        3. send a named event
+        4. flush console output
+        5. list probes
+        6. detach client
+        7. list failed extensions
+```
+
+This is useful for diagnosing issues when probes that rely on specific extensions are not working as expected.
