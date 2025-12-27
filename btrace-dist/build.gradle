@@ -178,6 +178,8 @@ task fixPermissions(type: Exec) {
     commandLine 'chmod', '500', "${distTarget}/bin/btrace"
     commandLine 'chmod', '500', "${distTarget}/bin/btracec"
     commandLine 'chmod', '500', "${distTarget}/bin/btracer"
+
+    dependsOn processResources
 }
 
 task copyDtraceLib(type: Copy) {
@@ -268,6 +270,7 @@ task buildDockerContext(type: Copy, dependsOn: [agentJar, bootJar, clientJar, co
 
     from "${distTarget}"
     into "${buildDir}/docker-context/btrace"
+    fileMode = 0644
 
     doLast {
         // Copy entrypoint script

@@ -689,7 +689,7 @@ spec:
   - name: app
     image: myapp:latest
   - name: btrace
-    image: openjdk:11-jdk
+    image: bellsoft/liberica-openjdk-debian:11-cds
     command: ["/bin/sh", "-c", "sleep infinity"]
 ```
 

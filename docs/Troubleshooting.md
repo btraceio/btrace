@@ -778,7 +778,7 @@ Error: tools.jar not found
 # Instead of JRE
 FROM openjdk:11-jre
 # Use JDK
-FROM openjdk:11-jdk
+FROM bellsoft/liberica-openjdk-debian:11-cds
 ```
 
 **Option 2: Install JDK in running pod** (temporary)
@@ -794,7 +794,7 @@ spec:
   - name: app
     image: myapp-jre:latest  # Can use JRE
   - name: btrace
-    image: openjdk:11-jdk     # Sidecar has JDK
+    image: bellsoft/liberica-openjdk-debian:11-cds     # Sidecar has JDK
 ```
 
 ### Service Mesh Compatibility
