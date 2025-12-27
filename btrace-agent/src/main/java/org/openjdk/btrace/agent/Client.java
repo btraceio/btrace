@@ -25,6 +25,38 @@
 
 package org.openjdk.btrace.agent;
 
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.ExitCommand;
+import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.MessageCommand;
+import org.openjdk.btrace.core.comm.RenameCommand;
+import org.openjdk.btrace.core.comm.RetransformationStartNotification;
+import org.openjdk.btrace.core.comm.StatusCommand;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.core.extensions.PermissionSet;
+import org.openjdk.btrace.instr.BTraceProbe;
+import org.openjdk.btrace.instr.BTraceProbeFactory;
+import org.openjdk.btrace.instr.BTraceProbePersisted;
+import org.openjdk.btrace.instr.BTraceTransformer;
+import org.openjdk.btrace.instr.ClassCache;
+import org.openjdk.btrace.instr.ClassFilter;
+import org.openjdk.btrace.instr.ClassInfo;
+import org.openjdk.btrace.instr.HandlerRepositoryImpl;
+import org.openjdk.btrace.instr.InstrumentUtils;
+import org.openjdk.btrace.instr.Instrumentor;
+import org.openjdk.btrace.instr.MethodTrackingContext;
+import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import org.openjdk.btrace.runtime.BTraceRuntimes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -48,37 +80,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.PermissionSet;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.comm.RenameCommand;
-import org.openjdk.btrace.core.comm.RetransformationStartNotification;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.instr.BTraceProbe;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
-import org.openjdk.btrace.instr.BTraceProbePersisted;
-import org.openjdk.btrace.instr.BTraceTransformer;
-import org.openjdk.btrace.instr.ClassCache;
-import org.openjdk.btrace.instr.ClassFilter;
-import org.openjdk.btrace.instr.ClassInfo;
-import org.openjdk.btrace.instr.HandlerRepositoryImpl;
-import org.openjdk.btrace.instr.InstrumentUtils;
-import org.openjdk.btrace.instr.Instrumentor;
-import org.openjdk.btrace.instr.MethodTrackingContext;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
-import org.openjdk.btrace.runtime.BTraceRuntimes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Abstract class that represents a BTrace client at the BTrace agent.
@@ -347,7 +348,7 @@ abstract class Client implements CommandListener {
         }
       }
     } catch (Throwable th) {
-      log.debug("Filed to load BTrace probe code", th);
+      log.debug("Failed to load BTrace probe code", th);
       errorExit(th);
       return null;
     }
