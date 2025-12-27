@@ -1458,6 +1458,7 @@ final class Preprocessor {
 
   private boolean isExtensionType(Type type, ClassLoader classLoader) {
     String className = type.getClassName();
+    // Try with the provided ClassLoader first
     try {
       Class<?> clazz = Class.forName(className, false, classLoader);
       return Extension.class.isAssignableFrom(clazz);
@@ -1466,35 +1467,29 @@ final class Preprocessor {
       try {
         Class<?> clazz = Class.forName(className);
         return Extension.class.isAssignableFrom(clazz);
-      } catch (ClassNotFoundException ex) {
-        log.warn("Class '{}' not found when checking extension type", className);
-        return false;
-      } catch (LinkageError ex) {
-        log.warn(
-            "LinkageError loading class '{}' when checking extension type: {}",
-            className,
-            ex.getMessage());
-        return false;
-      } catch (Exception ex) {
-        log.warn(
-            "Unexpected error loading class '{}' when checking extension type: {}",
-            className,
-            ex.getMessage());
-        return false;
+      } catch (Throwable ex) {
+        return logClassLoadingError(className, ex);
       }
-    } catch (LinkageError e) {
+    } catch (Throwable e) {
+      return logClassLoadingError(className, e);
+    }
+  }
+
+  private boolean logClassLoadingError(String className, Throwable error) {
+    if (error instanceof ClassNotFoundException) {
+      log.warn("Class '{}' not found when checking extension type", className);
+    } else if (error instanceof LinkageError) {
       log.warn(
           "LinkageError loading class '{}' when checking extension type: {}",
           className,
-          e.getMessage());
-      return false;
-    } catch (Exception e) {
+          error.getMessage());
+    } else {
       log.warn(
           "Unexpected error loading class '{}' when checking extension type: {}",
           className,
-          e.getMessage());
-      return false;
+          error.getMessage());
     }
+    return false;
   }
 
   private AbstractInsnNode updateInjectedUsage(
