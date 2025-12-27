@@ -117,6 +117,8 @@ public final class Main {
   private static volatile ArgsMap argMap;
   private static volatile Instrumentation inst;
   private static volatile Long fileRollMilliseconds;
+  private static volatile ServerSocket serverSocket;
+  private static volatile boolean serverRunning = true;
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
@@ -816,7 +818,6 @@ public final class Main {
         error("invalid port assuming default..");
       }
     }
-    ServerSocket ss;
     try {
       if (log.isDebugEnabled()) {
         log.debug("starting server at port {}", port);
@@ -827,25 +828,45 @@ public final class Main {
       if (scriptOutputFile != null && !scriptOutputFile.isEmpty()) {
         System.setProperty("btrace.output", scriptOutputFile);
       }
-      ss = new ServerSocket(port);
-      System.setProperty("btrace.port", String.valueOf(ss.getLocalPort()));
+      serverSocket = new ServerSocket(port);
+      System.setProperty("btrace.port", String.valueOf(serverSocket.getLocalPort()));
+
+      // Add shutdown hook to close server socket on JVM exit
+      Runtime.getRuntime()
+          .addShutdownHook(
+              new Thread(
+                  () -> {
+                    serverRunning = false;
+                    if (serverSocket != null && !serverSocket.isClosed()) {
+                      try {
+                        serverSocket.close();
+                        log.debug("BTrace server socket closed");
+                      } catch (IOException e) {
+                        log.debug("Error closing server socket", e);
+                      }
+                    }
+                  },
+                  "BTrace Server Shutdown"));
+
     } catch (IOException ioexp) {
-      ioexp.printStackTrace();
+      log.error("Failed to start BTrace server on port {}", port, ioexp);
       return;
     }
 
-    while (true) {
+    while (serverRunning) {
       try {
         log.debug("waiting for clients");
-        Socket sock = ss.accept();
+        Socket sock = serverSocket.accept();
         if (log.isDebugEnabled()) {
           log.debug("client accepted {}", sock);
         }
         ClientContext ctx = new ClientContext(inst, transformer, argMap, settings);
         Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
       } catch (RuntimeException | IOException re) {
-        if (log.isDebugEnabled()) {
-          log.debug("BTrace server failed", re);
+        if (serverRunning) {
+          if (log.isDebugEnabled()) {
+            log.debug("BTrace server failed", re);
+          }
         }
       }
     }

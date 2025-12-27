@@ -21,7 +21,11 @@
  */
 package org.openjdk.btrace.instr;
 
-import static org.openjdk.btrace.instr.ClassFilter.isSubTypeOf;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,16 +33,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static org.openjdk.btrace.instr.ClassFilter.isSubTypeOf;
 
 public final class BTraceProbeSupport {
   private static final Logger log = LoggerFactory.getLogger(BTraceProbeSupport.class);
 
+  private volatile String actionPrefix = null;
+  private static final AtomicReferenceFieldUpdater<BTraceProbeSupport, String> actionPrefixUpdate = AtomicReferenceFieldUpdater.newUpdater(BTraceProbeSupport.class, String.class, "actionPrefix");
   private final List<OnMethod> onMethods;
   private final List<OnProbe> onProbes;
   private final Map<String, String> serviceFields;
@@ -100,8 +104,8 @@ public final class BTraceProbeSupport {
       }
       // Check regex match
       if (om.isClassRegexMatcher() && !om.isClassAnnotationMatcher()) {
-        Pattern p = Pattern.compile(probeClass);
-        if (p.matcher(targetName).matches()) {
+        Pattern p = om.getClassPattern();
+        if (p != null && p.matcher(targetName).matches()) {
           applicables.add(om);
           continue;
         }
@@ -109,11 +113,13 @@ public final class BTraceProbeSupport {
       if (om.isClassAnnotationMatcher()) {
         Collection<String> annoTypes = cr.getAnnotationTypes();
         if (om.isClassRegexMatcher()) {
-          Pattern p = Pattern.compile(probeClass);
-          for (String annoType : annoTypes) {
-            if (p.matcher(annoType).matches()) {
-              applicables.add(om);
-              continue outer;
+          Pattern p = om.getClassPattern();
+          if (p != null) {
+            for (String annoType : annoTypes) {
+              if (p.matcher(annoType).matches()) {
+                applicables.add(om);
+                continue outer;
+              }
             }
           }
         } else {
@@ -223,6 +229,16 @@ public final class BTraceProbeSupport {
     for (OnMethod om : onMethods) {
       om.applyArgs(argsMap);
     }
+  }
+
+  String getActionPrefix() {
+    return actionPrefixUpdate.updateAndGet(this, prefix -> {
+      if (prefix == null) {
+        prefix = Constants.BTRACE_METHOD_PREFIX +
+                getClassName(true).replace('/', '$') + "$";
+      }
+      return prefix;
+    });
   }
 
   @Override

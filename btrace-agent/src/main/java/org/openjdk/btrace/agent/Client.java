@@ -70,7 +70,7 @@ import org.openjdk.btrace.instr.ClassInfo;
 import org.openjdk.btrace.instr.HandlerRepositoryImpl;
 import org.openjdk.btrace.instr.InstrumentUtils;
 import org.openjdk.btrace.instr.Instrumentor;
-import org.openjdk.btrace.instr.templates.impl.MethodTrackingExpander;
+import org.openjdk.btrace.instr.MethodTrackingContext;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
 import org.slf4j.Logger;
@@ -96,7 +96,7 @@ abstract class Client implements CommandListener {
     ClassReader.class.getClassLoader();
     ClassWriter.class.getClassLoader();
     Annotation.class.getClassLoader();
-    MethodTrackingExpander.class.getClassLoader();
+    MethodTrackingContext.class.getClassLoader();
     ClassCache.class.getClassLoader();
     ClassInfo.class.getClassLoader();
   }
@@ -211,7 +211,7 @@ abstract class Client implements CommandListener {
                   }
                 }
               } catch (Throwable t) {
-                t.printStackTrace();
+                log.error("Error during periodic flush", t);
               }
             }
           },

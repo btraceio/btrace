@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,44 +23,25 @@
  * questions.
  */
 
-package org.openjdk.btrace.instr.templates;
+package org.openjdk.btrace.instr;
 
 /**
- * An interface to be implemented by the template expanders
+ * Thrown when bytecode instrumentation fails due to invalid variable mapping, corrupted state, or
+ * other instrumentation logic errors.
  *
- * @author Jaroslav Bachorik
- * @since 1.3
+ * <p>This exception indicates a bug in the instrumentation logic and provides detailed debug
+ * information to help diagnose the issue. When thrown, instrumentation will fail gracefully,
+ * returning the original unmodified class to prevent crashes in the instrumented application.
+ *
+ * @author BTrace Team
+ * @since 2.3
  */
-public interface TemplateExpander {
-  /**
-   * The expander identifies and, possibly, expands the given template
-   *
-   * @param v The expander parent
-   * @param t The template to process
-   * @return appropriate {@linkplain Result} value
-   */
-  Result expand(TemplateExpanderVisitor v, Template t);
-
-  /** Called upon code points invalidating the current expander status */
-  void resetState();
-
-  /**
-   * The result of expansion
-   *
-   * <ul>
-   *   <li><b>EXPANDED</b> = expander has claimed and expanded the template
-   *   <li><b>CLAIMED</b> = expander has claimed the template but didn't expand it
-   *   <li><b>IGNORED</b> = expander has not claimed the template
-   * </ul>
-   */
-  enum Result {
-    EXPANDED,
-    CLAIMED,
-    IGNORED
+public class InstrumentationException extends RuntimeException {
+  public InstrumentationException(String message) {
+    super(message);
   }
 
-  /** A knockoff of the java.util.function.Consumer interface for pre-8 usage */
-  interface Consumer<T> {
-    void consume(T visitor);
+  public InstrumentationException(String message, Throwable cause) {
+    super(message, cause);
   }
 }

@@ -68,6 +68,8 @@ import javax.management.openmbean.SimpleType;
 import org.openjdk.btrace.core.Profiler;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Property;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a simple DynamicMBean implementation that exposes the static fields of BTrace class as
@@ -76,6 +78,7 @@ import org.openjdk.btrace.core.annotations.Property;
  * @author A. Sundararajan
  */
 public class BTraceMBean implements DynamicMBean {
+  private static final Logger log = LoggerFactory.getLogger(BTraceMBean.class);
 
   private final Class<?> clazz;
   private final Map<String, Field> attributes;
@@ -392,7 +395,7 @@ public class BTraceMBean implements DynamicMBean {
           }
         }
       } catch (OpenDataException ode) {
-        ode.printStackTrace();
+        log.warn("Failed to convert type to OpenType", ode);
       }
 
       // nothing seems working...
@@ -434,7 +437,7 @@ public class BTraceMBean implements DynamicMBean {
                     new CompositeData[0]
                   });
             } catch (OpenDataException e) {
-              e.printStackTrace();
+              log.warn("Failed to create empty profiler snapshot composite data", e);
               return null;
             }
           }
@@ -489,7 +492,7 @@ public class BTraceMBean implements DynamicMBean {
                   new CompositeDataSupport(
                       at, new String[] {"key", "value"}, new Object[] {r.blockName, recordData});
             } catch (Exception ode) {
-              ode.printStackTrace();
+              log.warn("Failed to create record composite data", ode);
             }
             index++;
           }
@@ -508,7 +511,7 @@ public class BTraceMBean implements DynamicMBean {
                       total
                     });
           } catch (Exception e) {
-            e.printStackTrace();
+            log.warn("Failed to create profiler snapshot composite data", e);
           }
           //                    System.err.println("!!! data: " + snapshot);
           return snapshotData;
@@ -530,7 +533,7 @@ public class BTraceMBean implements DynamicMBean {
             try {
               array[index] = new CompositeDataSupport(ct, row);
             } catch (OpenDataException ode) {
-              ode.printStackTrace();
+              log.warn("Failed to create map row composite data", ode);
             }
             index++;
           }

@@ -10,6 +10,7 @@ import java.io.OutputStream;
  */
 public class BinaryNumberDataCommand extends BinaryDataCommand {
     private Number value;
+    private static final NumberEncoding ENCODING = new NumberEncoding((byte)0, (byte)1, (byte)2, (byte)3, (byte)4);
 
     static {
         // Register this command type
@@ -30,29 +31,8 @@ public class BinaryNumberDataCommand extends BinaryDataCommand {
         // Write the name
         super.write(out);
         
-        // Write the value type
-        if (value == null) {
-            BinaryProtocol.writeByte(out, (byte) 0);
-            return;
-        }
-        
-        if (value instanceof Integer) {
-            BinaryProtocol.writeByte(out, (byte) 1);
-            BinaryProtocol.writeInt(out, (Integer) value);
-        } else if (value instanceof Long) {
-            BinaryProtocol.writeByte(out, (byte) 2);
-            BinaryProtocol.writeLong(out, (Long) value);
-        } else if (value instanceof Float) {
-            BinaryProtocol.writeByte(out, (byte) 3);
-            BinaryProtocol.writeFloat(out, (Float) value);
-        } else if (value instanceof Double) {
-            BinaryProtocol.writeByte(out, (byte) 4);
-            BinaryProtocol.writeDouble(out, (Double) value);
-        } else {
-            // Default to long
-            BinaryProtocol.writeByte(out, (byte) 2);
-            BinaryProtocol.writeLong(out, value.longValue());
-        }
+        // Write the value type + payload via unified encoding
+        ENCODING.writeNumber(out, value);
     }
 
     @Override
@@ -60,28 +40,8 @@ public class BinaryNumberDataCommand extends BinaryDataCommand {
         // Read the name
         super.read(in);
         
-        // Read the value type
-        byte type = BinaryProtocol.readByte(in);
-        
-        switch (type) {
-            case 0: // null
-                value = null;
-                break;
-            case 1: // Integer
-                value = BinaryProtocol.readInt(in);
-                break;
-            case 2: // Long
-                value = BinaryProtocol.readLong(in);
-                break;
-            case 3: // Float
-                value = BinaryProtocol.readFloat(in);
-                break;
-            case 4: // Double
-                value = BinaryProtocol.readDouble(in);
-                break;
-            default:
-                throw new IOException("Unsupported number type: " + type);
-        }
+        // Read the value via unified encoding
+        value = ENCODING.readNumber(in);
     }
 
     public Number getValue() {

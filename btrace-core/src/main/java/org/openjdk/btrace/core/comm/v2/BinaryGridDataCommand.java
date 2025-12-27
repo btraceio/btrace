@@ -13,6 +13,8 @@ import java.util.List;
 public class BinaryGridDataCommand extends BinaryDataCommand {
     private List<String> columnNames = new ArrayList<>();
     private List<Object[]> data = new ArrayList<>();
+    private static final ScalarEncoding SCALAR =
+        new ScalarEncoding((byte)0, (byte)1, (byte)2, (byte)3, (byte)4, (byte)5, (byte)6);
 
     static {
         // Register this command type
@@ -54,7 +56,7 @@ public class BinaryGridDataCommand extends BinaryDataCommand {
             // Write each cell
             if (row != null) {
                 for (Object cell : row) {
-                    writeCell(out, cell);
+                    SCALAR.writeValue(out, cell);
                 }
             }
         }
@@ -82,68 +84,10 @@ public class BinaryGridDataCommand extends BinaryDataCommand {
             // Read each cell
             Object[] row = new Object[rowLength];
             for (int j = 0; j < rowLength; j++) {
-                row[j] = readCell(in);
+                row[j] = SCALAR.readValue(in);
             }
             
             data.add(row);
-        }
-    }
-
-    /**
-     * Write a cell value to the output stream
-     */
-    private void writeCell(OutputStream out, Object cell) throws IOException {
-        if (cell == null) {
-            // Null value has type code 0
-            BinaryProtocol.writeByte(out, (byte) 0);
-        } else if (cell instanceof String) {
-            BinaryProtocol.writeByte(out, (byte) 1);
-            BinaryProtocol.writeString(out, (String) cell);
-        } else if (cell instanceof Integer) {
-            BinaryProtocol.writeByte(out, (byte) 2);
-            BinaryProtocol.writeInt(out, (Integer) cell);
-        } else if (cell instanceof Long) {
-            BinaryProtocol.writeByte(out, (byte) 3);
-            BinaryProtocol.writeLong(out, (Long) cell);
-        } else if (cell instanceof Float) {
-            BinaryProtocol.writeByte(out, (byte) 4);
-            BinaryProtocol.writeFloat(out, (Float) cell);
-        } else if (cell instanceof Double) {
-            BinaryProtocol.writeByte(out, (byte) 5);
-            BinaryProtocol.writeDouble(out, (Double) cell);
-        } else if (cell instanceof Boolean) {
-            BinaryProtocol.writeByte(out, (byte) 6);
-            BinaryProtocol.writeBoolean(out, (Boolean) cell);
-        } else {
-            // For unsupported types, convert to string
-            BinaryProtocol.writeByte(out, (byte) 1);
-            BinaryProtocol.writeString(out, cell.toString());
-        }
-    }
-
-    /**
-     * Read a cell value from the input stream
-     */
-    private Object readCell(InputStream in) throws IOException {
-        byte type = BinaryProtocol.readByte(in);
-        
-        switch (type) {
-            case 0: // null
-                return null;
-            case 1: // String
-                return BinaryProtocol.readString(in);
-            case 2: // Integer
-                return BinaryProtocol.readInt(in);
-            case 3: // Long
-                return BinaryProtocol.readLong(in);
-            case 4: // Float
-                return BinaryProtocol.readFloat(in);
-            case 5: // Double
-                return BinaryProtocol.readDouble(in);
-            case 6: // Boolean
-                return BinaryProtocol.readBoolean(in);
-            default:
-                throw new IOException("Unsupported cell type: " + type);
         }
     }
 

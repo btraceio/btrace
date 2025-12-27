@@ -28,7 +28,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
       - name: Generate cache key
         id: cache-key
         run: |
@@ -53,7 +53,7 @@ jobs:
                                        --tests "org.openjdk.btrace.core.comm.WireProtocol*"
       - name: Upload dist build data
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-build
           retention-days: 1
@@ -62,7 +62,7 @@ jobs:
             btrace-instr/build/classes/traces
       - name: Upload test trace data
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-trace
           retention-days: 1
@@ -70,7 +70,7 @@ jobs:
             btrace-instr/build/classes/traces
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-reports
           path: |
@@ -94,7 +94,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
       - name: Prepare OS
         run: |
           sudo apt-get update
@@ -116,15 +116,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Download build data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dist-build
           path: btrace-dist/build
       - name: Download test trace data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: test-trace
           path: btrace-instr/build/classes/traces
+      - name: Build btrace-instr jar
+        run: |
+          ./gradlew --no-daemon --parallel --build-cache :btrace-instr:jar
       - name: Run tests
         run: |
           set +x
@@ -133,14 +136,14 @@ jobs:
         run: du -sh ~/.gradle/caches
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
             integration-tests/build/reports/**/*
       - name: Archive binary artifacts
         if: success() && matrix.java == '11'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: btrace-dist
           path: |
@@ -158,7 +161,7 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v5
     - name: Set up Java
       uses: actions/setup-java@v5
       with:
@@ -174,7 +177,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
     - name: Download build data
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: dist-build
     - name: Deploy Maven
@@ -182,8 +185,8 @@ jobs:
       env:
         GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
         GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
-        BTRACE_SONATYPE_USER: ${{ secrets.BTRACE_SONATYPE_USER }}
-        BTRACE_SONATYPE_PWD: ${{ secrets.BTRACE_SONATYPE_PWD }}
+        SONATYPE_USER: ${{ secrets.SONATYPE_USERNAME }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
 
   cleanup:
     runs-on: ubuntu-latest
