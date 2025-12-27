@@ -768,7 +768,7 @@ java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grant=NETWORK,THREADS
 
 ###### Grant all permissions (use with caution)
 ```bash
-btrace --grantAll <pid> MetricsProbe.class
+btrace --grantAll=true <pid> MetricsProbe.class
 ```
 or
 ```bash
