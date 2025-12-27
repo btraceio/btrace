@@ -25,16 +25,6 @@
 
 package org.openjdk.btrace.instr;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -62,6 +52,17 @@ import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This class preprocesses a compiled BTrace program. This is done after BTrace safety verification
@@ -194,7 +195,6 @@ final class Preprocessor {
   private final Set<String> jfrHandlerNames = new HashSet<>();
   private final Map<String, AnnotationNode> eventFlds = new HashMap<>();
   private final Map<String, AnnotationNode> injectedFlds = new HashMap<>();
-  private final Map<String, String> injectedFldDescs = new HashMap<>();
   private final Map<String, Integer> serviceLocals = new HashMap<>();
   private MethodNode clinit = null;
   private FieldNode rtField = null;
@@ -566,7 +566,6 @@ final class Preprocessor {
       if (fn.invisibleAnnotations != null) fn.invisibleAnnotations.remove(an);
 
       injectedFlds.put(fn.name, an);
-      injectedFldDescs.put(fn.name, fn.desc);
       return null;
     }
     return fn;
@@ -1081,7 +1080,7 @@ final class Preprocessor {
         AbstractInsnNode prev = n.getPrevious();
         if (prev != null && prev.getType() == AbstractInsnNode.METHOD_INSN) {
           MethodInsnNode min = (MethodInsnNode) prev;
-          if (min.name.equals("leave")) {
+          if (org.checkerframework.checker.units.qual.min.name.equals("leave")) {
             // don't start the runtime if we are bailing out (BTraceRuntime.leave())
             continue;
           }
@@ -1305,8 +1304,8 @@ final class Preprocessor {
       if (n.getType() == AbstractInsnNode.METHOD_INSN) {
         MethodInsnNode min = (MethodInsnNode) n;
         if (min.getOpcode() == Opcodes.INVOKEVIRTUAL
-            && min.owner.equals(Constants.BTRACERTBASE_INTERNAL)
-            && min.name.equals("start")) {
+            && org.checkerframework.checker.units.qual.min.owner.equals(Constants.BTRACERTBASE_INTERNAL)
+            && org.checkerframework.checker.units.qual.min.name.equals("start")) {
           return min;
         }
       }
@@ -1592,8 +1591,8 @@ final class Preprocessor {
 
   private AbstractInsnNode unfoldServiceInstantiation(
       ClassNode cn, MethodInsnNode min, InsnList l) {
-    if (min.owner.equals(SERVICE_INTERNAL)) {
-      AbstractInsnNode next = min.getNext();
+    if (org.checkerframework.checker.units.qual.min.owner.equals(SERVICE_INTERNAL)) {
+      AbstractInsnNode next = org.checkerframework.checker.units.qual.min.getNext();
       switch (min.name) {
         case "simple":
           {
