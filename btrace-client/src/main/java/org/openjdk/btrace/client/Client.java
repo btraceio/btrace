@@ -61,6 +61,7 @@ import org.openjdk.btrace.core.comm.DisconnectCommand;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.ListFailedExtensionsCommand;
 import org.openjdk.btrace.core.comm.ListProbesCommand;
 import org.openjdk.btrace.core.comm.MessageCommand;
 import org.openjdk.btrace.core.comm.ReconnectCommand;
@@ -414,6 +415,49 @@ public class Client {
     }
   }
 
+  void connectAndListFailedExtensions(String host, CommandListener listener) throws IOException {
+    if (sock != null) {
+      throw new IllegalStateException();
+    }
+    try {
+      if (log.isDebugEnabled()) {
+        log.debug("opening socket to {}", port);
+      }
+      long timeout = System.nanoTime() + TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
+      while (sock == null && System.nanoTime() <= timeout) {
+        try {
+          sock = new Socket(host, port);
+        } catch (ConnectException e) {
+          log.debug("server not yet available; retrying ...");
+          Thread.sleep(20);
+        }
+      }
+
+      if (sock == null) {
+        log.debug("server not available. exiting.");
+        System.exit(1);
+      }
+      oos = new ObjectOutputStream(sock.getOutputStream());
+      WireIO.write(oos, new ListFailedExtensionsCommand());
+      ois = new ObjectInputStream(sock.getInputStream());
+
+      log.debug("entering into command loop");
+      commandLoop(
+          cmd -> {
+            if (cmd.getType() == Command.LIST_FAILED_EXTENSIONS) {
+              listener.onCommand(cmd);
+              System.exit(0);
+            } else {
+              listener.onCommand(cmd);
+            }
+          });
+    } catch (UnknownHostException uhe) {
+      throw new IOException(uhe);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
   void reconnect(String host, String resumeProbe, CommandListener listener, String[] command)
       throws IOException {
     if (sock != null) {
@@ -654,6 +698,10 @@ public class Client {
 
   void listProbes() throws IOException {
     send(new ListProbesCommand());
+  }
+
+  void listFailedExtensions() throws IOException {
+    send(new ListFailedExtensionsCommand());
   }
 
   /** reset the internal status of the client */

@@ -48,9 +48,10 @@ public abstract class Command implements Serializable {
   public static final byte LIST_PROBES = 14;
   public static final byte DISCONNECT = 15;
   public static final byte RECONNECT = 16;
+  public static final byte LIST_FAILED_EXTENSIONS = 17;
 
   public static final byte FIRST_COMMAND = ERROR;
-  public static final byte LAST_COMMAND = RECONNECT;
+  public static final byte LAST_COMMAND = LIST_FAILED_EXTENSIONS;
 
   @SuppressWarnings("RedundantThrows")
   public static final Command NULL =

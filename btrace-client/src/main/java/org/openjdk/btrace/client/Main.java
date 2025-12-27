@@ -124,6 +124,7 @@ public final class Main {
     String probeCommand = null;
     String probeCommandArg = null;
     boolean listProbes = false;
+    boolean listFailedExtensions = false;
     boolean unattended = false;
 
     for (int i = 0; i < args.length; i++) {
@@ -220,6 +221,9 @@ public final class Main {
         } else if (args[count].equals("-lp")) {
           log.debug("listing active probes");
           listProbes = true;
+        } else if (args[count].equals("-le")) {
+          log.debug("listing failed extensions");
+          listFailedExtensions = true;
         } else if (args[count].equals("-x")) {
           log.debug("submitting probe in unattended mode");
           unattended = true;
@@ -281,6 +285,11 @@ public final class Main {
         registerExitHook(client);
         client.attach(pid.toString(), null, classPath);
         client.connectAndListProbes(host, createCommandListener(client));
+        System.exit(0);
+      } else if (listFailedExtensions) {
+        registerExitHook(client);
+        client.attach(pid.toString(), null, classPath);
+        client.connectAndListFailedExtensions(host, createCommandListener(client));
         System.exit(0);
       } else {
         String fileName = args[count + 1];
@@ -375,7 +384,7 @@ public final class Main {
           try {
             con.printf("Please enter your option:\n");
             con.printf(
-                "\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n\t5. list probes\n\t6. detach client\n");
+                "\t1. exit\n\t2. send an event\n\t3. send a named event\n\t4. flush console output\n\t5. list probes\n\t6. detach client\n\t7. list failed extensions\n");
             con.flush();
             String option = con.readLine();
             if (option == null) {
@@ -405,6 +414,9 @@ public final class Main {
                 break;
               case "6":
                 client.disconnect();
+                break;
+              case "7":
+                client.listFailedExtensions();
                 break;
               default:
                 con.printf("invalid option!\n");
