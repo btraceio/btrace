@@ -63,13 +63,12 @@ class ExtensionRegistryTest {
   }
 
   @Test
-  void testIsFailedExtensionWithFailedClass() {
+  void testIsFailedExtensionWithValidClass() {
     // Since we can't easily manipulate the static state without ServiceLoader,
-    // we just verify the method exists and returns a boolean for any class
-    boolean result = ExtensionRegistry.isFailedExtension(ValidExtension.class);
-    // The method should be callable and return a boolean (true or false)
-    // We don't assert on the value since we don't control the static state
-    assertNotNull(result ? Boolean.TRUE : Boolean.FALSE);
+    // we just verify the method is callable and doesn't throw
+    // ValidExtension has proper annotations, so it should return false
+    // (unless it was previously discovered and failed, which is unlikely)
+    ExtensionRegistry.isFailedExtension(ValidExtension.class);
   }
 
   @Test
