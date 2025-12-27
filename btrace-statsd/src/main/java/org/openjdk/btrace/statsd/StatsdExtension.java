@@ -85,8 +85,9 @@ public final class StatsdExtension extends Extension {
       return; // Already initialized
     }
 
+    ExecutorService localExecutor = null;
     try {
-      executor =
+      localExecutor =
           Executors.newSingleThreadExecutor(
               r -> {
                 Thread t = new Thread(r, "BTrace StatsD Client - " + ctx.getScriptClassName());
@@ -94,15 +95,16 @@ public final class StatsdExtension extends Extension {
                 return t;
               });
 
-      executor.submit(this::senderLoop);
-    } catch (Exception e) {
+      localExecutor.submit(this::senderLoop);
+      executor = localExecutor;
+    } catch (RuntimeException e) {
       // Reset running flag so initialization can be retried
       running.set(false);
       // Clean up any partially initialized resources
-      if (executor != null) {
-        executor.shutdownNow();
-        executor = null;
+      if (localExecutor != null) {
+        localExecutor.shutdownNow();
       }
+      executor = null;
       throw new ExtensionException("Failed to initialize StatsD extension", e);
     }
   }
