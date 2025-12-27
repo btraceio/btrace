@@ -1,5 +1,6 @@
 package org.openjdk.btrace.runtime;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,6 +24,10 @@ public final class ExtensionRegistry {
 
   /** Global registry of discovered extensions (class -> metadata) */
   private static final ConcurrentHashMap<Class<? extends Extension>, ExtensionMeta> registry =
+      new ConcurrentHashMap<>();
+
+  /** Registry of failed extensions (className -> error message) */
+  private static final ConcurrentHashMap<String, String> failedExtensions =
       new ConcurrentHashMap<>();
 
   /** Per-script extension instances (scriptClassName -> (extensionClass -> instance)) */
@@ -56,7 +61,9 @@ public final class ExtensionRegistry {
           registry.put(clazz, meta);
           log.debug("Discovered extension: {} v{}", meta.getName(), meta.getVersion());
         } catch (ExtensionException e) {
-          log.warn("Failed to load extension {}: {}", clazz.getName(), e.getMessage());
+          String errorMsg = e.getMessage();
+          failedExtensions.put(clazz.getName(), errorMsg);
+          log.warn("Failed to load extension {}: {}", clazz.getName(), errorMsg);
         }
       }
     }
@@ -83,6 +90,35 @@ public final class ExtensionRegistry {
   }
 
   /**
+   * Returns an unmodifiable map of extensions that failed to load during discovery.
+   *
+   * @return map of extension class names to error messages
+   */
+  public static Map<String, String> getFailedExtensions() {
+    return Collections.unmodifiableMap(failedExtensions);
+  }
+
+  /**
+   * Checks if an extension failed to load during discovery.
+   *
+   * @param extensionClass the extension class
+   * @return true if the extension failed to load
+   */
+  public static boolean isFailedExtension(Class<? extends Extension> extensionClass) {
+    return failedExtensions.containsKey(extensionClass.getName());
+  }
+
+  /**
+   * Gets the error message for a failed extension.
+   *
+   * @param extensionClass the extension class
+   * @return the error message, or null if the extension did not fail
+   */
+  public static String getFailureReason(Class<? extends Extension> extensionClass) {
+    return failedExtensions.get(extensionClass.getName());
+  }
+
+  /**
    * Gets or creates an extension instance for the specified script.
    *
    * @param extensionClass the extension class
@@ -93,6 +129,16 @@ public final class ExtensionRegistry {
    */
   @SuppressWarnings("unchecked")
   public <T extends Extension> T getExtension(Class<T> extensionClass, String scriptClassName) {
+    // Check if this extension failed to load during discovery
+    String failureReason = failedExtensions.get(extensionClass.getName());
+    if (failureReason != null) {
+      throw new ExtensionException(
+          "Cannot use extension "
+              + extensionClass.getName()
+              + " because it failed to load during discovery: "
+              + failureReason);
+    }
+
     Map<Class<? extends Extension>, Extension> scriptExtensions =
         instances.computeIfAbsent(scriptClassName, k -> new ConcurrentHashMap<>());
 
