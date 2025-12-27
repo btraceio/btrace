@@ -24,4 +24,7 @@ public final class Args {
   public static final String NO_SERVER = "noServer";
   public static final String HELP = "help";
   public static final String LIBS = "libs";
+  public static final String GRANT = "grant";
+  public static final String DENY = "deny";
+  public static final String GRANT_ALL = "grantAll";
 }

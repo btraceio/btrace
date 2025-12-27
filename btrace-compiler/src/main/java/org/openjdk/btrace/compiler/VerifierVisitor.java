@@ -52,9 +52,20 @@ import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreeScanner;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import org.openjdk.btrace.core.Messages;
+import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Injected;
+import org.openjdk.btrace.core.annotations.Kind;
+import org.openjdk.btrace.core.annotations.OnError;
+import org.openjdk.btrace.core.annotations.OnExit;
+import org.openjdk.btrace.core.annotations.OnMethod;
+import org.openjdk.btrace.core.annotations.RequestPermission;
+import org.openjdk.btrace.core.annotations.RequestPermissions;
+import org.openjdk.btrace.core.annotations.Sampled;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.core.extensions.RequiresPermission;
+import org.openjdk.btrace.core.extensions.RequiresPermissions;
+
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -64,14 +75,10 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Injected;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.OnError;
-import org.openjdk.btrace.core.annotations.OnExit;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Sampled;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * This class tree visitor validates a BTrace program's ClassTree.
@@ -93,10 +100,17 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   private TypeMirror runtimeServiceTm = null;
   private TypeMirror simpleServiceTm = null;
   private TypeMirror serviceInjectorTm = null;
+  private TypeMirror extensionTm = null;
 
   private boolean isInAnnotation = false;
 
   private final Set<String> eventFieldNames = new HashSet<>();
+
+  /** Permissions required by extensions used in this probe */
+  private final EnumSet<Permission> requiredPermissions = EnumSet.noneOf(Permission.class);
+
+  /** Permissions declared by @RequestPermission on the probe class */
+  private final EnumSet<Permission> declaredPermissions = EnumSet.noneOf(Permission.class);
 
   private final TreeScanner<Void, Void> jfrFieldNameCollector =
       new TreeScanner<Void, Void>() {
@@ -138,6 +152,11 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
             .getElementUtils()
             .getTypeElement("org.openjdk.btrace.services.api.Service")
             .asType();
+    TypeElement extensionElement =
+        verifier.getElementUtils().getTypeElement("org.openjdk.btrace.core.extensions.Extension");
+    if (extensionElement != null) {
+      extensionTm = extensionElement.asType();
+    }
   }
 
   @Override
@@ -185,6 +204,10 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
             reportError("service.injector.literals", node);
           }
 
+          return super.visitMethodInvocation(node, v);
+        }
+        // check extension calls
+        if (extensionTm != null && verifier.getTypeUtils().isSubtype(tm, extensionTm)) {
           return super.visitMethodInvocation(node, v);
         }
       }
@@ -284,17 +307,26 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     List<? extends AnnotationTree> anno = mt.getAnnotations();
     if (anno != null && !anno.isEmpty()) {
       String btrace = BTrace.class.getName();
+      boolean isBTrace = false;
       for (AnnotationTree at : anno) {
         String name = at.getAnnotationType().toString();
         if (name.equals(btrace) || name.equals("BTrace")) {
-          String oldClassName = className;
-          try {
-            className = node.getSimpleName().toString();
-            fqn = getElement(node).asType().toString();
-            return super.visitClass(node, v);
-          } finally {
-            className = oldClassName;
-          }
+          isBTrace = true;
+        }
+        // Collect declared permissions from @RequestPermission annotations
+        collectDeclaredPermissions(at);
+      }
+      if (isBTrace) {
+        String oldClassName = className;
+        try {
+          className = node.getSimpleName().toString();
+          fqn = getElement(node).asType().toString();
+          Void result = super.visitClass(node, v);
+          // After visiting all members, verify permissions
+          verifyPermissions(node);
+          return result;
+        } finally {
+          className = oldClassName;
         }
       }
     }
@@ -517,7 +549,23 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
         if (vt.getInitializer() != null) {
           reportError("injected.no.initializer", vt.getInitializer());
         }
+      } else if (extensionTm != null && verifier.getTypeUtils().isSubtype(ve.asType(), extensionTm)) {
+        // Extension fields require @Injected annotation
+        Injected i = ve.getAnnotation(Injected.class);
+        if (i == null) {
+          reportError("missing.injected", vt);
+        }
+        if (vt.getInitializer() != null) {
+          reportError("injected.no.initializer", vt.getInitializer());
+        }
+        // Collect permissions required by this extension
+        collectExtensionPermissions(ve.asType());
       } else {
+        // If the Extension type mirror could not be resolved, report this instead of silently
+        // skipping extension field validation. This likely indicates a classpath issue.
+        if (extensionTm == null) {
+          reportError("extension.class.not.found", vt);
+        }
         vt.accept(jfrFieldNameCollector, null);
       }
     }
@@ -722,5 +770,115 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
       }
     }
     return allLiterals;
+  }
+
+  /**
+   * Collects declared permissions from @RequestPermission or @RequestPermissions annotations.
+   *
+   * @param at the annotation tree to process
+   */
+  private void collectDeclaredPermissions(AnnotationTree at) {
+    String annType = at.getAnnotationType().toString();
+    if (annType.equals("RequestPermission")
+        || annType.equals(RequestPermission.class.getName())
+        || annType.endsWith(".RequestPermission")) {
+      // Single @RequestPermission annotation
+      for (ExpressionTree arg : at.getArguments()) {
+        Permission perm = extractPermissionFromExpression(arg);
+        if (perm != null) {
+          declaredPermissions.add(perm);
+        }
+      }
+    } else if (annType.equals("RequestPermissions")
+        || annType.equals(RequestPermissions.class.getName())
+        || annType.endsWith(".RequestPermissions")) {
+      // Container @RequestPermissions annotation (contains array of @RequestPermission)
+      for (ExpressionTree arg : at.getArguments()) {
+        if (arg instanceof AssignmentTree) {
+          AssignmentTree assignment = (AssignmentTree) arg;
+          if (assignment.getVariable().toString().equals("value")) {
+            ExpressionTree value = assignment.getExpression();
+            if (value instanceof NewArrayTree) {
+              for (ExpressionTree elem : ((NewArrayTree) value).getInitializers()) {
+                if (elem instanceof AnnotationTree) {
+                  collectDeclaredPermissions((AnnotationTree) elem);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Extracts a Permission enum value from an annotation argument expression.
+   *
+   * @param expr the expression tree (e.g., Permission.NETWORK or value = Permission.NETWORK)
+   * @return the Permission enum value, or null if not found
+   */
+  private Permission extractPermissionFromExpression(ExpressionTree expr) {
+    String exprStr;
+    if (expr instanceof AssignmentTree) {
+      // Handle value = Permission.NETWORK case
+      exprStr = ((AssignmentTree) expr).getExpression().toString();
+    } else {
+      // Handle direct Permission.NETWORK case
+      exprStr = expr.toString();
+    }
+
+    // Extract permission name from "Permission.NETWORK" or just "NETWORK"
+    String permName = exprStr;
+    if (permName.startsWith("Permission.")) {
+      permName = permName.substring("Permission.".length());
+    } else if (permName.contains(".Permission.")) {
+      permName = permName.substring(permName.lastIndexOf('.') + 1);
+    }
+
+    try {
+      return Permission.valueOf(permName);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Collects permissions required by an extension type by examining its @RequiresPermission
+   * annotations.
+   *
+   * @param extensionType the extension type mirror
+   */
+  private void collectExtensionPermissions(TypeMirror extensionType) {
+    Element extensionElement = verifier.getTypeUtils().asElement(extensionType);
+    if (extensionElement == null) {
+      return;
+    }
+
+    // Check for @RequiresPermission annotations
+    RequiresPermission single = extensionElement.getAnnotation(RequiresPermission.class);
+    if (single != null) {
+      requiredPermissions.add(single.value());
+    }
+
+    // Check for @RequiresPermissions container
+    RequiresPermissions multiple = extensionElement.getAnnotation(RequiresPermissions.class);
+    if (multiple != null) {
+      for (RequiresPermission rp : multiple.value()) {
+        requiredPermissions.add(rp.value());
+      }
+    }
+  }
+
+  /**
+   * Verifies that all required permissions are declared by the probe.
+   *
+   * @param node the class tree node for error reporting
+   */
+  private void verifyPermissions(ClassTree node) {
+    for (Permission perm : requiredPermissions) {
+      if (!declaredPermissions.contains(perm)) {
+        reportError("permission.missing", node);
+      }
+    }
   }
 }

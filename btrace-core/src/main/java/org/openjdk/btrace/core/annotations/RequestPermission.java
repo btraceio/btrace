@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
+ * particular file as subject to the Classpath exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -22,22 +22,43 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package org.openjdk.btrace.core.annotations;
 
-import org.openjdk.btrace.core.BTraceRuntime;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.openjdk.btrace.core.extensions.Permission;
 
 /**
- * Service type enumeration
+ * Declares that a BTrace script requests a specific permission.
  *
- * @author Jaroslav Bachorik
+ * <p>Scripts must declare all permissions required by the extensions they use. The BTrace verifier
+ * will check that these permissions are granted before allowing the script to run.
+ *
+ * <p>Example:
+ *
+ * <pre>
+ * &#64;BTrace
+ * &#64;RequestPermission(Permission.NETWORK)
+ * &#64;RequestPermission(Permission.THREADS)
+ * public class MyScript {
+ *   &#64;Injected
+ *   private static StatsdExtension statsd;
+ *   // ...
+ * }
+ * </pre>
  */
-public enum ServiceType {
-  /** A simple service; possibly a globally shared singleton */
-  SIMPLE,
-  /** A runtime-aware service; requires an instance per {@linkplain BTraceRuntime} */
-  RUNTIME,
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Repeatable(RequestPermissions.class)
+public @interface RequestPermission {
   /**
-   * An extension; managed by the ExtensionRegistry with proper lifecycle and per-script isolation.
+   * The requested permission.
+   *
+   * @return permission
    */
-  EXTENSION
+  Permission value();
 }

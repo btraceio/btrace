@@ -25,16 +25,6 @@
 
 package org.openjdk.btrace.instr;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -58,7 +48,21 @@ import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.annotations.Event;
 import org.openjdk.btrace.core.annotations.Return;
+import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This class preprocesses a compiled BTrace program. This is done after BTrace safety verification
@@ -80,6 +84,8 @@ import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
  *     publicly accessible
  */
 final class Preprocessor {
+  private static final Logger log = LoggerFactory.getLogger(Preprocessor.class);
+
   private static final String ANNOTATIONS_PREFIX = "org/openjdk/btrace/core/annotations/";
   private static final Type TLS_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "TLS;");
   private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
@@ -137,6 +143,10 @@ final class Preprocessor {
   private static final String RT_SERVICE_CTR_DESC = "(" + RT_CTX_DESC + ")V";
   private static final String SERVICE_CTR_DESC =
       "(" + Constants.STRING_DESC + ")" + Constants.VOID_DESC;
+
+  // Extension-related constants
+  private static final String GET_EXTENSION_DESC =
+      "(" + Constants.CLASS_DESC + ")" + Constants.EXTENSION_DESC;
 
   private static final String JFR_EVENT_TEMPLATE_INTERNAL =
       "org/openjdk/btrace/core/jfr/JfrEvent$Template";
@@ -746,8 +756,8 @@ final class Preprocessor {
           }
         }
       } else if (type == AbstractInsnNode.METHOD_INSN) {
-        MethodInsnNode min = (MethodInsnNode) n;
-        n = unfoldServiceInstantiation(cn, min, l);
+        MethodInsnNode minNode = (MethodInsnNode) n;
+        n = unfoldServiceInstantiation(cn, minNode, l);
       } else if (n.getOpcode() == retopcode
           && getClassifiers(mn).contains(MethodClassifier.RT_AWARE)) {
         addBTraceRuntimeExit(cn, (InsnNode) n, l);
@@ -1069,8 +1079,8 @@ final class Preprocessor {
       if (n.getOpcode() == Opcodes.RETURN) {
         AbstractInsnNode prev = n.getPrevious();
         if (prev != null && prev.getType() == AbstractInsnNode.METHOD_INSN) {
-          MethodInsnNode min = (MethodInsnNode) prev;
-          if (min.name.equals("leave")) {
+          MethodInsnNode minNode = (MethodInsnNode) prev;
+          if (minNode.name.equals("leave")) {
             // don't start the runtime if we are bailing out (BTraceRuntime.leave())
             continue;
           }
@@ -1254,12 +1264,16 @@ final class Preprocessor {
     }
     // <clinit> will always be guarded by BTrace error handler
     if (mn.name.equals("<clinit>")) {
-      return EnumSet.of(MethodClassifier.RT_AWARE);
+      classifiers = EnumSet.of(MethodClassifier.RT_AWARE);
+      classifierMap.put(mn, classifiers);
+      return classifiers;
     }
 
     // JFR event handlers will alwyas be guarded by BTrace error handler
     if (jfrHandlerNames.contains(mn.name)) {
-      return EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
+      classifiers = EnumSet.of(MethodClassifier.RT_AWARE, MethodClassifier.GUARDED);
+      classifierMap.put(mn, classifiers);
+      return classifiers;
     }
 
     List<AnnotationNode> annots = getAnnotations(mn);
@@ -1274,6 +1288,7 @@ final class Preprocessor {
         }
       }
     }
+    classifierMap.put(mn, classifiers);
     return classifiers;
   }
 
@@ -1292,11 +1307,11 @@ final class Preprocessor {
   private MethodInsnNode findBTraceRuntimeStart() {
     for (AbstractInsnNode n = clinit.instructions.getFirst(); n != null; n = n.getNext()) {
       if (n.getType() == AbstractInsnNode.METHOD_INSN) {
-        MethodInsnNode min = (MethodInsnNode) n;
-        if (min.getOpcode() == Opcodes.INVOKEVIRTUAL
-            && min.owner.equals(Constants.BTRACERTBASE_INTERNAL)
-            && min.name.equals("start")) {
-          return min;
+        MethodInsnNode minNode = (MethodInsnNode) n;
+        if (minNode.getOpcode() == Opcodes.INVOKEVIRTUAL
+            && minNode.owner.equals(Constants.BTRACERTBASE_INTERNAL)
+            && minNode.name.equals("start")) {
+          return minNode;
         }
       }
     }
@@ -1445,6 +1460,38 @@ final class Preprocessor {
     return ret;
   }
 
+  private boolean isExtensionType(Type type, ClassLoader classLoader) {
+    String className = type.getClassName();
+    // Try with the provided ClassLoader first
+    try {
+      Class<?> clazz = Class.forName(className, false, classLoader);
+      return Extension.class.isAssignableFrom(clazz);
+    } catch (ClassNotFoundException e) {
+      // Try with the current class's classloader as fallback
+      try {
+        Class<?> clazz = Class.forName(className);
+        return Extension.class.isAssignableFrom(clazz);
+      } catch (ClassNotFoundException | LinkageError ex) {
+        return logClassLoadingError(className, ex);
+      }
+    } catch (LinkageError e) {
+      // No fallback for LinkageError - it indicates a fundamental class loading issue
+      return logClassLoadingError(className, e);
+    }
+  }
+
+  private boolean logClassLoadingError(String className, Throwable error) {
+    if (error instanceof ClassNotFoundException) {
+      log.warn("Class '{}' not found when checking extension type", className);
+    } else if (error instanceof LinkageError) {
+      log.warn(
+          "Failed to load class '{}' due to linkage error when checking extension type: {}",
+          className,
+          error.getMessage());
+    }
+    return false;
+  }
+
   private AbstractInsnNode updateInjectedUsage(
       ClassNode cn, FieldInsnNode fin, InsnList l, LocalVarGenerator lvg) {
     if (serviceLocals.containsKey(fin.name)) {
@@ -1476,6 +1523,11 @@ final class Preprocessor {
         }
       }
     }
+    // Auto-detect extension types based on class hierarchy
+    ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+    if (svcType.equals("SIMPLE") && isExtensionType(implType, contextClassLoader)) {
+      svcType = "EXTENSION";
+    }
     int varIdx = lvg.newVar(implType);
     if (svcType.equals("SIMPLE")) {
       if (fctryMethod == null || fctryMethod.isEmpty()) {
@@ -1495,6 +1547,20 @@ final class Preprocessor {
                 false));
         toInsert.add(new InsnNode(Opcodes.DUP));
       }
+    } else if (svcType.equals("EXTENSION")) {
+      // Extension: use registry-based lookup
+      // runtime.getExtension(ExtensionClass.class)
+      toInsert.add(getRuntimeImpl(cn));
+      toInsert.add(new LdcInsnNode(implType));
+      toInsert.add(
+          new MethodInsnNode(
+              Opcodes.INVOKEVIRTUAL,
+              Constants.BTRACERTBASE_INTERNAL,
+              "getExtension",
+              GET_EXTENSION_DESC,
+              false));
+      toInsert.add(new TypeInsnNode(Opcodes.CHECKCAST, implType.getInternalName()));
+      toInsert.add(new InsnNode(Opcodes.DUP));
     } else { // RuntimeService here
       if (fctryMethod == null || fctryMethod.isEmpty()) {
         toInsert.add(new TypeInsnNode(Opcodes.NEW, implType.getInternalName()));
@@ -1529,18 +1595,18 @@ final class Preprocessor {
   }
 
   private AbstractInsnNode unfoldServiceInstantiation(
-      ClassNode cn, MethodInsnNode min, InsnList l) {
-    if (min.owner.equals(SERVICE_INTERNAL)) {
-      AbstractInsnNode next = min.getNext();
-      switch (min.name) {
+      ClassNode cn, MethodInsnNode minNode, InsnList l) {
+    if (minNode.owner.equals(SERVICE_INTERNAL)) {
+      AbstractInsnNode next = minNode.getNext();
+      switch (minNode.name) {
         case "simple":
           {
-            Type[] args = Type.getArgumentTypes(min.desc);
+            Type[] args = Type.getArgumentTypes(minNode.desc);
             if (args.length == 1) {
-              AbstractInsnNode ldcType = min.getPrevious();
+              AbstractInsnNode ldcType = minNode.getPrevious();
               if (ldcType.getType() == AbstractInsnNode.LDC_INSN) {
                 // remove the original sequence
-                l.remove(min);
+                l.remove(minNode);
                 l.remove(ldcType);
                 if (next.getOpcode() == Opcodes.CHECKCAST) {
                   next = next.getNext();
@@ -1557,12 +1623,12 @@ final class Preprocessor {
                 l.insertBefore(next, toInsert);
               }
             } else if (args.length == 2) {
-              AbstractInsnNode ldcType = min.getPrevious();
+              AbstractInsnNode ldcType = minNode.getPrevious();
               AbstractInsnNode ldcFMethod = ldcType.getPrevious();
               if (ldcType.getType() == AbstractInsnNode.LDC_INSN
                   && ldcFMethod.getType() == AbstractInsnNode.LDC_INSN) {
                 // remove the original sequence
-                l.remove(min);
+                l.remove(minNode);
                 l.remove(ldcType);
                 l.remove(ldcFMethod);
                 if (next.getOpcode() == Opcodes.CHECKCAST) {
@@ -1588,12 +1654,12 @@ final class Preprocessor {
           }
         case "runtime":
           {
-            Type[] args = Type.getArgumentTypes(min.desc);
+            Type[] args = Type.getArgumentTypes(minNode.desc);
             if (args.length == 1) {
-              AbstractInsnNode ldcType = min.getPrevious();
+              AbstractInsnNode ldcType = minNode.getPrevious();
               if (ldcType.getType() == AbstractInsnNode.LDC_INSN) {
                 // remove the original sequence
-                l.remove(min);
+                l.remove(minNode);
                 l.remove(ldcType);
                 if (next.getOpcode() == Opcodes.CHECKCAST) {
                   next = next.getNext();
@@ -1617,7 +1683,7 @@ final class Preprocessor {
       }
       return next;
     }
-    return min;
+    return minNode;
   }
 
   private InsnList getReturnSequence(ClassNode cn, MethodNode mn, boolean addRuntimeExit) {
