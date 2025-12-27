@@ -113,7 +113,7 @@ spec:
 **Usage:**
 ```bash
 kubectl exec myapp-with-btrace -c btrace-sidecar -- \
-  btrace $(pgrep -f myapp) /scripts/trace.btrace
+  sh -c 'btrace $(pgrep -f myapp) /scripts/trace.btrace'
 ```
 
 ### Pattern 3: Development Image
