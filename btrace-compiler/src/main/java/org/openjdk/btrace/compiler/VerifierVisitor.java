@@ -52,19 +52,6 @@ import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreeScanner;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.Name;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.TypeMirror;
-import javax.tools.Diagnostic;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Injected;
@@ -78,6 +65,20 @@ import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.extensions.Permission;
 import org.openjdk.btrace.core.extensions.RequiresPermission;
 import org.openjdk.btrace.core.extensions.RequiresPermissions;
+
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
+import javax.tools.Diagnostic;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * This class tree visitor validates a BTrace program's ClassTree.
@@ -877,7 +878,6 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     for (Permission perm : requiredPermissions) {
       if (!declaredPermissions.contains(perm)) {
         reportError("permission.missing", node);
-        return; // Report only first missing permission to avoid noise
       }
     }
   }
