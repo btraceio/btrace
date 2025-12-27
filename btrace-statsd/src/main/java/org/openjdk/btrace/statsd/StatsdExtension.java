@@ -42,6 +42,7 @@ import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.extensions.ExtensionContext;
 import org.openjdk.btrace.core.extensions.ExtensionDescriptor;
+import org.openjdk.btrace.core.extensions.ExtensionException;
 import org.openjdk.btrace.core.extensions.Permission;
 import org.openjdk.btrace.core.extensions.RequiresPermission;
 import org.slf4j.Logger;
@@ -84,15 +85,26 @@ public final class StatsdExtension extends Extension {
       return; // Already initialized
     }
 
-    executor =
-        Executors.newSingleThreadExecutor(
-            r -> {
-              Thread t = new Thread(r, "BTrace StatsD Client - " + ctx.getScriptClassName());
-              t.setDaemon(true);
-              return t;
-            });
+    try {
+      executor =
+          Executors.newSingleThreadExecutor(
+              r -> {
+                Thread t = new Thread(r, "BTrace StatsD Client - " + ctx.getScriptClassName());
+                t.setDaemon(true);
+                return t;
+              });
 
-    executor.submit(this::senderLoop);
+      executor.submit(this::senderLoop);
+    } catch (Exception e) {
+      // Reset running flag so initialization can be retried
+      running.set(false);
+      // Clean up any partially initialized resources
+      if (executor != null) {
+        executor.shutdownNow();
+        executor = null;
+      }
+      throw new ExtensionException("Failed to initialize StatsD extension", e);
+    }
   }
 
   @SuppressWarnings("InfiniteLoopStatement")
