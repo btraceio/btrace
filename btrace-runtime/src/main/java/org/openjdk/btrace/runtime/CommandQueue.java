@@ -11,6 +11,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 final class CommandQueue {
+    private static final long DROP_TIMEOUT_MS = Long.getLong("org.openjdk.btrace.runtime.cmd.dropTimeoutMillis", 1L);
+    private static final int BACKOFF_YIELD_ITERS = Integer.getInteger("org.openjdk.btrace.runtime.cmd.backoffYieldIters", 3000);
+    private static final int BACKOFF_SLEEP_ITERS = Integer.getInteger("org.openjdk.btrace.runtime.cmd.backoffSleepIters", 100);
     private final MpscChunkedArrayQueue<Command> queue;
     private final AtomicLong droppedCommands = new AtomicLong();
 
@@ -41,11 +44,11 @@ final class CommandQueue {
 
     public boolean enqueue(Command cmd) {
         int backoffCntr = 0;
-        long tsCutOff = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1);
+        long tsCutOff = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(DROP_TIMEOUT_MS);
         while (!Thread.interrupted() && !queue.relaxedOffer(cmd)) {
-            if (backoffCntr < 3000) {
+            if (backoffCntr < BACKOFF_YIELD_ITERS) {
                 Thread.yield();
-            } else if (backoffCntr < 3100) {
+            } else if (backoffCntr < BACKOFF_YIELD_ITERS + BACKOFF_SLEEP_ITERS) {
                 LockSupport.parkNanos(1_000_000);
             }
             backoffCntr++;

@@ -27,7 +27,6 @@ package org.openjdk.btrace.runtime;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -112,7 +111,7 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
   protected static final Map<String, BTraceRuntimeImplBase> runtimes = new ConcurrentHashMap<>();
 
   // a set of all the client names connected so far
-  private static final Set<String> clients = new HashSet<>();
+  private static final Set<String> clients = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
   // BTrace Class object corresponding to this client; accessed from instrumented code
   private Class clazz;
@@ -201,7 +200,7 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
               m.setAccessible(true);
               return m.invoke(initValue);
             } catch (Exception e) {
-              e.printStackTrace();
+              log.warn("Failed to clone TLS initial value", e);
               return null;
             }
           }

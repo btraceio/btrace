@@ -44,12 +44,24 @@
  */
 package org.openjdk.btrace.instr;
 
-import java.util.Collection;
 import org.objectweb.asm.ClassVisitor;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 
+import java.util.Collection;
+
 public interface BTraceProbe {
+  /**
+   * Returns the action method prefix for this probe.
+   * This is computed once and cached.
+   *
+   * Format: BTRACE_METHOD_PREFIX + className.replace('/', '$') + "$"
+   * Example: "$btrace$com$example$MyProbe$"
+   *
+   * @return cached action prefix
+   */
+  String getActionPrefix();
+
   Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr);
 
   byte[] getFullBytecode();
@@ -85,4 +97,5 @@ public interface BTraceProbe {
   void applyArgs(ArgsMap argsMap);
 
   BTraceRuntime.Impl getRuntime();
+
 }

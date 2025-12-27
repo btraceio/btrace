@@ -20,6 +20,8 @@ public class BinarySetSettingsCommand extends BinaryCommand {
     private static final byte TYPE_DOUBLE = 6;
 
     private final Map<String, Object> params;
+    private static final ScalarEncoding SCALAR =
+        new ScalarEncoding((byte)0, TYPE_STRING, TYPE_INTEGER, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE, TYPE_BOOLEAN);
 
     static {
         // Register this command type
@@ -46,38 +48,8 @@ public class BinarySetSettingsCommand extends BinaryCommand {
         
         // Write each parameter
         for (Map.Entry<String, ?> entry : params.entrySet()) {
-            // Write the parameter key
             BinaryProtocol.writeString(out, entry.getKey());
-            
-            // Write the parameter value based on its type
-            Object value = entry.getValue();
-            
-            if (value == null) {
-                // Write a null value (type code 0)
-                BinaryProtocol.writeByte(out, (byte) 0);
-            } else if (value instanceof String) {
-                BinaryProtocol.writeByte(out, TYPE_STRING);
-                BinaryProtocol.writeString(out, (String) value);
-            } else if (value instanceof Integer) {
-                BinaryProtocol.writeByte(out, TYPE_INTEGER);
-                BinaryProtocol.writeInt(out, (Integer) value);
-            } else if (value instanceof Long) {
-                BinaryProtocol.writeByte(out, TYPE_LONG);
-                BinaryProtocol.writeLong(out, (Long) value);
-            } else if (value instanceof Boolean) {
-                BinaryProtocol.writeByte(out, TYPE_BOOLEAN);
-                BinaryProtocol.writeBoolean(out, (Boolean) value);
-            } else if (value instanceof Float) {
-                BinaryProtocol.writeByte(out, TYPE_FLOAT);
-                BinaryProtocol.writeFloat(out, (Float) value);
-            } else if (value instanceof Double) {
-                BinaryProtocol.writeByte(out, TYPE_DOUBLE);
-                BinaryProtocol.writeDouble(out, (Double) value);
-            } else {
-                // For unsupported types, convert to string
-                BinaryProtocol.writeByte(out, TYPE_STRING);
-                BinaryProtocol.writeString(out, value.toString());
-            }
+            SCALAR.writeValue(out, entry.getValue());
         }
     }
 
@@ -94,40 +66,10 @@ public class BinarySetSettingsCommand extends BinaryCommand {
             // Read the parameter key
             String key = BinaryProtocol.readString(in);
             
-            // Read the parameter type
-            byte type = BinaryProtocol.readByte(in);
-            
-            // Read the parameter value based on its type
-            Object value = null;
-            
-            switch (type) {
-                case 0: // null
-                    value = null;
-                    break;
-                case TYPE_STRING:
-                    value = BinaryProtocol.readString(in);
-                    break;
-                case TYPE_INTEGER:
-                    value = BinaryProtocol.readInt(in);
-                    break;
-                case TYPE_LONG:
-                    value = BinaryProtocol.readLong(in);
-                    break;
-                case TYPE_BOOLEAN:
-                    value = BinaryProtocol.readBoolean(in);
-                    break;
-                case TYPE_FLOAT:
-                    value = BinaryProtocol.readFloat(in);
-                    break;
-                case TYPE_DOUBLE:
-                    value = BinaryProtocol.readDouble(in);
-                    break;
-                default:
-                    throw new IOException("Unsupported parameter type: " + type);
-            }
+            Object value = SCALAR.readValue(in);
             
             // Store the parameter
             params.put(key, value);
         }
     }
-} 
+}
