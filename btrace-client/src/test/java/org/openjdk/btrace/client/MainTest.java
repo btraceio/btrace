@@ -77,16 +77,18 @@ class MainTest {
     extractJarMethod.setAccessible(true);
 
     try (JarFile jarFile = new JarFile(sourceJar)) {
-      IOException exception =
+      Exception exception =
           assertThrows(
-              IOException.class,
+              Exception.class,
               () -> {
                 extractJarMethod.invoke(
                     null, jarFile, "META-INF/embedded/nonexistent.jar", targetFile);
               });
 
+      Throwable cause = exception.getCause();
+      assertTrue(cause instanceof IOException, "Expected IOException as cause");
       assertTrue(
-          exception.getCause().getMessage().contains("Embedded JAR not found"),
+          cause.getMessage().contains("Embedded JAR not found"),
           "Expected error message about missing embedded JAR");
     }
   }
