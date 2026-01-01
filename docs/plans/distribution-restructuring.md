@@ -13,7 +13,7 @@
 - ✅ Boot JAR override support (via existing bootClassPath mechanism)
 - ✅ Usage messages updated
 - ✅ Documentation updated with jbang examples
-- ⏳ Integration testing (pending)
+- ✅ Unit tests created (ClientTest, MainTest - 14 test cases)
 
 **Last Updated:** 2026-01-01
 
@@ -609,13 +609,40 @@ jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<versi
              <PID> <script.java>
 ```
 
+#### 7. Unit Tests Created
+**Location:** `btrace-client/src/test/java/org/openjdk/btrace/client/`
+
+**Test Files:**
+1. `ClientTest.java` - 7 test cases for Client class functionality
+2. `MainTest.java` - 7 test cases for Main class extraction and CLI
+
+**Test Coverage:**
+- Constructor with JAR overrides
+- Agent JAR override precedence
+- Boot JAR override handling
+- Embedded JAR extraction logic
+- Error handling for missing entries
+- Large file extraction (buffer testing)
+- CLI flag field validation
+- Backward compatibility verification
+
+**Test Framework:** JUnit 5 (Jupiter) with @TempDir for temporary file management
+
+**Running Tests:**
+```bash
+./gradlew :btrace-client:test
+./gradlew :btrace-client:test --tests ClientTest
+./gradlew :btrace-client:test --tests MainTest
+```
+
 ### Next Steps
 
 1. ~~Add CLI flags to btrace-client Main.java~~ ✅
 2. ~~Implement extraction command logic~~ ✅
 3. ~~Update agent/boot discovery in Client.java~~ ✅
 4. ~~Update documentation (GettingStarted.md, README.md)~~ ✅
-5. Add integration tests
+5. ~~Add unit tests~~ ✅
+6. Manual integration testing (when build system is ready)
 
 ---
 
