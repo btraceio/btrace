@@ -47,9 +47,45 @@ Commit the regenerated golden files to Git.
 
 ### Installation
 
+#### JBang (Easiest - Recommended)
+
+Use [JBang](https://www.jbang.dev/) to run BTrace without manual installation:
+
+```sh
+# Install JBang (one time)
+curl -Ls https://sh.jbang.dev | bash -s - app setup
+
+# Use BTrace immediately (replace <version> with desired version, e.g., 2.3.0)
+jbang org.openjdk.btrace:btrace-client:<version> <PID> <script.java>
+
+# After first run, use shorter alias
+jbang btrace <PID> <script.java>
+```
+
+**Note:** Replace `<version>` with the desired BTrace version (e.g., `2.3.0`). See [releases](https://github.com/btraceio/btrace/releases) for available versions.
+
+**Benefits:** Zero installation, automatic version management, works everywhere (Windows/macOS/Linux/containers), perfect for CI/CD.
+
+**Extract agent JARs** (if needed for `--agent-jar`/`--boot-jar` flags):
+```sh
+# Extract embedded JARs
+jbang btrace --extract-agent ~/.btrace
+
+# This creates ~/.btrace/btrace-agent.jar and ~/.btrace/btrace-boot.jar
+# Then use them:
+jbang btrace --agent-jar ~/.btrace/btrace-agent.jar --boot-jar ~/.btrace/btrace-boot.jar <PID> <script.java>
+
+# Or find them in Maven local repository (after first jbang run):
+# ~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
+# ~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
+```
+
+See [Getting Started Guide](docs/GettingStarted.md#jbang-installation-recommended-for-quick-start) for complete JBang documentation and examples.
+
+#### Binary Distribution
+
 **Download:** Get the latest release from the [release page](https://github.com/btraceio/btrace/releases/latest)
 
-**Binary distribution:**
 ```sh
 # Extract the archive
 tar -xzf btrace-*.tar.gz
@@ -61,7 +97,8 @@ export BTRACE_HOME=/path/to/btrace
 export PATH=$BTRACE_HOME/bin:$PATH
 ```
 
-**Package installation:**
+#### Package Installation
+
 ```sh
 # RPM-based systems
 sudo rpm -i btrace-*.rpm
@@ -91,6 +128,16 @@ See [docker/README.md](docker/README.md) for complete Docker documentation.
 
 ### Quick Start
 
+**With JBang (no installation required):**
+```sh
+# Attach to running application
+jbang btrace <PID> <trace_script.java>
+
+# Extract agent JARs
+jbang btrace --extract-agent ~/.btrace
+```
+
+**With installed BTrace:**
 ```sh
 # Attach to running application
 btrace <PID> <trace_script.java>
