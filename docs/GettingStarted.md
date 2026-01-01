@@ -51,10 +51,72 @@ sudo rpm -i btrace-<version>.rpm
 sudo dpkg -i btrace-<version>.deb
 ```
 
+### JBang Installation (Recommended for Quick Start)
+
+[JBang](https://www.jbang.dev/) makes it incredibly easy to use BTrace without manual installation. It automatically downloads and caches BTrace from Maven Central.
+
+**Install JBang** (one time):
+```bash
+# macOS / Linux
+curl -Ls https://sh.jbang.dev | bash -s - app setup
+
+# Windows (PowerShell)
+iex "& { $(iwr https://ps.jbang.dev) } app setup"
+
+# Or use package managers
+brew install jbangdev/tap/jbang    # macOS
+sdk install jbang                   # SDKMAN
+```
+
+**Use BTrace with JBang** (no separate BTrace installation needed):
+```bash
+# Attach to running application (replace <version> with desired version, e.g., 2.3.0)
+jbang org.openjdk.btrace:btrace-client:<version> <PID> <script.java>
+
+# Use shorter alias after first run
+jbang btrace <PID> <script.java>
+```
+
+**Extract agent JARs** (if needed for `--agent-jar`/`--boot-jar` flags):
+```bash
+# Extract to a directory of your choice
+jbang org.openjdk.btrace:btrace-client:<version> --extract-agent ~/.btrace
+
+# This creates:
+#   ~/.btrace/btrace-agent.jar
+#   ~/.btrace/btrace-boot.jar
+
+# Then use them explicitly:
+jbang btrace --agent-jar ~/.btrace/btrace-agent.jar \
+             --boot-jar ~/.btrace/btrace-boot.jar \
+             <PID> <script.java>
+```
+
+**Alternative: Use JARs from Maven local repository:**
+After jbang downloads BTrace, find the JARs in your local Maven repository:
+```bash
+# JARs are cached at:
+~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
+~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
+
+# Use them directly:
+jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
+             --boot-jar ~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
+             <PID> <script.java>
+```
+
+**Benefits:**
+- No manual download or installation
+- Automatic version management via Maven coordinates
+- Works across all platforms (Windows, macOS, Linux)
+- Perfect for CI/CD pipelines and containers
+
 ### Verify Installation
 
 ```bash
 btrace -h
+# or with JBang
+jbang btrace -h
 ```
 
 You should see the BTrace help message with available options.
@@ -145,11 +207,51 @@ public class TraceMethods {
 
 Congratulations! You've successfully traced your first Java application with BTrace.
 
-## Three Ways to Run BTrace
+## Four Ways to Run BTrace
 
-BTrace offers three deployment modes to suit different use cases:
+BTrace offers multiple deployment modes to suit different use cases:
 
-### 1. Attach Mode (Most Common)
+### 1. JBang Mode (Easiest - Recommended)
+
+Use JBang to run BTrace without installation:
+
+```bash
+jbang org.openjdk.btrace:btrace-client:<version> <PID> <script.java>
+```
+
+**When to use:**
+- Quick start without installation
+- CI/CD pipelines
+- Trying BTrace for the first time
+- Containers and cloud environments
+
+**Examples:**
+```bash
+# Basic usage
+jbang btrace 12345 MyTrace.java
+
+# With verbose output
+jbang btrace -v 12345 MyTrace.java arg1 arg2
+
+# Extract agent JARs, then use them explicitly
+jbang btrace --extract-agent ~/.btrace
+jbang btrace --agent-jar ~/.btrace/btrace-agent.jar \
+             --boot-jar ~/.btrace/btrace-boot.jar \
+             12345 MyTrace.java
+
+# Or use JARs from Maven local repository (after jbang downloads them)
+jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
+             --boot-jar ~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
+             12345 MyTrace.java
+```
+
+**Benefits:**
+- Zero installation required
+- Works everywhere (Windows, macOS, Linux, containers)
+- Automatic version management
+- Perfect for reproducible builds
+
+### 2. Attach Mode (Most Common)
 
 Attach to an already running Java process:
 
@@ -171,8 +273,10 @@ btrace -v 12345 MyTrace.java arg1 arg2
 - `-v` - Verbose output
 - `-p <port>` - Specify port for communication
 - `-o <file>` - Redirect output to file
+- `--agent-jar <path>` - Override agent JAR auto-discovery
+- `--boot-jar <path>` - Override boot JAR auto-discovery
 
-### 2. Java Agent Mode (Pre-compiled Scripts)
+### 3. Java Agent Mode (Pre-compiled Scripts)
 
 Start a Java application with BTrace agent and a pre-compiled script:
 
@@ -194,7 +298,7 @@ btracec MyTrace.java
 java -javaagent:/path/to/btrace-agent.jar=script=MyTrace.class MyApp
 ```
 
-### 3. Launcher Mode (btracer)
+### 4. Launcher Mode (btracer)
 
 Use the `btracer` wrapper to compile and attach in one step:
 
