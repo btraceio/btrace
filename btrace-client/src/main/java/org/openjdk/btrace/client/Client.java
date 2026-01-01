@@ -27,9 +27,12 @@ package org.openjdk.btrace.client;
 import com.sun.tools.attach.VirtualMachine;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -38,12 +41,15 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -130,6 +136,9 @@ public class Client {
   private final String dumpDir;
   private final String probeDescPath;
   private final String statsdDef;
+  // override paths for agent and boot JARs (for jbang support)
+  private final String agentJarOverride;
+  private final String bootJarOverride;
 
   // connection state to the traced JVM
   private volatile Socket sock;
@@ -139,11 +148,11 @@ public class Client {
   private boolean disconnected = false;
 
   public Client(int port) {
-    this(port, null, ".", false, false, false, false, null, null);
+    this(port, null, ".", false, false, false, false, null, null, null, null);
   }
 
   public Client(int port, String probeDescPath) {
-    this(port, null, probeDescPath, false, false, false, false, null, null);
+    this(port, null, probeDescPath, false, false, false, false, null, null, null, null);
   }
 
   public Client(
@@ -156,6 +165,32 @@ public class Client {
       boolean dumpClasses,
       String dumpDir,
       String statsdDef) {
+    this(
+        port,
+        outputFile,
+        probeDescPath,
+        debug,
+        trackRetransforms,
+        trusted,
+        dumpClasses,
+        dumpDir,
+        statsdDef,
+        null,
+        null);
+  }
+
+  public Client(
+      int port,
+      String outputFile,
+      String probeDescPath,
+      boolean debug,
+      boolean trackRetransforms,
+      boolean trusted,
+      boolean dumpClasses,
+      String dumpDir,
+      String statsdDef,
+      String agentJarOverride,
+      String bootJarOverride) {
     this.port = port;
     this.outputFile = outputFile;
     this.probeDescPath = probeDescPath;
@@ -165,6 +200,8 @@ public class Client {
     this.dumpDir = dumpDir;
     this.trackRetransforms = trackRetransforms;
     this.statsdDef = statsdDef;
+    this.agentJarOverride = agentJarOverride;
+    this.bootJarOverride = bootJarOverride;
   }
 
   private static boolean isPortAvailable(int port) {
@@ -267,18 +304,49 @@ public class Client {
    */
   public void attach(String pid, String sysCp, String bootCp) throws IOException {
     try {
-      String agentPath = "/btrace-agent.jar";
-      URL btracePkg = Client.class.getClassLoader().getResource("org/openjdk/btrace/client");
-      if (btracePkg != null) {
-        String tmp = btracePkg.toString();
-        tmp = tmp.substring(0, tmp.indexOf('!'));
-        tmp = tmp.substring("jar:".length(), tmp.lastIndexOf('/'));
-        agentPath = tmp + agentPath;
-        agentPath = new File(new URI(agentPath)).getAbsolutePath();
-        attach(pid, agentPath, sysCp, bootCp);
+      String agentPath;
+
+      // If --agent-jar was specified, use it
+      if (agentJarOverride != null && !agentJarOverride.isEmpty()) {
+        File agentFile = new File(agentJarOverride);
+        if (!agentFile.exists()) {
+          throw new IOException("Specified agent JAR does not exist: " + agentJarOverride);
+        }
+        agentPath = agentFile.getAbsolutePath();
       } else {
-        log.warn("Unable to prepare BTrace agent");
+        // Try to extract embedded agent JAR from uber JAR
+        agentPath = extractEmbeddedAgentJar();
+        if (agentPath == null) {
+          // Fall back to co-location discovery
+          agentPath = "/btrace-agent.jar";
+          URL btracePkg = Client.class.getClassLoader().getResource("org/openjdk/btrace/client");
+          if (btracePkg != null) {
+            String tmp = btracePkg.toString();
+            tmp = tmp.substring(0, tmp.indexOf('!'));
+            tmp = tmp.substring("jar:".length(), tmp.lastIndexOf('/'));
+            agentPath = tmp + agentPath;
+            agentPath = new File(new URI(agentPath)).getAbsolutePath();
+          } else {
+            log.warn("Unable to prepare BTrace agent");
+            return;
+          }
+        }
       }
+
+      // Handle boot JAR override or embedded boot JAR
+      String effectiveBootCp = bootCp;
+      if (bootJarOverride != null && !bootJarOverride.isEmpty()) {
+        File bootFile = new File(bootJarOverride);
+        if (!bootFile.exists()) {
+          throw new IOException("Specified boot JAR does not exist: " + bootJarOverride);
+        }
+        String bootPath = bootFile.getAbsolutePath();
+        effectiveBootCp = (bootCp == null || bootCp.equals("."))
+            ? bootPath
+            : bootPath + File.pathSeparator + bootCp;
+      }
+
+      attach(pid, agentPath, sysCp, effectiveBootCp);
     } catch (RuntimeException | IOException e) {
       throw e;
     } catch (Exception exp) {
@@ -709,6 +777,54 @@ public class Client {
     sock = null;
     ois = null;
     oos = null;
+  }
+
+  /**
+   * Attempts to extract the embedded agent JAR from the uber JAR.
+   *
+   * @return the path to the extracted agent JAR, or null if not found
+   */
+  private String extractEmbeddedAgentJar() {
+    try {
+      URL btraceLoc = Client.class.getProtectionDomain().getCodeSource().getLocation();
+      File btraceJar = new File(btraceLoc.toURI());
+
+      try (JarFile jarFile = new JarFile(btraceJar)) {
+        JarEntry agentEntry = jarFile.getJarEntry("META-INF/embedded/btrace-agent.jar");
+        if (agentEntry == null) {
+          // Not an uber JAR
+          return null;
+        }
+
+        // Create a temp directory for extracted JARs
+        File tempDir = Files.createTempDirectory("btrace-").toFile();
+        tempDir.deleteOnExit();
+
+        File agentFile = new File(tempDir, "btrace-agent.jar");
+        agentFile.deleteOnExit();
+
+        // Extract the agent JAR
+        try (InputStream in = jarFile.getInputStream(agentEntry);
+            OutputStream out = new FileOutputStream(agentFile)) {
+          byte[] buffer = new byte[8192];
+          int bytesRead;
+          while ((bytesRead = in.read(buffer)) != -1) {
+            out.write(buffer, 0, bytesRead);
+          }
+        }
+
+        if (log.isDebugEnabled()) {
+          log.debug("Extracted embedded agent JAR to: {}", agentFile.getAbsolutePath());
+        }
+
+        return agentFile.getAbsolutePath();
+      }
+    } catch (Exception e) {
+      if (log.isDebugEnabled()) {
+        log.debug("Failed to extract embedded agent JAR: {}", e.getMessage());
+      }
+      return null;
+    }
   }
 
   // -- Internals only below this point

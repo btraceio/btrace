@@ -171,6 +171,57 @@ task clientJar(type: ShadowJar) {
     relocate 'org.slf4j', 'org.openjdk.btrace.libs.client.org.slf4j'
 }
 
+task apiJar(type: Jar) {
+    group 'Build'
+    description 'Creates API JAR for compile-time dependencies'
+    archiveBaseName.set('btrace-api')
+    archiveVersion.set('')
+    archiveClassifier.set('')
+    destinationDirectory = libsDir
+
+    from(project(':btrace-api').sourceSets.main.output)
+}
+
+task uberJar(type: ShadowJar) {
+    group 'Build'
+    description 'Creates uber JAR with embedded agent and boot JARs'
+    archiveBaseName.set('btrace')
+    archiveVersion.set('')
+    archiveClassifier.set('')
+    destinationDirectory = libsDir
+
+    dependsOn agentJar, bootJar
+
+    from(project(':btrace-client').sourceSets.main.output)
+    from(project(':btrace-agent').sourceSets.main.output)
+    from(project(':btrace-compiler').sourceSets.main.output)
+    from(project(':btrace-core').sourceSets.main.output)
+    from(project(':btrace-runtime').sourceSets.main.output)
+    from(project(':btrace-instr').sourceSets.main.output)
+
+    manifest {
+        attributes(
+            'Main-Class': 'org.openjdk.btrace.client.Main',
+            'BTrace-Agent-Embedded': 'META-INF/embedded/btrace-agent.jar',
+            'BTrace-Boot-Embedded': 'META-INF/embedded/btrace-boot.jar',
+            'BTrace-Version': version
+        )
+    }
+
+    configurations = [project.configurations.artifact]
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.uber.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+
+    doLast {
+        def uberJarFile = archiveFile.get().asFile
+        ant.zip(destfile: uberJarFile, update: true) {
+            zipfileset(file: agentJar.archiveFile.get().asFile, fullpath: 'META-INF/embedded/btrace-agent.jar')
+            zipfileset(file: bootJar.archiveFile.get().asFile, fullpath: 'META-INF/embedded/btrace-boot.jar')
+        }
+    }
+}
+
 task fixPermissions(type: Exec) {
     onlyIf {
         !OperatingSystem.current().isWindows()

@@ -27,11 +27,18 @@ package org.openjdk.btrace.client;
 
 import java.io.Console;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.Messages;
@@ -66,6 +73,9 @@ public final class Main {
   private static String OUTPUT_FILE;
   private static String DUMP_DIR;
   private static String PROBE_DESC_PATH;
+  private static String AGENT_JAR_OVERRIDE;
+  private static String BOOT_JAR_OVERRIDE;
+  private static String EXTRACT_AGENT_DIR;
 
   static {
     DebugSupport.initLoggers(Boolean.getBoolean("com.sun.btrace.debug"), null);
@@ -150,6 +160,14 @@ public final class Main {
             }
           }
           break;
+        case "--extract-agent":
+          if (i < args.length - 1) {
+            EXTRACT_AGENT_DIR = args[i + 1];
+          } else {
+            EXTRACT_AGENT_DIR = ".";
+          }
+          handleExtractAgent();
+          return;
       }
     }
 
@@ -227,6 +245,12 @@ public final class Main {
         } else if (args[count].equals("-x")) {
           log.debug("submitting probe in unattended mode");
           unattended = true;
+        } else if (args[count].equals("--agent-jar")) {
+          AGENT_JAR_OVERRIDE = args[++count];
+          if (log.isDebugEnabled()) log.debug("agent JAR override: {}", AGENT_JAR_OVERRIDE);
+        } else if (args[count].equals("--boot-jar")) {
+          BOOT_JAR_OVERRIDE = args[++count];
+          if (log.isDebugEnabled()) log.debug("boot JAR override: {}", BOOT_JAR_OVERRIDE);
         } else {
           usage();
         }
@@ -270,7 +294,9 @@ public final class Main {
               TRUSTED,
               DUMP_CLASSES,
               DUMP_DIR,
-              statsdDef);
+              statsdDef,
+              AGENT_JAR_OVERRIDE,
+              BOOT_JAR_OVERRIDE);
       if (resumeProbe != null) {
         registerExitHook(client);
         if (con != null) {
@@ -441,5 +467,55 @@ public final class Main {
     exiting = true;
     System.err.println(msg);
     System.exit(code);
+  }
+
+  /**
+   * Extracts embedded agent JARs from the uber JAR to the specified directory.
+   */
+  private static void handleExtractAgent() {
+    if (EXTRACT_AGENT_DIR == null) {
+      return;
+    }
+
+    File outputDir = new File(EXTRACT_AGENT_DIR);
+    if (!outputDir.exists() && !outputDir.mkdirs()) {
+      errorExit("Failed to create output directory: " + outputDir.getAbsolutePath(), 1);
+    }
+
+    URL btraceLoc = Main.class.getProtectionDomain().getCodeSource().getLocation();
+    try (JarFile btrace = new JarFile(new File(btraceLoc.toURI()))) {
+      File agentFile = new File(outputDir, "btrace-agent.jar");
+      File bootFile = new File(outputDir, "btrace-boot.jar");
+
+      extractJar(btrace, "META-INF/embedded/btrace-agent.jar", agentFile);
+      extractJar(btrace, "META-INF/embedded/btrace-boot.jar", bootFile);
+
+      System.out.println("Extracted agent JARs to: " + outputDir.getAbsolutePath());
+      System.out.println("  - " + agentFile.getName());
+      System.out.println("  - " + bootFile.getName());
+      System.exit(0);
+    } catch (Exception e) {
+      errorExit("Failed to extract agent JARs: " + e.getMessage(), 1);
+    }
+  }
+
+  /**
+   * Extracts a single JAR entry from the source JAR to the target file.
+   */
+  private static void extractJar(JarFile source, String entryPath, File target)
+      throws IOException {
+    JarEntry entry = source.getJarEntry(entryPath);
+    if (entry == null) {
+      throw new IOException("Embedded JAR not found: " + entryPath);
+    }
+
+    try (InputStream in = source.getInputStream(entry);
+        OutputStream out = new FileOutputStream(target)) {
+      byte[] buffer = new byte[8192];
+      int bytesRead;
+      while ((bytesRead = in.read(buffer)) != -1) {
+        out.write(buffer, 0, bytesRead);
+      }
+    }
   }
 }
