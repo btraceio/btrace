@@ -2,10 +2,9 @@ buildscript { scriptHandler ->
     apply from: rootProject.file('buildSrc/shared.gradle'), to: scriptHandler
 }
 
-// Note: versioning plugin disabled due to JGit incompatibility with git worktrees
-// plugins {
-//     alias(libs.plugins.versioning)
-// }
+plugins {
+    alias(libs.plugins.versioning)
+}
 
 dependencies {
     implementation libs.slf4j
@@ -27,29 +26,12 @@ jar {
     manifest {
         attributes(
                 'Built-By'       : System.properties['user.name'],
-                'Build-Timestamp': new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
-                'Build-Revision' : getGitCommit(),
+                'Build-Timestamp': new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+                'Build-Revision' : versioning.info.commit,
                 'Created-By'     : "Gradle ${gradle.gradleVersion}",
                 'Build-Jdk'      : "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
                 'Build-OS'       : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
                 'Main-Class'     : "org.openjdk.btrace.client.Main"
         )
-    }
-}
-import java.text.SimpleDateFormat
-import java.util.Date
-
-// Workaround for git worktree incompatibility with versioning plugin
-def getGitCommit() {
-    try {
-        def stdout = new ByteArrayOutputStream()
-        exec {
-            commandLine 'git', 'rev-parse', 'HEAD'
-            standardOutput = stdout
-            ignoreExitValue = true
-        }
-        return stdout.toString().trim()
-    } catch (Exception e) {
-        return 'unknown'
     }
 }
