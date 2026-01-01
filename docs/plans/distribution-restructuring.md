@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase 1 (Alternative 1) - IN PROGRESS**
+**Phase 1 (Alternative 1) - COMPLETE ✅**
 - ✅ btrace-api module created
 - ✅ apiJar task implemented (generates 14MB JAR)
 - ✅ uberJar task implemented (generates 16MB JAR with embedded agent/boot JARs)
@@ -14,6 +14,21 @@
 - ✅ Usage messages updated
 - ✅ Documentation updated with jbang examples
 - ✅ Unit tests created (ClientTest, MainTest - 14 test cases)
+- ✅ Test fixes for CI (reflection exception handling)
+- ✅ Versioning plugin re-enabled
+- ✅ PR created and ready for review
+
+**Implementation Details:**
+- **Pull Request:** #786 (Draft)
+- **Branch:** btrace-feature-distro-tmp
+- **Commits:**
+  - a1acfe95: feat: add --agent-jar, --boot-jar, --extract-agent CLI flags
+  - cd8fc7d3: test: add unit tests for CLI flags and JAR extraction
+  - 8f700b41: dist: add btrace-api module and uber JAR build configuration
+  - 3fb3ab37: test: fix reflection exception handling in MainTest
+  - 631e4d1b: build: enable versioning plugin in btrace-client
+- **Files Changed:** 11 files, +1556 additions, -26 deletions
+- **Base Branch:** develop (8979a800)
 
 **Last Updated:** 2026-01-01
 
