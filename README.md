@@ -149,6 +149,32 @@ btracec <trace_script.java>
 btracer <compiled_script.class> <java-application-and-args>
 ```
 
+### Oneliner Quick Examples
+
+BTrace now supports DTrace-style oneliners for quick debugging without writing full Java scripts:
+
+```sh
+# Trace method entry with arguments
+btrace -n 'javax.swing.*::setText @entry { print method, args }' <PID>
+
+# Find slow database queries (>100ms)
+btrace -n 'java.sql.Statement::execute* @return if duration>100ms { print method, duration }' <PID>
+
+# Count method invocations
+btrace -n 'java.util.HashMap::get @entry { count }' <PID>
+
+# Print stack trace on OutOfMemoryError
+btrace -n 'java.lang.OutOfMemoryError::<init> @return { stack(10) }' <PID>
+```
+
+**Supported features:**
+- **Locations**: `@entry`, `@return`, `@error`
+- **Actions**: `print`, `count`, `time`, `stack`
+- **Filters**: `if duration>NUMBERms`, `if args[N]==VALUE`
+- **Patterns**: Wildcards (`*`, `?`) and regex (`/pattern/`)
+
+See [Oneliner Guide](docs/OnelinerGuide.md) for complete syntax and examples.
+
 ### Documentation
 For comprehensive documentation, tutorials, and guides:
 * **[BTrace Documentation Hub](docs/README.md)** - Complete documentation index with learning paths, quick reference, troubleshooting, and more
