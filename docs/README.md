@@ -13,6 +13,7 @@ Get up and running in 5 minutes with installation, your first script, and common
 | Document | Description | Target Audience |
 |----------|-------------|-----------------|
 | **[Getting Started](GettingStarted.md)** | Installation, first script, deployment modes, common pitfalls | New users, quick start |
+| **[Oneliner Guide](OnelinerGuide.md)** | DTrace-style oneliners for quick debugging without scripts | Quick debugging, ops/SRE |
 | **[Quick Reference](QuickReference.md)** | Annotations, patterns, CLI commands, built-in functions | Experienced users, quick lookup |
 | **[BTrace Tutorial](BTraceTutorial.md)** | Comprehensive lessons covering all features | All users, in-depth learning |
 | **[Troubleshooting Guide](Troubleshooting.md)** | Common errors, debugging, performance, compatibility | Problem-solving, debugging |
@@ -23,8 +24,9 @@ Get up and running in 5 minutes with installation, your first script, and common
 ### I'm New to BTrace
 1. Read [Getting Started Guide](GettingStarted.md) (10 minutes)
 2. Try the 5-minute quick start example
-3. Explore [BTrace Tutorial](BTraceTutorial.md) lessons 1-3
-4. Keep [Quick Reference](QuickReference.md) handy
+3. Learn [Oneliner syntax](OnelinerGuide.md) for quick debugging (5 minutes)
+4. Explore [BTrace Tutorial](BTraceTutorial.md) lessons 1-3
+5. Keep [Quick Reference](QuickReference.md) handy
 
 ### I Need to Solve a Problem
 1. Check [Troubleshooting Guide](Troubleshooting.md) for your error
@@ -33,6 +35,7 @@ Get up and running in 5 minutes with installation, your first script, and common
 4. Ask on [Slack](http://btrace.slack.com/) or [Gitter](https://gitter.im/btraceio/btrace)
 
 ### I Need a Quick Lookup
+- **Quick Debug?** → [Oneliner Guide](OnelinerGuide.md) for DTrace-style one-line commands
 - **Annotations?** → [Quick Reference: Core Annotations](QuickReference.md#core-annotations)
 - **CLI Commands?** → [Quick Reference: CLI Commands](QuickReference.md#cli-commands)
 - **Common Patterns?** → [Quick Reference: Common Patterns](QuickReference.md#common-patterns)

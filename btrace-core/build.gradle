@@ -5,7 +5,6 @@ buildscript { scriptHandler ->
 }
 
 plugins {
-    alias(libs.plugins.versioning)
     alias(libs.plugins.jmh)
     id 'jacoco'
 }
@@ -35,7 +34,7 @@ jmh {
 processResources {
     filter ReplaceTokens, tokens: [
         "btrace.version": project.version,
-        "hash"          : versioning.info.commit
+        "hash"          : getGitCommit()
     ]
 }
 
