@@ -8,6 +8,98 @@ Creating a DTrace-style oneliner language for BTrace is **highly feasible** and 
 
 ---
 
+## Implementation Status
+
+### ✅ Phase 1: Alternative 1 (Minimal) - COMPLETED
+
+**Completed**: January 2026
+
+**Implementation Summary:**
+- **Core Components** (~1200 LoC):
+  - `OnelinerLexer.java` (150 LoC) - Tokenizer with regex and string support
+  - `OnelinerParser.java` (300 LoC) - Recursive descent parser
+  - `OnelinerAST.java` (200 LoC) - AST node definitions
+  - `OnelinerValidator.java` (150 LoC) - Semantic validation
+  - `OnelinerCodeGenerator.java` (350 LoC) - Java source generation
+  - `OnelinerException.java` (50 LoC) - Error handling with position tracking
+
+- **Test Suite** (58 tests):
+  - 26 parser unit tests
+  - 22 code generator unit tests
+  - 10 integration tests (end-to-end compilation)
+
+- **CLI Integration**:
+  - Added `-n`/`--oneliner` flag to Main.java:256
+  - Oneliner compilation flow in Main.java:331
+  - Updated messages.properties with usage documentation
+
+- **Documentation** (~1200 lines):
+  - `docs/OnelinerGuide.md` (600+ lines) - Comprehensive guide
+  - Updated `README.md` with oneliner examples
+  - Updated `docs/README.md` documentation hub
+  - Updated `docs/GettingStarted.md` with 2-minute quick start
+
+**Capabilities Delivered:**
+- ✅ Probe points: `@entry`, `@return`, `@error`
+- ✅ Actions: `print`, `count`, `time`, `stack`
+- ✅ Filters: `if duration>NUMBERms`, `if args[N]==VALUE`
+- ✅ Patterns: Wildcards (`*`, `?`) and regex (`/pattern/`)
+- ✅ Class patterns with package wildcards (`javax.swing.*`, `javax.swing.**`)
+- ✅ Method patterns with wildcards and regex
+- ✅ Special method names: `<init>`, `<clinit>`
+- ✅ Multiple actions per probe
+- ✅ Stack traces with configurable depth
+
+**Examples Working:**
+```bash
+# Trace Swing UI updates
+btrace -n 'javax.swing.*::setText @entry { print method, args }' 1234
+
+# Count HashMap operations
+btrace -n 'java.util.HashMap::get @entry { count }' 1234
+
+# Find slow database queries
+btrace -n 'java.sql.Statement::execute* @return if duration>100ms { print method, duration }' 1234
+
+# Track OutOfMemoryError with stack
+btrace -n 'java.lang.OutOfMemoryError::<init> @return { stack(10) }' 1234
+```
+
+**Pull Request**: #788 (Draft, labeled with AI)
+
+**Branch**: `btrace-feature-oneliner`
+
+**Code Quality:**
+- ✅ Google Java Format applied (spotlessApply)
+- ✅ No compiler warnings
+- ✅ SLF4J logging for debug mode
+- ✅ Clear error messages with position tracking
+- ✅ Comprehensive test coverage
+
+### 🔜 Phase 2: Alternative 2 (Moderate) - PLANNED
+
+**Timeline**: 4-6 weeks after Phase 1 merge
+
+**Planned Features:**
+- Aggregations: `@hist=histogram`, `@avg=avg`, `@min=min`, `@max=max`, `@sum=sum`
+- Multi-probe support: `probe1 | probe2 | probe3`
+- CALL location: `@call:Target::method`
+- Enhanced filters with AND/OR logic
+- Grouping with multiple keys: `by method, class`
+- Aggregation actions: `@hist << duration by method`
+
+**Estimated Scope:**
+- Parser enhancements: ~300 LoC
+- Code generator updates: ~200 LoC
+- Additional tests: ~30 tests
+- Documentation updates: ~200 lines
+
+### 📋 Phase 3: Alternative 3 (Comprehensive) - DEFERRED
+
+Future consideration based on user feedback and demand for advanced features.
+
+---
+
 ## Key Requirements
 
 - **Execution**: Both CLI (`btrace -n "oneliner"`) and file-based with simplified syntax
