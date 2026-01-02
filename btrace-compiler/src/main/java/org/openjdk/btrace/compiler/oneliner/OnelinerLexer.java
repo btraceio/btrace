@@ -305,7 +305,7 @@ public class OnelinerLexer {
   }
 
   private boolean isIdentifierStart(char ch) {
-    return Character.isLetter(ch) || ch == '_' || ch == '*' || ch == '?' || ch == '<' || ch == '>';
+    return Character.isLetter(ch) || ch == '_' || ch == '*' || ch == '?';
   }
 
   private boolean isIdentifierPart(char ch) {
@@ -314,8 +314,6 @@ public class OnelinerLexer {
         || ch == '.'
         || ch == '*'
         || ch == '?'
-        || ch == '<'
-        || ch == '>'
         || ch == '$';
   }
 }

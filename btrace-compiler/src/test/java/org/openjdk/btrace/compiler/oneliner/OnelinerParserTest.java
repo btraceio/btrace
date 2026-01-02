@@ -218,6 +218,6 @@ class OnelinerParserTest {
   @Test
   void testErrorEmptyActionBlock() {
     String input = "javax.swing.*::setText @entry { }";
-    assertThrows(IllegalArgumentException.class, () -> OnelinerParser.parse(input));
+    assertThrows(OnelinerException.class, () -> OnelinerParser.parse(input));
   }
 }

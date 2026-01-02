@@ -69,6 +69,18 @@ public class OnelinerParser {
       return "/" + regex + "/";
     } else if (check(TokenType.IDENTIFIER)) {
       return advance().value;
+    } else if (check(TokenType.LT)) {
+      // Handle special method names like <init> and <clinit>
+      advance(); // consume '<'
+      if (!check(TokenType.IDENTIFIER)) {
+        error("Expected 'init' or 'clinit' after '<'");
+      }
+      String methodName = advance().value;
+      if (!check(TokenType.GT)) {
+        error("Expected '>' after '" + methodName + "'");
+      }
+      advance(); // consume '>'
+      return "<" + methodName + ">";
     } else {
       error("Expected " + patternName + " (identifier or regex)");
       return null;

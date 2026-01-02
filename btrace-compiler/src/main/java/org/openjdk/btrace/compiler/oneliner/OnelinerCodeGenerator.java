@@ -20,7 +20,7 @@ public class OnelinerCodeGenerator {
   public static String generate(OnelinerNode node) {
     StringBuilder sb = new StringBuilder();
 
-    String className = "BTraceOneliner_" + System.currentTimeMillis();
+    String className = "BTraceOneliner";
 
     // Package and imports
     sb.append("package org.openjdk.btrace.generated;\n\n");
@@ -30,7 +30,7 @@ public class OnelinerCodeGenerator {
     sb.append("import org.openjdk.btrace.core.types.AnyType;\n\n");
 
     // Class declaration
-    sb.append("@BTrace\n");
+    sb.append("@BTrace(trusted = true)\n");
     sb.append("public class ").append(className).append(" {\n\n");
 
     ProbeClause probe = node.probe;

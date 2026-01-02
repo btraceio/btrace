@@ -188,12 +188,13 @@ class OnelinerCodeGeneratorTest {
     OnelinerNode ast1 = OnelinerParser.parse(input);
     String generated1 = OnelinerCodeGenerator.generate(ast1);
 
-    Thread.sleep(2); // Ensure timestamp difference
-
     OnelinerNode ast2 = OnelinerParser.parse(input);
     String generated2 = OnelinerCodeGenerator.generate(ast2);
 
-    assertNotEquals(generated1, generated2); // Class names should differ
+    // Class name is fixed (BTraceOneliner) - uniqueness not required since
+    // each oneliner gets its own temp file and class loader context
+    assertTrue(generated1.contains("class BTraceOneliner"));
+    assertTrue(generated2.contains("class BTraceOneliner"));
   }
 
   @Test
