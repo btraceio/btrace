@@ -121,9 +121,45 @@ jbang btrace -h
 
 You should see the BTrace help message with available options.
 
+## 2-Minute Oneliner Quick Start
+
+**New in BTrace:** DTrace-style oneliners let you debug without writing script files!
+
+### Quick Examples
+
+```bash
+# Find your Java application's PID
+jps
+
+# Trace method entry with arguments
+btrace -n 'TestApp::processData @entry { print method, args }' <PID>
+
+# Find slow methods (>50ms)
+btrace -n 'TestApp::* @return if duration>50ms { print method, duration }' <PID>
+
+# Count method invocations
+btrace -n 'TestApp::doWork @entry { count }' <PID>
+
+# Print stack traces
+btrace -n 'TestApp::processData @entry { stack(5) }' <PID>
+```
+
+**Oneliner Syntax:**
+```
+class-pattern::method-pattern @location [filter] { action }
+```
+
+- **Locations**: `@entry`, `@return`, `@error`
+- **Actions**: `print`, `count`, `time`, `stack`
+- **Filters**: `if duration>NUMBERms`, `if args[N]==VALUE`
+
+**For complete oneliner documentation**, see [Oneliner Guide](OnelinerGuide.md).
+
+**Want full BTrace power?** Continue to the full 5-minute quick start below.
+
 ## 5-Minute Quick Start
 
-Let's trace a simple Java application to see BTrace in action.
+Let's trace a simple Java application to see BTrace in action with full Java scripts.
 
 ### Step 1: Prepare a Test Application
 

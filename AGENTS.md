@@ -12,7 +12,7 @@
 - btrace-instr: ASM-based instrumentation and weaving utilities used by the agent/compiler.
 - btrace-runtime: APIs exposed to scripts; provides safe helpers for printing, timers, and data collection.
 - btrace-client: CLI/attach tooling that sends compiled scripts to the target JVM and streams results.
-- services & services-api: SPI for pluggable services/exporters (for example, statsd integration in `btrace-statsd`).
+- extensions: API + implementations packaged as BTrace extensions (for example, statsd and metrics under `btrace-extensions/*`).
 - Flow: client attaches → compiles/sends script → agent loads and instruments target classes → runtime emits events → client displays/exports.
 
 ### High-Level Flow
@@ -32,7 +32,7 @@
  btrace-client  ->  btrace-agent  ->  btrace-instr
                          |                 |
                          v                 v
-                   btrace-runtime     services-api -> services (statsd)
+                   btrace-runtime     extensions (e.g., statsd, utils, metrics)
                                  
  btrace-compiler  (validates/compiles scripts)
  btrace-dist      (packages binaries)
@@ -120,7 +120,7 @@ public class ReturnTrace {
 - Language: Java. Source/target set to 8; toolchains compile with JDK 11.
 - Format: Google Java Format via Spotless. Import order enforced; unused imports removed.
 - Packages under `org.openjdk.btrace.*`.
-- Module names follow `btrace-<component>` (e.g., `btrace-services-api`).
+- Module names follow `btrace-<component>` (e.g., `btrace-extensions:btrace-utils`).
 
 ## Testing Guidelines
 - Framework: JUnit Jupiter (JUnit 5).
@@ -145,3 +145,7 @@ public class ReturnTrace {
 - Prefer a workspace-local Gradle cache to avoid permission issues: set `GRADLE_USER_HOME=$(pwd)/.gradle-user`.
 - If network interfaces are restricted, force IPv4 to avoid wildcard IP detection errors: set `JAVA_TOOL_OPTIONS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
 - Example: `GRADLE_USER_HOME=$(pwd)/.gradle-user JAVA_TOOL_OPTIONS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false" ./gradlew :btrace-dist:buildZip -x test`
+
+## Hard rules
+- Never commit changes unless they are fully tested or you are explicitly asked to commit
+- Do not use FQNs directly! Always import types and use simple type names in the code!

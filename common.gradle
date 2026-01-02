@@ -32,6 +32,21 @@ ext.getJavadoc = {
     }.get().metadata.installationPath.file("bin/javadoc")
 }
 
+ext.getGitCommit = {
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'rev-parse', 'HEAD'
+            standardOutput = stdout
+            ignoreExitValue = true
+        }
+        def commit = stdout.toString().trim()
+        return commit ?: 'dev'
+    } catch (Exception e) {
+        return 'dev'
+    }
+}
+
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 compileJava {

@@ -1,3 +1,17 @@
+compileJava {
+    // Keep Java 8 compatibility while accessing JDK internal APIs
+    options.fork = true
+    options.forkOptions.jvmArgs += [
+        '--add-exports', 'jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED'
+    ]
+}
+
+javadoc {
+    // Javadoc also needs access to internal APIs - but Java 8 javadoc doesn't support --add-exports
+    // So we exclude the file that uses internal APIs from javadoc generation
+    exclude '**/PerfReaderImpl.java'
+}
+
 dependencies {
     implementation libs.slf4j
     implementation libs.asm
