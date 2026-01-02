@@ -76,6 +76,8 @@ public final class Main {
   private static String AGENT_JAR_OVERRIDE;
   private static String BOOT_JAR_OVERRIDE;
   private static String EXTRACT_AGENT_DIR;
+  private static boolean ONELINER_MODE;
+  private static String ONELINER_SCRIPT;
 
   static {
     DebugSupport.initLoggers(Boolean.getBoolean("com.sun.btrace.debug"), null);
@@ -251,6 +253,10 @@ public final class Main {
         } else if (args[count].equals("--boot-jar")) {
           BOOT_JAR_OVERRIDE = args[++count];
           if (log.isDebugEnabled()) log.debug("boot JAR override: {}", BOOT_JAR_OVERRIDE);
+        } else if (args[count].equals("-n") || args[count].equals("--oneliner")) {
+          ONELINER_MODE = true;
+          ONELINER_SCRIPT = args[++count];
+          if (log.isDebugEnabled()) log.debug("oneliner: {}", ONELINER_SCRIPT);
         } else {
           usage();
         }
@@ -318,17 +324,53 @@ public final class Main {
         client.connectAndListFailedExtensions(host, createCommandListener(client));
         System.exit(0);
       } else {
-        String fileName = args[count + 1];
-        String[] btraceArgs = new String[args.length - count - 2];
-        if (btraceArgs.length > 0) {
-          System.arraycopy(args, count + 2, btraceArgs, 0, btraceArgs.length);
-        }
-        if (!new File(fileName).exists()) {
-          errorExit("File not found: " + fileName, 1);
-        }
-        byte[] code = client.compile(fileName, classPath, includePath);
-        if (code == null) {
-          errorExit("BTrace compilation failed", 1);
+        String fileName;
+        byte[] code;
+        String[] btraceArgs;
+
+        if (ONELINER_MODE) {
+          // Oneliner mode: parse and generate Java source from oneliner
+          try {
+            org.openjdk.btrace.compiler.oneliner.OnelinerAST.OnelinerNode ast =
+                org.openjdk.btrace.compiler.oneliner.OnelinerParser.parse(ONELINER_SCRIPT);
+            org.openjdk.btrace.compiler.oneliner.OnelinerValidator.validate(
+                ast, ONELINER_SCRIPT);
+            String javaSource = org.openjdk.btrace.compiler.oneliner.OnelinerCodeGenerator.generate(ast);
+            String className = "BTraceOneliner_" + System.currentTimeMillis();
+            fileName = className + ".java";
+
+            // Extract script args
+            btraceArgs = new String[args.length - count - 1];
+            if (btraceArgs.length > 0) {
+              System.arraycopy(args, count + 1, btraceArgs, 0, btraceArgs.length);
+            }
+
+            // Compile generated source
+            if (log.isDebugEnabled()) {
+              log.debug("Generated BTrace source:\n{}", javaSource);
+            }
+            code = client.compile(fileName, javaSource, classPath, new PrintWriter(System.err), ".", classPath);
+            if (code == null) {
+              errorExit("Oneliner compilation failed", 1);
+            }
+          } catch (org.openjdk.btrace.compiler.oneliner.OnelinerException e) {
+            errorExit(e.getMessage(), 1);
+            return;
+          }
+        } else {
+          // File mode: compile from file
+          fileName = args[count + 1];
+          btraceArgs = new String[args.length - count - 2];
+          if (btraceArgs.length > 0) {
+            System.arraycopy(args, count + 2, btraceArgs, 0, btraceArgs.length);
+          }
+          if (!new File(fileName).exists()) {
+            errorExit("File not found: " + fileName, 1);
+          }
+          code = client.compile(fileName, classPath, includePath);
+          if (code == null) {
+            errorExit("BTrace compilation failed", 1);
+          }
         }
         if (log.isDebugEnabled()) {
           log.debug("Boot classpath: {}", classPath);
