@@ -1,3 +1,11 @@
+compileJava {
+    sourceCompatibility = 11
+    targetCompatibility = 11
+    options.compilerArgs += [
+        '--add-exports', 'jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED'
+    ]
+}
+
 dependencies {
     implementation libs.slf4j
     implementation libs.asm
