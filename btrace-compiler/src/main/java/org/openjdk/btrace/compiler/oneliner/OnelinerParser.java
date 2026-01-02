@@ -233,9 +233,7 @@ public class OnelinerParser {
     List<String> args = new ArrayList<>();
 
     // Check if there are any identifiers to print
-    if (isP
-
-rintIdentifier(peek().type)) {
+    if (isPrintIdentifier(peek().type)) {
       args.add(parsePrintIdentifier());
 
       while (match(TokenType.COMMA) && isAtEnd() == false) {
