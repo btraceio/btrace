@@ -1,7 +1,7 @@
 compileJava {
-    sourceCompatibility = 11
-    targetCompatibility = 11
-    options.compilerArgs += [
+    // Keep Java 8 compatibility while accessing JDK internal APIs
+    options.fork = true
+    options.forkOptions.jvmArgs += [
         '--add-exports', 'jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED'
     ]
 }
