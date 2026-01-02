@@ -345,16 +345,27 @@ public final class Main {
               System.arraycopy(args, count + 1, btraceArgs, 0, btraceArgs.length);
             }
 
-            // Compile generated source
+            // Write generated source to temp file
             if (log.isDebugEnabled()) {
               log.debug("Generated BTrace source:\n{}", javaSource);
             }
-            code = client.compile(fileName, javaSource, classPath, new PrintWriter(System.err), ".", classPath);
-            if (code == null) {
-              errorExit("Oneliner compilation failed", 1);
+            java.io.File tempFile = java.io.File.createTempFile(className, ".java");
+            try {
+              java.nio.file.Files.write(tempFile.toPath(), javaSource.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+              // Compile from temp file
+              code = client.compile(tempFile.getAbsolutePath(), classPath, new PrintWriter(System.err), ".");
+              if (code == null) {
+                errorExit("Oneliner compilation failed", 1);
+              }
+            } finally {
+              tempFile.delete();
             }
           } catch (org.openjdk.btrace.compiler.oneliner.OnelinerException e) {
             errorExit(e.getMessage(), 1);
+            return;
+          } catch (java.io.IOException e) {
+            errorExit("Failed to create temp file for oneliner: " + e.getMessage(), 1);
             return;
           }
         } else {
