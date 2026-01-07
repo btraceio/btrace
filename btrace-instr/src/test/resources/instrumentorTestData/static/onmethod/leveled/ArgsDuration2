@@ -6,22 +6,26 @@ GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2.$btrace$$level : I
 DUP
 ISTORE 10
 IFLE L0
+L1
+FRAME APPEND [J J I]
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 8
-FRAME APPEND [J J I]
+FRAME SAME
 ILOAD 10
-IFLE L1
+IFLE L2
+L3
+FRAME SAME1 J
 INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 8
 LSUB
 LSTORE 6
-L1
+L2
 FRAME SAME1 J
 ILOAD 10
 ICONST_1
-IF_ICMPLT L2
+IF_ICMPLT L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L2
+IFNE L4
 DUP2
 LSTORE 11
 ALOAD 0
@@ -32,13 +36,13 @@ LLOAD 2
 ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2$args2 (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
-L2
+L4
 FRAME SAME1 J
 ILOAD 10
 ICONST_1
-IF_ICMPLT L3
+IF_ICMPLT L5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L3
+IFNE L5
 DUP2
 LSTORE 13
 ALOAD 0
@@ -49,14 +53,14 @@ LLOAD 2
 ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2$args (Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V
-L3
-FRAME SAME1 J
-L4
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
-LOCALVARIABLE a Ljava/lang/String; L0 L4 1
-LOCALVARIABLE b J L0 L4 2
-LOCALVARIABLE c [Ljava/lang/String; L0 L4 4
-LOCALVARIABLE d [I L0 L4 5
+L5
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE a Ljava/lang/String; L0 L6 1
+LOCALVARIABLE b J L0 L6 2
+LOCALVARIABLE c [Ljava/lang/String; L0 L6 4
+LOCALVARIABLE d [I L0 L6 5
 MAXSTACK = 12
 MAXLOCALS = 15
 

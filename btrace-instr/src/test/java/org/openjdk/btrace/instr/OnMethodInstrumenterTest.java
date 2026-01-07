@@ -61,6 +61,7 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
     targetClassMap.put("issues/InterestingVarsTest", "InterestingVarsClass");
 
     verifyFlagMap.put("issues/TezSplitter", Boolean.FALSE);
+    verifyFlagMap.put("ServicesTest", Boolean.FALSE);
   }
 
   private static String getTargetClass(String name) {

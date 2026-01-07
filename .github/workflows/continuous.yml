@@ -131,7 +131,7 @@ jobs:
       - name: Run tests
         run: |
           set +x
-          ./gradlew --no-daemon --parallel --build-cache  -Pintegration :integration-tests:test
+          ./gradlew --no-daemon --parallel --build-cache -Pintegration -PCI :integration-tests:test
       - name: Check Gradle cache size
         run: du -sh ~/.gradle/caches
       - name: Integration test reports

@@ -24,6 +24,16 @@
  */
 package org.openjdk.btrace.instr;
 
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.DebugSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
@@ -35,15 +45,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The single entry point for class transformation.
@@ -183,7 +184,38 @@ public final class BTraceTransformer implements ClassFileTransformer {
           return classfileBuffer;
         } else {
           if (log.isDebugEnabled()) {
-            log.error("transformed class {}", cr.getJavaClassName());
+            log.debug("transformed class {}", cr.getJavaClassName());
+          }
+          // Optional: verify transformed class via ASM in tests.
+          if (Boolean.getBoolean("btrace.verify.transformed") && !Boolean.TRUE.equals(VerifyGuard.IN_PROGRESS.get())) {
+            boolean allow;
+            String filter = System.getProperty("btrace.verify.filter");
+            if (filter != null && !filter.isEmpty()) {
+              allow = className.matches(filter);
+            } else {
+              allow = isAppClass(className);
+            }
+            if (allow) {
+              try {
+                VerifyGuard.IN_PROGRESS.set(Boolean.TRUE);
+                java.io.StringWriter sw = new java.io.StringWriter();
+                org.objectweb.asm.util.CheckClassAdapter.verify(
+                    new org.objectweb.asm.ClassReader(transformed),
+                    false,
+                    new java.io.PrintWriter(sw));
+                String report = sw.toString();
+                if (!report.isEmpty()) {
+                  log.warn("ASM verification issues for {}:\n{}", className, report);
+                } else if (log.isDebugEnabled()) {
+                  log.debug("ASM verification OK for {}", className);
+                }
+              } catch (Throwable t) {
+                // Don't break transformation on verifier diagnostics
+                log.warn("ASM verification failed for {}: {}", className, t.toString());
+              } finally {
+                VerifyGuard.IN_PROGRESS.remove();
+              }
+            }
           }
           if (debug.isDumpClasses()) {
             debug.dumpClass(className.replace('.', '/'), transformed);
@@ -191,7 +223,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
         }
         return transformed;
       } catch (Throwable th) {
-        log.debug("Failed to transform class {}", className, th);
+        log.warn("Failed to transform class {}", className, th);
         throw th;
       } finally {
         if (entered) {
@@ -201,6 +233,25 @@ public final class BTraceTransformer implements ClassFileTransformer {
     } finally {
       setupLock.readLock().unlock();
     }
+  }
+
+  // Helper guard and app-class predicate for verifier
+  static final class VerifyGuard {
+    static final ThreadLocal<Boolean> IN_PROGRESS = ThreadLocal.withInitial(() -> Boolean.FALSE);
+  }
+
+  private static boolean isAppClass(String internalName) {
+    if (internalName == null) return false;
+    return !(internalName.startsWith("java/") ||
+        internalName.startsWith("javax/") ||
+        internalName.startsWith("jdk/") ||
+        internalName.startsWith("sun/") ||
+        internalName.startsWith("com/sun/") ||
+        internalName.startsWith("org/ietf/") ||
+        internalName.startsWith("org/omg/") ||
+        internalName.startsWith("org/w3c/") ||
+        internalName.startsWith("org/xml/") ||
+        internalName.startsWith("org/openjdk/btrace/"));
   }
 
   static class Filter {

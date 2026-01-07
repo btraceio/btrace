@@ -24,16 +24,6 @@
  */
 package org.openjdk.btrace.instr;
 
-import java.lang.annotation.Annotation;
-import java.lang.ref.Reference;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassReader;
@@ -41,6 +31,19 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.openjdk.btrace.core.PrefixMap;
 import org.openjdk.btrace.core.annotations.BTrace;
+
+import java.lang.annotation.Annotation;
+import java.lang.ref.Reference;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * This class checks whether a given target class matches at least one probe specified in a BTrace
@@ -51,6 +54,8 @@ import org.openjdk.btrace.core.annotations.BTrace;
 public class ClassFilter {
   private static final Class<?> REFERENCE_CLASS = Reference.class;
   private static final PrefixMap SENSITIVE_CLASSES = new PrefixMap();
+  // Method-level sensitive filter: internalClassName -> set of "name+desc" signatures
+  private static final Map<String, Set<String>> SENSITIVE_METHODS = new HashMap<>();
 
   static {
     ClassReader.class.getClassLoader();
@@ -68,7 +73,6 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("java/lang/ThreadLocal$ThreadLocalMap");
     SENSITIVE_CLASSES.add("java/lang/WeakPairMap");
     SENSITIVE_CLASSES.add("java/lang/WeakPairMap$Pair$Weak");
-
     SENSITIVE_CLASSES.add("java/lang/instrument/");
     SENSITIVE_CLASSES.add("java/lang/invoke/");
     SENSITIVE_CLASSES.add("java/lang/ref/");
@@ -82,6 +86,9 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("jdk/internal/");
     SENSITIVE_CLASSES.add("sun/invoke/");
     SENSITIVE_CLASSES.add("org/openjdk/btrace/");
+
+    // Method-level exclusion for Thread: 'threadLocals' will create infinite recursion on JDK 25+.
+    addSensitiveMethod("java/lang/Thread", "threadLocals");
   }
 
   private final List<OnMethod> onMethods;
@@ -176,6 +183,15 @@ public class ClassFilter {
    */
   public static boolean isSensitiveClass(String name) {
     return SENSITIVE_CLASSES.contains(name);
+  }
+
+  public static boolean isSensitiveMethod(String owner, String name, String desc) {
+    Set<String> methods = SENSITIVE_METHODS.get(owner);
+    return methods != null && !methods.isEmpty() && methods.contains(name);
+  }
+
+  private static void addSensitiveMethod(String owner, String name) {
+    SENSITIVE_METHODS.computeIfAbsent(owner, k -> new HashSet<>()).add(name);
   }
 
   public boolean isCandidate(Class<?> target) {

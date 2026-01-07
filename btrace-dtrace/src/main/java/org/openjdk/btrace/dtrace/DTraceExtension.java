@@ -32,9 +32,7 @@ import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.MessageCommand;
 import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.extensions.ExtensionContext;
-import org.openjdk.btrace.core.extensions.ExtensionDescriptor;
 import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.RequiresPermission;
 import org.opensolaris.os.dtrace.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,19 +44,13 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Use the following code to obtain an instance:
  *
- * <pre>
- * <code>
- * {@literal @}Injected(ServiceType.EXTENSION)
+ * Example usage:
+ *
+ * <pre><code>
+ * {@literal @}Injected
  * private static DTraceExtension dtrace;
- * </code>
- * </pre>
+ * </code></pre>
  */
-@ExtensionDescriptor(
-    name = "dtrace",
-    version = "1.0",
-    description = "DTrace integration for BTrace (Solaris only)")
-@RequiresPermission(value = Permission.NATIVE, reason = "Uses native DTrace API")
-@RequiresPermission(value = Permission.THREADS, reason = "DTrace consumer runs in background")
 public final class DTraceExtension extends Extension {
   private static final Logger log = LoggerFactory.getLogger(DTraceExtension.class);
 

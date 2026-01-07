@@ -30,7 +30,6 @@ import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.ServiceType;
 import org.openjdk.btrace.services.impl.Printer;
 
 /**
@@ -40,7 +39,7 @@ import org.openjdk.btrace.services.impl.Printer;
  */
 @BTrace
 public class AllMethods {
-    @Injected(ServiceType.RUNTIME)
+    @Injected
     private static Printer printer;
 
     @OnMethod(

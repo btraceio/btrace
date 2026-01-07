@@ -13,4 +13,5 @@ dependencies {
     runtimeOnly project(path: ':btrace-instr')
 
     testImplementation project(path: ':btrace-instr')
+    testImplementation project(path: ':btrace-extensions:btrace-metrics')
 }

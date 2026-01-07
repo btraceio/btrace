@@ -39,7 +39,7 @@ ALOAD 10
 LLOAD 8
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration2$args1 (JJLjava/lang/String;J)V
 L2
-FRAME SAME1 J
+FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest J J J java/lang/String resources/OnMethodTest T T] [J]
 L3
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
 LOCALVARIABLE a Ljava/lang/String; L0 L3 1

@@ -1,0 +1,28 @@
+plugins {
+    id 'org.openjdk.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-utils'
+    name = 'BTrace Utilities'
+    description = 'Utility services for BTrace scripts (eg. printer)'
+    services = ['org.openjdk.btrace.utils.PrinterService']
+}
+
+dependencies {
+    // API dependencies (minimal) - no legacy services API
+    apiCompileOnly project(':btrace-core')
+    implImplementation project(':btrace-core')
+}

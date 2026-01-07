@@ -82,10 +82,12 @@ public class VariableMapper {
 
   /**
    * Creates a new scope for all the subsequent mappings.<br>
+   * Label snapshots capture the full mapping array capacity to handle variables
+   * that are declared but not yet remapped when the label is visited.
    * @param label the scope label
    */
   public void noteLabel(Label label) {
-    labelMappings.put(currentLabel, new CopyOnWriteArray(mapping, nextMappedVar));
+    labelMappings.put(currentLabel, new CopyOnWriteArray(mapping, mapping.length));
     currentLabel = label;
   }
 
@@ -168,7 +170,16 @@ public class VariableMapper {
 
     // only remap locals slots above method arguments
     if (offset >= 0) {
+      // If the snapshot is too small, fall back to the live mapping.
+      // This handles variables that were declared but not yet remapped when the snapshot was taken.
       if (currentMapping.length() <= offset) {
+        // Check if variable exists in current live mapping
+        if (offset < mapping.length) {
+          int liveVar = mapping[offset];
+          if ((liveVar & REMAP_FLAG) != 0) {
+            return unmask(liveVar);
+          }
+        }
         throw new InstrumentationException(
             String.format(
                 "Variable mapping out of bounds: var=%d, offset=%d, mappingSize=%d, argsSize=%d",

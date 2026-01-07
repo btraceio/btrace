@@ -21,7 +21,12 @@ dependencies {
         implementation files("${toolsJar}")
     }
     implementation project(':btrace-core')
-    implementation project(':btrace-services-api')
     implementation project(':btrace-runtime')
     implementation project(':btrace-instr')
+    implementation project(':btrace-extension')
+}
+
+// Exclude sources that rely on JDK-internal modules from Javadoc to avoid missing-package errors
+tasks.named('javadoc').configure {
+    exclude 'org/openjdk/btrace/agent/PerfReaderImpl.java'
 }

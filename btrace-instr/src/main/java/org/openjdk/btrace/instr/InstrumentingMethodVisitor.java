@@ -129,6 +129,22 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     }
   }
 
+  /**
+   * Normalizes a frame array by replacing BTrace-specific TOP_EXT markers with ASM's TOP constant.
+   * TOP_EXT is used internally to mark the second slot of long/double values, but ASM expects TOP
+   * instead.
+   */
+  private static Object[] normalizeFrameArray(Object[] arr) {
+    if (arr == null || arr.length == 0) {
+      return arr;
+    }
+    Object[] result = new Object[arr.length];
+    for (int i = 0; i < arr.length; i++) {
+      result[i] = arr[i] == TOP_EXT ? TOP : arr[i];
+    }
+    return result;
+  }
+
   @Override
   public void visitFrame(int type, int nLocal, Object[] local, int nStack, Object[] stack) {
     if (lastFramePc == pc) {
@@ -1166,7 +1182,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     }
     lastFramePc = pc;
 
-    if (!frameOffsets.add(l.getOffset()) || !jumpTargetStates.containsKey(l)) {
+    // Always allow explicit frame insertion at the requested label.
+    // Using frameOffsets prevents duplicates at the same offset.
+    if (!frameOffsets.add(l.getOffset())) {
       return;
     }
 
@@ -1187,15 +1205,21 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       return;
     }
 
-    if (!frameOffsets.add(l.getOffset()) || !jumpTargetStates.containsKey(l)) {
+    // Always allow explicit frame insertion at the requested label.
+    // Using frameOffsets prevents duplicates at the same offset.
+    if (!frameOffsets.add(l.getOffset())) {
       return;
     }
 
     lastFramePc = pc;
 
-    Object[] localsArr = trimLocalVars(localTypes.toArray(true));
-    Object[] stackSlots = stack.toArray(true);
+    SavedState saved = jumpTargetStates.get(l);
+    Object[] localsArr = (saved != null ? saved.lvTypes : localTypes).toArray(true);
+    Object[] stackSlots = (saved != null ? saved.sStack : stack).toArray(true);
 
+    // Always use F_NEW for inserted frames to ensure correctness.
+    // Compressed frames (F_SAME, F_APPEND, etc.) require careful offset management
+    // and are better left to ASM's automatic frame computation or explicit visitFrame calls.
     superVisitFrame(F_NEW, localsArr.length, localsArr, stackSlots.length, stackSlots);
   }
 
@@ -1546,8 +1570,24 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       for (int i = 0; i < stackPtr; i++) {
         Object o = stack[i];
         if (o != null) {
-          if (!compress || o != TOP_EXT) {
+          if (compress && o == TOP_EXT) {
+            // When compressing for ASM API, skip TOP_EXT entirely.
+            // ASM's visitFrame() expects category-2 types (long/double) to be represented
+            // by a single element, NOT as [LONG, TOP] or [DOUBLE, TOP].
+            // See: ASM MethodVisitor API and JVMS Chapter 4
+            // - ASM API input: visitFrame(F_NEW, n, [LONG, LONG], ...)
+            // - JVMS bytecode output: Disassembles to [long, top, long, top]
+            // ASM handles the expansion from compact to JVMS format internally.
+            continue;
+          } else {
             ret[localCnt++] = o;
+            // If this is a category-2 type, the next slot should be TOP_EXT (second half).
+            // Skip it to maintain compact ASM API format.
+            if (compress && (o == LONG || o == DOUBLE)) {
+              if (i + 1 < stackPtr && stack[i + 1] == TOP_EXT) {
+                i++; // Skip the TOP_EXT in next iteration
+              }
+            }
           }
         }
       }
@@ -1562,8 +1602,14 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
           Object o = other[ptr];
           arr[idx++] = o;
           if (o == DOUBLE || o == LONG) {
+            // Check if next slot in INPUT already has TOP_EXT
             int next = ptr + 1;
-            if (next >= other.length || (other[next] != null && other[next] != TOP_EXT)) {
+            if (next < other.length && other[next] == TOP_EXT) {
+              // Input already has TOP_EXT, copy it and skip ahead
+              arr[idx++] = TOP_EXT;
+              ptr++; // Skip the TOP_EXT in next iteration
+            } else {
+              // Input doesn't have TOP_EXT, add it
               arr[idx++] = TOP_EXT;
             }
           }
@@ -1621,8 +1667,14 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         Object o = other[i];
         arr[idx++] = o;
         if (o == LONG || o == DOUBLE) {
+          // Check if next slot in INPUT already has TOP_EXT
           int lookup = i + 1;
-          if (lookup == other.length || other[lookup] != TOP_EXT) {
+          if (lookup < other.length && other[lookup] == TOP_EXT) {
+            // Input already has TOP_EXT, copy it and skip ahead
+            arr[idx++] = TOP_EXT;
+            i++; // Skip the TOP_EXT in next iteration
+          } else {
+            // Input doesn't have TOP_EXT, add it
             arr[idx++] = TOP_EXT;
           }
         }
@@ -1654,8 +1706,24 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       for (int i = 0; i <= lastVarPtr; i++) {
         Object o = locals[i];
         if (o != null) {
-          if (!compress || o != TOP_EXT) {
+          if (compress && o == TOP_EXT) {
+            // When compressing for ASM API, skip TOP_EXT entirely.
+            // ASM's visitFrame() expects category-2 types (long/double) to be represented
+            // by a single element, NOT as [LONG, TOP] or [DOUBLE, TOP].
+            // See: ASM MethodVisitor API and JVMS Chapter 4
+            // - ASM API input: visitFrame(F_NEW, n, [Main, int, String, LONG, LONG], ...)
+            // - JVMS bytecode output: Disassembles to [Main, int, String, long, top, long, top]
+            // ASM handles the expansion from compact to JVMS format internally.
+            continue;
+          } else {
             ret[localCnt++] = o;
+            // If this is a category-2 type, the next slot should be TOP_EXT (second half).
+            // Skip it to maintain compact ASM API format.
+            if (compress && (o == LONG || o == DOUBLE)) {
+              if (i + 1 <= lastVarPtr && locals[i + 1] == TOP_EXT) {
+                i++; // Skip the TOP_EXT in next iteration
+              }
+            }
           }
         } else {
           ret[localCnt++] = TOP;

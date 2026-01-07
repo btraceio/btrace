@@ -7,9 +7,11 @@ GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorDuration.$btrace$$level : I
 DUP
 ISTORE 5
 IFLE L0
+L2
+FRAME APPEND [J J I]
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 3
-FRAME APPEND [J J I]
+FRAME SAME
 FRAME SAME1 java/lang/Throwable
 INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 3
@@ -19,9 +21,9 @@ DUP
 ASTORE 6
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/ErrorDuration.$btrace$$level : I
 ICONST_1
-IF_ICMPLT L2
+IF_ICMPLT L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L2
+IFNE L3
 ALOAD 0
 LDC "uncaught"
 LLOAD 1
@@ -32,7 +34,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ErrorDuration"
 ]
-L2
+L3
 FRAME FULL [resources/OnMethodTest J J I java/lang/Throwable] [java/lang/Throwable]
 ATHROW
 MAXSTACK = 6

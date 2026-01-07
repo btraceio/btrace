@@ -26,6 +26,35 @@
 package org.openjdk.btrace.runtime;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
+import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpmcArrayQueue;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.BTraceUtils;
+import org.openjdk.btrace.core.Profiler;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.EventCommand;
+import org.openjdk.btrace.core.comm.ExitCommand;
+import org.openjdk.btrace.core.comm.MessageCommand;
+import org.openjdk.btrace.core.extensions.Extension;
+import org.openjdk.btrace.core.handlers.ErrorHandler;
+import org.openjdk.btrace.core.handlers.EventHandler;
+import org.openjdk.btrace.core.handlers.ExitHandler;
+import org.openjdk.btrace.core.handlers.LowMemoryHandler;
+import org.openjdk.btrace.core.handlers.TimerHandler;
+import org.openjdk.btrace.runtime.profiling.MethodInvocationProfiler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.management.ListenerNotFoundException;
+import javax.management.MBeanServer;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
+import javax.management.ObjectName;
+import javax.management.openmbean.CompositeData;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -67,36 +96,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.management.ListenerNotFoundException;
-import javax.management.MBeanServer;
-import javax.management.NotificationEmitter;
-import javax.management.NotificationListener;
-import javax.management.ObjectName;
-import javax.management.openmbean.CompositeData;
-import org.jctools.queues.MessagePassingQueue;
-import org.jctools.queues.MpmcArrayQueue;
-import org.jctools.queues.MpscChunkedArrayQueue;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.Profiler;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.EventCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.handlers.ErrorHandler;
-import org.openjdk.btrace.core.handlers.EventHandler;
-import org.openjdk.btrace.core.handlers.ExitHandler;
-import org.openjdk.btrace.core.handlers.LowMemoryHandler;
-import org.openjdk.btrace.core.handlers.TimerHandler;
-import org.openjdk.btrace.runtime.profiling.MethodInvocationProfiler;
-import org.openjdk.btrace.services.api.RuntimeContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Base class form multiple Java version specific implementation.
@@ -110,7 +109,7 @@ import org.slf4j.LoggerFactory;
  * @author KLynch
  */
 @SuppressWarnings("unchecked")
-public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, RuntimeContext {
+public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
   private static final Logger log = LoggerFactory.getLogger(BTraceRuntimeImplBase.class);
 
   private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
@@ -271,7 +270,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   private volatile NotificationListener memoryListener;
 
   // Extension registry for this runtime
-  private final ExtensionRegistry extensionRegistry;
+  // Extension instances are now resolved via the manifest-based bridge when injected.
 
   // Command queue for the client
   private final CommandQueue queue;
@@ -409,7 +408,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     specQueueManager = null;
     className = null;
     instrumentation = null;
-    extensionRegistry = null;
   }
 
   BTraceRuntimeImplBase(
@@ -419,11 +417,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     specQueueManager = new SpeculativeQueueManager();
     this.className = className;
     instrumentation = inst;
-    this.extensionRegistry =
-        new ExtensionRegistry(
-            scriptClassName ->
-                new ExtensionContextImpl(
-                    this, scriptClassName, SharedSettings.GLOBAL.getEffectivePermissions()));
 
     BTraceRuntimeAccess.addRuntime(className, this);
 
@@ -518,17 +511,21 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
   public final void start() {
     initMBeans();
     if (timerHandlers != null) {
-      timer = new Timer(true);
-      TimerTask[] timerTasks = new TimerTask[timerHandlers.length];
-      wrapToTimerTasks(timerTasks);
-      for (int index = 0; index < timerHandlers.length; index++) {
-        TimerHandler th = timerHandlers[index];
-        long period = th.period;
-        String periodArg = th.periodArg;
-        if (periodArg != null) {
-          period = BTraceRuntime.parseLong(args.template(periodArg), period);
+      try {
+        timer = new Timer(true);
+        TimerTask[] timerTasks = new TimerTask[timerHandlers.length];
+        wrapToTimerTasks(timerTasks);
+        for (int index = 0; index < timerHandlers.length; index++) {
+          TimerHandler th = timerHandlers[index];
+          long period = th.period;
+          String periodArg = th.periodArg;
+          if (periodArg != null) {
+            period = BTraceRuntime.parseLong(args.template(periodArg), period);
+          }
+          timer.schedule(timerTasks[index], period, period);
         }
-        timer.schedule(timerTasks[index], period, period);
+      } catch (Exception e) {
+        log.error("Timer creation/scheduling failed", e);
       }
     }
 
@@ -719,19 +716,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
     return args;
   }
 
-  /**
-   * Gets or creates an extension instance for this runtime's script.
-   *
-   * @param extensionClass the extension class
-   * @param <T> the extension type
-   * @return the extension instance
-   */
-  public final <T extends Extension> T getExtension(Class<T> extensionClass) {
-    if (extensionRegistry == null) {
-      throw new IllegalStateException("Extension registry not initialized");
-    }
-    return extensionRegistry.getExtension(extensionClass, className);
-  }
+  // Direct access to extension implementations is not supported; services are injected via
+  // invokedynamic and resolved by the bridge.
 
   // BTrace perf counter reading functions
   @Override
@@ -893,9 +879,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, Runti
 
   protected void cleanupRuntime() {
     // Release all extension instances for this script
-    if (extensionRegistry != null) {
-      extensionRegistry.releaseExtensions(className);
-    }
+    // Extension instances (if any) are managed by the manifest-based loader/bridge.
     // to be overridden by concrete implementations
   }
 

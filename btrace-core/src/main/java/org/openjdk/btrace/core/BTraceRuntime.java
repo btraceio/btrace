@@ -72,7 +72,6 @@ import org.openjdk.btrace.core.types.BTraceMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
-import sun.security.action.GetPropertyAction;
 
 @SuppressWarnings("deprecation")
 public final class BTraceRuntime {
@@ -812,7 +811,7 @@ public final class BTraceRuntime {
   }
 
   static String property(String name) {
-    return AccessController.doPrivileged(new GetPropertyAction(name));
+    return AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty(name));
   }
 
   static Properties properties() {

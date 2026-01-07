@@ -47,7 +47,7 @@ import org.openjdk.btrace.core.comm.ReconnectCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
-import org.openjdk.btrace.runtime.ExtensionRegistry;
+import org.openjdk.btrace.extension.ExtensionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -224,12 +224,27 @@ class RemoteClient extends Client {
                         // ignore any other command
                     }
                   } catch (Exception exp) {
-                    log.debug("Error while processing BTrace command", exp);
+                    // When the client disconnects normally, ObjectInputStream.read may throw
+                    // EOFException. Treat it as a clean shutdown and avoid noisy stack traces
+                    // that end up in target stderr during debug runs.
+                    if (exp instanceof java.io.EOFException || exp instanceof SocketException) {
+                      if (log.isDebugEnabled()) {
+                        log.debug("client command stream closed: {}", exp.toString());
+                      }
+                    } else {
+                      log.debug("Error while processing BTrace command", exp);
+                    }
                     break;
                   }
                 }
               } finally {
                 BTraceRuntime.leave();
+                try {
+                  // Ensure streams and socket are closed once the client side closed first.
+                  closeAll();
+                } catch (IOException ignore) {
+                  // best effort
+                }
               }
             });
     cmdHandler.setDaemon(true);
@@ -314,16 +329,17 @@ class RemoteClient extends Client {
             synchronized (output) {
               WireIO.write(output, cmd);
               output.flush();
-              output.close();
+              try {
+                // Half-close the output to allow the client to read DISCONNECT reliably
+                if (socket != null && !socket.isClosed()) {
+                  socket.shutdownOutput();
+                }
+              } catch (IOException ioe) {
+                // ignore; best effort
+              }
             }
-            oosUpdater.compareAndSet(this, output, null);
-            if (input != null) {
-              input.close();
-              oisUpdater.compareAndSet(this, input, null);
-            }
-            if (socket != null) {
-              socket.close();
-              sockUpdater.compareAndSet(this, socket, null);
+            if (log.isDebugEnabled()) {
+              log.debug("sent DISCONNECT to client and shutdown socket output");
             }
             break;
           }

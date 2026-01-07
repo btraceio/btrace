@@ -42,6 +42,30 @@ When instrumentor code changes, update test golden files with:
 ```
 Commit the regenerated golden files to Git.
 
+### How To Run Tests
+
+For a fast local cycle, run unit tests and skip integration tests (which start forked JVMs):
+
+```sh
+export GRADLE_USER_HOME="$PWD/.gradle-home"   # keep caches inside the repo (optional)
+./gradlew --no-daemon test -x integration-tests:test
+```
+
+Tips:
+- Prefer IPv4 if your environment has odd local IPs: set `GRADLE_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
+- Run specific modules:
+  - Runtime: `./gradlew :btrace-runtime:test`
+  - Extension: `./gradlew :btrace-extension:test`
+  - Compiler: `./gradlew :btrace-compiler:test`
+  - Instr: `./gradlew :btrace-instr:test`
+- Update instrumentor golden files when bytecode output changes: `./gradlew test -PupdateTestData`.
+
+Integration tests (optional):
+```sh
+./gradlew --no-daemon integration-tests:test
+```
+These may exercise privileged extensions. If you run into permission denials, provide a policy file and pass it to the test JVMs via `-Dbtrace.permissions=/path/to/permissions.properties`.
+
 
 ## Using BTrace
 
@@ -188,12 +212,7 @@ BTrace supports extensions (like StatsdExtension) that provide additional functi
 * **Standard permissions** (granted unless denied): FILE_READ, SYSTEM_PROPS, THREAD_INFO, MEMORY_INFO
 * **Privileged permissions** (require explicit grant): FILE_WRITE, NETWORK, THREADS, NATIVE, EXEC, REFLECTION, CLASSLOADER, UNLIMITED_MEMORY
 
-Declare required permissions in your probe with `@RequestPermission`:
-```java
-@BTrace
-@RequestPermission(Permission.NETWORK)
-public class MyProbe { ... }
-```
+Permissions are enforced based on extension/service descriptors and agent grants specified at attach-time.
 
 Grant permissions at runtime:
 ```sh
@@ -206,6 +225,47 @@ btrace -le <PID>
 ```
 
 See the [Tutorial](docs/BTraceTutorial.md) for detailed documentation.
+
+Extensions CLI: use `btracex` to inspect and manage extensions and the simplified permission policy:
+- `btracex inspect <zip|dir>` prints extension id, version, services, and whether it’s privileged.
+- `btracex policy print|set [--policy-file <path>|--home|--classpath <outDir>]` edits `allowExtensions`, `denyExtensions`, `allowPrivileged`.
+- `btracex list` shows installed extensions; `btracex install` installs from Maven coordinates.
+
+Note: Extension “required permissions” are informational and help operators assess risk. Implementation linking is controlled by per‑extension allow/deny lists and the `allowPrivileged` flag; when blocked, APIs remain available and SHIMs are used so probes continue safely.
+
+#### Agent Policy and Allow/Deny Lists
+- Launch-time policy can be set via agent args (operator-controlled):
+  - `-javaagent:btrace-agent.jar=...,grant=NETWORK,THREADS,grantAll=false`
+  - `-javaagent:btrace-agent.jar=...,allowExtensions=btrace-statsd,my-metrics,denyExtensions=legacy-foo`
+- Optional policy file (process-local): `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`.
+- When an extension impl is blocked, the API remains on bootstrap so SHIMs can be generated.
+
+See docs/PermissionPolicy.md for details and examples.
+
+#### btracex TUI (interactive)
+- Launch: `btracex inspect` (with no args) opens an interactive view of installed extensions.
+- Header: shows current policy file path and the list of scanned repositories.
+- Table: columns State, Id, Version. State uses compact symbols: `?` (default), `+` (allowed), `-` (denied).
+- Details: selection updates automatically; shows the full-word state: `default` / `allowed` / `denied` and the full path.
+- Legend: a short legend under the table maps the state symbols.
+
+Screenshot / demo (optional):
+
+![btracex TUI](docs/images/btracex-tui.png)
+
+![btracex TUI demo](docs/images/btracex-tui.gif)
+
+See also: docs/TUI.md for recording tips and an ASCII preview.
+
+Keys
+- Navigate: Arrow keys, PageUp/PageDown, Home/End
+- Toggle state: space (flows `? → + (confirm) → - → +`; only `c` clears to default)
+- Clear: `c` (removes extension id from both allow and deny lists)
+- Explain privileges: `e` (opens a dialog with required permissions and risk descriptions)
+- Filter: `/` (filter by id or path)
+- Sort: `s` (choose column; repeat to toggle asc/desc)
+- Adjust split: `m` (enter mode), then Up/Down to resize; press `Esc` or `m` again to exit
+- Help / Quit: `?` / `q`
 
 ### Maven Integration
 

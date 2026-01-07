@@ -1893,6 +1893,54 @@ public class InstrumentingMethodVisitorTest {
   }
 
   @Test
+  void insertFrameAppendStackWithLongOnStack() {
+    Label l = new Label();
+    instance.visitLdcInsn(1);
+    instance.visitVarInsn(Opcodes.ISTORE, 1);
+    instance.visitLdcInsn(100L); // Push long (2 slots)
+    instance.visitJumpInsn(Opcodes.GOTO, l);
+    instance.visitLabel(l);
+
+    instance.insertFrameAppendStack(l, Type.INT_TYPE); // Append int to stack with long
+
+    // Verify frame uses compact ASM API format: [LONG, INTEGER] without TOP marker.
+    // ASM's visitFrame() expects category-2 types (long/double) as single elements.
+    // ASM internally expands this to JVMS bytecode format [long, top, int].
+    LastVisitedFrame expected =
+        new LastVisitedFrame(
+            Opcodes.F_NEW,
+            1,
+            new Object[] {Opcodes.INTEGER},
+            2,
+            new Object[] {Opcodes.LONG, Opcodes.INTEGER});
+    assertEquals(expected, lastVisitedFrame);
+  }
+
+  @Test
+  void insertFrameAppendStackWithDoubleOnStack() {
+    Label l = new Label();
+    instance.visitLdcInsn(1);
+    instance.visitVarInsn(Opcodes.ISTORE, 1);
+    instance.visitLdcInsn(3.14); // Push double (2 slots)
+    instance.visitJumpInsn(Opcodes.GOTO, l);
+    instance.visitLabel(l);
+
+    instance.insertFrameAppendStack(l, Type.getType(String.class)); // Append String
+
+    // Verify frame uses compact ASM API format: [DOUBLE, String] without TOP marker.
+    // ASM's visitFrame() expects category-2 types (long/double) as single elements.
+    // ASM internally expands this to JVMS bytecode format [double, top, String].
+    LastVisitedFrame expected =
+        new LastVisitedFrame(
+            Opcodes.F_NEW,
+            1,
+            new Object[] {Opcodes.INTEGER},
+            2,
+            new Object[] {Opcodes.DOUBLE, "java/lang/String"});
+    assertEquals(expected, lastVisitedFrame);
+  }
+
+  @Test
   void insertFrameSameStack() {
     Label l = new Label();
     instance.visitLdcInsn(1);

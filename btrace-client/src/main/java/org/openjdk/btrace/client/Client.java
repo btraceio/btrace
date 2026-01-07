@@ -238,6 +238,73 @@ public class Client {
   }
 
   /**
+   * Scans the extensions directory and returns a classpath string with all API JARs.
+   *
+   * Looks in the following locations (first match wins):
+   * - System property 'btrace.libs' (assumed to point to BTrace libs directory); scans sibling 'extensions/'
+   * - Derived from java.class.path entry containing 'btrace-client' (for dist layouts); scans sibling 'extensions/'
+   */
+  private String getExtensionApiClasspath() {
+    try {
+      // 1) Use -Dbtrace.libs if provided
+      String libsProp = System.getProperty("btrace.libs");
+      if (libsProp != null && !libsProp.isEmpty()) {
+        File libsDir = new File(libsProp);
+        File btraceHome = libsDir.getParentFile();
+        String cp = scanExtensionsDir(new File(btraceHome, "extensions"));
+        if (!cp.isEmpty()) {
+          return cp;
+        }
+      }
+
+      // 2) Fall back to locating btrace-client in the classpath
+      String classPath = System.getProperty("java.class.path");
+      for (String entry : classPath.split(File.pathSeparator)) {
+        if (entry.contains("btrace-client")) {
+          File clientPath = new File(entry);
+          File libsDir = clientPath.getParentFile();
+          if (libsDir != null) {
+            File btraceHome = libsDir.getParentFile();
+            String cp = scanExtensionsDir(new File(btraceHome, "extensions"));
+            if (!cp.isEmpty()) {
+              return cp;
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      log.warn("Failed to scan extensions directory", e);
+    }
+    return "";
+  }
+
+  /**
+   * Builds a classpath string of all *-api.jar files in immediate subdirectories of the given
+   * extensions directory.
+   */
+  private static String scanExtensionsDir(File extensionsDir) {
+    if (extensionsDir == null || !extensionsDir.exists() || !extensionsDir.isDirectory()) {
+      return "";
+    }
+    StringBuilder cp = new StringBuilder();
+    File[] extensionDirs = extensionsDir.listFiles(File::isDirectory);
+    if (extensionDirs != null) {
+      for (File extDir : extensionDirs) {
+        File[] apiJars = extDir.listFiles((dir, name) -> name.endsWith("-api.jar"));
+        if (apiJars != null) {
+          for (File jar : apiJars) {
+            if (cp.length() > 0) {
+              cp.append(File.pathSeparator);
+            }
+            cp.append(jar.getAbsolutePath());
+          }
+        }
+      }
+    }
+    return cp.toString();
+  }
+
+  /**
    * Compiles given BTrace program using given classpath. Errors and warning are written to given
    * PrintWriter.
    */
@@ -247,10 +314,45 @@ public class Client {
     if (fileName.endsWith(".java")) {
       Compiler compiler = new Compiler(includePath);
       classPath += File.pathSeparator + System.getProperty("java.class.path");
+      // Add extension API JARs to classpath
+      String extApiCp = getExtensionApiClasspath();
+      if (!extApiCp.isEmpty()) {
+        classPath += File.pathSeparator + extApiCp;
+      }
       if (log.isDebugEnabled()) {
         log.debug("compiling {}", fileName);
+        if (!extApiCp.isEmpty()) {
+          log.debug("extension API classpath: {}", extApiCp);
+        }
+        log.debug("compiler classpath: {}", classPath);
       }
-      Map<String, byte[]> classes = compiler.compile(file, err, ".", classPath);
+
+      // Ensure the verifier's classloader can see the same classpath (TCCL lookup)
+      ClassLoader prevCl = Thread.currentThread().getContextClassLoader();
+      String prevSysCp = System.getProperty("java.class.path", "");
+      Map<String, byte[]> classes;
+      try {
+        String[] cpEntries = classPath.split(File.pathSeparator);
+        java.net.URL[] urls = new java.net.URL[cpEntries.length];
+        for (int i = 0; i < cpEntries.length; i++) {
+          urls[i] = new File(cpEntries[i]).toURI().toURL();
+        }
+        java.net.URLClassLoader compileCl = new java.net.URLClassLoader(urls, prevCl);
+        Thread.currentThread().setContextClassLoader(compileCl);
+        // Ensure VerifierVisitor fallback scan (java.class.path) can see extension API jars
+        if (!extApiCp.isEmpty()) {
+          System.setProperty(
+              "java.class.path",
+              prevSysCp.isEmpty() ? extApiCp : (prevSysCp + File.pathSeparator + extApiCp));
+        }
+        classes = compiler.compile(file, err, ".", classPath);
+      } catch (Exception e) {
+        log.error("Failed to set up compiler classloader", e);
+        classes = compiler.compile(file, err, ".", classPath);
+      } finally {
+        Thread.currentThread().setContextClassLoader(prevCl);
+        System.setProperty("java.class.path", prevSysCp);
+      }
       if (classes == null) {
         log.error("btrace compilation for script {} failed!", fileName);
         return null;
@@ -696,6 +798,9 @@ public class Client {
                     System.exit(1);
                   }
                   statusReported = true;
+                  // Forward the first STATUS as well so higher-level listeners (e.g. unattended -x)
+                  // can react immediately (e.g. initiate disconnect)
+                  listener.onCommand(cmd);
                 } else {
                   listener.onCommand(cmd);
                 }
@@ -728,6 +833,9 @@ public class Client {
   }
 
   public void sendDisconnect() throws IOException {
+    if (log.isDebugEnabled()) {
+      log.debug("sending command {}", DisconnectCommand.class.getSimpleName());
+    }
     send(new DisconnectCommand());
   }
 
@@ -743,6 +851,8 @@ public class Client {
 
   /** Closes all connection state to the traced JVM. */
   public synchronized void close() throws IOException {
+    // Mark as disconnected to prevent shutdown hook from attempting further sends
+    disconnected = true;
     if (ois != null) {
       ois.close();
     }
@@ -761,6 +871,9 @@ public class Client {
 
   void disconnect() throws IOException {
     disconnected = true;
+    if (log.isDebugEnabled()) {
+      log.debug("sending DISCONNECT request to agent");
+    }
     sendDisconnect();
   }
 

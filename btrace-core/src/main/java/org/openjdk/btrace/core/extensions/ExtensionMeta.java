@@ -7,8 +7,8 @@ import java.util.Set;
 /**
  * Metadata extracted from an extension class.
  *
- * <p>This class holds immutable metadata parsed from {@link ExtensionDescriptor} and {@link
- * RequiresPermission} annotations.
+ * <p>This class holds immutable metadata parsed from package-level {@link ExtensionDescriptor}
+ * (if available).
  */
 public final class ExtensionMeta {
   private final Class<? extends Extension> extensionClass;
@@ -41,25 +41,23 @@ public final class ExtensionMeta {
    *
    * @param extensionClass the extension class
    * @return extracted metadata
-   * @throws ExtensionException if the class is missing required annotations or is invalid
-   */
+   * Builds metadata from package-level {@link ExtensionDescriptor} when present.
+  */
   public static ExtensionMeta from(Class<? extends Extension> extensionClass) {
-    ExtensionDescriptor descriptor = extensionClass.getAnnotation(ExtensionDescriptor.class);
-    if (descriptor == null) {
-      throw new ExtensionException(
-          "Extension class " + extensionClass.getName() + " missing @ExtensionDescriptor");
-    }
+    // Prefer package-level descriptor for identity and extension-level permissions
+    Package pkg = extensionClass.getPackage();
+    ExtensionDescriptor pkgDesc = pkg != null ? pkg.getAnnotation(ExtensionDescriptor.class) : null;
 
-    // Extract required permissions
+    String name = (pkgDesc != null && !pkgDesc.name().isEmpty()) ? pkgDesc.name() : extensionClass.getSimpleName();
+    String version = (pkgDesc != null) ? pkgDesc.version() : "";
+    String description = (pkgDesc != null) ? pkgDesc.description() : "";
+    String minBTraceVersion = (pkgDesc != null) ? pkgDesc.minBTraceVersion() : "";
+
+    // Extract required permissions (pkg-level)
     Set<Permission> permissions = new HashSet<>();
-    RequiresPermission single = extensionClass.getAnnotation(RequiresPermission.class);
-    if (single != null) {
-      permissions.add(single.value());
-    }
-    RequiresPermissions multiple = extensionClass.getAnnotation(RequiresPermissions.class);
-    if (multiple != null) {
-      for (RequiresPermission req : multiple.value()) {
-        permissions.add(req.value());
+    if (pkgDesc != null) {
+      for (Permission p : pkgDesc.permissions()) {
+        if (p != null) permissions.add(p);
       }
     }
 
@@ -68,20 +66,14 @@ public final class ExtensionMeta {
             ? PermissionSet.empty()
             : PermissionSet.of(permissions.toArray(new Permission[0]));
 
-    // Extract dependencies
-    Set<Class<? extends Extension>> deps = new HashSet<>();
-    for (Class<? extends Extension> dep : descriptor.dependencies()) {
-      deps.add(dep);
-    }
-
     return new ExtensionMeta(
         extensionClass,
-        descriptor.name(),
-        descriptor.version(),
-        descriptor.description(),
-        descriptor.minBTraceVersion(),
+        name,
+        version,
+        description,
+        minBTraceVersion,
         permissionSet,
-        Collections.unmodifiableSet(deps));
+        Collections.emptySet());
   }
 
   /**

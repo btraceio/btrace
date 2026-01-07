@@ -726,31 +726,30 @@ These permissions have security implications and must be explicitly granted:
 * **CLASSLOADER** - Access classloaders
 * **UNLIMITED_MEMORY** - Unlimited buffer allocation
 
-##### Declaring Required Permissions
+##### Permission Model
 
-Probes that use extensions must declare their required permissions using the `@RequestPermission` annotation:
+Permissions are defined by extension/service descriptors and enforced via agent grants. The Gradle plugin writes the effective permission set into the extension’s manifest.
 
-```java
-package myprobes;
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.statsd.StatsdExtension;
+##### Do Not Instantiate Types in Probes
 
+- Probes do not construct arbitrary objects (`new` is not allowed). Instead, obtain builders or factories from injected services and pass built configuration handles back to the service.
+- This keeps hot paths allocation-free and within verifier constraints (only BTraceUtils, injected services, or objects returned from services can be used).
+
+Example:
+```
 @BTrace
-@RequestPermission(Permission.NETWORK)
-@RequestPermission(Permission.THREADS)
-public class MetricsProbe {
-    @Injected(ServiceType.EXTENSION)
-    private static StatsdExtension statsd;
-
-    @OnMethod(clazz = "com.example.MyService", method = "process")
-    public static void onProcess(@Duration long duration) {
-        statsd.timing("service.process.duration", duration / 1_000_000);
-    }
+class Example {
+  @Injected static MetricsService metrics;
+  static final HistogramConfig cfg;
+  static {
+    cfg = metrics.newHistogramConfig().unit("ns").build();
+  }
+  @OnMethod(clazz="com.example.Foo", method="bar", location=@Location(Kind.RETURN))
+  static void onReturn(@Duration long d) {
+    metrics.histogram("foo.bar.latency", cfg).record(d);
+  }
 }
 ```
-
-The compiler validates that all permissions required by the used extensions are declared. If a permission is missing, compilation fails with an error message.
 
 ##### Granting Permissions at Runtime
 
@@ -774,6 +773,21 @@ or
 ```bash
 java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grantAll=true ...
 ```
+
+##### Per-Extension Allow/Deny (Simplified Policy)
+- Allow specific extensions to link implementations via agent args:
+  - `-javaagent:btrace-agent.jar=...,allowExtensions=btrace-statsd,my-metrics`
+- Deny specific extensions (implementation blocked; SHIM fallback):
+  - `-javaagent:btrace-agent.jar=...,denyExtensions=legacy-foo`
+- Allow all privileged extensions:
+  - `-javaagent:btrace-agent.jar=...,allowPrivileged=true`
+- Optional process-local policy file:
+  - `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`
+  - Example content:
+    - `allowExtensions=btrace-statsd`
+    - `denyExtensions=legacy-foo`
+    - `allowPrivileged=false`
+- Extensions continue to expose required permissions in logs to help operators decide whether to allow them.
 
 ##### Permission Error Messages
 
@@ -809,10 +823,8 @@ The StatsdExtension allows sending metrics to a StatsD server:
 
 ```java
 @BTrace
-@RequestPermission(Permission.NETWORK)
-@RequestPermission(Permission.THREADS)
 public class StatsdExample {
-    @Injected(ServiceType.EXTENSION)
+    @Injected
     private static StatsdExtension statsd;
 
     @OnMethod(clazz = "com.example.API", method = "handleRequest",
@@ -829,13 +841,101 @@ Run with:
 btrace --grant=NETWORK,THREADS -statsd localhost:8125 <pid> StatsdExample.class
 ```
 
+##### Using the Histogram Metrics Extension (btrace-metrics)
+
+The histogram metrics extension provides high-performance in-process metrics using HdrHistogram. It does not require network permissions and runs entirely inside the target JVM.
+
+Requirements:
+- Build the distribution so extensions are exploded under `BTRACE_HOME/extensions/`.
+- The agent discovers built-in extensions automatically; no additional flags are needed.
+
+Example:
+
+```java
+package myprobes;
+
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import org.openjdk.btrace.core.annotations.*;
+import org.openjdk.btrace.metrics.MetricsService;
+import org.openjdk.btrace.metrics.histogram.HistogramConfig;
+import org.openjdk.btrace.metrics.histogram.HistogramMetric;
+import org.openjdk.btrace.metrics.histogram.HistogramSnapshot;
+import org.openjdk.btrace.metrics.stats.StatsMetric;
+import org.openjdk.btrace.metrics.stats.StatsSnapshot;
+
+@BTrace
+public class HistogramExample {
+    // ServiceType hint is optional; omit for defaults
+    @Injected
+    private static MetricsService metrics;
+
+    private static HistogramMetric histogram;
+    private static StatsMetric stats;
+
+    @OnMethod(clazz = "com.example.Service", method = "doWork")
+    public static void onEntry() {
+        if (histogram == null) {
+            histogram = metrics.histogramMicros("service.doWork");
+            stats = metrics.stats("service.doWork.stats");
+        }
+    }
+
+    @OnMethod(clazz = "com.example.Service", method = "doWork", location = @Location(Kind.RETURN))
+    public static void onReturn(@Duration long durationNanos) {
+        long durationMicros = durationNanos / 1000;
+        histogram.record(durationMicros);
+        stats.record(durationMicros);
+    }
+
+    @OnTimer(1000)
+    public static void onTimer() {
+        HistogramSnapshot h = histogram.snapshot();
+        StatsSnapshot s = stats.snapshot();
+
+        println("=== Metrics Report ===");
+        println("Count: " + s.count());
+        println("Mean: " + s.mean() + " μs");
+        println("Min: " + s.min() + " μs");
+        println("Max: " + s.max() + " μs");
+        println("P50: " + h.p50() + " μs");
+        println("P95: " + h.p95() + " μs");
+        println("P99: " + h.p99() + " μs");
+        println("======================");
+    }
+}
+```
+
+Run with:
+```bash
+btrace <pid> HistogramExample.java
+```
+
+You should see a periodic metrics report similar to:
+```
+=== Metrics Report ===
+Count: 4
+Mean: 4178.5 μs
+Min: 118 μs
+Max: 16341 μs
+P50: 120 μs
+P95: 16343 μs
+P99: 16343 μs
+======================
+```
+
+Configuration (optional):
+- You can tune defaults in `btrace.conf` (see Architecture: Extension Configuration):
+  - `btrace-metrics.histogram.default-precision=3`
+  - `btrace-metrics.histogram.max-value=3600000000`
+
 ##### Troubleshooting Failed Extensions
 
 If extensions fail to load during agent initialization (for example, due to missing dependencies or configuration issues), BTrace will display a warning when you submit a probe:
 
 ```
 [BTRACE WARN] 1 extension(s) failed to load:
-  - StatsdExtension: Missing @ExtensionDescriptor annotation
+  - StatsdExtension: Missing manifest metadata (ensure Gradle plugin is applied and configured)
 Use 'btrace -le <PID>' for details.
 ```
 
