@@ -25,6 +25,7 @@
 
 package org.openjdk.btrace.instr;
 
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -36,6 +37,7 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.FrameNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LdcInsnNode;
@@ -53,6 +55,10 @@ import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -91,7 +97,6 @@ final class Preprocessor {
   private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
   private static final Type INJECTED_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Injected;");
   private static final Type EVENT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Event;");
-  private static final String SERVICE_INTERNAL = "org/openjdk/btrace/services/api/Service";
   private static final String TIMERHANDLER_INTERNAL =
       "org/openjdk/btrace/core/handlers/TimerHandler";
   private static final String TIMERHANDLER_DESC = "L" + TIMERHANDLER_INTERNAL + ";";
@@ -137,7 +142,7 @@ final class Preprocessor {
       "(" + Constants.BTRACERTIMPL_DESC + ")" + Constants.BOOLEAN_DESC;
   private static final String BTRACERT_HANDLE_EXCEPTION_DESC =
       "(" + Constants.THROWABLE_DESC + ")" + Constants.VOID_DESC;
-  private static final String RT_CTX_INTERNAL = "org/openjdk/btrace/services/api/RuntimeContext";
+  private static final String RT_CTX_INTERNAL = "org/openjdk/btrace/core/extensions/ExtensionContext";
   private static final String RT_CTX_DESC = "L" + RT_CTX_INTERNAL + ";";
   private static final Type RT_CTX_TYPE = Type.getType(RT_CTX_DESC);
   private static final String RT_SERVICE_CTR_DESC = "(" + RT_CTX_DESC + ")V";
@@ -201,6 +206,30 @@ final class Preprocessor {
 
   private final Map<MethodNode, EnumSet<MethodClassifier>> classifierMap = new HashMap<>();
   private AbstractInsnNode clinitEntryPoint;
+
+  // Determines if the given ASM Type represents a class that is a BTrace Extension
+  private static boolean isExtensionType(Type implType, ClassLoader loader) {
+    if (implType == null) return false;
+    try {
+      Class<?> cls = Class.forName(implType.getClassName(), false, loader);
+      return Extension.class.isAssignableFrom(cls);
+    } catch (Throwable t) {
+      return false;
+    }
+  }
+
+  // Determines if the given type is an interface or abstract class
+  private static boolean isInterfaceOrAbstract(Type serviceType, ClassLoader loader) {
+    if (serviceType == null) return true;
+    try {
+      Class<?> cls = Class.forName(serviceType.getClassName(), false, loader);
+      int mod = cls.getModifiers();
+      return cls.isInterface() || java.lang.reflect.Modifier.isAbstract(mod);
+    } catch (Throwable t) {
+      // If unknown, prefer indy path for safety
+      return true;
+    }
+  }
 
   public static AnnotationNode getAnnotation(FieldNode fn, Type annotation) {
     if (fn == null || (fn.visibleAnnotations == null && fn.invisibleAnnotations == null))
@@ -755,9 +784,6 @@ final class Preprocessor {
             n = updateInjectedUsage(cn, fin, l, lvg);
           }
         }
-      } else if (type == AbstractInsnNode.METHOD_INSN) {
-        MethodInsnNode minNode = (MethodInsnNode) n;
-        n = unfoldServiceInstantiation(cn, minNode, l);
       } else if (n.getOpcode() == retopcode
           && getClassifiers(mn).contains(MethodClassifier.RT_AWARE)) {
         addBTraceRuntimeExit(cn, (InsnNode) n, l);
@@ -1460,36 +1486,56 @@ final class Preprocessor {
     return ret;
   }
 
-  private boolean isExtensionType(Type type, ClassLoader classLoader) {
-    String className = type.getClassName();
-    // Try with the provided ClassLoader first
+  /**
+   * Ensures that the extension providing the given service class is loaded.
+   * Uses reflection to access Main.getExtensionLoader() to avoid compile-time
+   * dependency on btrace-agent module.
+   *
+   * @param serviceClassName fully qualified service class name
+   */
+  private void ensureExtensionLoaded(String serviceClassName) {
     try {
-      Class<?> clazz = Class.forName(className, false, classLoader);
-      return Extension.class.isAssignableFrom(clazz);
-    } catch (ClassNotFoundException e) {
-      // Try with the current class's classloader as fallback
-      try {
-        Class<?> clazz = Class.forName(className);
-        return Extension.class.isAssignableFrom(clazz);
-      } catch (ClassNotFoundException | LinkageError ex) {
-        return logClassLoadingError(className, ex);
-      }
-    } catch (LinkageError e) {
-      // No fallback for LinkageError - it indicates a fundamental class loading issue
-      return logClassLoadingError(className, e);
-    }
-  }
+      // Use reflection to obtain the agent's ExtensionLoader instance
+      Class<?> mainClass = Class.forName("org.openjdk.btrace.agent.Main");
+      Method getLoaderMethod = mainClass.getMethod("getExtensionLoader");
+      Object extensionLoader = getLoaderMethod.invoke(null);
 
-  private boolean logClassLoadingError(String className, Throwable error) {
-    if (error instanceof ClassNotFoundException) {
-      log.warn("Class '{}' not found when checking extension type", className);
-    } else if (error instanceof LinkageError) {
-      log.warn(
-          "Failed to load class '{}' due to linkage error when checking extension type: {}",
-          className,
-          error.getMessage());
+      if (extensionLoader == null) {
+        return; // Extension system not initialized; let later resolution fail clearly
+      }
+
+      // Find an extension that provides this service API
+      Class<?> loaderClass = extensionLoader.getClass();
+      Method findMethod = loaderClass.getMethod("findExtensionForService", String.class);
+      Object descriptor = findMethod.invoke(extensionLoader, serviceClassName);
+
+      if (descriptor != null) {
+        // Ensure API JAR is appended to bootstrap, then load implementation if needed
+        try {
+          Method ensureApi = loaderClass.getMethod("ensureApiOnBootstrap", descriptor.getClass());
+          ensureApi.invoke(extensionLoader, descriptor);
+        } catch (NoSuchMethodException ignored) {
+          // Older loaders may not expose this method; continue to load()
+        }
+
+        // Invoke a compatible load(...) method
+        try {
+          Method loadMethod = loaderClass.getMethod("load", descriptor.getClass());
+          loadMethod.invoke(extensionLoader, descriptor);
+        } catch (NoSuchMethodException nsme) {
+          for (Method m : loaderClass.getMethods()) {
+            if (m.getName().equals("load")
+                && m.getParameterCount() == 1
+                && m.getParameterTypes()[0].isAssignableFrom(descriptor.getClass())) {
+              m.invoke(extensionLoader, descriptor);
+              break;
+            }
+          }
+        }
+      }
+    } catch (Exception ignored) {
+      // Best-effort only; if extension/system not ready, resolution can fail later with details
     }
-    return false;
   }
 
   private AbstractInsnNode updateInjectedUsage(
@@ -1505,9 +1551,15 @@ final class Preprocessor {
 
     InsnList toInsert = new InsnList();
     AnnotationNode an = injectedFlds.get(fin.name);
-    Type implType = Type.getType(fin.desc);
+    Type serviceType = Type.getType(fin.desc);
+
+    // Ensure extension providing this service is loaded
+    ensureExtensionLoaded(serviceType.getClassName());
+
     String svcType = "SIMPLE";
     String fctryMethod = null;
+    int optionalFlag = 0;
+    String injectMode = "UNSPECIFIED";
     if (an.values != null) {
       Iterator<Object> iter = an.values.iterator();
       while (iter.hasNext()) {
@@ -1520,72 +1572,60 @@ final class Preprocessor {
           case "factoryMethod":
             fctryMethod = (String) val;
             break;
+          case "optional":
+            if (val instanceof Boolean) {
+              optionalFlag = ((Boolean) val) ? 1 : 0;
+            }
+            break;
+          case "mode":
+            // enum value represented as String[]: [ "Lpkg/Enum;", "NAME" ]
+            if (val instanceof String[]) {
+              injectMode = ((String[]) val)[1];
+            }
+            break;
         }
       }
     }
     // Auto-detect extension types based on class hierarchy
     ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-    if (svcType.equals("SIMPLE") && isExtensionType(implType, contextClassLoader)) {
+    if (svcType.equals("SIMPLE") && isExtensionType(serviceType, contextClassLoader)) {
       svcType = "EXTENSION";
     }
-    int varIdx = lvg.newVar(implType);
-    if (svcType.equals("SIMPLE")) {
-      if (fctryMethod == null || fctryMethod.isEmpty()) {
-        toInsert.add(new TypeInsnNode(Opcodes.NEW, implType.getInternalName()));
-        toInsert.add(new InsnNode(Opcodes.DUP));
-        toInsert.add(new InsnNode(Opcodes.DUP));
-        toInsert.add(
-            new MethodInsnNode(
-                Opcodes.INVOKESPECIAL, implType.getInternalName(), "<init>", "()V", false));
-      } else {
-        toInsert.add(
-            new MethodInsnNode(
-                Opcodes.INVOKESTATIC,
-                implType.getInternalName(),
-                fctryMethod,
-                Type.getMethodDescriptor(implType),
-                false));
-        toInsert.add(new InsnNode(Opcodes.DUP));
-      }
-    } else if (svcType.equals("EXTENSION")) {
-      // Extension: use registry-based lookup
-      // runtime.getExtension(ExtensionClass.class)
-      toInsert.add(getRuntimeImpl(cn));
-      toInsert.add(new LdcInsnNode(implType));
-      toInsert.add(
-          new MethodInsnNode(
-              Opcodes.INVOKEVIRTUAL,
-              Constants.BTRACERTBASE_INTERNAL,
-              "getExtension",
-              GET_EXTENSION_DESC,
-              false));
-      toInsert.add(new TypeInsnNode(Opcodes.CHECKCAST, implType.getInternalName()));
-      toInsert.add(new InsnNode(Opcodes.DUP));
-    } else { // RuntimeService here
-      if (fctryMethod == null || fctryMethod.isEmpty()) {
-        toInsert.add(new TypeInsnNode(Opcodes.NEW, implType.getInternalName()));
-        toInsert.add(new InsnNode(Opcodes.DUP));
-        toInsert.add(new InsnNode(Opcodes.DUP));
-        toInsert.add(getRuntimeImpl(cn));
-        toInsert.add(
-            new MethodInsnNode(
-                Opcodes.INVOKESPECIAL,
-                implType.getInternalName(),
-                "<init>",
-                RT_SERVICE_CTR_DESC,
-                false));
-      } else {
-        toInsert.add(getRuntimeImpl(cn));
-        toInsert.add(
-            new MethodInsnNode(
-                Opcodes.INVOKESTATIC,
-                implType.getInternalName(),
-                fctryMethod,
-                Type.getMethodDescriptor(implType, RT_CTX_TYPE),
-                false));
-        toInsert.add(new InsnNode(Opcodes.DUP));
-      }
-    }
+    int varIdx = lvg.newVar(serviceType);
+    // Always use invokedynamic bridge to obtain the service instance
+    MethodType mt =
+        MethodType.methodType(
+            CallSite.class,
+            MethodHandles.Lookup.class,
+            String.class,
+            MethodType.class,
+            String.class,
+            String.class,
+            String.class,
+            Integer.class,
+            String.class);
+    Handle bsm =
+        new Handle(
+            Opcodes.H_INVOKESTATIC,
+            "org/openjdk/btrace/runtime/ExtensionIndy",
+            "bootstrapFieldGet",
+            mt.toMethodDescriptorString(),
+            false);
+
+    String factory = (fctryMethod != null) ? fctryMethod : "";
+    InvokeDynamicInsnNode indy =
+        new InvokeDynamicInsnNode(
+            fin.name,
+            Type.getMethodDescriptor(serviceType),
+            bsm,
+            serviceType.getClassName(),
+            svcType,
+            factory,
+            optionalFlag,
+            injectMode);
+
+    toInsert.add(indy);
+    toInsert.add(new InsnNode(Opcodes.DUP));
     toInsert.add(new VarInsnNode(Opcodes.ASTORE, varIdx));
     l.insert(fin, toInsert);
     AbstractInsnNode next = fin.getNext();
@@ -1594,97 +1634,7 @@ final class Preprocessor {
     return next;
   }
 
-  private AbstractInsnNode unfoldServiceInstantiation(
-      ClassNode cn, MethodInsnNode minNode, InsnList l) {
-    if (minNode.owner.equals(SERVICE_INTERNAL)) {
-      AbstractInsnNode next = minNode.getNext();
-      switch (minNode.name) {
-        case "simple":
-          {
-            Type[] args = Type.getArgumentTypes(minNode.desc);
-            if (args.length == 1) {
-              AbstractInsnNode ldcType = minNode.getPrevious();
-              if (ldcType.getType() == AbstractInsnNode.LDC_INSN) {
-                // remove the original sequence
-                l.remove(minNode);
-                l.remove(ldcType);
-                if (next.getOpcode() == Opcodes.CHECKCAST) {
-                  next = next.getNext();
-                  l.remove(next.getPrevious());
-                }
-                // ---
-
-                String sType = ((Type) ((LdcInsnNode) ldcType).cst).getInternalName();
-                InsnList toInsert = new InsnList();
-                toInsert.add(new TypeInsnNode(Opcodes.NEW, sType));
-                toInsert.add(new InsnNode(Opcodes.DUP));
-                toInsert.add(
-                    new MethodInsnNode(Opcodes.INVOKESPECIAL, sType, "<init>", "()V", false));
-                l.insertBefore(next, toInsert);
-              }
-            } else if (args.length == 2) {
-              AbstractInsnNode ldcType = minNode.getPrevious();
-              AbstractInsnNode ldcFMethod = ldcType.getPrevious();
-              if (ldcType.getType() == AbstractInsnNode.LDC_INSN
-                  && ldcFMethod.getType() == AbstractInsnNode.LDC_INSN) {
-                // remove the original sequence
-                l.remove(minNode);
-                l.remove(ldcType);
-                l.remove(ldcFMethod);
-                if (next.getOpcode() == Opcodes.CHECKCAST) {
-                  next = next.getNext();
-                  l.remove(next.getPrevious());
-                }
-                // ---
-
-                String sType = ((Type) ((LdcInsnNode) ldcType).cst).getInternalName();
-                String fMethod = (String) ((LdcInsnNode) ldcFMethod).cst;
-
-                InsnList toInsert = new InsnList();
-                toInsert.add(new TypeInsnNode(Opcodes.NEW, sType));
-                toInsert.add(new InsnNode(Opcodes.DUP));
-                toInsert.add(new LdcInsnNode(fMethod));
-                toInsert.add(
-                    new MethodInsnNode(
-                        Opcodes.INVOKESPECIAL, sType, "<init>", SERVICE_CTR_DESC, false));
-                l.insertBefore(next, toInsert);
-              }
-            }
-            break;
-          }
-        case "runtime":
-          {
-            Type[] args = Type.getArgumentTypes(minNode.desc);
-            if (args.length == 1) {
-              AbstractInsnNode ldcType = minNode.getPrevious();
-              if (ldcType.getType() == AbstractInsnNode.LDC_INSN) {
-                // remove the original sequence
-                l.remove(minNode);
-                l.remove(ldcType);
-                if (next.getOpcode() == Opcodes.CHECKCAST) {
-                  next = next.getNext();
-                  l.remove(next.getPrevious());
-                }
-                // ---
-
-                String sType = ((Type) ((LdcInsnNode) ldcType).cst).getInternalName();
-                InsnList toInsert = new InsnList();
-                toInsert.add(new TypeInsnNode(Opcodes.NEW, sType));
-                toInsert.add(new InsnNode(Opcodes.DUP));
-                toInsert.add(getRuntimeImpl(cn));
-                toInsert.add(
-                    new MethodInsnNode(
-                        Opcodes.INVOKESPECIAL, sType, "<init>", RT_SERVICE_CTR_DESC, false));
-                l.insertBefore(next, toInsert);
-              }
-            }
-            break;
-          }
-      }
-      return next;
-    }
-    return minNode;
-  }
+  
 
   private InsnList getReturnSequence(ClassNode cn, MethodNode mn, boolean addRuntimeExit) {
     InsnList l = new InsnList();

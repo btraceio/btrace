@@ -308,6 +308,10 @@ public class BTraceMethodNode extends MethodNode {
     return cn.isFieldInjected(name);
   }
 
+  boolean isServiceType(String typeName) {
+    return cn.isServiceType(typeName);
+  }
+
   OnProbe getOnProbe() {
     return op;
   }

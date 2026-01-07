@@ -40,7 +40,6 @@ import org.openjdk.btrace.core.handlers.ExitHandler;
 import org.openjdk.btrace.core.handlers.LowMemoryHandler;
 import org.openjdk.btrace.core.handlers.TimerHandler;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
-import org.openjdk.btrace.services.api.RuntimeContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +54,10 @@ import org.slf4j.LoggerFactory;
  * @author Joachim Skeie (GC MBean support, advanced Deque manipulation)
  * @author KLynch
  */
-public abstract class BTraceRuntimeAccess implements RuntimeContext {
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.extensions.ExtensionContext;
+
+public abstract class BTraceRuntimeAccess {
   private static final Logger log = LoggerFactory.getLogger(BTraceRuntimeAccess.class);
 
   static final class RTWrapper {
@@ -134,6 +136,20 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
 
   public static void leave() {
     rt.get().set(null);
+  }
+
+  /**
+   * Returns the current ExtensionContext for the executing BTrace script, or null if none.
+   * Used by the invokedynamic bootstrap to construct runtime-aware services.
+   */
+  public static ExtensionContext currentContext() {
+    RTWrapper wrapper = rt.get();
+    BTraceRuntimeImplBase current = wrapper != null ? (BTraceRuntimeImplBase) wrapper.rt : null;
+    if (current == null) return null;
+    return new ExtensionContextImpl(
+        current,
+        current.getClassName(),
+        SharedSettings.GLOBAL.getEffectivePermissions());
   }
 
   public static String getClientName(String forClassName) {
@@ -223,7 +239,6 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
     return rtw.escape(callable);
   }
 
-  @Override
   public void send(String msg) {
     BTraceRuntimeImplBase rt = getCurrent();
     if (rt != null) {
@@ -231,7 +246,6 @@ public abstract class BTraceRuntimeAccess implements RuntimeContext {
     }
   }
 
-  @Override
   public void send(Command cmd) {
     BTraceRuntimeImplBase rt = getCurrent();
     if (rt != null) {

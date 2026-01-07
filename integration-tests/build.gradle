@@ -5,6 +5,7 @@ apply plugin: 'java'
 
 dependencies {
     implementation project(':btrace-compiler')
+    implementation project(':btrace-extensions:btrace-metrics')
 }
 
 compileTestJava {
@@ -21,15 +22,33 @@ task buildEventsJar(type: Jar) {
 }
 
 task compileTestProbes {
-    dependsOn compileTestJava
+    dependsOn compileTestJava, ':btrace-extensions:buildExtensionsApi', ':btrace-instr:jar', ':btrace-compiler:jar'
     doLast {
         def path = project(':integration-tests').sourceSets.main.runtimeClasspath
 
         def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
         def compiler = loader.loadClass('org.openjdk.btrace.compiler.Compiler')
         def rtCp = sourceSets.main.runtimeClasspath
+        // Ensure the BTrace extension API JAR(s) (with manifest attributes) are present on classpath
+        def extApiJars = []
+        rootProject.subprojects.each { sp ->
+            if (sp.plugins.hasPlugin('org.openjdk.btrace.extension')) {
+                try {
+                    def apiJar = sp.tasks.named('buildApiJar').get().archiveFile.get().asFile
+                    extApiJars << apiJar
+                } catch (Throwable ignored) { }
+            }
+        }
+        if (extApiJars.isEmpty()) {
+            logger.lifecycle("[integration-tests] No extension API JARs found. If you renamed an extension module, ensure it applies id 'org.openjdk.btrace.extension'.")
+        } else {
+            rtCp = rtCp.plus(files(extApiJars))
+            logger.lifecycle("[integration-tests] Using extension API JARs: ${extApiJars}")
+        }
 
-        def args = ["-cp", rtCp.plus(files(buildDir.toPath().resolve("classes/java/test"), buildDir.toPath().resolve("classes/java/java11_dummy"))).getAsPath(), "-d", buildDir.toPath().resolve("classes").toString()]
+        def fullCp = rtCp.plus(files(buildDir.toPath().resolve("classes/java/test"), buildDir.toPath().resolve("classes/java/java11_dummy")))
+        def cpPath = fullCp.getAsPath()
+        def args = ["-cp", cpPath, "-d", buildDir.toPath().resolve("classes").toString()]
 
         def files = fileTree(dir: "src/test/btrace", include: '**/*.java', exclude: 'verifier/**/*.java').findAll {
             it != null
@@ -37,16 +56,28 @@ task compileTestProbes {
 
         args.addAll(files)
 
-        compiler.main(args as String[])
+        // Ensure BTrace compiler and its Verifier use the same classloader for resource lookups
+        // and have access to extension API manifest metadata
+        def prev = Thread.currentThread().contextClassLoader
+        try {
+            Thread.currentThread().contextClassLoader = loader
+            System.setProperty('btrace.allow.undeclared.services', 'true')
+            System.setProperty('java.class.path', cpPath)
+            compiler.main(args as String[])
+        } finally {
+            Thread.currentThread().contextClassLoader = prev
+            System.clearProperty('btrace.allow.undeclared.services')
+        }
     }
 }
 
 test {
     onlyIf {
-        project.hasProperty("integration") &&
-        new File("${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/btrace-client.jar").exists()
+        project.hasProperty("integration")
     }
-    dependsOn cleanTest, buildEventsJar, compileTestProbes
+    dependsOn cleanTest, buildEventsJar, compileTestProbes,
+             ':btrace-dist:agentJar', ':btrace-dist:clientJar', ':btrace-dist:bootJar',
+             ':btrace-dist:explodeExtensions', ':btrace-extensions:buildExtensionsApi'
 
     testLogging.showStandardStreams = true
 
@@ -56,5 +87,27 @@ test {
         jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
     } else {
         jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+    }
+
+    // Canonical propagation: use Gradle project properties only (-P)
+    // -Pbtrace.debug=true will enable verbose logs in the tests (maps to btrace.test.debug)
+    // Any other -Pbtrace.* properties are forwarded verbatim to the test JVM and then to the traced app
+    project.properties.findAll { k, v -> k instanceof String && k.startsWith('btrace.') }.each { k, v ->
+        def key = (String) k
+        def val = String.valueOf(v)
+        systemProperty key, val
+        if (key == 'btrace.debug') {
+            systemProperty 'btrace.test.debug', val
+        }
+    }
+
+    // Expose CI flag to tests when passed as -PCI (or present in env)
+    // Treat presence of -PCI without value as 'true'
+    if (project.hasProperty('CI')) {
+        def ciVal = project.findProperty('CI')
+        def ci = (ciVal == null || ciVal.toString().trim().isEmpty()) ? 'true' : ciVal.toString()
+        systemProperty 'CI', ci
+    } else if (System.getenv('CI') != null) {
+        systemProperty 'CI', System.getenv('CI')
     }
 }

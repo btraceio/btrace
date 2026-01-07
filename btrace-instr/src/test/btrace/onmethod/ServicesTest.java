@@ -27,48 +27,23 @@ package traces;
 
 import org.openjdk.btrace.core.annotations.BTrace;
 import org.openjdk.btrace.core.annotations.Injected;
+import org.openjdk.btrace.core.annotations.InjectionMode;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
-import org.openjdk.btrace.core.annotations.ServiceType;
-import org.openjdk.btrace.services.api.Service;
-import services.DummyRuntimeService;
-import services.DummySimpleService;
+import org.openjdk.btrace.utils.PrinterService;
+import org.openjdk.btrace.statsd.Statsd;
 
-/**
- * Sanity test to make sure the injected services are properly initialized
- * and referenced further on.
- *
- * @author Jaroslav Bachorik
- */
 @BTrace
 public class ServicesTest {
-    @Injected(ServiceType.RUNTIME)
-    private static DummyRuntimeService printer;
+  @Injected
+  private static PrinterService printer;
 
-    @OnMethod(clazz = "resources.OnMethodTest", method = "args")
-    public static void testRuntimeService(String a, long b, String[] c, int[] d) {
-        DummyRuntimeService ds = Service.runtime(DummyRuntimeService.class);
+  @Injected
+  private static Statsd statsd;
 
-        ds.doit(10, "hello");
-    }
-
-    @OnMethod(clazz = "resources.OnMethodTest", method = "noargs")
-    public static void testSimpleService() {
-        DummySimpleService ds = Service.simple(DummySimpleService.class);
-
-        ds.doit("hello", 10);
-    }
-
-    @OnMethod(clazz = "resources.OnMethodTest", method = "args$static")
-    public static void testSingletonService(String a, long b, String[] c, int[] d) {
-        DummySimpleService ds = Service.simple("getInstance", DummySimpleService.class);
-
-        ds.doit("hello", 10);
-    }
-
-    @OnMethod(clazz = "resources.OnMethodTest", method = "noargs$static")
-    public static void testFieldInjection(@ProbeClassName String pcn) {
-        printer.doit(10, "hey");
-        printer.doit(20, "ho");
-    }
+  @OnMethod(clazz = "resources.OnMethodTest", method = "noargs$static")
+  public static void testFieldInjection(@ProbeClassName String pcn) {
+    printer.println("svc-injection ok: " + pcn);
+    statsd.increment("btrace.services.test", "source:onmethod");
+  }
 }

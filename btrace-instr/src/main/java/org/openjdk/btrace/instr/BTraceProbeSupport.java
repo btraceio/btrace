@@ -165,7 +165,26 @@ public final class BTraceProbeSupport {
   }
 
   boolean isServiceType(String typeName) {
-    return serviceFields.containsValue(typeName);
+    // First check if it's a direct service type (e.g., MetricsService)
+    if (serviceFields.containsValue(typeName)) {
+      return true;
+    }
+    // Check if it's in a sub-package of any service type's package
+    // This allows return types from service methods (e.g., HistogramMetric, HistogramSnapshot)
+    // without hardcoding specific packages - we infer allowed packages from injected services
+    for (String serviceType : serviceFields.values()) {
+      // Extract package by removing the class name (everything after the last '/')
+      int lastSlash = serviceType.lastIndexOf('/');
+      if (lastSlash > 0) {
+        String servicePackage = serviceType.substring(0, lastSlash);
+        // Allow classes in the same package or sub-packages of the service
+        // This makes the verifier cooperate with the extension system automatically
+        if (typeName.startsWith(servicePackage + "/")) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   boolean isFieldInjected(String name) {

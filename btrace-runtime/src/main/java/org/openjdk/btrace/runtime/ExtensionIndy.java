@@ -1,0 +1,311 @@
+/*
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package org.openjdk.btrace.runtime;
+
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.annotations.InjectionMode;
+import org.openjdk.btrace.extension.ExtensionBridge;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.invoke.CallSite;
+import java.lang.invoke.ConstantCallSite;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+
+/**
+ * Invokedynamic bootstrap methods for BTrace extension access.
+ * Provides classloader bridging between BTrace scripts and extensions.
+ */
+public final class ExtensionIndy {
+  private static final Logger logger = LoggerFactory.getLogger(ExtensionIndy.class);
+  /**
+   * Bridge to extension system. Set by ExtensionBridgeImpl during agent initialization.
+   * Must be volatile for visibility across threads.
+   */
+  public static volatile ExtensionBridge bridge = null;
+
+  static {
+    logger.info("ExtensionIndy loaded");
+  }
+
+  /**
+   * Bootstrap method for extension service field access.
+   * Called when a script accesses an @Injected field for the first time.
+   *
+   * @param caller caller's lookup context
+   * @param fieldName field name (for debugging)
+   * @param type method type - should be {@code () -> ServiceInterface}
+   * @param serviceClassName fully qualified service class name
+   * @param serviceType legacy service type (ignored; retained for compatibility)
+   * @param factoryMethod optional factory method name (empty string if none)
+   * @return CallSite that returns the extension service instance
+   */
+  public static CallSite bootstrapFieldGet(
+      MethodHandles.Lookup caller,
+      String fieldName,
+      MethodType type,
+      String serviceClassName,
+      String serviceType,
+      String factoryMethod,
+      Integer optionalFlag,
+      String injectMode)
+      throws Exception {
+    MethodHandle mh;
+    boolean isOptional = optionalFlag != 0;
+    InjectionMode parsedMode = parseInjectionMode(injectMode);
+    InjectionMode effectiveMode = resolveMode(parsedMode);
+    logger.debug("linking: mode={}", effectiveMode);
+
+    boolean linkLog = isLinkLogEnabled();
+    try {
+      Class<?> serviceClass = requireServiceClass(serviceClassName);
+      mh = findInstantiationHandle(serviceClass, factoryMethod);
+      if (linkLog) logger.info("Linked service '{}' to '{}'", serviceClassName, serviceClass.getName());
+
+    } catch (Throwable t) {
+      logger.debug("Bootstrap failed for '{}': {}", serviceClassName, t.toString());
+      // Decide fallback behavior based on optional flag and injection mode.
+      // In SHIM mode we allow shim fallback even for non-optional injections so scripts can run
+      // with no-ops when implementations are blocked by permissions.
+      boolean allowShim = (effectiveMode == InjectionMode.SHIM) || isOptional;
+      if (allowShim) {
+        Object fallback = resolvePreGeneratedShim(type, caller, effectiveMode);
+        if (fallback == null) {
+          fallback = createFallbackInstance(effectiveMode, type, caller, t);
+        }
+        if (linkLog) logger.warn("Service '{}' unavailable; using {} fallback",
+            serviceClassName, (effectiveMode == InjectionMode.SHIM ? "SHIM" : "THROW"));
+        mh = MethodHandles.constant(type.returnType(), fallback);
+      } else {
+        throw t instanceof Exception ? (Exception) t : new Exception(t);
+      }
+    }
+
+    try {
+      mh = mh.asType(type);
+    } catch (java.lang.invoke.WrongMethodTypeException ignored) {
+    }
+    return new ConstantCallSite(mh);
+  }
+
+  private static Object resolvePreGeneratedShim(MethodType type, MethodHandles.Lookup caller, InjectionMode mode) {
+    try {
+      Class<?> iface = type.returnType();
+      ClassLoader cl = iface.getClassLoader();
+      ShimTarget target = ShimIndex.resolve(iface, cl);
+      if (target == null) return null;
+      String fqcn = (mode == InjectionMode.SHIM ? target.noopFqcn : target.throwFqcn);
+      if (fqcn == null || fqcn.isEmpty()) return null;
+      ClassLoader loader = (cl != null ? cl : ClassLoader.getSystemClassLoader());
+      Class<?> shim = loader.loadClass(fqcn);
+      java.lang.reflect.Field f = shim.getField("INSTANCE");
+      Object inst = f.get(null);
+      if (iface.isInstance(inst)) return inst;
+    } catch (Throwable ignore) {
+    }
+    return null;
+  }
+
+  private static InjectionMode resolveMode(InjectionMode fieldMode) {
+    if (fieldMode != null && fieldMode != InjectionMode.UNSPECIFIED) {
+      return fieldMode;
+    }
+    String prop = System.getProperty("btrace.extension.shimMode", "throw");
+    if ("shim".equalsIgnoreCase(prop)) return InjectionMode.SHIM;
+    return InjectionMode.THROW;
+  }
+
+  private static InjectionMode parseInjectionMode(String injectMode) {
+    if (injectMode == null || injectMode.isEmpty()) return InjectionMode.UNSPECIFIED;
+    if ("THROW".equalsIgnoreCase(injectMode)) return InjectionMode.THROW;
+    if ("SHIM".equalsIgnoreCase(injectMode)) return InjectionMode.SHIM;
+    return InjectionMode.UNSPECIFIED;
+  }
+
+  private static boolean isLinkLogEnabled() {
+    return SharedSettings.GLOBAL.isDebug() || Boolean.getBoolean("btrace.extension.linkLog");
+  }
+
+  private static Class<?> requireServiceClass(String serviceClassName) throws Exception {
+    if (bridge == null) {
+      throw new IllegalStateException("ExtensionIndy.bridge not initialized");
+    }
+    Class<?> serviceClass = bridge.getExtensionClass(serviceClassName);
+    if (serviceClass == null) {
+      throw new ClassNotFoundException("Extension service not found: " + serviceClassName);
+    }
+    if (serviceClass.isInterface()) {
+      throw new IllegalStateException("No implementation available for service (interface returned): " + serviceClassName);
+    }
+    logger.debug("Resolved service '{}' to '{}'", serviceClassName, serviceClass.getName());
+    return serviceClass;
+  }
+
+  private static MethodHandle findInstantiationHandle(Class<?> serviceClass, String factoryMethod) throws Exception {
+    MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+    boolean useFactory = factoryMethod != null && !factoryMethod.isEmpty();
+    try {
+      if (useFactory) {
+        return lookup.findStatic(serviceClass, factoryMethod, MethodType.methodType(serviceClass));
+      }
+      return lookup.findConstructor(serviceClass, MethodType.methodType(void.class));
+    } catch (Throwable t) {
+      logger.debug("Instantiation handle resolution failed for '{}': {}", serviceClass.getName(), t.toString());
+      throw new IllegalStateException("Unable to create service instance for " + serviceClass.getName(), t);
+    }
+  }
+
+  private static Object createFallbackInstance(
+      InjectionMode mode, MethodType type, MethodHandles.Lookup caller, Throwable cause) throws Exception {
+    Class<?> iface = type.returnType();
+    if (!iface.isInterface()) {
+      return null;
+    }
+    ClassLoader loader = iface.getClassLoader();
+    if (loader == null) {
+      loader = ClassLoader.getSystemClassLoader();
+    }
+    InvocationHandler handler;
+    if (mode == InjectionMode.SHIM) {
+      handler = new NoOpHandler();
+    } else {
+      handler = new ThrowingHandler(iface.getName(), cause);
+    }
+    Object proxy = Proxy.newProxyInstance(loader, new Class<?>[] {iface}, handler);
+    return proxy;
+  }
+
+  private static final class NoOpHandler implements InvocationHandler {
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      String name = method.getName();
+      int paramCount = method.getParameterCount();
+      if (name.equals("toString") && paramCount == 0) return "NoOp" + proxy.getClass().getInterfaces()[0].getSimpleName();
+      if (name.equals("hashCode") && paramCount == 0) return System.identityHashCode(proxy);
+      if (name.equals("equals") && paramCount == 1) return proxy == args[0];
+      Class<?> rt = method.getReturnType();
+      if (rt == void.class) return null;
+      if (rt.isPrimitive()) {
+        if (rt == boolean.class) return false;
+        if (rt == byte.class) return (byte) 0;
+        if (rt == short.class) return (short) 0;
+        if (rt == char.class) return (char) 0;
+        if (rt == int.class) return 0;
+        if (rt == long.class) return 0L;
+        if (rt == float.class) return 0f;
+        if (rt == double.class) return 0d;
+      }
+      return null;
+    }
+  }
+
+  private static final class ThrowingHandler implements InvocationHandler {
+    private final String iface;
+    private final Throwable cause;
+
+    ThrowingHandler(String iface, Throwable cause) {
+      this.iface = iface;
+      this.cause = cause;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      String name = method.getName();
+      int paramCount = method.getParameterCount();
+      if (name.equals("toString") && paramCount == 0) return "Throwing" + proxy.getClass().getInterfaces()[0].getSimpleName();
+      if (name.equals("hashCode") && paramCount == 0) return System.identityHashCode(proxy);
+      if (name.equals("equals") && paramCount == 1) return proxy == args[0];
+      IllegalStateException ex = new IllegalStateException(
+          "BTrace optional service unavailable: " + iface, cause);
+      throw ex;
+    }
+  }
+
+  private ExtensionIndy() {
+    // Utility class, no instances
+  }
+
+  private static final class ShimTarget {
+    final String noopFqcn;
+    final String throwFqcn;
+
+    ShimTarget(String noopFqcn, String throwFqcn) {
+      this.noopFqcn = noopFqcn;
+      this.throwFqcn = throwFqcn;
+    }
+  }
+
+  private static final class ShimIndex {
+    private static volatile java.util.Map<String, ShimTarget> cache;
+
+    static ShimTarget resolve(Class<?> iface, ClassLoader cl) {
+      String key = iface.getName();
+      java.util.Map<String, ShimTarget> map = cache;
+      if (map == null) {
+        synchronized (ShimIndex.class) {
+          if (cache == null) {
+            cache = load(cl);
+          }
+          map = cache;
+        }
+      }
+      return map.get(key);
+    }
+
+    private static java.util.Map<String, ShimTarget> load(ClassLoader cl) {
+      java.util.Map<String, ShimTarget> map = new java.util.HashMap<>();
+      java.io.InputStream is = (cl != null ? cl : ClassLoader.getSystemClassLoader())
+          .getResourceAsStream("META-INF/btrace/shims.index");
+      if (is == null) return map;
+      try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
+        String line;
+        while ((line = br.readLine()) != null) {
+          line = line.trim();
+          if (line.isEmpty() || line.startsWith("#")) continue;
+          int eq = line.indexOf('=');
+          if (eq <= 0) continue;
+          String k = line.substring(0, eq).trim();
+          String rest = line.substring(eq + 1).trim();
+          String noop = rest;
+          String thrw = null;
+          int comma = rest.indexOf(',');
+          if (comma > 0) {
+            noop = rest.substring(0, comma).trim();
+            thrw = rest.substring(comma + 1).trim();
+          }
+          map.put(k, new ShimTarget(noop, thrw));
+        }
+      } catch (Throwable ignore) {
+        // ignore; will fallback to dynamic proxy
+      }
+      return map;
+    }
+  }
+}

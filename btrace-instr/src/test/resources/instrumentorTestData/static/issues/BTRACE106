@@ -12,12 +12,6 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 3
 LSUB
 LSTORE 1
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L2
-ALOAD 0
-LDC "bMethod"
-LLOAD 1
-INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o3 (Ljava/lang/Object;Ljava/lang/String;J)V
 L2
 FRAME APPEND [J J]
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -25,11 +19,19 @@ IFNE L3
 ALOAD 0
 LDC "bMethod"
 LLOAD 1
-INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V
+INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o3 (Ljava/lang/Object;Ljava/lang/String;J)V
 L3
 FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+ALOAD 0
+LDC "bMethod"
+LLOAD 1
+INVOKESTATIC resources/issues/BTRACE106.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o2 (Ljava/lang/Object;Ljava/lang/String;J)V
 L4
-LOCALVARIABLE this Lresources/issues/BTRACE106; L0 L4 0
+FRAME SAME
+L5
+LOCALVARIABLE this Lresources/issues/BTRACE106; L0 L5 0
 MAXSTACK = 4
 MAXLOCALS = 5
 

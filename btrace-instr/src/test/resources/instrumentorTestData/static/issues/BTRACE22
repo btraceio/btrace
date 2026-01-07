@@ -9,16 +9,18 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 3
 LSUB
 LSTORE 1
+L3
+FRAME FULL [resources/issues/BTRACE22 J J D] [D]
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L3
+IFNE L4
 ALOAD 0
 LLOAD 1
 INVOKESTATIC resources/issues/BTRACE22.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE22$tracker (Ljava/lang/Object;J)V
-L3
-FRAME FULL [resources/issues/BTRACE22 J J D] [D]
 L4
-LOCALVARIABLE this Lresources/issues/BTRACE22; L0 L4 0
-LOCALVARIABLE d D L1 L4 5
+FRAME SAME1 D
+L5
+LOCALVARIABLE this Lresources/issues/BTRACE22; L0 L5 0
+LOCALVARIABLE d D L1 L5 5
 MAXSTACK = 6
 MAXLOCALS = 7
 

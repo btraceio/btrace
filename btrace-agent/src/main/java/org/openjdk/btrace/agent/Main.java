@@ -24,32 +24,22 @@
  */
 package org.openjdk.btrace.agent;
 
-import static org.openjdk.btrace.core.Args.BOOT_CLASS_PATH;
-import static org.openjdk.btrace.core.Args.CMD_QUEUE_LIMIT;
-import static org.openjdk.btrace.core.Args.CONFIG;
-import static org.openjdk.btrace.core.Args.DEBUG;
-import static org.openjdk.btrace.core.Args.DENY;
-import static org.openjdk.btrace.core.Args.DUMP_CLASSES;
-import static org.openjdk.btrace.core.Args.DUMP_DIR;
-import static org.openjdk.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
-import static org.openjdk.btrace.core.Args.FILE_ROLL_MILLISECONDS;
-import static org.openjdk.btrace.core.Args.GRANT;
-import static org.openjdk.btrace.core.Args.GRANT_ALL;
-import static org.openjdk.btrace.core.Args.HELP;
-import static org.openjdk.btrace.core.Args.LIBS;
-import static org.openjdk.btrace.core.Args.NO_SERVER;
-import static org.openjdk.btrace.core.Args.PORT;
-import static org.openjdk.btrace.core.Args.PROBE_DESC_PATH;
-import static org.openjdk.btrace.core.Args.SCRIPT;
-import static org.openjdk.btrace.core.Args.SCRIPT_DIR;
-import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_DIR;
-import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_FILE;
-import static org.openjdk.btrace.core.Args.STARTUP_RETRANSFORM;
-import static org.openjdk.btrace.core.Args.STATSD;
-import static org.openjdk.btrace.core.Args.STDOUT;
-import static org.openjdk.btrace.core.Args.SYSTEM_CLASS_PATH;
-import static org.openjdk.btrace.core.Args.TRACK_RETRANSFORMS;
-import static org.openjdk.btrace.core.Args.TRUSTED;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.Messages;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
+import org.openjdk.btrace.core.comm.WireIO;
+import org.openjdk.btrace.extension.ExtensionLoader;
+import org.openjdk.btrace.extension.impl.ExtensionBridgeImpl;
+import org.openjdk.btrace.instr.BTraceProbeFactory;
+import org.openjdk.btrace.instr.BTraceTransformer;
+import org.openjdk.btrace.instr.Constants;
+import org.openjdk.btrace.runtime.BTraceRuntimes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -79,21 +69,36 @@ import java.util.concurrent.ThreadFactory;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.WireIO;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
-import org.openjdk.btrace.instr.BTraceTransformer;
-import org.openjdk.btrace.instr.Constants;
-import org.openjdk.btrace.runtime.BTraceRuntimes;
-import org.openjdk.btrace.runtime.ExtensionRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static org.openjdk.btrace.core.Args.ALLOW_EXTENSIONS;
+import static org.openjdk.btrace.core.Args.ALLOW_PRIVILEGED;
+import static org.openjdk.btrace.core.Args.BOOT_CLASS_PATH;
+import static org.openjdk.btrace.core.Args.CMD_QUEUE_LIMIT;
+import static org.openjdk.btrace.core.Args.CONFIG;
+import static org.openjdk.btrace.core.Args.DEBUG;
+import static org.openjdk.btrace.core.Args.DENY;
+import static org.openjdk.btrace.core.Args.DENY_EXTENSIONS;
+import static org.openjdk.btrace.core.Args.DUMP_CLASSES;
+import static org.openjdk.btrace.core.Args.DUMP_DIR;
+import static org.openjdk.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
+import static org.openjdk.btrace.core.Args.FILE_ROLL_MILLISECONDS;
+import static org.openjdk.btrace.core.Args.GRANT;
+import static org.openjdk.btrace.core.Args.GRANT_ALL;
+import static org.openjdk.btrace.core.Args.HELP;
+import static org.openjdk.btrace.core.Args.LIBS;
+import static org.openjdk.btrace.core.Args.NO_SERVER;
+import static org.openjdk.btrace.core.Args.PORT;
+import static org.openjdk.btrace.core.Args.PROBE_DESC_PATH;
+import static org.openjdk.btrace.core.Args.SCRIPT;
+import static org.openjdk.btrace.core.Args.SCRIPT_DIR;
+import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_DIR;
+import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_FILE;
+import static org.openjdk.btrace.core.Args.STARTUP_RETRANSFORM;
+import static org.openjdk.btrace.core.Args.STATSD;
+import static org.openjdk.btrace.core.Args.STDOUT;
+import static org.openjdk.btrace.core.Args.SYSTEM_CLASS_PATH;
+import static org.openjdk.btrace.core.Args.TRACK_RETRANSFORMS;
+import static org.openjdk.btrace.core.Args.TRUSTED;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -121,8 +126,9 @@ public final class Main {
   private static volatile ArgsMap argMap;
   private static volatile Instrumentation inst;
   private static volatile Long fileRollMilliseconds;
-  private static volatile ServerSocket serverSocket;
+  private static volatile ExtensionLoader extensionLoader;
   private static volatile boolean serverRunning = true;
+  private static ServerSocket serverSocket;
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
@@ -148,6 +154,9 @@ public final class Main {
       settings.setDebug(isDebug);
       DebugSupport.initLoggers(isDebug, log);
 
+      // Load defaults from file-based permission policy first
+      org.openjdk.btrace.extension.PermissionPolicy.get().loadFromDefaults();
+      // Then parse and apply agent args (which override file policy)
       parseArgs();
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
@@ -176,8 +185,8 @@ public final class Main {
       BTraceRuntimes.getDefault();
       // init BTraceRuntime
       BTraceRuntime.initUnsafe();
-      // Discover extensions via ServiceLoader - critical for tracking failures
-      ExtensionRegistry.discover(ClassLoader.getSystemClassLoader());
+      // initialize extension system
+      initExtensions();
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {
@@ -200,6 +209,9 @@ public final class Main {
         log.debug("Failed to instrument MethodHandleNatives", t);
       }
       int startedScripts = startScripts();
+    } catch (Throwable t) {
+      log.error("Failed to initialize BTrace agent", t);
+      throw new RuntimeException("BTrace agent initialization failed", t);
     } finally {
       log.debug("Agent init took: {}", (System.nanoTime() - ts) + "ns");
     }
@@ -307,6 +319,82 @@ public final class Main {
         log.debug(e.toString(), e);
       }
     }
+  }
+
+  /**
+   * Initialize the extension system by discovering and loading extensions
+   * from configured extension directories.
+   */
+  private static void initExtensions() {
+    try {
+      log.info("Initializing BTrace extension system");
+
+      // Determine BTRACE_HOME from agent JAR location
+      String btraceHome = getBTraceHome();
+      if (log.isDebugEnabled()) {
+        log.debug("BTRACE_HOME={}", btraceHome);
+      }
+      if (btraceHome == null) {
+        log.warn("Could not determine BTRACE_HOME, extensions will not be loaded");
+        System.err.println("[DEBUG] BTRACE_HOME is null, skipping extension initialization");
+        return;
+      }
+
+      // Initialize extension loader with boot classloader as parent, configuration, and instrumentation
+      ClassLoader bootClassLoader = Main.class.getClassLoader();
+      extensionLoader = ExtensionLoader.initialize(btraceHome, bootClassLoader, inst);
+
+      // Initialize invokedynamic bridge for extensions after loader is ready
+      ExtensionBridgeImpl.initialize(extensionLoader);
+
+    } catch (Exception e) {
+      log.error("Failed to initialize extension system: {}", e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Get BTRACE_HOME directory by locating the agent JAR.
+   *
+   * @return BTRACE_HOME path, or null if not found
+   */
+  private static String getBTraceHome() {
+    try {
+      // Get the agent JAR location
+      String agentPath =
+          Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+
+      // Agent is typically at BTRACE_HOME/libs/btrace-agent.jar
+      File agentJar = new File(agentPath);
+      if (agentJar.exists() && agentJar.getName().equals("btrace-agent.jar")) {
+        File libsDir = agentJar.getParentFile();
+        if (libsDir != null && libsDir.getName().equals("libs")) {
+          File btraceHome = libsDir.getParentFile();
+          if (btraceHome != null) {
+            return btraceHome.getAbsolutePath();
+          }
+        }
+      }
+
+      // Try BTRACE_HOME environment variable
+      String envHome = System.getenv("BTRACE_HOME");
+      if (envHome != null && new File(envHome).exists()) {
+        return envHome;
+      }
+
+    } catch (Exception e) {
+      log.debug("Failed to determine BTRACE_HOME: {}", e.getMessage());
+    }
+
+    return null;
+  }
+
+  /**
+   * Get the extension loader instance.
+   *
+   * @return extension loader, or null if not initialized
+   */
+  public static ExtensionLoader getExtensionLoader() {
+    return extensionLoader;
   }
 
   private static int startScripts() {
@@ -561,6 +649,30 @@ public final class Main {
             }
             break;
           }
+        case ALLOW_EXTENSIONS:
+          {
+            if (!p.isEmpty()) {
+              org.openjdk.btrace.extension.PermissionPolicy.get().setAllowExtensionsCsv(p);
+              log.debug("allowExtensions: {}", p);
+            }
+            break;
+          }
+        case DENY_EXTENSIONS:
+          {
+            if (!p.isEmpty()) {
+              org.openjdk.btrace.extension.PermissionPolicy.get().setDenyExtensionsCsv(p);
+              log.debug("denyExtensions: {}", p);
+            }
+            break;
+          }
+        case ALLOW_PRIVILEGED:
+          {
+            if (!p.isEmpty()) {
+              org.openjdk.btrace.extension.PermissionPolicy.get().setAllowPrivileged(Boolean.parseBoolean(p));
+              log.debug("allowPrivileged: {}", p);
+            }
+            break;
+          }
 
         default:
           {
@@ -599,7 +711,7 @@ public final class Main {
         String path = tokenizer.nextToken();
         File f = new File(path);
         if (!f.exists()) {
-          log.warn("BTrace bootstrap classpath resource [{}] does not exist", path);
+          log.debug("BTrace bootstrap classpath resource [{}] does not exist", path);
         } else {
           if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
             JarFile jf = asJarFile(f);
@@ -624,7 +736,7 @@ public final class Main {
           String path = tokenizer.nextToken();
           File f = new File(path);
           if (!f.exists()) {
-            log.warn("BTrace system classpath resource [{}] does not exist.", path);
+            log.debug("BTrace system classpath resource [{}] does not exist.", path);
           } else {
             if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
               JarFile jf = asJarFile(f);
@@ -924,7 +1036,7 @@ public final class Main {
               }
             }
           } catch (Throwable t) {
-            t.printStackTrace();
+            log.warn("Unhandled exception in client handler", t);
           }
         });
   }

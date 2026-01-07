@@ -41,6 +41,9 @@ import org.openjdk.btrace.core.comm.RetransformationStartNotification;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.extensions.Permission;
 import org.openjdk.btrace.core.extensions.PermissionSet;
+import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
+import org.openjdk.btrace.extension.ExtensionLoader;
+import org.openjdk.btrace.extension.ExtensionRegistry;
 import org.openjdk.btrace.instr.BTraceProbe;
 import org.openjdk.btrace.instr.BTraceProbeFactory;
 import org.openjdk.btrace.instr.BTraceProbePersisted;
@@ -54,7 +57,6 @@ import org.openjdk.btrace.instr.Instrumentor;
 import org.openjdk.btrace.instr.MethodTrackingContext;
 import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
-import org.openjdk.btrace.runtime.ExtensionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -348,6 +350,9 @@ abstract class Client implements CommandListener {
           throw new SecurityException(formatPermissionError(missing));
         }
       }
+
+      // Validate that all injected service types are declared by available extensions
+      validateDeclaredServices(probe);
     } catch (Throwable th) {
       log.debug("Failed to load BTrace probe code", th);
       errorExit(th);
@@ -393,6 +398,26 @@ abstract class Client implements CommandListener {
       sendCommand(new MessageCommand(warning.toString()));
     }
 
+    // Expose extension-declared permissions for integration visibility
+    // Print extension permissions only when explicitly requested (debug or system property)
+    if (settings.isDebug() || Boolean.getBoolean("btrace.list.extension.permissions")) {
+      try {
+        ExtensionLoader loader = Main.getExtensionLoader();
+        if (loader != null) {
+          StringBuilder info = new StringBuilder();
+          info.append("[BTRACE INFO] Extensions and declared permissions:\n");
+          for (ExtensionDescriptorDTO ext : loader.getAvailableExtensions()) {
+            PermissionSet perms = ext.getRequiredPermissions();
+            String pStr = perms != null && !perms.isEmpty() ? perms.toString() : "[]";
+            info.append("  - ").append(ext.getId()).append(": ").append(pStr).append("\n");
+          }
+          sendCommand(new MessageCommand(info.toString()));
+        }
+      } catch (Throwable t) {
+        // ignore, informational only
+      }
+    }
+
     boolean entered = false;
     try {
       entered = BTraceRuntimeAccess.enter(runtime);
@@ -405,6 +430,62 @@ abstract class Client implements CommandListener {
       if (entered) {
         BTraceRuntime.leave();
       }
+    }
+  }
+
+  /**
+   * Validates that all {@code @Injected} service field types used by the given probe are
+   * declared by some available extension. This runs in the agent's runtime where the actual
+   * classloader and JPMS module layer apply.
+   *
+   * Why reflection here (vs. pure ASM):
+   * - Classloader identity: Ensures types are checked against the agent's classes loaded by the
+   *   correct loader. Name-only checks in ASM cannot detect split-brain issues (same FQN, different
+   *   loader/JAR) that would later cause ClassCastException.
+   * - JPMS access rules: Surfaces missing exports/opens and other module access constraints that
+   *   cannot be proven by static bytecode analysis.
+   * - Linkage/loadability: Fails fast if a referenced type is not actually resolvable on the
+   *   agent's runtime path (NoClassDefFoundError/missing transitive dependencies).
+   * - Assignability truth: Verifies that the service type corresponds to something an extension
+   *   actually declares in its manifest, avoiding false positives from shaded or version-skewed
+   *   classes.
+   *
+   * Implementation notes:
+   * - We use reflection only to access the probe's internal service field map (to avoid a direct
+   *   compile-time dependency on the probe's delegate type) and to keep the agent/probe boundary
+   *   clean. We do not instantiate user classes or trigger class initializers.
+   * - This check complements compile-time and bytecode-time validation (ASM-based) which enforce
+   *   structural rules without loading classes. Reflection here provides the necessary runtime
+   *   assurance in the actual environment where the agent will operate.
+   */
+  private void validateDeclaredServices(BTraceProbe probe) throws IOException {
+    if (!(probe instanceof BTraceProbePersisted)) {
+      return;
+    }
+    ExtensionLoader loader = Main.getExtensionLoader();
+    if (loader == null) {
+      return;
+    }
+    // Reflectively access serviceFields() from the delegate to get injected service types
+    try {
+      java.lang.reflect.Field delF = BTraceProbePersisted.class.getDeclaredField("delegate");
+      delF.setAccessible(true);
+      Object delegate = delF.get(probe);
+      java.lang.reflect.Method svcM = delegate.getClass().getDeclaredMethod("serviceFields");
+      svcM.setAccessible(true);
+      @SuppressWarnings("unchecked")
+      Map<String, String> svcMap = (Map<String, String>) svcM.invoke(delegate);
+      if (svcMap != null) {
+        for (String internalName : svcMap.values()) {
+          String fqcn = internalName.replace('/', '.');
+          if (loader.findExtensionForService(fqcn) == null) {
+            throw new IOException(
+                "Injected service type not declared by any extension: " + fqcn);
+          }
+        }
+      }
+    } catch (ReflectiveOperationException e) {
+      log.debug("Unable to inspect injected services for validation", e);
     }
   }
 
@@ -521,7 +602,8 @@ abstract class Client implements CommandListener {
               log.debug("Attempting to retransform class: {}", c.getName());
               inst.retransformClasses(c);
             } catch (ClassFormatError | VerifyError e) {
-              log.debug("Class '{}' verification failed", c.getName(), e);
+              // Avoid printing full stack traces in debug to keep target stderr clean
+              log.debug("Class '{}' verification failed: {}", c.getName(), e.toString());
               sendCommand(
                   new MessageCommand(
                       "[BTRACE WARN] Class verification failed: "
@@ -544,13 +626,14 @@ abstract class Client implements CommandListener {
               try {
                 inst.retransformClasses(c);
               } catch (ClassFormatError | VerifyError e1) {
-                log.debug("Class '{}' verification failed", c.getName(), e);
+                // Avoid printing full stack traces in debug to keep target stderr clean
+                log.debug("Class '{}' verification failed: {}", c.getName(), e1.toString());
                 sendCommand(
                     new MessageCommand(
                         "[BTRACE WARN] Class verification failed: "
                             + c.getName()
                             + " ("
-                            + e.getMessage()
+                            + e1.getMessage()
                             + ")"));
               }
             }

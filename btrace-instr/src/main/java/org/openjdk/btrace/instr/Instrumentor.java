@@ -65,6 +65,7 @@ public class Instrumentor extends ClassVisitor {
 
   private final boolean useHiddenClasses;
 
+  // Allow forcing INDY-based dispatch (no handler copying) on all JDKs via property
   private static boolean useHiddenClassesInTest = false;
 
   private Instrumentor(
@@ -121,6 +122,11 @@ public class Instrumentor extends ClassVisitor {
   @Override
   public MethodVisitor visitMethod(
       int access, String name, String desc, String signature, String[] exceptions) {
+
+    // Skip weaving into sensitive methods even if class matched by probes
+    if (ClassFilter.isSensitiveMethod(className, name, desc)) {
+      return super.visitMethod(access, name, desc, signature, exceptions);
+    }
 
     List<OnMethod> appliedOnMethods = new ArrayList<>();
 
@@ -1484,6 +1490,7 @@ public class Instrumentor extends ClassVisitor {
         return new MethodReturnInstrumentor(
             cl, mv, mHelper, className, superName, access, name, desc) {
           int retValIndex;
+          private int retTmpIndex = Integer.MIN_VALUE;
 
           final ValidationResult vr;
           private boolean generatingCode = false;
@@ -1558,6 +1565,18 @@ public class Instrumentor extends ClassVisitor {
 
           @Override
           protected void onMethodReturn(int opcode) {
+            // If we're adding duration but the probe does not request @Return,
+            // store the return value to a temp local so the epilogue doesn't
+            // carry a live value on the stack across branches; reload before return.
+            boolean needsTempStore =
+                om.getDurationParameter() != -1
+                    && om.getReturnParameter() == -1
+                    && !Type.VOID_TYPE.equals(getReturnType());
+            // Do not store the return value into a temp local here.
+            // Keep it on the operand stack across the epilogue so the join
+            // does not introduce a locals delta. The simulated stack tracks
+            // the correct max depth (int under long ops).
+
             if (vr.isValid() || vr.isAny()) {
               int mid = MethodID.getMethodId(className, name, desc);
               trackingCtx.emitTestSample(true, mid);

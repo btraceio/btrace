@@ -27,4 +27,7 @@ public final class Args {
   public static final String GRANT = "grant";
   public static final String DENY = "deny";
   public static final String GRANT_ALL = "grantAll";
+  public static final String ALLOW_EXTENSIONS = "allowExtensions";
+  public static final String DENY_EXTENSIONS = "denyExtensions";
+  public static final String ALLOW_PRIVILEGED = "allowPrivileged";
 }

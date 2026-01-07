@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
 import jdk.internal.reflect.CallerSensitive;
 import jdk.internal.reflect.Reflection;
-import jdk.jfr.EventType;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.comm.CommandListener;
@@ -89,6 +88,25 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   private final Method findBootstrapOrNullMtd;
 
+  private static volatile Boolean jfrAvailable = null;
+  private static final Object jfrLock = new Object();
+
+  private static boolean isJfrAvailable() {
+    if (jfrAvailable == null) {
+      synchronized (jfrLock) {
+        if (jfrAvailable == null) {
+          try {
+            Class.forName("jdk.jfr.EventType");
+            jfrAvailable = Boolean.TRUE;
+          } catch (ClassNotFoundException | LinkageError e) {
+            jfrAvailable = Boolean.FALSE;
+          }
+        }
+      }
+    }
+    return jfrAvailable;
+  }
+
   public BTraceRuntimeImpl_11() {
     fixExports(BTraceRuntime.instrumentation);
 
@@ -116,25 +134,67 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     Set<Module> myModules = Collections.singleton(BTraceRuntimeImpl_11.class.getModule());
     if (instr != null) {
       Module javaBaseMod = int.class.getModule();
-      Module jfrMod = EventType.class.getModule();
-      instr.redefineModule(
-              javaBaseMod,
+      Module jfrMod = null;
+      if (isJfrAvailable()) {
+        try {
+          Class<?> eventTypeClass = Class.forName("jdk.jfr.EventType");
+          jfrMod = eventTypeClass.getModule();
+        } catch (ClassNotFoundException | LinkageError e) {
+          // JFR not available, skip JFR module setup
+        }
+      }
+
+      // Build export/open maps only for packages actually present in the module to avoid
+      // IllegalArgumentException on newer JDKs (e.g., 25+) where some packages are removed.
+      Set<String> basePkgs = javaBaseMod.getPackages();
+      java.util.Map<String, Set<Module>> extraExports = new java.util.HashMap<>();
+      java.util.Map<String, Set<Module>> extraOpens = new java.util.HashMap<>();
+
+      if (basePkgs.contains("java.lang")) {
+        extraExports.put("java.lang", myModules);
+        extraOpens.put("java.lang", myModules);
+      }
+      if (basePkgs.contains("jdk.internal.reflect")) {
+        extraExports.put("jdk.internal.reflect", myModules);
+      }
+      if (basePkgs.contains("jdk.internal.perf")) {
+        extraExports.put("jdk.internal.perf", myModules);
+      }
+      if (basePkgs.contains("sun.security.action")) {
+        extraExports.put("sun.security.action", myModules);
+      }
+
+      if (!extraExports.isEmpty() || !extraOpens.isEmpty()) {
+        instr.redefineModule(
+            javaBaseMod,
+            Collections.emptySet(),
+            extraExports,
+            extraOpens,
+            Collections.emptySet(),
+            Collections.emptyMap());
+      }
+
+      // jdk.jfr internal access - only if JFR module is available
+      if (jfrMod != null) {
+        java.util.Map<String, Set<Module>> jfrExports = new java.util.HashMap<>();
+        java.util.Map<String, Set<Module>> jfrOpens = new java.util.HashMap<>();
+        Set<String> jfrPkgs = jfrMod.getPackages();
+        if (jfrPkgs.contains("jdk.jfr.internal")) {
+          jfrExports.put("jdk.jfr.internal", myModules);
+        }
+        if (jfrPkgs.contains("jdk.jfr")) {
+          jfrOpens.put("jdk.jfr", myModules);
+        }
+        if (!jfrExports.isEmpty() || !jfrOpens.isEmpty()) {
+          instr.redefineModule(
+              jfrMod,
               Collections.emptySet(),
-              Map.of(
-                      "java.lang", myModules,
-                      "jdk.internal.reflect", myModules,
-                      "jdk.internal.perf", myModules,
-                      "sun.security.action", myModules),
-              Map.of("java.lang", myModules),
+              jfrExports,
+              jfrOpens,
               Collections.emptySet(),
               Collections.emptyMap());
-      instr.redefineModule(
-          jfrMod, // jdk.jfr
-          Collections.emptySet(),
-          Map.of("jdk.jfr.internal", myModules),
-          Map.of("jdk.jfr", myModules),
-          Collections.emptySet(),
-          Collections.emptyMap());
+        }
+      }
     }
     return instr;
   }
@@ -239,6 +299,9 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   @Override
   public JfrEvent.Factory createEventFactory(JfrEvent.Template template) {
+    if (!isJfrAvailable()) {
+      return null;
+    }
     JfrEventFactoryImpl factory = new JfrEventFactoryImpl(template);
     eventFactories.add(factory);
     return factory;
@@ -254,16 +317,32 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   @Override
   protected void cleanupRuntime() {
-    for (JfrEventFactoryImpl factory : eventFactories) {
-      factory.unregister();
+    if (isJfrAvailable()) {
+      for (JfrEventFactoryImpl factory : eventFactories) {
+        factory.unregister();
+      }
+      eventFactories.clear();
     }
-    eventFactories.clear();
   }
 
   private static Perf getPerf() {
     synchronized (BTraceRuntimeImpl_11.class) {
       if (perf == null) {
-        perf = AccessController.doPrivileged(new Perf.GetPerfAction());
+        try {
+          // Newer JDKs (25+) have removed Perf.GetPerfAction; prefer reflective access to getPerf()
+          Method m = Perf.class.getDeclaredMethod("getPerf");
+          m.setAccessible(true);
+          perf = (Perf) m.invoke(null);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+          // Fallback for older JDKs where GetPerfAction exists
+          try {
+            Class<?> actClz = Class.forName("jdk.internal.perf.Perf$GetPerfAction");
+            Object action = actClz.getDeclaredConstructor().newInstance();
+            perf = AccessController.doPrivileged((java.security.PrivilegedAction<Perf>) action);
+          } catch (Throwable t) {
+            throw new IllegalStateException("Unable to acquire jdk.internal.perf.Perf instance", t);
+          }
+        }
       }
     }
     return perf;

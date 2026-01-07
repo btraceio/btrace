@@ -8,9 +8,11 @@ GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Err.$btrace$$level :
 DUP
 ISTORE 10
 IFLE L0
+L3
+FRAME APPEND [J J I]
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 8
-FRAME APPEND [J J I]
+FRAME SAME
 FRAME SAME1 java/lang/Throwable
 INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 8
@@ -20,9 +22,9 @@ DUP
 ASTORE 11
 ILOAD 10
 ICONST_1
-IF_ICMPLT L3
+IF_ICMPLT L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L3
+IFNE L4
 ALOAD 0
 LLOAD 6
 ALOAD 11
@@ -32,7 +34,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Err"
 ]
-L3
+L4
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I java/lang/Throwable] [java/lang/Throwable]
 ATHROW
 L2
@@ -45,9 +47,9 @@ DUP
 ASTORE 12
 ILOAD 10
 ICONST_1
-IF_ICMPLT L4
+IF_ICMPLT L5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L4
+IFNE L5
 ALOAD 0
 LLOAD 6
 ALOAD 12
@@ -57,7 +59,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Err"
 ]
-L4
+L5
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T java/lang/Throwable] [java/lang/Throwable]
 ATHROW
 MAXSTACK = 5

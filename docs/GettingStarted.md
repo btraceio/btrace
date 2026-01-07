@@ -243,6 +243,67 @@ public class TraceMethods {
 
 Congratulations! You've successfully traced your first Java application with BTrace.
 
+## Quick Start: Histogram Metrics Extension
+
+Capture latency distributions and simple stats without external systems using the built-in histogram metrics extension (HdrHistogram-based).
+
+1. Ensure you built the distribution so extensions are available under `BTRACE_HOME/extensions/`.
+2. Create a probe that injects `MetricsService` (no special flags needed):
+
+```java
+import static org.openjdk.btrace.core.BTraceUtils.*;
+
+import org.openjdk.btrace.core.annotations.*;
+import org.openjdk.btrace.metrics.MetricsService;
+import org.openjdk.btrace.metrics.histogram.*;
+import org.openjdk.btrace.metrics.stats.*;
+
+@BTrace
+public class LatencyProbe {
+   @Injected
+   private static MetricsService metrics;
+   private static HistogramMetric h;
+   private static StatsMetric s;
+
+   @OnMethod(clazz = "TestApp", method = "processData")
+   public static void onEntry() {
+      if (h == null) {
+         h = metrics.histogramMicros("testapp.process");
+         s = metrics.stats("testapp.process.stats");
+      }
+   }
+
+   @OnMethod(clazz = "TestApp", method = "processData", location = @Location(Kind.RETURN))
+   public static void onReturn(@Duration long durNs) {
+      long us = durNs / 1000;
+      h.record(us);
+      s.record(us);
+   }
+
+   @OnTimer(1000)
+   public static void report() {
+      HistogramSnapshot hs = h.snapshot();
+      StatsSnapshot ss = s.snapshot();
+      println("=== Metrics Report ===");
+      println("Count: " + ss.count());
+      println("Mean: " + ss.mean() + " μs");
+      println("Min: " + ss.min() + " μs");
+      println("Max: " + ss.max() + " μs");
+      println("P50: " + hs.p50() + " μs");
+      println("P95: " + hs.p95() + " μs");
+      println("P99: " + hs.p99() + " μs");
+      println("======================");
+   }
+}
+```
+
+3. Attach to your running app:
+```bash
+btrace <PID> LatencyProbe.java
+```
+
+See the full tutorial section: “Using the Histogram Metrics Extension (btrace-metrics)” in `docs/BTraceTutorial.md` for configuration and details.
+
 ## Four Ways to Run BTrace
 
 BTrace offers multiple deployment modes to suit different use cases:

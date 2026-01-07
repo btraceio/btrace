@@ -123,51 +123,7 @@ public class Verifier extends ClassVisitor {
         }
       };
     }
-    if (type.equals(Constants.REQUEST_PERMISSION_DESC)) {
-      return new AnnotationVisitor(ASM9, delegate) {
-        @Override
-        public void visitEnum(String name, String descriptor, String value) {
-          if ("value".equals(name)) {
-            try {
-              cn.addRequiredPermission(Permission.valueOf(value));
-            } catch (IllegalArgumentException e) {
-              // Ignore unknown permissions
-            }
-          }
-          super.visitEnum(name, descriptor, value);
-        }
-      };
-    }
-    if (type.equals(Constants.REQUEST_PERMISSIONS_DESC)) {
-      return new AnnotationVisitor(ASM9, delegate) {
-        @Override
-        public AnnotationVisitor visitArray(String name) {
-          AnnotationVisitor arrayDelegate = super.visitArray(name);
-          if ("value".equals(name)) {
-            return new AnnotationVisitor(ASM9, arrayDelegate) {
-              @Override
-              public AnnotationVisitor visitAnnotation(String name, String descriptor) {
-                AnnotationVisitor nested = super.visitAnnotation(name, descriptor);
-                return new AnnotationVisitor(ASM9, nested) {
-                  @Override
-                  public void visitEnum(String name, String descriptor, String value) {
-                    if ("value".equals(name)) {
-                      try {
-                        cn.addRequiredPermission(Permission.valueOf(value));
-                      } catch (IllegalArgumentException e) {
-                        // Ignore unknown permissions
-                      }
-                    }
-                    super.visitEnum(name, descriptor, value);
-                  }
-                };
-              }
-            };
-          }
-          return arrayDelegate;
-        }
-      };
-    }
+    // RequestPermission annotations removed; ignore.
     return delegate;
   }
 
