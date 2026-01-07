@@ -83,10 +83,17 @@ test {
 
     def props = new Properties()
     props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
+    def libsPath = "${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
     if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
-        jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
+        jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${libsPath}"
     } else {
-        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${libsPath}", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+    }
+
+    // Optional test knob: when -Pbtrace.test.skipLibs=true, set a system property that instructs
+    // the agent to skip adding preconfigured btrace-libs (used to exercise manifest-libs path).
+    if (project.findProperty('btrace.test.skipLibs')?.toString()?.toBoolean()) {
+        systemProperty 'btrace.test.skipLibs', 'true'
     }
 
     // Canonical propagation: use Gradle project properties only (-P)

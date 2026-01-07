@@ -447,7 +447,6 @@ public class Client {
             ? bootPath
             : bootPath + File.pathSeparator + bootCp;
       }
-
       attach(pid, agentPath, sysCp, effectiveBootCp);
     } catch (RuntimeException | IOException e) {
       throw e;
@@ -528,6 +527,25 @@ public class Client {
         agentArgs += ",=" + Args.CMD_QUEUE_LIMIT + cmdQueueLimit;
       }
       agentArgs += "," + Args.PROBE_DESC_PATH + "=" + probeDescPath;
+
+      // Pass-through selected system properties as agent system props via "$" args
+      // so the agent can read them at startup. These become system properties in the target JVM.
+      String manifestLibs = System.getProperty("btrace.feature.manifestLibs");
+      String sysAppendJar = System.getProperty("btrace.system.appendJar");
+      String allowExternalLibs = System.getProperty("btrace.allowExternalLibs");
+      String testSkipLibs = System.getProperty("btrace.test.skipLibs");
+      if (manifestLibs != null && !manifestLibs.isEmpty()) {
+        agentArgs += "," + "$btrace.feature.manifestLibs" + "=" + manifestLibs;
+      }
+      if (sysAppendJar != null && !sysAppendJar.isEmpty()) {
+        agentArgs += "," + "$btrace.system.appendJar" + "=" + sysAppendJar;
+      }
+      if (allowExternalLibs != null && !allowExternalLibs.isEmpty()) {
+        agentArgs += "," + "$btrace.allowExternalLibs" + "=" + allowExternalLibs;
+      }
+      if (testSkipLibs != null && !testSkipLibs.isEmpty()) {
+        agentArgs += "," + "$btrace.test.skipLibs" + "=" + testSkipLibs;
+      }
       if (log.isDebugEnabled()) {
         log.debug("agent args: {}", agentArgs);
       }

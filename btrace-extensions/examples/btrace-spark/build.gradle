@@ -1,0 +1,29 @@
+plugins {
+    id 'org.openjdk.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-spark-example'
+    name = 'BTrace Spark Example'
+    description = 'Example provided-style extension for Apache Spark (driver/executor)'
+    services = ['org.example.btrace.spark.api.SparkApi']
+}
+
+dependencies {
+    apiCompileOnly project(':btrace-core')
+    implCompileOnly project(':btrace-core')
+    implCompileOnly project(':btrace-extension')
+}
+

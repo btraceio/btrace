@@ -173,6 +173,17 @@ btracec <trace_script.java>
 btracer <compiled_script.class> <java-application-and-args>
 ```
 
+### Extensions and Deprecated libs/profiles
+
+Extensions add functionality via a stable API on bootstrap and an isolated implementation. See the extension development guide and examples.
+
+Note: The legacy `libs`/profiles mechanism is deprecated and planned for removal after N+2 minor releases. Prefer packaging integrations as extensions and using provided-style class loading patterns (object hand-off + TCCL). For migration guidance and examples, see:
+- `docs/architecture/migrating-from-libs-profiles.md`
+- `docs/architecture/provided-style-extensions.md`
+- `docs/examples/README.md`
+
+As a last resort (discouraged), you may append a single jar to the system classpath: `-Dbtrace.system.appendJar=/abs/path/lib.jar -Dbtrace.trusted=true`.
+
 ### Oneliner Quick Examples
 
 BTrace now supports DTrace-style oneliners for quick debugging without writing full Java scripts:
