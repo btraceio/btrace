@@ -55,12 +55,16 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.LinkedHashSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -130,6 +134,11 @@ public final class Main {
   private static volatile ExtensionLoader extensionLoader;
   private static volatile boolean serverRunning = true;
   private static ServerSocket serverSocket;
+  // Track appended jars to avoid duplicate classpath entries
+  private static final Set<Path> BOOT_ADDED =
+      Collections.synchronizedSet(new LinkedHashSet<>());
+  private static final Set<Path> SYSTEM_ADDED =
+      Collections.synchronizedSet(new LinkedHashSet<>());
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
@@ -513,6 +522,14 @@ public final class Main {
     }
 
     String libs = argMap.get(LIBS);
+    if (libs != null && !libs.isEmpty()) {
+      if (log.isDebugEnabled()) {
+        log.debug(
+            "The 'libs' profile feature is deprecated and will be removed in a future release. "
+                + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
+                + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
+      }
+    }
     String config = argMap.get(CONFIG);
     processClasspaths(libs);
     loadDefaultArguments(config);
@@ -719,6 +736,20 @@ public final class Main {
   }
 
   private static void processClasspaths(String libs) {
+    // Experimental: prefer manifest-driven libs when enabled
+    boolean useManifestLibs = Boolean.getBoolean("btrace.feature.manifestLibs");
+    if (useManifestLibs) {
+      if (log.isDebugEnabled()) log.debug("Using manifest-driven libs resolution");
+      AgentManifestLibs.ResolvedLibs libsFromMf = AgentManifestLibs.resolveFromManifest(Main.class);
+      // Append manifest-declared boot jars
+      for (Path p : libsFromMf.bootJars) {
+        appendBootJar(p);
+      }
+      // Append manifest-declared system jars
+      for (Path p : libsFromMf.systemJars) {
+        appendSystemJar(p);
+      }
+    }
     // Try to find JAR via Loader.class (unmasked bootstrap class)
     // Main.class won't work because it's loaded from .classdata
     String bootPath = null;
@@ -745,7 +776,7 @@ public final class Main {
         if (idx > -1) {
           bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
         }
-      }
+      } (feat(agent,client,extension,docs,tests): add manifest-libs (flag) + libs deprecation; provided-style helpers; examples; tests\n\n- agent: manifest-driven libs (flagged), centralized classpath append with dedup + diagnostics; deprecate libs (debug log); add single-jar system CL escape hatch; test knob scoped to manifest-libs\n- client: pass-through of btrace.* props to agent using $ system props\n- extension: add ClassLoadingUtil and MethodHandleCache for provided-style extensions\n- examples: add btrace-extensions/examples/{btrace-spark,btrace-hadoop} with README\n- docs: research + provided-style guide + migration + examples index; README deprecation note\n- tests: add ManifestLibsTests; gradle knob for btrace.test.skipLibs\n\nBREAKING CHANGE: libs/profiles deprecated with planned removal after N+2; prefer extensions)
     }
 
     String bootClassPath = argMap.get(BOOT_CLASS_PATH);
@@ -761,53 +792,105 @@ public final class Main {
     log.debug("Bootstrap ClassPath: {}", bootClassPath);
 
     StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
-    try {
-      while (tokenizer.hasMoreTokens()) {
-        String path = tokenizer.nextToken();
-        File f = new File(path);
-        if (!f.exists()) {
-          log.debug("BTrace bootstrap classpath resource [{}] does not exist", path);
+    while (tokenizer.hasMoreTokens()) {
+      String path = tokenizer.nextToken();
+      File f = new File(path);
+      if (!f.exists()) {
+        log.debug("BTrace bootstrap classpath resource [{}] does not exist", path);
+      } else {
+        if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+          appendBootJar(f.toPath());
         } else {
-          if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-            JarFile jf = asJarFile(f);
-            log.debug("Adding jar: {}", jf);
-            inst.appendToBootstrapClassLoaderSearch(jf);
-          } else {
-            log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
-          }
+          log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
         }
       }
-    } catch (IOException ex) {
-      log.debug("adding to boot classpath failed!", ex);
-      return;
     }
 
     String systemClassPath = argMap.get(SYSTEM_CLASS_PATH);
     if (systemClassPath != null) {
       log.debug("System ClassPath: {}", systemClassPath);
       tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
-      try {
-        while (tokenizer.hasMoreTokens()) {
-          String path = tokenizer.nextToken();
-          File f = new File(path);
-          if (!f.exists()) {
-            log.debug("BTrace system classpath resource [{}] does not exist.", path);
+      while (tokenizer.hasMoreTokens()) {
+        String path = tokenizer.nextToken();
+        File f = new File(path);
+        if (!f.exists()) {
+          log.debug("BTrace system classpath resource [{}] does not exist.", path);
+        } else {
+          if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+            appendSystemJar(f.toPath());
           } else {
-            if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-              JarFile jf = asJarFile(f);
-              inst.appendToSystemClassLoaderSearch(jf);
-            } else {
-              log.debug("ignoring system classpath element '{}' - only jar files allowed", path);
-            }
+            log.debug("ignoring system classpath element '{}' - only jar files allowed", path);
           }
         }
-      } catch (IOException ex) {
-        log.debug("adding to boot classpath failed!", ex);
-        return;
       }
     }
 
-    addPreconfLibs(libs);
+    // Skip preconfigured libs only when both the test knob is set and manifest-libs feature is enabled
+    boolean skipPreconfLibs = Boolean.getBoolean("btrace.test.skipLibs");
+    if (!(skipPreconfLibs && useManifestLibs)) {
+      addPreconfLibs(libs);
+    } else if (log.isDebugEnabled()) {
+      log.debug("Skipping addPreconfLibs due to btrace.test.skipLibs=true and manifestLibs enabled");
+    }
+
+    // Explicit, last-resort escape hatch: append a single jar to system CL
+    String sysAppend = System.getProperty("btrace.system.appendJar");
+    if (sysAppend != null && !sysAppend.isEmpty()) {
+      if (!settings.isTrusted()) {
+        log.warn(
+            "Ignoring btrace.system.appendJar: requires trusted=true. "
+                + "Use extensions or migration patterns instead.");
+      } else {
+        try {
+          Path p = Paths.get(sysAppend).toAbsolutePath().normalize();
+          if (!Files.exists(p) || !p.getFileName().toString().toLowerCase().endsWith(".jar")) {
+            log.warn("btrace.system.appendJar invalid or not found: {}", p);
+          } else {
+            boolean allowExternal = Boolean.getBoolean("btrace.allowExternalLibs");
+            String homeStr = getBTraceHome();
+            if (!allowExternal && homeStr != null) {
+              try {
+                Path home = Paths.get(homeStr).toRealPath();
+                Path rp = p.toRealPath();
+                if (!rp.startsWith(home)) {
+                  log.warn(
+                      "Rejecting btrace.system.appendJar outside BTRACE_HOME ({}): {}. "
+                          + "Override with -Dbtrace.allowExternalLibs=true",
+                      home,
+                      rp);
+                } else {
+                  appendSystemJar(p);
+                }
+              } catch (Exception e) {
+                // Fallback to basic check if realpath resolution fails
+                if (homeStr != null && !p.startsWith(homeStr)) {
+                  log.warn(
+                      "Rejecting btrace.system.appendJar outside BTRACE_HOME ({}): {}. "
+                          + "Override with -Dbtrace.allowExternalLibs=true",
+                      homeStr,
+                      p);
+                } else {
+                  appendSystemJar(p);
+                }
+              }
+            } else {
+              if (!allowExternal) {
+                log.warn(
+                    "Cannot determine BTRACE_HOME; proceeding to append system jar (btrace.system.appendJar): {}", p);
+              }
+              appendSystemJar(p);
+            }
+          }
+        } catch (Exception e) {
+          log.warn("Failed to process btrace.system.appendJar: {}", e.toString());
+        }
+      }
+    }
+
+    if (log.isDebugEnabled()) {
+      log.debug("Effective bootstrap jars: {}", BOOT_ADDED);
+      log.debug("Effective system jars: {}", SYSTEM_ADDED);
+    }
   }
 
   @SuppressWarnings("JavaReflectionMemberAccess")
@@ -831,6 +914,45 @@ public final class Main {
     }
 
     return new JarFile(path);
+  }
+
+  // Centralized helpers with dedup and logging
+  private static void appendBootJar(Path jarPath) {
+    try {
+      Path rp = jarPath.toAbsolutePath().normalize();
+      if (BOOT_ADDED.contains(rp)) {
+        if (log.isDebugEnabled()) log.debug("Skipping duplicate bootstrap jar: {}", rp);
+        return;
+      }
+      if (!Files.exists(rp)) {
+        if (log.isDebugEnabled()) log.debug("Bootstrap jar does not exist: {}", rp);
+        return;
+      }
+      inst.appendToBootstrapClassLoaderSearch(asJarFile(rp.toFile()));
+      BOOT_ADDED.add(rp);
+      if (log.isDebugEnabled()) log.debug("Added to bootstrap: {}", rp);
+    } catch (IOException e) {
+      log.debug("Failed to append bootstrap jar {}: {}", jarPath, e.toString());
+    }
+  }
+
+  private static void appendSystemJar(Path jarPath) {
+    try {
+      Path rp = jarPath.toAbsolutePath().normalize();
+      if (SYSTEM_ADDED.contains(rp)) {
+        if (log.isDebugEnabled()) log.debug("Skipping duplicate system jar: {}", rp);
+        return;
+      }
+      if (!Files.exists(rp)) {
+        if (log.isDebugEnabled()) log.debug("System jar does not exist: {}", rp);
+        return;
+      }
+      inst.appendToSystemClassLoaderSearch(asJarFile(rp.toFile()));
+      SYSTEM_ADDED.add(rp);
+      if (log.isDebugEnabled()) log.debug("Added to system: {}", rp);
+    } catch (IOException e) {
+      log.debug("Failed to append system jar {}: {}", jarPath, e.toString());
+    }
   }
 
   private static void addPreconfLibs(String libs) {
@@ -876,10 +998,7 @@ public final class Main {
               public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
                   throws IOException {
                 if (file.toString().toLowerCase().endsWith(".jar")) {
-                  if (log.isDebugEnabled()) {
-                    log.debug("Adding {} to bootstrap classpath", file);
-                  }
-                  inst.appendToBootstrapClassLoaderSearch(new JarFile(file.toFile()));
+                  appendBootJar(file);
                 }
                 return FileVisitResult.CONTINUE;
               }
@@ -919,10 +1038,7 @@ public final class Main {
               public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
                   throws IOException {
                 if (file.toString().toLowerCase().endsWith(".jar")) {
-                  if (log.isDebugEnabled()) {
-                    log.debug("Adding {} to system classpath", file);
-                  }
-                  inst.appendToSystemClassLoaderSearch(new JarFile(file.toFile()));
+                  appendSystemJar(file);
                 }
                 return FileVisitResult.CONTINUE;
               }
