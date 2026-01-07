@@ -15,9 +15,15 @@ buildscript {
 }
 
 ext.getToolsJar = {
-    return javaToolchains.compilerFor {
-        languageVersion.set(JavaLanguageVersion.of(11))
-    }.get().metadata.installationPath.file("lib/tools.jar")
+    // Prefer a JDK 8 tools.jar, which contains com.sun.tools.attach, com.sun.source.*, and sun.jvmstat.*
+    try {
+        def jdk8 = javaToolchains.compilerFor { languageVersion.set(JavaLanguageVersion.of(8)) }.get()
+        def tj = jdk8.metadata.installationPath.file("lib/tools.jar")
+        return tj
+    } catch (Throwable ignore) {
+        // Fallback to empty file reference to avoid NPEs; callers should check existence
+        return file('non-existent-tools.jar')
+    }
 }
 
 ext.getJavac = { int version = 11 ->
@@ -76,6 +82,18 @@ javadoc {
     options.encoding("UTF-8")
     executable = "${getJavadoc()}"
     failOnError true
+    // Ensure Javadoc can resolve com.sun.* APIs (tools.jar on JDK8)
+    doFirst {
+        def toolsJar = getToolsJar()
+        try {
+            File tj = (toolsJar instanceof File) ? toolsJar : toolsJar?.asFile
+            if (tj != null && tj.exists()) {
+                classpath += files(tj)
+            }
+        } catch (Throwable ignore) {
+            // Ignore if toolchain lacks tools.jar (JDK9+); compile still uses modules
+        }
+    }
 }
 
 task sourcesJar(type: Jar, dependsOn: classes, description: 'Creates a jar from the source files.') {

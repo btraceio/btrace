@@ -9,6 +9,10 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,12 +43,122 @@ class CompilerHelper {
     this.generatePack = generatePack;
   }
 
+  /**
+   * Extends the classpath with JARs from extension directories.
+   * Scans in order: BTRACE_HOME/libs/ext/, ~/.btrace/ext/, $BTRACE_EXT_PATH
+   *
+   * @param classPath original classpath (may be null)
+   * @return extended classpath including extension JARs
+   */
+  private String extendClassPathWithExtensions(String classPath) {
+    List<String> extensionJars = new ArrayList<>();
+
+    // 1. Built-in extensions: BTRACE_HOME/libs/ext/
+    String btraceHome = getBTraceHome();
+    if (btraceHome != null) {
+      Path builtinExtPath = Paths.get(btraceHome, "libs", "ext");
+      addExtensionJars(builtinExtPath, extensionJars);
+    }
+
+    // 2. User extensions: ~/.btrace/ext/
+    String userHome = System.getProperty("user.home");
+    if (userHome != null) {
+      Path userExtPath = Paths.get(userHome, ".btrace", "ext");
+      addExtensionJars(userExtPath, extensionJars);
+    }
+
+    // 3. Environment variable: BTRACE_EXT_PATH
+    String extPath = System.getenv("BTRACE_EXT_PATH");
+    if (extPath != null && !extPath.isEmpty()) {
+      String[] paths = extPath.split(File.pathSeparator);
+      for (String path : paths) {
+        addExtensionJars(Paths.get(path), extensionJars);
+      }
+    }
+
+    // Combine with original classpath
+    if (extensionJars.isEmpty()) {
+      return classPath;
+    }
+
+    StringBuilder sb = new StringBuilder();
+    if (classPath != null && !classPath.isEmpty()) {
+      sb.append(classPath);
+    }
+
+    for (String jar : extensionJars) {
+      if (sb.length() > 0) {
+        sb.append(File.pathSeparator);
+      }
+      sb.append(jar);
+    }
+
+    return sb.toString();
+  }
+
+  /**
+   * Attempts to determine BTRACE_HOME from environment or compiler classpath.
+   *
+   * @return BTRACE_HOME path, or null if not found
+   */
+  private String getBTraceHome() {
+    // Try environment variable first
+    String envHome = System.getenv("BTRACE_HOME");
+    if (envHome != null && Files.isDirectory(Paths.get(envHome))) {
+      return envHome;
+    }
+
+    // Try to find from compiler classpath (look for btrace-compiler.jar or btrace-boot.jar)
+    String classPath = System.getProperty("java.class.path");
+    if (classPath != null) {
+      for (String entry : classPath.split(File.pathSeparator)) {
+        if (entry.contains("btrace-compiler") || entry.contains("btrace-boot")) {
+          File jarFile = new File(entry);
+          if (jarFile.exists()) {
+            File libsDir = jarFile.getParentFile();
+            if (libsDir != null && libsDir.getName().equals("libs")) {
+              File home = libsDir.getParentFile();
+              if (home != null && home.isDirectory()) {
+                return home.getAbsolutePath();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Adds all JAR files from the given directory to the list.
+   *
+   * @param directory directory to scan
+   * @param jars list to add JAR paths to
+   */
+  private void addExtensionJars(Path directory, List<String> jars) {
+    if (!Files.isDirectory(directory)) {
+      return;
+    }
+
+    try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, "*.jar")) {
+      for (Path jar : stream) {
+        jars.add(jar.toAbsolutePath().toString());
+      }
+    } catch (IOException ignored) {
+      // Directory not accessible, skip silently
+    }
+  }
+
   Map<String, byte[]> compile(
       MemoryJavaFileManager manager,
       Iterable<? extends JavaFileObject> compUnits,
       Writer err,
       String sourcePath,
       String classPath) {
+    // Extend classpath with extension JARs
+    classPath = extendClassPathWithExtensions(classPath);
+
     // to collect errors, warnings etc.
     DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
 

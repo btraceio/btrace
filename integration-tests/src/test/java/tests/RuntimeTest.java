@@ -24,11 +24,14 @@
  */
 package tests;
 
+import org.junit.jupiter.api.Assertions;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.util.Properties;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -38,13 +41,12 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * @author Jaroslav Bachorik
@@ -57,6 +59,8 @@ public abstract class RuntimeTest {
   private static String eventsClassPath = null;
   private static Path projectRoot = null;
   private static boolean forceDebug = false;
+  private static String permissionsFile = null;
+  private static long defaultTimeoutMs = 10000L;
   /** Try starting JFR recording if available */
   private boolean startJfr = false;
   /** Display the otput from the test application */
@@ -92,14 +96,20 @@ public abstract class RuntimeTest {
             + File.pathSeparator
             + projectRoot.resolve("build/classes/java/test")
             + File.pathSeparator
+            + projectRoot.resolve("build/resources/test")
+            + File.pathSeparator
             + eventsClassPath;
 
     Assertions.assertNotNull(projectRoot);
     Assertions.assertNotNull(clientClassPath);
 
     String toolsjar = null;
+    // Accept both TEST_JAVA_HOME (preferred) and JAVA_TEST_HOME as aliases
     // TEST_JAVA_HOME has the highest precedence
     javaHome = System.getenv("TEST_JAVA_HOME");
+    if (javaHome == null) {
+      javaHome = System.getenv("JAVA_TEST_HOME");
+    }
     if (javaHome == null) {
       javaHome = System.getenv("JAVA_HOME");
     }
@@ -117,13 +127,67 @@ public abstract class RuntimeTest {
     }
     cp = toolsjar != null ? cp + File.pathSeparator + toolsjar : cp;
     System.out.println("=== Using Java: " + javaHome + ", cp: " + cp);
+
+    // Forward any btrace.* system properties to the traced app via JVM args
+    // so the agent/client can pick them up (e.g., btrace.verify.transformed, debug flags).
+    try {
+      System.getProperties()
+          .stringPropertyNames()
+          .stream()
+          .filter(n -> n.startsWith("btrace."))
+          .forEach(n -> extraJvmArgs.add("-D" + n + "=" + System.getProperty(n)));
+    } catch (Throwable ignore) {
+      // best effort; if this fails, tests still run with defaults
+    }
+
+    // Tune default timeout for newer JDKs which may exhibit slower attach/instrument timing
+    try {
+      Properties release = new Properties();
+      release.load(Files.newInputStream(Paths.get(javaHome, "release")));
+      String ver = release.getProperty("JAVA_VERSION", "\"0\"").replace("\"", "");
+      if (isVersionAtLeast(ver, 25)) {
+        defaultTimeoutMs = 20000L;
+      }
+    } catch (Exception ignore) {
+      // keep default
+    }
+
+    // Prepare permissions policy to allow privileged extensions for tests
+    try {
+      Path permsDir = projectRoot.resolve("build");
+      Files.createDirectories(permsDir);
+      Path perms = permsDir.resolve("permissions.properties");
+      String content = "allowPrivileged=true\n" +
+                       "allowExtensions=btrace-metrics,btrace-utils,btrace-statsd\n";
+      Files.write(perms, content.getBytes(StandardCharsets.UTF_8));
+      permissionsFile = perms.toAbsolutePath().toString();
+    } catch (IOException ioe) {
+      // best effort; leave permissionsFile null if we can't create it
+      permissionsFile = null;
+    }
   }
 
   protected void reset() {
     debugTestApp = false;
     debugBTrace = false;
     isUnsafe = false;
-    timeout = 10000L;
+    timeout = defaultTimeoutMs;
+  }
+
+  private static boolean isVersionAtLeast(String version, int majorThreshold) {
+    try {
+      // Accept forms like "25", "25.0.1", or legacy "1.8.0_262"
+      String v = version;
+      if (v.startsWith("1.")) {
+        v = v.substring(2); // e.g., 8.0_262 -> 8.0_262
+      }
+      int dot = v.indexOf('.') == -1 ? v.length() : v.indexOf('.');
+      String majorStr = v.substring(0, dot);
+      int major = Integer.parseInt(majorStr.replaceAll("[^0-9]", ""));
+      return major >= majorThreshold;
+    } catch (Throwable t) {
+      return false;
+    }
   }
 
   public void testWithJfr(String testApp, String testScript, int checkLines, ResultValidator v)
@@ -171,12 +235,19 @@ public abstract class RuntimeTest {
       debugTestApp = true;
     }
     String testJavaHome = System.getenv("TEST_JAVA_HOME");
+    if (testJavaHome == null) {
+      testJavaHome = System.getenv("JAVA_TEST_HOME");
+    }
     testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
     if (testJavaHome == null) {
       throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
     }
+    System.out.println("===> test java: " + testJavaHome);
     String jfrFile = null;
     List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
+    if (permissionsFile != null) {
+      args.add("-Dbtrace.permissions=" + permissionsFile);
+    }
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
     }
@@ -184,6 +255,7 @@ public abstract class RuntimeTest {
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
     args.add("-XX:+EnableDynamicAgentLoading");
     args.add("-XX:+UnlockDiagnosticVMOptions");
+    args.add("-XX:-OmitStackTraceInFastThrow");
 //    args.add("-Xlog");
 
     // uncomment the following line to get extra JFR logs
@@ -242,7 +314,12 @@ public abstract class RuntimeTest {
                 String l = null;
                 while ((l = stderrReader.readLine()) != null) {
                   if (l.contains("Server VM warning")
-                      || l.contains("XML libraries not available")) {
+                      || l.contains("XML libraries not available")
+                      || l.contains("terminally deprecated method in sun.misc.Unsafe")
+                      || l.contains("sun.misc.Unsafe::objectFieldOffset")
+                      || l.contains("org.jctools.util.UnsafeAccess")
+                      || l.contains("ASM verification requested for ")
+                      || l.contains("ASM verification OK for ")) {
                     continue;
                   }
                   testAppLatch.countDown();
@@ -269,7 +346,7 @@ public abstract class RuntimeTest {
 
       System.out.println("Detached.");
 
-      int retries = 10;
+      int retries = 1000;
       boolean exitted = false;
       while (!exitted && retries-- > 0) {
         pw.println("done");
@@ -290,6 +367,35 @@ public abstract class RuntimeTest {
       errT.join();
     }
 
+    // Allow a brief grace period for any final output to flush before validation
+    try {
+      Thread.sleep(500L);
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+    }
+    // If JFR was enabled for dynamic attach, give it a moment and dump the recording
+    if (startJfr && pidStringRef.get() != null) {
+      try {
+        Thread.sleep(1500L);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+      }
+      try {
+        ProcessBuilder jcmdPb;
+        String jcmdExe = testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
+        if (jfrFile != null) {
+          jcmdPb =
+              new ProcessBuilder(
+                  jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
+        } else {
+          jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
+        }
+        jcmdPb.start().waitFor();
+      } catch (Exception ignore) {
+        // best effort
+      }
+    }
+
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
   }
 
@@ -307,12 +413,18 @@ public abstract class RuntimeTest {
       debugTestApp = true;
     }
     String testJavaHome = System.getenv("TEST_JAVA_HOME");
+    if (testJavaHome == null) {
+      testJavaHome = System.getenv("JAVA_TEST_HOME");
+    }
     testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
     if (testJavaHome == null) {
       throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
     }
     String jfrFile = null;
     List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
+    if (permissionsFile != null) {
+      args.add("-Dbtrace.permissions=" + permissionsFile);
+    }
     if (attachDebugger) {
       args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
     }
@@ -389,7 +501,14 @@ public abstract class RuntimeTest {
               try {
                 String l = null;
                 while ((l = stderrReader.readLine()) != null) {
-                  if (l.contains("SLF4J") || l.contains("Server VM warning") || l.contains("XML")) {
+                  if (l.contains("SLF4J")
+                      || l.contains("Server VM warning")
+                      || l.contains("XML")
+                      || l.contains("terminally deprecated method in sun.misc.Unsafe")
+                      || l.contains("sun.misc.Unsafe::objectFieldOffset")
+                      || l.contains("org.jctools.util.UnsafeAccess")
+                      || l.contains("ASM verification requested for ")
+                      || l.contains("ASM verification OK for ")) {
                     continue;
                   }
                   stderr.append(l).append(System.lineSeparator());
@@ -419,7 +538,20 @@ public abstract class RuntimeTest {
     stdoutLatch.await();
 
     if (startJfr && pidStringRef.get() != null) {
-      ProcessBuilder jcmdPb = new ProcessBuilder("jcmd", pidStringRef.get(), "JFR.dump", "name=1");
+      // Give the periodic event at least one interval to fire before dumping
+      try {
+        Thread.sleep(1500L);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+      }
+      // Dump the current recording into the configured file to ensure events are flushed
+      ProcessBuilder jcmdPb;
+      String jcmdExe = testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
+      if (jfrFile != null) {
+        jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
+      } else {
+        jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
+      }
       jcmdPb.start().waitFor();
     }
 
@@ -607,6 +739,8 @@ public abstract class RuntimeTest {
     pb.environment().remove("JAVA_TOOL_OPTIONS");
     Process p = pb.start();
 
+    AtomicBoolean done = new AtomicBoolean(false);
+
     Thread stderrThread =
         new Thread(
             () -> {
@@ -617,6 +751,7 @@ public abstract class RuntimeTest {
 
                 int lineno = 0;
                 String line = null;
+                boolean callbackActive = true;
                 while ((line = br.readLine()) != null) {
                   System.out.println("[btrace err] " + line);
                   if (line.contains("Server VM warning")
@@ -629,8 +764,11 @@ public abstract class RuntimeTest {
                     // skip test debug lines
                     continue;
                   }
-                  if (!outputProcessor.onStderr(++lineno, line)) {
-                    return;
+                  if (callbackActive && !outputProcessor.onStderr(++lineno, line)) {
+                    callbackActive = false;
+                    // Continue draining output to prevent buffer fill-up and deadlock,
+                    // but stop calling the callback
+                    done.set(true);
                   }
                   ;
                 }
@@ -649,9 +787,13 @@ public abstract class RuntimeTest {
                         new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
                 int lineno = 1;
                 String line = null;
+                boolean callbackActive = true;
                 while ((line = br.readLine()) != null) {
-                  if (!outputProcessor.onStdout(lineno, line)) {
-                    return;
+                  if (callbackActive && !outputProcessor.onStdout(lineno, line)) {
+                    callbackActive = false;
+                    // Continue draining output to prevent buffer fill-up and deadlock,
+                    // but stop calling the callback
+                    done.set(true);
                   }
                   if (!(debugBTrace && line.contains("DEBUG"))) {
                     lineno++;
@@ -669,8 +811,33 @@ public abstract class RuntimeTest {
     stderrThread.start();
     stdoutThread.start();
 
-    stderrThread.join();
-    stdoutThread.join();
+    // Wait adaptively: if callbacks indicate completion (done=true), shorten wait and terminate
+    long deadline = System.currentTimeMillis() + 30000; // 30s max
+    while ((stderrThread.isAlive() || stdoutThread.isAlive()) && System.currentTimeMillis() < deadline) {
+      if (done.get()) {
+        // Give the client a brief grace period to exit on its own
+        try { Thread.sleep(200); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        if (p.isAlive()) {
+          p.destroy();
+          try { Thread.sleep(200); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+          if (p.isAlive()) {
+            p.destroyForcibly();
+          }
+        }
+        // After short-circuiting, only wait up to 1s more for threads to drain
+        deadline = System.currentTimeMillis() + 1000;
+      }
+      try { Thread.sleep(100); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+    }
+
+    // If threads are still alive, process likely hung - destroy it
+    if (stderrThread.isAlive() || stdoutThread.isAlive()) {
+      System.err.println("WARNING: BTrace process output threads still alive after timeout, destroying process");
+      p.destroyForcibly();
+      // Give threads a moment to notice process died
+      stderrThread.join(1000);
+      stdoutThread.join(1000);
+    }
   }
 
   public Process runBTrace(

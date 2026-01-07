@@ -4,16 +4,14 @@ import org.openjdk.btrace.core.BTraceUtils;
 import org.openjdk.btrace.core.Profiler;
 import org.openjdk.btrace.core.annotations.*;
 import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.statsd.StatsdExtension;
+import org.openjdk.btrace.statsd.Statsd;
 
 @BTrace
-@RequestPermission(Permission.NETWORK)
-@RequestPermission(Permission.THREADS)
 class BTRACE256 {
   @Property Profiler swingProfiler = BTraceUtils.Profiling.newProfiler();
 
-  @Injected(ServiceType.EXTENSION)
-  private StatsdExtension sd;
+  @Injected
+  private Statsd sd;
 
   @OnMethod(clazz = "/.*\\.BTRACE256/", method = "doStuff")
   void entry(@ProbeMethodName(fqn = true) String probeMethod) {

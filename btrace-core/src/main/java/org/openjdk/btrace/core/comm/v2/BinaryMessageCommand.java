@@ -1,6 +1,7 @@
 package org.openjdk.btrace.core.comm.v2;
 
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -111,7 +112,7 @@ public class BinaryMessageCommand extends BinaryCommand {
             
             // Create an inflater to decompress
             InflaterInputStream inflaterStream = new InflaterInputStream(
-                new java.io.ByteArrayInputStream(compressedData),
+                new ByteArrayInputStream(compressedData),
                 new Inflater()
             );
             

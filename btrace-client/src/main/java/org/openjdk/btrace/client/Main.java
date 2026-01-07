@@ -404,7 +404,20 @@ public final class Main {
               if (isUnattended
                   && cmd.getType() == Command.STATUS
                   && ((StatusCommand) cmd).getFlag() == StatusCommand.STATUS_FLAG) {
-                client.sendDisconnect();
+                // In unattended mode, initiate a graceful disconnect and
+                // continue processing so the server can send DISCONNECT
+                // with the probe id, which the client prints.
+                try {
+                  if (log.isDebugEnabled()) {
+                    log.debug("initiating unattended disconnect after STATUS OK");
+                  }
+                  client.disconnect(); // marks disconnected and sends DISCONNECT
+                } catch (IOException ioe) {
+                  if (log.isDebugEnabled()) {
+                    log.debug("error initiating unattended disconnect: {}", ioe.toString());
+                  }
+                }
+                // Do not exit here; wait for DISCONNECT to arrive and be printed
               } else {
                 listener.onCommand(cmd);
               }
@@ -445,11 +458,12 @@ public final class Main {
                         log.debug("sending exit command");
                         client.sendExit(0);
                       } else {
-                        log.debug("sending disconnect command");
-                        client.sendDisconnect();
+                        // Disconnect already initiated; avoid duplicate sends on shutdown
+                        log.debug("client already marked disconnected; skipping shutdown send");
                       }
-                    } catch (IOException ioexp) {
-                      log.debug(ioexp.toString(), ioexp);
+                    } catch (IOException | IllegalStateException ioexp) {
+                      // Streams may already be closed (e.g., unattended mode)
+                      if (log.isDebugEnabled()) log.debug(ioexp.toString(), ioexp);
                     }
                   }
                 }));

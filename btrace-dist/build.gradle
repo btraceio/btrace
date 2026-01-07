@@ -63,10 +63,13 @@ includes['boot'] = {
         }
         return true
     }
+    if (it.path.startsWith('META-INF/services')) {
+        return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
+    }
     return it.path.startsWith("org/slf4j/") || it.path.startsWith('org/openjdk/btrace/runtime/') ||
-            it.path.startsWith('org/jctools/') ||
-            it.path.startsWith('org/openjdk/btrace/services/') ||
-            it.path.startsWith('org/openjdk/btrace/statsd/')
+            it.path.startsWith('org/openjdk/btrace/extension/') ||
+            it.path.startsWith('org/jctools/')
+            // Extensions are loaded from extensions/ directory
 }
 
 includes['client'] = {
@@ -78,6 +81,9 @@ includes['client'] = {
     }
     if (it.path.startsWith('org/openjdk/btrace')) {
         return !it.path.startsWith('org/openjdk/btrace/agent')
+    }
+    if (it.path.startsWith('com/googlecode/lanterna/')) {
+        return true
     }
     if (it.path.startsWith('META-INF/services')) {
         return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
@@ -96,6 +102,8 @@ dependencies {
     implementation project(':btrace-agent')
     implementation project(':btrace-client')
     implementation project(':btrace-compiler')
+    // Metrics extension excluded unless present; extensions copied dynamically
+    implementation project(':btrace-ext-cli')
 }
 
 jar {
@@ -229,6 +237,7 @@ task fixPermissions(type: Exec) {
     commandLine 'chmod', '500', "${distTarget}/bin/btrace"
     commandLine 'chmod', '500', "${distTarget}/bin/btracec"
     commandLine 'chmod', '500', "${distTarget}/bin/btracer"
+    commandLine 'chmod', '500', "${distTarget}/bin/btracex"
 
     dependsOn processResources
 }
@@ -238,7 +247,64 @@ task copyDtraceLib(type: Copy) {
     into "${distTarget}/libs/"
 }
 
+task copyExtensions(type: Copy) {
+    group 'Build'
+    description 'Copy extension ZIP archives to extensions/ directory'
+    into "${distTarget}/extensions/"
+}
+
+// Copy the btracex CLI shaded jar into libs
+
+// Discover all extension subprojects and wire copyExtensions dynamically to avoid hard-coded paths
+gradle.projectsEvaluated {
+    def extProjects = rootProject.subprojects.findAll { it.plugins.hasPlugin('org.openjdk.btrace.extension') }
+    if (extProjects.isEmpty()) {
+        logger.lifecycle("[btrace-dist] No BTrace extension projects found. Skipping extension packaging.")
+    } else {
+        tasks.named('copyExtensions').configure { t ->
+            extProjects.each { sp ->
+                // Depend on packaging task and copy any *-extension.zip from its distributions folder
+                t.dependsOn("${sp.path}:packageExtension")
+                t.from(sp.layout.buildDirectory.dir('distributions')) {
+                    include "*-extension.zip"
+                }
+            }
+        }
+    }
+}
+
+task explodeExtensions {
+    group 'Build'
+    description 'Explode extension ZIP archives into extension subdirectories'
+    dependsOn copyExtensions
+
+    doLast {
+        def extensionsDir = file("${distTarget}/extensions")
+        if (!extensionsDir.exists()) {
+            return
+        }
+
+        extensionsDir.listFiles().each { file ->
+            if (file.name.endsWith('-extension.zip')) {
+                // Extract extension name from filename: btrace-metrics-2.3.0-SNAPSHOT-extension.zip -> btrace-metrics
+                def extensionName = file.name.replaceAll(/-\d+.*-extension\.zip$/, '')
+                def targetDir = new File(extensionsDir, extensionName)
+                targetDir.mkdirs()
+
+                // Explode ZIP into extension directory
+                copy {
+                    from zipTree(file)
+                    into targetDir
+                }
+
+                logger.info("Exploded extension ${file.name} into ${extensionName}/")
+            }
+        }
+    }
+}
+
 task buildZip(type: Zip) {
+    dependsOn agentJar, bootJar, clientJar, fixPermissions, explodeExtensions
     from "${distTarget}"
     include "**/*"
 
@@ -299,6 +365,7 @@ ospackage {
     link('/usr/local/bin/btrace', '/opt/btrace/bin/btrace')
     link('/usr/local/bin/btracer', '/opt/btrace/bin/btracer')
     link('/usr/local/bin/btracec', '/opt/btrace/bin/btracec')
+    link('/usr/local/bin/btracex', '/opt/btrace/bin/btracex')
 }
 
 buildDeb {
@@ -306,12 +373,12 @@ buildDeb {
 }
 
 copyDtraceLib.dependsOn project(':btrace-dtrace').build
-shadowJar.dependsOn agentJar, bootJar, clientJar, copyDtraceLib
-buildTgz.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources
-buildZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources
-buildSdkmanZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources
-buildDeb.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources
-buildRpm.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources
+shadowJar.dependsOn agentJar, bootJar, clientJar, copyDtraceLib, copyExtensions
+buildTgz.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildSdkmanZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildDeb.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildRpm.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
 
 // Docker build tasks

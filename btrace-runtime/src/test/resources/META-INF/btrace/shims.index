@@ -1,0 +1,2 @@
+test.shim.ShimService=test.shim.ShimServiceNoop,test.shim.ShimServiceThrow
+

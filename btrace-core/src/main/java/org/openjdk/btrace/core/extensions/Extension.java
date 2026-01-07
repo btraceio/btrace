@@ -4,8 +4,7 @@ package org.openjdk.btrace.core.extensions;
  * Base class for all BTrace extensions.
  *
  * <p>Extensions provide additional functionality to BTrace scripts beyond the core BTraceUtils API.
- * They must declare required permissions via {@link RequiresPermission} annotations and implement
- * proper lifecycle management.
+ * They declare required permissions via descriptors and implement proper lifecycle management.
  *
  * <p><b>Lifecycle:</b>
  *
@@ -22,8 +21,6 @@ package org.openjdk.btrace.core.extensions;
  * <p><b>Example:</b>
  *
  * <pre>
- * &#64;ExtensionDescriptor(name = "example", version = "1.0")
- * &#64;RequiresPermission(Permission.NETWORK)
  * public class ExampleExtension extends Extension {
  *   private Socket socket;
  *

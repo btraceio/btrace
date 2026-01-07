@@ -9,13 +9,15 @@ GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrac
 DUP
 ISTORE 5
 IFLE L0
+L3
+FRAME FULL [resources/OnMethodTest J J I] []
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 3
 L0
 LINENUMBER 42 L0
-FRAME FULL [resources/OnMethodTest J J I] []
-L3
-LINENUMBER 43 L3
+FRAME SAME
+L4
+LINENUMBER 43 L4
 L1
 FRAME SAME1 java/lang/Throwable
 INVOKESTATIC java/lang/System.nanoTime ()J
@@ -26,14 +28,14 @@ DUP
 ASTORE 6
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
 ICONST_1
-IF_ICMPLT L4
+IF_ICMPLT L5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L4
+IFNE L5
 ALOAD 0
 LLOAD 1
 ALOAD 6
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V
-L4
+L5
 FRAME FULL [resources/OnMethodTest J J I java/lang/Throwable] [java/lang/Throwable]
 ATHROW
 LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0
@@ -50,13 +52,15 @@ GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrac
 DUP
 ISTORE 6
 IFLE L0
+L3
+FRAME FULL [resources/OnMethodTest java/lang/String J J I] []
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 4
 L0
 LINENUMBER 46 L0
-FRAME FULL [resources/OnMethodTest java/lang/String J J I] []
-L3
-LINENUMBER 47 L3
+FRAME SAME
+L4
+LINENUMBER 47 L4
 L1
 FRAME SAME1 java/lang/Throwable
 INVOKESTATIC java/lang/System.nanoTime ()J
@@ -67,14 +71,14 @@ DUP
 ASTORE 7
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr.$btrace$$level : I
 ICONST_1
-IF_ICMPLT L4
+IF_ICMPLT L5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L4
+IFNE L5
 ALOAD 0
 LLOAD 2
 ALOAD 7
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args (Ljava/lang/Object;JLjava/lang/Throwable;)V
-L4
+L5
 FRAME FULL [resources/OnMethodTest java/lang/String J J I java/lang/Throwable] [java/lang/Throwable]
 ATHROW
 LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0

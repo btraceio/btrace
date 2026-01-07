@@ -239,6 +239,16 @@ public class UnsafeFileWriter {
 - Modifying application behavior (use AOP)
 - Long-term data collection (use metrics libraries)
 
+## Extensions and Injection
+
+### How do I inject extension services?
+Use `@Injected` without parameters for all services/extensions. The invokedynamic injector
+detects how to construct injected services and extensions. If an extension requires runtime
+context, it is initialized via `Extension.initialize(ExtensionContext)`.
+
+See also: Architecture → `architecture/extension-invokedynamic-bridge.md` and
+Extension Development Guide → `btrace-extension-development-guide.md`.
+
 ### What are BTrace anti-patterns?
 
 **1. Tracing everything**

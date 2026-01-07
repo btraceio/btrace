@@ -35,7 +35,6 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.annotations.Sampled;
 import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.services.api.Service;
 
 /**
  * This class verifies that the BTrace "action" method is safe - boundedness and read-only rules are
@@ -199,18 +198,17 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
             // allow string concatenation via StringBuilder
           } else {
             List<StackItem> args = getMethodParams(desc, false);
-            if (!isServiceTarget(args.get(0)) && !isExtensionTarget(args.get(0))) {
+            // Allow calls on service targets or service-derived types (return types from services)
+            // This makes the verifier cooperate with the extension system automatically
+            if (!isServiceTarget(args.get(0)) && !getParent().isServiceType(owner)) {
               Verifier.reportError("no.method.calls", owner + "." + name + desc);
             }
           }
           break;
         case INVOKEINTERFACE:
-          {
-            // Allow interface calls on extension targets
-            List<StackItem> args = getMethodParams(desc, false);
-            if (!isExtensionTarget(args.get(0))) {
-              Verifier.reportError("no.method.calls", owner + "." + name + desc);
-            }
+          // Allow interface calls on service-derived types
+          if (!getParent().isServiceType(owner)) {
+            Verifier.reportError("no.method.calls", owner + "." + name + desc);
           }
           break;
         case INVOKESPECIAL:
@@ -223,9 +221,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
           }
           break;
         case INVOKESTATIC:
-          if (owner.equals(Constants.SERVICE)) {
-            delayedClzLoad = null;
-          } else if (!owner.equals(Constants.BTRACE_UTILS)
+          if (!owner.equals(Constants.BTRACE_UTILS)
               && !owner.startsWith(Constants.BTRACE_UTILS + "$")
               && !owner.equals(className)) {
             if ("valueOf".equals(name) && isPrimitiveWrapper(owner)) {
@@ -282,9 +278,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   private boolean isServiceTarget(StackItem si) {
     if (si instanceof ResultItem) {
       ResultItem ri = (ResultItem) si;
-      if (ri.getOwner().equals(Type.getInternalName(Service.class))) {
-        return true;
-      } else if (ri.getOwner().equals(className) && getParent().isFieldInjected(ri.getName())) {
+      if (ri.getOwner().equals(className) && getParent().isFieldInjected(ri.getName())) {
         return true;
       }
     }

@@ -16,8 +16,10 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 3
 LSUB
 LSTORE 1
+L3
+FRAME SAME
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L3
+IFNE L4
 LDC "public void resources.issues.BTRACE256#doStuff"
 LLOAD 1
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE256$exit(Ljava/lang/String;J)V [
@@ -26,9 +28,9 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE256"
 ]
-L3
-FRAME SAME
 L4
-LOCALVARIABLE this Lresources/issues/BTRACE256; L0 L4 0
+FRAME SAME
+L5
+LOCALVARIABLE this Lresources/issues/BTRACE256; L0 L5 0
 MAXSTACK = 4
 MAXLOCALS = 5

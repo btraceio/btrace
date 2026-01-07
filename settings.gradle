@@ -1,3 +1,8 @@
+// Use the in-repo Gradle plugin for extension authorship without needing a remote repository
+pluginManagement {
+    includeBuild('btrace-gradle-plugin')
+}
+
 rootProject.name = 'btrace-ng'
 
 // Find the directories containing a "build.gradle" file in the root directory
@@ -16,6 +21,15 @@ def subDirs = rootDir.listFiles(new FileFilter() {
 })
 
 subDirs.each { File dir ->
+    if (dir.name == 'btrace-gradle-plugin') {
+        // This module is consumed as an included build via pluginManagement
+        // to provide the Gradle plugin. Do not include it as a subproject.
+        return
+    }
+    // Skip legacy, removed modules
+    if (dir.name in ['btrace-services', 'btrace-services-api', 'btrace-statsd']) {
+        return
+    }
     if (dir.name.startsWith("btrace-")) {
         include dir.name
     }
@@ -23,6 +37,12 @@ subDirs.each { File dir ->
     include "benchmarks:agent-benchmark"
     include "benchmarks:runtime-benchmarks"
 }
+
+// Explicitly include nested extension modules
+include 'btrace-extensions'
+include 'btrace-extensions:btrace-metrics'
+include 'btrace-extensions:btrace-utils'
+include 'btrace-extensions:btrace-statsd'
 
 dependencyResolutionManagement {
     versionCatalogs {
@@ -69,6 +89,12 @@ dependencyResolutionManagement {
             // https://mvnrepository.com/artifact/org.junit.jupiter
             library ('junit', 'org.junit', 'junit-bom').versionRef('junit')
             library ('junit-jupiter', 'org.junit.jupiter', 'junit-jupiter').versionRef('junit')
+
+            // https://mvnrepository.com/artifact/org.hdrhistogram/HdrHistogram
+            library ('hdrhistogram', 'org.hdrhistogram', 'HdrHistogram').version('2.2.2')
+
+            // https://mvnrepository.com/artifact/com.clearspring.analytics/stream
+            library ('stream-lib', 'com.clearspring.analytics', 'stream').version('2.9.8')
         }
     }
 }

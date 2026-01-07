@@ -38,8 +38,11 @@ import org.objectweb.asm.tree.MethodNode;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.VerifierException;
 import org.openjdk.btrace.core.comm.RetransformClassNotification;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.extension.ServiceDeclarationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +55,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import org.openjdk.btrace.core.extensions.Permission;
 
 /**
  * @author Jaroslav Bachorik
@@ -133,7 +135,20 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       public AnnotationVisitor visitAnnotation(String type, boolean aVisible) {
         AnnotationVisitor av = super.visitAnnotation(type, aVisible);
         if (type.equals(Constants.INJECTED_DESC)) {
-          delegate.addServiceField(name, Type.getType(desc).getInternalName());
+          // Bytecode-time validation for @Injected fields:
+          // This ASM-based check enforces that the injected service type is declared by
+          // some available extension (as exposed via ServiceDeclarationRegistry). It does
+          // not load classes; instead, the agent registers a resolver that knows about
+          // extension manifests. This complements the runtime validation in
+          // org.openjdk.btrace.agent.Client#validateDeclaredServices, which uses reflection
+          // to account for classloader identity, JPMS access, and linkage in the actual
+          // target JVM.
+          String internal = Type.getType(desc).getInternalName();
+          String fqcn = internal.replace('/', '.');
+          if (!ServiceDeclarationRegistry.isDeclaredService(fqcn)) {
+            throw new VerifierException(Messages.get("invalid.injected.service") + ": " + fqcn);
+          }
+          delegate.addServiceField(name, internal);
         }
         if (type.equals("Lorg/openjdk/btrace/core/annotations/Event;")) {
           av =
@@ -309,6 +324,10 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
   boolean isFieldInjected(String name) {
     return delegate.isFieldInjected(name);
+  }
+
+  boolean isServiceType(String typeName) {
+    return delegate.isServiceType(typeName);
   }
 
   void addOnMethod(OnMethod om) {

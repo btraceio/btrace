@@ -28,6 +28,8 @@ Get up and running in 5 minutes with installation, your first script, and common
 4. Explore [BTrace Tutorial](BTraceTutorial.md) lessons 1-3
 5. Keep [Quick Reference](QuickReference.md) handy
 
+Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension](GettingStarted.md#quick-start-histogram-metrics-extension) and the tutorial section [Using the Histogram Metrics Extension](BTraceTutorial.md#using-the-histogram-metrics-extension-btrace-metrics).
+
 ### I Need to Solve a Problem
 1. Check [Troubleshooting Guide](Troubleshooting.md) for your error
 2. Search [FAQ](FAQ.md) for similar issues
@@ -47,6 +49,7 @@ Get up and running in 5 minutes with installation, your first script, and common
 3. **Aggregations** → [Quick Reference: Aggregation Functions](QuickReference.md#aggregation-functions)
 4. **Cloud Deployments** → [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes), [FAQ: K8s](FAQ.md#can-i-use-btrace-with-microservices)
 5. **Level Filtering** → [Quick Reference: @Level](QuickReference.md#level)
+6. **Extensions Architecture** → [Extension invokedynamic Bridge](architecture/extension-invokedynamic-bridge.md)
 
 ## Documentation by Topic
 
@@ -69,6 +72,7 @@ Get up and running in 5 minutes with installation, your first script, and common
 - **Docker & Containers** → [Getting Started: Containers](GettingStarted.md#btrace-in-containers-and-kubernetes)
 - **Kubernetes** → [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes), [FAQ: Microservices](FAQ.md#can-i-use-btrace-with-microservices), [Troubleshooting: K8s](Troubleshooting.md#kubernetes-and-cloud-deployments)
 - **Performance Tuning** → [FAQ: Performance Impact](FAQ.md#whats-the-performance-impact-of-btrace), [Troubleshooting: Performance](Troubleshooting.md#performance-issues)
+- **Extensions CLI (btracex)** → [Permission Policy](PermissionPolicy.md) for allow/deny and quick inspection
 
 ### Problem Solving
 - **No Output** → [Troubleshooting: No Output](Troubleshooting.md#no-output-from-scripts)

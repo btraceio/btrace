@@ -35,22 +35,22 @@ import java.lang.annotation.Target;
  * @author Jaroslav Bachorik
  */
 @Target(ElementType.FIELD)
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface Injected {
-  /**
-   * The injected service type
-   *
-   * @return the service type
-   */
-  ServiceType value() default ServiceType.SIMPLE;
+  // No parameters by default. Construction is auto-detected by the extension bridge.
 
   /**
-   * The factory method to be used.
-   *
-   * <p>It must be a static method declared by the service class and returning the service class
-   * instance
-   *
-   * @return The name of the static method to be used as the factory method or an empty string
+   * Whether the injected service is optional.
+   * Optional services may fall back to a shim or throwing stub
+   * based on {@link #mode()} or the global property
+   * {@code btrace.extension.shimMode} (shim|throw).
    */
-  String factoryMethod() default "";
+  boolean optional() default false;
+
+  /**
+   * Per-field override for fallback behavior when {@link #optional()} is true.
+   * If unspecified, the global property {@code btrace.extension.shimMode}
+   * determines whether to inject a shim or a throwing stub.
+   */
+  InjectionMode mode() default InjectionMode.UNSPECIFIED;
 }

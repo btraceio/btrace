@@ -39,6 +39,8 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.annotations.Where;
 import org.openjdk.btrace.runtime.Interval;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for all out method instrumenting classes.
@@ -46,6 +48,7 @@ import org.openjdk.btrace.runtime.Interval;
  * @author A. Sundararajan
  */
 public class MethodInstrumentor extends BTraceMethodVisitor {
+  private static final Logger log = LoggerFactory.getLogger(MethodInstrumentor.class);
   protected final Assembler asm;
   protected MethodTrackingContext trackingCtx;
   MethodInstrumentor parent = null;
@@ -497,7 +500,13 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
 
   private void report(String msg) {
     String out = "[" + getName(true) + "] " + msg;
-    System.err.println(out);
+    if (Boolean.getBoolean("btrace.validation.warn")) {
+      log.warn(out);
+    } else if (Boolean.getBoolean("btrace.validation.info")) {
+      log.info(out);
+    } else {
+      log.debug(out);
+    }
   }
 
   protected static final class ValidationResult {

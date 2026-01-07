@@ -87,11 +87,15 @@ public class OnMethodTest {
 
     @OnTimer(500)
     public static void doRecurrent() {
-        long x = 10;
-        if (timeNanos() > x) {
-            println(x);
+        // Print only once to avoid unbounded output in unattended mode
+        // which can cause CI to wait for excessive line counts.
+        if (timerHits == 0) {
+            println(10);
         }
+        timerHits++;
     }
+
+    private static int timerHits = 0;
 
     private static void dump(String s) {
         println(s);

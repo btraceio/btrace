@@ -1,0 +1,64 @@
+plugins {
+    id 'groovy'
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+group = project.findProperty('GROUP') ?: (rootProject.group ?: 'org.openjdk.btrace')
+version = rootProject.version
+
+repositories {
+    gradlePluginPortal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+    // Match versions commonly cached in this repository to avoid extra fetches
+    implementation 'org.ow2.asm:asm:9.6'
+    implementation 'org.ow2.asm:asm-tree:9.6'
+}
+
+gradlePlugin {
+    plugins {
+        btraceExtension {
+            id = 'org.openjdk.btrace.extension'
+            implementationClass = 'org.openjdk.btrace.gradle.BTraceExtensionPlugin'
+            displayName = 'BTrace Extension Plugin'
+            description = 'Builds and packages BTrace extensions, scanning permissions and wiring manifests.'
+        }
+    }
+}
+
+publishing {
+    publications {
+        // java-gradle-plugin will add pluginMaven and marker publications automatically.
+        // This block allows publishing to local/remote Maven repositories.
+        withType(MavenPublication) {
+            pom {
+                name = 'BTrace Gradle Extension Plugin'
+                description = 'Gradle plugin for building BTrace extensions'
+                url = 'https://github.com/btraceio/btrace'
+                licenses {
+                    license {
+                        name = 'GPL-2.0 with Classpath Exception'
+                        url = 'https://openjdk.org/legal/gplv2+ce.html'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'btrace'
+                        name = 'BTrace Project'
+                        url = 'https://github.com/btraceio'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/btraceio/btrace'
+                    connection = 'scm:git:https://github.com/btraceio/btrace.git'
+                    developerConnection = 'scm:git:ssh://git@github.com:btraceio/btrace.git'
+                }
+            }
+        }
+    }
+}

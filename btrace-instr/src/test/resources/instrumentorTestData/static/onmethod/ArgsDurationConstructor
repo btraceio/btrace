@@ -6,17 +6,19 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 4
 LSUB
 LSTORE 2
+L3
+FRAME FULL [resources/OnMethodTest java/lang/String J J] []
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L3
+IFNE L4
 ALOAD 0
 LLOAD 2
 ALOAD 1
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructor$args (Ljava/lang/Object;JLjava/lang/String;)V
-L3
-FRAME FULL [resources/OnMethodTest java/lang/String J J] []
 L4
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
-LOCALVARIABLE a Ljava/lang/String; L0 L4 1
+FRAME SAME
+L5
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a Ljava/lang/String; L0 L5 1
 MAXSTACK = 4
 MAXLOCALS = 6
 

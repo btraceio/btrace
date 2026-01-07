@@ -6,14 +6,16 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 3
 LSUB
 LSTORE 1
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L2
-LLOAD 1
-INVOKESTATIC resources/DerivedClass.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE53$onInit (J)V
 L2
 FRAME FULL [resources/DerivedClass J J] []
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+LLOAD 1
+INVOKESTATIC resources/DerivedClass.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE53$onInit (J)V
 L3
-LOCALVARIABLE this Lresources/DerivedClass; L0 L3 0
+FRAME SAME
+L4
+LOCALVARIABLE this Lresources/DerivedClass; L0 L4 0
 MAXSTACK = 4
 MAXLOCALS = 5
 
