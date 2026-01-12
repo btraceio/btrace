@@ -194,8 +194,6 @@ public final class Main {
       BTraceRuntimes.getDefault();
       // init BTraceRuntime
       BTraceRuntime.initUnsafe();
-      // initialize extension system
-      initExtensions();
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {
@@ -218,6 +216,22 @@ public final class Main {
         log.debug("Failed to instrument MethodHandleNatives", t);
       }
       int startedScripts = startScripts();
+      // Ensure early hooks (e.g., Thread.start) are applied even if Thread was already loaded
+      if (startedScripts > 0) {
+        try {
+          inst.retransformClasses(Thread.class);
+          if (log.isDebugEnabled()) {
+            log.debug("Proactively retransformed java.lang.Thread after startup scripts");
+          }
+        } catch (Throwable t) {
+          if (log.isDebugEnabled()) {
+            log.debug("Unable to proactively retransform java.lang.Thread: {}", t.toString());
+          }
+        }
+      }
+
+      // initialize extension system after transformer is installed so early app code is not delayed
+      initExtensions();
     } catch (Throwable t) {
       log.error("Failed to initialize BTrace agent", t);
       throw new RuntimeException("BTrace agent initialization failed", t);

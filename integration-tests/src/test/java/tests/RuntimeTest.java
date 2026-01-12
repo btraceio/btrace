@@ -537,6 +537,14 @@ public abstract class RuntimeTest {
     testAppLatch.await();
     stdoutLatch.await();
 
+    // Allow time for traced app to produce additional output after "ready:"
+    // BTrace INFO logs during agent init can exhaust stdoutLatch before app work begins
+    try {
+      Thread.sleep(1000L);
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+    }
+
     if (startJfr && pidStringRef.get() != null) {
       // Give the periodic event at least one interval to fire before dumping
       try {
