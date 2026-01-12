@@ -212,10 +212,6 @@ public final class Main {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing unsafe");
       BTraceRuntime.initUnsafe();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Unsafe initialized");
-      // initialize extension system
-      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
-      initExtensions();
-      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Extensions initialized");
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {
@@ -244,6 +240,23 @@ public final class Main {
       }
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Starting scripts");
       int startedScripts = startScripts();
+      // Ensure early hooks (e.g., Thread.start) are applied even if Thread was already loaded
+      if (startedScripts > 0) {
+        try {
+          inst.retransformClasses(Thread.class);
+          if (log.isDebugEnabled()) {
+            log.debug("Proactively retransformed java.lang.Thread after startup scripts");
+          }
+        } catch (Throwable t) {
+          if (log.isDebugEnabled()) {
+            log.debug("Unable to proactively retransform java.lang.Thread: {}", t.toString());
+          }
+        }
+      }
+
+      // initialize extension system after transformer is installed so early app code is not delayed
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
+      initExtensions();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
       // FATAL errors should always be printed
