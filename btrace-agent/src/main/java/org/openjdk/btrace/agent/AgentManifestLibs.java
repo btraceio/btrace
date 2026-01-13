@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -50,13 +51,13 @@ final class AgentManifestLibs {
     boolean ignore = Boolean.getBoolean("btrace.ignoreManifestLibs");
     if (ignore) {
       if (log.isDebugEnabled()) log.debug("Ignoring manifest libs (btrace.ignoreManifestLibs=true)");
-      return new ResolvedLibs(List.of(), List.of());
+      return new ResolvedLibs(Collections.emptyList(), Collections.emptyList());
     }
 
     Manifest mf = readManifest(anchor);
     if (mf == null) {
       if (log.isDebugEnabled()) log.debug("No manifest found for agent; skipping manifest libs");
-      return new ResolvedLibs(List.of(), List.of());
+      return new ResolvedLibs(Collections.emptyList(), Collections.emptyList());
     }
 
     Path agentJarPath = locateAgentPath(anchor);
