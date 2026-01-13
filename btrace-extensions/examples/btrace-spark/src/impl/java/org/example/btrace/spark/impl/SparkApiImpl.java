@@ -20,7 +20,7 @@ public final class SparkApiImpl extends Extension implements SparkApi {
         jobStartEvent,
         () -> {
           try {
-            Class<?> evtCls = ClassLoadingUtil.load(
+            Class<?> evtCls = ClassLoadingUtil.loadFromContext(
                 "org.apache.spark.scheduler.SparkListenerJobStart", jobStartEvent);
             MethodHandle getJobId = mh.findVirtual(evtCls, "jobId", int.class);
             int jobId = (int) getJobId.invoke(jobStartEvent);
@@ -49,7 +49,7 @@ public final class SparkApiImpl extends Extension implements SparkApi {
         stageInfo,
         () -> {
           try {
-            Class<?> cls = ClassLoadingUtil.load(
+            Class<?> cls = ClassLoadingUtil.loadFromContext(
                 "org.apache.spark.scheduler.StageInfo", stageInfo);
             // Example: read simple properties via cached MethodHandles
             try {
