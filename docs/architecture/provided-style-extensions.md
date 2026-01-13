@@ -52,7 +52,7 @@ public final class SparkApiImpl implements SparkApi {
       evt,
       () -> {
         try {
-          Class<?> cls = ClassLoadingUtil.load(
+          Class<?> cls = ClassLoadingUtil.loadFromContext(
               "org.apache.spark.scheduler.SparkListenerJobStart", evt);
           MethodHandle getJobId = mh.findVirtual(cls, "jobId", int.class);
           int jobId = (int) getJobId.invoke(evt);

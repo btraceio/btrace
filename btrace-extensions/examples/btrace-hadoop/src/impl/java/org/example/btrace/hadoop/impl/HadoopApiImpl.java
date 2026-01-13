@@ -31,14 +31,14 @@ public final class HadoopApiImpl extends Extension implements HadoopApi {
         () -> {
           try {
             // Resolve Hadoop Path and FileSystem types reflectively
-            Class<?> pathCls = ClassLoadingUtil.load("org.apache.hadoop.fs.Path", path);
+            Class<?> pathCls = ClassLoadingUtil.loadFromContext("org.apache.hadoop.fs.Path", path);
             // Use toString on Path via MH
             MethodHandle toStringMH = mh.findVirtual(pathCls, "toString", String.class);
             String p = (String) toStringMH.invoke(path);
 
             if (fs != null) {
               try {
-                Class<?> fsCls = ClassLoadingUtil.load("org.apache.hadoop.fs.FileSystem", fs);
+                Class<?> fsCls = ClassLoadingUtil.loadFromContext("org.apache.hadoop.fs.FileSystem", fs);
                 // getUri() -> URI
                 MethodHandle getUri = mh.findVirtual(fsCls, "getUri", URI.class);
                 Object uri = getUri.invoke(fs);
