@@ -347,6 +347,8 @@ class RemoteClient extends Client {
           }
         case Command.DISCONNECT:
           {
+            // Mark as disconnecting so listProbes() can find this probe
+            disconnecting = true;
             ((DisconnectCommand) cmd).setProbeId(id.toString());
             synchronized (output) {
               output.write(cmd);
