@@ -52,7 +52,7 @@ public final class ClassLoadingUtil {
   }
 
   /** Convenience: attempt to load using the defining loader of a context object. */
-  public static Class<?> load(String className, Object context) throws ClassNotFoundException {
+  public static Class<?> loadFromContext(String className, Object context) throws ClassNotFoundException {
     return load(className, definingLoader(context));
   }
 
