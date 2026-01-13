@@ -76,6 +76,7 @@ class RemoteClient extends Client {
   private volatile Socket sock;
   private volatile ObjectInputStream ois;
   private volatile ObjectOutputStream oos;
+  private volatile boolean disconnecting;
 
   private final AtomicReferenceFieldUpdater<RemoteClient, Socket> sockUpdater =
       AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, Socket.class, "sock");
@@ -325,6 +326,8 @@ class RemoteClient extends Client {
           }
         case Command.DISCONNECT:
           {
+            // Mark as disconnecting so listProbes() can find this probe
+            disconnecting = true;
             ((DisconnectCommand) cmd).setProbeId(id.toString());
             synchronized (output) {
               WireIO.write(output, cmd);
@@ -361,7 +364,7 @@ class RemoteClient extends Client {
   }
 
   public boolean isDisconnected() {
-    return sock == null;
+    return disconnecting || sock == null;
   }
 
   @Override
@@ -388,6 +391,7 @@ class RemoteClient extends Client {
   }
 
   void reconnect(ObjectInputStream ois, ObjectOutputStream oos, Socket socket) throws IOException {
+    this.disconnecting = false;
     this.sock = socket;
     this.ois = ois;
     this.oos = oos;

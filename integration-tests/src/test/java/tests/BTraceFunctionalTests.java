@@ -424,29 +424,41 @@ public class BTraceFunctionalTests extends RuntimeTest {
         "Skipping unattended test in CI: run locally for correctness");
 
     TestApp testApp = launchTestApp("resources.Main");
-    File traceFile = locateTrace("btrace/OnMethodTest.java");
+    try {
+      File traceFile = locateTrace("btrace/OnMethodTest.java");
 
-    String pid = String.valueOf(testApp.getPid());
-    AtomicBoolean hasError = new AtomicBoolean(false);
-    System.out.println("===> btrace -x (unattended)");
+      String pid = String.valueOf(testApp.getPid());
+      // Allow time for the worker thread to start after "ready:" is printed
+      try {
+        Thread.sleep(500L);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+      }
+      AtomicBoolean hasError = new AtomicBoolean(false);
+      AtomicBoolean probeStarted = new AtomicBoolean(false);
+      System.out.println("===> btrace -x (unattended)");
     runBTrace(
         new String[] {"-x", pid, traceFile.toString()},
         new ProcessOutputProcessor() {
           @Override
           public boolean onStdout(int lineno, String line) {
             System.out.println("[btrace #" + lineno + "] " + line);
+            if (line.contains("BTrace Probe:") || line.contains("Successfully started")) {
+              probeStarted.set(true);
+            }
             return lineno < 500;
           }
 
           @Override
           public boolean onStderr(int lineno, String line) {
-            System.err.println("[btrace #" + lineno + "] " + line);
+            System.err.println("[btrace err] " + line);
             hasError.set(true);
             return lineno < 10;
           }
         });
 
     assertFalse(hasError.get(), "btrace -x reported errors");
+    System.out.println("===> probe started: " + probeStarted.get());
 
     // Poll list of probes to discover the probe id reliably
     System.out.println("===> polling btrace -lp for probe id");
@@ -512,10 +524,13 @@ public class BTraceFunctionalTests extends RuntimeTest {
       }
     }
 
-    // Assert exactly one matching probe is present
-    org.junit.jupiter.api.Assertions.assertEquals(1, matchCount[0],
-        "expected exactly one OnMethodTest probe listed by -lp");
-    assertNotNull(probeId[0], "probe id not found in -lp within timeout");
+      // Assert exactly one matching probe is present
+      org.junit.jupiter.api.Assertions.assertEquals(1, matchCount[0],
+          "expected exactly one OnMethodTest probe listed by -lp");
+      assertNotNull(probeId[0], "probe id not found in -lp within timeout");
+    } finally {
+      testApp.stop();
+    }
   }
 
     @ParameterizedTest(name = "testThreadStart: dynamic={0}")

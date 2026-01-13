@@ -472,6 +472,7 @@ public class Client {
       }
       Properties serverVmProps = vm.getSystemProperties();
       int serverPort = Integer.parseInt(serverVmProps.getProperty("btrace.port", "-1"));
+      boolean agentAlreadyRunning = false;
       if (serverPort != -1) {
         if (serverPort != port) {
           throw new IOException(
@@ -483,10 +484,21 @@ public class Client {
                   + serverPort
                   + "!");
         }
+        agentAlreadyRunning = true;
+        if (log.isDebugEnabled()) {
+          log.debug("agent already running on port {}", port);
+        }
       } else {
         if (!isPortAvailable(port)) {
           throw new IOException("Port " + port + " unavailable.");
         }
+      }
+
+      if (agentAlreadyRunning) {
+        if (log.isDebugEnabled()) {
+          log.debug("skipping loadAgent, agent already active");
+        }
+        return;
       }
 
       if (log.isDebugEnabled()) {

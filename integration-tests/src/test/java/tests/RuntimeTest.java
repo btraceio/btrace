@@ -730,11 +730,13 @@ public abstract class RuntimeTest {
                 "-cp",
                 cp,
                 "org.openjdk.btrace.client.Main",
-                debugBTrace ? "-v" : "",
                 "-cp",
                 eventsClassPath,
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
+    if (debugBTrace) {
+      argVals.add(4, "-v"); // insert after Main class name
+    }
     argVals.addAll(Arrays.asList(args));
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
@@ -857,11 +859,13 @@ public abstract class RuntimeTest {
                 "-cp",
                 cp,
                 "org.openjdk.btrace.client.Main",
-                debugBTrace ? "-v" : "",
                 "-cp",
                 eventsClassPath,
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
+    if (debugBTrace) {
+      argVals.add(4, "-v"); // insert after Main class name
+    }
     argVals.addAll(Arrays.asList(args));
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
