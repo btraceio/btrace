@@ -822,7 +822,7 @@ public final class Main {
                 }
               } catch (Exception e) {
                 // Fallback to basic check if realpath resolution fails
-                if (homeStr != null && !p.startsWith(homeStr)) {
+                if (!p.startsWith(homeStr)) {
                   log.warn(
                       "Rejecting btrace.system.appendJar outside BTRACE_HOME ({}): {}. "
                           + "Override with -Dbtrace.allowExternalLibs=true",
