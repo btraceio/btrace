@@ -177,6 +177,11 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
         }
       }
 
+      // Handle embedded vs filesystem extensions differently
+      if (descriptor.isEmbedded()) {
+        return loadEmbedded(descriptor);
+      }
+
       // Load extension from directory structure:
       // extensions/extension-name/
       //   extension-name-api.jar  (added to bootstrap classpath)
@@ -219,6 +224,37 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
   }
 
   /**
+   * Load an embedded extension using ClassDataLoader.
+   *
+   * <p>For embedded extensions:
+   * - API classes are already on bootstrap (flattened into agent JAR as .class files)
+   * - Impl classes are stored as .classdata files and loaded via ClassDataLoader
+   *
+   * @param descriptor embedded extension descriptor
+   * @return true if loaded successfully
+   */
+  private boolean loadEmbedded(ExtensionDescriptorDTO descriptor) {
+    log.info("Loading embedded extension: {} version {}", descriptor.getId(), descriptor.getVersion());
+
+    // API classes are already on bootstrap via Boot-Class-Path manifest attribute
+    // (they were flattened into the agent JAR at build time as .class files)
+    log.debug("API classes for {} already on bootstrap classpath", descriptor.getId());
+
+    // Create ClassDataLoader for implementation classes (.classdata resources)
+    ClassLoader resourceLoader = ExtensionLoaderImpl.class.getClassLoader();
+    ClassDataLoader classLoader = new ClassDataLoader(
+        descriptor.getId(), resourceLoader, parentClassLoader);
+
+    descriptor.setClassLoader(classLoader);
+    loadedExtensions.put(descriptor.getId(), descriptor);
+
+    log.info("Successfully loaded embedded extension: {} version {}",
+        descriptor.getId(), descriptor.getVersion());
+
+    return true;
+  }
+
+  /**
    * Ensure the extension API JAR is appended to the bootstrap classpath without
    * attempting to load the implementation JAR. This enables BTrace to generate
    * shims against the API when implementation use is blocked (e.g., permissions).
@@ -228,6 +264,12 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
    */
   @Override
   public boolean ensureApiOnBootstrap(ExtensionDescriptorDTO descriptor) {
+    // For embedded extensions, API classes are already on bootstrap
+    if (descriptor.isEmbedded()) {
+      log.debug("Embedded extension {} has API already on bootstrap", descriptor.getId());
+      return true;
+    }
+
     try {
       Path extensionDir = descriptor.getJarPath();
       Path apiJar = findApiJar(extensionDir);
