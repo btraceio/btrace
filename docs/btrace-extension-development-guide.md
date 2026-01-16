@@ -224,6 +224,87 @@ autoload = true
 repositories = [ "${btrace.home}/extensions", "${user.home}/.btrace/extensions" ]
 ```
 
+## Fat Agent Deployment (Embedded Extensions)
+
+For environments where installing extensions separately is impractical (Spark, Hadoop, Kubernetes), extensions can be embedded directly in a fat agent JAR.
+
+### Building a Fat Agent with Your Extension
+
+Use the BTrace Fat Agent Plugin to create a self-contained agent JAR:
+
+```groovy
+plugins {
+    id 'org.openjdk.btrace.fat-agent' version '<btraceVersion>'
+}
+
+btraceFatAgent {
+    baseName = 'my-btrace-agent'
+
+    embedExtensions {
+        // Your extension project (if in same multi-project build)
+        project(':my-extension')
+
+        // Published extensions from Maven
+        maven('io.btrace:btrace-metrics:2.3.0')
+
+        // Local extension ZIPs
+        file('libs/other-extension.zip')
+    }
+}
+```
+
+Build the fat agent:
+
+```bash
+./gradlew fatAgentJar
+```
+
+### How Embedding Works
+
+The plugin stages your extension:
+1. **API classes** → copied as `.class` files (loaded via bootstrap)
+2. **Impl classes** → renamed to `.classdata` (loaded at runtime by `ClassDataLoader`)
+3. **Metadata** → written to `META-INF/btrace-extensions/{id}/extension.properties`
+
+At agent startup, embedded extensions are automatically discovered from the JAR manifest attribute `BTrace-Embedded-Extensions`.
+
+### Using the Fat Agent
+
+```bash
+# Start application with all embedded extensions
+java -javaagent:my-btrace-agent.jar MyApp
+
+# Extensions load automatically - no BTRACE_HOME needed
+```
+
+### Benefits for Extension Developers
+
+- **Simplified Distribution**: Ship a single JAR with your extension pre-loaded
+- **No Installation Required**: Users don't need to install extensions separately
+- **Version Locking**: Ensure compatible extension versions are bundled together
+- **Cloud-Native**: Perfect for containers and distributed systems
+
+### Maven Plugin
+
+For Maven users, the `btrace-maven-plugin` provides equivalent functionality:
+
+```xml
+<plugin>
+    <groupId>org.openjdk.btrace</groupId>
+    <artifactId>btrace-maven-plugin</artifactId>
+    <version>${btrace.version}</version>
+    <configuration>
+        <extensions>
+            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
+        </extensions>
+    </configuration>
+</plugin>
+```
+
+Build with `mvn package` to create the fat agent JAR.
+
+See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) for implementation details.
+
 ## Testing
 
 - Unit test Impl logic normally (JUnit 5).
@@ -237,8 +318,9 @@ repositories = [ "${btrace.home}/extensions", "${user.home}/.btrace/extensions" 
 - [ ] Set `btraceExtension.id`, declare/annotate `services`
 - [ ] Configure `shadedPackages`; optionally tune `requiredPermissions`
 - [ ] Keep API clean (JDK-only) and small
-- [ ] Build and install ZIP into extensions dir
+- [ ] Build and install ZIP into extensions dir (or embed in fat agent)
 - [ ] Unit + integration tests pass on supported JDKs
+- [ ] Consider fat agent packaging for cloud/distributed deployments
 
 ## Best Practices
 

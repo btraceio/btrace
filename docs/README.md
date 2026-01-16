@@ -48,8 +48,9 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 2. **Sampling** → [Quick Reference: @Sampled](QuickReference.md#sampled), [FAQ: Performance](FAQ.md#performance-issues)
 3. **Aggregations** → [Quick Reference: Aggregation Functions](QuickReference.md#aggregation-functions)
 4. **Cloud Deployments** → [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes), [FAQ: K8s](FAQ.md#can-i-use-btrace-with-microservices)
-5. **Level Filtering** → [Quick Reference: @Level](QuickReference.md#level)
-6. **Extensions Architecture** → [Extension invokedynamic Bridge](architecture/extension-invokedynamic-bridge.md)
+5. **Fat Agent JAR** → [Getting Started: Fat Agent](GettingStarted.md#fat-agent-jar-single-jar-deployment) for single-JAR deployment
+6. **Level Filtering** → [Quick Reference: @Level](QuickReference.md#level)
+7. **Extensions Architecture** → [Extension invokedynamic Bridge](architecture/extension-invokedynamic-bridge.md)
 
 ## Documentation by Topic
 
@@ -69,6 +70,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 ### Deployment & Operations
 - **Installation** → [Getting Started: Installation](GettingStarted.md#installation)
 - **Three Deployment Modes** → [Getting Started: Running BTrace](GettingStarted.md#three-ways-to-run-btrace)
+- **Fat Agent (Single-JAR)** → [Getting Started: Fat Agent](GettingStarted.md#fat-agent-jar-single-jar-deployment), [Architecture](architecture/fat-agent-plugin.md), [Gradle Plugin](../btrace-gradle-plugin/README.md), [Maven Plugin](GettingStarted.md#maven-plugin)
 - **Docker & Containers** → [Getting Started: Containers](GettingStarted.md#btrace-in-containers-and-kubernetes)
 - **Kubernetes** → [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes), [FAQ: Microservices](FAQ.md#can-i-use-btrace-with-microservices), [Troubleshooting: K8s](Troubleshooting.md#kubernetes-and-cloud-deployments)
 - **Performance Tuning** → [FAQ: Performance Impact](FAQ.md#whats-the-performance-impact-of-btrace), [Troubleshooting: Performance](Troubleshooting.md#performance-issues)
@@ -99,7 +101,8 @@ BTrace includes 50+ sample scripts demonstrating real-world use cases:
 ### Official Resources
 - **GitHub Repository**: [github.com/btraceio/btrace](https://github.com/btraceio/btrace)
 - **Wiki (External)**: [github.com/btraceio/btrace/wiki](https://github.com/btraceio/btrace/wiki/Home)
-- **Maven Plugin**: [github.com/btraceio/btrace-maven](https://github.com/btraceio/btrace-maven)
+- **Maven Plugin (Script Compilation)**: [github.com/btraceio/btrace-maven](https://github.com/btraceio/btrace-maven)
+- **Maven Plugin (Fat Agent)**: [Gradle Plugin README](../btrace-gradle-plugin/README.md#btrace-maven-plugin)
 - **Releases**: [GitHub Releases](https://github.com/btraceio/btrace/releases/latest)
 
 ### Community

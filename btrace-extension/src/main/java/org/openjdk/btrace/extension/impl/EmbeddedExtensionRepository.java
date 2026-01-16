@@ -80,10 +80,12 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
   /**
    * Creates an embedded extension repository.
    *
-   * @param resourceLoader classloader to read resources from (typically agent classloader)
+   * @param resourceLoader classloader to read resources from (typically agent classloader).
+   *     If null (bootstrap classloader), falls back to system classloader.
    */
   public EmbeddedExtensionRepository(ClassLoader resourceLoader) {
-    this.resourceLoader = resourceLoader;
+    // Handle bootstrap classloader case (null) by using system classloader
+    this.resourceLoader = resourceLoader != null ? resourceLoader : ClassLoader.getSystemClassLoader();
   }
 
   @Override

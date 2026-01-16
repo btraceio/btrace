@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.shadow)
     alias(libs.plugins.ospackage)
     alias(libs.plugins.sdkman.vendors)
+    id 'org.openjdk.btrace.fat-agent'
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -228,6 +229,42 @@ task uberJar(type: ShadowJar) {
             zipfileset(file: bootJar.archiveFile.get().asFile, fullpath: 'META-INF/embedded/btrace-boot.jar')
         }
     }
+}
+
+/**
+ * Fat agent JAR configuration via BTrace Fat Agent Plugin.
+ *
+ * Creates a fat agent JAR with embedded extensions for single-JAR deployment.
+ *
+ * Structure:
+ * btrace-agent-fat.jar
+ * ├── META-INF/
+ * │   ├── MANIFEST.MF (BTrace-Embedded-Extensions: ext1,ext2)
+ * │   └── btrace-extensions/
+ * │       └── ext-id/
+ * │           └── extension.properties
+ * ├── org/openjdk/btrace/...           # Agent + API classes (.class)
+ * └── org/openjdk/btrace/ext/impl/...  # Impl classes (.classdata)
+ *
+ * Usage:
+ *   ./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-spark,btrace-metrics
+ */
+btraceFatAgent {
+    baseName = 'btrace-agent-fat'
+    outputDir = libsDir
+
+    // Reference agent and boot JAR tasks
+    agentJarTask = 'agentJar'
+    bootJarTask = 'bootJar'
+
+    // Auto-discover extensions from subprojects
+    autoDiscover = true
+    filterProperty = 'embedExtensions'
+
+    // Package relocations
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.agent.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
 
 task fixPermissions(type: Exec) {

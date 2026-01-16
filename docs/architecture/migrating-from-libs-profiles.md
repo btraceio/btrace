@@ -51,6 +51,58 @@ If immediate migration is not feasible and the app must see a jar on the system 
 - Restricted to `BTRACE_HOME` unless `-Dbtrace.allowExternalLibs=true`.
 - One jar only; discouraged; subject to removal.
 
+## Fat Agent Deployment
+
+For Spark/Hadoop/Kubernetes environments where managing separate extension JARs is impractical, use fat agent builds to embed extensions directly.
+
+### Gradle Plugin
+
+```groovy
+plugins {
+    id 'org.openjdk.btrace.fat-agent'
+}
+
+btraceFatAgent {
+    baseName = 'my-btrace-agent'
+    embedExtensions {
+        project(':my-spark-extension')
+        maven('io.btrace:btrace-metrics:2.3.0')
+    }
+}
+```
+
+Build: `./gradlew fatAgentJar`
+
+### Maven Plugin
+
+```xml
+<plugin>
+    <groupId>org.openjdk.btrace</groupId>
+    <artifactId>btrace-maven-plugin</artifactId>
+    <version>${btrace.version}</version>
+    <configuration>
+        <outputName>my-btrace-agent</outputName>
+        <extensions>
+            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
+        </extensions>
+    </configuration>
+</plugin>
+```
+
+Build: `mvn package`
+
+### Usage
+
+```bash
+# Spark
+spark-submit --conf spark.driver.extraJavaOptions=-javaagent:my-btrace-agent.jar ...
+
+# Kubernetes
+java -javaagent:/opt/btrace/my-btrace-agent.jar MyApp
+```
+
+See [Fat Agent Plugin Architecture](fat-agent-plugin.md) for details.
+
 ## Examples & Templates
 
 - See provided-style extension guide: `docs/architecture/provided-style-extensions.md` for Spark/Hadoop templates and `extensions.conf` snippets.
