@@ -244,6 +244,43 @@ Note: The legacy `libs`/profiles mechanism is deprecated and planned for removal
 
 As a last resort (discouraged), you may append a single jar to the system classpath: `-Dbtrace.system.appendJar=/abs/path/lib.jar -Dbtrace.trusted=true`.
 
+### Fat Agent JAR (Single-JAR Deployment)
+
+For environments where managing multiple JARs is impractical (Spark, Hadoop, Kubernetes), BTrace provides a fat agent JAR with embedded extensions:
+
+```sh
+# Build fat agent with all extensions
+./gradlew :btrace-dist:fatAgentJar
+
+# Build with specific extensions only
+./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-metrics,btrace-statsd
+
+# Use the fat agent
+java -javaagent:btrace-agent-fat.jar <your-app>
+```
+
+The fat agent JAR includes:
+- All agent and boot classes
+- Embedded extension API classes (bootstrap)
+- Embedded extension impl classes (runtime-loaded)
+- Extension metadata for auto-discovery
+
+For custom fat agent builds, use the Gradle plugin:
+```groovy
+plugins {
+    id 'org.openjdk.btrace.fat-agent'
+}
+
+btraceFatAgent {
+    embedExtensions {
+        maven('io.btrace:btrace-metrics:2.3.0')
+        project(':my-custom-extension')
+    }
+}
+```
+
+See [Fat Agent Plugin Architecture](docs/architecture/fat-agent-plugin.md) and [Gradle Plugin README](btrace-gradle-plugin/README.md) for details.
+
 ### Oneliner Quick Examples
 
 BTrace now supports DTrace-style oneliners for quick debugging without writing full Java scripts:
@@ -340,7 +377,21 @@ Keys
 
 ### Maven Integration
 
-The [BTrace Maven Plugin](https://github.com/btraceio/btrace-maven) enables:
+**Fat Agent Plugin** (in this repo): Build fat agent JARs with embedded extensions:
+```xml
+<plugin>
+    <groupId>org.openjdk.btrace</groupId>
+    <artifactId>btrace-maven-plugin</artifactId>
+    <version>${btrace.version}</version>
+    <configuration>
+        <extensions>
+            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
+        </extensions>
+    </configuration>
+</plugin>
+```
+
+**Script Compilation Plugin** ([external repo](https://github.com/btraceio/btrace-maven)):
 - Compilation of BTrace scripts during the build process
 - BTrace Project Archetype for quick project setup
 
