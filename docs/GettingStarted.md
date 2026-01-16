@@ -685,6 +685,125 @@ kubectl logs <pod-name> -c btrace
 
 For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](troubleshooting.md#kubernetes-and-cloud-deployments).
 
+## Fat Agent JAR (Single-JAR Deployment)
+
+For environments where managing multiple JARs is impractical (Spark executors, Hadoop nodes, minimal containers), BTrace provides a **fat agent JAR** with embedded extensions.
+
+### Why Fat Agent?
+
+Standard BTrace deployment requires multiple files:
+- `btrace-agent.jar` + `btrace-boot.jar`
+- Extension JARs in `$BTRACE_HOME/extensions/`
+
+The fat agent bundles everything into a single JAR that works without `$BTRACE_HOME`.
+
+### Building the Fat Agent
+
+```bash
+# Build with all available extensions
+./gradlew :btrace-dist:fatAgentJar
+
+# Build with specific extensions only
+./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-metrics,btrace-statsd
+
+# Output location
+ls btrace-dist/build/resources/main/v*/libs/btrace-agent-fat.jar
+```
+
+### Using the Fat Agent
+
+```bash
+# Start application with fat agent
+java -javaagent:/path/to/btrace-agent-fat.jar MyApp
+
+# With agent options
+java -javaagent:/path/to/btrace-agent-fat.jar=debug=true,port=2021 MyApp
+
+# Verify embedded extensions loaded (look for "Extension system initialized with N")
+java -javaagent:/path/to/btrace-agent-fat.jar=debug=true MyApp 2>&1 | grep "Extension"
+```
+
+### Spark Example
+
+```bash
+# Copy fat agent to cluster-accessible location
+hdfs dfs -put btrace-agent-fat.jar /btrace/
+
+# Submit with agent
+spark-submit \
+  --conf spark.driver.extraJavaOptions="-javaagent:btrace-agent-fat.jar" \
+  --conf spark.executor.extraJavaOptions="-javaagent:btrace-agent-fat.jar" \
+  --files btrace-agent-fat.jar \
+  myapp.jar
+```
+
+### Kubernetes Example
+
+```dockerfile
+# Minimal container with fat agent only
+FROM openjdk:17-slim
+
+# Copy only the fat agent (no BTRACE_HOME needed)
+COPY btrace-agent-fat.jar /opt/btrace/
+
+# Your application
+COPY myapp.jar /app/
+ENTRYPOINT ["java", "-javaagent:/opt/btrace/btrace-agent-fat.jar", "-jar", "/app/myapp.jar"]
+```
+
+### Custom Fat Agent Builds
+
+For custom extension combinations, use the Gradle plugin:
+
+```groovy
+plugins {
+    id 'org.openjdk.btrace.fat-agent'
+}
+
+btraceFatAgent {
+    baseName = 'my-btrace-agent'
+
+    embedExtensions {
+        // From Maven Central
+        maven('io.btrace:btrace-metrics:2.3.0')
+        maven('io.btrace:btrace-statsd:2.3.0')
+
+        // Local extension
+        file('libs/my-custom-extension.zip')
+    }
+}
+```
+
+### Maven Plugin
+
+For Maven users, a Maven plugin is also available:
+
+```xml
+<plugin>
+    <groupId>org.openjdk.btrace</groupId>
+    <artifactId>btrace-maven-plugin</artifactId>
+    <version>${btrace.version}</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>fat-agent</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <outputName>my-btrace-agent</outputName>
+        <extensions>
+            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
+            <extension>io.btrace:btrace-statsd:${btrace.version}</extension>
+        </extensions>
+    </configuration>
+</plugin>
+```
+
+Build with `mvn package` to create `target/my-btrace-agent.jar`.
+
+See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) and [Gradle Plugin README](../btrace-gradle-plugin/README.md) for complete documentation.
+
 ## Common Pitfalls and Solutions
 
 ### 1. Permission Denied / Attachment Fails
