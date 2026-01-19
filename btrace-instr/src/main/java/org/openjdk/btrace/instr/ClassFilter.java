@@ -88,12 +88,23 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("sun/invoke/");
     SENSITIVE_CLASSES.add("org/openjdk/btrace/");
 
-    // Method-level exclusions for Thread: ThreadLocal accessor/mutator methods create infinite
-    // recursion on JDK 25+ where ThreadLocal.createMap calls Thread.setThreadLocals.
+    // JDK 25+ added accessor methods for thread-local fields (previously direct field access).
+    // ThreadLocal.get() calls Thread.threadLocals() which triggers infinite recursion if instrumented.
+    // ThreadLocal.createMap() calls the setter variants when initializing thread-local storage.
     addSensitiveMethod("java/lang/Thread", "threadLocals");
     addSensitiveMethod("java/lang/Thread", "setThreadLocals");
+    addSensitiveMethod("java/lang/Thread", "inheritableThreadLocals");
+    addSensitiveMethod("java/lang/Thread", "setInheritableThreadLocals");
     addSensitiveMethod("java/lang/Thread", "terminatingThreadLocals");
     addSensitiveMethod("java/lang/Thread", "setTerminatingThreadLocals");
+    // Thread.interrupted() calls getAndClearInterrupt(); BTrace runtime uses Thread.interrupted()
+    addSensitiveMethod("java/lang/Thread", "getAndClearInterrupt");
+    // Interrupt-related methods used in exception handling and thread coordination
+    addSensitiveMethod("java/lang/Thread", "setInterrupt");
+    addSensitiveMethod("java/lang/Thread", "clearInterrupt");
+    // Uncaught exception handling - dispatchUncaughtException calls getUncaughtExceptionHandler
+    addSensitiveMethod("java/lang/Thread", "dispatchUncaughtException");
+    addSensitiveMethod("java/lang/Thread", "getUncaughtExceptionHandler");
   }
 
   private final List<OnMethod> onMethods;
