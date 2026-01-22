@@ -54,7 +54,10 @@ import java.util.regex.PatternSyntaxException;
 public class ClassFilter {
   private static final Class<?> REFERENCE_CLASS = Reference.class;
   private static final PrefixMap SENSITIVE_CLASSES = new PrefixMap();
-  // Method-level sensitive filter: internalClassName -> set of "name+desc" signatures
+  // Method-level sensitive filter: internalClassName -> set of method names.
+  // We filter by name only (not descriptor) because these are specific JDK internal methods
+  // that don't have overloads. Filtering by name is more conservative - if JDK ever added
+  // overloads, we'd rather block them all than risk infinite recursion.
   private static final Map<String, Set<String>> SENSITIVE_METHODS = new HashMap<>();
 
   static {
@@ -200,6 +203,18 @@ public class ClassFilter {
     return SENSITIVE_CLASSES.contains(name);
   }
 
+  /**
+   * Check if a method should be excluded from instrumentation.
+   *
+   * <p>Note: The {@code desc} parameter is accepted for API consistency but currently ignored.
+   * Filtering is by method name only, which is intentionally conservative - if JDK added
+   * overloads of sensitive methods, we'd rather block all of them than risk infinite recursion.
+   *
+   * @param owner internal class name (e.g., "java/lang/Thread")
+   * @param name method name
+   * @param desc method descriptor (currently unused, reserved for future use)
+   * @return true if the method should not be instrumented
+   */
   public static boolean isSensitiveMethod(String owner, String name, String desc) {
     Set<String> methods = SENSITIVE_METHODS.get(owner);
     return methods != null && !methods.isEmpty() && methods.contains(name);

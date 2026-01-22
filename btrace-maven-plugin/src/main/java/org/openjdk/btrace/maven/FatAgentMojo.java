@@ -192,11 +192,12 @@ public class FatAgentMojo extends AbstractMojo {
   }
 
   private void extractJar(File jarFile, Path targetDir) throws IOException {
+    Path normalizedTarget = targetDir.toAbsolutePath().normalize();
     try (JarFile jar = new JarFile(jarFile)) {
       Enumeration<JarEntry> entries = jar.entries();
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
-        Path targetPath = targetDir.resolve(entry.getName());
+        Path targetPath = resolveSecurely(normalizedTarget, entry.getName());
 
         if (entry.isDirectory()) {
           Files.createDirectories(targetPath);
@@ -208,6 +209,23 @@ public class FatAgentMojo extends AbstractMojo {
         }
       }
     }
+  }
+
+  /**
+   * Resolves a path securely, preventing directory traversal attacks (Zip Slip).
+   *
+   * @param baseDir the base directory (must be absolute and normalized)
+   * @param entryName the entry name to resolve
+   * @return the resolved path
+   * @throws IOException if the resolved path escapes the base directory
+   */
+  // Package-private for testing
+  Path resolveSecurely(Path baseDir, String entryName) throws IOException {
+    Path resolved = baseDir.resolve(entryName).normalize();
+    if (!resolved.startsWith(baseDir)) {
+      throw new IOException("Entry would escape target directory: " + entryName);
+    }
+    return resolved;
   }
 
   /**
@@ -261,6 +279,11 @@ public class FatAgentMojo extends AbstractMojo {
       extensionId = artifactId; // fallback to artifact ID
     }
 
+    // Validate extension ID to prevent path traversal attacks
+    if (!isValidExtensionId(extensionId)) {
+      throw new IOException("Invalid extension ID (potential path traversal): " + extensionId);
+    }
+
     // Stage API classes (as .class files for bootstrap)
     stageApiClasses(apiJar, stagingDir);
 
@@ -301,6 +324,7 @@ public class FatAgentMojo extends AbstractMojo {
   }
 
   private void stageApiClasses(File apiJar, Path stagingDir) throws IOException {
+    Path normalizedStaging = stagingDir.toAbsolutePath().normalize();
     try (JarFile jar = new JarFile(apiJar)) {
       Enumeration<JarEntry> entries = jar.entries();
       while (entries.hasMoreElements()) {
@@ -309,7 +333,7 @@ public class FatAgentMojo extends AbstractMojo {
 
         // Only copy .class files (not META-INF or other resources)
         if (name.endsWith(".class") && !name.startsWith("META-INF/")) {
-          Path targetPath = stagingDir.resolve(name);
+          Path targetPath = resolveSecurely(normalizedStaging, name);
           Files.createDirectories(targetPath.getParent());
           try (InputStream is = jar.getInputStream(entry)) {
             Files.copy(is, targetPath);
@@ -322,6 +346,7 @@ public class FatAgentMojo extends AbstractMojo {
   private void stageImplClasses(File implJar, Path stagingDir, String extensionId) throws IOException {
     Path implDir = stagingDir.resolve(EXTENSION_METADATA_PATH).resolve(extensionId).resolve("impl");
     Files.createDirectories(implDir);
+    Path normalizedImplDir = implDir.toAbsolutePath().normalize();
 
     try (JarFile jar = new JarFile(implJar)) {
       Enumeration<JarEntry> entries = jar.entries();
@@ -332,7 +357,7 @@ public class FatAgentMojo extends AbstractMojo {
         // Rename .class to .classdata for runtime loading
         if (name.endsWith(".class") && !name.startsWith("META-INF/")) {
           String classdataName = name.substring(0, name.length() - 6) + CLASSDATA_SUFFIX;
-          Path targetPath = implDir.resolve(classdataName);
+          Path targetPath = resolveSecurely(normalizedImplDir, classdataName);
           Files.createDirectories(targetPath.getParent());
           try (InputStream is = jar.getInputStream(entry)) {
             Files.copy(is, targetPath);
@@ -449,5 +474,37 @@ public class FatAgentMojo extends AbstractMojo {
       }
     }
     dir.delete();
+  }
+
+  /**
+   * Validates that an extension ID is safe and cannot be used for path traversal.
+   *
+   * <p>Valid extension IDs must:
+   * <ul>
+   *   <li>Not be null or empty</li>
+   *   <li>Not contain path separators (/ or \)</li>
+   *   <li>Not contain parent directory references (..)</li>
+   *   <li>Only contain safe characters: alphanumeric, hyphen, underscore, dot</li>
+   * </ul>
+   *
+   * @param extensionId the extension ID to validate
+   * @return true if the ID is safe, false otherwise
+   */
+  // Package-private for testing
+  static boolean isValidExtensionId(String extensionId) {
+    if (extensionId == null || extensionId.isEmpty()) {
+      return false;
+    }
+    // Reject path separators
+    if (extensionId.contains("/") || extensionId.contains("\\")) {
+      return false;
+    }
+    // Reject parent directory references
+    if (extensionId.contains("..")) {
+      return false;
+    }
+    // Only allow safe characters: alphanumeric, hyphen, underscore, dot
+    // This pattern matches valid Maven artifact IDs
+    return extensionId.matches("^[a-zA-Z0-9][a-zA-Z0-9._-]*$");
   }
 }
