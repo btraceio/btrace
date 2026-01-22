@@ -59,6 +59,7 @@ public final class ProbeConfiguration {
    *
    * @param output "jfr", "file", or "stdout" (case-insensitive)
    * @return this configuration for chaining
+   * @throws IllegalArgumentException if output is not a recognized value
    */
   public ProbeConfiguration setOutput(String output) {
     if (output == null || output.isEmpty()) {
@@ -75,8 +76,8 @@ public final class ProbeConfiguration {
         this.output = Output.STDOUT;
         break;
       default:
-        // Unknown output type, keep default
-        break;
+        throw new IllegalArgumentException(
+            "Unknown output type: '" + output + "'. Valid values: jfr, file, stdout");
     }
     return this;
   }

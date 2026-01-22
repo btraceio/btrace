@@ -24,6 +24,15 @@ dependencies {
     // Match versions commonly cached in this repository to avoid extra fetches
     implementation 'org.ow2.asm:asm:9.9.1'
     implementation 'org.ow2.asm:asm-tree:9.9.1'
+
+    // Testing
+    testImplementation gradleTestKit()
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 gradlePlugin {

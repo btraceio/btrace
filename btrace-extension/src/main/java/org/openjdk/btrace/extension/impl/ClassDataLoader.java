@@ -85,6 +85,11 @@ public final class ClassDataLoader extends ClassLoader {
       throw new ClassNotFoundException(name + " (no .classdata resource found)");
     }
 
+    // Validate bytecode before defining - ensures we're loading a valid class file
+    if (!isValidClassFile(classBytes)) {
+      throw new ClassNotFoundException(name + " (invalid class file format)");
+    }
+
     Class<?> clazz = defineClass(name, classBytes, 0, classBytes.length);
     Class<?> existing = loadedClasses.putIfAbsent(name, clazz);
     return existing != null ? existing : clazz;
@@ -123,5 +128,30 @@ public final class ClassDataLoader extends ClassLoader {
   @Override
   public String toString() {
     return "ClassDataLoader{extension='" + extensionId + "', classes=" + loadedClasses.size() + "}";
+  }
+
+  /**
+   * Validates that the byte array represents a valid Java class file.
+   *
+   * <p>This performs basic structural validation:
+   * <ul>
+   *   <li>Minimum length for a class file header</li>
+   *   <li>Magic number 0xCAFEBABE at the start</li>
+   * </ul>
+   *
+   * @param classBytes the bytes to validate
+   * @return true if the bytes appear to be a valid class file
+   */
+  private static boolean isValidClassFile(byte[] classBytes) {
+    // Minimum class file size: magic(4) + version(4) + constant_pool_count(2) = 10 bytes
+    // In practice, smallest valid class is larger, but this catches obvious corruption
+    if (classBytes == null || classBytes.length < 10) {
+      return false;
+    }
+    // Check for Java class file magic number: 0xCAFEBABE
+    return classBytes[0] == (byte) 0xCA
+        && classBytes[1] == (byte) 0xFE
+        && classBytes[2] == (byte) 0xBA
+        && classBytes[3] == (byte) 0xBE;
   }
 }

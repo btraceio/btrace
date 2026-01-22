@@ -139,7 +139,8 @@ final class AgentManifestLibs {
     return v != null && !v.trim().isEmpty() ? v.trim() : null;
   }
 
-  private static void addEntries(Set<Path> out, String value, Path baseDir) {
+  // Package-private for testing
+  static void addEntries(Set<Path> out, String value, Path baseDir) {
     if (value == null || value.isEmpty()) return;
     // Space-separated entries (manifest convention)
     String[] parts = value.split("\\s+");
@@ -149,7 +150,8 @@ final class AgentManifestLibs {
     }
   }
 
-  private static Path resolveEntry(String entry, Path baseDir) {
+  // Package-private for testing
+  static Path resolveEntry(String entry, Path baseDir) {
     try {
       if (entry.startsWith("file:")) {
         return Paths.get(new URI(entry));
@@ -164,7 +166,8 @@ final class AgentManifestLibs {
     return p;
   }
 
-  private static void scanLibTree(Path root, Set<Path> out) {
+  // Package-private for testing
+  static void scanLibTree(Path root, Set<Path> out) {
     try {
       if (root == null || !Files.exists(root)) return;
       Files.walk(root)
@@ -205,7 +208,8 @@ final class AgentManifestLibs {
     return parent != null ? parent.toPath() : null;
   }
 
-  private static List<Path> filterAndNormalize(Set<Path> entries, Path home, boolean allowExternal) {
+  // Package-private for testing
+  static List<Path> filterAndNormalize(Set<Path> entries, Path home, boolean allowExternal) {
     List<Path> out = new ArrayList<>();
     for (Path p : entries) {
       try {
@@ -226,8 +230,9 @@ final class AgentManifestLibs {
               log.warn("Rejecting manifest lib outside BTRACE_HOME: {}", rp);
               continue;
             }
-          } catch (IOException ignored) {
-            // best effort; fall back to np.startsWith(home)
+          } catch (IOException e) {
+            // toRealPath failed (file may not exist or path issue); fall back to non-canonical check
+            if (log.isDebugEnabled()) log.debug("toRealPath failed for {}: {}", np, e.getMessage());
             if (!np.startsWith(home)) {
               log.warn("Rejecting manifest lib outside BTRACE_HOME: {}", np);
               continue;

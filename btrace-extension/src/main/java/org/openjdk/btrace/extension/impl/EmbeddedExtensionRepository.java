@@ -104,6 +104,11 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
 
     for (String extId : extensionIds) {
       try {
+        // Validate extension ID to prevent path traversal attacks
+        if (!isValidExtensionId(extId)) {
+          log.warn("Rejecting invalid extension ID (potential path traversal): {}", extId);
+          continue;
+        }
         ExtensionDescriptorDTO descriptor = parseEmbeddedExtension(extId);
         if (descriptor != null) {
           extensions.add(descriptor);
@@ -158,6 +163,11 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
       props.load(is);
 
       String id = props.getProperty("id", extensionId);
+      // Validate ID from properties file (in case it differs from manifest)
+      if (!isValidExtensionId(id)) {
+        log.warn("Extension {} has invalid ID in properties: {}", extensionId, id);
+        id = extensionId; // Fall back to validated ID
+      }
       String version = props.getProperty("version", "0.0.0");
       String name = props.getProperty("name", id);
       String description = props.getProperty("description", "");
@@ -168,7 +178,13 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
 
       List<String> services = servicesStr.isEmpty()
           ? Collections.emptyList()
-          : Arrays.asList(servicesStr.split(","));
+          : validateClassNames(Arrays.asList(servicesStr.split(",")), "service");
+
+      // Validate configurator class name if present
+      if (configurator != null && !isValidClassName(configurator)) {
+        log.warn("Extension {} has invalid configurator class name: {}", extensionId, configurator);
+        configurator = null;
+      }
 
       // Discover bundled probes
       List<String> bundledProbes = discoverBundledProbes(extensionId);
@@ -220,5 +236,74 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
   @Override
   public String toString() {
     return "EmbeddedExtensionRepository{priority=" + EMBEDDED_PRIORITY + "}";
+  }
+
+  /**
+   * Validates that an extension ID is safe and cannot be used for path traversal.
+   *
+   * <p>Valid extension IDs must:
+   * <ul>
+   *   <li>Not be null or empty</li>
+   *   <li>Not contain path separators (/ or \)</li>
+   *   <li>Not contain parent directory references (..)</li>
+   *   <li>Only contain safe characters: alphanumeric, hyphen, underscore, dot</li>
+   * </ul>
+   *
+   * @param extensionId the extension ID to validate
+   * @return true if the ID is safe, false otherwise
+   */
+  static boolean isValidExtensionId(String extensionId) {
+    if (extensionId == null || extensionId.isEmpty()) {
+      return false;
+    }
+    // Reject path separators
+    if (extensionId.contains("/") || extensionId.contains("\\")) {
+      return false;
+    }
+    // Reject parent directory references
+    if (extensionId.contains("..")) {
+      return false;
+    }
+    // Only allow safe characters: alphanumeric, hyphen, underscore, dot
+    // This pattern matches valid Maven artifact IDs
+    return extensionId.matches("^[a-zA-Z0-9][a-zA-Z0-9._-]*$");
+  }
+
+  /**
+   * Validates that a string is a valid Java class name.
+   *
+   * @param className the class name to validate
+   * @return true if the class name appears valid
+   */
+  static boolean isValidClassName(String className) {
+    if (className == null || className.isEmpty()) {
+      return false;
+    }
+    // Basic validation: must be a valid Java identifier pattern
+    // Allows: package.Class, package.Class$Inner
+    return className.matches("^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_$]*)*(\\$[a-zA-Z_][a-zA-Z0-9_$]*)*$");
+  }
+
+  /**
+   * Validates and filters a list of class names.
+   *
+   * @param classNames list of class names to validate
+   * @param type description of the class type (for logging)
+   * @return list of valid class names
+   */
+  private List<String> validateClassNames(List<String> classNames, String type) {
+    List<String> valid = new ArrayList<>();
+    for (String className : classNames) {
+      String trimmed = className.trim();
+      if (trimmed.isEmpty()) {
+        continue;
+      }
+      if (isValidClassName(trimmed)) {
+        valid.add(trimmed);
+      } else {
+        log.warn("Ignoring invalid {} class name: {}", type, trimmed);
+      }
+    }
+    return valid;
   }
 }
