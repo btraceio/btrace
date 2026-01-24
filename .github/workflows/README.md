@@ -109,9 +109,17 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 ### 5. `release.yml` - Release Management
 
-**Purpose:** Handles release creation and artifact publishing.
+**Purpose:** Handles the complete release process with a manual checkpoint for Maven Central.
 
-**Trigger:** Tag push matching version patterns
+**Trigger:** Manual via `scripts/release.sh` or workflow_dispatch
+
+**Key Features:**
+- Stages artifacts to Maven Central (does NOT auto-release)
+- Waits up to 30 minutes for manual release via Central Portal
+- Creates GitHub release only after Maven artifacts are available
+- Updates SDKMan and manages milestones
+
+**Manual Checkpoint:** After staging, you must release via [Central Portal](https://central.sonatype.com/publishing/deployments). This allows reviewing artifacts before they become permanent.
 
 ## V2 Protocol Test Coverage
 

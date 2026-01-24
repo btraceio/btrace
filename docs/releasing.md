@@ -34,7 +34,7 @@ BTrace uses an automated release process via GitHub Actions. The release is trig
 DRY_RUN=true ./scripts/release.sh minor
 ```
 
-### What Happens Automatically
+### What Happens During Release
 
 The release workflow performs these steps:
 
@@ -42,12 +42,32 @@ The release workflow performs these steps:
 2. **Build & Test**: Runs full build and unit tests
 3. **Integration Tests**: Tests on JDK 8, 11, 17, 21
 4. **Prepare Release**: Creates/updates release branch, updates version, creates tag
-5. **Publish to Maven Central**: Publishes artifacts via Central Portal
-6. **Build Distributions**: Creates tar.gz, zip, deb, rpm packages
-7. **GitHub Release**: Creates release with artifacts and changelog
-8. **SDKMan Update**: Announces new version to SDKMan
-9. **Version Bumps**: Updates develop and release branch to next snapshots
-10. **Milestones**: Creates/closes milestone, associates merged PRs
+5. **Stage to Maven Central**: Uploads artifacts to staging (requires manual release)
+6. **⏸️ MANUAL CHECKPOINT**: You must release artifacts via Central Portal
+7. **Wait for Maven Central**: Polls until artifacts are available (30 min timeout)
+8. **Build Distributions**: Creates tar.gz, zip, deb, rpm packages
+9. **GitHub Release**: Creates release with artifacts and changelog
+10. **SDKMan Update**: Announces new version to SDKMan
+11. **JBang**: Automatic - uses Maven Central artifacts
+12. **Version Bumps**: Updates develop and release branch to next snapshots
+13. **Milestones**: Creates/closes milestone, associates merged PRs
+
+### Manual Release Step
+
+After step 5, the workflow pauses and waits for you to manually release the Maven artifacts:
+
+1. Go to [Central Portal Deployments](https://central.sonatype.com/publishing/deployments)
+2. Find the staged repository for BTrace
+3. **Review** the artifacts to ensure everything looks correct
+4. Click **Publish** to release to Maven Central
+5. The workflow will detect the release and continue automatically
+
+If you don't want to proceed:
+- Simply let the workflow timeout (30 minutes), or
+- Cancel the workflow run
+- Drop the staging repository via Central Portal
+
+This checkpoint allows you to verify the release before it becomes irreversible.
 
 ### Branch Strategy
 
@@ -69,7 +89,15 @@ Or use the GitHub Actions UI to trigger with `dry_run: true`.
 
 ## Maven Central
 
-Artifacts are published to Maven Central via the [Central Portal](https://central.sonatype.com/).
+Artifacts are staged to Maven Central via the [Central Portal](https://central.sonatype.com/).
+The workflow does **not** auto-release - you must manually publish from the Central Portal after reviewing the staged artifacts.
+
+### Staged Release Process
+
+1. Workflow uploads signed artifacts to a staging repository
+2. You review artifacts at [Central Portal Deployments](https://central.sonatype.com/publishing/deployments)
+3. Click "Publish" to release, or "Drop" to discard
+4. Once published, artifacts sync to Maven Central within ~10 minutes
 
 ### Maven Coordinates
 
@@ -98,28 +126,51 @@ Generate Central Portal tokens at: https://central.sonatype.com/account
 
 ## SDKMan
 
-After release, BTrace is available via SDKMan:
+After the GitHub release is created, the workflow announces the new version to SDKMan.
+BTrace will be available via:
 
 ```bash
 sdk install btrace
 ```
 
-## Rollback Procedure
+For major releases, `sdkMajorRelease` is used; for minor/patch, `sdkMinorRelease` is used.
 
-If a release fails after tagging but before full completion:
+## JBang
+
+JBang automatically picks up new versions from Maven Central. No manual action required.
+Once Maven Central has the artifacts, users can run:
 
 ```bash
-# Delete tag locally and remotely
-git tag -d vX.Y.Z
-git push origin :refs/tags/vX.Y.Z
-
-# Reset release branch if needed
-git checkout release/X.Y
-git reset --hard <previous-commit>
-git push --force origin release/X.Y
+jbang btrace <PID> script.java
 ```
 
-If artifacts were published to staging but not released, drop the staging repository via the [Central Portal UI](https://central.sonatype.com/publishing/deployments).
+## Rollback Procedure
+
+### Before Maven Central release (reversible)
+
+If the workflow is waiting for Maven Central and you want to abort:
+
+1. **Cancel the workflow** in GitHub Actions
+2. **Drop the staging repository** via [Central Portal](https://central.sonatype.com/publishing/deployments)
+3. **Delete the tag** (if created):
+   ```bash
+   git tag -d vX.Y.Z
+   git push origin :refs/tags/vX.Y.Z
+   ```
+4. **Reset release branch** if needed:
+   ```bash
+   git checkout release/X.Y
+   git reset --hard <previous-commit>
+   git push --force origin release/X.Y
+   ```
+
+### After Maven Central release (irreversible)
+
+Once artifacts are released to Maven Central, they cannot be deleted. You can only:
+- Release a new patch version with fixes
+- Document the issue in release notes
+
+Similarly, SDKMan announcements cannot be retracted.
 
 ## Troubleshooting
 
@@ -127,7 +178,14 @@ If artifacts were published to staging but not released, drop the staging reposi
 - Check test reports in workflow artifacts
 - Fix issues and re-run the release script
 
-### Maven Central publishing fails
+### Wait for Maven Central times out
+- The workflow waits 30 minutes for you to release via Central Portal
+- If you missed it, manually complete the release:
+  1. Release artifacts via [Central Portal](https://central.sonatype.com/publishing/deployments)
+  2. Create GitHub release manually with artifacts from the workflow
+  3. Run SDKMan update: `./gradlew :btrace-dist:sdkMinorRelease`
+
+### Maven Central staging fails
 - Verify credentials are valid (regenerate tokens if needed)
 - Check signing key hasn't expired
 - Review Sonatype status: https://status.sonatype.com/
@@ -136,5 +194,9 @@ If artifacts were published to staging but not released, drop the staging reposi
 - Verify SDKMan API credentials
 - SDKMan updates can be retried manually via Gradle:
   ```bash
+  # For minor/patch releases
   ./gradlew :btrace-dist:sdkMinorRelease
+
+  # For major releases
+  ./gradlew :btrace-dist:sdkMajorRelease
   ```
