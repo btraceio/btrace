@@ -616,11 +616,13 @@ sdkman {
 publishing {
     repositories {
         maven {
-            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            // Central Portal URLs (OSSRH was sunset on June 30, 2025)
+            def releasesRepoUrl = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://central.sonatype.com/repository/maven-snapshots/"
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 
             credentials {
+                // Use Central Portal user token credentials
                 username = project.hasProperty("sonatype.user") ? project.property("sonatype.user") : System.getenv('SONATYPE_USER')
                 password = project.hasProperty("sonatype.password") ? project.property("sonatype.password") : System.getenv('SONATYPE_PASSWORD')
             }
