@@ -34,7 +34,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-${{ matrix.java }}
+
       - name: Set up JDK ${{ matrix.java }}
+        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: ${{ matrix.java }}
@@ -81,7 +89,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
       - name: Set up JDK 11
+        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: 11
@@ -125,7 +141,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
       - name: Set up JDK 11
+        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: 11
@@ -168,7 +192,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
       - name: Set up JDK 11
+        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: 11
@@ -221,7 +253,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
       - name: Set up JDK 11
+        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: 11
@@ -304,7 +344,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
       - name: Set up JDK 11
+        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: 11

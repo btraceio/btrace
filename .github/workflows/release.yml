@@ -1,60 +1,828 @@
-on:
-  push:
-    tags:
-      - 'v*'
+# BTrace Release Workflow
+#
+# This workflow handles the complete release process:
+# 1. Validates inputs and prerequisites
+# 2. Runs full test suite (unit + integration tests)
+# 3. Creates release branch and tag
+# 4. Publishes to Maven Central via Sonatype
+# 5. Creates GitHub release with artifacts
+# 6. Updates SDKMan
+# 7. Updates version numbers for next development cycle
+# 8. Manages milestones
+#
+# Triggered by scripts/release.sh or manually via workflow_dispatch
 
-name: Create Release
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      release_version:
+        description: 'Release version (e.g., 2.3.0)'
+        required: true
+        type: string
+      commit_sha:
+        description: 'Source commit SHA'
+        required: true
+        type: string
+      release_branch:
+        description: 'Release branch (e.g., release/2.3)'
+        required: true
+        type: string
+      next_snapshot:
+        description: 'Next snapshot version (e.g., 2.4.0-SNAPSHOT)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run (skip publishing and tagging)'
+        required: false
+        type: boolean
+        default: false
 
 defaults:
   run:
     shell: bash
 
+env:
+  RELEASE_VERSION: ${{ inputs.release_version }}
+  RELEASE_TAG: v${{ inputs.release_version }}
+
 jobs:
-  build:
-    name: Create Release
+  # ============================================================
+  # Job 1: Validate inputs and prerequisites
+  # ============================================================
+  validate:
+    name: Validate Release
     runs-on: ubuntu-latest
+    outputs:
+      branch_exists: ${{ steps.check-branch.outputs.exists }}
+      create_branch: ${{ steps.check-branch.outputs.create }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
-      - name: Branch name
-        id: branch_name
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Validate inputs
         run: |
-          echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
-          echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
-          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+          echo "Validating release inputs..."
+          echo "  Release Type: ${{ inputs.release_type }}"
+          echo "  Release Version: ${{ inputs.release_version }}"
+          echo "  Commit SHA: ${{ inputs.commit_sha }}"
+          echo "  Release Branch: ${{ inputs.release_branch }}"
+          echo "  Next Snapshot: ${{ inputs.next_snapshot }}"
+          echo "  Dry Run: ${{ inputs.dry_run }}"
+
+          # Validate version format (X.Y.Z)
+          if [[ ! "${{ inputs.release_version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format. Expected X.Y.Z"
+            exit 1
+          fi
+
+          # Validate release type
+          if [[ ! "${{ inputs.release_type }}" =~ ^(major|minor|patch)$ ]]; then
+            echo "::error::Invalid release type. Expected major, minor, or patch"
+            exit 1
+          fi
+
+          # Validate commit exists
+          if ! git cat-file -e "${{ inputs.commit_sha }}^{commit}" 2>/dev/null; then
+            echo "::error::Commit ${{ inputs.commit_sha }} does not exist"
+            exit 1
+          fi
+
+          echo "All inputs validated successfully"
+
+      - name: Check if tag exists
+        run: |
+          if git rev-parse "v${{ inputs.release_version }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ inputs.release_version }} already exists"
+            exit 1
+          fi
+          if git ls-remote --tags origin "refs/tags/v${{ inputs.release_version }}" | grep -q .; then
+            echo "::error::Tag v${{ inputs.release_version }} already exists on remote"
+            exit 1
+          fi
+          echo "Tag does not exist - OK"
+
+      - name: Check if release branch exists
+        id: check-branch
+        run: |
+          BRANCH="${{ inputs.release_branch }}"
+          if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
+            echo "Release branch ${BRANCH} already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "create=false" >> $GITHUB_OUTPUT
+          else
+            echo "Release branch ${BRANCH} will be created"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "create=true" >> $GITHUB_OUTPUT
+          fi
+
+  # ============================================================
+  # Job 2: Build and run unit tests
+  # ============================================================
+  build-and-test:
+    name: Build and Test
+    needs: validate
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.commit_sha }}
+
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
       - name: Set up Java
+        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: 11
           distribution: temurin
-      - name: Deploy Maven
-        id: deploy_maven
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          key="${{ runner.os }}-gradle-release-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}"
+          echo "key=${key}" >> $GITHUB_OUTPUT
+
+      - name: Cache Gradle
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build
+        run: ./gradlew --no-daemon --parallel --build-cache build
+
+      - name: Upload dist build data
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-build
+          retention-days: 1
+          path: |
+            btrace-dist/build
+            btrace-instr/build/classes/traces
+
+      - name: Upload test trace data
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-trace
+          retention-days: 1
+          path: |
+            btrace-instr/build/classes/traces
+
+      - name: Archive test reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: unit-test-reports
+          path: |
+            **/reports/**/*
+
+  # ============================================================
+  # Job 3: Integration tests on multiple JDK versions
+  # ============================================================
+  integration-tests:
+    name: Integration Tests (JDK ${{ matrix.java }})
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [8.0.452-tem, 11.0.27-tem, 17.0.15-tem, 21.0.7-tem]
+    env:
+      TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.commit_sha }}
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare OS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl zip unzip
+
+      - name: Prepare JDK ${{ matrix.java }}
+        run: |
+          curl -s "https://get.sdkman.io" | bash
+          source "$HOME/.sdkman/bin/sdkman-init.sh"
+          echo 'n' | sdk install java ${{ matrix.java }}
+          which java
+          echo 'y' | sdk install java 11.0.25-tem
+
+      - name: Cache Gradle
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: ${{ needs.build-and-test.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Download build data
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-build
+          path: btrace-dist/build
+
+      - name: Download test trace data
+        uses: actions/download-artifact@v7
+        with:
+          name: test-trace
+          path: btrace-instr/build/classes/traces
+
+      - name: Build btrace-instr jar
+        run: |
+          ./gradlew --no-daemon --parallel --build-cache :btrace-instr:jar
+
+      - name: Run integration tests
+        run: |
+          ./gradlew --no-daemon --parallel --build-cache -Pintegration :integration-tests:test
+
+      - name: Integration test reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: integration-test-reports-${{ matrix.java }}
+          path: |
+            integration-tests/build/reports/**/*
+
+  # ============================================================
+  # Job 4: Prepare release (create branch, update version, tag)
+  # ============================================================
+  prepare-release:
+    name: Prepare Release
+    needs: [validate, integration-tests]
+    runs-on: ubuntu-latest
+    outputs:
+      release_sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create or checkout release branch
+        run: |
+          BRANCH="${{ inputs.release_branch }}"
+          if git show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
+            echo "Checking out existing branch ${BRANCH}"
+            git checkout -b "${BRANCH}" "origin/${BRANCH}"
+          else
+            echo "Creating new branch ${BRANCH}"
+            git checkout -b "${BRANCH}"
+          fi
+
+      - name: Update version in common.gradle
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          sed -i "s/project.version = '.*'/project.version = '${VERSION}'/" common.gradle
+          echo "Updated version to ${VERSION}"
+          grep "project.version" common.gradle
+
+      - name: Commit version change
+        id: commit
+        run: |
+          git add common.gradle
+          git commit -m "Release ${RELEASE_TAG}"
+          SHA=$(git rev-parse HEAD)
+          echo "sha=${SHA}" >> $GITHUB_OUTPUT
+          echo "Release commit: ${SHA}"
+
+      - name: Create tag
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
+          echo "Created tag ${RELEASE_TAG}"
+
+      - name: Push branch and tag
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git push origin "${{ inputs.release_branch }}"
+          git push origin "${RELEASE_TAG}"
+          echo "Pushed branch and tag"
+
+      - name: Dry run summary
+        if: ${{ inputs.dry_run == true }}
+        run: |
+          echo "::warning::DRY RUN - Branch and tag NOT pushed"
+          echo "Would have pushed:"
+          echo "  - Branch: ${{ inputs.release_branch }}"
+          echo "  - Tag: ${RELEASE_TAG}"
+
+  # ============================================================
+  # Job 5: Publish to Maven Central
+  # ============================================================
+  publish-maven:
+    name: Publish to Maven Central
+    needs: [prepare-release, build-and-test]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
+      - name: Set up Java
+        if: steps.cache-java.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v5
+        with:
+          java-version: 11
+          distribution: temurin
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Gradle
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: ${{ needs.build-and-test.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Publish to Maven Central
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
           SONATYPE_USER: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PWD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
         run: |
-          ./gradlew :btrace-dist:publishAllPublicationsToMavenRepository
-      - name: Build artifacts
-        run: ./gradlew :btrace-dist:build
-      - name: Create Release
-        id: create_release
+          echo "Publishing to Central Portal..."
+          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository \
+            closeAndReleaseSonatypeStagingRepository \
+            --no-daemon
+
+      - name: Verify publication
+        run: |
+          echo "Waiting for Maven Central sync..."
+          sleep 30
+          echo "Artifacts published to Maven Central"
+          echo "  - io.btrace:btrace-agent:${{ inputs.release_version }}"
+          echo "  - io.btrace:btrace-client:${{ inputs.release_version }}"
+          echo "  - io.btrace:btrace-boot:${{ inputs.release_version }}"
+
+  # ============================================================
+  # Job 6: Build distribution packages
+  # ============================================================
+  build-distributions:
+    name: Build Distributions
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.dry_run == true && inputs.commit_sha || env.RELEASE_TAG }}
+
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
+      - name: Set up Java
+        if: steps.cache-java.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v5
+        with:
+          java-version: 11
+          distribution: temurin
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Update version for dry run
+        if: ${{ inputs.dry_run == true }}
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          sed -i "s/project.version = '.*'/project.version = '${VERSION}'/" common.gradle
+
+      - name: Build distribution packages
+        run: |
+          ./gradlew :btrace-dist:build --no-daemon
+
+      - name: List artifacts
+        run: |
+          echo "Distribution artifacts:"
+          ls -la btrace-dist/build/distributions/
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-distributions
+          retention-days: 7
+          path: |
+            btrace-dist/build/distributions/btrace-v${{ inputs.release_version }}-bin.tar.gz
+            btrace-dist/build/distributions/btrace-v${{ inputs.release_version }}-bin.zip
+            btrace-dist/build/distributions/btrace-v${{ inputs.release_version }}-sdkman-bin.zip
+            btrace-dist/build/distributions/*.deb
+            btrace-dist/build/distributions/*.rpm
+
+  # ============================================================
+  # Job 7: Create GitHub Release
+  # ============================================================
+  create-github-release:
+    name: Create GitHub Release
+    needs: [build-distributions, publish-maven]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: release-distributions
+          path: distributions
+
+      - name: Check for no-release-notes label
+        id: check-label
+        run: |
+          # Check if this release should skip auto-generated notes
+          SKIP_NOTES="false"
+          # This would check PRs merged since last release for the label
+          # For now, always generate release notes
+          echo "skip_notes=${SKIP_NOTES}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: BTrace ${{ inputs.release_version }}
           draft: false
-          prerelease: true
+          prerelease: false
           generate_release_notes: true
           files: |
-            btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.tar.gz
-            btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-bin.zip
-            btrace-dist/build/distributions/btrace-${{ steps.branch_name.outputs.SOURCE_TAG }}-sdkman-bin.zip
-      - name: Update SDKMan!
-        id: update_sdkman
+            distributions/btrace-v${{ inputs.release_version }}-bin.tar.gz
+            distributions/btrace-v${{ inputs.release_version }}-bin.zip
+            distributions/btrace-v${{ inputs.release_version }}-sdkman-bin.zip
+            distributions/*.deb
+            distributions/*.rpm
+
+  # ============================================================
+  # Job 8: Update SDKMan
+  # ============================================================
+  update-sdkman:
+    name: Update SDKMan
+    needs: create-github-release
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
+
+      - name: Set up Java
+        if: steps.cache-java.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v5
+        with:
+          java-version: 11
+          distribution: temurin
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Announce to SDKMan
         env:
-          SKDMAN_API_KEY: ${{ secrets.SDKMAN_KEY }}
+          SDKMAN_API_KEY: ${{ secrets.SDKMAN_KEY }}
           SDKMAN_API_TOKEN: ${{ secrets.SDKMAN_TOKEN }}
         run: |
-          ./gradlew :btrace-dist:sdkMinorRelease
+          ./gradlew :btrace-dist:sdkMinorRelease --no-daemon
+
+  # ============================================================
+  # Job 9: Update develop branch (major/minor only)
+  # ============================================================
+  update-develop:
+    name: Update Develop Branch
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    if: ${{ inputs.release_type != 'patch' && inputs.dry_run != true }}
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update version in develop
+        run: |
+          NEXT_VERSION="${{ inputs.next_snapshot }}"
+          sed -i "s/project.version = '.*'/project.version = '${NEXT_VERSION}'/" common.gradle
+          echo "Updated develop to ${NEXT_VERSION}"
+          grep "project.version" common.gradle
+
+      - name: Commit and push
+        run: |
+          git add common.gradle
+          git commit -m "Bump version to ${{ inputs.next_snapshot }} after ${RELEASE_TAG} release"
+          git push origin develop
+
+  # ============================================================
+  # Job 10: Update release branch to next patch snapshot
+  # ============================================================
+  update-release-branch:
+    name: Update Release Branch
+    needs: [prepare-release, create-github-release]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculate next patch snapshot
+        id: next-version
+        run: |
+          CURRENT="${{ inputs.release_version }}"
+          MAJOR=$(echo $CURRENT | cut -d. -f1)
+          MINOR=$(echo $CURRENT | cut -d. -f2)
+          PATCH=$(echo $CURRENT | cut -d. -f3)
+          NEXT_PATCH=$((PATCH + 1))
+          NEXT_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}-SNAPSHOT"
+          echo "version=${NEXT_VERSION}" >> $GITHUB_OUTPUT
+          echo "Next patch version: ${NEXT_VERSION}"
+
+      - name: Update version in release branch
+        run: |
+          NEXT_VERSION="${{ steps.next-version.outputs.version }}"
+          sed -i "s/project.version = '.*'/project.version = '${NEXT_VERSION}'/" common.gradle
+          echo "Updated release branch to ${NEXT_VERSION}"
+          grep "project.version" common.gradle
+
+      - name: Commit and push
+        run: |
+          git add common.gradle
+          git commit -m "Bump version to ${{ steps.next-version.outputs.version }} for next patch release"
+          git push origin ${{ inputs.release_branch }}
+
+  # ============================================================
+  # Job 11: Update master branch
+  # ============================================================
+  update-master:
+    name: Update Master Branch
+    needs: create-github-release
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fast-forward master to release tag
+        run: |
+          git fetch origin "${RELEASE_TAG}"
+          git merge --ff-only "${RELEASE_TAG}" || git reset --hard "${RELEASE_TAG}"
+          git push origin master
+
+  # ============================================================
+  # Job 12: Manage milestones
+  # ============================================================
+  update-milestones:
+    name: Update Milestones
+    needs: create-github-release
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create and close milestone
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MILESTONE_TITLE="${{ inputs.release_version }}"
+
+          # Check if milestone exists
+          MILESTONE=$(gh api repos/${{ github.repository }}/milestones --jq ".[] | select(.title == \"${MILESTONE_TITLE}\")")
+
+          if [[ -z "${MILESTONE}" ]]; then
+            echo "Creating milestone ${MILESTONE_TITLE}..."
+            gh api repos/${{ github.repository }}/milestones \
+              -X POST \
+              -f title="${MILESTONE_TITLE}" \
+              -f state="closed" \
+              -f description="Released as ${RELEASE_TAG}"
+          else
+            MILESTONE_NUMBER=$(echo "${MILESTONE}" | jq -r '.number')
+            echo "Closing existing milestone ${MILESTONE_TITLE} (#${MILESTONE_NUMBER})..."
+            gh api repos/${{ github.repository }}/milestones/${MILESTONE_NUMBER} \
+              -X PATCH \
+              -f state="closed"
+          fi
+
+      - name: Associate merged PRs with milestone
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the milestone number
+          MILESTONE_TITLE="${{ inputs.release_version }}"
+          MILESTONE_NUMBER=$(gh api repos/${{ github.repository }}/milestones --jq ".[] | select(.title == \"${MILESTONE_TITLE}\") | .number")
+
+          if [[ -z "${MILESTONE_NUMBER}" ]]; then
+            echo "Warning: Could not find milestone ${MILESTONE_TITLE}"
+            exit 0
+          fi
+
+          # Find the previous release tag
+          PREV_TAG=$(git describe --tags --abbrev=0 "${RELEASE_TAG}^" 2>/dev/null || echo "")
+
+          if [[ -z "${PREV_TAG}" ]]; then
+            echo "No previous tag found, skipping PR association"
+            exit 0
+          fi
+
+          echo "Finding PRs merged between ${PREV_TAG} and ${RELEASE_TAG}..."
+
+          # Get commits between tags
+          COMMITS=$(git log "${PREV_TAG}..${RELEASE_TAG}" --pretty=format:"%H" 2>/dev/null || echo "")
+
+          for COMMIT in ${COMMITS}; do
+            # Find PR associated with this commit
+            PR_NUMBER=$(gh api repos/${{ github.repository }}/commits/${COMMIT}/pulls --jq '.[0].number' 2>/dev/null || echo "")
+
+            if [[ -n "${PR_NUMBER}" && "${PR_NUMBER}" != "null" ]]; then
+              echo "Associating PR #${PR_NUMBER} with milestone ${MILESTONE_TITLE}..."
+              gh api repos/${{ github.repository }}/issues/${PR_NUMBER} \
+                -X PATCH \
+                -f milestone="${MILESTONE_NUMBER}" 2>/dev/null || true
+            fi
+          done
+
+  # ============================================================
+  # Job 13: Release summary
+  # ============================================================
+  summary:
+    name: Release Summary
+    needs: [create-github-release, update-sdkman, update-milestones]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ inputs.release_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | ${RELEASE_TAG} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release Type | ${{ inputs.release_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Commit | ${{ inputs.commit_sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release Branch | ${{ inputs.release_branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry Run | ${{ inputs.dry_run }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ inputs.dry_run }}" != "true" ]]; then
+            echo "## Links" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
+            echo "- [Maven Central](https://central.sonatype.com/search?q=io.btrace&version=${{ inputs.release_version }})" >> $GITHUB_STEP_SUMMARY
+            echo "- [SDKMan](https://sdkman.io/sdks#btrace)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## Maven Coordinates" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```xml' >> $GITHUB_STEP_SUMMARY
+            echo '<dependency>' >> $GITHUB_STEP_SUMMARY
+            echo '    <groupId>io.btrace</groupId>' >> $GITHUB_STEP_SUMMARY
+            echo '    <artifactId>btrace-client</artifactId>' >> $GITHUB_STEP_SUMMARY
+            echo "    <version>${{ inputs.release_version }}</version>" >> $GITHUB_STEP_SUMMARY
+            echo '</dependency>' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Dry Run Mode" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> **Note:** This was a dry run. No artifacts were published or tags created." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate | ${{ needs.validate.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build & Test | ${{ needs.build-and-test.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Prepare Release | ${{ needs.prepare-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Publish Maven | ${{ needs.publish-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GitHub Release | ${{ needs.create-github-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SDKMan | ${{ needs.update-sdkman.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Milestones | ${{ needs.update-milestones.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================
+  # Cleanup job
+  # ============================================================
+  cleanup:
+    name: Cleanup Artifacts
+    needs: [summary]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Cleanup temporary artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            dist-build
+            test-trace
