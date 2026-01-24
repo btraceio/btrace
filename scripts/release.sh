@@ -110,17 +110,17 @@ has_fzf() {
 }
 
 #######################################
-# Display commit picker
+# Display commit picker with master-detail view
 # Args: branch [count]
 # Returns: selected commit SHA or branch name
 #######################################
 pick_commit() {
     local branch=$1
-    local count=${2:-15}
+    local count=${2:-20}
 
-    # Build list of commits
+    # Build list of commits with more detail
     local commits
-    commits=$(git log "${branch}" --oneline --format="%h  %ad  %s" --date=short -n "${count}" 2>/dev/null)
+    commits=$(git log "${branch}" --format="%h  %ad  %s" --date=short -n "${count}" 2>/dev/null)
 
     if [[ -z "${commits}" ]]; then
         error "No commits found on branch '${branch}'"
@@ -132,10 +132,36 @@ pick_commit() {
     echo "" >&2
 
     if has_fzf; then
-        # Use fzf for fuzzy selection
-        local header_line="${branch} (HEAD)         Use latest commit on ${branch}"
+        # Use fzf with preview pane for master-detail view
+        local header_line="HEAD      (latest)  Use latest commit on ${branch}"
+
+        # Preview command shows full commit details
+        # For HEAD line, show branch tip; for commits, show the specific commit
+        local preview_cmd='
+            line={}
+            sha=$(echo "$line" | awk "{print \$1}")
+            if [[ "$sha" == "HEAD" ]]; then
+                git log -1 --format="Commit:  %H%nAuthor:  %an <%ae>%nDate:    %ad%n%nSubject: %s%n%n%b" --date=format:"%Y-%m-%d %H:%M:%S" '"${branch}"'
+                echo ""
+                echo "─── Changed Files ───"
+                git diff-tree --no-commit-id --name-status -r '"${branch}"' | head -20
+            else
+                git log -1 --format="Commit:  %H%nAuthor:  %an <%ae>%nDate:    %ad%nTags:    %(describe:tags)%n%nSubject: %s%n%n%b" --date=format:"%Y-%m-%d %H:%M:%S" "$sha" 2>/dev/null
+                echo ""
+                echo "─── Changed Files ───"
+                git diff-tree --no-commit-id --name-status -r "$sha" 2>/dev/null | head -20
+            fi
+        '
+
         local selected
-        selected=$(echo -e "${header_line}\n${commits}" | fzf --height=20 --reverse --header="Press Enter to select, Esc to cancel" 2>/dev/tty)
+        selected=$(echo -e "${header_line}\n${commits}" | \
+            fzf --height=80% \
+                --reverse \
+                --header="↑/↓: navigate  Enter: select  Esc: cancel" \
+                --preview="${preview_cmd}" \
+                --preview-window=right:50%:wrap \
+                --ansi \
+                2>/dev/tty)
 
         if [[ -z "${selected}" ]]; then
             error "No commit selected"
@@ -150,7 +176,7 @@ pick_commit() {
             echo "${selected}" | awk '{print $1}'
         fi
     else
-        # Fallback to numbered selection
+        # Fallback to numbered selection (no fzf available)
         echo -e "  ${GREEN}1)${NC} ${branch} (HEAD)         Use latest commit on ${branch}" >&2
         echo "  ─────────────────────────────────────────────────────" >&2
 
@@ -189,7 +215,7 @@ pick_commit() {
 }
 
 #######################################
-# Display branch picker for patch releases
+# Display branch picker for patch releases with preview
 # Returns: selected branch name (e.g., "release/2.3")
 #######################################
 pick_release_branch() {
@@ -215,8 +241,31 @@ pick_release_branch() {
             display_list+="${branch}   (latest: ${latest_tag})"$'\n'
         done <<< "${branches}"
 
+        # Preview command shows branch info and recent commits
+        local preview_cmd='
+            branch=$(echo {} | awk "{print \$1}")
+            echo "Branch: $branch"
+            echo ""
+            latest_tag=$(git describe --tags --abbrev=0 "$branch" 2>/dev/null || echo "none")
+            current_ver=$(git show "$branch:common.gradle" 2>/dev/null | grep "project.version" | sed -E "s/.*\x27([^\x27]+)\x27.*/\1/")
+            echo "Latest tag:      $latest_tag"
+            echo "Current version: $current_ver"
+            echo ""
+            echo "─── Recent Commits ───"
+            git log "$branch" --oneline -10 2>/dev/null
+            echo ""
+            echo "─── Release Tags ───"
+            git tag --list "v${branch#release/}.*" --sort=-version:refname | head -5
+        '
+
         local selected
-        selected=$(echo -e "${display_list}" | fzf --height=15 --reverse --header="Select branch for patch release" 2>/dev/tty)
+        selected=$(echo -e "${display_list}" | \
+            fzf --height=60% \
+                --reverse \
+                --header="↑/↓: navigate  Enter: select  Esc: cancel" \
+                --preview="${preview_cmd}" \
+                --preview-window=right:50%:wrap \
+                2>/dev/tty)
 
         if [[ -z "${selected}" ]]; then
             error "No branch selected"
