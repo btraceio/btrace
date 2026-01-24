@@ -27,8 +27,11 @@ BTrace dynamically instruments running Java applications to inject tracing code 
 # Install via JBang (easiest)
 curl -Ls https://sh.jbang.dev | bash -s - app setup
 
+# Add the BTrace JBang catalog (one time)
+jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
+
 # Trace slow methods in your running app
-jbang btrace -n 'com.myapp.*::* @return if duration>100ms { print method, duration }' $(pgrep -f myapp)
+jbang btrace@btraceio -n 'com.myapp.*::* @return if duration>100ms { print method, duration }' $(pgrep -f myapp)
 ```
 
 ---
@@ -63,7 +66,8 @@ See the [Oneliner Guide](docs/OnelinerGuide.md) for complete syntax.
 
 ```sh
 # JBang (recommended - zero installation)
-jbang btrace <PID> script.java
+jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
+jbang btrace@btraceio <PID> script.java
 
 # SDKMan
 sdk install btrace

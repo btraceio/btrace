@@ -71,37 +71,38 @@ sdk install jbang                   # SDKMAN
 **Use BTrace with JBang** (no separate BTrace installation needed):
 ```bash
 # Attach to running application (replace <version> with desired version, e.g., 2.3.0)
-jbang org.openjdk.btrace:btrace-client:<version> <PID> <script.java>
+jbang io.btrace:btrace-client:<version> <PID> <script.java>
 
-# Use shorter alias after first run
-jbang btrace <PID> <script.java>
+# Add the BTrace JBang catalog (one time), then use the shorter alias
+jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
+jbang btrace@btraceio <PID> <script.java>
 ```
 
 **Extract agent JARs** (if needed for `--agent-jar`/`--boot-jar` flags):
 ```bash
 # Extract to a directory of your choice
-jbang org.openjdk.btrace:btrace-client:<version> --extract-agent ~/.btrace
+jbang io.btrace:btrace-client:<version> --extract-agent ~/.btrace
 
 # This creates:
 #   ~/.btrace/btrace-agent.jar
 #   ~/.btrace/btrace-boot.jar
 
 # Then use them explicitly:
-jbang btrace --agent-jar ~/.btrace/btrace-agent.jar \
+jbang btrace@btraceio --agent-jar ~/.btrace/btrace-agent.jar \
              --boot-jar ~/.btrace/btrace-boot.jar \
              <PID> <script.java>
 ```
 
 **Alternative: Use JARs from Maven local repository:**
-After jbang downloads BTrace, find the JARs in your local Maven repository:
+After jbang downloads BTrace, find the JARs in your local Maven repository (default `~/.m2`):
 ```bash
 # JARs are cached at:
-~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
-~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
+~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
+~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
 
 # Use them directly:
-jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
-             --boot-jar ~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
+jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
+             --boot-jar ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
              <PID> <script.java>
 ```
 
@@ -116,7 +117,7 @@ jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<versi
 ```bash
 btrace -h
 # or with JBang
-jbang btrace -h
+jbang btrace@btraceio -h
 ```
 
 You should see the BTrace help message with available options.
@@ -313,7 +314,10 @@ BTrace offers multiple deployment modes to suit different use cases:
 Use JBang to run BTrace without installation:
 
 ```bash
-jbang org.openjdk.btrace:btrace-client:<version> <PID> <script.java>
+jbang io.btrace:btrace-client:<version> <PID> <script.java>
+
+# One-time catalog setup for the short alias
+jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
 ```
 
 **When to use:**
@@ -325,20 +329,20 @@ jbang org.openjdk.btrace:btrace-client:<version> <PID> <script.java>
 **Examples:**
 ```bash
 # Basic usage
-jbang btrace 12345 MyTrace.java
+jbang btrace@btraceio 12345 MyTrace.java
 
 # With verbose output
-jbang btrace -v 12345 MyTrace.java arg1 arg2
+jbang btrace@btraceio -v 12345 MyTrace.java arg1 arg2
 
 # Extract agent JARs, then use them explicitly
-jbang btrace --extract-agent ~/.btrace
-jbang btrace --agent-jar ~/.btrace/btrace-agent.jar \
+jbang btrace@btraceio --extract-agent ~/.btrace
+jbang btrace@btraceio --agent-jar ~/.btrace/btrace-agent.jar \
              --boot-jar ~/.btrace/btrace-boot.jar \
              12345 MyTrace.java
 
 # Or use JARs from Maven local repository (after jbang downloads them)
-jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
-             --boot-jar ~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
+jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
+             --boot-jar ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
              12345 MyTrace.java
 ```
 
