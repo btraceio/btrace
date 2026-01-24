@@ -4,11 +4,16 @@
 # 1. Validates inputs and prerequisites
 # 2. Runs full test suite (unit + integration tests)
 # 3. Creates release branch and tag
-# 4. Publishes to Maven Central via Sonatype
-# 5. Creates GitHub release with artifacts
-# 6. Updates SDKMan
-# 7. Updates version numbers for next development cycle
-# 8. Manages milestones
+# 4. Stages artifacts to Maven Central (requires manual release)
+# 5. Waits for Maven Central availability (up to 30 minutes)
+# 6. Creates GitHub release with artifacts
+# 7. Updates SDKMan
+# 8. Updates version numbers for next development cycle
+# 9. Manages milestones
+#
+# IMPORTANT: Maven artifacts are STAGED, not released automatically.
+# After staging, go to https://central.sonatype.com/publishing/deployments
+# to review and release. The workflow will wait up to 30 minutes.
 #
 # Triggered by scripts/release.sh or manually via workflow_dispatch
 
@@ -355,10 +360,10 @@ jobs:
           echo "  - Tag: ${RELEASE_TAG}"
 
   # ============================================================
-  # Job 5: Publish to Maven Central
+  # Job 5: Stage to Maven Central (does NOT release)
   # ============================================================
-  publish-maven:
-    name: Publish to Maven Central
+  stage-maven:
+    name: Stage to Maven Central
     needs: [prepare-release, build-and-test]
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
@@ -398,26 +403,86 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Publish to Maven Central
+      - name: Stage to Maven Central
         env:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PWD: ${{ secrets.GPG_SIGNING_PWD }}
           SONATYPE_USER: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
         run: |
-          echo "Publishing to Central Portal..."
-          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository \
-            closeAndReleaseSonatypeStagingRepository \
-            --no-daemon
+          echo "Staging artifacts to Central Portal..."
+          echo "After this job completes, go to https://central.sonatype.com/publishing/deployments"
+          echo "to review and release the staged artifacts."
+          ./gradlew :btrace-dist:publishAllPublicationsToSonatypeRepository --no-daemon
 
-      - name: Verify publication
+      - name: Staging complete
         run: |
-          echo "Waiting for Maven Central sync..."
-          sleep 30
-          echo "Artifacts published to Maven Central"
+          echo "=============================================="
+          echo "ARTIFACTS STAGED - MANUAL RELEASE REQUIRED"
+          echo "=============================================="
+          echo ""
+          echo "Staged artifacts:"
           echo "  - io.btrace:btrace-agent:${{ inputs.release_version }}"
           echo "  - io.btrace:btrace-client:${{ inputs.release_version }}"
           echo "  - io.btrace:btrace-boot:${{ inputs.release_version }}"
+          echo ""
+          echo "Next steps:"
+          echo "  1. Go to https://central.sonatype.com/publishing/deployments"
+          echo "  2. Review the staged repository"
+          echo "  3. Click 'Publish' to release to Maven Central"
+          echo ""
+          echo "The workflow will wait up to 30 minutes for artifacts to appear."
+          echo "If you don't want to proceed, let the workflow timeout or cancel it."
+
+  # ============================================================
+  # Job 5b: Wait for Maven Central availability
+  # ============================================================
+  wait-for-maven:
+    name: Wait for Maven Central
+    needs: stage-maven
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Wait for artifacts on Maven Central
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          ARTIFACT_URL="https://repo1.maven.org/maven2/io/btrace/btrace-client/${VERSION}/btrace-client-${VERSION}.pom"
+
+          echo "Waiting for Maven Central to have: ${ARTIFACT_URL}"
+          echo "This requires manual release from Central Portal."
+          echo ""
+          echo "Go to: https://central.sonatype.com/publishing/deployments"
+          echo ""
+
+          MAX_ATTEMPTS=60  # 30 minutes with 30s intervals
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: Checking Maven Central..."
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${ARTIFACT_URL}")
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo ""
+              echo "SUCCESS: Artifacts are available on Maven Central!"
+              echo "Proceeding with GitHub release and SDKMan announcement..."
+              exit 0
+            fi
+
+            echo "  Status: ${HTTP_STATUS} - Not available yet. Waiting 30s..."
+            sleep 30
+          done
+
+          echo ""
+          echo "TIMEOUT: Artifacts did not appear on Maven Central within 30 minutes."
+          echo "The release was NOT finalized."
+          echo ""
+          echo "To complete the release manually:"
+          echo "  1. Release artifacts via Central Portal"
+          echo "  2. Create GitHub release manually"
+          echo "  3. Run: ./gradlew :btrace-dist:sdkMinorRelease"
+          exit 1
 
   # ============================================================
   # Job 6: Build distribution packages
@@ -484,7 +549,7 @@ jobs:
   # ============================================================
   create-github-release:
     name: Create GitHub Release
-    needs: [build-distributions, publish-maven]
+    needs: [build-distributions, wait-for-maven]
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
@@ -565,7 +630,12 @@ jobs:
           SDKMAN_API_KEY: ${{ secrets.SDKMAN_KEY }}
           SDKMAN_API_TOKEN: ${{ secrets.SDKMAN_TOKEN }}
         run: |
-          ./gradlew :btrace-dist:sdkMinorRelease --no-daemon
+          # Use sdkMajorRelease for major releases, sdkMinorRelease otherwise
+          if [[ "${{ inputs.release_type }}" == "major" ]]; then
+            ./gradlew :btrace-dist:sdkMajorRelease --no-daemon
+          else
+            ./gradlew :btrace-dist:sdkMinorRelease --no-daemon
+          fi
 
   # ============================================================
   # Job 9: Update develop branch (major/minor only)
@@ -754,6 +824,7 @@ jobs:
             echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
             echo "- [Maven Central](https://central.sonatype.com/search?q=io.btrace&version=${{ inputs.release_version }})" >> $GITHUB_STEP_SUMMARY
             echo "- [SDKMan](https://sdkman.io/sdks#btrace)" >> $GITHUB_STEP_SUMMARY
+            echo "- JBang: \`jbang btrace@${{ inputs.release_version }}\` (uses Maven Central)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "## Maven Coordinates" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -779,9 +850,11 @@ jobs:
           echo "| Build & Test | ${{ needs.build-and-test.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Integration Tests | ${{ needs.integration-tests.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Prepare Release | ${{ needs.prepare-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Publish Maven | ${{ needs.publish-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage Maven | ${{ needs.stage-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Wait for Maven | ${{ needs.wait-for-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| GitHub Release | ${{ needs.create-github-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| SDKMan | ${{ needs.update-sdkman.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JBang | (automatic via Maven Central) |" >> $GITHUB_STEP_SUMMARY
           echo "| Milestones | ${{ needs.update-milestones.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================
