@@ -51,10 +51,11 @@ The release workflow performs these steps:
 
 ### Branch Strategy
 
-- **develop**: Main development branch with SNAPSHOT versions
-- **release/X.Y**: Long-lived release branches for patch releases
-- **master**: Tracks the latest stable release
-- **Tags**: `vX.Y.Z` format (e.g., `v2.3.0`)
+BTrace uses trunk-based development with `develop` as the main branch:
+
+- **develop**: Main trunk - all development and releases start here
+- **release/X.Y**: Long-lived branches for patch releases (created automatically during major/minor releases)
+- **Tags**: `vX.Y.Z` format (e.g., `v2.3.0`) - the latest release is always identifiable via tags
 
 ### Manual Verification (Optional)
 

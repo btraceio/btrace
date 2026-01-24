@@ -5,7 +5,7 @@ name: BTrace CI/CD
 
 on:
   push:
-    branches: [ develop, master ]
+    branches: [ develop ]
   pull_request:
     branches: [ develop ]
   workflow_dispatch:
@@ -157,7 +157,7 @@ jobs:
             btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
 
   publish:
-    if: github.ref ==  'refs/heads/develop' || github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/develop'
     needs: 
       - test
       - build
