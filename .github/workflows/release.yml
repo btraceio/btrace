@@ -485,6 +485,69 @@ jobs:
           exit 1
 
   # ============================================================
+  # Job 5c: Update JBang catalog
+  # ============================================================
+  update-jbang-catalog:
+    name: Update JBang Catalog
+    needs: [prepare-release, wait-for-maven]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout jbang-catalog
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          repository: btraceio/jbang-catalog
+          token: ${{ secrets.JBANG_CATALOG_PAT || secrets.GITHUB_TOKEN }}
+          path: catalog
+
+      - name: Update catalog files
+        continue-on-error: true
+        run: |
+          VERSION="${{ inputs.release_version }}"
+
+          if [ ! -d catalog ]; then
+            echo "⚠️ Catalog checkout failed - skipping update"
+            echo "Add JBANG_CATALOG_PAT secret to enable automatic catalog updates"
+            exit 0
+          fi
+
+          cd catalog
+
+          # Update btrace.java dependency
+          sed -i.bak "s|//DEPS io.btrace:btrace-client:.*|//DEPS io.btrace:btrace-client:${VERSION}|g" btrace.java
+
+          # Update btrace-latest.java dependency
+          sed -i.bak "s|//DEPS io.btrace:btrace-client:.*|//DEPS io.btrace:btrace-client:${VERSION}|g" btrace-latest.java
+
+          # Clean up backup files
+          rm -f *.bak
+
+          # Show changes
+          git diff
+
+      - name: Commit and push catalog updates
+        continue-on-error: true
+        run: |
+          VERSION="${{ inputs.release_version }}"
+
+          if [ ! -d catalog ]; then
+            echo "⚠️ Catalog checkout failed - skipping update"
+            echo "Add JBANG_CATALOG_PAT secret to enable automatic catalog updates"
+            exit 0
+          fi
+
+          cd catalog
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add btrace.java btrace-latest.java
+          if git commit -m "Update btrace to version ${VERSION}"; then
+            git push || echo "⚠️ Push failed - update catalog manually at https://github.com/btraceio/jbang-catalog"
+          fi
+
+  # ============================================================
   # Job 6: Build distribution packages
   # ============================================================
   build-distributions:
@@ -798,7 +861,7 @@ jobs:
   # ============================================================
   summary:
     name: Release Summary
-    needs: [create-github-release, update-sdkman, update-milestones]
+    needs: [create-github-release, update-sdkman, update-milestones, update-jbang-catalog]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -854,7 +917,7 @@ jobs:
           echo "| Wait for Maven | ${{ needs.wait-for-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| GitHub Release | ${{ needs.create-github-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| SDKMan | ${{ needs.update-sdkman.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| JBang | (automatic via Maven Central) |" >> $GITHUB_STEP_SUMMARY
+          echo "| JBang Catalog | ${{ needs.update-jbang-catalog.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Milestones | ${{ needs.update-milestones.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================

@@ -8,7 +8,7 @@ A cheat sheet for experienced users. For step-by-step instructions, see [Getting
 
 | Method | Command |
 |--------|---------|
-| JBang | `jbang btrace <PID> script.java` |
+| JBang | `jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json && jbang btrace@btraceio <PID> script.java` |
 | SDKMan | `sdk install btrace` |
 | Docker | `docker pull btrace/btrace` |
 | Manual | [Download latest release](https://github.com/btraceio/btrace/releases/latest) |

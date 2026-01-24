@@ -141,8 +141,13 @@ JBang automatically picks up new versions from Maven Central. No manual action r
 Once Maven Central has the artifacts, users can run:
 
 ```bash
-jbang btrace <PID> script.java
+jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
+jbang btrace@btraceio <PID> script.java
 ```
+
+Release checklist for JBang:
+- The release workflow updates `btraceio/jbang-catalog` automatically when `JBANG_CATALOG_PAT` is configured.
+- If the workflow cannot push, update `btrace.java` in `btraceio/jbang-catalog` to the new major/minor version.
 
 ## Rollback Procedure
 
