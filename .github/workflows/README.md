@@ -11,7 +11,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
 **Purpose:** Main continuous integration pipeline for all BTrace components.
 
 **Triggers:**
-- Push to `develop` or `master` branches
+- Push to `develop` branch
 - Pull requests to `develop`
 - Manual workflow dispatch
 
@@ -27,7 +27,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
   - Downloads build artifacts from previous job
   - Runs integration tests with `-Pintegration` flag
 - **publish:** Publishes artifacts to Maven Central
-  - Only on `develop` or `master` branches
+  - Only on `develop` branch
   - Requires GPG signing credentials
 - **cleanup:** Removes temporary artifacts
 
