@@ -1,5 +1,20 @@
 # BTrace Quick Reference
 
+A cheat sheet for experienced users. For step-by-step instructions, see [Getting Started](GettingStarted.md). Back to [README](../README.md).
+
+---
+
+## Quick Install
+
+| Method | Command |
+|--------|---------|
+| JBang | `jbang btrace <PID> script.java` |
+| SDKMan | `sdk install btrace` |
+| Docker | `docker pull btrace/btrace` |
+| Manual | [Download latest release](https://github.com/btraceio/btrace/releases/latest) |
+
+---
+
 ## Table of Contents
 1. [Core Annotations](#core-annotations)
 2. [Location Kinds](#location-kinds)
@@ -606,6 +621,8 @@ BTrace scripts have safety restrictions:
 
 Use `-u` (unsafe mode) to bypass restrictions, but only in controlled environments.
 
+---
+
 ## See Also
 
 - **[Documentation Hub](README.md)** - Complete documentation map and learning paths
@@ -613,22 +630,3 @@ Use `-u` (unsafe mode) to bypass restrictions, but only in controlled environmen
 - **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
 - **[Troubleshooting Guide](Troubleshooting.md)** - Solutions to common problems
 - **[FAQ](FAQ.md)** - Common questions and best practices
-## CLI Commands
-
-- `btrace <PID> <Script>`: Attach to a running JVM and submit a script.
-- `btracec <Script.java>`: Compile a BTrace script.
-- `btracer <Script.class> <java-app-args>`: Launch a JVM with the BTrace agent.
-- `btracex ...`: Extensions CLI (inspect, list, policy, install). See below.
-
-### Agent Security Arguments
-- `allowExtensions=<id1,id2>`: allow specific extensions to link implementations.
-- `denyExtensions=<id1,id2>`: block specific extensions (SHIMs only; API remains on bootstrap).
-- `allowPrivileged=true|false`: allow all privileged extensions to link implementations.
-- Optional policy file: `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties` with:
-  - `allowExtensions=id1,id2`, `denyExtensions=id3`, `allowPrivileged=false`.
-- When an implementation is blocked, ExtensionIndy provides SHIMs so probes continue safely.
-- `btracex` (Extensions CLI)
-  - `btracex inspect <zip|dir> [--json]`: show id/version/privileged/services.
-  - `btracex list [--json]`: list installed extensions and privileged flag.
-  - `btracex policy print|set [--policy-file <path>|--home|--classpath <outDir>]`: view or set `allowExtensions`, `denyExtensions`, `allowPrivileged`.
-  - `btracex install <group:artifact:version> [...]`: install extensions from Maven coordinates (TBD).
