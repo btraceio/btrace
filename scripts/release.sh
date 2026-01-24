@@ -177,6 +177,9 @@ pick_commit() {
         fi
     else
         # Fallback to numbered selection (no fzf available)
+        echo -e "${YELLOW}Tip: Install fzf for a better interactive experience with preview${NC}" >&2
+        echo -e "${YELLOW}     brew install fzf  OR  apt install fzf  OR  https://github.com/junegunn/fzf${NC}" >&2
+        echo "" >&2
         echo -e "  ${GREEN}1)${NC} ${branch} (HEAD)         Use latest commit on ${branch}" >&2
         echo "  ─────────────────────────────────────────────────────" >&2
 
@@ -275,7 +278,11 @@ pick_release_branch() {
         # Extract branch name
         echo "${selected}" | awk '{print $1}'
     else
-        # Fallback to numbered selection
+        # Fallback to numbered selection (no fzf available)
+        echo -e "${YELLOW}Tip: Install fzf for a better interactive experience with preview${NC}" >&2
+        echo -e "${YELLOW}     brew install fzf  OR  apt install fzf  OR  https://github.com/junegunn/fzf${NC}" >&2
+        echo "" >&2
+
         local i=1
         local -a branch_names
 
