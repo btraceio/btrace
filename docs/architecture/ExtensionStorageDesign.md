@@ -39,7 +39,7 @@ BTRACE_HOME/
 │   └── extensions/            # Built-in extensions directory
 │       ├── btrace-metrics-2.3.0.jar
 │       ├── btrace-statsd-2.3.0.jar
-│       └── README.md
+│       └── Readme.md
 └── docs/
     └── ...
 ```

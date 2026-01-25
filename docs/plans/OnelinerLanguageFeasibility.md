@@ -35,8 +35,8 @@ Creating a DTrace-style oneliner language for BTrace is **highly feasible** and 
 
 - **Documentation** (~1200 lines):
   - `docs/OnelinerGuide.md` (600+ lines) - Comprehensive guide
-  - Updated `README.md` with oneliner examples
-  - Updated `docs/README.md` documentation hub
+  - Updated `Readme.md` with oneliner examples
+  - Updated `docs/Readme.md` documentation hub
   - Updated `docs/GettingStarted.md` with 2-minute quick start
 
 **Capabilities Delivered:**

@@ -113,7 +113,7 @@ Violations (examples):
 
 ---
 
-For deeper background on extension loading, permission enforcement, and injection, see: `docs/btrace-extension-development-guide.md` and `docs/architecture/extension-invokedynamic-bridge.md`.
+For deeper background on extension loading, permission enforcement, and injection, see: `docs/BTraceExtensionDevelopmentGuide.md` and `docs/architecture/ExtensionInvokeDynamicBridge.md`.
 
 ## Fixes Appendix
 This section maps validation errors to concrete fixes you can apply.

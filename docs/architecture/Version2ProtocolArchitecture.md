@@ -873,4 +873,4 @@ The BTrace v2 binary protocol delivers significant performance improvements (3-6
 - Implementation: `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/`
 - Tests: `btrace-core/src/test/java/org/openjdk/btrace/core/comm/v2/`
 - Plan: `/Users/jaroslav.bachorik/.claude/plans/flickering-sleeping-fern.md`
-- README: `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/README.md`
+- README: `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/Readme.md`

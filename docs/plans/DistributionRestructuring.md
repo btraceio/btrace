@@ -432,7 +432,7 @@ task explodeJars {
 ### 6. Update Documentation
 
 **docs/GettingStarted.md**: Add section on new distribution structure
-**docs/README.md**: Update with jbang usage examples
+**docs/Readme.md**: Update with jbang usage examples
 **CHANGELOG.md**: Document new JARs and CLI flags
 
 ---
@@ -583,9 +583,9 @@ Added three new lines to btrace.usage:
 #### 6. Documentation Updates with JBang Examples
 **Locations:**
 - `docs/GettingStarted.md`
-- `README.md`
+- `Readme.md`
 
-**Changes to GettingStarted.md:**
+**Changes to gettingStarted.md:**
 1. Added new "JBang Installation" section after package manager installation
    - Installation instructions for multiple platforms
    - Basic usage examples with Maven coordinates
@@ -597,11 +597,11 @@ Added three new lines to btrace.usage:
    - Included multiple JBang usage examples
    - Added `--agent-jar` and `--boot-jar` flags to attach mode options
 
-**Changes to README.md:**
+**Changes to Readme.md:**
 1. Restructured Installation section with JBang as primary option
    - "JBang (Easiest - Recommended)" as first subsection
    - Moved traditional installation to "Binary Distribution" subsection
-   - Added cross-reference to GettingStarted.md
+   - Added cross-reference to gettingStarted.md
 
 2. Updated Quick Start section
    - Added "With JBang" examples first
@@ -655,7 +655,7 @@ jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<versi
 1. ~~Add CLI flags to btrace-client Main.java~~ ✅
 2. ~~Implement extraction command logic~~ ✅
 3. ~~Update agent/boot discovery in Client.java~~ ✅
-4. ~~Update documentation (GettingStarted.md, README.md)~~ ✅
+4. ~~Update documentation (gettingStarted.md, Readme.md)~~ ✅
 5. ~~Add unit tests~~ ✅
 6. Manual integration testing (when build system is ready)
 
@@ -667,7 +667,7 @@ jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<versi
 - `btrace-api/build.gradle`
 - `btrace-api/src/main/java/org/openjdk/btrace/api/BTraceUtils.java`
 - `btrace-dist/src/main/resources/bin/btrace2` (new wrapper script)
-- `docs/plans/distribution-restructuring.md` (this document)
+- `docs/plans/DistributionRestructuring.md` (this document)
 
 ### Modified Files
 - `settings.gradle` - Add btrace-api module
@@ -677,7 +677,7 @@ jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<versi
 - `btrace-agent/src/main/java/org/openjdk/btrace/agent/Main.java:748-753` - Support --boot-jar flag
 - `btrace-dist/src/main/resources/bin/btrace` - Update to support new flags
 - `docs/GettingStarted.md` - Document new distribution
-- `docs/README.md` - Add jbang examples
+- `docs/Readme.md` - Add jbang examples
 
 ---
 
@@ -752,7 +752,7 @@ jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<versi
 ## References
 
 - [jbang Integration Analysis](./jbang-integration-analysis.md)
-- [Oneliner Language Feasibility](./oneliner-language-feasibility.md)
+- [Oneliner Language Feasibility](./OnelinerLanguageFeasibility.md)
 - [OpenTelemetry Java Agent Structure](https://github.com/open-telemetry/opentelemetry-java-instrumentation/blob/main/docs/contributing/javaagent-structure.md)
 - [Elastic APM invokedynamic Blog](https://www.elastic.co/blog/embracing-invokedynamic-to-tame-class-loaders-in-java-agents)
 - [Datadog dd-trace-java](https://github.com/DataDog/dd-trace-java)

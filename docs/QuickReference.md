@@ -1,6 +1,6 @@
 # BTrace Quick Reference
 
-A cheat sheet for experienced users. For step-by-step instructions, see [Getting Started](GettingStarted.md). Back to [README](../README.md).
+A cheat sheet for experienced users. For step-by-step instructions, see [Getting Started](gettingStarted.md). Back to [README](../Readme.md).
 
 ---
 
@@ -113,7 +113,7 @@ private static JfrEvent.Factory myEventFactory;
 
 **Field Kinds:** TIMESTAMP, TIMESPAN, DATAAMOUNT, FREQUENCY, MEMORYADDRESS, PERCENTAGE, BOOLEANFLAG, UNSIGNED
 
-See [Getting Started: JFR Integration](GettingStarted.md#advanced-jfr-integration) and Pattern #9 below.
+See [Getting Started: JFR Integration](gettingStarted.md#advanced-jfr-integration) and Pattern #9 below.
 
 ### @PeriodicEvent
 Define a handler for periodic JFR events (OpenJDK 8 or Java 11+).
@@ -219,7 +219,7 @@ public class LatencyProbe {
 }
 ```
 
-See also: Architecture → `architecture/extension-invokedynamic-bridge.md`.
+See also: Architecture → `architecture/ExtensionInvokeDynamicBridge.md`.
 
 ### @Sampled
 Control sampling rate.
@@ -625,8 +625,8 @@ Use `-u` (unsafe mode) to bypass restrictions, but only in controlled environmen
 
 ## See Also
 
-- **[Documentation Hub](README.md)** - Complete documentation map and learning paths
-- **[Getting Started Guide](GettingStarted.md)** - Installation, first script, and quick start
-- **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
-- **[Troubleshooting Guide](Troubleshooting.md)** - Solutions to common problems
-- **[FAQ](FAQ.md)** - Common questions and best practices
+- **[Documentation Hub](Readme.md)** - Complete documentation map and learning paths
+- **[Getting Started Guide](gettingStarted.md)** - Installation, first script, and quick start
+- **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
+- **[Troubleshooting Guide](troubleshooting.md)** - Solutions to common problems
+- **[FAQ](faq.md)** - Common questions and best practices
