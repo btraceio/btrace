@@ -52,7 +52,7 @@ public class OnelinerCodeGenerator {
     boolean hasCountAction = hasCountAction(probe.actionBlock);
     if (hasCountAction) {
       sb.append(INDENT)
-          .append("private static final AtomicInteger counter = new AtomicInteger();\n\n");
+          .append("private static final AtomicInteger counter = BTraceUtils.newAtomicInteger(0);\n\n");
     }
 
     // Generate probe method
@@ -64,7 +64,7 @@ public class OnelinerCodeGenerator {
       sb.append(INDENT).append("@OnEvent\n");
       sb.append(INDENT).append("public static void onEvent() {\n");
       sb.append(INDENT).append(INDENT);
-      sb.append("BTraceUtils.println(\"count: \" + counter.get());\n");
+      sb.append("BTraceUtils.println(\"count: \" + BTraceUtils.get(counter));\n");
       sb.append(INDENT).append("}\n");
     }
 
@@ -190,7 +190,7 @@ public class OnelinerCodeGenerator {
       if (action instanceof PrintAction) {
         generatePrintAction(sb, indent, (PrintAction) action);
       } else if (action instanceof CountAction) {
-        sb.append(indent).append("counter.incrementAndGet();\n");
+        sb.append(indent).append("BTraceUtils.incrementAndGet(counter);\n");
       } else if (action instanceof TimeAction) {
         generateTimeAction(sb, indent);
       } else if (action instanceof StackAction) {
@@ -223,14 +223,14 @@ public class OnelinerCodeGenerator {
         sb.append(" null");
       } else if (argFilter.value instanceof String) {
         if (argFilter.comparator == Comparator.EQ) {
-          sb.append("\"")
+          sb.append("BTraceUtils.compare(\"")
               .append(escapeJavaString((String) argFilter.value))
-              .append("\".equals(");
+              .append("\", ");
           sb.append("BTraceUtils.str(args[").append(argFilter.argIndex).append("]))");
         } else if (argFilter.comparator == Comparator.NEQ) {
-          sb.append("!\"")
+          sb.append("!BTraceUtils.compare(\"")
               .append(escapeJavaString((String) argFilter.value))
-              .append("\".equals(");
+              .append("\", ");
           sb.append("BTraceUtils.str(args[").append(argFilter.argIndex).append("]))");
         } else {
           throw new IllegalArgumentException(

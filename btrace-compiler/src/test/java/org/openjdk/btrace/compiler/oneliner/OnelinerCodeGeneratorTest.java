@@ -71,9 +71,9 @@ class OnelinerCodeGeneratorTest {
     String generated = OnelinerCodeGenerator.generate(ast);
 
     assertTrue(generated.contains("private static final AtomicInteger counter"));
-    assertTrue(generated.contains("counter.incrementAndGet()"));
+    assertTrue(generated.contains("BTraceUtils.incrementAndGet(counter)"));
     assertTrue(generated.contains("@OnEvent"));
-    assertTrue(generated.contains("BTraceUtils.println(\"count: \" + counter.get())"));
+    assertTrue(generated.contains("BTraceUtils.println(\"count: \" + BTraceUtils.get(counter))"));
   }
 
   @Test
@@ -139,7 +139,8 @@ class OnelinerCodeGeneratorTest {
     String generated = OnelinerCodeGenerator.generate(ast);
 
     assertTrue(generated.contains("args.length > 0"));
-    assertTrue(generated.contains("\"test\".equals(BTraceUtils.str(args[0]))"));
+    assertTrue(
+        generated.contains("BTraceUtils.compare(\"test\", BTraceUtils.str(args[0]))"));
   }
 
   @Test
@@ -148,7 +149,8 @@ class OnelinerCodeGeneratorTest {
     OnelinerNode ast = OnelinerParser.parse(input);
     String generated = OnelinerCodeGenerator.generate(ast);
 
-    assertTrue(generated.contains("!\"foo\".equals(BTraceUtils.str(args[0]))"));
+    assertTrue(
+        generated.contains("!BTraceUtils.compare(\"foo\", BTraceUtils.str(args[0]))"));
   }
 
   @Test
@@ -168,7 +170,7 @@ class OnelinerCodeGeneratorTest {
     String generated = OnelinerCodeGenerator.generate(ast);
 
     assertTrue(generated.contains("BTraceUtils.println(method)"));
-    assertTrue(generated.contains("counter.incrementAndGet()"));
+    assertTrue(generated.contains("BTraceUtils.incrementAndGet(counter)"));
     assertTrue(generated.contains("BTraceUtils.jstack()"));
     assertTrue(generated.contains("@OnEvent"));
   }
