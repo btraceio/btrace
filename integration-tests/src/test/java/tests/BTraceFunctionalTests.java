@@ -28,7 +28,6 @@ package tests;
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,13 +40,22 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import org.openjdk.btrace.client.Client;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.DisconnectCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * A set of end-to-end functional tests.
@@ -192,7 +200,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           }
       }
 
-      assumeFalse(testJavaHome == null);
+      org.junit.jupiter.api.Assumptions.assumeFalse(testJavaHome == null);
 
       Properties releaseProps = new Properties();
       releaseProps.load(
@@ -414,108 +422,80 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethodUnattended() throws Exception {
-    // NOTE: This test is flaky in CI due to timing and attach/disconnect nuances.
-    // When running in CI (enable via Gradle -PCI), skip it and rely on manual runs locally
-    // for correctness until a deterministic strategy is implemented.
-    assumeFalse(
-        Boolean.getBoolean("CI")
-            || "true".equalsIgnoreCase(System.getProperty("CI"))
-            || System.getenv("CI") != null,
-        "Skipping unattended test in CI: run locally for correctness");
-
     TestApp testApp = launchTestApp("resources.Main");
     File traceFile = locateTrace("btrace/OnMethodTest.java");
 
     String pid = String.valueOf(testApp.getPid());
-    AtomicBoolean hasError = new AtomicBoolean(false);
-    System.out.println("===> btrace -x (unattended)");
-    runBTrace(
-        new String[] {"-x", pid, traceFile.toString()},
-        new ProcessOutputProcessor() {
-          @Override
-          public boolean onStdout(int lineno, String line) {
-            System.out.println("[btrace #" + lineno + "] " + line);
-            return lineno < 500;
-          }
+    String host = "localhost";
+    Client client = createClientForTests(traceFile.getParentFile().getAbsolutePath());
+    client.attach(pid, null, getEventsClassPath());
+    byte[] code = client.compile(traceFile.getAbsolutePath(), getEventsClassPath());
+    assertNotNull(code, "BTrace compilation failed");
 
-          @Override
-          public boolean onStderr(int lineno, String line) {
-            System.err.println("[btrace #" + lineno + "] " + line);
-            hasError.set(true);
-            return lineno < 10;
-          }
-        });
-
-    assertFalse(hasError.get(), "btrace -x reported errors");
-
-    // Poll list of probes to discover the probe id reliably
-    System.out.println("===> polling btrace -lp for probe id");
-    final String[] probeId = new String[1];
-    final int[] matchCount = new int[1];
-    long start = System.currentTimeMillis();
-    while ((System.currentTimeMillis() - start) < 15000) {
-      // reset per-iteration state
-      matchCount[0] = 0;
-      probeId[0] = null;
-      runBTrace(
-          new String[] {"-lp", pid},
-          new ProcessOutputProcessor() {
-            @Override
-            public boolean onStdout(int lineno, String line) {
-              System.out.println("[btrace #" + lineno + "] " + line);
-              // Format: "N: <uuid> [<class>]"
-              int idx = line.indexOf(':');
-              if (idx > -1) {
-                String rest = line.substring(idx + 1).trim();
-                int sp = rest.indexOf(' ');
-                int lb = rest.indexOf('[');
-                int rb = rest.indexOf(']');
-                if (sp > 0 && lb > sp && rb > lb) {
-                  String id = rest.substring(0, sp).trim();
-                  String cls = rest.substring(lb + 1, rb).trim();
-                  if (cls.endsWith("OnMethodTest")) {
-                    matchCount[0]++;
-                    if (matchCount[0] == 1) {
-                      probeId[0] = id;
-                    }
-                    if (matchCount[0] > 1) {
-                      // No need to read further in this iteration
-                      return false;
-                    }
-                  }
+    CompletableFuture<String> probeIdFuture = new CompletableFuture<>();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    Future<?> submitFuture =
+        executor.submit(
+            () -> {
+              try {
+                client.submit(
+                    host,
+                    traceFile.getName(),
+                    code,
+                    new String[0],
+                    cmd -> {
+                      if (cmd.getType() == Command.STATUS) {
+                        StatusCommand status = (StatusCommand) cmd;
+                        if (status.getFlag() == StatusCommand.STATUS_FLAG && status.isSuccess()) {
+                          try {
+                            client.sendDisconnect();
+                          } catch (IOException e) {
+                            probeIdFuture.completeExceptionally(e);
+                          }
+                        } else if (!status.isSuccess()) {
+                          probeIdFuture.completeExceptionally(
+                              new IllegalStateException("Probe startup failed"));
+                        }
+                      } else if (cmd.getType() == Command.DISCONNECT) {
+                        DisconnectCommand disconnect = (DisconnectCommand) cmd;
+                        probeIdFuture.complete(disconnect.getProbeId());
+                      }
+                    });
+              } catch (IOException e) {
+                if (!probeIdFuture.isDone()) {
+                  probeIdFuture.completeExceptionally(e);
                 }
               }
-              return lineno < 50;
-            }
+            });
 
-            @Override
-            public boolean onStderr(int lineno, String line) {
-              System.err.println("[btrace #" + lineno + "] " + line);
-              return false;
-            }
-          });
-      if (matchCount[0] == 1) {
-        break; // exactly one match found
-      }
-      if (matchCount[0] > 1) {
-        break; // over-matched; fail via assertion below
-      }
-      // No matches; wait and retry until timeout
-      try {
-        Thread.sleep(300);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-        try {
-          // break outer loop on interrupt
-          break;
-        } catch (Exception ignore) {}
-      }
+    String probeId = probeIdFuture.get(15, TimeUnit.SECONDS);
+    client.close();
+    try {
+      submitFuture.get(5, TimeUnit.SECONDS);
+    } catch (Exception ignore) {
+      // best effort; disconnect closes the socket and may surface as a submit error
+    } finally {
+      executor.shutdownNow();
     }
 
-    // Assert exactly one matching probe is present
-    org.junit.jupiter.api.Assertions.assertEquals(1, matchCount[0],
-        "expected exactly one OnMethodTest probe listed by -lp");
-    assertNotNull(probeId[0], "probe id not found in -lp within timeout");
+    List<String> probes = listProbesWithProtocol(host);
+    long matches =
+        probes.stream()
+            .filter(p -> extractProbeClassName(p).endsWith("OnMethodTest"))
+            .count();
+    assertEquals(1, matches, "expected exactly one OnMethodTest probe listed by -lp");
+    assertTrue(
+        probes.stream().anyMatch(p -> p.startsWith(probeId + " ")),
+        "probe id not present in -lp output");
+  }
+
+  private static String extractProbeClassName(String probeEntry) {
+    int lb = probeEntry.indexOf('[');
+    int rb = probeEntry.indexOf(']');
+    if (lb > -1 && rb > lb) {
+      return probeEntry.substring(lb + 1, rb).trim();
+    }
+    return "";
   }
 
     @ParameterizedTest(name = "testThreadStart: dynamic={0}")

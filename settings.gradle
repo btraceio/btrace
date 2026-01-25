@@ -43,6 +43,7 @@ include 'btrace-extensions'
 include 'btrace-extensions:btrace-metrics'
 include 'btrace-extensions:btrace-utils'
 include 'btrace-extensions:btrace-statsd'
+include 'btrace-extensions:btrace-streams'
 
 dependencyResolutionManagement {
     versionCatalogs {

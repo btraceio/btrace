@@ -35,6 +35,10 @@ public final class DisconnectCommand extends Command implements PrintableCommand
     this.probeId = probeId;
   }
 
+  public String getProbeId() {
+    return probeId;
+  }
+
   @Override
   public void print(PrintWriter out) {
     out.println("BTrace Probe: " + probeId);

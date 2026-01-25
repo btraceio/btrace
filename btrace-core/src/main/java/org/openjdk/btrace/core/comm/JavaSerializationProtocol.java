@@ -115,6 +115,7 @@ public class JavaSerializationProtocol implements WireProtocol {
     if (closed) {
       throw new IOException("Protocol is closed");
     }
+    oos.reset();
     WireIO.write(oos, command);
   }
 

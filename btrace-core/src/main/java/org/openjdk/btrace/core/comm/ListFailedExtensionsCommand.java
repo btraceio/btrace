@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -28,6 +29,17 @@ public class ListFailedExtensionsCommand extends Command implements PrintableCom
         failedExtensions.add(entry.getKey() + ": " + entry.getValue());
       }
     }
+  }
+
+  public void setFailedExtensionsList(List<String> failures) {
+    this.failedExtensions.clear();
+    if (failures != null && !failures.isEmpty()) {
+      this.failedExtensions.addAll(failures);
+    }
+  }
+
+  public List<String> getFailedExtensions() {
+    return new ArrayList<>(failedExtensions);
   }
 
   @Override

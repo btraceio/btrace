@@ -47,6 +47,7 @@ The binary protocol supports all the command types from the original protocol:
 | 14 | LIST_PROBES | List probes command |
 | 15 | DISCONNECT | Disconnect command |
 | 16 | RECONNECT | Reconnect command |
+| 17 | LIST_FAILED_EXTENSIONS | List failed extensions command |
 
 ## Data Types
 
