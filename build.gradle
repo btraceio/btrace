@@ -49,8 +49,37 @@ nexusPublishing {
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
             snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
             // Use Central Portal user token credentials (different from legacy OSSRH credentials)
-            username = findProperty("sonatype.user") ?: System.getenv("SONATYPE_USER")
-            password = findProperty("sonatype.password") ?: System.getenv("SONATYPE_PASSWORD")
+            username = findProperty("sonatype.user")
+                    ?: findProperty("sonatype.username")
+                    ?: System.getenv("SONATYPE_USER")
+                    ?: System.getenv("SONATYPE_USERNAME")
+            password = findProperty("sonatype.password")
+                    ?: System.getenv("SONATYPE_PASSWORD")
         }
+    }
+}
+
+def sonatypeUsername = findProperty("sonatype.user")
+        ?: findProperty("sonatype.username")
+        ?: System.getenv("SONATYPE_USER")
+        ?: System.getenv("SONATYPE_USERNAME")
+def sonatypePassword = findProperty("sonatype.password")
+        ?: System.getenv("SONATYPE_PASSWORD")
+def hasSonatypeCredentials =
+        sonatypeUsername != null && !sonatypeUsername.toString().trim().isEmpty()
+                && sonatypePassword != null
+                && !sonatypePassword.toString().trim().isEmpty()
+
+if (!hasSonatypeCredentials) {
+    logger.lifecycle("Sonatype credentials not provided; skipping Nexus staging initialization and release tasks.")
+    def skipTheseTasks = [
+        "initializeSonatypeStagingRepository",
+        "publishToSonatype",
+        "closeSonatypeStagingRepository",
+        "dropSonatypeStagingRepository",
+        "releaseSonatypeStagingRepository",
+    ]
+    tasks.matching { skipTheseTasks.contains(it.name) }.configureEach {
+        enabled = false
     }
 }
