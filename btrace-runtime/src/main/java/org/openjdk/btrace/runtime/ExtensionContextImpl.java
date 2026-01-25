@@ -2,6 +2,7 @@ package org.openjdk.btrace.runtime;
 
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.extensions.ExtensionContext;
 import org.openjdk.btrace.core.extensions.Permission;
 import org.openjdk.btrace.core.extensions.PermissionSet;
@@ -58,5 +59,9 @@ public final class ExtensionContextImpl implements ExtensionContext {
   @Override
   public boolean hasPermission(Permission permission) {
     return permissions.has(permission);
+  }
+
+  void registerExtension(Extension ext) {
+    runtime.registerExtension(ext);
   }
 }

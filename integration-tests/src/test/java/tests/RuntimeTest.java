@@ -86,6 +86,10 @@ public abstract class RuntimeTest {
   protected long timeout = 10000L;
   /** Track retransforming progress */
   protected boolean trackRetransforms = false;
+  /** Disconnect after status OK (client -x) */
+  protected boolean unattended = false;
+  /** Delay before client attach (ms) */
+  protected long attachDelayMs = 0;
   /** Dump generated oneliner source */
   protected boolean dumpOneliner = false;
   /** Dump verifier errors in target JVM */
@@ -197,6 +201,8 @@ public abstract class RuntimeTest {
     debugTestApp = false;
     debugBTrace = false;
     isUnsafe = false;
+    unattended = false;
+    attachDelayMs = 0;
     dumpOneliner = false;
     dumpVerifierErrors = false;
     timeout = defaultTimeoutMs;
@@ -374,13 +380,20 @@ public abstract class RuntimeTest {
     String pid = pidStringRef.get();
     if (pid != null) {
       System.out.println("Target process ready: " + pid);
+      if (attachDelayMs > 0) {
+        try {
+          Thread.sleep(attachDelayMs);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+      }
 
       Process client = attachOneliner(pid, oneliner, cmdArgs, checkLines, stdout, stderr);
 
       System.out.println("Detached.");
 
-      int retries = 1000;
       boolean exitted = false;
+      int retries = 1000;
       while (!exitted && retries-- > 0) {
         pw.println("done");
         pw.flush();
@@ -550,13 +563,20 @@ public abstract class RuntimeTest {
     String pid = pidStringRef.get();
     if (pid != null) {
       System.out.println("Target process ready: " + pid);
+      if (attachDelayMs > 0) {
+        try {
+          Thread.sleep(attachDelayMs);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
+      }
 
       Process client = attach(pid, testScript, cmdArgs, checkLines, stdout, stderr);
 
       System.out.println("Detached.");
 
-      int retries = 1000;
       boolean exitted = false;
+      int retries = 1000;
       while (!exitted && retries-- > 0) {
         pw.println("done");
         pw.flush();
@@ -1247,6 +1267,9 @@ public abstract class RuntimeTest {
         argVals.add(cpIdx, "-Dbtrace.oneliner.dump=true");
       }
     }
+    if (unattended) {
+      argVals.add("-x");
+    }
     argVals.addAll(Arrays.asList(pid, traceFile.getAbsolutePath()));
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
@@ -1362,6 +1385,9 @@ public abstract class RuntimeTest {
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-oneliner").toString()));
     if (debugBTrace) {
       argVals.add("-v");
+    }
+    if (unattended) {
+      argVals.add("-x");
     }
     argVals.addAll(Arrays.asList(pid));
     if (cmdArgs != null) {

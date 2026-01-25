@@ -211,6 +211,24 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testExtensionLifecycleClose() throws Exception {
+    attachDelayMs = 500;
+    testDynamic(
+        "resources.Main",
+        "btrace/ExtensionLifecycleTest.java",
+        new String[] {"extensionCloseTest=true"},
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("extension close: btrace-utils"));
+          }
+        });
+  }
+
+  @Test
   public void testTraceAll() throws Exception {
       String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
       if (testJavaHome == null) testJavaHome = System.getenv().get("JAVA_TEST_HOME");

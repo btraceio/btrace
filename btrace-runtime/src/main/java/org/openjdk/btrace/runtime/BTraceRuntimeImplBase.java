@@ -94,6 +94,9 @@ import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -271,6 +274,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
 
   // Extension registry for this runtime
   // Extension instances are now resolved via the manifest-based bridge when injected.
+  private final Set<Extension> extensions = Collections.newSetFromMap(new IdentityHashMap<>());
+  private volatile boolean extensionsClosed = false;
 
   // Command queue for the client
   private final CommandQueue queue;
@@ -852,6 +857,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
 
   @Override
   public final void handleExit(int exitCode) {
+    cleanupExtensions();
     exitImpl(exitCode);
     try {
       cmdThread.join();
@@ -878,9 +884,36 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
   }
 
   protected void cleanupRuntime() {
-    // Release all extension instances for this script
-    // Extension instances (if any) are managed by the manifest-based loader/bridge.
     // to be overridden by concrete implementations
+  }
+
+  final void registerExtension(Extension ext) {
+    if (ext == null) {
+      return;
+    }
+    synchronized (extensions) {
+      extensions.add(ext);
+    }
+  }
+
+  private void cleanupExtensions() {
+    if (extensionsClosed) {
+      return;
+    }
+    synchronized (extensions) {
+      if (extensionsClosed) {
+        return;
+      }
+      extensionsClosed = true;
+      for (Extension ext : extensions) {
+        try {
+          ext.close();
+        } catch (Throwable ignore) {
+          // best effort cleanup
+        }
+      }
+      extensions.clear();
+    }
   }
 
   protected static void loadLibrary(ClassLoader cl) {
@@ -1098,6 +1131,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
         exitHandlers = null;
       }
 
+      cleanupExtensions();
       send(new ExitCommand(exitCode));
     } finally {
       disabled = true;
