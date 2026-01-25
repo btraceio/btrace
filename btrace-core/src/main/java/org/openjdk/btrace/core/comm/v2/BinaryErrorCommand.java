@@ -9,42 +9,46 @@ import java.io.OutputStream;
  * This command is used to send error information from the BTrace agent to the client.
  */
 public class BinaryErrorCommand extends BinaryCommand {
-    private int cause;
+    private String exceptionClass;
     private String message;
+    private String stackTrace;
 
     static {
         // Register this command type
         BinaryCommand.registerCommand(ERROR, BinaryErrorCommand::new);
     }
 
-    public BinaryErrorCommand(int cause, String message) {
+    public BinaryErrorCommand(String exceptionClass, String message, String stackTrace) {
         super(ERROR, true);
-        this.cause = cause;
+        this.exceptionClass = exceptionClass;
         this.message = message;
+        this.stackTrace = stackTrace;
     }
 
     public BinaryErrorCommand() {
-        this(0, null);
+        this(null, null, null);
     }
 
     @Override
     protected void write(OutputStream out) throws IOException {
-        BinaryProtocol.writeInt(out, cause);
+        BinaryProtocol.writeString(out, exceptionClass);
         BinaryProtocol.writeString(out, message);
+        BinaryProtocol.writeString(out, stackTrace);
     }
 
     @Override
     protected void read(InputStream in) throws IOException {
-        cause = BinaryProtocol.readInt(in);
+        exceptionClass = BinaryProtocol.readString(in);
         message = BinaryProtocol.readString(in);
+        stackTrace = BinaryProtocol.readString(in);
     }
 
-    public int getCause() {
-        return cause;
+    public String getExceptionClass() {
+        return exceptionClass;
     }
 
-    public void setCause(int cause) {
-        this.cause = cause;
+    public void setExceptionClass(String exceptionClass) {
+        this.exceptionClass = exceptionClass;
     }
 
     public String getMessage() {
@@ -53,5 +57,13 @@ public class BinaryErrorCommand extends BinaryCommand {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getStackTrace() {
+        return stackTrace;
+    }
+
+    public void setStackTrace(String stackTrace) {
+        this.stackTrace = stackTrace;
     }
 } 
