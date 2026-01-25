@@ -153,11 +153,17 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
    */
   @Override
   public boolean load(ExtensionDescriptorDTO descriptor) {
-    if (descriptor.isLoaded()) {
-      log.debug("Extension {} is already loaded", descriptor.getId());
-      return true;
+    // Synchronize on descriptor to prevent concurrent loading of the same extension
+    synchronized (descriptor) {
+      if (descriptor.isLoaded()) {
+        log.debug("Extension {} is already loaded", descriptor.getId());
+        return true;
+      }
+      return doLoad(descriptor);
     }
+  }
 
+  private boolean doLoad(ExtensionDescriptorDTO descriptor) {
     log.info("Loading extension: {} version {} from {}",
         descriptor.getId(), descriptor.getVersion(), descriptor.getJarPath());
 
@@ -194,9 +200,12 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
       }
 
       // Add API JAR to bootstrap classpath
-      JarFile apiJarFile = new JarFile(apiJar.toFile());
-      instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
-      log.debug("Added {} to bootstrap classpath", apiJar.getFileName());
+      // Note: JarFile must be closed after appendToBootstrapClassLoaderSearch as the
+      // instrumentation API does not take ownership of the file handle
+      try (JarFile apiJarFile = new JarFile(apiJar.toFile())) {
+        instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
+        log.debug("Added {} to bootstrap classpath", apiJar.getFileName());
+      }
 
       // Create classloader for implementation JAR
       URL implUrl = implJar.toUri().toURL();
@@ -235,9 +244,12 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
         log.warn("No API JAR found for extension {} in {}", descriptor.getId(), extensionDir);
         return false;
       }
-      JarFile apiJarFile = new JarFile(apiJar.toFile());
-      instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
-      log.debug("Ensured API on bootstrap for extension {} via {}", descriptor.getId(), apiJar.getFileName());
+      // Note: JarFile must be closed after appendToBootstrapClassLoaderSearch as the
+      // instrumentation API does not take ownership of the file handle
+      try (JarFile apiJarFile = new JarFile(apiJar.toFile())) {
+        instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
+        log.debug("Ensured API on bootstrap for extension {} via {}", descriptor.getId(), apiJar.getFileName());
+      }
       return true;
     } catch (Exception e) {
       log.warn("Failed to ensure API on bootstrap for {}: {}", descriptor.getId(), e.getMessage(), e);
