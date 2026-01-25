@@ -92,6 +92,15 @@ public abstract class RuntimeTest {
   protected boolean attachDebugger = false;
 
   public static void classSetup() {
+    if (System.getProperty("btrace.comm.protocol") == null) {
+      System.setProperty("btrace.comm.protocol", "2");
+    }
+    if (System.getProperty("btrace.comm.autoNegotiate") == null) {
+      System.setProperty("btrace.comm.autoNegotiate", "false");
+    }
+    if (System.getProperty("btrace.comm.forceVersion") == null) {
+      System.setProperty("btrace.comm.forceVersion", "true");
+    }
     String forceDebugVal = System.getProperty("btrace.test.debug");
     if (forceDebugVal == null) {
       forceDebugVal = System.getenv("BTRACE_TEST_DEBUG");
@@ -517,6 +526,7 @@ public abstract class RuntimeTest {
                   if (l.contains("SLF4J")
                       || l.contains("Server VM warning")
                       || l.contains("XML")
+                      || l.contains("Successfully started BTrace probe")
                       || l.contains("terminally deprecated method in sun.misc.Unsafe")
                       || l.contains("sun.misc.Unsafe::objectFieldOffset")
                       || l.contains("org.jctools.util.UnsafeAccess")
@@ -781,6 +791,7 @@ public abstract class RuntimeTest {
                   System.out.println("[btrace err] " + line);
                   if (line.contains("Server VM warning")
                       || line.contains("XML libraries not available")
+                      || line.contains("Successfully started BTrace probe")
                       || line.contains("Connection reset")) {
                     // skip JVM generated warnings
                     continue;
@@ -1028,6 +1039,9 @@ public abstract class RuntimeTest {
                 "-Dcom.sun.btrace.unsafe=" + isUnsafe,
                 "-Dcom.sun.btrace.debug=" + debugBTrace,
                 "-Dcom.sun.btrace.trackRetransforms=" + trackRetransforms,
+                "-Dbtrace.comm.protocol=2",
+                "-Dbtrace.comm.autoNegotiate=false",
+                "-Dbtrace.comm.forceVersion=true",
                 "-cp",
                 cp,
                 "org.openjdk.btrace.client.Main",
@@ -1154,6 +1168,12 @@ public abstract class RuntimeTest {
     int port = getBTracePort();
     try (Socket socket = new Socket(host, port);
         WireProtocol protocol = createClientProtocol(socket, host)) {
+      ProtocolConfig config = ProtocolConfig.fromSystemProperties();
+      if (config.isForceVersion()
+          && config.getVersion() == ProtocolVersion.V2
+          && !(protocol instanceof BinaryWireProtocol)) {
+        throw new IOException("Expected V2 protocol but got: " + protocol.getClass().getName());
+      }
       protocol.write(new ListProbesCommand());
       Command cmd = protocol.read();
       if (cmd instanceof ListProbesCommand) {
