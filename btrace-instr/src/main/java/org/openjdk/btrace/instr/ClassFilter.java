@@ -89,6 +89,7 @@ public class ClassFilter {
 
     // Method-level exclusion for Thread: 'threadLocals' will create infinite recursion on JDK 25+.
     addSensitiveMethod("java/lang/Thread", "threadLocals");
+    addSensitiveMethod("java/lang/Thread", "setThreadLocals");
   }
 
   private final List<OnMethod> onMethods;
