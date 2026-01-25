@@ -70,8 +70,8 @@ def hasSonatypeCredentials =
                 && sonatypePassword != null
                 && !sonatypePassword.toString().trim().isEmpty()
 
-if (!hasSonatypeCredentials) {
-    logger.lifecycle("Sonatype credentials not provided; skipping Nexus staging initialization and release tasks.")
+if (!hasSonatypeCredentials || project.version.endsWith("-SNAPSHOT")) {
+    logger.lifecycle("Sonatype credentials not provided or running with snapshot; skipping Nexus staging initialization and release tasks.")
     def skipTheseTasks = [
         "initializeSonatypeStagingRepository",
         "publishToSonatype",
