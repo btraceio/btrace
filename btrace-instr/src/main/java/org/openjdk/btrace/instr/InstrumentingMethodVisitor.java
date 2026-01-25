@@ -1310,11 +1310,14 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         } else {
           try {
             int var = variableMapper.map(idx);
+            if (var >= localsArr.length) {
+              localsArr = Arrays.copyOf(localsArr, var + 1);
+            }
             localsArr[var] = e;
             if (e == LONG || e == DOUBLE) {
               int off = var + 1;
-              if (off == localsArr.length) {
-                localsArr = Arrays.copyOf(localsArr, localsArr.length + 1);
+              if (off >= localsArr.length) {
+                localsArr = Arrays.copyOf(localsArr, off + 1);
               }
               localsArr[off] = TOP_EXT;
               idx++;
@@ -1324,11 +1327,15 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
             // proactively remap so stack frames stay consistent.
             int size = (e == LONG || e == DOUBLE) ? 2 : 1;
             int var = variableMapper.remap(idx, size);
+            int required = var + size;
+            if (required > localsArr.length) {
+              localsArr = Arrays.copyOf(localsArr, required);
+            }
             localsArr[var] = e;
             if (size == 2) {
               int off = var + 1;
-              if (off == localsArr.length) {
-                localsArr = Arrays.copyOf(localsArr, localsArr.length + 1);
+              if (off >= localsArr.length) {
+                localsArr = Arrays.copyOf(localsArr, off + 1);
               }
               localsArr[off] = TOP_EXT;
               idx++;
@@ -1337,11 +1344,22 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         }
         idx++;
       }
-      for (LocalVarSlot lvs : newLocals) {
-        int ptr = lvs.idx != Integer.MIN_VALUE ? lvs.idx : 0;
-        localsArr[ptr] = lvs.isExpired() ? TOP : lvs.type;
-        if (lvs.type == LONG || lvs.type == DOUBLE) {
-          localsArr[ptr + 1] = TOP_EXT;
+      if (!newLocals.isEmpty()) {
+        int required = localsArr.length;
+        for (LocalVarSlot lvs : newLocals) {
+          int ptr = lvs.idx != Integer.MIN_VALUE ? lvs.idx : 0;
+          int size = (lvs.type == LONG || lvs.type == DOUBLE) ? 2 : 1;
+          required = Math.max(required, ptr + size);
+        }
+        if (required > localsArr.length) {
+          localsArr = Arrays.copyOf(localsArr, required);
+        }
+        for (LocalVarSlot lvs : newLocals) {
+          int ptr = lvs.idx != Integer.MIN_VALUE ? lvs.idx : 0;
+          localsArr[ptr] = lvs.isExpired() ? TOP : lvs.type;
+          if (lvs.type == LONG || lvs.type == DOUBLE) {
+            localsArr[ptr + 1] = TOP_EXT;
+          }
         }
       }
     } else {
