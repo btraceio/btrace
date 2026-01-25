@@ -1373,7 +1373,55 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       }
     }
     localsArr = trimLocalVars(localsArr);
+    localsArr = ensureTopExtSlots(localsArr);
     return localsArr;
+  }
+
+  private static Object[] ensureTopExtSlots(Object[] localsArr) {
+    if (localsArr == null || localsArr.length == 0) {
+      return localsArr;
+    }
+    Object[] arr = localsArr;
+    for (int i = 0; i < arr.length; i++) {
+      Object val = arr[i];
+      if (val == LONG || val == DOUBLE) {
+        int next = i + 1;
+        if (next >= arr.length) {
+          arr = Arrays.copyOf(arr, next + 1);
+          arr[next] = TOP_EXT;
+          i = next;
+          continue;
+        }
+        if (arr[next] == TOP_EXT) {
+          i = next;
+          continue;
+        }
+        arr = insertTopExtSlot(arr, next);
+        i = next;
+        continue;
+      }
+      if (val == TOP_EXT && (i == 0 || (arr[i - 1] != LONG && arr[i - 1] != DOUBLE))) {
+        arr = removeTopExtSlot(arr, i);
+        i--;
+      }
+    }
+    return arr;
+  }
+
+  private static Object[] insertTopExtSlot(Object[] arr, int index) {
+    Object[] expanded = Arrays.copyOf(arr, arr.length + 1);
+    System.arraycopy(arr, index, expanded, index + 1, arr.length - index);
+    expanded[index] = TOP_EXT;
+    return expanded;
+  }
+
+  private static Object[] removeTopExtSlot(Object[] arr, int index) {
+    Object[] compacted = new Object[arr.length - 1];
+    System.arraycopy(arr, 0, compacted, 0, index);
+    if (index < compacted.length) {
+      System.arraycopy(arr, index + 1, compacted, index, compacted.length - index);
+    }
+    return compacted;
   }
 
   private static Object[] trimLocalVars(Object[] localsArr) {
