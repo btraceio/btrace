@@ -10,17 +10,30 @@ import org.openjdk.btrace.compiler.oneliner.OnelinerAST.*;
 public class OnelinerCodeGenerator {
 
   private static final String INDENT = "  ";
+  private static final String DEFAULT_CLASS_NAME = "BTraceOneliner";
 
   /**
-   * Generate Java source code from a oneliner AST
+   * Generate Java source code from a oneliner AST using the default class name.
    *
    * @param node The parsed oneliner AST
    * @return Generated BTrace Java source code
    */
   public static String generate(OnelinerNode node) {
-    StringBuilder sb = new StringBuilder();
+    return generate(node, DEFAULT_CLASS_NAME);
+  }
 
-    String className = "BTraceOneliner";
+  /**
+   * Generate Java source code from a oneliner AST with a custom class name.
+   *
+   * @param node The parsed oneliner AST
+   * @param className The class name to use for the generated BTrace script
+   * @return Generated BTrace Java source code
+   */
+  public static String generate(OnelinerNode node, String className) {
+    if (className == null || className.isEmpty()) {
+      className = DEFAULT_CLASS_NAME;
+    }
+    StringBuilder sb = new StringBuilder();
 
     // Package and imports
     sb.append("package org.openjdk.btrace.generated;\n\n");
