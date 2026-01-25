@@ -1320,9 +1320,19 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
               idx++;
             }
           } catch (InstrumentationException ex) {
-            // Skip unmapped variables during frame computation - this is expected when
-            // variables haven't been remapped yet at certain instrumentation points
-            // Original behavior was to silently skip these with 0xFFFFFFFF check
+            // When locals haven't been remapped yet (common with early Duration instrumentation),
+            // proactively remap so stack frames stay consistent.
+            int size = (e == LONG || e == DOUBLE) ? 2 : 1;
+            int var = variableMapper.remap(idx, size);
+            localsArr[var] = e;
+            if (size == 2) {
+              int off = var + 1;
+              if (off == localsArr.length) {
+                localsArr = Arrays.copyOf(localsArr, localsArr.length + 1);
+              }
+              localsArr[off] = TOP_EXT;
+              idx++;
+            }
           }
         }
         idx++;
