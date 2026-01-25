@@ -39,6 +39,7 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -385,68 +386,17 @@ public class Client {
    * PrintWriter.
    */
   public byte[] compile(String fileName, String classPath, PrintWriter err, String includePath) {
-    byte[] code = null;
     File file = new File(fileName);
     if (fileName.endsWith(".java")) {
-      Compiler compiler = new Compiler(includePath);
-      classPath += File.pathSeparator + System.getProperty("java.class.path");
-      // Add extension API JARs to classpath
-      String extApiCp = getExtensionApiClasspath();
-      if (!extApiCp.isEmpty()) {
-        classPath += File.pathSeparator + extApiCp;
-      }
-      if (log.isDebugEnabled()) {
-        log.debug("compiling {}", fileName);
-        if (!extApiCp.isEmpty()) {
-          log.debug("extension API classpath: {}", extApiCp);
-        }
-        log.debug("compiler classpath: {}", classPath);
-      }
-
-      // Ensure the verifier's classloader can see the same classpath (TCCL lookup)
-      ClassLoader prevCl = Thread.currentThread().getContextClassLoader();
-      String prevSysCp = System.getProperty("java.class.path", "");
-      Map<String, byte[]> classes;
-      try {
-        String[] cpEntries = classPath.split(File.pathSeparator);
-        java.net.URL[] urls = new java.net.URL[cpEntries.length];
-        for (int i = 0; i < cpEntries.length; i++) {
-          urls[i] = new File(cpEntries[i]).toURI().toURL();
-        }
-        java.net.URLClassLoader compileCl = new java.net.URLClassLoader(urls, prevCl);
-        Thread.currentThread().setContextClassLoader(compileCl);
-        // Ensure VerifierVisitor fallback scan (java.class.path) can see extension API jars
-        if (!extApiCp.isEmpty()) {
-          System.setProperty(
-              "java.class.path",
-              prevSysCp.isEmpty() ? extApiCp : (prevSysCp + File.pathSeparator + extApiCp));
-        }
-        classes = compiler.compile(file, err, ".", classPath);
-      } catch (Exception e) {
-        log.error("Failed to set up compiler classloader", e);
-        classes = compiler.compile(file, err, ".", classPath);
-      } finally {
-        Thread.currentThread().setContextClassLoader(prevCl);
-        System.setProperty("java.class.path", prevSysCp);
-      }
-      if (classes == null) {
-        log.error("btrace compilation for script {} failed!", fileName);
-        return null;
-      }
-
-      int size = classes.size();
-      if (size != 1) {
-        log.error("no classes or more than one class in script {}", fileName);
-        return null;
-      }
-      String name = classes.keySet().iterator().next();
-      code = classes.get(name);
-      if (log.isDebugEnabled()) {
-        log.debug("compiled {}", fileName);
-      }
+      return compileInternal(
+          fileName,
+          classPath,
+          err,
+          includePath,
+          (compiler, resolvedCp) -> compiler.compile(file, err, ".", resolvedCp));
     } else if (fileName.endsWith(".class")) {
       int codeLen = (int) file.length();
-      code = new byte[codeLen];
+      byte[] code = new byte[codeLen];
       try {
         if (log.isDebugEnabled()) {
           log.debug("reading {}", fileName);
@@ -464,6 +414,7 @@ public class Client {
         if (log.isDebugEnabled()) {
           log.debug("read {}", fileName);
         }
+        return code;
       } catch (IOException exp) {
         err.println(exp.getMessage());
         return null;
@@ -472,7 +423,94 @@ public class Client {
       err.println("BTrace script has to be a .java or a .class");
       return null;
     }
+  }
 
+  public byte[] compileSource(String fileName, String source, String classPath) {
+    return compileSource(fileName, source, classPath, new PrintWriter(System.err), null);
+  }
+
+  public byte[] compileSource(
+      String fileName, String source, String classPath, PrintWriter err, String includePath) {
+    return compileInternal(
+        fileName,
+        classPath,
+        err,
+        includePath,
+        (compiler, resolvedCp) -> compiler.compile(fileName, source, err, ".", resolvedCp));
+  }
+
+  @FunctionalInterface
+  private interface CompilerInvoker {
+    Map<String, byte[]> compile(Compiler compiler, String classPath) throws Exception;
+  }
+
+  private byte[] compileInternal(
+      String scriptName,
+      String classPath,
+      PrintWriter err,
+      String includePath,
+      CompilerInvoker invoker) {
+    Compiler compiler = new Compiler(includePath);
+    classPath += File.pathSeparator + System.getProperty("java.class.path");
+    // Add extension API JARs to classpath
+    String extApiCp = getExtensionApiClasspath();
+    if (!extApiCp.isEmpty()) {
+      classPath += File.pathSeparator + extApiCp;
+    }
+    if (log.isDebugEnabled()) {
+      log.debug("compiling {}", scriptName);
+      if (!extApiCp.isEmpty()) {
+        log.debug("extension API classpath: {}", extApiCp);
+      }
+      log.debug("compiler classpath: {}", classPath);
+    }
+
+    // Ensure the verifier's classloader can see the same classpath (TCCL lookup)
+    ClassLoader prevCl = Thread.currentThread().getContextClassLoader();
+    String prevSysCp = System.getProperty("java.class.path", "");
+    Map<String, byte[]> classes;
+    try {
+      String[] cpEntries = classPath.split(File.pathSeparator);
+      URL[] urls = new URL[cpEntries.length];
+      for (int i = 0; i < cpEntries.length; i++) {
+        urls[i] = new File(cpEntries[i]).toURI().toURL();
+      }
+      URLClassLoader compileCl = new URLClassLoader(urls, prevCl);
+      Thread.currentThread().setContextClassLoader(compileCl);
+      // Ensure VerifierVisitor fallback scan (java.class.path) can see extension API jars
+      if (!extApiCp.isEmpty()) {
+        System.setProperty(
+            "java.class.path",
+            prevSysCp.isEmpty() ? extApiCp : (prevSysCp + File.pathSeparator + extApiCp));
+      }
+      classes = invoker.compile(compiler, classPath);
+    } catch (Exception e) {
+      log.error("Failed to set up compiler classloader", e);
+      try {
+        classes = invoker.compile(compiler, classPath);
+      } catch (Exception ex) {
+        log.error("btrace compilation for script {} failed!", scriptName, ex);
+        return null;
+      }
+    } finally {
+      Thread.currentThread().setContextClassLoader(prevCl);
+      System.setProperty("java.class.path", prevSysCp);
+    }
+    if (classes == null) {
+      log.error("btrace compilation for script {} failed!", scriptName);
+      return null;
+    }
+
+    int size = classes.size();
+    if (size != 1) {
+      log.error("no classes or more than one class in script {}", scriptName);
+      return null;
+    }
+    String name = classes.keySet().iterator().next();
+    byte[] code = classes.get(name);
+    if (log.isDebugEnabled()) {
+      log.debug("compiled {}", scriptName);
+    }
     return code;
   }
 

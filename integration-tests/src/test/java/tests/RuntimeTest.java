@@ -86,6 +86,10 @@ public abstract class RuntimeTest {
   protected long timeout = 10000L;
   /** Track retransforming progress */
   protected boolean trackRetransforms = false;
+  /** Dump generated oneliner source */
+  protected boolean dumpOneliner = false;
+  /** Dump verifier errors in target JVM */
+  protected boolean dumpVerifierErrors = false;
   /** Provide extra JVM args */
   private static final List<String> extraJvmArgs = new ArrayList<>();
 
@@ -193,6 +197,8 @@ public abstract class RuntimeTest {
     debugTestApp = false;
     debugBTrace = false;
     isUnsafe = false;
+    dumpOneliner = false;
+    dumpVerifierErrors = false;
     timeout = defaultTimeoutMs;
   }
 
@@ -244,6 +250,187 @@ public abstract class RuntimeTest {
   public void testDynamic(String testApp, String testScript, int checkLines, ResultValidator v)
       throws Exception {
     testDynamic(testApp, testScript, null, checkLines, v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void testDynamicOneliner(
+      String testApp, String oneliner, int checkLines, ResultValidator v) throws Exception {
+    testDynamicOneliner(testApp, oneliner, null, checkLines, v);
+  }
+
+  @SuppressWarnings("DefaultCharset")
+  public void testDynamicOneliner(
+      String testApp, String oneliner, String[] cmdArgs, int checkLines, ResultValidator v)
+      throws Exception {
+    System.out.println("=== Dynamic attach (oneliner)");
+    if (forceDebug) {
+      // force debug flags
+      debugBTrace = true;
+      debugTestApp = true;
+    }
+    String testJavaHome = System.getenv("TEST_JAVA_HOME");
+    if (testJavaHome == null) {
+      testJavaHome = System.getenv("JAVA_TEST_HOME");
+    }
+    testJavaHome = testJavaHome != null ? testJavaHome : System.getenv("JAVA_HOME");
+    if (testJavaHome == null) {
+      throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
+    }
+    System.out.println("===> test java: " + testJavaHome);
+    String jfrFile = null;
+    List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
+    if (permissionsFile != null) {
+      args.add("-Dbtrace.permissions=" + permissionsFile);
+    }
+    if (attachDebugger) {
+      args.add("-agentlib:jdwp=transport=dt_socket,server=y,address=8000");
+    }
+    args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
+    args.add("-XX:+IgnoreUnrecognizedVMOptions");
+    args.add("-XX:+EnableDynamicAgentLoading");
+    args.add("-XX:+UnlockDiagnosticVMOptions");
+    args.add("-XX:-OmitStackTraceInFastThrow");
+    if (dumpVerifierErrors) {
+      args.add("-Dbtrace.verifier.dump=true");
+    }
+    args.addAll(extraJvmArgs);
+    if (startJfr) {
+      jfrFile = Files.createTempFile("btrace-", ".jfr").toString();
+      args.add("-XX:StartFlightRecording=settings=default,dumponexit=true,filename=" + jfrFile);
+    }
+    args.add("-Dbtrace.test=test");
+    args.add(testApp);
+
+    ProcessBuilder pb = new ProcessBuilder(args);
+    pb.environment().remove("JAVA_TOOL_OPTIONS");
+
+    Process p = pb.start();
+    PrintWriter pw = new PrintWriter(p.getOutputStream());
+
+    StringBuilder stdout = new StringBuilder();
+    StringBuilder stderr = new StringBuilder();
+    AtomicInteger ret = new AtomicInteger(-1);
+
+    BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+    CountDownLatch testAppLatch = new CountDownLatch(1);
+    AtomicReference<String> pidStringRef = new AtomicReference<>();
+
+    Thread outT =
+        new Thread(
+            () -> {
+              try {
+                String l;
+                while ((l = stdoutReader.readLine()) != null) {
+                  if (l.startsWith("ready:")) {
+                    pidStringRef.set(l.split(":")[1]);
+                    testAppLatch.countDown();
+                  }
+                  if (debugTestApp) {
+                    System.out.println("[traced app] " + l);
+                  }
+                }
+
+              } catch (Exception e) {
+                e.printStackTrace(System.err);
+              }
+            },
+            "STDOUT Reader");
+    outT.setDaemon(true);
+
+    BufferedReader stderrReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+
+    Thread errT =
+        new Thread(
+            () -> {
+              try {
+                String l = null;
+                while ((l = stderrReader.readLine()) != null) {
+                  if (l.contains("Server VM warning")
+                      || l.contains("XML libraries not available")
+                      || l.contains("terminally deprecated method in sun.misc.Unsafe")
+                      || l.contains("sun.misc.Unsafe::objectFieldOffset")
+                      || l.contains("org.jctools.util.UnsafeAccess")
+                      || l.contains("ASM verification requested for ")
+                      || l.contains("ASM verification OK for ")) {
+                    continue;
+                  }
+                  testAppLatch.countDown();
+                  if (debugTestApp) {
+                    System.err.println("[traced app] " + l);
+                  }
+                }
+              } catch (Exception e) {
+                e.printStackTrace(System.err);
+              }
+            },
+            "STDERR Reader");
+    errT.setDaemon(true);
+
+    outT.start();
+    errT.start();
+
+    testAppLatch.await();
+    String pid = pidStringRef.get();
+    if (pid != null) {
+      System.out.println("Target process ready: " + pid);
+
+      Process client = attachOneliner(pid, oneliner, cmdArgs, checkLines, stdout, stderr);
+
+      System.out.println("Detached.");
+
+      int retries = 1000;
+      boolean exitted = false;
+      while (!exitted && retries-- > 0) {
+        pw.println("done");
+        pw.flush();
+        exitted = client.waitFor(1, TimeUnit.SECONDS);
+        if (!exitted) {
+          System.out.println("... retrying ...");
+        }
+      }
+
+      if (!exitted) {
+        client.destroyForcibly();
+      }
+
+      ret.set(exitted ? client.exitValue() : -1);
+
+      outT.join();
+      errT.join();
+    }
+
+    // Allow a brief grace period for any final output to flush before validation
+    try {
+      Thread.sleep(500L);
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+    }
+    // If JFR was enabled for dynamic attach, give it a moment and dump the recording
+    if (startJfr && pidStringRef.get() != null) {
+      try {
+        Thread.sleep(1500L);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+      }
+      try {
+        ProcessBuilder jcmdPb;
+        String jcmdExe =
+            testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
+        if (jfrFile != null) {
+          jcmdPb =
+              new ProcessBuilder(
+                  jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
+        } else {
+          jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
+        }
+        jcmdPb.start().waitFor();
+      } catch (Exception e) {
+        e.printStackTrace(System.err);
+      }
+    }
+
+    v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -1054,6 +1241,12 @@ public abstract class RuntimeTest {
     if (debugBTrace) {
       argVals.add("-v");
     }
+    if (dumpOneliner) {
+      int cpIdx = argVals.indexOf("-cp");
+      if (cpIdx > -1) {
+        argVals.add(cpIdx, "-Dbtrace.oneliner.dump=true");
+      }
+    }
     argVals.addAll(Arrays.asList(pid, traceFile.getAbsolutePath()));
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
@@ -1134,6 +1327,121 @@ public abstract class RuntimeTest {
     l.await(timeout, TimeUnit.MILLISECONDS);
 
     // Thread.sleep(100_000_000L);
+
+    return p;
+  }
+
+  private Process attachOneliner(
+      String pid,
+      String oneliner,
+      String[] cmdArgs,
+      int checkLines,
+      StringBuilder stdout,
+      StringBuilder stderr)
+      throws Exception {
+    List<String> argVals =
+        new ArrayList<>(
+            Arrays.asList(
+                javaHome + "/bin/java",
+                "-Dcom.sun.btrace.unsafe=" + isUnsafe,
+                "-Dcom.sun.btrace.debug=" + debugBTrace,
+                "-Dcom.sun.btrace.trackRetransforms=" + trackRetransforms,
+                "-Dbtrace.comm.protocol=2",
+                "-Dbtrace.comm.autoNegotiate=false",
+                "-Dbtrace.comm.forceVersion=true",
+                "-cp",
+                cp,
+                "org.openjdk.btrace.client.Main",
+                "-cp",
+                eventsClassPath,
+                "-d",
+                Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString(),
+                "-n",
+                oneliner,
+                "-pd",
+                Paths.get(System.getProperty("java.io.tmpdir"), "btrace-oneliner").toString()));
+    if (debugBTrace) {
+      argVals.add("-v");
+    }
+    argVals.addAll(Arrays.asList(pid));
+    if (cmdArgs != null) {
+      argVals.addAll(Arrays.asList(cmdArgs));
+    }
+    if (Files.exists(Paths.get(javaHome, "jmods"))) {
+      argVals.addAll(
+          1,
+          Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
+    }
+    ProcessBuilder pb = new ProcessBuilder(argVals);
+
+    pb.environment().remove("JAVA_TOOL_OPTIONS");
+    Process p = pb.start();
+
+    CountDownLatch l = new CountDownLatch(checkLines);
+
+    new Thread(
+            () -> {
+              try {
+                BufferedReader br =
+                    new BufferedReader(
+                        new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
+
+                String line = null;
+                while ((line = br.readLine()) != null) {
+                  System.out.println("[btrace err] " + line);
+                  if (line.contains("Server VM warning")
+                      || line.contains("XML libraries not available")
+                      || line.contains("Successfully started BTrace probe")
+                      || line.contains("Connection reset")) {
+                    // skip JVM generated warnings
+                    continue;
+                  }
+                  if (line.startsWith("[traced app]") || line.startsWith("[btrace out]")) {
+                    // skip test debug lines
+                    continue;
+                  }
+                  stderr.append(line).append('\n');
+                  if (line.contains("Exception") || line.contains("Error")) {
+                    for (int i = 0; i < checkLines; i++) {
+                      l.countDown();
+                    }
+                  }
+                }
+              } catch (Exception e) {
+                for (int i = 0; i < checkLines; i++) {
+                  l.countDown();
+                }
+                throw new Error(e);
+              }
+            },
+            "Stderr Reader")
+        .start();
+
+    new Thread(
+            () -> {
+              try {
+                BufferedReader br =
+                    new BufferedReader(
+                        new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
+                String line = null;
+                while ((line = br.readLine()) != null) {
+                  stdout.append(line).append('\n');
+                  System.out.println("[btrace out] " + line);
+                  if (!(debugBTrace && line.contains("DEBUG"))) {
+                    l.countDown();
+                  }
+                }
+              } catch (Exception e) {
+                for (int i = 0; i < checkLines; i++) {
+                  l.countDown();
+                }
+                throw new Error(e);
+              }
+            },
+            "Stdout Reader")
+        .start();
+
+    l.await(timeout, TimeUnit.MILLISECONDS);
 
     return p;
   }

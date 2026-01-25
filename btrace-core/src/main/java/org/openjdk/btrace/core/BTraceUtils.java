@@ -311,6 +311,10 @@ public class BTraceUtils {
     return Strings.str(obj);
   }
 
+  public static String str(Object[] array) {
+    return Strings.str(array);
+  }
+
   /**
    * Returns identity string of the form class-name@identity-hash
    *
@@ -3697,6 +3701,22 @@ public class BTraceUtils {
       } else {
         return identityStr(obj);
       }
+    }
+
+    public static String str(Object[] array) {
+      if (array == null) {
+        return "null";
+      }
+      StringBuilder buf = new StringBuilder();
+      buf.append('[');
+      for (int i = 0; i < array.length; i++) {
+        if (i > 0) {
+          buf.append(", ");
+        }
+        buf.append(str(array[i]));
+      }
+      buf.append(']');
+      return buf.toString();
     }
 
     /**

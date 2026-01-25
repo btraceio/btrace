@@ -525,6 +525,9 @@ public class BTraceProbePersisted implements BTraceProbe {
         verifyBytecode();
         return true;
       } catch (VerifierException e) {
+        if (Boolean.getBoolean("btrace.verifier.dump")) {
+          System.err.println("[BTRACE VERIFY] " + e.getMessage());
+        }
         log.debug("Class '{}' verification failed", getClassName(), e);
       }
     }

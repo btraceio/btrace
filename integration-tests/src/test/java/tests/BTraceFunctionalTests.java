@@ -191,6 +191,26 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testOnelinerRuntime() throws Exception {
+    dumpOneliner = Boolean.getBoolean("btrace.oneliner.dump");
+    dumpVerifierErrors = Boolean.getBoolean("btrace.verifier.dump");
+    String oneLiner = "resources.Main::callB @entry { print method, args }";
+    testDynamicOneliner(
+        "resources.Main",
+        oneLiner,
+        30,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("callB"), "Expected oneliner output");
+            assertTrue(stdout.contains("Hello World"), "Expected oneliner args output");
+          }
+        });
+  }
+
+  @Test
   public void testTraceAll() throws Exception {
       String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
       if (testJavaHome == null) testJavaHome = System.getenv().get("JAVA_TEST_HOME");
