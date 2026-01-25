@@ -18,8 +18,6 @@ ASTORE 6
 ASTORE 7
 ALOAD 7
 FRAME FULL [resources/issues/BTRACE28 java/lang/String java/lang/String java/lang/String java/lang/String [B [B java/lang/StringBuilder] [java/lang/Throwable]
-ASTORE 8
-ALOAD 8
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L11
 LDC "resources.issues.BTRACE28"
@@ -33,7 +31,6 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 L11
 FRAME SAME
 L12
-LOCALVARIABLE e Ljava/lang/Throwable; L10 L9 8
 LOCALVARIABLE this Lresources/issues/BTRACE28; L3 L12 0
 LOCALVARIABLE param1 Ljava/lang/String; L3 L12 1
 LOCALVARIABLE param2 Ljava/lang/String; L3 L12 2
@@ -42,4 +39,3 @@ LOCALVARIABLE contentType Ljava/lang/String; L5 L12 4
 LOCALVARIABLE mainArr [B L6 L12 5
 LOCALVARIABLE byteArr [B L7 L12 6
 LOCALVARIABLE sb Ljava/lang/StringBuilder; L0 L12 7
-MAXLOCALS = 9
