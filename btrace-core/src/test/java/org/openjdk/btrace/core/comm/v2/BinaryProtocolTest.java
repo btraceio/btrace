@@ -3,6 +3,8 @@ package org.openjdk.btrace.core.comm.v2;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.aggregation.HistogramData;
 
 /**
  * Tests for the binary protocol implementation.
@@ -153,6 +156,12 @@ public class BinaryProtocolTest {
         List<Object[]> data = new ArrayList<>();
         data.add(new Object[] { "Row1Col1", 123, 3.14 });
         data.add(new Object[] { "Row2Col1", 456, 2.71 });
+        data.add(
+            new Object[] {
+                "Row3Col1",
+                789,
+                new HistogramData(new long[] {1, 2}, new long[] {3, 4})
+            });
         
         // Create and write command
         BinaryGridDataCommand original = new BinaryGridDataCommand("TestGrid", columnNames, data);
@@ -174,13 +183,18 @@ public class BinaryProtocolTest {
         assertEquals("Column3", readColumnNames.get(2));
         
         List<Object[]> readData = gridCommand.getData();
-        assertEquals(2, readData.size());
+        assertEquals(3, readData.size());
         assertEquals("Row1Col1", readData.get(0)[0]);
         assertEquals(123, readData.get(0)[1]);
         assertEquals(3.14, readData.get(0)[2]);
         assertEquals("Row2Col1", readData.get(1)[0]);
         assertEquals(456, readData.get(1)[1]);
         assertEquals(2.71, readData.get(1)[2]);
+        assertEquals("Row3Col1", readData.get(2)[0]);
+        assertEquals(789, readData.get(2)[1]);
+        HistogramData histogram = (HistogramData) readData.get(2)[2];
+        assertArrayEquals(new long[] {1, 2}, histogram.getValues());
+        assertArrayEquals(new long[] {3, 4}, histogram.getCounts());
     }
     
     @Test
@@ -202,7 +216,9 @@ public class BinaryProtocolTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
         // Create and write command
-        BinaryErrorCommand original = new BinaryErrorCommand(404, "Test error message");
+        BinaryErrorCommand original =
+            new BinaryErrorCommand(
+                "java.lang.IllegalStateException", "Test error message", "stack-trace");
         BinaryWireIO.write(baos, original);
 
         // Read command
@@ -212,8 +228,9 @@ public class BinaryProtocolTest {
         // Verify command
         assertTrue(readCommand instanceof BinaryErrorCommand);
         BinaryErrorCommand errorCommand = (BinaryErrorCommand) readCommand;
-        assertEquals(404, errorCommand.getCause());
+        assertEquals("java.lang.IllegalStateException", errorCommand.getExceptionClass());
         assertEquals("Test error message", errorCommand.getMessage());
+        assertEquals("stack-trace", errorCommand.getStackTrace());
         assertEquals(BinaryCommand.ERROR, errorCommand.getType());
     }
 
@@ -222,7 +239,7 @@ public class BinaryProtocolTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
         // Create and write command with null message
-        BinaryErrorCommand original = new BinaryErrorCommand(500, null);
+        BinaryErrorCommand original = new BinaryErrorCommand("java.lang.RuntimeException", null, null);
         BinaryWireIO.write(baos, original);
 
         // Read command
@@ -232,8 +249,9 @@ public class BinaryProtocolTest {
         // Verify command
         assertTrue(readCommand instanceof BinaryErrorCommand);
         BinaryErrorCommand errorCommand = (BinaryErrorCommand) readCommand;
-        assertEquals(500, errorCommand.getCause());
+        assertEquals("java.lang.RuntimeException", errorCommand.getExceptionClass());
         assertEquals(null, errorCommand.getMessage());
+        assertEquals(null, errorCommand.getStackTrace());
     }
 
     @Test
@@ -319,6 +337,8 @@ public class BinaryProtocolTest {
         data.put("longValue", 9876543210L);
         data.put("floatValue", 3.14f);
         data.put("doubleValue", 2.71828);
+        data.put("bigIntValue", new BigInteger("123456789012345678901234567890"));
+        data.put("bigDecValue", new BigDecimal("12345.67890123456789"));
 
         // Create and write command
         BinaryNumberMapDataCommand original = new BinaryNumberMapDataCommand("TestNumberMap", data);
@@ -335,11 +355,14 @@ public class BinaryProtocolTest {
         assertEquals(BinaryCommand.NUMBER_MAP, mapCommand.getType());
 
         Map<String, Number> readData = mapCommand.getData();
-        assertEquals(4, readData.size());
+        assertEquals(6, readData.size());
         assertEquals(42, readData.get("intValue").intValue());
         assertEquals(9876543210L, readData.get("longValue").longValue());
         assertEquals(3.14f, readData.get("floatValue").floatValue(), 0.001);
         assertEquals(2.71828, readData.get("doubleValue").doubleValue(), 0.00001);
+        assertEquals(
+            new BigInteger("123456789012345678901234567890"), readData.get("bigIntValue"));
+        assertEquals(new BigDecimal("12345.67890123456789"), readData.get("bigDecValue"));
     }
 
     @Test
@@ -443,6 +466,24 @@ public class BinaryProtocolTest {
         BinaryNumberDataCommand numberCommand = (BinaryNumberDataCommand) readCommand;
         assertEquals("TestLong", numberCommand.getName());
         assertEquals(9876543210L, numberCommand.getValue().longValue());
+    }
+
+    @Test
+    public void testBinaryNumberDataCommandBigDecimal() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // Test with BigDecimal
+        BinaryNumberDataCommand original =
+            new BinaryNumberDataCommand("TestBigDecimal", new BigDecimal("12345.67890123456789"));
+        BinaryWireIO.write(baos, original);
+
+        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+        BinaryCommand readCommand = BinaryWireIO.read(bais);
+
+        assertTrue(readCommand instanceof BinaryNumberDataCommand);
+        BinaryNumberDataCommand numberCommand = (BinaryNumberDataCommand) readCommand;
+        assertEquals("TestBigDecimal", numberCommand.getName());
+        assertEquals(new BigDecimal("12345.67890123456789"), numberCommand.getValue());
     }
 
     @Test

@@ -1,5 +1,7 @@
 package org.openjdk.btrace.core.comm.v2;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,7 +61,14 @@ public class CommandAdapter {
                 
             case BinaryCommand.ERROR:
                 BinaryErrorCommand errCmd = (BinaryErrorCommand) binaryCmd;
-                return new ErrorCommand(new RuntimeException(errCmd.getMessage()));
+                Throwable errorCause = null;
+                if (errCmd.getExceptionClass() != null
+                    || errCmd.getMessage() != null
+                    || errCmd.getStackTrace() != null) {
+                    errorCause = new RemoteException(
+                        errCmd.getExceptionClass(), errCmd.getMessage(), errCmd.getStackTrace());
+                }
+                return new ErrorCommand(errorCause);
                 
             case BinaryCommand.RENAME:
                 BinaryRenameCommand renameCmd = (BinaryRenameCommand) binaryCmd;
@@ -84,7 +93,9 @@ public class CommandAdapter {
                 
             case BinaryCommand.GRID_DATA:
                 BinaryGridDataCommand gridCmd = (BinaryGridDataCommand) binaryCmd;
-                GridDataCommand cmd = new GridDataCommand(gridCmd.getName(), gridCmd.getData());
+                GridDataCommand cmd =
+                    new GridDataCommand(
+                        gridCmd.getName(), gridCmd.getColumnNames(), gridCmd.getData());
                 return cmd;
                 
             case BinaryCommand.RETRANSFORMATION_START:
@@ -155,7 +166,20 @@ public class CommandAdapter {
                 
             case Command.ERROR:
                 ErrorCommand errCmd = (ErrorCommand) originalCmd;
-                return new BinaryErrorCommand(0, errCmd.getCause() != null ? errCmd.getCause().getMessage() : null);
+                Throwable cause = errCmd.getCause();
+                String exceptionClass = null;
+                String message = null;
+                String stackTrace = null;
+                if (cause != null) {
+                    exceptionClass = cause.getClass().getName();
+                    message = cause.getMessage();
+                    StringWriter writer = new StringWriter();
+                    PrintWriter printWriter = new PrintWriter(writer);
+                    cause.printStackTrace(printWriter);
+                    printWriter.flush();
+                    stackTrace = writer.toString();
+                }
+                return new BinaryErrorCommand(exceptionClass, message, stackTrace);
                 
             case Command.RENAME:
                 RenameCommand renameCmd = (RenameCommand) originalCmd;
@@ -189,8 +213,8 @@ public class CommandAdapter {
                 
             case Command.GRID_DATA:
                 GridDataCommand gridCmd = (GridDataCommand) originalCmd;
-                List<String> columnNames = new ArrayList<>();
-                return new BinaryGridDataCommand(gridCmd.getName(), columnNames, gridCmd.getData());
+                return new BinaryGridDataCommand(
+                    gridCmd.getName(), gridCmd.getColumnNames(), gridCmd.getData());
                 
             case Command.RETRANSFORMATION_START:
                 RetransformationStartNotification retransStartCmd = 
