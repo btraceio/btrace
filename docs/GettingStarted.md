@@ -154,7 +154,7 @@ class-pattern::method-pattern @location [filter] { action }
 - **Actions**: `print`, `count`, `time`, `stack`
 - **Filters**: `if duration>NUMBERms`, `if args[N]==VALUE`
 
-**For complete oneliner documentation**, see [Oneliner Guide](OnelinerGuide.md).
+**For complete oneliner documentation**, see [Oneliner Guide](onelinerGuide.md).
 
 **Want full BTrace power?** Continue to the full 5-minute quick start below.
 
@@ -558,7 +558,7 @@ jmc recording.jfr
 - Can be analyzed offline
 - Timeline visualization in Mission Control
 
-For complete JFR documentation, see [BTrace Tutorial Lesson 5](BTraceTutorial.md) and [FAQ: JFR Integration](FAQ.md#jfr-integration).
+For complete JFR documentation, see [BTrace Tutorial Lesson 5](btraceTutorial.md) and [FAQ: JFR Integration](faq.md#jfr-integration).
 
 ## BTrace in Containers and Kubernetes
 
@@ -604,7 +604,7 @@ ENV BTRACE_HOME=/opt/btrace-2.2.2
 ENV PATH=$PATH:$BTRACE_HOME/bin
 ```
 
-See [docker/README.md](../docker/README.md) for more Docker usage patterns.
+See [docker/Readme.md](../docker/Readme.md) for more Docker usage patterns.
 
 ### Kubernetes Pods
 
@@ -683,7 +683,7 @@ kubectl logs <pod-name> -c btrace
 3. **Security Policies**: Pod Security Policies may block ptrace; adjust as needed
 4. **Resource Limits**: BTrace overhead may trigger CPU/memory limits
 
-For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](Troubleshooting.md#kubernetes-and-cloud-deployments).
+For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](troubleshooting.md#kubernetes-and-cloud-deployments).
 
 ## Common Pitfalls and Solutions
 
@@ -697,7 +697,7 @@ For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](Troubleshoo
 - **JDK 21+**: Add `-XX:+EnableDynamicAgentLoading` to target JVM to suppress warnings and ensure compatibility
 - Verify JDK (not JRE) is installed
 
-**Note**: Starting with JDK 21, dynamic agent loading triggers warnings. In a future JDK release, it will be disabled by default, requiring `-XX:+EnableDynamicAgentLoading` to use BTrace's attach mode. See [Troubleshooting: JVM Attachment Issues](Troubleshooting.md#jvm-attachment-issues) for details.
+**Note**: Starting with JDK 21, dynamic agent loading triggers warnings. In a future JDK release, it will be disabled by default, requiring `-XX:+EnableDynamicAgentLoading` to use BTrace's attach mode. See [Troubleshooting: JVM Attachment Issues](troubleshooting.md#jvm-attachment-issues) for details.
 
 ### 2. Script Verification Errors
 
@@ -752,10 +752,10 @@ btrace -Dfile.encoding=UTF-8 <PID> script.java
 
 Now that you have BTrace running, explore these resources:
 
-1. **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
-2. **[Quick Reference](QuickReference.md)** - Annotation and API cheat sheet
+1. **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
+2. **[Quick Reference](quickReference.md)** - Annotation and API cheat sheet
 3. **[Sample Scripts](../btrace-dist/src/main/resources/samples/)** - 50+ real-world examples
-4. **[Troubleshooting Guide](Troubleshooting.md)** - Solutions to common problems
+4. **[Troubleshooting Guide](troubleshooting.md)** - Solutions to common problems
 5. **[BTrace Wiki](https://github.com/btraceio/btrace/wiki/Home)** - Comprehensive user guide
 
 ## Tips for Success
@@ -769,11 +769,11 @@ Now that you have BTrace running, explore these resources:
 
 ## See Also
 
-- **[Documentation Hub](README.md)** - Complete documentation map and learning paths
-- **[Quick Reference](QuickReference.md)** - Annotation and API cheat sheet
-- **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
-- **[Troubleshooting Guide](Troubleshooting.md)** - Solutions to common problems
-- **[FAQ](FAQ.md)** - Common questions and best practices
+- **[Documentation Hub](Readme.md)** - Complete documentation map and learning paths
+- **[Quick Reference](quickReference.md)** - Annotation and API cheat sheet
+- **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
+- **[Troubleshooting Guide](troubleshooting.md)** - Solutions to common problems
+- **[FAQ](faq.md)** - Common questions and best practices
 
 ## Getting Help
 
