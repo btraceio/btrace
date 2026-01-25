@@ -21,4 +21,11 @@ public final class PrinterServiceImpl extends Extension implements PrinterServic
   public void println() {
     print(NL);
   }
+
+  @Override
+  public void close() {
+    if (getContext().getArgs().containsKey("extensionCloseTest")) {
+      getContext().send("extension close: btrace-utils");
+    }
+  }
 }
