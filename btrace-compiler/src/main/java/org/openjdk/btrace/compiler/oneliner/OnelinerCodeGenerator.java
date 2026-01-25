@@ -43,7 +43,7 @@ public class OnelinerCodeGenerator {
     sb.append("import org.openjdk.btrace.core.types.AnyType;\n\n");
 
     // Class declaration
-    sb.append("@BTrace(trusted = true)\n");
+    sb.append("@BTrace\n");
     sb.append("public class ").append(className).append(" {\n\n");
 
     ProbeClause probe = node.probe;
