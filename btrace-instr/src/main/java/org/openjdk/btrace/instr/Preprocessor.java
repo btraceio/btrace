@@ -1828,6 +1828,9 @@ final class Preprocessor {
       for (Type t : args) {
         offset += t.getSize();
       }
+      if (mn.maxLocals > offset) {
+        offset = mn.maxLocals;
+      }
     }
 
     static int translateIdx(int idx) {
