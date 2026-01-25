@@ -394,7 +394,7 @@ public final class Main {
         log.debug("submitting the BTrace program");
         CommandListener listener = createCommandListener(client);
 
-        boolean isUnattended = unattended;
+        final boolean isUnattended = unattended;
         client.submit(
             host,
             fileName,
@@ -417,7 +417,7 @@ public final class Main {
                     log.debug("error initiating unattended disconnect: {}", ioe.toString());
                   }
                 }
-                // Do not exit here; wait for DISCONNECT to arrive and be printed
+                // Continue processing commands so DISCONNECT is handled.
               } else {
                 listener.onCommand(cmd);
               }

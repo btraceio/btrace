@@ -30,7 +30,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.Properties;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
@@ -42,11 +45,21 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.openjdk.btrace.client.Client;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.ListProbesCommand;
+import org.openjdk.btrace.core.comm.ProtocolConfig;
+import org.openjdk.btrace.core.comm.ProtocolNegotiator;
+import org.openjdk.btrace.core.comm.ProtocolVersion;
+import org.openjdk.btrace.core.comm.WireProtocol;
+import org.openjdk.btrace.core.comm.BinaryWireProtocol;
+import org.openjdk.btrace.core.comm.JavaSerializationProtocol;
 
 /**
  * @author Jaroslav Bachorik
@@ -536,6 +549,12 @@ public abstract class RuntimeTest {
 
     testAppLatch.await();
     stdoutLatch.await();
+    // Allow some time for late BTrace output to flush in on-startup mode.
+    try {
+      Thread.sleep(1000L);
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+    }
 
     if (startJfr && pidStringRef.get() != null) {
       // Give the periodic event at least one interval to fire before dumping
@@ -731,7 +750,13 @@ public abstract class RuntimeTest {
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
           1,
-          Arrays.asList("--add-exports", "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"));
+          Arrays.asList(
+              "--add-exports",
+              "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
+              "--add-modules",
+              "jdk.attach",
+              "--add-exports",
+              "jdk.attach/sun.tools.attach=ALL-UNNAMED"));
     }
 
     ProcessBuilder pb = new ProcessBuilder(argVals);
@@ -1097,6 +1122,103 @@ public abstract class RuntimeTest {
     // Thread.sleep(100_000_000L);
 
     return p;
+  }
+
+  protected int getBTracePort() {
+    return Integer.getInteger("btrace.port", 2020);
+  }
+
+  protected String getEventsClassPath() {
+    return eventsClassPath;
+  }
+
+  protected Client createClientForTests(String probeDescPath) {
+    String libs = System.getProperty("btrace.libs");
+    String agentJar = libs != null ? Paths.get(libs, "btrace-agent.jar").toString() : null;
+    String bootJar = libs != null ? Paths.get(libs, "btrace-boot.jar").toString() : null;
+    return new Client(
+        getBTracePort(),
+        null,
+        probeDescPath,
+        debugBTrace,
+        trackRetransforms,
+        false,
+        false,
+        null,
+        null,
+        agentJar,
+        bootJar);
+  }
+
+  protected List<String> listProbesWithProtocol(String host) throws IOException {
+    int port = getBTracePort();
+    try (Socket socket = new Socket(host, port);
+        WireProtocol protocol = createClientProtocol(socket, host)) {
+      protocol.write(new ListProbesCommand());
+      Command cmd = protocol.read();
+      if (cmd instanceof ListProbesCommand) {
+        return ((ListProbesCommand) cmd).getProbes();
+      }
+      return Collections.emptyList();
+    } catch (ClassNotFoundException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private WireProtocol createClientProtocol(Socket socket, String host) throws IOException {
+    ProtocolConfig config = ProtocolConfig.fromSystemProperties();
+    ProtocolVersion preferred = config.getVersion();
+
+    if (config.isAutoNegotiate() && preferred == ProtocolVersion.V2) {
+      try {
+        return createV2Protocol(socket);
+      } catch (IOException e) {
+        closeSocketQuietly(socket);
+        Socket fallback = new Socket(host, getBTracePort());
+        return createV1Protocol(fallback);
+      }
+    }
+
+    if (config.isForceVersion() && preferred == ProtocolVersion.V2) {
+      return createV2Protocol(socket);
+    }
+
+    return createV1Protocol(socket);
+  }
+
+  private WireProtocol createV1Protocol(Socket socket) throws IOException {
+    InputStream in = socket.getInputStream();
+    OutputStream out = socket.getOutputStream();
+    return new JavaSerializationProtocol(in, out);
+  }
+
+  private WireProtocol createV2Protocol(Socket socket) throws IOException {
+    InputStream in = socket.getInputStream();
+    OutputStream out = socket.getOutputStream();
+    ProtocolNegotiator negotiator = new ProtocolNegotiator(ProtocolVersion.V2);
+    int timeoutMs = ProtocolNegotiator.getNegotiationTimeoutMs();
+    int previousTimeout = socket.getSoTimeout();
+    try {
+      socket.setSoTimeout(timeoutMs);
+      ProtocolVersion negotiated = negotiator.negotiateClient(in, out, ProtocolVersion.V2);
+      if (negotiated != ProtocolVersion.V2) {
+        throw new IOException("Protocol negotiation failed: expected V2");
+      }
+      return new BinaryWireProtocol(in, out);
+    } finally {
+      socket.setSoTimeout(previousTimeout);
+    }
+  }
+
+  private void closeSocketQuietly(Socket socket) {
+    if (socket == null) {
+      return;
+    }
+    try {
+      socket.close();
+    } catch (IOException ignore) {
+      // best effort
+    }
   }
 
   public interface ResultValidator {

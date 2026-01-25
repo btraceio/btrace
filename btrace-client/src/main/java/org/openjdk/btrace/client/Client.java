@@ -24,14 +24,13 @@
  */
 package org.openjdk.btrace.client;
 
+import com.sun.tools.attach.AgentLoadException;
 import com.sun.tools.attach.VirtualMachine;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
@@ -67,13 +66,18 @@ import org.openjdk.btrace.core.comm.DisconnectCommand;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.BinaryWireProtocol;
+import org.openjdk.btrace.core.comm.JavaSerializationProtocol;
 import org.openjdk.btrace.core.comm.ListFailedExtensionsCommand;
 import org.openjdk.btrace.core.comm.ListProbesCommand;
 import org.openjdk.btrace.core.comm.MessageCommand;
 import org.openjdk.btrace.core.comm.ReconnectCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.WireIO;
+import org.openjdk.btrace.core.comm.ProtocolConfig;
+import org.openjdk.btrace.core.comm.ProtocolNegotiator;
+import org.openjdk.btrace.core.comm.ProtocolVersion;
+import org.openjdk.btrace.core.comm.WireProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,8 +146,7 @@ public class Client {
 
   // connection state to the traced JVM
   private volatile Socket sock;
-  private volatile ObjectInputStream ois;
-  private volatile ObjectOutputStream oos;
+  private volatile WireProtocol protocol;
 
   private boolean disconnected = false;
 
@@ -220,6 +223,19 @@ public class Client {
       return false;
     }
     return true;
+  }
+
+  private boolean isAgentAvailableAfterLoadFailure(VirtualMachine vm) {
+    try {
+      Properties serverVmProps = vm.getSystemProperties();
+      String serverPort = serverVmProps.getProperty("btrace.port");
+      if (serverPort != null) {
+        return Integer.parseInt(serverPort) == port;
+      }
+    } catch (Exception ignore) {
+      // fall through to port probe
+    }
+    return !isPortAvailable(port);
   }
 
   @SuppressWarnings("DefaultCharset")
@@ -302,6 +318,66 @@ public class Client {
       }
     }
     return cp.toString();
+  }
+
+  private WireProtocol createProtocol(Socket socket, String host, boolean allowFallback)
+      throws IOException {
+    ProtocolConfig config = ProtocolConfig.fromSystemProperties();
+    ProtocolVersion preferred = config.getVersion();
+
+    if (config.isAutoNegotiate() && preferred == ProtocolVersion.V2) {
+      try {
+        return createV2Protocol(socket);
+      } catch (IOException e) {
+        if (!allowFallback) {
+          throw e;
+        }
+        closeSocketQuietly(socket);
+        Socket fallback = new Socket(host, port);
+        this.sock = fallback;
+        return createV1Protocol(fallback);
+      }
+    }
+
+    if (config.isForceVersion() && preferred == ProtocolVersion.V2) {
+      return createV2Protocol(socket);
+    }
+
+    return createV1Protocol(socket);
+  }
+
+  private WireProtocol createV1Protocol(Socket socket) throws IOException {
+    InputStream in = socket.getInputStream();
+    OutputStream out = socket.getOutputStream();
+    return new JavaSerializationProtocol(in, out);
+  }
+
+  private WireProtocol createV2Protocol(Socket socket) throws IOException {
+    InputStream in = socket.getInputStream();
+    OutputStream out = socket.getOutputStream();
+    ProtocolNegotiator negotiator = new ProtocolNegotiator(ProtocolVersion.V2);
+    int timeoutMs = ProtocolNegotiator.getNegotiationTimeoutMs();
+    int previousTimeout = socket.getSoTimeout();
+    try {
+      socket.setSoTimeout(timeoutMs);
+      ProtocolVersion negotiated = negotiator.negotiateClient(in, out, ProtocolVersion.V2);
+      if (negotiated != ProtocolVersion.V2) {
+        throw new IOException("Protocol negotiation failed: expected V2");
+      }
+      return new BinaryWireProtocol(in, out);
+    } finally {
+      socket.setSoTimeout(previousTimeout);
+    }
+  }
+
+  private void closeSocketQuietly(Socket socket) {
+    if (socket == null) {
+      return;
+    }
+    try {
+      socket.close();
+    } catch (IOException ignore) {
+    }
   }
 
   /**
@@ -452,7 +528,7 @@ public class Client {
     } catch (RuntimeException | IOException e) {
       throw e;
     } catch (Exception exp) {
-      throw new IOException(exp.getMessage());
+      throw new IOException("Failed to attach to PID " + pid, exp);
     }
   }
 
@@ -531,14 +607,47 @@ public class Client {
       if (log.isDebugEnabled()) {
         log.debug("agent args: {}", agentArgs);
       }
-      vm.loadAgent(agentPath, agentArgs);
+      boolean isJava8 = serverVmProps.getProperty("java.version", "").startsWith("1.8");
+      // HotSpot on JDK 8 can report AgentLoadException("0") even when the agent loads successfully.
+      // Use a small retry window and treat error code 0 as success only if the agent is reachable.
+      int attempts = isJava8 ? 3 : 1;
+      AgentLoadException lastAle = null;
+      for (int i = 0; i < attempts; i++) {
+        try {
+          vm.loadAgent(agentPath, agentArgs);
+          lastAle = null;
+          break;
+        } catch (AgentLoadException ale) {
+          lastAle = ale;
+          if ("0".equals(ale.getMessage()) && isJava8) {
+            if (isAgentAvailableAfterLoadFailure(vm)) {
+              if (log.isDebugEnabled()) {
+                log.debug("Agent load reported error 0 but agent is available on port {}", port);
+              }
+              lastAle = null;
+              break;
+            }
+            try {
+              Thread.sleep(100);
+            } catch (InterruptedException ie) {
+              Thread.currentThread().interrupt();
+              break;
+            }
+            continue;
+          }
+          throw ale;
+        }
+      }
+      if (lastAle != null) {
+        throw lastAle;
+      }
       if (log.isDebugEnabled()) {
         log.debug("loaded {}", agentPath);
       }
     } catch (RuntimeException | IOException re) {
       throw re;
     } catch (Exception exp) {
-      throw new IOException(exp.getMessage());
+      throw new IOException("Failed to attach to PID " + pid, exp);
     }
   }
 
@@ -564,9 +673,8 @@ public class Client {
         log.debug("server not available. exiting.");
         System.exit(1);
       }
-      oos = new ObjectOutputStream(sock.getOutputStream());
-      WireIO.write(oos, new ListProbesCommand());
-      ois = new ObjectInputStream(sock.getInputStream());
+      protocol = createProtocol(sock, host, true);
+      protocol.write(new ListProbesCommand());
 
       log.debug("entering into command loop");
       commandLoop(
@@ -607,9 +715,8 @@ public class Client {
         log.debug("server not available. exiting.");
         System.exit(1);
       }
-      oos = new ObjectOutputStream(sock.getOutputStream());
-      WireIO.write(oos, new ListFailedExtensionsCommand());
-      ois = new ObjectInputStream(sock.getInputStream());
+      protocol = createProtocol(sock, host, true);
+      protocol.write(new ListFailedExtensionsCommand());
 
       log.debug("entering into command loop");
       commandLoop(
@@ -651,11 +758,10 @@ public class Client {
         log.debug("server not available. exiting.");
         System.exit(1);
       }
-      oos = new ObjectOutputStream(sock.getOutputStream());
-      ois = new ObjectInputStream(sock.getInputStream());
+      protocol = createProtocol(sock, host, true);
 
       log.debug("reconnecting client {}", resumeProbe);
-      WireIO.write(oos, new ReconnectCommand(resumeProbe));
+      protocol.write(new ReconnectCommand(resumeProbe));
 
       log.debug("entering into command loop");
       commandLoop(
@@ -758,7 +864,7 @@ public class Client {
         log.debug("server not available. exiting.");
         System.exit(1);
       }
-      oos = new ObjectOutputStream(sock.getOutputStream());
+      protocol = createProtocol(sock, host, true);
       log.debug("setting up client settings");
       Map<String, Object> settings = new HashMap<>();
       settings.put(SharedSettings.DEBUG_KEY, debug);
@@ -768,16 +874,12 @@ public class Client {
       settings.put(SharedSettings.PROBE_DESC_PATH_KEY, probeDescPath);
       settings.put(SharedSettings.OUTPUT_FILE_KEY, outputFile);
 
-      WireIO.write(oos, new SetSettingsCommand(settings));
-
-      ois = new ObjectInputStream(sock.getInputStream());
+      protocol.write(new SetSettingsCommand(settings));
 
       if (log.isDebugEnabled()) {
         log.debug("sending instrument command: {}", Arrays.deepToString(args));
       }
-      SharedSettings sSettings = new SharedSettings();
-      sSettings.from(settings);
-      WireIO.write(oos, new InstrumentCommand(code, args));
+      protocol.write(new InstrumentCommand(code, args));
 
       log.debug("entering into command loop");
       commandLoop(
@@ -853,11 +955,8 @@ public class Client {
   public synchronized void close() throws IOException {
     // Mark as disconnected to prevent shutdown hook from attempting further sends
     disconnected = true;
-    if (ois != null) {
-      ois.close();
-    }
-    if (oos != null) {
-      oos.close();
+    if (protocol != null) {
+      protocol.close();
     }
     if (sock != null) {
       sock.close();
@@ -888,8 +987,7 @@ public class Client {
   /** reset the internal status of the client */
   private void reset() {
     sock = null;
-    ois = null;
-    oos = null;
+    protocol = null;
   }
 
   /**
@@ -966,19 +1064,18 @@ public class Client {
   }
 
   private void send(Command cmd) throws IOException {
-    if (oos == null) {
+    if (protocol == null) {
       throw new IllegalStateException();
     }
-    oos.reset();
-    WireIO.write(oos, cmd);
+    protocol.write(cmd);
   }
 
   private void commandLoop(CommandListener listener) throws IOException {
-    assert ois != null : "null input stream?";
+    assert protocol != null : "null protocol?";
     AtomicBoolean exited = new AtomicBoolean(false);
     while (true) {
       try {
-        Command cmd = WireIO.read(ois);
+        Command cmd = protocol.read();
         if (log.isDebugEnabled()) {
           log.debug("received command {}", cmd);
         }
@@ -990,6 +1087,9 @@ public class Client {
       } catch (IOException e) {
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
         throw e;
+      } catch (ClassNotFoundException e) {
+        if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
+        throw new IOException(e);
       } catch (NullPointerException e) {
         log.error("Unexpected null pointer during command processing", e);
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));

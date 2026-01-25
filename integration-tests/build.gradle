@@ -6,6 +6,8 @@ apply plugin: 'java'
 dependencies {
     implementation project(':btrace-compiler')
     implementation project(':btrace-extensions:btrace-metrics')
+    testImplementation project(':btrace-client')
+    testImplementation project(':btrace-core')
 }
 
 compileTestJava {
@@ -83,10 +85,14 @@ test {
 
     def props = new Properties()
     props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
-    if (props.getProperty("JAVA_VERSION")?.contains("1.8")) {
+    def isJava8 = props.getProperty("JAVA_VERSION")?.contains("1.8")
+    if (isJava8) {
         jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
     } else {
-        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', "-Dproject.version=${project.version}"
+        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-modules', 'jdk.attach', '--add-exports', 'jdk.attach/sun.tools.attach=ALL-UNNAMED', "-Dproject.version=${project.version}"
+    }
+    if (!isJava8) {
+        classpath = classpath.filter { it.name != 'tools.jar' }
     }
 
     // Canonical propagation: use Gradle project properties only (-P)

@@ -109,6 +109,7 @@ class FileClient extends Client {
             }
           } else {
             ((PrintableCommand) cmd).print(out);
+            out.flush();
           }
         }
         break;

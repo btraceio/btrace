@@ -27,6 +27,7 @@ junit*
 /btrace-statsd/target/
 *.iml
 .gradle
+.gradle-user
 .idea
 !/lib/btrace-asm-*.jar
 !/lib/btrace-jctools-core-*.jar

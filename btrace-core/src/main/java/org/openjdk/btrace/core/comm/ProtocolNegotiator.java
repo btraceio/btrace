@@ -27,7 +27,9 @@ package org.openjdk.btrace.core.comm;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PushbackInputStream;
+import java.util.Arrays;
 
 /**
  * Handles protocol version negotiation for BTrace command communication.
@@ -60,6 +62,8 @@ public class ProtocolNegotiator {
 
   /** Maximum size of magic byte prefix to detect */
   private static final int MAX_MAGIC_BYTES = 4; // Length of "BTR2"
+  private static final String PROP_NEGOTIATION_TIMEOUT = "btrace.protocol.negotiation.timeout";
+  private static final int DEFAULT_NEGOTIATION_TIMEOUT_MS = 5000;
 
   private final ProtocolVersion preferredVersion;
 
@@ -117,9 +121,9 @@ public class ProtocolNegotiator {
    */
   private ProtocolVersion negotiateWithPushback(PushbackInputStream pis) throws IOException {
     byte[] prefix = new byte[MAX_MAGIC_BYTES];
-    int bytesRead = pis.read(prefix);
+    int bytesRead = readFully(pis, prefix);
 
-    if (bytesRead <= 0) {
+    if (bytesRead < MAX_MAGIC_BYTES) {
       throw new IOException("Connection closed during protocol negotiation");
     }
 
@@ -149,9 +153,9 @@ public class ProtocolNegotiator {
     is.mark(MAX_MAGIC_BYTES);
 
     byte[] prefix = new byte[MAX_MAGIC_BYTES];
-    int bytesRead = is.read(prefix);
+    int bytesRead = readFully(is, prefix);
 
-    if (bytesRead <= 0) {
+    if (bytesRead < MAX_MAGIC_BYTES) {
       throw new IOException("Connection closed during protocol negotiation");
     }
 
@@ -168,6 +172,59 @@ public class ProtocolNegotiator {
     }
 
     return detected;
+  }
+
+  /**
+   * Negotiates protocol version on the agent side.
+   *
+   * <p>Reads the magic prefix sent by the client. If V2 is detected, responds with the same magic
+   * bytes. If V1 is detected, pushes the bytes back so Java serialization can read the header.
+   *
+   * @param input the input stream (must support pushback)
+   * @param output the output stream
+   * @return the negotiated ProtocolVersion
+   * @throws IOException if negotiation fails
+   */
+  public ProtocolVersion negotiateAgent(PushbackInputStream input, OutputStream output)
+      throws IOException {
+    ProtocolVersion detected = negotiateWithPushback(input);
+    if (detected == ProtocolVersion.V2) {
+      output.write(ProtocolVersion.V2.getMagicBytes());
+      output.flush();
+    }
+    return detected;
+  }
+
+  /**
+   * Negotiates protocol version on the client side.
+   *
+   * <p>If the preferred version is V2, sends the V2 magic bytes and waits for the agent response.
+   * Throws if the response does not match the V2 magic bytes.
+   *
+   * @param input the input stream
+   * @param output the output stream
+   * @param preferred the preferred protocol version
+   * @return the negotiated ProtocolVersion
+   * @throws IOException if negotiation fails
+   */
+  public ProtocolVersion negotiateClient(
+      InputStream input, OutputStream output, ProtocolVersion preferred) throws IOException {
+    if (preferred != ProtocolVersion.V2) {
+      return ProtocolVersion.V1;
+    }
+    byte[] magic = ProtocolVersion.V2.getMagicBytes();
+    output.write(magic);
+    output.flush();
+
+    byte[] response = new byte[magic.length];
+    int read = readFully(input, response);
+    if (read < magic.length) {
+      throw new IOException("Connection closed during protocol negotiation");
+    }
+    if (!Arrays.equals(magic, response)) {
+      throw new IOException("Protocol negotiation failed: unexpected response");
+    }
+    return ProtocolVersion.V2;
   }
 
   /**
@@ -193,5 +250,29 @@ public class ProtocolNegotiator {
       return (PushbackInputStream) is;
     }
     return new PushbackInputStream(is, MAX_MAGIC_BYTES);
+  }
+
+  public static int getNegotiationTimeoutMs() {
+    String value = System.getProperty(PROP_NEGOTIATION_TIMEOUT);
+    if (value == null || value.trim().isEmpty()) {
+      return DEFAULT_NEGOTIATION_TIMEOUT_MS;
+    }
+    try {
+      return Integer.parseInt(value.trim());
+    } catch (NumberFormatException e) {
+      return DEFAULT_NEGOTIATION_TIMEOUT_MS;
+    }
+  }
+
+  private static int readFully(InputStream in, byte[] buffer) throws IOException {
+    int offset = 0;
+    while (offset < buffer.length) {
+      int read = in.read(buffer, offset, buffer.length - offset);
+      if (read < 0) {
+        break;
+      }
+      offset += read;
+    }
+    return offset;
   }
 }

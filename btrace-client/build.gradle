@@ -13,7 +13,7 @@ dependencies {
 
     def toolsJar = getToolsJar();
     if (toolsJar.getAsFile().exists()) {
-        implementation files("${toolsJar}")
+        runtimeOnly files("${toolsJar}")
     }
 
     implementation project(':btrace-core')
