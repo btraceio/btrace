@@ -636,4 +636,103 @@ public class BTraceFunctionalTests extends RuntimeTest {
         }
         return true;
     }
+
+  @Test
+  public void testOnelinerMethodEntry() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callA @entry { print method }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callA"), "Method entry not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithArguments() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @entry { print args }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("[1, Hello World]"), "Arguments not captured correctly");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithReturn() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @return { print method, duration }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callB"), "Return method name not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithRegexClassMatch() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "/resources\\..*Main/::callA @entry { print method }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callA"), "Regex class matching not working");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerStack() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @entry { stack }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(
+                stdout.contains("resources.Main.callA") || stdout.contains("resources.Main"),
+                "Stack trace not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerCompilationError() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @invalid { print }",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            // Compilation errors should be reported
+            assertTrue(
+                !stderr.isEmpty() || stdout.contains("error") || stdout.contains("Error"),
+                "Expected compilation error not reported");
+          }
+        });
+  }
 }
