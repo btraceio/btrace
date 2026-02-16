@@ -405,25 +405,26 @@ public abstract class RuntimeTest {
 
       System.out.println("Detached.");
 
-      boolean exitted = false;
-      int retries = 1000;
-      while (!exitted && retries-- > 0) {
-        pw.println("done");
-        pw.flush();
-        exitted = client.waitFor(1, TimeUnit.SECONDS);
-        if (!exitted) {
-          System.out.println("... retrying ...");
-        }
+      // Signal the target app to shut down
+      pw.println("done");
+      pw.flush();
+
+      // Wait for the target process to exit gracefully
+      if (!p.waitFor(10, TimeUnit.SECONDS)) {
+        System.out.println("Target process did not exit in time, destroying.");
+        p.destroyForcibly();
       }
 
-      if (!exitted) {
+      // Now wait for the client process (should exit quickly once target is gone)
+      if (!client.waitFor(10, TimeUnit.SECONDS)) {
+        System.out.println("Client process did not exit in time, destroying.");
         client.destroyForcibly();
       }
 
-      ret.set(exitted ? client.exitValue() : -1);
+      ret.set(client.isAlive() ? -1 : client.exitValue());
 
-      outT.join();
-      errT.join();
+      outT.join(5000);
+      errT.join(5000);
     }
 
     // Allow a brief grace period for any final output to flush before validation
@@ -588,25 +589,26 @@ public abstract class RuntimeTest {
 
       System.out.println("Detached.");
 
-      boolean exitted = false;
-      int retries = 1000;
-      while (!exitted && retries-- > 0) {
-        pw.println("done");
-        pw.flush();
-        exitted = client.waitFor(1, TimeUnit.SECONDS);
-        if (!exitted) {
-          System.out.println("... retrying ...");
-        }
+      // Signal the target app to shut down
+      pw.println("done");
+      pw.flush();
+
+      // Wait for the target process to exit gracefully
+      if (!p.waitFor(10, TimeUnit.SECONDS)) {
+        System.out.println("Target process did not exit in time, destroying.");
+        p.destroyForcibly();
       }
 
-      if (!exitted) {
+      // Now wait for the client process (should exit quickly once target is gone)
+      if (!client.waitFor(10, TimeUnit.SECONDS)) {
+        System.out.println("Client process did not exit in time, destroying.");
         client.destroyForcibly();
       }
 
-      ret.set(exitted ? client.exitValue() : -1);
+      ret.set(client.isAlive() ? -1 : client.exitValue());
 
-      outT.join();
-      errT.join();
+      outT.join(5000);
+      errT.join(5000);
     }
 
     // Allow a brief grace period for any final output to flush before validation
@@ -809,6 +811,13 @@ public abstract class RuntimeTest {
     }
 
     v.validate(stdout.toString(), stderr.toString(), ret.get(), jfrFile);
+
+    // Clean up the target process
+    pw.println("done");
+    pw.flush();
+    if (!p.waitFor(10, TimeUnit.SECONDS)) {
+      p.destroyForcibly();
+    }
   }
 
   protected Path locateAgent() {
