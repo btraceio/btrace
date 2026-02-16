@@ -11,9 +11,13 @@ fi
 
 JAVA_ARGS="-XX:+IgnoreUnrecognizedVMOptions"
 
-if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
+CLIENT_JAR="${BTRACE_HOME}/libs/btrace-client.jar"
+if [ ! -f "${CLIENT_JAR}" ]; then
+  CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
+fi
+if [ -f "${CLIENT_JAR}" ]; then
   if [ -d "${JAVA_HOME}" ]; then
-    CP="${BTRACE_HOME}/libs/btrace-client.jar"
+    CP="${CLIENT_JAR}"
     ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CP} org.openjdk.btrace.extcli.Main "$@"
   else
     echo "Please set a valid JAVA_HOME before running this script"

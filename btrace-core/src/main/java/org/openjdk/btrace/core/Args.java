@@ -3,6 +3,7 @@ package org.openjdk.btrace.core;
 public final class Args {
   public static final String SYSTEM_CLASS_PATH = "systemClassPath";
   public static final String BOOT_CLASS_PATH = "bootClassPath";
+  public static final String AGENT_JAR = "agentJar";
   public static final String CONFIG = "config";
   public static final String SCRIPT = "script";
   public static final String SCRIPT_DIR = "scriptdir";

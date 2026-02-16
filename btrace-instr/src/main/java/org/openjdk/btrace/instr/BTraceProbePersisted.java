@@ -537,7 +537,7 @@ public class BTraceProbePersisted implements BTraceProbe {
   @Override
   public void notifyTransform(String className) {
     if (rt != null && factory.getSettings().isTrackRetransforms()) {
-      rt.send(new RetransformClassNotification(className.replace('/', '.')));
+      rt.sendCommand(new RetransformClassNotification(className.replace('/', '.')));
     }
   }
 
@@ -810,7 +810,7 @@ public class BTraceProbePersisted implements BTraceProbe {
                       // allow ThreadLocal methods
                     } else if (owner.equals(Constants.BTRACERTACCESS_INTERNAL)) {
                       // allow BTraceRuntimeAccess methods
-                    } else if (owner.equals(Constants.BTRACERTBASE_INTERNAL)) {
+                    } else if (owner.equals(Constants.BTRACERTBRIDGE_INTERNAL)) {
                       // allow BTraceRuntimeImplBase methods
                     } else {
                       if (!delegate.isServiceType(owner)) {
@@ -819,7 +819,11 @@ public class BTraceProbePersisted implements BTraceProbe {
                     }
                     break;
                   case INVOKEINTERFACE:
-                    Verifier.reportError("no.method.calls", owner + "." + name + desc);
+                    // allow BTraceRuntimeBridge interface methods (leave(), enter(), etc.)
+                    if (!owner.equals(Constants.BTRACERTBRIDGE_INTERNAL)
+                        && !delegate.isServiceType(owner)) {
+                      Verifier.reportError("no.method.calls", owner + "." + name + desc);
+                    }
                     break;
                   case INVOKESPECIAL:
                     if (owner.equals(Constants.OBJECT_INTERNAL)

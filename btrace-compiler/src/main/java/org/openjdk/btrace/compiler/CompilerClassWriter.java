@@ -37,22 +37,32 @@ import org.objectweb.asm.ClassWriter;
  * @author Jaroslav Bachorik
  */
 class CompilerClassWriter extends ClassWriter {
-  private final URLClassLoader cl;
+  private final ClassLoader cl;
 
   public CompilerClassWriter(String classPath, PrintWriter perr) {
+    this(classPath, perr, null);
+  }
+
+  public CompilerClassWriter(String classPath, PrintWriter perr, ClassLoader maskedClassLoader) {
     super(ClassWriter.COMPUTE_FRAMES);
-    List<URL> urls = new ArrayList<>();
-    if (classPath != null) {
-      for (String e : classPath.split(File.pathSeparator)) {
-        File f = new File(e);
-        try {
-          urls.add(f.toURI().toURL());
-        } catch (MalformedURLException ex) {
-          perr.printf("%s is not a valid classpath entry\n", e);
+    if (maskedClassLoader != null) {
+      // Use the provided MaskedClassLoader which can read .classdata files
+      this.cl = maskedClassLoader;
+    } else {
+      // Fall back to URLClassLoader for standard .class files
+      List<URL> urls = new ArrayList<>();
+      if (classPath != null) {
+        for (String e : classPath.split(File.pathSeparator)) {
+          File f = new File(e);
+          try {
+            urls.add(f.toURI().toURL());
+          } catch (MalformedURLException ex) {
+            perr.printf("%s is not a valid classpath entry\n", e);
+          }
         }
       }
+      this.cl = new URLClassLoader(urls.toArray(new URL[0]), getClass().getClassLoader());
     }
-    cl = new URLClassLoader(urls.toArray(new URL[0]), getClass().getClassLoader());
   }
 
   @Override

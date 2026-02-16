@@ -47,17 +47,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import jdk.jfr.Event;
-import org.openjdk.btrace.core.aggregation.Aggregation;
-import org.openjdk.btrace.core.aggregation.AggregationFunction;
-import org.openjdk.btrace.core.aggregation.AggregationKey;
 import org.openjdk.btrace.core.annotations.OnMethod;
 import org.openjdk.btrace.core.annotations.ProbeClassName;
 import org.openjdk.btrace.core.annotations.ProbeMethodName;
 import org.openjdk.btrace.core.annotations.Self;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class is an all-in-one wrapper for BTrace DSL methods
@@ -66,8 +61,6 @@ import org.slf4j.LoggerFactory;
  * @author Jaroslav Bachorik
  */
 public class BTraceUtils {
-  private static final Logger log = LoggerFactory.getLogger(BTraceUtils.class);
-
   // standard stack depth decrement for figuring out the caller class calls
   private static final int STACK_DEC = 2;
 
@@ -2903,136 +2896,6 @@ public class BTraceUtils {
     Speculation.discard(id);
   }
 
-  // aggregation support
-
-  /**
-   * Creates a new aggregation based on the given aggregation function type.
-   *
-   * @param type the aggregating function to be performed on the data being added to the
-   *     aggregation.
-   */
-  public static Aggregation newAggregation(AggregationFunction type) {
-    return Aggregations.newAggregation(type);
-  }
-
-  /**
-   * Creates a grouping aggregation key with the provided value. The value must be a String or
-   * Number type.
-   *
-   * @param element1 the value of the aggregation key
-   */
-  public static AggregationKey newAggregationKey(Object element1) {
-    return Aggregations.newAggregationKey(element1);
-  }
-
-  /**
-   * Creates a composite grouping aggregation key with the provided values. The values must be
-   * String or Number types.
-   *
-   * @param element1 the first element of the composite aggregation key
-   * @param element2 the second element of the composite aggregation key
-   */
-  public static AggregationKey newAggregationKey(Object element1, Object element2) {
-    return Aggregations.newAggregationKey(element1, element2);
-  }
-
-  /**
-   * Creates a composite grouping aggregation key with the provided values. The values must be
-   * String or Number types.
-   *
-   * @param element1 the first element of the composite aggregation key
-   * @param element2 the second element of the composite aggregation key
-   * @param element3 the third element of the composite aggregation key
-   */
-  public static AggregationKey newAggregationKey(
-      Object element1, Object element2, Object element3) {
-    return Aggregations.newAggregationKey(element1, element2, element3);
-  }
-
-  /**
-   * Creates a composite grouping aggregation key with the provided values. The values must be
-   * String or Number types.
-   *
-   * @param element1 the first element of the composite aggregation key
-   * @param element2 the second element of the composite aggregation key
-   * @param element3 the third element of the composite aggregation key
-   * @param element4 the fourth element of the composite aggregation key
-   */
-  public static AggregationKey newAggregationKey(
-      Object element1, Object element2, Object element3, Object element4) {
-    return Aggregations.newAggregationKey(element1, element2, element3, element4);
-  }
-
-  /**
-   * Adds a value to the aggregation with no grouping key. This method should be used when the
-   * aggregation is to calculate only a single aggregated value.
-   *
-   * @param aggregation the aggregation to which the value should be added
-   */
-  public static void addToAggregation(Aggregation aggregation, long value) {
-    Aggregations.addToAggregation(aggregation, value);
-  }
-
-  /**
-   * Adds a value to the aggregation with a grouping key. This method should be used when the
-   * aggregation should effectively perform a "group by" on the key value. The aggregation will
-   * calculate a separate aggregated value for each unique aggregation key.
-   *
-   * @param aggregation the aggregation to which the value should be added
-   * @param key the grouping aggregation key
-   */
-  public static void addToAggregation(Aggregation aggregation, AggregationKey key, long value) {
-    Aggregations.addToAggregation(aggregation, key, value);
-  }
-
-  /**
-   * Resets values within the aggregation to the default. This will affect all values within the
-   * aggregation when multiple aggregation keys have been used.
-   *
-   * @param aggregation the aggregation to be cleared
-   */
-  public static void clearAggregation(Aggregation aggregation) {
-    Aggregations.clearAggregation(aggregation);
-  }
-
-  /**
-   * Removes all aggregated values from the aggregation except for the largest or smallest <code>
-   * abs(count)</code> elements.
-   *
-   * <p>If <code>count</code> is positive, the largest aggregated values in the aggregation will be
-   * preserved. If <code>count</code> is negative the smallest values will be preserved. If <code>
-   * count</code> is zero then all elements will be removed.
-   *
-   * <p>Behavior is intended to be similar to the dtrace <code>trunc()</code> function.
-   *
-   * @param aggregation the aggregation to be truncated
-   * @param count the number of elements to preserve. If negative, the smallest <code>abs(count)
-   *     </code> elements are preserved.
-   */
-  public static void truncateAggregation(Aggregation aggregation, int count) {
-    Aggregations.truncateAggregation(aggregation, count);
-  }
-
-  /** Prints the aggregation. */
-  public static void printAggregation(String name, Aggregation aggregation) {
-    Aggregations.printAggregation(name, aggregation);
-  }
-
-  /**
-   * Prints aggregation using the provided format
-   *
-   * @param name The name of the aggregation to be used in the textual output
-   * @param aggregation The aggregation to print
-   * @param format The format to use. It mimics {@linkplain String#format(java.lang.String,
-   *     java.lang.Object[]) } behaviour with the addition of the ability to address the key title
-   *     as a 0-indexed item
-   * @see String#format(java.lang.String, java.lang.Object[])
-   * @since 1.1
-   */
-  public static void printAggregation(String name, Aggregation aggregation, String format) {
-    Aggregations.printAggregation(name, aggregation, format);
-  }
-
   // Internals only below this point
   private static void checkStatic(Field field) {
     if (!Modifier.isStatic(field.getModifiers())) {
@@ -4764,139 +4627,6 @@ public class BTraceUtils {
      */
     public static long getAndSet(AtomicLong al, long newValue) {
       return BTraceRuntime.getAndSet(al, newValue);
-    }
-  }
-
-  /*
-   * Wraps the aggregations related BTrace utility methods
-   * @since 1.2
-   */
-  public static class Aggregations {
-    /**
-     * Creates a new aggregation based on the given aggregation function type.
-     *
-     * @param type the aggregating function to be performed on the data being added to the
-     *     aggregation.
-     */
-    public static Aggregation newAggregation(AggregationFunction type) {
-      return BTraceRuntime.newAggregation(type);
-    }
-
-    /**
-     * Creates a grouping aggregation key with the provided value. The value must be a String or
-     * Number type.
-     *
-     * @param element1 the value of the aggregation key
-     */
-    public static AggregationKey newAggregationKey(Object element1) {
-      return BTraceRuntime.newAggregationKey(element1);
-    }
-
-    /**
-     * Creates a composite grouping aggregation key with the provided values. The values must be
-     * String or Number types.
-     *
-     * @param element1 the first element of the composite aggregation key
-     * @param element2 the second element of the composite aggregation key
-     */
-    public static AggregationKey newAggregationKey(Object element1, Object element2) {
-      return BTraceRuntime.newAggregationKey(element1, element2);
-    }
-
-    /**
-     * Creates a composite grouping aggregation key with the provided values. The values must be
-     * String or Number types.
-     *
-     * @param element1 the first element of the composite aggregation key
-     * @param element2 the second element of the composite aggregation key
-     * @param element3 the third element of the composite aggregation key
-     */
-    public static AggregationKey newAggregationKey(
-        Object element1, Object element2, Object element3) {
-      return BTraceRuntime.newAggregationKey(element1, element2, element3);
-    }
-
-    /**
-     * Creates a composite grouping aggregation key with the provided values. The values must be
-     * String or Number types.
-     *
-     * @param element1 the first element of the composite aggregation key
-     * @param element2 the second element of the composite aggregation key
-     * @param element3 the third element of the composite aggregation key
-     * @param element4 the fourth element of the composite aggregation key
-     */
-    public static AggregationKey newAggregationKey(
-        Object element1, Object element2, Object element3, Object element4) {
-      return BTraceRuntime.newAggregationKey(element1, element2, element3, element4);
-    }
-
-    /**
-     * Adds a value to the aggregation with no grouping key. This method should be used when the
-     * aggregation is to calculate only a single aggregated value.
-     *
-     * @param aggregation the aggregation to which the value should be added
-     */
-    public static void addToAggregation(Aggregation aggregation, long value) {
-      BTraceRuntime.addToAggregation(aggregation, value);
-    }
-
-    /**
-     * Adds a value to the aggregation with a grouping key. This method should be used when the
-     * aggregation should effectively perform a "group by" on the key value. The aggregation will
-     * calculate a separate aggregated value for each unique aggregation key.
-     *
-     * @param aggregation the aggregation to which the value should be added
-     * @param key the grouping aggregation key
-     */
-    public static void addToAggregation(Aggregation aggregation, AggregationKey key, long value) {
-      BTraceRuntime.addToAggregation(aggregation, key, value);
-    }
-
-    /**
-     * Resets values within the aggregation to the default. This will affect all values within the
-     * aggregation when multiple aggregation keys have been used.
-     *
-     * @param aggregation the aggregation to be cleared
-     */
-    public static void clearAggregation(Aggregation aggregation) {
-      BTraceRuntime.clearAggregation(aggregation);
-    }
-
-    /**
-     * Removes all aggregated values from the aggregation except for the largest or smallest <code>
-     * abs(count)</code> elements.
-     *
-     * <p>If <code>count</code> is positive, the largest aggregated values in the aggregation will
-     * be preserved. If <code>count</code> is negative the smallest values will be preserved. If
-     * <code>count</code> is zero then all elements will be removed.
-     *
-     * <p>Behavior is intended to be similar to the dtrace <code>trunc()</code> function.
-     *
-     * @param aggregation the aggregation to be truncated
-     * @param count the number of elements to preserve. If negative, the smallest <code>abs(count)
-     *     </code> elements are preserved.
-     */
-    public static void truncateAggregation(Aggregation aggregation, int count) {
-      BTraceRuntime.truncateAggregation(aggregation, count);
-    }
-
-    public static void printAggregation(String name, Aggregation aggregation) {
-      BTraceRuntime.printAggregation(name, aggregation);
-    }
-
-    public static void printAggregation(String name, Aggregation aggregation, String format) {
-      BTraceRuntime.printAggregation(name, aggregation, format);
-    }
-
-    public static void printAggregation(
-        String name, String format, Collection<Aggregation> aggregationList) {
-      Aggregation[] aggregationArray = new Aggregation[aggregationList.size()];
-      int index = 0;
-      for (Aggregation a : aggregationList) {
-        aggregationArray[index] = a;
-        index++;
-      }
-      BTraceRuntime.printAggregation(name, format, aggregationArray);
     }
   }
 

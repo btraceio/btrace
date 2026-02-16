@@ -2,17 +2,16 @@ package org.openjdk.btrace.instr;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
-
 import java.lang.reflect.Method;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClassInfoTest {
     @BeforeAll
     static void setupAll() throws Throwable {
-        Method m = BTraceRuntimeAccess.class.getDeclaredMethod("registerRuntimeAccessor");
+        Class<?> accessImpl = Class.forName("org.openjdk.btrace.runtime.BTraceRuntimeAccessImpl");
+        Method m = accessImpl.getDeclaredMethod("install");
         m.setAccessible(true);
         m.invoke(null);
     }

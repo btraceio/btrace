@@ -1365,6 +1365,7 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
     } else {
       localsArr = locals.toArray(new Object[0]);
     }
+    localsArr = normalizeCategory2Slots(localsArr);
     for (int m : variableMapper.mappings()) {
       if (m != 0) {
         if (localsArr[m] == null) {

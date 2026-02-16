@@ -18,7 +18,6 @@ public class BinarySetSettingsCommand extends BinaryCommand {
     private static final byte TYPE_BOOLEAN = 4;
     private static final byte TYPE_FLOAT = 5;
     private static final byte TYPE_DOUBLE = 6;
-    private static final byte TYPE_HISTOGRAM = 7;
 
     private final Map<String, Object> params;
     private static final ScalarEncoding SCALAR =
@@ -29,8 +28,7 @@ public class BinarySetSettingsCommand extends BinaryCommand {
             TYPE_LONG,
             TYPE_FLOAT,
             TYPE_DOUBLE,
-            TYPE_BOOLEAN,
-            TYPE_HISTOGRAM);
+            TYPE_BOOLEAN);
 
     static {
         // Register this command type

@@ -128,12 +128,15 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  @CallerSensitive
   public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
     Unsafe unsafe = BTraceRuntime.initUnsafe();
     if (unsafe != null) {
-      Class<?> caller = Reflection.getCallerClass(2);
-      if (!caller.getName().startsWith("org.openjdk.btrace.")) {
+      // Use stack trace instead of Reflection.getCallerClass() to avoid
+      // CallerSensitive annotation requirement (only works from bootstrap CL)
+      StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+      // stack[0] = getStackTrace, stack[1] = defineClass (this method), stack[2] = caller
+      String callerClassName = stack.length > 2 ? stack[2].getClassName() : null;
+      if (callerClassName == null || !callerClassName.startsWith("org.openjdk.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
       ClassLoader loader = null;

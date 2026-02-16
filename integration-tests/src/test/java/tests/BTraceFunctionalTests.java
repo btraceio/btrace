@@ -34,25 +34,25 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Properties;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import org.openjdk.btrace.client.Client;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.DisconnectCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -168,6 +168,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethod() throws Exception {
+    debugTestApp = true;
+    debugBTrace = true;
     testDynamic(
         "resources.Main",
         "btrace/OnMethodTest.java",

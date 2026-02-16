@@ -25,16 +25,24 @@
 package tests;
 
 import org.junit.jupiter.api.Assertions;
+import org.openjdk.btrace.client.Client;
+import org.openjdk.btrace.core.comm.BinaryWireProtocol;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.JavaSerializationProtocol;
+import org.openjdk.btrace.core.comm.ListProbesCommand;
+import org.openjdk.btrace.core.comm.ProtocolConfig;
+import org.openjdk.btrace.core.comm.ProtocolNegotiator;
+import org.openjdk.btrace.core.comm.ProtocolVersion;
+import org.openjdk.btrace.core.comm.WireProtocol;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Properties;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -44,22 +52,14 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.openjdk.btrace.client.Client;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.ListProbesCommand;
-import org.openjdk.btrace.core.comm.ProtocolConfig;
-import org.openjdk.btrace.core.comm.ProtocolNegotiator;
-import org.openjdk.btrace.core.comm.ProtocolVersion;
-import org.openjdk.btrace.core.comm.WireProtocol;
-import org.openjdk.btrace.core.comm.BinaryWireProtocol;
-import org.openjdk.btrace.core.comm.JavaSerializationProtocol;
 
 /**
  * @author Jaroslav Bachorik
@@ -67,6 +67,7 @@ import org.openjdk.btrace.core.comm.JavaSerializationProtocol;
 @SuppressWarnings("ConstantConditions")
 public abstract class RuntimeTest {
   private static String cp = null;
+  private static String targetAppCp = null;
   protected static String javaHome = null;
   private static String clientClassPath = null;
   private static String eventsClassPath = null;
@@ -116,15 +117,27 @@ public abstract class RuntimeTest {
     forceDebug = Boolean.parseBoolean(forceDebugVal);
     Path libsPath = Paths.get(System.getProperty("btrace.libs"));
     projectRoot = Paths.get(System.getProperty("project.dir"));
-    Path clientJarPath = libsPath.resolve("btrace-client.jar");
+    Path btraceJarPath = libsPath.resolve("btrace.jar");
+
+    Assertions.assertTrue(
+        Files.isRegularFile(btraceJarPath),
+        "btrace.jar missing in libs directory");
     Path eventsJarPath = projectRoot.resolve("build/libs/events.jar");
-    clientClassPath = clientJarPath.toString();
+    clientClassPath = btraceJarPath.toString();
     eventsClassPath = eventsJarPath.toString();
-    // client jar needs to take precedence in order for the agent.jar inferring code to work
+
     cp =
-        clientJarPath
+        btraceJarPath
             + File.pathSeparator
             + projectRoot.resolve("build/classes/java/test")
+            + File.pathSeparator
+            + projectRoot.resolve("build/resources/test")
+            + File.pathSeparator
+            + eventsClassPath;
+
+    // Target app classpath without btrace.jar - btrace is attached as agent
+    targetAppCp =
+        projectRoot.resolve("build/classes/java/test")
             + File.pathSeparator
             + projectRoot.resolve("build/resources/test")
             + File.pathSeparator
@@ -466,7 +479,7 @@ public abstract class RuntimeTest {
     }
     System.out.println("===> test java: " + testJavaHome);
     String jfrFile = null;
-    List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
+    List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", targetAppCp));
     if (permissionsFile != null) {
       args.add("-Dbtrace.permissions=" + permissionsFile);
     }
@@ -634,7 +647,7 @@ public abstract class RuntimeTest {
     System.out.println("=== On-Startup");
     Path agentPath = locateAgent();
     if (agentPath == null) {
-      throw new RuntimeException("Missing btrace-agent.jar");
+      throw new RuntimeException("Missing btrace.jar or btrace-agent.jar");
     }
     if (forceDebug) {
       // force debug flags
@@ -650,7 +663,7 @@ public abstract class RuntimeTest {
       throw new IllegalStateException("Missing TEST_JAVA_HOME or JAVA_HOME env variables");
     }
     String jfrFile = null;
-    List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", cp));
+    List<String> args = new ArrayList<>(Arrays.asList(testJavaHome + "/bin/java", "-cp", targetAppCp));
     if (permissionsFile != null) {
       args.add("-Dbtrace.permissions=" + permissionsFile);
     }
@@ -796,7 +809,8 @@ public abstract class RuntimeTest {
 
   protected Path locateAgent() {
     Path start = projectRoot.resolve("../btrace-dist/build/resources/main");
-    Path[] tracePath = new Path[1];
+    // [0] = masked btrace.jar, [1] = old btrace-agent.jar
+    Path[] tracePath = new Path[2];
     try {
       Files.walkFileTree(
           start,
@@ -810,9 +824,15 @@ public abstract class RuntimeTest {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
                 throws IOException {
-              if (file.toString().endsWith("btrace-agent.jar")) {
+              String fileName = file.getFileName().toString();
+              if (fileName.equals("btrace.jar")) {
+                // Prefer the new masked btrace.jar
                 tracePath[0] = file;
                 return FileVisitResult.TERMINATE;
+              }
+              if (fileName.equals("btrace-agent.jar") && tracePath[1] == null) {
+                // Fall back to old btrace-agent.jar
+                tracePath[1] = file;
               }
               return FileVisitResult.CONTINUE;
             }
@@ -831,7 +851,8 @@ public abstract class RuntimeTest {
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return tracePath[0];
+    // Prefer masked btrace.jar, fall back to btrace-agent.jar
+    return tracePath[0] != null ? tracePath[0] : tracePath[1];
   }
 
   public static final class TestApp {
@@ -957,7 +978,7 @@ public abstract class RuntimeTest {
                 javaHome + "/bin/java",
                 "-cp",
                 cp,
-                "org.openjdk.btrace.client.Main",
+                "org.openjdk.btrace.boot.Loader",
                 debugBTrace ? "-v" : "",
                 "-cp",
                 eventsClassPath,
@@ -1091,7 +1112,7 @@ public abstract class RuntimeTest {
                 javaHome + "/bin/java",
                 "-cp",
                 cp,
-                "org.openjdk.btrace.client.Main",
+                "org.openjdk.btrace.boot.Loader",
                 debugBTrace ? "-v" : "",
                 "-cp",
                 eventsClassPath,
@@ -1251,7 +1272,7 @@ public abstract class RuntimeTest {
                 "-Dbtrace.comm.forceVersion=true",
                 "-cp",
                 cp,
-                "org.openjdk.btrace.client.Main",
+                "org.openjdk.btrace.boot.Loader",
                 "-cp",
                 eventsClassPath,
                 "-d",
@@ -1482,8 +1503,23 @@ public abstract class RuntimeTest {
 
   protected Client createClientForTests(String probeDescPath) {
     String libs = System.getProperty("btrace.libs");
-    String agentJar = libs != null ? Paths.get(libs, "btrace-agent.jar").toString() : null;
-    String bootJar = libs != null ? Paths.get(libs, "btrace-boot.jar").toString() : null;
+    String agentJar = null;
+    String bootJar = null;
+
+    if (libs != null) {
+      // First check for new masked btrace.jar structure
+      Path maskedJar = Paths.get(libs, "btrace.jar");
+      if (Files.exists(maskedJar)) {
+        // Use masked JAR - pass it as agent, boot is embedded
+        agentJar = maskedJar.toString();
+        bootJar = null; // boot classes are in the masked JAR
+      } else {
+        // Fall back to old separate JAR structure
+        agentJar = Paths.get(libs, "btrace-agent.jar").toString();
+        bootJar = Paths.get(libs, "btrace-boot.jar").toString();
+      }
+    }
+
     return new Client(
         getBTracePort(),
         null,

@@ -105,9 +105,9 @@ public abstract class Constants {
   public static final String BTRACERT_DESC = "L" + BTRACERT_INTERNAL + ";";
   public static final String BTRACERTIMPL_INTERNAL = "org/openjdk/btrace/core/BTraceRuntime$Impl";
   public static final String BTRACERTIMPL_DESC = "L" + BTRACERTIMPL_INTERNAL + ";";
-  public static final String BTRACERTBASE_INTERNAL =
-      "org/openjdk/btrace/runtime/BTraceRuntimeImplBase";
-  public static final String BTRACERTBASE_DESC = "L" + BTRACERTBASE_INTERNAL + ";";
+  public static final String BTRACERTBRIDGE_INTERNAL =
+      "org/openjdk/btrace/core/BTraceRuntimeBridge";
+  public static final String BTRACERTBRIDGE_DESC = "L" + BTRACERTBRIDGE_INTERNAL + ";";
   public static final Type BTRACERT_TYPE = Type.getType(BTRACERT_DESC);
 
   public static final String THREAD_LOCAL_INTERNAL = "java/lang/ThreadLocal";

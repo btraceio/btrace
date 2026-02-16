@@ -41,6 +41,10 @@ if [ -d "${JAVA_HOME}/jmods" ]; then
   JAVA_ARGS="$JAVA_ARGS -XX:+AllowRedefinitionToAddDeleteMethods"
   JAVA_ARGS="$JAVA_ARGS --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
 fi
+CLIENT_JAR="${BTRACE_HOME}/libs/btrace-client.jar"
+if [ ! -f "${CLIENT_JAR}" ]; then
+  CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
+fi
 
 OPTIONS=
 
@@ -87,7 +91,11 @@ if [ -d "${JAVA_HOME}" ]; then
       OPTIONS="stdout=true,$OPTIONS"
       ;;
     --version)
-      $JAVA_HOME/bin/java ${JAVA_ARGS} -cp ${BTRACE_HOME}/libs/btrace-client.jar org.openjdk.btrace.client.Main --version
+      if [ -z "${CLIENT_JAR}" ]; then
+        echo "Please set BTRACE_HOME before running this script"
+        exit 1
+      fi
+      $JAVA_HOME/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR} org.openjdk.btrace.boot.Loader --version
       exit 0
       ;;
     -h)
