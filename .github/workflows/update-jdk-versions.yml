@@ -1,0 +1,50 @@
+name: Update JDK Test Versions
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+
+      - name: Check for version updates
+        id: update
+        run: |
+          chmod +x scripts/update-jdk-versions.sh
+          if changes=$(scripts/update-jdk-versions.sh); then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "body<<EOF"
+              echo "$changes"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        if: steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/update-jdk-versions
+          base: develop
+          title: 'chore: update JDK test versions'
+          draft: true
+          labels: automation
+          commit-message: 'chore: update JDK test versions'
+          body: |
+            Automated JDK version update detected by SDKMan API.
+
+            ### Changes
+            ${{ steps.update.outputs.body }}
