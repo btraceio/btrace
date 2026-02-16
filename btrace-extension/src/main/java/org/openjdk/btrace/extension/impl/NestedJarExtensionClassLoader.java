@@ -127,7 +127,10 @@ public final class NestedJarExtensionClassLoader extends URLClassLoader {
               entryName, extensionId, extensionJar.getName()));
     }
 
-    Path targetFile = targetDir.resolve(entryName);
+    Path targetFile = targetDir.resolve(entryName).normalize();
+    if (!targetFile.startsWith(targetDir)) {
+      throw new IOException("Zip Slip: entry would extract outside target dir: " + entryName);
+    }
     try (InputStream in = extensionJar.getInputStream(entry);
         OutputStream out = Files.newOutputStream(targetFile)) {
       byte[] buffer = new byte[8192];
