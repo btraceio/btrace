@@ -17,6 +17,7 @@ repositories {
 def distBase = "${project.buildDir}/resources/main"
 def distTarget = "${distBase}/v${project.version}"
 def libsDir = new File("${distTarget}/libs")
+def clientLibsDir = new File(project.buildDir, "client-libs")
 
 def includes = [:]
 
@@ -107,7 +108,7 @@ dependencies {
 }
 
 jar {
-    onlyIf { false }
+    onlyIf { false }  // Disable default jar task
 }
 
 sourcesJar {
@@ -148,20 +149,12 @@ task agentJar(type: ShadowJar) {
     relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
 
-task bootJar(type: ShadowJar) {
+task bootJar(type: Copy) {
     group 'Build'
-    archiveBaseName.set('btrace-boot')
-    archiveVersion.set('')
-    archiveClassifier.set('')
-    destinationDirectory = libsDir
-
-
-    include includes['boot']
-
-    configurations = [project.configurations.artifact]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+    dependsOn project(':btrace-bootstrap').tasks.shadowJar
+    from project(':btrace-bootstrap').tasks.shadowJar.archiveFile
+    into libsDir
+    rename { 'btrace-boot.jar' }
 }
 
 task clientJar(type: ShadowJar) {
@@ -169,14 +162,15 @@ task clientJar(type: ShadowJar) {
     archiveBaseName.set('btrace-client')
     archiveVersion.set('')
     archiveClassifier.set('')
-    destinationDirectory = libsDir
+    destinationDirectory = clientLibsDir
 
     include includes['client']
 
     configurations = [project.configurations.artifact]
     relocate 'org.jctools', 'org.openjdk.btrace.libs.client.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.client.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.client.org.slf4j'
+    // Use the same relocation as bootstrap for ASM and SLF4J so client can call bootstrap methods
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
 }
 
 task apiJar(type: Jar) {
@@ -192,10 +186,10 @@ task apiJar(type: Jar) {
 
 task uberJar(type: ShadowJar) {
     group 'Build'
-    description 'Creates uber JAR with embedded agent and boot JARs'
+    description 'Creates uber JAR with embedded agent and boot JARs (legacy format)'
     archiveBaseName.set('btrace')
     archiveVersion.set('')
-    archiveClassifier.set('')
+    archiveClassifier.set('uber')
     destinationDirectory = libsDir
 
     dependsOn agentJar, bootJar
@@ -206,6 +200,11 @@ task uberJar(type: ShadowJar) {
     from(project(':btrace-core').sourceSets.main.output)
     from(project(':btrace-runtime').sourceSets.main.output)
     from(project(':btrace-instr').sourceSets.main.output)
+
+    // Rely on the running JDK for attach classes; avoid tools.jar conflicts in uber JAR.
+    exclude 'com/sun/tools/attach/**'
+    exclude 'sun/tools/attach/**'
+    exclude 'META-INF/services/com.sun.tools.attach.spi.AttachProvider'
 
     manifest {
         attributes(
@@ -225,9 +224,129 @@ task uberJar(type: ShadowJar) {
         def uberJarFile = archiveFile.get().asFile
         ant.zip(destfile: uberJarFile, update: true) {
             zipfileset(file: agentJar.archiveFile.get().asFile, fullpath: 'META-INF/embedded/btrace-agent.jar')
-            zipfileset(file: bootJar.archiveFile.get().asFile, fullpath: 'META-INF/embedded/btrace-boot.jar')
+            zipfileset(file: file("${libsDir}/btrace-boot.jar"), fullpath: 'META-INF/embedded/btrace-boot.jar')
         }
     }
+}
+
+// ==================== Masked JAR ====================
+// Single JAR with .classdata masking for bootstrap isolation
+// Bootstrap classes are stored as .class, non-bootstrap as .classdata
+// Uses existing shadow JARs to get properly relocated classes
+
+def maskedJarTmpDir = new File(project.buildDir, "masked-jar-tmp")
+
+// Task to prepare agent classes with .classdata extension from agentJar
+task prepareAgentClassdata(type: Copy) {
+    group 'Build'
+    description 'Prepare agent classes with .classdata extension'
+    // Explicit dependency on agentJar and processResources (agentJar outputs to resources dir)
+    dependsOn agentJar, processResources
+
+    into "${maskedJarTmpDir}/agent"
+
+    from(provider { zipTree(agentJar.archiveFile) }) {
+        include '**/*.class'
+        include '**/messages.properties'
+        // Exclude manifest
+        exclude 'META-INF/MANIFEST.MF'
+        rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Task to prepare client classes with .classdata extension from clientJar
+task prepareClientClassdata(type: Copy) {
+    group 'Build'
+    description 'Prepare client classes with .classdata extension'
+    // Explicit dependency on clientJar
+    dependsOn clientJar
+
+    into "${maskedJarTmpDir}/client"
+
+    from(provider { zipTree(clientJar.archiveFile) }) {
+        include '**/*.class'
+        include '**/messages.properties'
+        // Exclude manifest
+        exclude 'META-INF/MANIFEST.MF'
+        // Exclude classes that are in bootstrap (core, runtime, extension)
+        exclude 'org/openjdk/btrace/core/**'
+        exclude 'org/openjdk/btrace/runtime/**'
+        exclude 'org/openjdk/btrace/extension/**'
+        // Exclude boot's relocated packages (they're in bootstrap)
+        exclude 'org/openjdk/btrace/libs/org/objectweb/asm/**'
+        exclude 'org/openjdk/btrace/libs/org/slf4j/**'
+        exclude 'org/openjdk/btrace/libs/boot/**'
+        rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Single JAR with .classdata masking for bootstrap isolation
+task btraceJar(type: Jar) {
+    group 'Build'
+    description 'Creates single JAR with .classdata masking for bootstrap isolation'
+    archiveBaseName.set('btrace')
+    archiveVersion.set('')
+    archiveClassifier.set('')
+    destinationDirectory = libsDir
+
+    dependsOn prepareAgentClassdata, prepareClientClassdata
+    dependsOn project(':btrace-boot').tasks.jar
+    dependsOn project(':btrace-bootstrap').tasks.shadowJar
+
+    // 1. Include boot loader class (must be in bootstrap as .class)
+    from(project(':btrace-boot').sourceSets.main.output) {
+        include 'org/openjdk/btrace/boot/**/*.class'
+    }
+
+    // 2. Include bootstrap classes from btrace-bootstrap shadowJar (as .class)
+    from(zipTree(project(':btrace-bootstrap').tasks.shadowJar.archiveFile)) {
+        include '**/*.class'
+        include 'META-INF/services/**'
+        // Exclude manifest from bootstrap jar
+        exclude 'META-INF/MANIFEST.MF'
+    }
+
+    // 3. Include masked agent classes (as .classdata)
+    into('META-INF/btrace/agent') {
+        from("${maskedJarTmpDir}/agent") {
+            include '**/*.classdata'
+            include '**/messages.properties'
+        }
+    }
+
+    // 4. Include masked client classes (as .classdata)
+    into('META-INF/btrace/client') {
+        from("${maskedJarTmpDir}/client") {
+            include '**/*.classdata'
+            include '**/messages.properties'
+        }
+    }
+
+    // 5. Include messages resource bundle in root (needed by bootstrap)
+    from(project(':btrace-core').sourceSets.main.output) {
+        include 'org/openjdk/btrace/core/messages.properties'
+        include 'org/openjdk/btrace/core/Messages.class'
+    }
+
+    manifest {
+        attributes(
+            'Premain-Class': 'org.openjdk.btrace.boot.Loader',
+            'Agent-Class': 'org.openjdk.btrace.boot.Loader',
+            'Main-Class': 'org.openjdk.btrace.boot.Loader',
+            'Can-Redefine-Classes': true,
+            'Can-Retransform-Classes': true,
+            'Boot-Class-Path': '.',
+            'BTrace-Version': version,
+            'BTrace-Agent-Main': 'org.openjdk.btrace.agent.Main',
+            'BTrace-Client-Main': 'org.openjdk.btrace.client.Main'
+        )
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 task fixPermissions(type: Exec) {
@@ -373,16 +492,16 @@ buildDeb {
 }
 
 copyDtraceLib.dependsOn project(':btrace-dtrace').build
-shadowJar.dependsOn agentJar, bootJar, clientJar, copyDtraceLib, copyExtensions
-buildTgz.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildSdkmanZip.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildDeb.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildRpm.dependsOn agentJar, bootJar, clientJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+shadowJar.dependsOn agentJar, bootJar, clientJar, uberJar, btraceJar, apiJar, copyDtraceLib, copyExtensions
+buildTgz.dependsOn agentJar, bootJar, clientJar, uberJar, btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildZip.dependsOn agentJar, bootJar, clientJar, uberJar, btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildSdkmanZip.dependsOn agentJar, bootJar, clientJar, uberJar, btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildDeb.dependsOn agentJar, bootJar, clientJar, uberJar, btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildRpm.dependsOn agentJar, bootJar, clientJar, uberJar, btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
 
 // Docker build tasks
-task buildDockerContext(type: Copy, dependsOn: [agentJar, bootJar, clientJar, copyDtraceLib, processResources, fixPermissions]) {
+task buildDockerContext(type: Copy, dependsOn: [agentJar, bootJar, clientJar, uberJar, apiJar, copyDtraceLib, processResources, fixPermissions]) {
     group 'Docker'
     description 'Prepare Docker build context with BTrace distribution'
 
@@ -630,48 +749,12 @@ publishing {
     }
 
     publications {
-        agent(MavenPublication) {
-            artifactId 'btrace-agent'
+        btrace(MavenPublication) {
+            artifactId 'btrace'
             groupId 'io.btrace'
-            artifact agentJar
-            artifact agentSourcesJar {
-                archiveClassifier = "sources"
-            }
-            artifact agentJavadocJar {
-                archiveClassifier = "javadoc"
-            }
+            artifact btraceJar
             pom.withXml {
-                addPomDetails(asNode(), 'btrace-agent')
-            }
-        }
-
-        client(MavenPublication) {
-            artifactId 'btrace-client'
-            groupId 'io.btrace'
-            artifact clientJar
-            artifact clientSourcesJar {
-                archiveClassifier = "sources"
-            }
-            artifact clientJavadocJar {
-                archiveClassifier = "javadoc"
-            }
-            pom.withXml {
-                addPomDetails(asNode(), 'btrace-client')
-            }
-        }
-
-        boot(MavenPublication) {
-            artifactId 'btrace-boot'
-            groupId 'io.btrace'
-            artifact bootJar
-            artifact bootSourcesJar {
-                archiveClassifier = "sources"
-            }
-            artifact bootJavadocJar {
-                archiveClassifier = "javadoc"
-            }
-            pom.withXml {
-                addPomDetails(asNode(), 'btrace-boot')
+                addPomDetails(asNode(), 'btrace')
             }
         }
     }
@@ -703,7 +786,5 @@ signing {
     if (signingKey != null && signingPwd != null) {
         useInMemoryPgpKeys(signingKey, signingPwd)
     }
-    sign publishing.publications.agent
-    sign publishing.publications.boot
-    sign publishing.publications.client
+    sign publishing.publications.btrace
 }

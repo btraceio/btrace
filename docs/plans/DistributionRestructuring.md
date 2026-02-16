@@ -730,13 +730,13 @@ jbang btrace --agent-jar ~/.m2/repository/org/openjdk/btrace/btrace-agent/<versi
 ### Phase 1
 - [x] btrace.jar built successfully with embedded JARs (16MB with 867KB agent + 1.1MB boot)
 - [x] btrace-api.jar created (14MB with annotations, types, and annotation processor)
-- [ ] `btrace --extract-agent` works correctly
-- [ ] `--agent-jar` and `--boot-jar` flags work with jbang
-- [ ] Backward compatibility: existing bin/btrace still works
+- [x] `btrace --extract-agent` works correctly
+- [x] `--agent-jar` and `--boot-jar` flags work with jbang (docker-based attach test passes with Testcontainers 2.0.3)
+- [x] Backward compatibility: existing bin/btrace still works
 - [x] Distribution size increase acceptable (16MB uber JAR vs 2.3MB client JAR)
 
 ### Phase 2
-- [ ] btrace-bootstrap module created
+- [x] btrace-bootstrap module created
 - [ ] No duplicate classes in distribution
 - [ ] Single btrace.jar works as -javaagent
 - [ ] JAR size reduced to ~3.5MB

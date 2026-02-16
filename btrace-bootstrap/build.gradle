@@ -1,0 +1,66 @@
+plugins {
+    id 'java-library'
+    alias(libs.plugins.shadow)
+}
+
+def bootIncludes = {
+    if (it.directory) {
+        return true
+    }
+    if (it.path.endsWith('.jar')) {
+        return true
+    }
+    if (it.path.startsWith('org/openjdk/btrace/core/')) {
+        if (it.path == 'org/openjdk/btrace/core/Messages.class'
+                || it.path == 'org/openjdk/btrace/core/messages.properties') {
+            return false
+        }
+        return true
+    }
+    if (it.path.startsWith('org/objectweb/asm/')) {
+        if (it.path.startsWith('org/objectweb/asm/commons/')
+                || it.path.startsWith('org/objectweb/asm/util/')
+                || it.path.startsWith('org/objectweb/asm/xml/')) {
+            return false
+        }
+        return true
+    }
+    if (it.path.startsWith('META-INF/services')) {
+        return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
+    }
+    return it.path.startsWith('org/slf4j/')
+            || it.path.startsWith('org/openjdk/btrace/runtime/')
+            || it.path.startsWith('org/openjdk/btrace/extension/')
+            || it.path.startsWith('org/jctools/')
+}
+
+dependencies {
+    implementation project(':btrace-core')
+    implementation project(':btrace-runtime')
+    implementation project(':btrace-instr')
+    implementation project(':btrace-extension')
+    implementation libs.slf4j
+    implementation libs.asm
+    implementation libs.asm.tree
+    implementation libs.asm.util
+    implementation libs.jctools
+}
+
+jar {
+    enabled = false
+}
+
+shadowJar {
+    archiveBaseName.set('btrace-bootstrap')
+    archiveVersion.set('')
+    archiveClassifier.set('')
+
+    include bootIncludes
+
+    configurations = [project.configurations.runtimeClasspath]
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+}
+
+assemble.dependsOn shadowJar
