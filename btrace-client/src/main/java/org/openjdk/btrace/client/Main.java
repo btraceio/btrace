@@ -589,6 +589,11 @@ public final class Main {
     if (entry == null) {
       throw new IOException("Embedded JAR not found: " + entryPath);
     }
+    // Validate that the entry name does not contain path traversal sequences
+    String normalizedEntry = entry.getName();
+    if (normalizedEntry.contains("..")) {
+      throw new IOException("Zip Slip: entry contains path traversal: " + normalizedEntry);
+    }
 
     try (InputStream in = source.getInputStream(entry);
         OutputStream out = new FileOutputStream(target)) {
