@@ -1223,8 +1223,8 @@ public class Client {
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
         throw new IOException(e);
       } catch (NullPointerException e) {
-        log.error("Unexpected null pointer during command processing", e);
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
+        throw new IOException("Protocol closed during command processing", e);
       }
     }
   }
