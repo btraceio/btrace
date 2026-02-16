@@ -22,6 +22,7 @@
 package org.openjdk.btrace.runtime;
 
 import org.openjdk.btrace.core.BTraceRuntimeBridge;
+import org.openjdk.btrace.core.extensions.ExtensionContext;
 import org.openjdk.btrace.core.handlers.ErrorHandler;
 import org.openjdk.btrace.core.handlers.EventHandler;
 import org.openjdk.btrace.core.handlers.ExitHandler;
@@ -82,6 +83,11 @@ public final class BTraceRuntimeAccess {
     return current != null ? current.getClientName(forClassName) : forClassName;
   }
 
+  public static ExtensionContext currentContext() {
+    Delegate current = delegate;
+    return current != null ? current.currentContext() : null;
+  }
+
   public interface Delegate {
     boolean enter(BTraceRuntimeBridge currentRt);
 
@@ -99,5 +105,6 @@ public final class BTraceRuntimeAccess {
 
     String getClientName(String forClassName);
 
+    ExtensionContext currentContext();
   }
 }

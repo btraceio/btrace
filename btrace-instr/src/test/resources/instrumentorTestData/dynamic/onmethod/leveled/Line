@@ -22,4 +22,3 @@ L5
 LOCALVARIABLE e Ljava/io/IOException; L3 L4 1
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
 MAXSTACK = 4
-FRAME FULL [resources/OnMethodTest java/lang/String J [I] []

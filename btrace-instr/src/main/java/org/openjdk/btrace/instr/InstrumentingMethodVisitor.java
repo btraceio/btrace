@@ -1363,9 +1363,23 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         }
       }
     } else {
-      localsArr = locals.toArray(new Object[0]);
+      // Expand compact locals list into slot-indexed array.
+      // The locals list stores LONG/DOUBLE as single entries but they
+      // occupy 2 JVM slots. We must insert TOP_EXT companions to
+      // prevent ensureTopExtSlots() from overwriting the next real local.
+      int slotCount = 0;
+      for (Object e : locals) {
+        slotCount += (e == LONG || e == DOUBLE) ? 2 : 1;
+      }
+      localsArr = new Object[slotCount];
+      int slot = 0;
+      for (Object e : locals) {
+        localsArr[slot++] = e;
+        if (e == LONG || e == DOUBLE) {
+          localsArr[slot++] = TOP_EXT;
+        }
+      }
     }
-    localsArr = normalizeCategory2Slots(localsArr);
     for (int m : variableMapper.mappings()) {
       if (m != 0) {
         if (localsArr[m] == null) {

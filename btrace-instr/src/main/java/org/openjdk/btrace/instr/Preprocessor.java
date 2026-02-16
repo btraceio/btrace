@@ -206,6 +206,8 @@ final class Preprocessor {
 
   private final Map<MethodNode, EnumSet<MethodClassifier>> classifierMap = new HashMap<>();
   private AbstractInsnNode clinitEntryPoint;
+  // Label marking where the <clinit> error handler should start (after runtime is set)
+  private LabelNode clinitErrorHandlerStart;
 
   // Determines if the given ASM Type represents a class that is a BTrace Extension
   private static boolean isExtensionType(Type implType, ClassLoader loader) {
@@ -855,6 +857,10 @@ final class Preprocessor {
             false));
     l.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, rtField.name, rtField.desc));
 
+    // Mark where the error handler should start (after runtime is set)
+    clinitErrorHandlerStart = new LabelNode();
+    l.add(clinitErrorHandlerStart);
+
     l.add(getRuntimeImpl(cn));
     addRuntimeCheck(cn, clinit, l, true);
 
@@ -1151,10 +1157,18 @@ final class Preprocessor {
 
     EnumSet<MethodClassifier> clsf = getClassifiers(mn);
     if (!clsf.isEmpty()) {
-      LabelNode from = new LabelNode();
+      LabelNode from;
       LabelNode to = new LabelNode();
       InsnList l = mn.instructions;
-      l.insert(from);
+
+      // For <clinit>, start the error handler AFTER the runtime is set
+      // to avoid NPE when handling exceptions thrown during runtime setup
+      if (mn.name.equals("<clinit>") && clinitErrorHandlerStart != null) {
+        from = clinitErrorHandlerStart;
+      } else {
+        from = new LabelNode();
+        l.insert(from);
+      }
       l.add(to);
       // add proper stackframe map node
       l.add(throwableHandlerFrame(mn));

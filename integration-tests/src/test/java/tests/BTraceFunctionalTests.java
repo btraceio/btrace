@@ -168,8 +168,6 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethod() throws Exception {
-    debugTestApp = true;
-    debugBTrace = true;
     testDynamic(
         "resources.Main",
         "btrace/OnMethodTest.java",
@@ -260,7 +258,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
             assertFalse(stdout.contains("FAILED"), "Script should not have failed");
-            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
             assertTrue(stdout.contains("[invocations="));
           }
         });
@@ -338,6 +336,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testProbeArgs() throws Exception {
+//    debugBTrace = true;
+//    debugTestApp = true;
     isUnsafe = true;
     testDynamic(
         "resources.Main",

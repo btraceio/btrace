@@ -263,6 +263,19 @@ class CompilerHelper {
       log.error("Compilation failed", e);
       perr.append("ERROR: Compilation failed: ").append(e.getMessage()).append("\n");
     } finally {
+      // Close masked resources first (they wrap/depend on the base manager)
+      if (maskedClassLoader instanceof AutoCloseable) {
+        try {
+          ((AutoCloseable) maskedClassLoader).close();
+        } catch (Exception ignored) {
+        }
+      }
+      if (effectiveManager != manager) {
+        try {
+          effectiveManager.close();
+        } catch (IOException ignored) {
+        }
+      }
       try {
         manager.close();
       } catch (IOException ignored) {

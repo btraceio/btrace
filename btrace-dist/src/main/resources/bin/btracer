@@ -41,10 +41,7 @@ if [ -d "${JAVA_HOME}/jmods" ]; then
   JAVA_ARGS="$JAVA_ARGS -XX:+AllowRedefinitionToAddDeleteMethods"
   JAVA_ARGS="$JAVA_ARGS --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
 fi
-CLIENT_JAR="${BTRACE_HOME}/libs/btrace-client.jar"
-if [ ! -f "${CLIENT_JAR}" ]; then
-  CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
-fi
+CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
 
 OPTIONS=
 

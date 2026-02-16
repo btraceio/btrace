@@ -751,7 +751,11 @@ public abstract class RuntimeTest {
                       || l.contains("sun.misc.Unsafe::objectFieldOffset")
                       || l.contains("org.jctools.util.UnsafeAccess")
                       || l.contains("ASM verification requested for ")
-                      || l.contains("ASM verification OK for ")) {
+                      || l.contains("ASM verification OK for ")
+                      || l.contains("A restricted method")
+                      || l.contains("has been called by")
+                      || l.contains("enable-native-access")
+                      || l.contains("Restricted methods will be blocked")) {
                     continue;
                   }
                   stderr.append(l).append(System.lineSeparator());
@@ -1270,6 +1274,7 @@ public abstract class RuntimeTest {
                 "-Dbtrace.comm.protocol=2",
                 "-Dbtrace.comm.autoNegotiate=false",
                 "-Dbtrace.comm.forceVersion=true",
+                "-Dbtrace.libs=" + System.getProperty("btrace.libs"),
                 "-cp",
                 cp,
                 "org.openjdk.btrace.boot.Loader",
@@ -1395,7 +1400,7 @@ public abstract class RuntimeTest {
                 "-Dbtrace.comm.forceVersion=true",
                 "-cp",
                 cp,
-                "org.openjdk.btrace.client.Main",
+                "org.openjdk.btrace.boot.Loader",
                 "-cp",
                 eventsClassPath,
                 "-d",
@@ -1439,7 +1444,11 @@ public abstract class RuntimeTest {
                   if (line.contains("Server VM warning")
                       || line.contains("XML libraries not available")
                       || line.contains("Successfully started BTrace probe")
-                      || line.contains("Connection reset")) {
+                      || line.contains("Connection reset")
+                      || line.contains("terminally deprecated method in sun.misc.Unsafe")
+                      || line.contains("sun.misc.Unsafe::objectFieldOffset")
+                      || line.contains("org.jctools.util.UnsafeAccess")
+                      || line.contains("A restricted method")) {
                     // skip JVM generated warnings
                     continue;
                   }

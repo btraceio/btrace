@@ -82,14 +82,18 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer$Node");
     SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractOwnableSynchronizer");
     SENSITIVE_CLASSES.add("java/util/concurrent/locks/ReentrantLock");
+    SENSITIVE_CLASSES.add("java/util/concurrent/ConcurrentHashMap");
 
     SENSITIVE_CLASSES.add("jdk/internal/");
     SENSITIVE_CLASSES.add("sun/invoke/");
     SENSITIVE_CLASSES.add("org/openjdk/btrace/");
 
-    // Method-level exclusion for Thread: 'threadLocals' will create infinite recursion on JDK 25+.
+    // Method-level exclusions for Thread: ThreadLocal accessor/mutator methods create infinite
+    // recursion on JDK 25+ where ThreadLocal.createMap calls Thread.setThreadLocals.
     addSensitiveMethod("java/lang/Thread", "threadLocals");
     addSensitiveMethod("java/lang/Thread", "setThreadLocals");
+    addSensitiveMethod("java/lang/Thread", "terminatingThreadLocals");
+    addSensitiveMethod("java/lang/Thread", "setTerminatingThreadLocals");
   }
 
   private final List<OnMethod> onMethods;

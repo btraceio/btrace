@@ -36,6 +36,8 @@ import org.openjdk.btrace.core.handlers.EventHandler;
 import org.openjdk.btrace.core.handlers.ExitHandler;
 import org.openjdk.btrace.core.handlers.LowMemoryHandler;
 import org.openjdk.btrace.core.handlers.TimerHandler;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.extensions.ExtensionContext;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 
 public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delegate {
@@ -289,4 +291,14 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
     return BTraceRuntimeAccessImpl.getClientNameInternal(forClassName);
   }
 
+  @Override
+  public ExtensionContext currentContext() {
+    RTWrapper wrapper = rt.get();
+    BTraceRuntimeImplBase current = wrapper != null ? (BTraceRuntimeImplBase) wrapper.rt : null;
+    if (current == null) return null;
+    return new ExtensionContextImpl(
+        current,
+        current.getClassName(),
+        SharedSettings.GLOBAL.getEffectivePermissions());
+  }
 }

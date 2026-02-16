@@ -22,8 +22,7 @@ if exist "%JAVA_HOME%/jmods/" (
 )
 
 if "%1" == "--version" (
-  set CLIENT_JAR=%BTRACE_HOME%\libs\btrace-client.jar
-  if not exist "%CLIENT_JAR%" set CLIENT_JAR=%BTRACE_HOME%\libs\btrace.jar
+  set CLIENT_JAR=%BTRACE_HOME%\libs\btrace.jar
   if not exist "%CLIENT_JAR%" goto noBTraceHome
   %JAVA_HOME%\bin\java "%JAVA_ARGS%" -cp %CLIENT_JAR% org.openjdk.btrace.boot.Loader --version
   goto end

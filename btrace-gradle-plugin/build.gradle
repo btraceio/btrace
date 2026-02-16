@@ -4,6 +4,12 @@ plugins {
     id 'maven-publish'
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
 group = project.findProperty('GROUP') ?: (rootProject.group ?: 'org.openjdk.btrace')
 version = rootProject.version
 
