@@ -49,6 +49,7 @@ class ClassDataJavaFileObject implements JavaFileObject {
     private final String className;
     private final JarFile jarFile;
     private final JarEntry entry;
+    private final String entryName;
     private final URI uri;
 
     /**
@@ -59,15 +60,15 @@ class ClassDataJavaFileObject implements JavaFileObject {
      * @param entry     the JAR entry for the .classdata file
      */
     ClassDataJavaFileObject(String className, JarFile jarFile, JarEntry entry) {
-        String entryName = entry.getName();
-        if (entryName.contains("..")) {
-            throw new IllegalArgumentException("Invalid entry name (path traversal): " + entryName);
+        String name = entry.getName();
+        if (name.contains("..")) {
+            throw new IllegalArgumentException("Invalid entry name (path traversal): " + name);
         }
         this.className = className;
         this.jarFile = jarFile;
         this.entry = entry;
-        // Create a URI that identifies this class data file
-        this.uri = URI.create("jar:file:" + jarFile.getName() + "!/" + entryName);
+        this.entryName = name;
+        this.uri = URI.create("jar:file:" + jarFile.getName() + "!/" + name);
     }
 
     @Override
@@ -102,7 +103,6 @@ class ClassDataJavaFileObject implements JavaFileObject {
     @Override
     public String getName() {
         // Return a .class name instead of .classdata for javac compatibility
-        String entryName = entry.getName();
         if (entryName.endsWith(".classdata")) {
             return entryName.substring(0, entryName.length() - ".classdata".length()) + ".class";
         }
