@@ -722,7 +722,7 @@ public class Client {
           break;
         } catch (AgentLoadException ale) {
           lastAle = ale;
-          if ("0".equals(ale.getMessage()) && isJava8) {
+          if (isJava8 && ale.getMessage() != null && ale.getMessage().endsWith("0")) {
             if (isAgentAvailableAfterLoadFailure(vm)) {
               if (log.isDebugEnabled()) {
                 log.debug("Agent load reported error 0 but agent is available on port {}", port);
