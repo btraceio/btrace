@@ -1,6 +1,6 @@
 # BTrace Quick Reference
 
-A cheat sheet for experienced users. For step-by-step instructions, see [Getting Started](gettingStarted.md). Back to [README](../Readme.md).
+A cheat sheet for experienced users. For step-by-step instructions, see [Getting Started](GettingStarted.md). Back to [README](../README.md).
 
 ---
 
@@ -625,8 +625,8 @@ Use `-u` (unsafe mode) to bypass restrictions, but only in controlled environmen
 
 ## See Also
 
-- **[Documentation Hub](Readme.md)** - Complete documentation map and learning paths
-- **[Getting Started Guide](gettingStarted.md)** - Installation, first script, and quick start
-- **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
-- **[Troubleshooting Guide](troubleshooting.md)** - Solutions to common problems
-- **[FAQ](faq.md)** - Common questions and best practices
+- **[Documentation Hub](README.md)** - Complete documentation map and learning paths
+- **[Getting Started Guide](GettingStarted.md)** - Installation, first script, and quick start
+- **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
+- **[Troubleshooting Guide](Troubleshooting.md)** - Solutions to common problems
+- **[FAQ](FAQ.md)** - Common questions and best practices
