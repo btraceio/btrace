@@ -43,6 +43,7 @@ import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -55,6 +56,8 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.openjdk.btrace.boot.MaskedClassLoader;
+import org.openjdk.btrace.boot.MaskedJarUtils;
 import org.openjdk.btrace.compiler.Compiler;
 import org.openjdk.btrace.core.Args;
 import org.openjdk.btrace.core.BTraceRuntime;
@@ -388,12 +391,76 @@ public class Client {
   public byte[] compile(String fileName, String classPath, PrintWriter err, String includePath) {
     File file = new File(fileName);
     if (fileName.endsWith(".java")) {
-      return compileInternal(
-          fileName,
-          classPath,
-          err,
-          includePath,
-          (compiler, resolvedCp) -> compiler.compile(file, err, ".", resolvedCp));
+      Compiler compiler = new Compiler(includePath);
+      classPath += File.pathSeparator + System.getProperty("java.class.path");
+      // Add extension API JARs to classpath
+      String extApiCp = getExtensionApiClasspath();
+      if (!extApiCp.isEmpty()) {
+        classPath += File.pathSeparator + extApiCp;
+      }
+      if (log.isDebugEnabled()) {
+        log.debug("compiling {}", fileName);
+        if (!extApiCp.isEmpty()) {
+          log.debug("extension API classpath: {}", extApiCp);
+        }
+        log.debug("compiler classpath: {}", classPath);
+      }
+
+      // Ensure the verifier's classloader can see the same classpath (TCCL lookup)
+      ClassLoader prevCl = Thread.currentThread().getContextClassLoader();
+      String prevSysCp = System.getProperty("java.class.path", "");
+      Map<String, byte[]> classes;
+      try {
+        String[] cpEntries = classPath.split(File.pathSeparator);
+
+        // Check if any entry is a masked JAR (contains META-INF/btrace/shared/)
+        File maskedJar = MaskedJarUtils.findMaskedJarInClasspath(cpEntries);
+        ClassLoader compileCl;
+
+        if (maskedJar != null) {
+          // Use MaskedClassLoader to load classes from .classdata files
+          log.debug("Using MaskedClassLoader for compilation: {}", maskedJar.getAbsolutePath());
+          compileCl = new MaskedClassLoader(maskedJar, "client", prevCl);
+        } else {
+          // Fall back to URLClassLoader for standard JARs
+          java.net.URL[] urls = new java.net.URL[cpEntries.length];
+          for (int i = 0; i < cpEntries.length; i++) {
+            urls[i] = new File(cpEntries[i]).toURI().toURL();
+          }
+          compileCl = new java.net.URLClassLoader(urls, prevCl);
+        }
+
+        Thread.currentThread().setContextClassLoader(compileCl);
+        // Ensure VerifierVisitor fallback scan (java.class.path) can see extension API jars
+        if (!extApiCp.isEmpty()) {
+          System.setProperty(
+              "java.class.path",
+              prevSysCp.isEmpty() ? extApiCp : (prevSysCp + File.pathSeparator + extApiCp));
+        }
+        classes = compiler.compile(file, err, ".", classPath);
+      } catch (Exception e) {
+        log.error("Failed to set up compiler classloader", e);
+        classes = compiler.compile(file, err, ".", classPath);
+      } finally {
+        Thread.currentThread().setContextClassLoader(prevCl);
+        System.setProperty("java.class.path", prevSysCp);
+      }
+      if (classes == null) {
+        log.error("btrace compilation for script {} failed!", fileName);
+        return null;
+      }
+
+      int size = classes.size();
+      if (size != 1) {
+        log.error("no classes or more than one class in script {}", fileName);
+        return null;
+      }
+      String name = classes.keySet().iterator().next();
+      byte[] code = classes.get(name);
+      if (log.isDebugEnabled()) {
+        log.debug("compiled {}", fileName);
+      }
+      return code;
     } else if (fileName.endsWith(".class")) {
       int codeLen = (int) file.length();
       byte[] code = new byte[codeLen];
@@ -521,6 +588,7 @@ public class Client {
   public void attach(String pid, String sysCp, String bootCp) throws IOException {
     try {
       String agentPath;
+      boolean isMaskedJar = false;
 
       // If --agent-jar was specified, use it
       if (agentJarOverride != null && !agentJarOverride.isEmpty()) {
@@ -529,37 +597,34 @@ public class Client {
           throw new IOException("Specified agent JAR does not exist: " + agentJarOverride);
         }
         agentPath = agentFile.getAbsolutePath();
+        isMaskedJar = isMaskedJar(agentFile);
       } else {
-        // Try to extract embedded agent JAR from uber JAR
-        agentPath = extractEmbeddedAgentJar();
+        // Find masked btrace.jar in classpath
+        agentPath = findMaskedAgentJar();
         if (agentPath == null) {
-          // Fall back to co-location discovery
-          agentPath = "/btrace-agent.jar";
-          URL btracePkg = Client.class.getClassLoader().getResource("org/openjdk/btrace/client");
-          if (btracePkg != null) {
-            String tmp = btracePkg.toString();
-            tmp = tmp.substring(0, tmp.indexOf('!'));
-            tmp = tmp.substring("jar:".length(), tmp.lastIndexOf('/'));
-            agentPath = tmp + agentPath;
-            agentPath = new File(new URI(agentPath)).getAbsolutePath();
-          } else {
-            log.warn("Unable to prepare BTrace agent");
-            return;
-          }
+          throw new IOException("No masked btrace.jar found in classpath. " +
+              "Please ensure btrace.jar (not btrace-client.jar) is in the classpath.");
         }
+        // Verify it exists and is readable
+        File agentFile = new File(agentPath);
+        if (!agentFile.exists() || !agentFile.canRead()) {
+          throw new IOException("Agent JAR not found or not readable: " + agentPath);
+        }
+        agentPath = agentFile.getAbsolutePath();  // Normalize to absolute path
+        isMaskedJar = true;  // findMaskedAgentJar only returns masked JARs
       }
 
-      // Handle boot JAR override or embedded boot JAR
+      // Handle boot classpath for masked JAR
       String effectiveBootCp = bootCp;
-      if (bootJarOverride != null && !bootJarOverride.isEmpty()) {
-        File bootFile = new File(bootJarOverride);
-        if (!bootFile.exists()) {
-          throw new IOException("Specified boot JAR does not exist: " + bootJarOverride);
+
+      // For masked JAR, use the agent JAR itself as boot classpath (it has bootstrap classes as .class files)
+      if (isMaskedJar) {
+        if (bootCp == null || bootCp.isEmpty() || bootCp.equals(".")) {
+          effectiveBootCp = agentPath;
+        } else {
+          // If bootCp is set to something else, prepend the masked JAR to it
+          effectiveBootCp = agentPath + File.pathSeparator + bootCp;
         }
-        String bootPath = bootFile.getAbsolutePath();
-        effectiveBootCp = (bootCp == null || bootCp.equals("."))
-            ? bootPath
-            : bootPath + File.pathSeparator + bootCp;
       }
 
       attach(pid, agentPath, sysCp, effectiveBootCp);
@@ -657,7 +722,7 @@ public class Client {
           break;
         } catch (AgentLoadException ale) {
           lastAle = ale;
-          if ("0".equals(ale.getMessage()) && isJava8) {
+          if (isJava8 && ale.getMessage() != null && ale.getMessage().endsWith("0")) {
             if (isAgentAvailableAfterLoadFailure(vm)) {
               if (log.isDebugEnabled()) {
                 log.debug("Agent load reported error 0 but agent is available on port {}", port);
@@ -683,8 +748,12 @@ public class Client {
         log.debug("loaded {}", agentPath);
       }
     } catch (RuntimeException | IOException re) {
+      System.err.println("[DEBUG] IOException/RuntimeException during attach:");
+      re.printStackTrace();
       throw re;
     } catch (Exception exp) {
+      System.err.println("[DEBUG] Exception during attach:");
+      exp.printStackTrace();
       throw new IOException("Failed to attach to PID " + pid, exp);
     }
   }
@@ -1029,50 +1098,75 @@ public class Client {
   }
 
   /**
-   * Attempts to extract the embedded agent JAR from the uber JAR.
+   * Finds the masked btrace.jar in the classpath.
    *
-   * @return the path to the extracted agent JAR, or null if not found
+   * @return the path to the masked JAR, or null if not found
    */
-  private String extractEmbeddedAgentJar() {
+  private String findMaskedAgentJar() {
     try {
-      URL btraceLoc = Client.class.getProtectionDomain().getCodeSource().getLocation();
-      File btraceJar = new File(btraceLoc.toURI());
-
-      try (JarFile jarFile = new JarFile(btraceJar)) {
-        JarEntry agentEntry = jarFile.getJarEntry("META-INF/embedded/btrace-agent.jar");
-        if (agentEntry == null) {
-          // Not an uber JAR
-          return null;
+      // 1. Check system property (set by Loader.main())
+      String maskedJarPath = System.getProperty("btrace.jar.path");
+      if (maskedJarPath != null && !maskedJarPath.isEmpty()) {
+        File maskedJar = new File(maskedJarPath);
+        if (maskedJar.exists() && maskedJar.isFile() && isMaskedJar(maskedJar)) {
+          if (log.isDebugEnabled()) {
+            log.debug("Using masked JAR from property: {}", maskedJar.getAbsolutePath());
+          }
+          return maskedJar.getAbsolutePath();
         }
+      }
 
-        // Create a temp directory for extracted JARs
-        File tempDir = Files.createTempDirectory("btrace-").toFile();
-        tempDir.deleteOnExit();
-
-        File agentFile = new File(tempDir, "btrace-agent.jar");
-        agentFile.deleteOnExit();
-
-        // Extract the agent JAR
-        try (InputStream in = jarFile.getInputStream(agentEntry);
-            OutputStream out = new FileOutputStream(agentFile)) {
-          byte[] buffer = new byte[8192];
-          int bytesRead;
-          while ((bytesRead = in.read(buffer)) != -1) {
-            out.write(buffer, 0, bytesRead);
+      // 2. Search classpath for btrace.jar
+      String classpath = System.getProperty("java.class.path", "");
+      for (String entry : classpath.split(File.pathSeparator)) {
+        if (entry.endsWith("btrace.jar")) {
+          File jarFile = new File(entry);
+          if (jarFile.exists() && isMaskedJar(jarFile)) {
+            if (log.isDebugEnabled()) {
+              log.debug("Found masked btrace.jar in classpath: {}", jarFile.getAbsolutePath());
+            }
+            return jarFile.getAbsolutePath();
           }
         }
-
-        if (log.isDebugEnabled()) {
-          log.debug("Extracted embedded agent JAR to: {}", agentFile.getAbsolutePath());
-        }
-
-        return agentFile.getAbsolutePath();
       }
+
+      // 3. No masked JAR found
+      return null;
     } catch (Exception e) {
       if (log.isDebugEnabled()) {
-        log.debug("Failed to extract embedded agent JAR: {}", e.getMessage());
+        log.debug("Failed to find masked agent JAR: {}", e.getMessage());
       }
       return null;
+    }
+  }
+
+  /**
+   * Check if a JAR file has the masked JAR structure (contains Loader and masked .classdata files)
+   */
+  private boolean isMaskedJar(File jarFile) {
+    try (JarFile jar = new JarFile(jarFile)) {
+      // Check for Loader class (unmasked entry point)
+      if (jar.getJarEntry("org/openjdk/btrace/boot/Loader.class") == null) {
+        return false;
+      }
+      // Check for masked agent classes
+      if (jar.getJarEntry("META-INF/btrace/agent/") != null) {
+        return true;
+      }
+      // Also check for at least one .classdata file
+      Enumeration<JarEntry> entries = jar.entries();
+      while (entries.hasMoreElements()) {
+        JarEntry entry = entries.nextElement();
+        if (entry.getName().endsWith(".classdata")) {
+          return true;
+        }
+      }
+      return false;
+    } catch (IOException e) {
+      if (log.isDebugEnabled()) {
+        log.debug("Failed to check if JAR is masked: {}", e.getMessage());
+      }
+      return false;
     }
   }
 
@@ -1129,8 +1223,8 @@ public class Client {
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
         throw new IOException(e);
       } catch (NullPointerException e) {
-        log.error("Unexpected null pointer during command processing", e);
         if (exited.compareAndSet(false, true)) listener.onCommand(new ExitCommand(-1));
+        throw new IOException("Protocol closed during command processing", e);
       }
     }
   }

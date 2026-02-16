@@ -19,7 +19,8 @@ if [ -d "${JAVA_HOME}/jmods" ]; then
   JAVA_ARGS="$JAVA_ARGS --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
 fi
 
-if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
+CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
+if [ -f "${CLIENT_JAR}" ]; then
   if [ -d "${JAVA_HOME}" ]; then
     TOOLS_JAR="$JAVA_HOME/lib/tools.jar"
 
@@ -59,7 +60,7 @@ if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
       echo "Unable to locate tools.jar. Please, make sure JAVA_HOME points to a valid JDK installation"
       exit 1
     fi
-    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR}:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar org.openjdk.btrace.client.Main $*
+    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR}:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar org.openjdk.btrace.boot.Loader $*
   else
     echo "Please set a valid JAVA_HOME before running this script"
     exit 1

@@ -38,8 +38,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
-import jdk.internal.reflect.CallerSensitive;
-import jdk.internal.reflect.Reflection;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.comm.CommandListener;
@@ -125,11 +123,16 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  @CallerSensitive
   public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
     try {
-      Class<?> caller = Reflection.getCallerClass();
-      if (!caller.getName().startsWith("org.openjdk.btrace.")) {
+      // Use StackWalker instead of Reflection.getCallerClass() to avoid
+      // CallerSensitive annotation requirement (only works from bootstrap CL)
+      Class<?> caller =
+          StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+              .walk(frames -> frames.skip(1).findFirst())
+              .map(StackWalker.StackFrame::getDeclaringClass)
+              .orElse(null);
+      if (caller == null || !caller.getName().startsWith("org.openjdk.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
 

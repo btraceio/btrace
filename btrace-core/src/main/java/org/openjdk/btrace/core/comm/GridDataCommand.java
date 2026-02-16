@@ -38,12 +38,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import org.openjdk.btrace.core.aggregation.HistogramData;
 
 /**
  * A data command that holds tabular data.
  *
- * <p>The elements contained within the grid must be of type Number, String or HistogramData.
+ * <p>The elements contained within the grid must be of type Number or String.
  *
  * @author Christian Glencross
  */
@@ -156,18 +155,11 @@ public class GridDataCommand extends DataCommand {
         if (dataRow == null) {
           continue;
         }
-        // Convert histograms to strings, and pretty-print multi-line text
+        // Pretty-print multi-line text
         Object[] printRow = dataRow.clone();
         for (int i = 0; i < printRow.length; i++) {
           if (printRow[i] == null) {
             printRow[i] = "<null>";
-          }
-          if (printRow[i] instanceof HistogramData) {
-            StringWriter buffer = new StringWriter();
-            PrintWriter writer = new PrintWriter(buffer);
-            ((HistogramData) printRow[i]).print(writer);
-            writer.flush();
-            printRow[i] = buffer.toString();
           }
           if (printRow[i] instanceof String) {
             String value = (String) printRow[i];

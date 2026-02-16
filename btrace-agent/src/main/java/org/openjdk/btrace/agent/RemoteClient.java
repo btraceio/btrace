@@ -239,7 +239,10 @@ class RemoteClient extends Client {
                         }
                       case Command.EVENT:
                         {
-                          getRuntime().handleEvent((EventCommand) cmd);
+                          BTraceRuntime.Impl rt = getRuntime();
+                          if (rt != null) {
+                            rt.handleEvent((EventCommand) cmd);
+                          }
                           break;
                         }
                       default:
@@ -382,6 +385,29 @@ class RemoteClient extends Client {
 
   public boolean isDisconnected() {
     return disconnected;
+  }
+
+  @Override
+  protected void sendCommand(Command command) {
+    if (getRuntime() != null) {
+      super.sendCommand(command);
+      return;
+    }
+    // Runtime not yet initialized - send directly via protocol
+    WireProtocol output = protocol;
+    if (output != null) {
+      try {
+        synchronized (output) {
+          output.write(command);
+          output.flush();
+        }
+      } catch (IOException e) {
+        log.warn("Failed to send command {} via protocol", command.getClass().getSimpleName(), e);
+      }
+    } else {
+      log.warn("Cannot send command {}, neither runtime nor protocol available",
+          command.getClass().getSimpleName());
+    }
   }
 
   @Override

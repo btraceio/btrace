@@ -18,7 +18,7 @@ public final class BTraceRuntimes {
             || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9$Factory")
             || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_8$Factory");
     log.debug("BTraceRuntime loaded: {}", loaded);
-    BTraceRuntimeAccess.registerRuntimeAccessor();
+    BTraceRuntimeAccessImpl.install();
   }
 
   private static boolean loadFactory(String className) {
@@ -55,7 +55,17 @@ public final class BTraceRuntimes {
   }
 
   public static BTraceRuntime.Impl getDefault() {
+    // Ensure runtime accessor is registered (must be done after static init completes)
+    BTraceRuntimeAccessImpl.ensureRegistered(FACTORY);
     return FACTORY != null ? FACTORY.getDefault() : null;
+  }
+
+  /**
+   * Ensures the runtime accessor is registered in BTraceRuntime.
+   * This must be called after getDefault() to complete initialization.
+   */
+  public static void ensureAccessorRegistered() {
+    BTraceRuntimeAccessImpl.ensureRegistered(FACTORY);
   }
 
   public static BTraceRuntime.Impl getRuntime(
