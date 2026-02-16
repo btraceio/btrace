@@ -1,8 +1,8 @@
 # BTrace v2 Binary Protocol Architecture
 
-**Document Version:** 1.0
-**Last Updated:** December 2025
-**Status:** Implementation in Progress
+**Document Version:** 1.1
+**Last Updated:** February 2026
+**Status:** Implemented (v2.3.0+)
 
 ---
 
@@ -383,7 +383,7 @@ Command status = wire.read(in);
 └──────────────┴──────────────┴────────────────────────────┘
 ```
 
-**Version Byte:** Always `0x02` for v2 protocol
+**Version Byte:** Current version is `0x03` (bumped from `0x02` after binary format changes to ErrorCommand and GridDataCommand)
 
 **Type Byte:** Command type identifier (0-16)
 
@@ -584,17 +584,21 @@ agent.onCommand(v1Cmd);
 **Special Cases:**
 
 1. **ErrorCommand:**
-   - v1: Contains full `Throwable` object
-   - v2: Contains error code + message string
-   - **Conversion:** Extract message from Throwable, discard stack trace
-   - **Rationale:** Stack traces don't serialize well across languages
+   - v1: Contains full `Throwable` object (type + message + stack trace)
+   - v2: Contains exception class name, message, and stack trace as strings
+   - **Conversion:** Adapter extracts exception class, message, and stack trace from the `Throwable`; on deserialization, wraps them in a `RemoteException` that preserves the original type and trace
 
 2. **GridDataCommand:**
-   - v1: Object[][] (mixed types)
-   - v2: Typed cells (String, Integer, Long, Float, Double, Boolean, null)
-   - **Conversion:** Type preservation via explicit type codes
+   - v1: Object[][] (mixed types), optional column names
+   - v2: Typed cells (String, Integer, Long, Float, Double, Boolean, HistogramData, null), column names preserved
+   - **Conversion:** Type preservation via explicit type codes; `HistogramData` has a dedicated encoding
 
-3. **StatusCommand:**
+3. **NumberMapDataCommand:**
+   - v1: `Map<String, Number>` (can carry any `Number` subclass)
+   - v2: Typed encoding for int/long/float/double plus dedicated codes for `BigInteger` and `BigDecimal`
+   - **Conversion:** Preserves precision for all standard `Number` types
+
+4. **StatusCommand:**
    - v1: Single int (positive=success, negative=failure)
    - v2: flag (int) + success (boolean)
    - **Conversion:** `flag = abs(v1), success = (v1 > 0)`
@@ -760,28 +764,16 @@ public class WireIOV2Adapter implements WireProtocol {
 
 ### For Developers
 
-#### Phase 1: Testing (Current Phase)
-- Expand test coverage for all 17 command types
-- Add edge case tests (null values, large payloads)
-- Improve error handling
-- Run performance benchmarks
-
-#### Phase 2: Integration
-- Implement protocol negotiation
-- Refactor RemoteClient and Client
-- Add WireProtocol abstraction
-- Test backward compatibility
-
-#### Phase 3: Validation
-- Integration tests with real agent/client
-- Backward compatibility test matrix
-- Performance benchmarks
-- Stress tests
-
-#### Phase 4: Rollout
+#### Completed
+- All 17 command types implemented and tested
+- Protocol negotiation implemented
+- RemoteClient and Client refactored with WireProtocol abstraction
+- Backward compatibility verified (v1 clients work with v2 agents and vice versa)
 - Default to v2 with automatic fallback to v1
-- Monitor for issues
-- Gradual adoption across environments
+
+#### Post-Release Technical Debt
+- Add v2-only end-to-end integration test suite
+- Stress tests under sustained high-frequency tracing
 
 ### Rollback Plan
 
@@ -860,11 +852,12 @@ The BTrace v2 binary protocol delivers significant performance improvements (3-6
 - Performance gains are substantial and validated by benchmarks
 - Migration is transparent to end users
 
-**Next Steps:**
-- Complete Phase 1 testing
-- Implement protocol negotiation (Phase 2)
-- Integrate into RemoteClient/Client (Phase 3)
-- Validate with comprehensive tests (Phase 4)
+**Implementation status:**
+- Protocol version bumped to 3 after binary format changes
+- All 17 command types covered by unit tests (26+ tests)
+- ErrorCommand preserves exception class, message, and stack trace via RemoteException
+- GridDataCommand preserves HistogramData and column names
+- NumberMapDataCommand preserves BigInteger and BigDecimal
 
 ---
 
@@ -872,5 +865,4 @@ The BTrace v2 binary protocol delivers significant performance improvements (3-6
 
 - Implementation: `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/`
 - Tests: `btrace-core/src/test/java/org/openjdk/btrace/core/comm/v2/`
-- Plan: `/Users/jaroslav.bachorik/.claude/plans/flickering-sleeping-fern.md`
 - README: `btrace-core/src/main/java/org/openjdk/btrace/core/comm/v2/Readme.md`

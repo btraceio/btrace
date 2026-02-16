@@ -68,7 +68,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 
 ### Deployment & Operations
 - **Installation** → [Getting Started: Installation](gettingStarted.md#installation)
-- **Three Deployment Modes** → [Getting Started: Running BTrace](gettingStarted.md#three-ways-to-run-btrace)
+- **Deployment Modes** → [Getting Started: Running BTrace](gettingStarted.md#four-ways-to-run-btrace)
 - **Docker & Containers** → [Getting Started: Containers](gettingStarted.md#btrace-in-containers-and-kubernetes)
 - **Kubernetes** → [Getting Started: K8s](gettingStarted.md#btrace-in-containers-and-kubernetes), [FAQ: Microservices](faq.md#can-i-use-btrace-with-microservices), [Troubleshooting: K8s](troubleshooting.md#kubernetes-and-cloud-deployments)
 - **Performance Tuning** → [FAQ: Performance Impact](faq.md#whats-the-performance-impact-of-btrace), [Troubleshooting: Performance](troubleshooting.md#performance-issues)
@@ -86,6 +86,12 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Third-Party Libraries** → [FAQ: Third-Party](faq.md#how-do-i-trace-methods-from-third-party-libraries)
 - **JMX Export** → [Quick Reference: @Export](quickReference.md#export), [FAQ: Monitoring Integration](faq.md#can-i-integrate-btrace-with-monitoring-systems)
 - **Service Mesh** → [FAQ: Service Mesh](faq.md#does-btrace-work-with-service-meshes-istiolinkerd)
+
+### Architecture
+- **Masked JAR** → [Masked JAR Architecture](architecture/MaskedJarArchitecture.md) — single-JAR distribution with classdata masking
+- **v2 Binary Protocol** → [Version 2 Protocol Architecture](architecture/Version2ProtocolArchitecture.md) — custom binary serialization
+- **Extension Framework** → [Extension invokedynamic Bridge](architecture/ExtensionInvokeDynamicBridge.md), [Extension Configuration](architecture/ExtensionConfiguration.md), [Extension Manifest](architecture/ExtensionManifestFormat.md), [Extension Storage](architecture/ExtensionStorageDesign.md)
+- **Instrumentation** → [BTrace Instrumentation Analysis](architecture/BTraceInstrAnalysis.md)
 
 ## Sample Scripts
 
@@ -124,7 +130,7 @@ BTrace is an open-source project welcoming contributions. To contribute:
 ## Version Information
 
 - **Current Version**: Check [GitHub Releases](https://github.com/btraceio/btrace/releases/latest)
-- **Java Compatibility**: Java 8-20
+- **Java Compatibility**: Java 8-25
 - **License**: GPLv2 with Classpath Exception
 
 ## Documentation Feedback
