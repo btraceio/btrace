@@ -56,7 +56,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * A set of end-to-end functional tests.
@@ -239,7 +238,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           }
       }
 
-      assumeFalse(testJavaHome == null);
+      org.junit.jupiter.api.Assumptions.assumeFalse(testJavaHome == null);
 
       Properties releaseProps = new Properties();
       releaseProps.load(
