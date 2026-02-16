@@ -54,6 +54,7 @@ dependencyResolutionManagement {
             version('jmhGradlePlugin', '0.7.3')
             version('slf4j', '1.7.36')
             version('junit', '5.11.4')
+            version('testcontainers', '2.0.3')
 
             // *** Gradle plugins ***
             plugin ('spotless', 'com.diffplug.spotless').version('6.11.0')
@@ -90,6 +91,8 @@ dependencyResolutionManagement {
             // https://mvnrepository.com/artifact/org.junit.jupiter
             library ('junit', 'org.junit', 'junit-bom').versionRef('junit')
             library ('junit-jupiter', 'org.junit.jupiter', 'junit-jupiter').versionRef('junit')
+            library ('testcontainers', 'org.testcontainers', 'testcontainers').versionRef('testcontainers')
+            library ('testcontainers-junit-jupiter', 'org.testcontainers', 'junit-jupiter').versionRef('testcontainers')
 
             // https://mvnrepository.com/artifact/org.hdrhistogram/HdrHistogram
             library ('hdrhistogram', 'org.hdrhistogram', 'HdrHistogram').version('2.2.2')

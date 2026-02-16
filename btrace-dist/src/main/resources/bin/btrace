@@ -19,7 +19,13 @@ if [ -d "${JAVA_HOME}/jmods" ]; then
   JAVA_ARGS="$JAVA_ARGS --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
 fi
 
-if [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
+if [ -f "${BTRACE_HOME}/libs/btrace.jar" ]; then
+  CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
+elif [ -f "${BTRACE_HOME}/libs/btrace-client.jar" ]; then
+  CLIENT_JAR="${BTRACE_HOME}/libs/btrace-client.jar"
+fi
+
+if [ -n "${CLIENT_JAR}" ]; then
   if [ -d "${JAVA_HOME}" ]; then
     TOOLS_JAR="$JAVA_HOME/lib/tools.jar"
 
