@@ -18,7 +18,7 @@ private static $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsShared$args(Ljav
 // annotable parameter count: 5 (visible)
 @Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
-GETSTATIC traces/onmethod/leveled/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
 IFNE L0
 RETURN
@@ -35,33 +35,33 @@ INVOKEVIRTUAL java/lang/StringBuilder.toString ()Ljava/lang/String;
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
 LDC "args"
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
-GETSTATIC traces/onmethod/leveled/ArgsShared.cntr : Ljava/lang/ThreadLocal;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.cntr : Ljava/lang/ThreadLocal;
 INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;
 CHECKCAST java/lang/Integer
 INVOKEVIRTUAL java/lang/Integer.intValue ()I
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.str (I)Ljava/lang/String;
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
-GETSTATIC traces/onmethod/leveled/ArgsShared.cntr : Ljava/lang/ThreadLocal;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.cntr : Ljava/lang/ThreadLocal;
 INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;
 CHECKCAST java/lang/Integer
 INVOKEVIRTUAL java/lang/Integer.intValue ()I
 ICONST_1
 IADD
 INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
-GETSTATIC traces/onmethod/leveled/ArgsShared.cntr : Ljava/lang/ThreadLocal;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.cntr : Ljava/lang/ThreadLocal;
 SWAP
 INVOKEVIRTUAL java/lang/ThreadLocal.set (Ljava/lang/Object;)V
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsShared$dumpExported ()V
-GETSTATIC traces/onmethod/leveled/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 L1
 FRAME SAME1 java/lang/Throwable
-GETSTATIC traces/onmethod/leveled/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X1
 SWAP
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
-GETSTATIC traces/onmethod/leveled/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 MAXSTACK = 3
@@ -69,7 +69,7 @@ MAXLOCALS = 6
 
 // access flags 0xA
 private static $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsShared$dumpExported()V
-GETSTATIC traces/onmethod/leveled/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 LDC "btrace.traces/onmethod/leveled/ArgsShared.exported"
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.getPerfLong (Ljava/lang/String;)J (itf)
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.str (J)Ljava/lang/String;
@@ -81,12 +81,12 @@ MAXLOCALS = 0
 
 // access flags 0xA
 private static $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsShared$incExported()V
-GETSTATIC traces/onmethod/leveled/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 LDC "btrace.traces/onmethod/leveled/ArgsShared.exported"
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.getPerfLong (Ljava/lang/String;)J (itf)
 LCONST_1
 LADD
-GETSTATIC traces/onmethod/leveled/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsShared.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X2
 POP
 LDC "btrace.traces/onmethod/leveled/ArgsShared.exported"

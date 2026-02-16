@@ -306,6 +306,8 @@ abstract class Client implements CommandListener {
         log.debug("removing instrumentation");
         retransformLoaded();
         log.debug("closing all I/O");
+        // Send EXIT command to notify remote client before closing
+        sendCommand(new ExitCommand(exitCode));
         Thread.sleep(300);
         try {
           closeAll();

@@ -328,6 +328,9 @@ public class BTraceProbePersisted implements BTraceProbe {
     int fullDataLen = dis.readInt();
     fullData = new byte[fullDataLen];
     dis.readFully(fullData);
+    if (fullData.length > 0 && isClassRenamed()) {
+      fullData = ProbeRenameVisitor.rename(getClassName(), fullData);
+    }
   }
 
   private void readDataHolderClass(DataInputStream dis) throws IOException {

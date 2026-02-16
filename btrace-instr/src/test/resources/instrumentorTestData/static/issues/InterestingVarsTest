@@ -10,7 +10,7 @@ FRAME SAME
 private static $btrace$org$openjdk$btrace$runtime$auxiliary$InterestingVarsTest$entry(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 @Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.InterestingVarsClass/", method="initAndStartApp")
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
-GETSTATIC traces/issues/InterestingVarsTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/InterestingVarsTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
 IFNE L0
 RETURN
@@ -18,16 +18,16 @@ L0
 FRAME SAME
 ALOAD 0
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
-GETSTATIC traces/issues/InterestingVarsTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/InterestingVarsTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 L1
 FRAME SAME1 java/lang/Throwable
-GETSTATIC traces/issues/InterestingVarsTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/InterestingVarsTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X1
 SWAP
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
-GETSTATIC traces/issues/InterestingVarsTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/InterestingVarsTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 MAXSTACK = 3

@@ -38,7 +38,7 @@ private static $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDurationSa
 @Lorg/openjdk/btrace/core/annotations/Return;() // parameter 0
 @Lorg/openjdk/btrace/core/annotations/Duration;() // parameter 1
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
-GETSTATIC traces/onmethod/MethodCallDurationSampled.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDurationSampled.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
 IFNE L0
 RETURN
@@ -46,16 +46,16 @@ L0
 FRAME SAME
 LDC "args"
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
-GETSTATIC traces/onmethod/MethodCallDurationSampled.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDurationSampled.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 L1
 FRAME SAME1 java/lang/Throwable
-GETSTATIC traces/onmethod/MethodCallDurationSampled.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDurationSampled.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X1
 SWAP
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
-GETSTATIC traces/onmethod/MethodCallDurationSampled.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallDurationSampled.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 MAXSTACK = 3

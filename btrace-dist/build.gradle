@@ -183,6 +183,7 @@ task prepareAgentClassdata(type: Copy) {
         include 'org/openjdk/btrace/libs/org/jctools/**/*.class'
         include 'org/openjdk/btrace/agent/**/*.class'
         include 'org/openjdk/btrace/instr/**/*.class'
+        include 'org/openjdk/btrace/instr/jaxb.index'  // Required for JAXB probe descriptor loading
         include 'org/openjdk/btrace/runtime/**/*.class'
         include 'org/openjdk/btrace/extension/**/*.class'
         include 'org/openjdk/btrace/core/comm/**/*.class'
@@ -276,8 +277,9 @@ task btraceJar(type: Jar) {
     from(zipTree(project(':btrace-bootstrap').tasks.shadowJar.archiveFile)) {
         include '**/*.class'
         include 'META-INF/services/**'
+        include '**/jaxb.index'  // Required for JAXB probe descriptor loading
         exclude 'org/openjdk/btrace/core/comm/**'
-        exclude 'org/openjdk/btrace/core/annotations/**'
+        // Include annotations in bootstrap (needed by ExtensionIndy at runtime)
         // Exclude manifest from bootstrap jar
         exclude 'META-INF/MANIFEST.MF'
     }
@@ -287,6 +289,7 @@ task btraceJar(type: Jar) {
         from("${maskedJarTmpDir}/agent") {
             include '**/*.classdata'
             include '**/messages.properties'
+            include '**/jaxb.index'  // Required for JAXB probe descriptor loading
         }
     }
 

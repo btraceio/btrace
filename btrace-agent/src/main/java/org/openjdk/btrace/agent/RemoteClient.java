@@ -239,7 +239,10 @@ class RemoteClient extends Client {
                         }
                       case Command.EVENT:
                         {
-                          getRuntime().handleEvent((EventCommand) cmd);
+                          BTraceRuntime.Impl rt = getRuntime();
+                          if (rt != null) {
+                            rt.handleEvent((EventCommand) cmd);
+                          }
                           break;
                         }
                       default:

@@ -33,10 +33,11 @@ subDirs.each { File dir ->
     if (dir.name.startsWith("btrace-")) {
         include dir.name
     }
-    include "integration-tests"
-    include "benchmarks:agent-benchmark"
-    include "benchmarks:runtime-benchmarks"
 }
+
+include "integration-tests"
+include "benchmarks:agent-benchmark"
+include "benchmarks:runtime-benchmarks"
 
 // Explicitly include nested extension modules
 include 'btrace-extensions'

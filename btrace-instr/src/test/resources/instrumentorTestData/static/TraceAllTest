@@ -105,7 +105,6 @@ IFNE L0
 LDC "public long resources.OnMethodTest#argsMultiReturn(java.lang.String, long, java.lang.String[], int[])"
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall (Ljava/lang/String;)V
 FRAME SAME
-FRAME FULL [resources/OnMethodTest java/lang/String J [I] []
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#staticField"
@@ -133,25 +132,25 @@ private static $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(L
 // annotable parameter count: 1 (visible)
 @Lorg/openjdk/btrace/core/annotations/ProbeMethodName;(fqn=true) // parameter 0
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
-GETSTATIC traces/TraceAllTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
 IFNE L0
 RETURN
 L0
 FRAME SAME
-GETSTATIC traces/TraceAllTest.hitCnt : Ljava/util/concurrent/atomic/AtomicLong;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.hitCnt : Ljava/util/concurrent/atomic/AtomicLong;
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.getAndIncrement (Ljava/util/concurrent/atomic/AtomicLong;)J
 POP2
-GETSTATIC traces/TraceAllTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 L1
 FRAME SAME1 java/lang/Throwable
-GETSTATIC traces/TraceAllTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X1
 SWAP
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
-GETSTATIC traces/TraceAllTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TraceAllTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 MAXSTACK = 3

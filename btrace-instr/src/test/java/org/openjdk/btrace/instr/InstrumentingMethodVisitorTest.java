@@ -317,6 +317,31 @@ public class InstrumentingMethodVisitorTest {
     }
   }
 
+  @Test
+  void computeFrameLocalsCompactLongThenRef() {
+    // Reproduces FutureTask.get(long, TimeUnit): compact locals [owner, LONG, TimeUnit]
+    // with no variable remapping (nextMappedVar == argsSize) triggers the else branch.
+    // The else branch must expand LONG to [LONG, TOP_EXT] to avoid overwriting TimeUnit.
+    int argsSize = 4; // this(1) + long(2) + ref(1)
+    List<Object> locals =
+        Arrays.asList(
+            "java/util/concurrent/FutureTask",
+            Opcodes.LONG,
+            "java/util/concurrent/TimeUnit");
+    VariableMapper mapper = new VariableMapper(argsSize);
+
+    Object[] result =
+        InstrumentingMethodVisitor.computeFrameLocals(argsSize, locals, null, mapper);
+
+    Object[] expected = {
+      "java/util/concurrent/FutureTask",
+      Opcodes.LONG,
+      InstrumentingMethodVisitor.TOP_EXT,
+      "java/util/concurrent/TimeUnit"
+    };
+    assertArrayEquals(expected, result);
+  }
+
   @ParameterizedTest
   @MethodSource("typeValues")
   void storeAsNew(Object value, Type type) {

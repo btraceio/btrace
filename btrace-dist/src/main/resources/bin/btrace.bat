@@ -6,8 +6,7 @@ set DEFAULT_BTRACE_HOME=%~dp0..
 if "%BTRACE_HOME%"=="" set BTRACE_HOME=%DEFAULT_BTRACE_HOME%
 set DEFAULT_BTRACE_HOME=
 
-set CLIENT_JAR=%BTRACE_HOME%\libs\btrace-client.jar
-if not exist "%CLIENT_JAR%" set CLIENT_JAR=%BTRACE_HOME%\libs\btrace.jar
+set CLIENT_JAR=%BTRACE_HOME%\libs\btrace.jar
 if not exist "%CLIENT_JAR%" goto noBTraceHome
 
 if "%JAVA_HOME%" == "" goto noJavaHome

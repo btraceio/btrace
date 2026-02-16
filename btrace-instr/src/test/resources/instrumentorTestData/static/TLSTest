@@ -12,32 +12,32 @@ MAXSTACK = 5
 private static $btrace$org$openjdk$btrace$runtime$auxiliary$TLSTest$testArgs(Ljava/lang/String;J[Ljava/lang/String;[I)V
 @Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="resources.OnMethodTest", method="args")
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
-GETSTATIC traces/TLSTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TLSTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
 IFNE L0
 RETURN
 L0
 FRAME SAME
-GETSTATIC traces/TLSTest.entryTimes : Ljava/lang/ThreadLocal;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TLSTest.entryTimes : Ljava/lang/ThreadLocal;
 INVOKEVIRTUAL java/lang/ThreadLocal.get ()Ljava/lang/Object;
 CHECKCAST java/util/Deque
 LLOAD 1
 INVOKESTATIC java/lang/Long.valueOf (J)Ljava/lang/Long;
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.push (Ljava/util/Deque;Ljava/lang/Object;)V
 ALOAD 0
-GETSTATIC traces/TLSTest.name : Ljava/lang/ThreadLocal;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TLSTest.name : Ljava/lang/ThreadLocal;
 SWAP
 INVOKEVIRTUAL java/lang/ThreadLocal.set (Ljava/lang/Object;)V
-GETSTATIC traces/TLSTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TLSTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 L1
 FRAME SAME1 java/lang/Throwable
-GETSTATIC traces/TLSTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TLSTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X1
 SWAP
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
-GETSTATIC traces/TLSTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/TLSTest.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 MAXSTACK = 3

@@ -456,10 +456,11 @@ public class Client {
         return null;
       }
       String name = classes.keySet().iterator().next();
-      code = classes.get(name);
+      byte[] code = classes.get(name);
       if (log.isDebugEnabled()) {
         log.debug("compiled {}", fileName);
       }
+      return code;
     } else if (fileName.endsWith(".class")) {
       int codeLen = (int) file.length();
       byte[] code = new byte[codeLen];
