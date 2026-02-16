@@ -14,7 +14,7 @@ public class BinaryGridDataCommand extends BinaryDataCommand {
     private List<String> columnNames = new ArrayList<>();
     private List<Object[]> data = new ArrayList<>();
     private static final ScalarEncoding SCALAR =
-        new ScalarEncoding((byte)0, (byte)1, (byte)2, (byte)3, (byte)4, (byte)5, (byte)6, (byte)7);
+        new ScalarEncoding((byte)0, (byte)1, (byte)2, (byte)3, (byte)4, (byte)5, (byte)6);
 
     static {
         // Register this command type

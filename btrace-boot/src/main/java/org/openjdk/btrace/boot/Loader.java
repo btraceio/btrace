@@ -24,21 +24,14 @@
  */
 package org.openjdk.btrace.boot;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
-import java.util.Enumeration;
-import java.util.NoSuchElementException;
 import java.util.jar.Attributes;
-import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
@@ -113,24 +106,44 @@ public final class Loader {
 
     private static void startAgent(String args, Instrumentation inst, String methodName) {
         try {
+            debug("startAgent called with args: " + args);
+
+            // Get JAR file location (tries CodeSource, then getResource() fallback)
             File jarFile = getJarFile();
             if (jarFile == null) {
                 throw new RuntimeException("Cannot locate btrace.jar");
             }
-            debug("Loading agent from: " + jarFile);
+            debug("Loading agent from: " + jarFile.getAbsolutePath());
+
+            // Add btrace.jar to bootstrap classloader search path
+            // This is required so that bootstrap-visible classes (BTraceRuntimeAccess, Auxiliary, etc.)
+            // are visible to probe classes which are defined via bootstrap classloader
+            try {
+                inst.appendToBootstrapClassLoaderSearch(new JarFile(jarFile));
+                debug("Added btrace.jar to bootstrap classpath");
+            } catch (IOException e) {
+                debug("WARNING: Failed to add btrace.jar to bootstrap classpath: " + e.getMessage());
+            }
 
             // Read main class from manifest
             String mainClass = getManifestAttribute(jarFile, AGENT_MAIN_ATTR, DEFAULT_AGENT_MAIN);
             debug("Agent main class: " + mainClass);
 
             // Create classloader for agent section
+            // Use null (bootstrap) as parent to ensure bootstrap classes like BTraceRuntimeAccess
+            // are loaded from bootstrap (via appendToBootstrapClassLoaderSearch), not from
+            // Loader's classloader. This ensures probe classes (loaded by bootstrap) see the
+            // same BTraceRuntimeAccess class that the agent uses.
             MaskedClassLoader agentLoader = new MaskedClassLoader(
-                    jarFile, AGENT_SECTION, Loader.class.getClassLoader());
+                    jarFile, AGENT_SECTION, null);
 
             // Load and invoke agent main class
             Class<?> agentMain = agentLoader.loadClass(mainClass);
+            debug("Loaded agent main class: " + agentMain.getName());
+
             Method method = agentMain.getMethod(methodName, String.class, Instrumentation.class);
             method.invoke(null, args, inst);
+            debug("Successfully invoked agent main");
 
         } catch (Exception e) {
             System.err.println("BTrace agent initialization failed: " + e.getMessage());
@@ -146,6 +159,10 @@ public final class Loader {
                 throw new RuntimeException("Cannot locate btrace.jar");
             }
             debug("Loading client from: " + jarFile);
+
+            // Set system property with btrace.jar location so client can use it as agent JAR
+            System.setProperty("btrace.jar.path", jarFile.getAbsolutePath());
+            debug("Set btrace.jar.path property to: " + jarFile.getAbsolutePath());
 
             // Read main class from manifest
             String mainClass = getManifestAttribute(jarFile, CLIENT_MAIN_ATTR, DEFAULT_CLIENT_MAIN);
@@ -185,25 +202,38 @@ public final class Loader {
 
     private static File getJarFile() {
         try {
+            // Try CodeSource first
             ProtectionDomain pd = Loader.class.getProtectionDomain();
             CodeSource cs = pd.getCodeSource();
-            if (cs == null) {
-                debug("No CodeSource available");
-                return null;
-            }
-            URL location = cs.getLocation();
-            if (location == null) {
-                debug("No location in CodeSource");
-                return null;
-            }
-            debug("CodeSource location: " + location);
-
-            // Handle file:// URLs
-            if ("file".equals(location.getProtocol())) {
-                return new File(location.toURI());
+            if (cs != null) {
+                URL location = cs.getLocation();
+                if (location != null) {
+                    debug("CodeSource location: " + location);
+                    if ("file".equals(location.getProtocol())) {
+                        return new File(location.toURI());
+                    }
+                    debug("Unsupported protocol: " + location.getProtocol());
+                }
             }
 
-            debug("Unsupported protocol: " + location.getProtocol());
+            // Fallback: use getResource() to find Loader.class in the JAR
+            debug("CodeSource unavailable, trying getResource()");
+            URL loaderResource = Loader.class.getResource("Loader.class");
+            if (loaderResource != null) {
+                debug("Loader resource: " + loaderResource);
+                String path = loaderResource.toString();
+                if (path.startsWith("jar:file:")) {
+                    // Extract JAR path from jar:file:/path/to/btrace.jar!/org/openjdk/btrace/boot/Loader.class
+                    path = path.substring("jar:file:".length());
+                    int idx = path.indexOf("!");
+                    if (idx > -1) {
+                        path = path.substring(0, idx);
+                        return new File(path);
+                    }
+                }
+            }
+
+            debug("Could not locate JAR file");
             return null;
         } catch (Exception e) {
             debug("Error getting JAR file: " + e.getMessage());
@@ -214,168 +244,6 @@ public final class Loader {
     private static void debug(String msg) {
         if (DEBUG) {
             System.err.println("[BTrace Boot] " + msg);
-        }
-    }
-
-    /**
-     * ClassLoader that loads classes from .classdata files in a masked section of a JAR.
-     * <p>
-     * This classloader reads class bytecode from files stored as .classdata instead of .class,
-     * allowing them to be hidden from the bootstrap classloader while remaining in the same JAR.
-     */
-    static final class MaskedClassLoader extends URLClassLoader {
-        private final JarFile jarFile;
-        private final File jarPath;
-        private final String sectionPrefix;
-
-        /**
-         * Creates a new MaskedClassLoader.
-         *
-         * @param jarPath path to the JAR file
-         * @param section section name ("agent" or "client")
-         * @param parent  parent classloader
-         */
-        MaskedClassLoader(File jarPath, String section, ClassLoader parent) throws IOException {
-            super(new URL[]{jarPath.toURI().toURL()}, parent);
-            this.jarPath = jarPath;
-            this.jarFile = new JarFile(jarPath);
-            this.sectionPrefix = "META-INF/btrace/" + section + "/";
-            debug("Created MaskedClassLoader for section: " + section);
-        }
-
-        @Override
-        protected Class<?> findClass(String name) throws ClassNotFoundException {
-            debug("findClass: " + name);
-
-            // Convert class name to path: org.foo.Bar -> META-INF/btrace/agent/org/foo/Bar.classdata
-            String path = sectionPrefix + name.replace('.', '/') + ".classdata";
-
-            JarEntry entry = jarFile.getJarEntry(path);
-            if (entry == null) {
-                debug("Class not found in masked section: " + name + " (path: " + path + ")");
-                throw new ClassNotFoundException(name);
-            }
-
-            try {
-                byte[] bytes = readEntry(entry);
-                debug("Loaded " + bytes.length + " bytes for class: " + name);
-
-                // Define the class with a CodeSource pointing to the JAR
-                URL jarUrl = jarPath.toURI().toURL();
-                CodeSource codeSource = new CodeSource(jarUrl, (java.security.cert.Certificate[]) null);
-                ProtectionDomain pd = new ProtectionDomain(codeSource, null, this, null);
-
-                return defineClass(name, bytes, 0, bytes.length, pd);
-            } catch (IOException e) {
-                throw new ClassNotFoundException(name, e);
-            }
-        }
-
-        @Override
-        public URL findResource(String name) {
-            debug("findResource: " + name);
-
-            // First check for the resource in the masked section
-            String maskedPath = sectionPrefix + name;
-            JarEntry entry = jarFile.getJarEntry(maskedPath);
-            if (entry != null) {
-                try {
-                    return createJarEntryURL(maskedPath);
-                } catch (MalformedURLException e) {
-                    debug("Failed to create URL for: " + maskedPath);
-                }
-            }
-
-            // Fall back to regular resource lookup
-            entry = jarFile.getJarEntry(name);
-            if (entry != null) {
-                try {
-                    return createJarEntryURL(name);
-                } catch (MalformedURLException e) {
-                    debug("Failed to create URL for: " + name);
-                }
-            }
-
-            return null;
-        }
-
-        @Override
-        public Enumeration<URL> findResources(String name) throws IOException {
-            debug("findResources: " + name);
-
-            final URL resource = findResource(name);
-            return new Enumeration<URL>() {
-                private boolean hasMore = (resource != null);
-
-                @Override
-                public boolean hasMoreElements() {
-                    return hasMore;
-                }
-
-                @Override
-                public URL nextElement() {
-                    if (!hasMore) {
-                        throw new NoSuchElementException();
-                    }
-                    hasMore = false;
-                    return resource;
-                }
-            };
-        }
-
-        @Override
-        public InputStream getResourceAsStream(String name) {
-            debug("getResourceAsStream: " + name);
-
-            // First check in the masked section
-            String maskedPath = sectionPrefix + name;
-            JarEntry entry = jarFile.getJarEntry(maskedPath);
-            if (entry != null) {
-                try {
-                    return jarFile.getInputStream(entry);
-                } catch (IOException e) {
-                    debug("Failed to get stream for: " + maskedPath);
-                }
-            }
-
-            // Fall back to regular resource lookup
-            entry = jarFile.getJarEntry(name);
-            if (entry != null) {
-                try {
-                    return jarFile.getInputStream(entry);
-                } catch (IOException e) {
-                    debug("Failed to get stream for: " + name);
-                }
-            }
-
-            return null;
-        }
-
-        private byte[] readEntry(JarEntry entry) throws IOException {
-            try (InputStream is = jarFile.getInputStream(entry)) {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = is.read(buffer)) != -1) {
-                    baos.write(buffer, 0, bytesRead);
-                }
-                return baos.toByteArray();
-            }
-        }
-
-        private URL createJarEntryURL(String entryPath) throws MalformedURLException {
-            // Create a jar: URL for the entry
-            return new URL("jar:" + jarPath.toURI().toURL() + "!/" + entryPath);
-        }
-
-        @Override
-        public void close() throws IOException {
-            super.close();
-            jarFile.close();
-        }
-
-        private void debug(String msg) {
-            Loader.debug("[MaskedCL:" + sectionPrefix + "] " + msg);
         }
     }
 }

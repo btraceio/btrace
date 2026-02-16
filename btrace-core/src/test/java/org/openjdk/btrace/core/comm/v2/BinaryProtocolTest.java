@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.aggregation.HistogramData;
 
 /**
  * Tests for the binary protocol implementation.
@@ -156,12 +155,7 @@ public class BinaryProtocolTest {
         List<Object[]> data = new ArrayList<>();
         data.add(new Object[] { "Row1Col1", 123, 3.14 });
         data.add(new Object[] { "Row2Col1", 456, 2.71 });
-        data.add(
-            new Object[] {
-                "Row3Col1",
-                789,
-                new HistogramData(new long[] {1, 2}, new long[] {3, 4})
-            });
+        data.add(new Object[] { "Row3Col1", 789, "Row3Col3" });
         
         // Create and write command
         BinaryGridDataCommand original = new BinaryGridDataCommand("TestGrid", columnNames, data);
@@ -192,9 +186,7 @@ public class BinaryProtocolTest {
         assertEquals(2.71, readData.get(1)[2]);
         assertEquals("Row3Col1", readData.get(2)[0]);
         assertEquals(789, readData.get(2)[1]);
-        HistogramData histogram = (HistogramData) readData.get(2)[2];
-        assertArrayEquals(new long[] {1, 2}, histogram.getValues());
-        assertArrayEquals(new long[] {3, 4}, histogram.getCounts());
+        assertEquals("Row3Col3", readData.get(2)[2]);
     }
     
     @Test

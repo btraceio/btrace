@@ -19,6 +19,7 @@ dependencies {
     implementation project(':btrace-core')
     implementation project(':btrace-compiler')
     implementation project(':btrace-instr')
+    implementation project(':btrace-boot')
 }
 
 jar {

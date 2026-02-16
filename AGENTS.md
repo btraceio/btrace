@@ -33,26 +33,103 @@
                          |                 |
                          v                 v
                    btrace-runtime     extensions (e.g., statsd, utils, metrics)
-                                 
+
  btrace-compiler  (validates/compiles scripts)
  btrace-dist      (packages binaries)
 ```
 
+## Distribution Architecture: Masked JAR
+
+BTrace uses a **single masked JAR** (`btrace.jar`) as its distribution artifact. This JAR contains:
+
+### Structure
+```
+btrace.jar
+├── META-INF/
+│   ├── MANIFEST.MF (Main-Class, Premain-Class, Agent-Class → org.openjdk.btrace.boot.Loader)
+│   ├── btrace/
+│   │   ├── agent/*.classdata    (agent classes - loaded in agent mode)
+│   │   ├── client/*.classdata   (client classes - loaded in client mode)
+│   │   └── shared/*.classdata   (shared classes - loaded in both modes)
+├── org/openjdk/btrace/boot/     (bootstrap classes - visible to JVM)
+└── org/openjdk/btrace/core/     (core/runtime classes from bootstrap module)
+```
+
+### Class Loading Strategy
+
+1. **Bootstrap Classes** (`.class` files in root):
+   - Loaded by bootstrap classloader
+   - Visible to JVM and all code
+   - Includes: Loader, MaskedClassLoader, MaskedJarUtils
+   - These classes initialize the masked jar system
+
+2. **Agent Classes** (`.classdata` in `META-INF/btrace/agent/`):
+   - Loaded via MaskedClassLoader in agent mode
+   - Isolated from application classes
+   - Includes: btrace-agent, btrace-instr, btrace-runtime, relocated jctools
+
+3. **Client Classes** (`.classdata` in `META-INF/btrace/client/`):
+   - Loaded via MaskedClassLoader in client mode
+   - Includes: btrace-client, btrace-compiler, lanterna UI
+
+4. **Shared Classes** (`.classdata` in `META-INF/btrace/shared/`):
+   - Loaded in both agent and client modes
+   - Includes: communication protocol, annotations, ASM core
+   - Critical for agent-client communication
+
+### Why Masked JAR?
+
+- **Single Source of Truth**: One JAR for all use cases (agent, client, standalone)
+- **Bootstrap Isolation**: Agent/client classes hidden from JVM, preventing conflicts
+- **No Embedded JARs**: Eliminates nested JAR extraction overhead
+- **Simplified Build**: Removed redundant uber jar - masked jar handles everything
+
+### Build Process
+
+The masked JAR is built in `btrace-dist/build.gradle`:
+1. `allClassesShadow` - Creates intermediate shadow jar with all dependencies and relocations
+2. `prepareAgentClassdata` - Extracts agent classes, renames `.class` → `.classdata`
+3. `prepareClientClassdata` - Extracts client classes, renames `.class` → `.classdata`
+4. `prepareSharedClassdata` - Extracts shared classes, renames `.class` → `.classdata`
+5. `btraceJar` - Combines bootstrap classes (as `.class`) + masked classes (as `.classdata`)
+
+### Debugging Tips
+
+- **ClassNotFoundException in agent mode**: Check if class is in `META-INF/btrace/agent/` (or shared if needed)
+- **ClassNotFoundException in client mode**: Check if class is in `META-INF/btrace/client/` (or shared if needed)
+- **NoClassDefFoundError between modes**: Class may need to be in shared section
+- **Inspect masked JAR**: `unzip -l btrace.jar | grep -E "(\.class|\.classdata)"`
+- **Check manifest**: `unzip -p btrace.jar META-INF/MANIFEST.MF`
+
 ## Launch Modes
 ```
-Launch-time:
-  java -javaagent:$BTRACE_HOME/lib/btrace-agent.jar=script=MyTrace.java -jar app.jar
-           |-> premain() installs transformer before classes load
+Launch-time (agent mode):
+  java -javaagent:$BTRACE_HOME/libs/btrace.jar=script=MyTrace.java -jar app.jar
+           |-> Loader.premain() -> loads agent classes from .classdata -> installs transformer
 
-Attach-time:
+Attach-time (client mode):
   btrace <PID> MyTrace.java
-           |-> client attaches -> agentmain() -> instrument running JVM
+           |-> Loader as Main-Class -> loads client classes from .classdata -> attaches to target JVM
+           |-> Target JVM: Loader.agentmain() -> loads agent classes from .classdata -> instruments
+
+Standalone (client mode):
+  java -jar btrace.jar <args>
+           |-> Same as attach-time, Loader delegates to client
 ```
 
 ## Troubleshooting
 - Attach disabled: if JVM was started with `-XX:+DisableAttachMechanism`, remove it or relaunch without it.
 - Permission errors: attach requires same OS user as target JVM; on Linux/macOS avoid sudo mixing; check container/JDK permissions.
 - Toolchains: ensure `JAVA_HOME` and optional `TEST_JAVA_HOME` point to valid JDKs; for integration tests, build `btrace-dist` first so client/libs exist.
+
+### Masked JAR Troubleshooting
+- **ClassNotFoundException with .classdata**: MaskedClassLoader can't find class in masked sections. Check:
+  1. Is the class in the correct section? (agent/client/shared)
+  2. Was the class relocated? Check package name matches relocated path
+  3. Did the build complete successfully? Rebuild with `./gradlew clean :btrace-dist:btraceJar`
+- **Shared classes**: If a class is used by BOTH agent and client (e.g., comm protocol, annotations), it MUST be in the shared section
+- **Bootstrap vs Masked**: Bootstrap classes (.class) are visible everywhere; masked classes (.classdata) are isolated per-mode
+- **Build order matters**: `allClassesShadow` must complete before prepare*Classdata tasks run
 
 ## Example Script
 ```java
@@ -126,7 +203,8 @@ public class ReturnTrace {
 - Framework: JUnit Jupiter (JUnit 5).
 - Unit tests reside under `src/test/java`; name classes with `*Test`.
 - Integration tests in `integration-tests/src/test/java`; BTrace scripts under `integration-tests/src/test/btrace`.
-- For integration runs, ensure `btrace-dist/build/resources/main/v<version>/libs/btrace-client.jar` exists (created by the dist build).
+- For integration runs, ensure `btrace-dist/build/resources/main/v<version>/libs/btrace.jar` exists (created by the dist build).
+- The masked JAR is used for all integration tests - both agent and client modes use the same artifact.
 
 ## Commit & Pull Request Guidelines
 - Commit style: Conventional Commits (e.g., `feat(core): add probe`, `fix(instr): handle null arg`).
@@ -146,6 +224,35 @@ public class ReturnTrace {
 - If network interfaces are restricted, force IPv4 to avoid wildcard IP detection errors: set `JAVA_TOOL_OPTIONS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
 - Example: `GRADLE_USER_HOME=$(pwd)/.gradle-user JAVA_TOOL_OPTIONS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false" ./gradlew :btrace-dist:buildZip -x test`
 
+## Common Patterns & Lessons Learned
+
+### Adding New Classes
+1. **Determine the section**: Is the class used by agent, client, or both?
+   - Agent only → prepareAgentClassdata include pattern
+   - Client only → prepareClientClassdata include pattern
+   - Both → prepareSharedClassdata include pattern
+2. **Update build.gradle**: Add include pattern in the appropriate task
+3. **Rebuild and test**: `./gradlew clean :btrace-dist:btraceJar && ./gradlew -Pintegration test`
+
+### Dependency Relocation
+- All third-party dependencies are relocated to `org.openjdk.btrace.libs.*`
+- Relocations happen in `allClassesShadow` task using Shadow plugin
+- Common relocations: ASM, SLF4J, JCTools
+- After relocation, classes are extracted and masked in prepare*Classdata tasks
+
+### Build Simplification Wins
+- **Before**: Separate agent.jar, client.jar, boot.jar, uber.jar (4 artifacts)
+- **After**: Single btrace.jar with masked sections (1 artifact)
+- **Result**: Simpler build, smaller distribution, easier maintenance
+
+### ClassLoader Isolation
+- Bootstrap classes can see everything (including masked sections via MaskedClassLoader)
+- Application classes cannot see masked sections (isolation prevents conflicts)
+- Masked classes in agent mode cannot see masked classes in client mode (intentional isolation)
+- Shared section solves cross-mode visibility when needed (e.g., command serialization)
+
 ## Hard rules
 - Never commit changes unless they are fully tested or you are explicitly asked to commit
 - Do not use FQNs directly! Always import types and use simple type names in the code!
+- When adding classes to masked jar, always consider: agent-only, client-only, or shared?
+- Rebuild the distribution after any changes to masked jar structure: `./gradlew clean :btrace-dist:btraceJar`

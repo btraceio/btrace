@@ -11,7 +11,7 @@ def javaHome = env['JAVA_HOME']
 dependencies {
   implementation project(path: ":btrace-dist", configuration: "shadow")
   implementation project(":btrace-compiler")
-  jmh tasks.getByPath(':btrace-dist:bootJar').outputs.getFiles()
+  jmh tasks.getByPath(':btrace-dist:btraceJar').outputs.getFiles()
 
   jmh libs.jmh
   jmh libs.jmh.annprocess
@@ -53,7 +53,7 @@ jmh {
   fork = 2
   jvm = "${env['JAVA_HOME']}/bin/java"
   duplicateClassesStrategy = DuplicatesStrategy.WARN
-  def agentJarPath = tasks.getByPath(':btrace-dist:agentJar').outputs.getFiles().getSingleFile()
+  def agentJarPath = tasks.getByPath(':btrace-dist:btraceJar').outputs.getFiles().getSingleFile()
   def scriptPath = buildDir.toPath().resolve('classes/java/main/TraceScript.btclass')
   def agent = "-javaagent:${agentJarPath}=stdout=false,noServer=true,debug=false,script=${scriptPath}"
   jvmArgsAppend = ["-Djmh.basedir=${buildDir.getParentFile()}", "-Dproject.version=${project.version}", "-Xmx128m", "-agentpath:/tmp/libasyncProfiler.dylib=start,event=cpu,jfr=7,file=/tmp/btrace.jfr", "${agent}"]

@@ -362,7 +362,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   @Override
   public void notifyTransform(String className) {
     if (rt != null && factory.getSettings().isTrackRetransforms()) {
-      rt.send(new RetransformClassNotification(className.replace('/', '.')));
+      rt.sendCommand(new RetransformClassNotification(className.replace('/', '.')));
     }
   }
 
@@ -500,7 +500,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     } catch (VerifierException e) {
       verifierException = e;
     } finally {
-      if (debug.isDumpClasses()) {
+      if (debug.isDumpClasses() && name != null) {
         debug.dumpClass(name, getBytecode(false));
       }
     }

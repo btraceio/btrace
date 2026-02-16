@@ -79,7 +79,7 @@ test {
         project.hasProperty("integration")
     }
     dependsOn cleanTest, buildEventsJar, compileTestProbes,
-             ':btrace-dist:agentJar', ':btrace-dist:clientJar', ':btrace-dist:bootJar', ':btrace-dist:uberJar',
+             ':btrace-dist:btraceJar',
              ':btrace-dist:explodeExtensions', ':btrace-extensions:buildExtensionsApi'
 
     testLogging.showStandardStreams = true

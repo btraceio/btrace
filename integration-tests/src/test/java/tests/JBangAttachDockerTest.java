@@ -40,12 +40,22 @@ public class JBangAttachDockerTest {
     File libsDir = new File(libsDirPath);
     assertTrue(libsDir.isDirectory(), "btrace.libs must be a directory");
 
+    File clientJar = new File(libsDir, "btrace-client.jar");
     File btraceJar = new File(libsDir, "btrace.jar");
     File agentJar = new File(libsDir, "btrace-agent.jar");
     File bootJar = new File(libsDir, "btrace-boot.jar");
-    assertTrue(btraceJar.isFile(), "btrace.jar missing in libs directory");
-    assertTrue(agentJar.isFile(), "btrace-agent.jar missing in libs directory");
-    assertTrue(bootJar.isFile(), "btrace-boot.jar missing in libs directory");
+
+    // Determine which JAR structure is available
+    boolean useMaskedJar = btraceJar.isFile();
+    File clientJarToUse = clientJar.isFile() ? clientJar : btraceJar;
+    assertTrue(clientJarToUse.isFile(), "btrace-client.jar or btrace.jar missing in libs directory");
+
+    // For masked JAR, agent and boot are embedded; for old structure, they must exist separately
+    if (!useMaskedJar) {
+      assertTrue(agentJar.isFile(), "btrace-agent.jar missing in libs directory");
+      assertTrue(bootJar.isFile(), "btrace-boot.jar missing in libs directory");
+    }
+    String clientJarName = clientJarToUse.getName();
 
     try (GenericContainer<?> container =
         new GenericContainer<>(DockerImageName.parse("eclipse-temurin:21-jdk"))
@@ -94,17 +104,19 @@ public class JBangAttachDockerTest {
                   + "--add-exports java.base/jdk.internal.reflect=ALL-UNNAMED "
                   + "--add-modules jdk.attach "
                   + "--add-exports jdk.attach/sun.tools.attach=ALL-UNNAMED "
-                  + "-cp /btrace/libs/btrace.jar org.openjdk.btrace.client.Main "
-                  + "--agent-jar /btrace/libs/btrace-agent.jar "
-                  + "--boot-jar /btrace/libs/btrace-boot.jar "
+                  + "-cp /btrace/libs/" + clientJarName + " org.openjdk.btrace.client.Main "
+                  + (useMaskedJar ? "" : "--agent-jar /btrace/libs/btrace-agent.jar --boot-jar /btrace/libs/btrace-boot.jar ")
                   + "${pid} /tmp/TestTrace.java -v > /tmp/btrace.log 2>&1\n"
                   + "cat /tmp/btrace.log\n"
                   + "kill ${pid} >/dev/null 2>&1 || true\n");
 
       String output = result.getStdout() + result.getStderr();
       assertEquals(0, result.getExitCode(), "btrace attach command failed");
-      assertTrue(output.contains("agent JAR override"), "agent override not acknowledged");
-      assertTrue(output.contains("boot JAR override"), "boot override not acknowledged");
+      if (!useMaskedJar) {
+        // Only check for override messages when using old separate JAR structure
+        assertTrue(output.contains("agent JAR override"), "agent override not acknowledged");
+        assertTrue(output.contains("boot JAR override"), "boot override not acknowledged");
+      }
       assertTrue(output.contains("work"), "expected probe output missing");
     }
   }

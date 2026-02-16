@@ -27,6 +27,8 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.openjdk.btrace.boot.MaskedClassLoader;
+import org.openjdk.btrace.boot.MaskedJarUtils;
 import org.openjdk.btrace.core.SharedSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,9 +183,24 @@ class CompilerHelper {
       options.add(classPath);
     }
 
+    // Wrap the file manager with MaskedJavaFileManager if a masked JAR is on the classpath
+    javax.tools.JavaFileManager effectiveManager = manager;
+    File maskedJar = MaskedJarUtils.findMaskedJarInClasspath(classPath);
+    ClassLoader maskedClassLoader = null;
+    if (maskedJar != null) {
+      try {
+        effectiveManager = new MaskedJavaFileManager(manager, maskedJar);
+        log.debug("Using MaskedJavaFileManager for: {}", maskedJar.getAbsolutePath());
+        // Create a MaskedClassLoader for CompilerClassWriter to use
+        maskedClassLoader = new MaskedClassLoader(maskedJar, "client", getClass().getClassLoader());
+      } catch (IOException e) {
+        log.warn("Failed to create MaskedJavaFileManager, falling back to standard manager", e);
+      }
+    }
+
     // create a compilation task
     JavacTask task =
-        (JavacTask) compiler.getTask(err, manager, diagnostics, options, null, compUnits);
+        (JavacTask) compiler.getTask(err, effectiveManager, diagnostics, options, null, compUnits);
     Verifier btraceVerifier = new Verifier();
     task.setTaskListener(btraceVerifier);
 
@@ -212,7 +229,7 @@ class CompilerHelper {
         if (classBytes.containsKey(name)) {
           dump(name + "_before", classBytes.get(name));
           ClassReader cr = new ClassReader(classBytes.get(name));
-          ClassWriter cw = new CompilerClassWriter(classPath, perr);
+          ClassWriter cw = new CompilerClassWriter(classPath, perr, maskedClassLoader);
           cr.accept(new Postprocessor(cw), ClassReader.EXPAND_FRAMES + ClassReader.SKIP_DEBUG);
           byte[] classData = cw.toByteArray();
           dump(name + "_after", classData);

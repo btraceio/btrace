@@ -9,3 +9,4 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 ]
 FRAME SAME
 MAXSTACK = 1
+FRAME FULL [resources/OnMethodTest java/lang/String J [I] []

@@ -12,6 +12,7 @@ if not defined JAVA_HOME (
 )
 
 set JAR=%BTRACE_HOME%\libs\btrace-client.jar
+if not exist "%JAR%" set JAR=%BTRACE_HOME%\libs\btrace.jar
 if not exist "%JAR%" (
   echo Could not find %JAR%
   exit /b 1

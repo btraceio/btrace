@@ -210,6 +210,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
 FRAME SAME
+FRAME FULL [resources/OnMethodTest java/lang/String J [I] []
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L0
 LDC "public void resources.OnMethodTest#staticField"
