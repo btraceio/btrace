@@ -24,6 +24,9 @@
  */
 package org.openjdk.btrace.instr;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -60,6 +63,7 @@ import static org.objectweb.asm.Opcodes.FSUB;
 import static org.objectweb.asm.Opcodes.GETFIELD;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
 import static org.objectweb.asm.Opcodes.GOTO;
+import static org.objectweb.asm.Opcodes.H_INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.IALOAD;
 import static org.objectweb.asm.Opcodes.IASTORE;
 import static org.objectweb.asm.Opcodes.ICONST_0;
@@ -585,6 +589,35 @@ public final class Assembler {
 
   public Assembler invokeStatic(String owner, String method, String desc) {
     mv.visitMethodInsn(INVOKESTATIC, owner, method, desc, false);
+    return this;
+  }
+
+  private static final String INDY_DISPATCHER_INTERNAL = "org/openjdk/btrace/indy/IndyDispatcher";
+  private static final MethodType RUNTIME_BOOTSTRAP_MT =
+      MethodType.methodType(
+          CallSite.class,
+          MethodHandles.Lookup.class,
+          String.class,
+          MethodType.class,
+          String.class);
+  private static final Handle RUNTIME_BOOTSTRAP_HANDLE =
+      new Handle(
+          H_INVOKESTATIC,
+          INDY_DISPATCHER_INTERNAL,
+          "runtimeBootstrap",
+          RUNTIME_BOOTSTRAP_MT.toMethodDescriptorString(),
+          false);
+
+  /**
+   * Emit an INVOKEDYNAMIC instruction that routes through IndyDispatcher.runtimeBootstrap to
+   * resolve a static method in the agent classloader at first invocation.
+   *
+   * @param owner the internal name of the target class
+   * @param method the method name
+   * @param desc the method descriptor
+   */
+  public Assembler invokeRuntime(String owner, String method, String desc) {
+    mv.visitInvokeDynamicInsn(method, desc, RUNTIME_BOOTSTRAP_HANDLE, owner);
     return this;
   }
 

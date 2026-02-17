@@ -222,6 +222,9 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
     StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
         .forEach(
             f -> {
+              if (f.getDeclaringClass().getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+                return;
+              }
               if (cont.getAndDecrement() == 0) {
                 cl.compareAndSet(null, f.getDeclaringClass().getClassLoader());
               }
@@ -236,6 +239,9 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
     StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
         .forEach(
             f -> {
+              if (f.getDeclaringClass().getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+                return;
+              }
               if (cont.getAndDecrement() == 0) {
                 cl.compareAndSet(null, f.getDeclaringClass());
               }
