@@ -31,6 +31,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import org.openjdk.btrace.core.HandlerRepository;
+import org.openjdk.btrace.runtime.LinkingFlag;
 
 /**
  * Minimal invokedynamic bootstrap dispatcher for BTrace probe handlers. Resides in the bootstrap
@@ -76,16 +77,21 @@ public final class IndyDispatcher {
    */
   public static CallSite bootstrap(
       MethodHandles.Lookup caller, String name, MethodType type, String probeClassName) {
-    MethodHandle mh;
+    LinkingFlag.guardLinking();
     try {
-      mh = repository.resolveHandler(caller.lookupClass().getName(), probeClassName, name, type);
-    } catch (Throwable t) {
-      mh = null;
+      MethodHandle mh;
+      try {
+        mh = repository.resolveHandler(caller.lookupClass().getName(), probeClassName, name, type);
+      } catch (Throwable t) {
+        mh = null;
+      }
+      if (mh == null) {
+        mh = MethodHandles.dropArguments(NOOP, 0, type.parameterArray());
+      }
+      return new ConstantCallSite(mh);
+    } finally {
+      LinkingFlag.reset();
     }
-    if (mh == null) {
-      mh = MethodHandles.dropArguments(NOOP, 0, type.parameterArray());
-    }
-    return new ConstantCallSite(mh);
   }
 
   /**
@@ -101,18 +107,21 @@ public final class IndyDispatcher {
    */
   public static CallSite runtimeBootstrap(
       MethodHandles.Lookup caller, String name, MethodType type, String owner) {
-    MethodHandle mh;
+    LinkingFlag.guardLinking();
     try {
-      mh = repository.resolveRuntime(owner, name, type);
-    } catch (Throwable t) {
-      mh = null;
+      MethodHandle mh;
+      try {
+        mh = repository.resolveRuntime(owner, name, type);
+      } catch (Throwable t) {
+        mh = null;
+      }
+      if (mh == null) {
+        mh = buildDefaultHandle(type);
+      }
+      return new ConstantCallSite(mh);
+    } finally {
+      LinkingFlag.reset();
     }
-    if (mh == null) {
-      // For methods that return a value, we cannot simply use noop (which returns void).
-      // Return a handle that drops all args and returns the type's default value.
-      mh = buildDefaultHandle(type);
-    }
-    return new ConstantCallSite(mh);
   }
 
   /** No-op handler used as fallback when handler resolution fails. */
