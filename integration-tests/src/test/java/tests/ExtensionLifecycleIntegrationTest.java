@@ -24,6 +24,7 @@
  */
 package tests;
 
+import java.net.ServerSocket;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,29 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
   @Override
   public void reset() {
     super.reset();
+    waitForPort(2020, 30_000);
+  }
+
+  /**
+   * Waits until the given port is available (not in use by a previous test's agent).
+   */
+  private static void waitForPort(int port, long timeoutMs) {
+    long deadline = System.currentTimeMillis() + timeoutMs;
+    while (System.currentTimeMillis() < deadline) {
+      try (ServerSocket ss = new ServerSocket(port)) {
+        ss.setReuseAddress(true);
+        return; // port is free
+      } catch (Exception e) {
+        // port still in use
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          return;
+        }
+      }
+    }
+    System.err.println("WARNING: port " + port + " still unavailable after " + timeoutMs + "ms");
   }
 
   @Test
