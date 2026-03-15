@@ -77,7 +77,19 @@ public final class LinkerInstrumentor {
     }
     public static byte[] addGuard(byte[] classData) {
         ClassReader cr = new ClassReader(classData);
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
+        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES) {
+            @Override
+            protected String getCommonSuperClass(String type1, String type2) {
+                // MethodHandleNatives references package-private types (MemberName, LambdaForm, etc.)
+                // that may not be resolvable via Class.forName() from the agent classloader.
+                // Fall back to Object rather than letting the instrumentation fail entirely.
+                try {
+                    return super.getCommonSuperClass(type1, type2);
+                } catch (RuntimeException e) {
+                    return "java/lang/Object";
+                }
+            }
+        };
         cr.accept(new LinkerClassVisitor(cw), ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();
     }
