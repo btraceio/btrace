@@ -4,6 +4,8 @@ DUP
 ASTORE 2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L0
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 2
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE69$onSyncEntry(Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
@@ -11,6 +13,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE69"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 FRAME APPEND [resources/OnMethodTest resources/OnMethodTest]
 L7
 LINENUMBER 127 L7
@@ -18,6 +21,8 @@ DUP
 ASTORE 3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L8
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 3
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE69$onSyncExit(Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
@@ -25,6 +30,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE69"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L8
 FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest]
 GOTO L9
@@ -34,6 +40,8 @@ DUP
 ASTORE 5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L10
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 5
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE69$onSyncExit(Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
@@ -41,6 +49,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE69"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L10
 FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest T java/lang/Throwable java/lang/Object] [java/lang/Object]
 ALOAD 4

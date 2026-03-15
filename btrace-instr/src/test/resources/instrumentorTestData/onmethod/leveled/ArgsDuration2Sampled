@@ -54,6 +54,8 @@ ICONST_5
 IF_ICMPGT L6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L6
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 DUP2
 LSTORE 12
 ALOAD 0
@@ -69,6 +71,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Sampled"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L6
 FRAME SAME1 J
 ILOAD 11
@@ -88,6 +91,8 @@ ICONST_1
 IF_ICMPLT L10
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L10
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 DUP2
 LSTORE 14
 ALOAD 0
@@ -103,6 +108,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Sampled"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L10
 FRAME SAME1 J
 L11

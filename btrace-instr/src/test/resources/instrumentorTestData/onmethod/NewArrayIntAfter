@@ -1,6 +1,8 @@
 DUP
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 ALOAD 1
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayIntAfter$args(Ljava/lang/Object;[I)V [
@@ -9,6 +11,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/NewArrayIntAfter"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 FRAME FULL [resources/OnMethodTest [I] [[I]
 ASTORE 2
 L2

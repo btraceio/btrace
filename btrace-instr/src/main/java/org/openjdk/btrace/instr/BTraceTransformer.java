@@ -133,6 +133,14 @@ public final class BTraceTransformer implements ClassFileTransformer {
       ProtectionDomain protectionDomain,
       byte[] classfileBuffer)
       throws IllegalClassFormatException {
+    // BTrace's own classes must never be instrumented regardless of classloader.
+    // This check must happen before acquiring setupLock because the lock itself
+    // may trigger class loading on JDK 8 (e.g. ReentrantReadWriteLock inner classes),
+    // and agent classes loaded by MaskedClassLoader bypass the loader-based sensitive check.
+    if (className != null && className.startsWith("org/openjdk/btrace/")) {
+      return null;
+    }
+
     try {
       setupLock.readLock().lock();
 

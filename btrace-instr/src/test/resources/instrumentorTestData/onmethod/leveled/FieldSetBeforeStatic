@@ -5,6 +5,8 @@ ICONST_1
 IF_ICMPLT L1
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 ACONST_NULL
 LDC "sField"
@@ -15,6 +17,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/FieldSetBeforeStatic"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L1
 FRAME FULL [resources/OnMethodTest J] [J]
 L2

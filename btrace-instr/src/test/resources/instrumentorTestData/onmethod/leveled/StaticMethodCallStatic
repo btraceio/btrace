@@ -5,6 +5,8 @@ ICONST_1
 IF_ICMPLT L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 6
 LLOAD 4
 LDC "static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)"
@@ -16,6 +18,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/StaticMethodCallStatic"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L2
 FRAME APPEND [resources/OnMethodTest J java/lang/String]
 ALOAD 6

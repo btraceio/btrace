@@ -8,6 +8,8 @@ ICONST_1
 IF_ICMPLT L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 ALOAD 6
 ILOAD 5
@@ -19,6 +21,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArraySetBeforeAny"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L3
 FRAME FULL [resources/OnMethodTest I [I I I I [I] [[I I I]
 L4

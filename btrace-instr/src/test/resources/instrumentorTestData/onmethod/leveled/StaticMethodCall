@@ -6,6 +6,8 @@ ICONST_1
 IF_ICMPLT L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 6
 LLOAD 4
 ALOAD 7
@@ -18,6 +20,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/StaticMethodCall"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L2
 FRAME FULL [java/lang/String J resources/OnMethodTest J java/lang/String resources/OnMethodTest] [J]
 ALOAD 7

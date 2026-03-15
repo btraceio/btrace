@@ -3,6 +3,8 @@ ICONST_1
 IF_ICMPLT L0
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L0
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ACONST_NULL
 ALOAD 0
 LLOAD 1
@@ -14,5 +16,6 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/StaticArgsSelf"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 FRAME SAME
 MAXSTACK = 6

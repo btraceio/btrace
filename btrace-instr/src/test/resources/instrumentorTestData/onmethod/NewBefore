@@ -1,5 +1,7 @@
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 LDC "java.util.HashMap"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewBefore$args(Ljava/lang/Object;Ljava/lang/String;)V [
@@ -8,6 +10,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/NewBefore"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L1
 FRAME SAME
 L2

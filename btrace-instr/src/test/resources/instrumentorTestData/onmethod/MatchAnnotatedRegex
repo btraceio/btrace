@@ -1,5 +1,7 @@
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L0
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MatchAnnotatedRegex$args(Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
@@ -7,5 +9,6 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/MatchAnnotatedRegex"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 FRAME SAME
 MAXSTACK = 1

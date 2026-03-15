@@ -1,6 +1,8 @@
 DUP
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 ALOAD 1
 LDC "java.util.HashMap"
@@ -10,6 +12,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/NewAfter"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 FRAME FULL [resources/OnMethodTest java/util/HashMap] [java/util/HashMap]
 ASTORE 2
 L2

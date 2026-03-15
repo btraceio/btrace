@@ -4,6 +4,8 @@ INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L0
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 LDC "public void resources.issues.BTRACE256#doStuff"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE256$entry(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
@@ -11,6 +13,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE256"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 FRAME APPEND [J J]
 INVOKESTATIC java/lang/System.nanoTime ()J
 LLOAD 3
@@ -20,6 +23,8 @@ L3
 FRAME SAME
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L4
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 LDC "public void resources.issues.BTRACE256#doStuff"
 LLOAD 1
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE256$exit(Ljava/lang/String;J)V [
@@ -28,6 +33,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE256"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L4
 FRAME SAME
 L5

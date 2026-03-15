@@ -4,6 +4,8 @@ IF_ICMPLT L2
 DUP
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 ALOAD 1
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$Catch$args(Ljava/lang/Object;Ljava/io/IOException;)V [
@@ -12,6 +14,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/Catch"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 FRAME FULL [resources/OnMethodTest java/io/IOException] [java/io/IOException]
 ASTORE 2
 L3

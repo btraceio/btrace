@@ -9,6 +9,8 @@ DUP
 ASTORE 2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 LDC "caught"
 ALOAD 2
@@ -18,6 +20,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ErrorCaught"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L5
 FRAME FULL [resources/OnMethodTest T java/lang/Throwable] [java/lang/Throwable]
 ATHROW

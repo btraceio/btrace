@@ -722,12 +722,19 @@ public final class Assembler {
   public Label openLinkerCheck() {
     Label l = new Label();
     invokeStatic(Constants.LINKING_FLAG_INTERNAL, "get", "()I");
-    // if the linking flag is 0, then we are not in a reentrant call
+    // if the linking flag is non-zero we are either in a bootstrap/linking call
+    // or inside a probe handler — skip to avoid recursion
     jump(IFNE, l);
+    // Set the flag to prevent re-entrant probe execution: if the probe handler
+    // calls instrumented code (e.g. AtomicLong.getAndIncrement), the nested
+    // openLinkerCheck will see the flag and skip.
+    invokeStatic(Constants.LINKING_FLAG_INTERNAL, "guardLinking", "()I");
+    pop();
     return l;
   }
 
   public void closeLinkerCheck(Label l) {
+    invokeStatic(Constants.LINKING_FLAG_INTERNAL, "reset", "()V");
     label(l);
     mHelper.insertFrameSameStack(l);
   }

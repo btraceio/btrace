@@ -1,5 +1,7 @@
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 LDC "resources.issues.BTRACE28"
 LDC "<init>"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE28$tracker(Ljava/lang/String;Ljava/lang/String;)V [
@@ -8,6 +10,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE28"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L1
 FRAME FULL [resources/issues/BTRACE28] []
 L2
@@ -20,6 +23,8 @@ ALOAD 7
 FRAME FULL [resources/issues/BTRACE28 java/lang/String java/lang/String java/lang/String java/lang/String [B [B java/lang/StringBuilder] [java/lang/Throwable]
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L11
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 LDC "resources.issues.BTRACE28"
 LDC "serveResource"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE28$tracker(Ljava/lang/String;Ljava/lang/String;)V [
@@ -28,6 +33,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE28"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L11
 FRAME SAME
 L12

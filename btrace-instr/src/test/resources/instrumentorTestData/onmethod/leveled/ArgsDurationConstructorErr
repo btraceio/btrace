@@ -31,6 +31,8 @@ ICONST_1
 IF_ICMPLT L5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 LLOAD 1
 ALOAD 6
@@ -40,6 +42,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L5
 FRAME FULL [resources/OnMethodTest J J I java/lang/Throwable] [java/lang/Throwable]
 ATHROW
@@ -79,6 +82,8 @@ ICONST_1
 IF_ICMPLT L5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 LLOAD 2
 ALOAD 7
@@ -88,6 +93,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L5
 FRAME FULL [resources/OnMethodTest java/lang/String J J I java/lang/Throwable] [java/lang/Throwable]
 ATHROW

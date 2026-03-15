@@ -15,6 +15,8 @@ L2
 FRAME FULL [resources/OnMethodTest java/lang/String J I J java/lang/String resources/OnMethodTest] []
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
 ALOAD 0
 ALOAD 7
 LLOAD 5
@@ -28,6 +30,7 @@ org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/MethodCallSampled"
 ]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
 L1
 FRAME SAME
 ALOAD 8
