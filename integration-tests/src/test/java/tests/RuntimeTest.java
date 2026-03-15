@@ -95,6 +95,8 @@ public abstract class RuntimeTest {
   protected boolean dumpOneliner = false;
   /** Dump verifier errors in target JVM */
   protected boolean dumpVerifierErrors = false;
+  /** Override the BTrace agent/client port (0 = use default 2020) */
+  protected int btracePort = 0;
   /** Provide extra JVM args */
   private static final List<String> extraJvmArgs = new ArrayList<>();
 
@@ -218,6 +220,7 @@ public abstract class RuntimeTest {
     attachDelayMs = 0;
     dumpOneliner = false;
     dumpVerifierErrors = false;
+    btracePort = 0;
     timeout = defaultTimeoutMs;
   }
 
@@ -1305,6 +1308,10 @@ public abstract class RuntimeTest {
     if (unattended) {
       argVals.add("-x");
     }
+    if (btracePort > 0) {
+      argVals.add("-p");
+      argVals.add(String.valueOf(btracePort));
+    }
     argVals.addAll(Arrays.asList(pid, traceFile.getAbsolutePath()));
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
@@ -1423,6 +1430,10 @@ public abstract class RuntimeTest {
     }
     if (unattended) {
       argVals.add("-x");
+    }
+    if (btracePort > 0) {
+      argVals.add("-p");
+      argVals.add(String.valueOf(btracePort));
     }
     argVals.addAll(Arrays.asList(pid));
     if (cmdArgs != null) {

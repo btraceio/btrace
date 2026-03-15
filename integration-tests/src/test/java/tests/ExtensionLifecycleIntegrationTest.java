@@ -24,6 +24,7 @@
  */
 package tests;
 
+import java.io.IOException;
 import java.net.ServerSocket;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,29 +50,12 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
   @Override
   public void reset() {
     super.reset();
-    waitForPort(2020, 30_000);
-  }
-
-  /**
-   * Waits until the given port is available (not in use by a previous test's agent).
-   */
-  private static void waitForPort(int port, long timeoutMs) {
-    long deadline = System.currentTimeMillis() + timeoutMs;
-    while (System.currentTimeMillis() < deadline) {
-      try (ServerSocket ss = new ServerSocket(port)) {
-        ss.setReuseAddress(true);
-        return; // port is free
-      } catch (Exception e) {
-        // port still in use
-        try {
-          Thread.sleep(200);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          return;
-        }
-      }
+    // Use an ephemeral port to avoid conflicts with leaked agents from other test classes
+    try (ServerSocket ss = new ServerSocket(0)) {
+      btracePort = ss.getLocalPort();
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to find a free port", e);
     }
-    System.err.println("WARNING: port " + port + " still unavailable after " + timeoutMs + "ms");
   }
 
   @Test
@@ -89,7 +73,7 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
             // Validate extension method was called
             assertTrue(
                 stdout.contains("LIFECYCLE: extension method called"),
-                "Extension method not called");
+                "Extension method not called. stdout: " + stdout);
           }
         });
   }
@@ -107,9 +91,10 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
             // Extension should still be called even on error exit
             assertTrue(
                 stdout.contains("LIFECYCLE: extension method called"),
-                "Extension method not called");
+                "Extension method not called. stdout: " + stdout);
             assertTrue(
-                stdout.contains("Triggering error exit"), "Error exit message not found");
+                stdout.contains("Triggering error exit"),
+                "Error exit message not found. stdout: " + stdout);
           }
         });
   }
@@ -129,10 +114,10 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
             // Validate both extensions were called
             assertTrue(
                 stdout.contains("LIFECYCLE: printer extension called"),
-                "Printer extension method not called");
+                "Printer extension method not called. stdout: " + stdout);
             assertTrue(
                 stdout.contains("LIFECYCLE: metrics extension called"),
-                "Metrics extension method not called");
+                "Metrics extension method not called. stdout: " + stdout);
           }
         });
   }
