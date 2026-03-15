@@ -62,61 +62,56 @@ public final class HandlerRepositoryImpl implements HandlerRepository {
       String callerName, String probeName, String handlerName, MethodType handlerType) {
     String cacheKey = probeName + "#" + handlerName + handlerType.toMethodDescriptorString();
 
-    MethodHandle cached = handlerCache.get(cacheKey);
-    if (cached != null) {
-      return cached;
-    }
+    // computeIfAbsent returns null if the mapping function returns null (probe not ready),
+    // which means resolution will be retried on the next call — the desired behavior.
+    return handlerCache.computeIfAbsent(
+        cacheKey,
+        k -> {
+          BTraceProbe probe = probeMap.get(probeName);
+          if (probe == null) {
+            log.warn("No probe registered for {}", probeName);
+            return null;
+          }
+          Class<?> probeClass = probe.getDefinedClass();
+          if (probeClass == null) {
+            log.warn("Probe {} not yet defined", probeName);
+            return null;
+          }
 
-    BTraceProbe probe = probeMap.get(probeName);
-    if (probe == null) {
-      log.warn("No probe registered for {}", probeName);
-      return null;
-    }
-    Class<?> probeClass = probe.getDefinedClass();
-    if (probeClass == null) {
-      log.warn("Probe {} not yet defined", probeName);
-      return null;
-    }
+          // Strip action prefix to get the actual method name in the probe class.
+          // The handlerName is prefixed (e.g. "$btrace$com$example$MyProbe$onEntry"),
+          // and the actual method in the probe class is the part after the last '$'.
+          String actualName = handlerName;
+          int idx = handlerName.lastIndexOf('$');
+          if (idx > -1) {
+            actualName = handlerName.substring(idx + 1);
+          }
 
-    // Strip action prefix to get the actual method name in the probe class.
-    // The handlerName is prefixed (e.g. "$btrace$com$example$MyProbe$onEntry"),
-    // and the actual method in the probe class is the part after the last '$'.
-    String actualName = handlerName;
-    int idx = handlerName.lastIndexOf('$');
-    if (idx > -1) {
-      actualName = handlerName.substring(idx + 1);
-    }
-
-    try {
-      MethodHandle mh =
-          MethodHandles.publicLookup().findStatic(probeClass, actualName, handlerType);
-      handlerCache.put(cacheKey, mh);
-      return mh;
-    } catch (NoSuchMethodException | IllegalAccessException e) {
-      log.warn("Failed to resolve handler {}.{}", probeName, actualName, e);
-      return null;
-    }
+          try {
+            return MethodHandles.publicLookup().findStatic(probeClass, actualName, handlerType);
+          } catch (NoSuchMethodException | IllegalAccessException e) {
+            log.warn("Failed to resolve handler {}.{}", probeName, actualName, e);
+            return null;
+          }
+        });
   }
 
   @Override
   public MethodHandle resolveRuntime(String owner, String name, MethodType type) {
     String cacheKey = "rt#" + owner + "." + name + type.toMethodDescriptorString();
 
-    MethodHandle cached = handlerCache.get(cacheKey);
-    if (cached != null) {
-      return cached;
-    }
-
-    try {
-      String className = owner.replace('/', '.');
-      Class<?> clz =
-          Class.forName(className, true, HandlerRepositoryImpl.class.getClassLoader());
-      MethodHandle mh = MethodHandles.publicLookup().findStatic(clz, name, type);
-      handlerCache.put(cacheKey, mh);
-      return mh;
-    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
-      log.warn("Failed to resolve runtime method {}.{}", owner, name, e);
-      return null;
-    }
+    return handlerCache.computeIfAbsent(
+        cacheKey,
+        k -> {
+          try {
+            String className = owner.replace('/', '.');
+            Class<?> clz =
+                Class.forName(className, true, HandlerRepositoryImpl.class.getClassLoader());
+            return MethodHandles.publicLookup().findStatic(clz, name, type);
+          } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+            log.warn("Failed to resolve runtime method {}.{}", owner, name, e);
+            return null;
+          }
+        });
   }
 }

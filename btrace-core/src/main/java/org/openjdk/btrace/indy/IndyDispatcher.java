@@ -79,9 +79,12 @@ public final class IndyDispatcher {
       MethodHandles.Lookup caller, String name, MethodType type, String probeClassName) {
     LinkingFlag.guardLinking();
     try {
-      MethodHandle mh;
+      MethodHandle mh = null;
       try {
-        mh = repository.resolveHandler(caller.lookupClass().getName(), probeClassName, name, type);
+        HandlerRepository repo = repository;
+        if (repo != null) {
+          mh = repo.resolveHandler(caller.lookupClass().getName(), probeClassName, name, type);
+        }
       } catch (Throwable t) {
         mh = null;
       }
@@ -109,9 +112,12 @@ public final class IndyDispatcher {
       MethodHandles.Lookup caller, String name, MethodType type, String owner) {
     LinkingFlag.guardLinking();
     try {
-      MethodHandle mh;
+      MethodHandle mh = null;
       try {
-        mh = repository.resolveRuntime(owner, name, type);
+        HandlerRepository repo = repository;
+        if (repo != null) {
+          mh = repo.resolveRuntime(owner, name, type);
+        }
       } catch (Throwable t) {
         mh = null;
       }

@@ -7,12 +7,16 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is used to inject code to set/unset linking flag to make sure no BTrace
  * code is executed while invokedynamic is being linked.
  */
 public final class LinkerInstrumentor {
+    private static final Logger log = LoggerFactory.getLogger(LinkerInstrumentor.class);
+
     private static class LinkerMethodVisitor extends MethodVisitor {
         private final Label tryStart = new Label();
         private final Label tryEnd = new Label();
@@ -86,6 +90,7 @@ public final class LinkerInstrumentor {
                 try {
                     return super.getCommonSuperClass(type1, type2);
                 } catch (RuntimeException e) {
+                    log.debug("getCommonSuperClass({}, {}) failed, falling back to Object", type1, type2, e);
                     return "java/lang/Object";
                 }
             }

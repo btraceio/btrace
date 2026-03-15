@@ -269,36 +269,36 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
   @Override
   public ClassLoader getCallerClassLoader(int stackDec) {
-    AtomicInteger cont = new AtomicInteger(stackDec);
-    AtomicReference<ClassLoader> cl = new AtomicReference<>(null);
-    StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
-        .forEach(
-            f -> {
-              if (f.getDeclaringClass().getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
-                return;
-              }
-              if (cont.getAndDecrement() == 0) {
-                cl.compareAndSet(null, f.getDeclaringClass().getClassLoader());
-              }
-            });
-    return cl.get();
+    return StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+        .walk(
+            frames ->
+                frames
+                    .filter(
+                        f ->
+                            !f.getDeclaringClass()
+                                .getName()
+                                .startsWith("org.openjdk.btrace.runtime.auxiliary."))
+                    .skip(stackDec)
+                    .findFirst()
+                    .map(f -> f.getDeclaringClass().getClassLoader())
+                    .orElse(null));
   }
 
   @Override
   public Class<?> getCallerClass(int stackDec) {
-    AtomicInteger cont = new AtomicInteger(stackDec);
-    AtomicReference<Class<?>> cl = new AtomicReference<>(null);
-    StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
-        .forEach(
-            f -> {
-              if (f.getDeclaringClass().getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
-                return;
-              }
-              if (cont.getAndDecrement() == 0) {
-                cl.compareAndSet(null, f.getDeclaringClass());
-              }
-            });
-    return cl.get();
+    return StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+        .walk(
+            frames ->
+                frames
+                    .filter(
+                        f ->
+                            !f.getDeclaringClass()
+                                .getName()
+                                .startsWith("org.openjdk.btrace.runtime.auxiliary."))
+                    .skip(stackDec)
+                    .findFirst()
+                    .map(StackWalker.StackFrame::getDeclaringClass)
+                    .orElse(null));
   }
 
   @Override
