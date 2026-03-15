@@ -11,7 +11,7 @@
 # Examples:
 #   ./scripts/release.sh minor                    # Minor release from develop
 #   ./scripts/release.sh major                    # Major release from develop
-#   ./scripts/release.sh patch release/2.3        # Patch release from release/2.3
+#   ./scripts/release.sh patch release/2.3._      # Patch release from release/2.3._
 #
 # Environment variables:
 #   DRY_RUN=true    Show what would be done without triggering workflow
@@ -73,20 +73,20 @@ Arguments:
 Release Types:
   major   Bump major version (e.g., 2.3.0-SNAPSHOT -> 3.0.0)
           Next develop: 3.1.0-SNAPSHOT
-          Creates: release/3.0 branch
+          Creates: release/3.0._ branch
 
   minor   Release current version (e.g., 2.3.0-SNAPSHOT -> 2.3.0)
           Next develop: 2.4.0-SNAPSHOT
-          Creates: release/2.3 branch
+          Creates: release/2.3._ branch
 
   patch   Bump patch version on release branch (e.g., 2.3.1-SNAPSHOT -> 2.3.1)
           Next release branch: 2.3.2-SNAPSHOT
-          Requires: release/X.Y branch as source
+          Requires: release/X.Y._ branch as source
 
 Examples:
   $(basename "$0") minor                    # Release 2.3.0 from develop
   $(basename "$0") major                    # Release 3.0.0 from develop
-  $(basename "$0") patch release/2.3        # Release 2.3.1 from release/2.3
+  $(basename "$0") patch release/2.3._      # Release 2.3.1 from release/2.3._
 
 Environment:
   DRY_RUN=true    Show what would happen without triggering the workflow
@@ -224,10 +224,10 @@ pick_commit() {
 pick_release_branch() {
     # Get release branches sorted by version (newest first)
     local branches
-    branches=$(git branch -a --list '*release/*' | sed 's/.*\(release\/[0-9]*\.[0-9]*\).*/\1/' | sort -t. -k1,1nr -k2,2nr | uniq)
+    branches=$(git branch -a --list '*release/*' | sed 's/.*\(release\/[0-9]*\.[0-9]*\._\).*/\1/' | sort -t. -k1,1nr -k2,2nr | uniq)
 
     if [[ -z "${branches}" ]]; then
-        error "No release branches found (expected pattern: release/X.Y)"
+        error "No release branches found (expected pattern: release/X.Y._)"
         exit 1
     fi
 
@@ -410,21 +410,21 @@ calculate_versions() {
             release_version="$((major + 1)).0.0"
             next_develop_snapshot="$((major + 1)).1.0-SNAPSHOT"
             next_release_snapshot="$((major + 1)).0.1-SNAPSHOT"
-            release_branch="release/$((major + 1)).0"
+            release_branch="release/$((major + 1)).0._"
             ;;
         minor)
-            # Minor: X.Y.Z-SNAPSHOT -> X.Y.Z (just drop SNAPSHOT)
-            release_version="${major}.${minor}.${patch}"
+            # Minor: X.Y.Z-SNAPSHOT -> X.Y.0 (always .0 for minor releases)
+            release_version="${major}.${minor}.0"
             next_develop_snapshot="${major}.$((minor + 1)).0-SNAPSHOT"
-            next_release_snapshot="${major}.${minor}.$((patch + 1))-SNAPSHOT"
-            release_branch="release/${major}.${minor}"
+            next_release_snapshot="${major}.${minor}.1-SNAPSHOT"
+            release_branch="release/${major}.${minor}._"
             ;;
         patch)
             # Patch: X.Y.Z-SNAPSHOT -> X.Y.Z
             release_version="${major}.${minor}.${patch}"
             next_develop_snapshot=""  # Not updated for patch releases
             next_release_snapshot="${major}.${minor}.$((patch + 1))-SNAPSHOT"
-            release_branch="release/${major}.${minor}"
+            release_branch="release/${major}.${minor}._"
             ;;
         *)
             error "Invalid release type: ${release_type}"
@@ -463,8 +463,8 @@ validate_source_ref() {
             fi
             ;;
         patch)
-            # Must be from a release/X.Y branch or a commit from one
-            if [[ "${source_ref}" =~ ^release/[0-9]+\.[0-9]+$ ]]; then
+            # Must be from a release/X.Y._ branch or a commit from one
+            if [[ "${source_ref}" =~ ^release/[0-9]+\.[0-9]+\._$ ]]; then
                 # It's a branch name, check if it exists
                 if ! git show-ref --verify --quiet "refs/heads/${source_ref}" && \
                    ! git show-ref --verify --quiet "refs/remotes/origin/${source_ref}"; then
@@ -480,7 +480,7 @@ validate_source_ref() {
                     fi
                 fi
             else
-                error "Patch releases must be from a release/X.Y branch."
+                error "Patch releases must be from a release/X.Y._ branch."
                 error "Got: ${source_ref}"
                 exit 1
             fi
@@ -504,6 +504,19 @@ check_tag_exists() {
     # Also check remote
     if git ls-remote --tags origin "refs/tags/v${tag}" | grep -q .; then
         error "Tag v${tag} already exists on remote."
+        exit 1
+    fi
+
+    # Check for leftover RC tag (locally and on remote)
+    if git rev-parse "v${tag}_RC" &> /dev/null; then
+        error "RC tag v${tag}_RC already exists locally."
+        error "Clean up with: git tag -d v${tag}_RC"
+        exit 1
+    fi
+
+    if git ls-remote --tags origin "refs/tags/v${tag}_RC" | grep -q .; then
+        error "RC tag v${tag}_RC already exists on remote."
+        error "Clean up with: git push origin :refs/tags/v${tag}_RC && git tag -d v${tag}_RC"
         exit 1
     fi
 }
@@ -642,7 +655,7 @@ main() {
                     ;;
                 patch)
                     error "Patch releases require a release branch."
-                    echo "Usage: $(basename "$0") patch release/X.Y"
+                    echo "Usage: $(basename "$0") patch release/X.Y._"
                     exit 1
                     ;;
             esac
