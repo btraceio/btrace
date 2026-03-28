@@ -70,7 +70,7 @@ sdk install jbang                   # SDKMAN
 
 **Use BTrace with JBang** (no separate BTrace installation needed):
 ```bash
-# Attach to running application (replace <version> with desired version, e.g., 2.3.0)
+# Attach to running application (replace <version> with desired version, e.g., 3.0.0)
 jbang io.btrace:btrace-client:<version> <PID> <script.java>
 
 # Add the BTrace JBang catalog (one time), then use the shorter alias
@@ -598,9 +598,9 @@ ENTRYPOINT ["java", "-jar", "/app/myapp.jar"]
 **Alternative: Manual installation (if not using official images):**
 ```dockerfile
 FROM bellsoft/liberica-openjdk-debian:11-cds
-RUN curl -L https://github.com/btraceio/btrace/releases/download/v2.2.2/btrace-2.2.2.tar.gz \
+RUN curl -L https://github.com/btraceio/btrace/releases/download/v3.0.0/btrace-3.0.0.tar.gz \
     | tar -xz -C /opt/
-ENV BTRACE_HOME=/opt/btrace-2.2.2
+ENV BTRACE_HOME=/opt/btrace-3.0.0
 ENV PATH=$PATH:$BTRACE_HOME/bin
 ```
 

@@ -1,4 +1,4 @@
-# BTrace Tutorial (BTrace 2.3.0)
+# BTrace Tutorial (BTrace 3.0.0)
 
 ## 1. Hello World
 
