@@ -147,8 +147,8 @@ class CompilerHelper {
       for (Path jar : stream) {
         jars.add(jar.toAbsolutePath().toString());
       }
-    } catch (IOException ignored) {
-      // Directory not accessible, skip silently
+    } catch (IOException e) {
+      log.debug("Unable to scan extension directory: {}", directory, e);
     }
   }
 
@@ -267,42 +267,38 @@ class CompilerHelper {
       if (maskedClassLoader instanceof AutoCloseable) {
         try {
           ((AutoCloseable) maskedClassLoader).close();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+          log.debug("Failed to close masked classloader", e);
         }
       }
       if (effectiveManager != manager) {
         try {
           effectiveManager.close();
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+          log.debug("Failed to close effective file manager", e);
         }
       }
       try {
         manager.close();
-      } catch (IOException ignored) {
+      } catch (IOException e) {
+        log.debug("Failed to close file manager", e);
       }
     }
     return result;
   }
 
   private void dump(String name, byte[] code) {
-    OutputStream os = null;
+    name = name.replace(".", "_") + ".class";
+    File f = new File(System.getProperty("java.io.tmpdir"), name);
     try {
-      name = name.replace(".", "_") + ".class";
-      File f = new File(System.getProperty("java.io.tmpdir"), name);
       if (!f.exists()) {
         f.getParentFile().createNewFile();
       }
-      os = new FileOutputStream(f);
-      os.write(code);
-    } catch (IOException ignored) {
-
-    } finally {
-      if (os != null) {
-        try {
-          os.close();
-        } catch (IOException ignored) {
-        }
+      try (OutputStream os = new FileOutputStream(f)) {
+        os.write(code);
       }
+    } catch (IOException e) {
+      log.debug("Failed to dump class file: {}", f, e);
     }
   }
 

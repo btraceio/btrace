@@ -71,12 +71,14 @@ final class JpsUtils {
     try {
       vm = VirtualMachine.attach(String.valueOf(pid));
       result = vm.getSystemProperties().containsKey("btrace.port");
-    } catch (Throwable ignored) {
+    } catch (Throwable e) {
+      log.debug("Failed to check BTrace server on pid {}", pid, e);
     } finally {
       if (vm != null) {
         try {
           vm.detach();
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+          log.debug("Failed to detach from VM {}", pid, e);
         }
       }
     }

@@ -16,8 +16,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class Installer {
+  private static final Logger log = LoggerFactory.getLogger(Installer.class);
   private Installer() {}
 
   static void install(String target, List<String> repos, String id, boolean dryRun) throws Exception {
@@ -91,7 +94,7 @@ final class Installer {
     for (String u : urls) {
       try {
         return downloadToTemp(u);
-      } catch (IOException ignored) { }
+      } catch (IOException e) { log.debug("Failed to download from {}", u, e); }
     }
     return null;
   }
@@ -150,7 +153,7 @@ final class Installer {
         System.out.println("Note: This extension requires privileged permissions. You can allow all privileged extensions with:");
         System.out.println("  btracex policy set --allowPrivileged true --policy-file ~/.btrace/permissions.properties");
       }
-    } catch (Exception ignored) { }
+    } catch (Exception e) { log.debug("Failed to inspect installed extension '{}'", id, e); }
   }
 
   private static Path getExtensionsRoot() throws IOException {

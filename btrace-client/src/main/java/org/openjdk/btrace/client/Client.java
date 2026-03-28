@@ -215,14 +215,15 @@ public class Client {
     Socket clSocket = null;
     try {
       clSocket = new Socket("127.0.0.1", port);
-    } catch (IOException ignored) {
-      // ignore
+    } catch (IOException e) {
+      // Connection refused means port is available
+      log.debug("Port {} is available (connection refused)", port);
     }
     if (clSocket != null) {
       try {
         clSocket.close();
-      } catch (IOException ignored) {
-        // ignore
+      } catch (IOException e) {
+        log.debug("Failed to close probe socket on port {}", port, e);
       }
       return false;
     }
@@ -236,7 +237,8 @@ public class Client {
       if (serverPort != null) {
         return Integer.parseInt(serverPort) == port;
       }
-    } catch (Exception ignore) {
+    } catch (Exception e) {
+      log.debug("Failed to check VM system properties", e);
       // fall through to port probe
     }
     return !isPortAvailable(port);
@@ -380,7 +382,8 @@ public class Client {
     }
     try {
       socket.close();
-    } catch (IOException ignore) {
+    } catch (IOException e) {
+      log.debug("Failed to close socket", e);
     }
   }
 

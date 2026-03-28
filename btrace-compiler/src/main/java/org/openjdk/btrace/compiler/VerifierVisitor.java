@@ -90,6 +90,7 @@ import org.openjdk.btrace.core.extensions.Permission;
  * @author A. Sundararajan
  */
 public class VerifierVisitor extends TreeScanner<Void, Void> {
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(VerifierVisitor.class);
   private static final String ON_ERROR_TYPE = OnError.class.getName();
   private static final String ON_EXIT_TYPE = OnExit.class.getName();
   private static final String THROWABLE_TYPE = Throwable.class.getName();
@@ -586,11 +587,13 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
             if (declaresServiceInJar(p, serviceClassName)) {
               return true;
             }
-          } catch (Exception ignored) {
+          } catch (Exception e) {
+            log.debug("Failed to check service in jar: {}", p, e);
           }
         }
       }
-    } catch (Exception ignored) {
+    } catch (Exception e) {
+      log.debug("Failed to scan classpath for service: {}", serviceClassName, e);
     }
     return false;
   }
@@ -624,7 +627,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
           }
         }
       }
-    } catch (Exception ignored) {
+    } catch (Exception e) {
+      log.debug("Failed to check service in jar: {}", jarPath, e);
     }
     return false;
   }
@@ -840,8 +844,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
                 for (String p : parts) {
                   try {
                     requiredPermissions.add(Permission.valueOf(p.trim()));
-                  } catch (IllegalArgumentException ignored) {
-                    // ignore unknown entries
+                  } catch (IllegalArgumentException e) {
+                    log.debug("Unknown permission entry: {}", p.trim(), e);
                   }
                 }
               }
@@ -849,8 +853,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
           }
         }
       }
-    } catch (Exception ignored) {
-      // Best-effort only; ignore any IO errors
+    } catch (Exception e) {
+      log.debug("Best-effort permission scanning failed", e);
     }
   }
 

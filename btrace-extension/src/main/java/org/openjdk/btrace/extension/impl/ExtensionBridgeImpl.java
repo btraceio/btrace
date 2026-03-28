@@ -111,8 +111,8 @@ public final class ExtensionBridgeImpl implements ExtensionBridge {
         Class<?> altImpl = findImplementationClass(altIface, tccl);
         if (altImpl != null) return altImpl;
       }
-    } catch (Throwable ignore) {
-      // ignore and fall back to interface
+    } catch (Throwable t) {
+      log.debug("Context classloader fallback failed for {}", serviceClassName, t);
     }
 
     // 6) Fallback to service interface (runtime will shim as needed)
@@ -160,7 +160,7 @@ public final class ExtensionBridgeImpl implements ExtensionBridge {
         }
       }
     } catch (Throwable t) {
-      // ignore and continue
+      log.debug("ServiceLoader lookup failed for {}", ifaceName, t);
     }
 
     // Conventional Impl naming: FooService -> FooServiceImpl

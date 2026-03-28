@@ -14,8 +14,11 @@ import java.util.stream.Collectors;
 import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.extensions.ExtensionMeta;
 import org.openjdk.btrace.core.extensions.Permission;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class ExtensionInspector {
+  private static final Logger log = LoggerFactory.getLogger(ExtensionInspector.class);
   static ExtensionReport inspect(Path input) throws IOException {
     if (Files.isDirectory(input)) {
       Path dir = input;
@@ -108,10 +111,10 @@ final class ExtensionInspector {
                 if (p != null) merged.add(p.name());
               }
             }
-          } catch (Throwable ignore) { }
+          } catch (Throwable t) { log.debug("Failed to read service descriptor for {}", svc, t); }
         }
         requiredPerms = new ArrayList<>(merged);
-      } catch (Throwable ignore) { }
+      } catch (Throwable t) { log.debug("Failed to load service classes for permission scanning", t); }
     }
     // Recompute privileged based on the merged permission names
     if (!privileged) {
@@ -119,7 +122,7 @@ final class ExtensionInspector {
         try {
           Permission p = Permission.valueOf(n.trim().toUpperCase());
           if (p.isPrivileged()) { privileged = true; break; }
-        } catch (IllegalArgumentException ignored) { /* skip unknown names */ }
+        } catch (IllegalArgumentException e) { log.debug("Unknown permission name: {}", n.trim(), e); }
       }
     }
     return ExtensionReport.ok(id, version, privileged, services, metas, requiredPerms);
@@ -152,11 +155,13 @@ final class ExtensionInspector {
               result.add(ExtensionMeta.from(ec));
             }
           } catch (Throwable t) {
-            // skip faulty provider
+            log.debug("Failed to load extension provider: {}", cn, t);
           }
         }
       }
-    } catch (Throwable ignored) {}
+    } catch (Throwable t) {
+      log.debug("Failed to read extension metadata from impl jar: {}", implJar, t);
+    }
     return result;
   }
 
@@ -170,7 +175,9 @@ final class ExtensionInspector {
           services.add(e.getName().substring("META-INF/services/".length()));
         }
       }
-    } catch (IOException ignored) {}
+    } catch (IOException e) {
+      log.debug("Failed to read services from impl jar: {}", implJar, e);
+    }
     return services;
   }
 
@@ -182,7 +189,9 @@ final class ExtensionInspector {
         v = jf.getManifest().getMainAttributes().getValue("BTrace-Extension-Version");
         if (v != null) return v;
       }
-    } catch (IOException ignored) {}
+    } catch (IOException e) {
+      log.debug("Failed to read version from jar: {}", apiJar, e);
+    }
     return "";
   }
 
@@ -200,7 +209,9 @@ final class ExtensionInspector {
         String id = p.getProperty("extension.id", "");
         if (!id.isEmpty()) return id;
       }
-    } catch (IOException ignored) {}
+    } catch (IOException e) {
+      log.debug("Failed to read extension id from jar: {}", jarPath, e);
+    }
     return "";
   }
 
@@ -234,7 +245,9 @@ final class ExtensionInspector {
         String v = p.getProperty("requires.permissions", "");
         if (!v.isEmpty()) { for (String part : v.split(",")) { String s = part.trim(); if (!s.isEmpty()) perms.add(s); } }
       }
-    } catch (IOException ignored) {}
+    } catch (IOException e) {
+      log.debug("Failed to read permissions from jar: {}", jarPath, e);
+    }
     return perms;
   }
 }
