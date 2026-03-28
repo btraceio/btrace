@@ -295,8 +295,8 @@ public class PCPP {
         // Output white space plus current token, handling #defines
         // (though not properly -- only handling #defines to constants and the empty string)
 
-        // !!HACK!! - print space only for word tokens. This way multicharacter
-        // operators such as ==, != etc. are property printed.
+        // Print space separator only before word tokens to preserve multi-character
+        // operators (==, !=, etc.) without introducing unwanted spaces.
         if (tok == StreamTokenizer.TT_WORD) {
           printer.print(" ");
         }
@@ -460,8 +460,9 @@ public class PCPP {
           }
         }
       } else {
-        // Non-constant define; try to do reasonable textual substitution anyway
-        // (FIXME: should identify some of these, like (-1), as constants)
+        // Non-constant define; perform textual substitution.
+        // Note: parenthesized negatives like (-1) are treated as non-constant
+        // since the tokenizer splits them into multiple tokens.
         emitDefine = false;
         StringBuilder val = new StringBuilder();
         for (int i = 0; i < sz; i++) {

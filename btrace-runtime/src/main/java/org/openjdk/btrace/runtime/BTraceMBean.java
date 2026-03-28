@@ -300,10 +300,15 @@ public class BTraceMBean implements DynamicMBean {
 
     private static OpenType<?> typeToOpenType(Type t) {
       try {
-        // FIXME: This is highly incomplete, revisit...
-        // just enough to get Maps for now.
         if (t instanceof Class) {
           Class<?> c = (Class<?>) t;
+          // Handle array types
+          if (c.isArray()) {
+            OpenType<?> componentType = typeToOpenType(c.getComponentType());
+            if (componentType instanceof SimpleType) {
+              return new ArrayType<>((SimpleType<?>) componentType, c.getComponentType().isPrimitive());
+            }
+          }
           if (Profiler.class.isAssignableFrom(c)) {
             CompositeType record =
                 new CompositeType(
