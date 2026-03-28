@@ -18,7 +18,9 @@ public final class Indy {
   public static CallSite bootstrap(
       MethodHandles.Lookup caller, String name, MethodType type, String probeClassName)
       throws Exception {
-    assert repository != null;
+    if (repository == null) {
+      throw new IllegalStateException("Indy bootstrap called before repository was initialized");
+    }
     MethodHandle mh;
     try {
       byte[] classData =

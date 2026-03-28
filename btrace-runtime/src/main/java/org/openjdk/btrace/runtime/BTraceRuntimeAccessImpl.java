@@ -223,7 +223,9 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
   @SuppressWarnings("UnusedReturnValue")
   static <T> T doWithCurrent(Callable<T> callable) {
     RTWrapper rtw = rt.get();
-    assert rtw != null : "BTraceRuntime access not set up";
+    if (rtw == null) {
+      throw new IllegalStateException("BTraceRuntime access not set up");
+    }
     return rtw.escape(callable);
   }
 

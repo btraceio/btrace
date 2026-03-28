@@ -1206,7 +1206,9 @@ public class Client {
   }
 
   private void commandLoop(CommandListener listener) throws IOException {
-    assert protocol != null : "null protocol?";
+    if (protocol == null) {
+      throw new IllegalStateException("Command loop started before protocol was established");
+    }
     AtomicBoolean exited = new AtomicBoolean(false);
     while (true) {
       try {

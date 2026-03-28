@@ -545,7 +545,9 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         }
     }
 
-    assert opType != null;
+    if (opType == null) {
+      throw new IllegalStateException("Unexpected opcode: unable to determine operand type");
+    }
 
     if (isPush) {
       pushToStack(opType);
