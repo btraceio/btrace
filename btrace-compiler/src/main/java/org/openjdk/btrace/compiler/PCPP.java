@@ -784,8 +784,9 @@ public class PCPP {
         return;
       }
       // Process this file in-line
-      Reader reader = new BufferedReader(new FileReader(fullname));
-      run(reader, fullname);
+      try (Reader reader = new BufferedReader(new FileReader(fullname))) {
+        run(reader, fullname);
+      }
     } else {
       // System.out.println("INACTIVE BLOCK, SKIPPING " + filename);
     }

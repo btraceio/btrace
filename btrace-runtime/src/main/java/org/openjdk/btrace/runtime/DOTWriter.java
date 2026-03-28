@@ -207,10 +207,18 @@ public class DOTWriter {
   // True if object links should be shown.
   private boolean displayLinks = true;
 
+  @SuppressWarnings("resource") // dotStream is closed in close()
   public DOTWriter(String fileName) {
     try {
-      dotStream = new PrintStream(new FileOutputStream(fileName), true, StandardCharsets.UTF_8.name());
-    } catch (Throwable ignored) {
+      FileOutputStream fos = new FileOutputStream(fileName);
+      try {
+        dotStream = new PrintStream(fos, true, StandardCharsets.UTF_8.name());
+      } catch (Throwable t) {
+        fos.close();
+        throw t;
+      }
+    } catch (Throwable t) {
+      System.err.println("DOTWriter: failed to open " + fileName + ": " + t.getMessage());
     }
 
     // Set up default properties.
