@@ -1,3 +1,7 @@
+plugins {
+    alias(libs.plugins.shadow)
+}
+
 compileJava {
     // Keep Java 8 compatibility while accessing JDK internal APIs
     options.fork = true
@@ -29,4 +33,72 @@ dependencies {
 // Exclude sources that rely on JDK-internal modules from Javadoc to avoid missing-package errors
 tasks.named('javadoc').configure {
     exclude 'org/openjdk/btrace/agent/PerfReaderImpl.java'
+}
+
+shadowJar {
+    include {
+        if (it.directory) {
+            return true
+        }
+        if (it.path.endsWith('.jar')) {
+            return true
+        }
+        if (it.path.startsWith('org/objectweb/asm/')) {
+            if (it.path.startsWith('org/objectweb/asm/commons/') ||
+                    it.path.startsWith('org/objectweb/asm/util/') ||
+                    it.path.startsWith('org/objectweb/asm/xml/')) {
+                return false
+            }
+            return true
+        }
+        return it.path.startsWith('org/jctools/') ||
+                it.path.startsWith("org/slf4j/") ||
+                it.path.startsWith('org/openjdk/btrace/agent/') ||
+                it.path.startsWith('org/openjdk/btrace/instr/') ||
+                it.path.startsWith('org/openjdk/btrace/core/') ||
+                it.path.startsWith('org/openjdk/btrace/runtime/') ||
+                it.path.startsWith('org/openjdk/btrace/extension/') ||
+                it.path.startsWith('org/openjdk/btrace/statsd/')
+    }
+
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.agent.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+}
+
+def unpackedJarDir = layout.buildDirectory.dir("tmp/unpackedJar")
+
+task unpackJar(type: Copy) {
+    dependsOn shadowJar
+    from zipTree(shadowJar.archiveFile)
+    into unpackedJarDir
+}
+
+task renameClassFiles(type: DefaultTask) {
+    dependsOn unpackJar
+    inputs.dir unpackedJarDir
+    outputs.dir unpackedJarDir
+    doLast {
+        fileTree(unpackedJarDir.get().asFile.path + "/org/openjdk/btrace/agent").include('**/*.class').each { File file ->
+            if (file.name != 'Agent.class' && !file.name.startsWith('AgentClassLoader')) {
+                file.renameTo(new File(file.parent, file.name.replace('.class', '.classdata')))
+            }
+        }
+    }
+}
+
+task agentJar(type: Jar) {
+    dependsOn renameClassFiles
+    from unpackedJarDir
+    archiveFileName = project.tasks.shadowJar.archiveFileName
+    destinationDirectory = project.tasks.shadowJar.destinationDirectory
+    manifest {
+        attributes(
+                "Premain-Class": "org.openjdk.btrace.agent.Agent",
+                "Agent-Class": "org.openjdk.btrace.agent.Agent",
+                "Can-Redefine-Classes": true,
+                "Can-Retransform-Classes": true,
+                "Boot-Class-Path": "btrace-boot.jar"
+        )
+    }
 }
