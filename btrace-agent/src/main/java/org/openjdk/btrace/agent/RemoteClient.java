@@ -193,7 +193,7 @@ class RemoteClient extends Client {
     this.settings.from(ctx.getSettings());
     Class<?> btraceClazz = loadClass(cmd);
     if (btraceClazz == null) {
-      throw new RuntimeException("can not load BTrace class");
+      throw new IllegalStateException("Cannot load BTrace class from received bytecode");
     }
 
     initClient();

@@ -234,7 +234,7 @@ public class Compiler {
         preprocessedCompUnits.add(MemoryJavaFileManager.preprocessedFileObject(jfo, includeDirs));
       }
     } catch (IOException ioExp) {
-      throw new RuntimeException(ioExp);
+      throw new RuntimeException("Failed to preprocess BTrace script", ioExp);
     }
     return compile(preprocessedCompUnits, err, sourcePath, classPath);
   }

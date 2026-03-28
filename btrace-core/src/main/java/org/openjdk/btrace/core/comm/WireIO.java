@@ -89,7 +89,7 @@ public class WireIO {
         cmd = new ReconnectCommand();
         break;
       default:
-        throw new RuntimeException("invalid command: " + type);
+        throw new IllegalArgumentException("Invalid command type: " + type);
     }
     try {
       cmd.read(in);

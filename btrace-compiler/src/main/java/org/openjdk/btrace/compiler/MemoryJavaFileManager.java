@@ -91,7 +91,7 @@ public final class MemoryJavaFileManager extends ForwardingJavaFileManager<JavaF
       try {
         pcpp.run(new StringReader(code), name);
       } catch (IOException exp) {
-        throw new RuntimeException(exp);
+        throw new RuntimeException("Preprocessing failed for " + name, exp);
       }
       return new StringInputBuffer(name, out.toString());
     } else {

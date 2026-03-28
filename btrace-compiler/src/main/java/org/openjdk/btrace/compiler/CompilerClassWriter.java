@@ -72,7 +72,7 @@ class CompilerClassWriter extends ClassWriter {
       c = cl.loadClass(type1.replace('/', '.'));
       d = cl.loadClass(type2.replace('/', '.'));
     } catch (Exception e) {
-      throw new RuntimeException(e.toString());
+      throw new RuntimeException("Failed to load classes for common superclass resolution: " + type1 + ", " + type2, e);
     }
     if (c.isAssignableFrom(d)) {
       return type1;
