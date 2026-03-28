@@ -1,0 +1,33 @@
+plugins {
+    id 'org.openjdk.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-vibe-guard'
+    name = 'BTrace Vibe Guard'
+    description = 'Behavioral contracts and runtime validation for AI-generated code paths'
+    services = ['org.openjdk.btrace.vibeguard.VibeGuardService']
+}
+
+dependencies {
+    apiCompileOnly project(':btrace-core')
+    implImplementation project(':btrace-core')
+
+    testImplementation libs.junit.jupiter
+}
+
+test {
+    useJUnitPlatform()
+}

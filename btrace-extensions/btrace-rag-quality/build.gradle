@@ -1,0 +1,33 @@
+plugins {
+    id 'org.openjdk.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-rag-quality'
+    name = 'BTrace RAG Quality'
+    description = 'RAG pipeline observability: retrieval latency, similarity scores, chunk quality for vector DB clients'
+    services = ['org.openjdk.btrace.rag.RagQualityService']
+}
+
+dependencies {
+    apiCompileOnly project(':btrace-core')
+    implImplementation project(':btrace-core')
+
+    testImplementation libs.junit.jupiter
+}
+
+test {
+    useJUnitPlatform()
+}

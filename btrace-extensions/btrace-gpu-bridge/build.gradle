@@ -1,0 +1,33 @@
+plugins {
+    id 'org.openjdk.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-gpu-bridge'
+    name = 'BTrace GPU Bridge'
+    description = 'GPU and model inference observability: ONNX Runtime, DJL, TensorFlow Java, and Panama FFM compute tracing'
+    services = ['org.openjdk.btrace.gpu.GpuBridgeService']
+}
+
+dependencies {
+    apiCompileOnly project(':btrace-core')
+    implImplementation project(':btrace-core')
+
+    testImplementation libs.junit.jupiter
+}
+
+test {
+    useJUnitPlatform()
+}
