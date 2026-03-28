@@ -1,0 +1,28 @@
+plugins {
+    id 'org.openjdk.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-otel'
+    name = 'BTrace OpenTelemetry'
+    description = 'OpenTelemetry trace and metrics export for BTrace via OTLP/HTTP'
+    services = ['org.openjdk.btrace.otel.OTel']
+}
+
+dependencies {
+    apiCompileOnly project(':btrace-core')
+    implImplementation project(':btrace-core')
+    implementation libs.slf4j
+}
