@@ -38,6 +38,7 @@ import java.util.Set;
  * @author Jaroslav Bachorik
  */
 public class BTraceMethodNode extends MethodNode {
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BTraceMethodNode.class);
   public static final Comparator<MethodNode> COMPARATOR =
       (o1, o2) -> (o1.name + "#" + o1.desc).compareTo(o2.name + "#" + o2.desc);
   private final BTraceProbeNode cn;
@@ -114,7 +115,7 @@ public class BTraceMethodNode extends MethodNode {
                 break;
               }
             default:
-              System.err.println("btrace WARNING: Unsupported @OnMethod attribute: " + name);
+              log.warn("Unsupported @OnMethod attribute: {}", name);
           }
         }
 
@@ -239,8 +240,7 @@ public class BTraceMethodNode extends MethodNode {
               // should be at least 180ns -
               // (80ns timestamps + 15ns stub) * 2 safety margin
               if (om.getSamplerMean() < 180) {
-                System.err.println(
-                    "Setting the adaptive sampler time windows to the default of 180ns");
+                log.warn("Setting the adaptive sampler time window to the default of 180ns");
                 om.setSamplerMean(180);
               }
             }

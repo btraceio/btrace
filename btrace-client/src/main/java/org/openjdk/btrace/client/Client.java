@@ -751,12 +751,10 @@ public class Client {
         log.debug("loaded {}", agentPath);
       }
     } catch (RuntimeException | IOException re) {
-      System.err.println("[DEBUG] IOException/RuntimeException during attach:");
-      re.printStackTrace();
+      log.debug("IOException/RuntimeException during attach", re);
       throw re;
     } catch (Exception exp) {
-      System.err.println("[DEBUG] Exception during attach:");
-      exp.printStackTrace();
+      log.debug("Exception during attach", exp);
       throw new IOException("Failed to attach to PID " + pid, exp);
     }
   }

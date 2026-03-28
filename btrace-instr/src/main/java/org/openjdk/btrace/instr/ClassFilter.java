@@ -52,6 +52,7 @@ import java.util.regex.PatternSyntaxException;
  * @author A. Sundararajan
  */
 public class ClassFilter {
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ClassFilter.class);
   private static final Class<?> REFERENCE_CLASS = Reference.class;
   private static final PrefixMap SENSITIVE_CLASSES = new PrefixMap();
   // Method-level sensitive filter: internalClassName -> set of "name+desc" signatures
@@ -301,9 +302,8 @@ public class ClassFilter {
             patSrcList.add(p);
           }
         } catch (PatternSyntaxException pse) {
-          System.err.println(
-              "btrace ERROR: invalid regex pattern - "
-                  + className.substring(1, className.length() - 1));
+          log.error("Invalid regex pattern: {}",
+              className.substring(1, className.length() - 1));
         }
       } else if (om.isClassAnnotationMatcher()) {
         strAnoList.add(className);

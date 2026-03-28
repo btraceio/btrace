@@ -56,6 +56,7 @@ import org.openjdk.btrace.core.types.AnyType;
  * @author A. Sundararajan
  */
 public class Instrumentor extends ClassVisitor {
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Instrumentor.class);
   private final BTraceProbe bcn;
   private final ClassLoader cl;
   private final Collection<OnMethod> applicableOnMethods;
@@ -99,7 +100,7 @@ public class Instrumentor extends ClassVisitor {
   }
 
   private static void reportPatternSyntaxException(String pattern) {
-    System.err.println("btrace ERROR: invalid regex pattern - " + pattern);
+    log.error("Invalid regex pattern: {}", pattern);
   }
 
   public final boolean hasMatch() {

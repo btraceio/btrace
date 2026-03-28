@@ -41,6 +41,7 @@ import org.openjdk.btrace.core.extensions.ExtensionContext;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 
 public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delegate {
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BTraceRuntimeAccessImpl.class);
   private static final BTraceRuntimeAccessImpl INSTANCE = new BTraceRuntimeAccessImpl();
 
   static final class RTWrapper {
@@ -200,7 +201,7 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
               m.setAccessible(true);
               return m.invoke(initValue);
             } catch (Exception e) {
-              System.err.println("BTrace: Failed to clone TLS initial value: " + e.getMessage());
+              log.warn("Failed to clone TLS initial value", e);
               return null;
             }
           }
@@ -254,7 +255,7 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
         | IllegalArgumentException
         | NoSuchFieldException
         | SecurityException e) {
-      System.err.println("BTrace: Failed to register runtime accessor: " + e.getMessage());
+      log.error("Failed to register runtime accessor", e);
     }
   }
 

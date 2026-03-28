@@ -46,6 +46,7 @@ import org.openjdk.btrace.core.Profiler;
  * @author Jaroslav Bachorik
  */
 class MethodInvocationRecorder {
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MethodInvocationRecorder.class);
 
   private final int defaultBufferSize;
   private final Map<String, Integer> indexMap = new HashMap<>();
@@ -211,7 +212,7 @@ class MethodInvocationRecorder {
         if (r != null) {
           recs[i] = r.duplicate();
         } else {
-          System.err.println("Unexpected NULL record at position " + i + "; ignoring");
+          log.warn("Unexpected NULL record at position {}; ignoring", i);
         }
       }
 

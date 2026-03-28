@@ -5,6 +5,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 
 class Printer {
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Printer.class);
   static int debugPrintIndentLevel = 0;
   ////////////
   // Output //
@@ -56,7 +57,7 @@ class Printer {
 
   void popEnableBit() {
     if (enabledBits.isEmpty()) {
-      System.err.println("WARNING: mismatched #ifdef/endif pairs");
+      log.warn("Mismatched #ifdef/endif pairs");
       return;
     }
     enabledBits.remove(enabledBits.size() - 1);
