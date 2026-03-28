@@ -46,6 +46,7 @@ include 'btrace-extensions:btrace-statsd'
 include 'btrace-extensions:examples:btrace-spark'
 include 'btrace-extensions:examples:btrace-hadoop'
 include 'btrace-extensions:btrace-ext-test'
+include 'btrace-extensions:btrace-llm-trace'
 
 dependencyResolutionManagement {
     versionCatalogs {

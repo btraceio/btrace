@@ -1,0 +1,33 @@
+plugins {
+    id 'org.openjdk.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-llm-trace'
+    name = 'BTrace LLM Tracing'
+    description = 'LLM inference observability: token counts, latency, cost tracking for Java LLM SDKs'
+    services = ['org.openjdk.btrace.llm.LlmTraceService']
+}
+
+dependencies {
+    apiCompileOnly project(':btrace-core')
+    implImplementation project(':btrace-core')
+
+    testImplementation libs.junit.jupiter
+}
+
+test {
+    useJUnitPlatform()
+}
