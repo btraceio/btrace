@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+dependencies {
+    implementation libs.slf4j
+    implementation libs.slf4j.simple
+
+    def toolsJar = getToolsJar();
+    if (toolsJar.getAsFile().exists()) {
+        compileOnly files("${toolsJar}")
+        runtimeOnly files("${toolsJar}")
+    }
+
+    implementation project(':btrace-core')
+    implementation project(':btrace-client')
+    implementation project(':btrace-compiler')
+    implementation project(':btrace-boot')
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'org.openjdk.btrace.mcp.BTraceMcpServer'
+        )
+    }
+}

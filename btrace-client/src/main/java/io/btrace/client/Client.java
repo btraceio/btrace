@@ -801,7 +801,7 @@ public class Client {
     }
   }
 
-  void connectAndListProbes(String host, CommandListener listener) throws IOException {
+  public void connectAndListProbes(String host, CommandListener listener) throws IOException {
     if (sock != null) {
       throw new IllegalStateException();
     }
@@ -1111,11 +1111,11 @@ public class Client {
     reset();
   }
 
-  boolean isDisconnected() {
+  public boolean isDisconnected() {
     return disconnected;
   }
 
-  void disconnect() throws IOException {
+  public void disconnect() throws IOException {
     disconnected = true;
     if (log.isDebugEnabled()) {
       log.debug("sending DISCONNECT request to agent");
