@@ -22,20 +22,17 @@ The previous multi-JAR approach (`btrace-agent.jar`, `btrace-boot.jar`, `btrace-
 
 ```
 btrace.jar (~2.9 MB)
-├── org/openjdk/btrace/boot/*.class             # Entry point (Loader, MaskedClassLoader, MaskedJarUtils)
-├── org/openjdk/btrace/core/*.class             # Bootstrap: core API (~42 classes)
-├── org/openjdk/btrace/core/extensions/*.class  # Bootstrap: extension API
-├── org/openjdk/btrace/core/types/*.class       # Bootstrap: type definitions
-├── org/openjdk/btrace/core/jfr/*.class         # Bootstrap: JFR integration
-├── org/openjdk/btrace/runtime/*.class          # Bootstrap: runtime support
-├── org/openjdk/btrace/libs/org/slf4j/**        # Bootstrap: relocated SLF4J
-├── META-INF/btrace/agent/*.classdata           # Masked: agent classes
+├── org/openjdk/btrace/boot/*.class                      # Entry point (Loader, MaskedClassLoader, MaskedJarUtils)
+├── org/openjdk/btrace/indy/IndyDispatcher.class         # Bootstrap: INVOKEDYNAMIC dispatch
+├── org/openjdk/btrace/runtime/LinkingFlag.class         # Bootstrap: re-entrancy guard
+├── org/openjdk/btrace/core/HandlerRepository.class      # Bootstrap: handler resolution interface
+├── META-INF/btrace/agent/*.classdata           # Masked: agent classes + BTrace runtime API + probe anchor
 ├── META-INF/btrace/client/*.classdata          # Masked: client classes
-├── META-INF/btrace/shared/*.classdata          # Masked: shared classes (ASM, protocol, etc.)
+├── META-INF/btrace/shared/*.classdata          # Masked: shared classes (ASM, protocol, annotations, SLF4J)
 └── META-INF/MANIFEST.MF
 ```
 
-**Bootstrap classes** (~112 total): Only the core API, runtime support, and SLF4J logging are stored as regular `.class` files. These are visible to the bootstrap classloader because the manifest declares `Boot-Class-Path: .`.
+**Bootstrap classes** (~4 total): Only the classes required by the INVOKEDYNAMIC dispatch mechanism are stored as regular `.class` files. These are visible to the bootstrap classloader because the manifest declares `Boot-Class-Path: .`.
 
 **Masked classes** (~1600+): Agent, client, and shared classes are stored as `.classdata` files under `META-INF/btrace/`. The JVM's class loading ignores these files entirely. They are loaded on demand by `MaskedClassLoader`.
 
@@ -76,7 +73,7 @@ Each mode creates a `MaskedClassLoader` for the appropriate section (agent or cl
 
 **Agent mode classloader hierarchy:**
 ```
-Bootstrap CL (core API, runtime, Loader)
+Bootstrap CL (IndyDispatcher, LinkingFlag, HandlerRepository, AnyType, Loader)
     └── MaskedClassLoader[agent] (parent=null)
             Loads from: META-INF/btrace/agent/*.classdata
             Fallback:   META-INF/btrace/shared/*.classdata
@@ -86,7 +83,7 @@ Using `null` as the parent ensures bootstrap-visible classes (like `BTraceRuntim
 
 **Client mode classloader hierarchy:**
 ```
-Bootstrap CL (core API, runtime, Loader)
+Bootstrap CL (IndyDispatcher, LinkingFlag, HandlerRepository, AnyType, Loader)
     └── System CL
         └── MaskedClassLoader[client] (parent=System CL)
                 Loads from: META-INF/btrace/client/*.classdata
@@ -114,16 +111,12 @@ Utility class for detecting masked JARs. A JAR is identified as masked by the pr
 A build-only module that defines which classes belong in the bootstrap section via a `bootIncludes` filter closure. This filter is used by the `btraceJar` task in `btrace-dist/build.gradle` to separate classes into `.class` (bootstrap) vs `.classdata` (masked) during JAR assembly.
 
 **Bootstrap inclusion criteria:**
-- `org/openjdk/btrace/core/` — core API (excluding Messages)
-- `org/openjdk/btrace/runtime/` — runtime support
-- `org/openjdk/btrace/core/extensions/` — extension API
-- `org/openjdk/btrace/libs/org/slf4j/` — relocated SLF4J (logging from bootstrap code)
+- `org/openjdk/btrace/indy/` — `IndyDispatcher`: bootstrap method for all INVOKEDYNAMIC probe/runtime dispatch
+- `org/openjdk/btrace/runtime/LinkingFlag` — re-entrancy guard used by `IndyDispatcher` and `LinkerInstrumentor`
+- `org/openjdk/btrace/core/HandlerRepository.class` — interface referenced directly by `IndyDispatcher`
+- `org/openjdk/btrace/core/types/AnyType` (+ inner classes) — `GETSTATIC AnyType.VOID` emitted into instrumented target classes
 
-**Explicitly excluded from bootstrap:**
-- ASM classes (loaded via shared section)
-- JCTools queues (loaded via shared section)
-- Communication protocol classes
-- Annotation and handler classes
+All other BTrace classes live in the masked sections (agent, client, or shared).
 
 ## Build Process
 
