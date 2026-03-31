@@ -139,10 +139,9 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       if (callerClassName == null || !callerClassName.startsWith("org.openjdk.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
-      ClassLoader loader = null;
-      if (!mustBeBootstrap) {
-        loader = new ClassLoader(null) {};
-      }
+      // mustBeBootstrap=false: define in the agent classloader so probe classes share the
+      // same classloader as BTrace runtime types (no longer requires bootstrap visibility).
+      ClassLoader loader = mustBeBootstrap ? null : BTraceRuntimeImpl_8.class.getClassLoader();
       Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
       unsafe.ensureClassInitialized(cl);
       return cl;
@@ -195,12 +194,28 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @CallerSensitive
   @Override
   public ClassLoader getCallerClassLoader(int stackDec) {
-    return Reflection.getCallerClass(stackDec + 1).getClassLoader();
+    int depth = stackDec + 1;
+    Class<?> cls;
+    while ((cls = Reflection.getCallerClass(depth)) != null) {
+      if (!cls.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+        return cls.getClassLoader();
+      }
+      depth++;
+    }
+    return null;
   }
 
   @Override
   public Class<?> getCallerClass(int stackDec) {
-    return Reflection.getCallerClass(stackDec + 1);
+    int depth = stackDec + 1;
+    Class<?> cls;
+    while ((cls = Reflection.getCallerClass(depth)) != null) {
+      if (!cls.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+        return cls;
+      }
+      depth++;
+    }
+    return null;
   }
 
   @Override

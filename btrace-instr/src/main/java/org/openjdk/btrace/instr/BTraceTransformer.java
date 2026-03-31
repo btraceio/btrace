@@ -25,10 +25,6 @@
 package org.openjdk.btrace.instr;
 
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.MethodNode;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.slf4j.Logger;
@@ -40,7 +36,6 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -64,8 +59,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
   private final ReentrantReadWriteLock setupLock = new ReentrantReadWriteLock();
   private final Collection<BTraceProbe> probes = new ArrayList<>(3);
   private final Filter filter = new Filter();
-  private final Collection<MethodNode> cushionMethods = new HashSet<>();
-
   public BTraceTransformer(DebugSupport d) {
     debug = d;
   }
@@ -101,23 +94,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
       probes.remove(p);
       for (OnMethod om : p.onmethods()) {
         filter.remove(om);
-        MethodNode cushionMethod =
-            new MethodNode(
-                Opcodes.ASM9,
-                Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC,
-                Instrumentor.getActionMethodName(p, om.getTargetName()),
-                om.getTargetDescriptor(),
-                null,
-                null);
-        InsnList code = new InsnList();
-        code.add(new InsnNode(Opcodes.RETURN));
-        cushionMethod.instructions = code;
-        int localSize = 0;
-        for (Type t : Type.getArgumentTypes(om.getTargetDescriptor())) {
-          localSize += t.getSize();
-        }
-        cushionMethod.maxLocals = localSize;
-        cushionMethods.add(cushionMethod);
       }
 
     } finally {
@@ -133,6 +109,16 @@ public final class BTraceTransformer implements ClassFileTransformer {
       ProtectionDomain protectionDomain,
       byte[] classfileBuffer)
       throws IllegalClassFormatException {
+    // BTrace's own classes must never be instrumented regardless of classloader.
+    // This intentionally duplicates the org/openjdk/btrace/ entry in ClassFilter's
+    // sensitive PrefixMap. The early-exit here is needed because:
+    // 1. setupLock acquisition can trigger class loading on JDK 8, re-entering transform()
+    // 2. Agent classes loaded by MaskedClassLoader bypass the loader-based sensitive check
+    //    (which only covers bootstrap and system classloaders)
+    if (className != null && className.startsWith("org/openjdk/btrace/")) {
+      return null;
+    }
+
     try {
       setupLock.readLock().lock();
 
@@ -170,7 +156,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
         }
         BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
         BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
-        cw.addCushionMethods(cushionMethods);
         for (BTraceProbe p : probes) {
           p.notifyTransform(className);
           cw.addInstrumentor(p, loader);
