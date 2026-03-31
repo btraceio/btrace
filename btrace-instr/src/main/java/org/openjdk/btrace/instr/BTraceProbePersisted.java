@@ -23,6 +23,7 @@ package org.openjdk.btrace.instr;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -91,6 +92,7 @@ public class BTraceProbePersisted implements BTraceProbe {
   private final AtomicBoolean triedVerify = new AtomicBoolean(false);
   private final Map<String, Set<String>> calleeMap = new HashMap<>();
   private volatile BTraceRuntime.Impl rt = null;
+  private volatile Class<?> definedClass = null;
   private BTraceTransformer transformer;
   private byte[] fullData = null;
   private byte[] dataHolder = null;
@@ -560,11 +562,13 @@ public class BTraceProbePersisted implements BTraceProbe {
 
   @Override
   public Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t) {
-    byte[] code = dataHolder;
+    byte[] code = transformAnyTypeDescriptors(fullData);
     if (debug.isDumpClasses()) {
       debug.dumpClass(delegate.getClassName(true) + "_bcp", code);
     }
     Class<?> clz = delegate.defineClass(rt, code);
+    definedClass = clz;
+    HandlerRepositoryImpl.registerProbe(this);
     t.register(this);
     transformer = t;
     this.rt = rt;
@@ -579,7 +583,14 @@ public class BTraceProbePersisted implements BTraceProbe {
       }
       transformer.unregister(this);
     }
+    HandlerRepositoryImpl.unregisterProbe(this);
+    definedClass = null;
     rt = null;
+  }
+
+  @Override
+  public Class<?> getDefinedClass() {
+    return definedClass;
   }
 
   @Override
@@ -592,53 +603,6 @@ public class BTraceProbePersisted implements BTraceProbe {
     if (!preverified) {
       isVerified();
     }
-  }
-
-  @Override
-  public void copyHandlers(ClassVisitor copyingVisitor) {
-    ClassReader cr = new ClassReader(fullData);
-    Set<String> copiedMethods = new HashSet<>();
-    for (OnMethod om : onmethods()) {
-      if (om.isCalled()) {
-        String mid = CallGraph.methodId(om.getTargetName(), om.getTargetDescriptor());
-        copiedMethods.add(mid);
-        Set<String> callees = calleeMap.get(mid);
-        if (callees != null) {
-          copiedMethods.addAll(calleeMap.get(mid));
-        }
-      }
-    }
-    cr.accept(
-        new ClassVisitor(ASM9) {
-          @Override
-          public void visit(
-              int version,
-              int access,
-              String name,
-              String signature,
-              String superName,
-              String[] interfaces) {
-            copyingVisitor.visit(version, access, name, signature, superName, interfaces);
-          }
-
-          @Override
-          public MethodVisitor visitMethod(
-              int access, String name, String desc, String signature, String[] exceptions) {
-            String mid = CallGraph.methodId(name, desc);
-            if (copiedMethods.contains(mid)) {
-              return copyingVisitor.visitMethod(
-                  ACC_PRIVATE | ACC_STATIC,
-                  getActionPrefix() + name,
-                  desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
-                  signature != null
-                      ? signature.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
-                      : null,
-                  exceptions);
-            }
-            return super.visitMethod(access, name, desc, signature, exceptions);
-          }
-        },
-        0);
   }
 
   @Override
@@ -659,6 +623,29 @@ public class BTraceProbePersisted implements BTraceProbe {
   @Override
   public Set<Permission> getRequiredPermissions() {
     return delegate.getRequiredPermissions();
+  }
+
+  private static byte[] transformAnyTypeDescriptors(byte[] data) {
+    ClassReader cr = new ClassReader(data);
+    ClassWriter cw = new ClassWriter(0);
+    cr.accept(
+        new ClassVisitor(ASM9, cw) {
+          @Override
+          public MethodVisitor visitMethod(
+              int access, String name, String desc, String sig, String[] exceptions) {
+            if (name.startsWith("<")) {
+              return super.visitMethod(access, name, desc, sig, exceptions);
+            }
+            String newDesc = desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+            String newSig =
+                sig != null
+                    ? sig.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
+                    : null;
+            return super.visitMethod(access, name, newDesc, newSig, exceptions);
+          }
+        },
+        0);
+    return cw.toByteArray();
   }
 
   private void upgradeBytecode() {

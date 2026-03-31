@@ -186,16 +186,9 @@ task prepareAgentClassdata(type: Copy) {
         include 'org/openjdk/btrace/instr/jaxb.index'  // Required for JAXB probe descriptor loading
         include 'org/openjdk/btrace/runtime/**/*.class'
         include 'org/openjdk/btrace/extension/**/*.class'
-        include 'org/openjdk/btrace/core/comm/**/*.class'
-        include 'org/openjdk/btrace/core/handlers/**/*.class'
-        include 'org/openjdk/btrace/core/Messages.class'
-        include 'org/openjdk/btrace/core/messages.properties'
-        // Exclude classes that go in shared section
-        exclude 'org/openjdk/btrace/core/extensions/**'
-        exclude 'org/openjdk/btrace/core/annotations/**'
-        // Exclude bootstrap runtime classes (now in btrace-core)
-        exclude 'org/openjdk/btrace/runtime/BTraceRuntimeAccess.class'
-        exclude 'org/openjdk/btrace/runtime/BTraceRuntimeAccess$*.class'
+        // core/* and slf4j are in shared section (accessible to both agent and client)
+        exclude 'org/openjdk/btrace/core/**'
+        // LinkingFlag stays in bootstrap (used by IndyDispatcher and LinkerInstrumentor)
         exclude 'org/openjdk/btrace/runtime/LinkingFlag.class'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
@@ -239,11 +232,20 @@ task prepareSharedClassdata(type: Copy) {
     into "${maskedJarTmpDir}/shared"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        // Only include classes used by both client and agent
+        // Core classes used by both client and agent (formerly in bootstrap)
+        include 'org/openjdk/btrace/core/*.class'
+        include 'org/openjdk/btrace/core/types/**/*.class'
+        include 'org/openjdk/btrace/core/jfr/**/*.class'
+        include 'org/openjdk/btrace/core/aggregation/**/*.class'
+        include 'org/openjdk/btrace/core/handlers/**/*.class'
         include 'org/openjdk/btrace/core/comm/**/*.class'
         include 'org/openjdk/btrace/core/extensions/**/*.class'
         include 'org/openjdk/btrace/core/annotations/**/*.class'
+        include 'org/openjdk/btrace/core/messages.properties'
+        // HandlerRepository stays in bootstrap (referenced by IndyDispatcher)
+        exclude 'org/openjdk/btrace/core/HandlerRepository.class'
         include 'org/openjdk/btrace/libs/org/objectweb/asm/**/*.class'
+        include 'org/openjdk/btrace/libs/org/slf4j/**/*.class'
         // Exclude ASM packages not needed
         exclude 'org/openjdk/btrace/libs/org/objectweb/asm/commons/**'
         exclude 'org/openjdk/btrace/libs/org/objectweb/asm/util/**'

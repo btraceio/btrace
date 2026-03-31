@@ -124,12 +124,17 @@ public final class BTraceRuntime {
   // for jvmstat.
 
   public static Unsafe initUnsafe() {
-    try {
-      if (unsafe == null) {
-        unsafe = Unsafe.getUnsafe();
+    if (unsafe == null) {
+      try {
+        // Use reflection to obtain Unsafe — works from any classloader, not just bootstrap.
+        // Unsafe.getUnsafe() requires the caller to be bootstrap-loaded, which is no longer
+        // guaranteed when BTraceRuntime lives in the agent masked classloader.
+        java.lang.reflect.Field f = Unsafe.class.getDeclaredField("theUnsafe");
+        f.setAccessible(true);
+        unsafe = (Unsafe) f.get(null);
+      } catch (Exception e) {
+        System.err.println("BTrace warning: unable to initialize Unsafe. BTrace will not function properly");
       }
-    } catch (SecurityException e) {
-      System.err.println("BTrace warning: unable to initialize Unsafe. BTrace will not function properly");
     }
     return unsafe;
   }

@@ -54,7 +54,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * @author Jaroslav Bachorik
@@ -76,6 +75,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   private final BTraceBCPClassLoader bcpResourceClassLoader;
 
   private volatile BTraceRuntime.Impl rt = null;
+  private volatile Class<?> definedClass = null;
 
   private BTraceTransformer transformer;
   private VerifierException verifierException = null;
@@ -202,11 +202,15 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
   @Override
   public Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t) {
-    byte[] code = getBytecode(true);
+    // getBytecode(false): include all handler methods (not just BCP-required ones) so that
+    // INVOKEDYNAMIC-based dispatch can resolve them via publicLookup().findStatic().
+    byte[] code = getBytecode(false);
     if (debug.isDumpClasses()) {
       debug.dumpClass(name + "_bcp", code);
     }
     Class<?> clz = delegate.defineClass(rt, code);
+    definedClass = clz;
+    HandlerRepositoryImpl.registerProbe(this);
     t.register(this);
     transformer = t;
     this.rt = rt;
@@ -221,7 +225,14 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       }
       transformer.unregister(this);
     }
+    HandlerRepositoryImpl.unregisterProbe(this);
+    definedClass = null;
     rt = null;
+  }
+
+  @Override
+  public Class<?> getDefinedClass() {
+    return definedClass;
   }
 
   @Override
@@ -265,6 +276,25 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
                 return null;
               }
               return super.visitMethod(access, name, desc, sig, exceptions);
+            }
+          };
+    } else {
+      // Transform AnyType→Object in method descriptors so that the probe class
+      // methods match the INVOKEDYNAMIC call site descriptors.
+      cv =
+          new ClassVisitor(Opcodes.ASM9, cw) {
+            @Override
+            public MethodVisitor visitMethod(
+                int access, String name, String desc, String sig, String[] exceptions) {
+              if (name.startsWith("<")) {
+                return super.visitMethod(access, name, desc, sig, exceptions);
+              }
+              String newDesc = desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+              String newSig =
+                  sig != null
+                      ? sig.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
+                      : null;
+              return super.visitMethod(access, name, newDesc, newSig, exceptions);
             }
           };
     }
@@ -371,37 +401,6 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     if (!isVerified()) {
       throw getVerifierException();
     }
-  }
-
-  @Override
-  public void copyHandlers(ClassVisitor copyingVisitor) {
-    Set<MethodNode> copyNodes = new TreeSet<>(BTraceMethodNode.COMPARATOR);
-
-    for (OnMethod om : onmethods()) {
-      if (!om.isCalled()) {
-        continue;
-      }
-
-      BTraceMethodNode bmn = om.getMethodNode();
-
-      MethodNode mn = copy(bmn);
-
-      copyNodes.add(mn);
-      for (BTraceMethodNode c : bmn.getCallees()) {
-        copyNodes.add(copy(c));
-      }
-    }
-    copyingVisitor.visit(
-        Opcodes.V1_7,
-        Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL,
-        getClassName(true),
-        null,
-        "java/lang/Object",
-        null);
-    for (MethodNode mn : copyNodes) {
-      mn.accept(copyingVisitor);
-    }
-    copyingVisitor.visitEnd();
   }
 
   @Override
@@ -515,20 +514,6 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       }
     }
     return methods;
-  }
-
-  private MethodNode copy(MethodNode n) {
-    String[] exceptions = n.exceptions != null ? n.exceptions.toArray(new String[0]) : null;
-    MethodNode mn = new MethodNode(Opcodes.ASM9, n.access, n.name, n.desc, n.signature, exceptions);
-    n.accept(mn);
-    mn.access = Opcodes.ACC_STATIC | Opcodes.ACC_PRIVATE;
-    mn.desc = mn.desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
-    mn.signature =
-        mn.signature != null
-            ? mn.signature.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
-            : null;
-    mn.name = getActionPrefix() + mn.name;
-    return mn;
   }
 
   private byte[] readFully(InputStream is) throws IOException {

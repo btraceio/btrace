@@ -1,0 +1,61 @@
+LCONST_0
+LSTORE 2
+LCONST_0
+LSTORE 4
+INVOKEDYNAMIC levelCheck()I [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.levelBootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;II)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructor",
+-2147483648,
+0
+]
+IFNE L1
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+FRAME FULL [resources/OnMethodTest java/lang/String J J] []
+INVOKEDYNAMIC levelCheck()I [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.levelBootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;II)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructor",
+-2147483648,
+0
+]
+IFNE L3
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+L3
+FRAME SAME
+INVOKEDYNAMIC levelCheck()I [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.levelBootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;II)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructor",
+1,
+2147483647
+]
+IFEQ L4
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
+ALOAD 0
+LLOAD 2
+ALOAD 1
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructor$args(Ljava/lang/Object;JLjava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructor"
+]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
+L4
+FRAME SAME
+L5
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a Ljava/lang/String; L0 L5 1
+MAXSTACK = 4
+MAXLOCALS = 6

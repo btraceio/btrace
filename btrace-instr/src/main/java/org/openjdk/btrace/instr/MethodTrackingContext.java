@@ -32,7 +32,6 @@ import java.util.List;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.annotations.Sampled;
-import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.Interval;
 
 /**
@@ -59,7 +58,6 @@ public class MethodTrackingContext {
   private int entryTsVar = Integer.MIN_VALUE;
   private int sHitVar = Integer.MIN_VALUE;
   private int durationVar = Integer.MIN_VALUE;
-  private int globalLevelVar = Integer.MIN_VALUE;
   private boolean durationComputed = false;
   private boolean prologueEmitted = false;
   private Label elseLabel = null;
@@ -185,7 +183,7 @@ public class MethodTrackingContext {
       asm.loadLocal(Type.INT_TYPE, sHitVar)
           .jump(IFEQ, l)
           .ldc(methodId)
-          .invokeStatic(METHOD_COUNTER_CLASS, "updateEndTs", "(I)V")
+          .invokeRuntime(METHOD_COUNTER_CLASS, "updateEndTs", "(I)V")
           .label(l);
       helper.insertFrameSameStack(l);
     }
@@ -195,7 +193,6 @@ public class MethodTrackingContext {
   public void reset() {
     entryTsVar = Integer.MIN_VALUE;
     sHitVar = Integer.MIN_VALUE;
-    globalLevelVar = Integer.MIN_VALUE;
     durationComputed = false;
   }
 
@@ -248,42 +245,11 @@ public class MethodTrackingContext {
 
     Label skipLabel = new Label();
 
-    // Load level variable (cached if multiple handlers need it)
-    if (helper.shouldCacheLevelVar()) {
-      if (globalLevelVar == Integer.MIN_VALUE) {
-        asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
-        globalLevelVar = helper.storeAsNew();
-      } else {
-        asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-      }
-    } else {
-      // Single handler case: just load without caching
-      asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC);
-    }
-
-    // Perform comparison based on interval
-    if (itv.getA() > 0 && itv.getB() >= Integer.MAX_VALUE) {
-      // Check level >= A (or level < A, skip)
-      asm.ldc(itv.getA()).jump(IF_ICMPLT, skipLabel);
-    } else if (itv.getA() <= 0 && itv.getB() < Integer.MAX_VALUE) {
-      // Check level <= B (or level > B, skip)
-      asm.ldc(itv.getB()).jump(IF_ICMPGT, skipLabel);
-    } else {
-      // Range check: A <= level <= B
-      // Check both lower and upper bounds
-      if (itv.getA() > 0) {
-        asm.ldc(itv.getA()).jump(IF_ICMPLT, skipLabel); // Skip if level < A
-        // Reload for second check (from cache if available, otherwise from static field)
-        if (helper.shouldCacheLevelVar()) {
-          asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-        } else {
-          asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC);
-        }
-      }
-      if (itv.getB() < Integer.MAX_VALUE) {
-        asm.ldc(itv.getB()).jump(IF_ICMPGT, skipLabel); // Skip if level > B
-      }
-    }
+    int lo = itv.getA() <= 0 ? 0 : itv.getA();
+    int hi = itv.getB();
+    // INDY returns 1 if probe level in [lo, hi], 0 otherwise; skip handler if out of range
+    asm.invokeDynamic("levelCheck", "()I", Assembler.LEVEL_BOOTSTRAP_HANDLE, probeClassName, lo, hi)
+        .jump(IFEQ, skipLabel);
 
     return skipLabel;
   }
@@ -313,10 +279,10 @@ public class MethodTrackingContext {
       asm.ldc(mid);
       switch (samplerKind) {
         case Const:
-          asm.invokeStatic(METHOD_COUNTER_CLASS, "hitTimed", "(I)J");
+          asm.invokeRuntime(METHOD_COUNTER_CLASS, "hitTimed", "(I)J");
           break;
         case Adaptive:
-          asm.invokeStatic(METHOD_COUNTER_CLASS, "hitTimedAdaptive", "(I)J");
+          asm.invokeRuntime(METHOD_COUNTER_CLASS, "hitTimedAdaptive", "(I)J");
           break;
         default:
           // do nothing
@@ -356,10 +322,10 @@ public class MethodTrackingContext {
       asm.ldc(mid);
       switch (samplerKind) {
         case Const:
-          asm.invokeStatic(METHOD_COUNTER_CLASS, "hit", "(I)Z");
+          asm.invokeRuntime(METHOD_COUNTER_CLASS, "hit", "(I)Z");
           break;
         case Adaptive:
-          asm.invokeStatic(METHOD_COUNTER_CLASS, "hitAdaptive", "(I)Z");
+          asm.invokeRuntime(METHOD_COUNTER_CLASS, "hitAdaptive", "(I)Z");
           break;
         default:
           // do nothing
@@ -418,7 +384,7 @@ public class MethodTrackingContext {
     if (!durationComputed) {
       if (entryTsVar != Integer.MIN_VALUE) {
         asm.ldc(mid)
-            .invokeStatic(METHOD_COUNTER_CLASS, "getEndTs", "(I)J")
+            .invokeRuntime(METHOD_COUNTER_CLASS, "getEndTs", "(I)J")
             .loadLocal(Type.LONG_TYPE, entryTsVar)
             .sub(Type.LONG_TYPE);
       } else {
@@ -473,42 +439,12 @@ public class MethodTrackingContext {
         skipTarget = skip != null ? skip : new Label();
 
         for (Interval i : optimized) {
-          Label nextCheck = new Label();
-          if (globalLevelVar == Integer.MIN_VALUE) {
-            asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
-            globalLevelVar = helper.storeAsNew();
-          } else {
-            asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-          }
-
-          boolean stackConsumed = false;
-          if (i.getA() > Integer.MIN_VALUE) {
-            stackConsumed = true;
-            if (i.getA() == 0) {
-              asm.jump(IFLT, nextCheck);
-            } else {
-              asm.ldc(i.getA()).jump(IF_ICMPLT, nextCheck);
-            }
-          }
-
-          if (i.getB() < Integer.MAX_VALUE) {
-            if (stackConsumed) {
-              asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-            }
-            if (i.getB() == 0) {
-              asm.jump(IFLE, skipTarget);
-            } else {
-              asm.ldc(i.getB()).jump(IF_ICMPLE, skipTarget);
-            }
-          } else {
-            Label l = new Label();
-            asm.label(l);
-            helper.insertFrameSameStack(l);
-            asm.jump(GOTO, skipTarget);
-          }
-
-          asm.label(nextCheck);
-          helper.insertFrameSameStack(nextCheck);
+          int lo = i.getA() == Integer.MIN_VALUE ? Integer.MIN_VALUE : i.getA();
+          int hi = i.getB();
+          // INDY returns 1 if level in [lo, hi]; jump to skipTarget if in skip range
+          asm.invokeDynamic(
+                  "levelCheck", "()I", Assembler.LEVEL_BOOTSTRAP_HANDLE, probeClassName, lo, hi)
+              .jump(IFNE, skipTarget);
         }
       }
     }

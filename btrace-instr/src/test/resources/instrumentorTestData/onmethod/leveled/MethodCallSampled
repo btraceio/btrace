@@ -1,0 +1,75 @@
+ICONST_0
+ISTORE 4
+INVOKEDYNAMIC levelCheck()I [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.levelBootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;II)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallSampled",
+-2147483648,
+0
+]
+IFNE L1
+ICONST_2
+INVOKEDYNAMIC hit(I)Z [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.runtimeBootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/instr/MethodTracker"
+]
+ISTORE 4
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J I] [resources/OnMethodTest java/lang/String J]
+LSTORE 5
+ASTORE 7
+ASTORE 8
+INVOKEDYNAMIC levelCheck()I [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.levelBootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;II)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallSampled",
+-2147483648,
+0
+]
+IFNE L2
+ILOAD 4
+IFEQ L3
+L2
+FRAME APPEND [J java/lang/String resources/OnMethodTest]
+INVOKEDYNAMIC levelCheck()I [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.levelBootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;II)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallSampled",
+1,
+2147483647
+]
+IFEQ L3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
+ALOAD 0
+ALOAD 7
+LLOAD 5
+ALOAD 8
+LDC "special long resources.OnMethodTest#callTarget(java.lang.String, long)"
+LDC "resources.OnMethodTest"
+LDC "callTopLevel"
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallSampled$args(Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/MethodCallSampled"
+]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
+L3
+FRAME SAME
+ALOAD 8
+ALOAD 7
+LLOAD 5
+L4
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
+LOCALVARIABLE a Ljava/lang/String; L0 L4 1
+LOCALVARIABLE b J L0 L4 2
+MAXSTACK = 8
+MAXLOCALS = 9

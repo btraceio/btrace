@@ -24,6 +24,9 @@
  */
 package org.openjdk.btrace.instr;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -60,6 +63,7 @@ import static org.objectweb.asm.Opcodes.FSUB;
 import static org.objectweb.asm.Opcodes.GETFIELD;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
 import static org.objectweb.asm.Opcodes.GOTO;
+import static org.objectweb.asm.Opcodes.H_INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.IALOAD;
 import static org.objectweb.asm.Opcodes.IASTORE;
 import static org.objectweb.asm.Opcodes.ICONST_0;
@@ -69,6 +73,7 @@ import static org.objectweb.asm.Opcodes.ICONST_3;
 import static org.objectweb.asm.Opcodes.ICONST_4;
 import static org.objectweb.asm.Opcodes.ICONST_5;
 import static org.objectweb.asm.Opcodes.ICONST_M1;
+import static org.objectweb.asm.Opcodes.IFEQ;
 import static org.objectweb.asm.Opcodes.IFNE;
 import static org.objectweb.asm.Opcodes.IF_ICMPGT;
 import static org.objectweb.asm.Opcodes.IF_ICMPLT;
@@ -106,7 +111,6 @@ import static org.openjdk.btrace.instr.Constants.BOX_INTEGER_DESC;
 import static org.openjdk.btrace.instr.Constants.BOX_LONG_DESC;
 import static org.openjdk.btrace.instr.Constants.BOX_SHORT_DESC;
 import static org.openjdk.btrace.instr.Constants.BOX_VALUEOF;
-import static org.openjdk.btrace.instr.Constants.BTRACE_LEVEL_FLD;
 import static org.openjdk.btrace.instr.Constants.BYTE_BOXED_INTERNAL;
 import static org.openjdk.btrace.instr.Constants.BYTE_VALUE;
 import static org.openjdk.btrace.instr.Constants.BYTE_VALUE_DESC;
@@ -588,6 +592,52 @@ public final class Assembler {
     return this;
   }
 
+  private static final String INDY_DISPATCHER_INTERNAL = "org/openjdk/btrace/indy/IndyDispatcher";
+  private static final MethodType RUNTIME_BOOTSTRAP_MT =
+      MethodType.methodType(
+          CallSite.class,
+          MethodHandles.Lookup.class,
+          String.class,
+          MethodType.class,
+          String.class);
+  private static final Handle RUNTIME_BOOTSTRAP_HANDLE =
+      new Handle(
+          H_INVOKESTATIC,
+          INDY_DISPATCHER_INTERNAL,
+          "runtimeBootstrap",
+          RUNTIME_BOOTSTRAP_MT.toMethodDescriptorString(),
+          false);
+
+  private static final MethodType LEVEL_BOOTSTRAP_MT =
+      MethodType.methodType(
+          CallSite.class,
+          MethodHandles.Lookup.class,
+          String.class,
+          MethodType.class,
+          String.class,
+          int.class,
+          int.class);
+  static final Handle LEVEL_BOOTSTRAP_HANDLE =
+      new Handle(
+          H_INVOKESTATIC,
+          INDY_DISPATCHER_INTERNAL,
+          "levelBootstrap",
+          LEVEL_BOOTSTRAP_MT.toMethodDescriptorString(),
+          false);
+
+  /**
+   * Emit an INVOKEDYNAMIC instruction that routes through IndyDispatcher.runtimeBootstrap to
+   * resolve a static method in the agent classloader at first invocation.
+   *
+   * @param owner the internal name of the target class
+   * @param method the method name
+   * @param desc the method descriptor
+   */
+  public Assembler invokeRuntime(String owner, String method, String desc) {
+    mv.visitInvokeDynamicInsn(method, desc, RUNTIME_BOOTSTRAP_HANDLE, owner);
+    return this;
+  }
+
   public Assembler invokeDynamic(
       String name, String descriptor, Handle bootstrap, Object... bootstrapArguments) {
     mv.visitInvokeDynamicInsn(name, descriptor, bootstrap, bootstrapArguments);
@@ -619,24 +669,24 @@ public final class Assembler {
   }
 
   public Assembler addLevelCheck(String clsName, Interval itv, Label jmp) {
-    getStatic(clsName, "$btrace$$level", INT_DESC);
+    int lo, hi;
     if (itv.getA() <= 0) {
-      if (itv.getB() != Integer.MAX_VALUE) {
-        ldc(itv.getB());
-        jump(IF_ICMPGT, jmp);
-      }
-    } else if (itv.getA() < itv.getB()) {
       if (itv.getB() == Integer.MAX_VALUE) {
-        ldc(itv.getA());
-        jump(IF_ICMPLT, jmp);
-      } else {
-        ldc(itv.getA());
-        jump(IF_ICMPLT, jmp);
-        getStatic(clsName, "$btrace$$level", INT_DESC);
-        ldc(itv.getB());
-        jump(IF_ICMPGT, jmp);
+        // No restriction — always passes
+        return this;
       }
+      lo = 0;
+      hi = itv.getB();
+    } else if (itv.getA() < itv.getB()) {
+      lo = itv.getA();
+      hi = itv.getB();
+    } else {
+      // A >= B with A > 0 — no check
+      return this;
     }
+    // INDY returns 1 if level in [lo, hi], 0 otherwise; skip handler if out of range
+    invokeDynamic("levelCheck", "()I", LEVEL_BOOTSTRAP_HANDLE, clsName, lo, hi);
+    jump(IFEQ, jmp);
     return this;
   }
 
@@ -652,49 +702,46 @@ public final class Assembler {
    */
   public Assembler compareLevel(String clsName, Level level) {
     Interval itv = level.getValue();
+    int lo, hi;
     if (itv.getA() <= 0) {
-      if (itv.getB() != Integer.MAX_VALUE) {
-        ldc(itv.getB());
-        getStatic(clsName, BTRACE_LEVEL_FLD, INT_DESC);
-        sub(Type.INT_TYPE);
-      }
-    } else if (itv.getA() < itv.getB()) {
       if (itv.getB() == Integer.MAX_VALUE) {
-        getStatic(clsName, BTRACE_LEVEL_FLD, INT_DESC);
-        ldc(itv.getA());
-        sub(Type.INT_TYPE);
-      } else {
-        Label l1 = new Label();
-        Label l2 = new Label();
-        ldc(itv.getA());
-        jump(IF_ICMPLT, l1);
-        getStatic(clsName, BTRACE_LEVEL_FLD, INT_DESC);
-        ldc(itv.getB());
-        jump(IF_ICMPGT, l1);
+        // No restriction — push 0 (in range) unconditionally
         ldc(0);
-        Label l3 = new Label();
-        label(l3);
-        mHelper.insertFrameSameStack(l3);
-        jump(GOTO, l2);
-        label(l1);
-        mHelper.insertFrameSameStack(l1);
-        ldc(-1);
-        label(l2);
-        mHelper.insertFrameSameStack(l2);
+        return this;
       }
+      lo = 0;
+      hi = itv.getB();
+    } else if (itv.getA() < itv.getB()) {
+      lo = itv.getA();
+      hi = itv.getB();
+    } else {
+      // A >= B with A > 0 — no check; push 0 (in range)
+      ldc(0);
+      return this;
     }
+    // INDY returns 1 if in range, 0 if not; convert to 0/-1 expected by callers
+    invokeDynamic("levelCheck", "()I", LEVEL_BOOTSTRAP_HANDLE, clsName, lo, hi);
+    ldc(1);
+    sub(Type.INT_TYPE); // result - 1: 0 if in range, -1 if not
     return this;
   }
 
   public Label openLinkerCheck() {
     Label l = new Label();
     invokeStatic(Constants.LINKING_FLAG_INTERNAL, "get", "()I");
-    // if the linking flag is 0, then we are not in a reentrant call
+    // if the linking flag is non-zero we are either in a bootstrap/linking call
+    // or inside a probe handler — skip to avoid recursion
     jump(IFNE, l);
+    // Set the flag to prevent re-entrant probe execution: if the probe handler
+    // calls instrumented code (e.g. AtomicLong.getAndIncrement), the nested
+    // openLinkerCheck will see the flag and skip.
+    invokeStatic(Constants.LINKING_FLAG_INTERNAL, "guardLinking", "()I");
+    pop();
     return l;
   }
 
   public void closeLinkerCheck(Label l) {
+    invokeStatic(Constants.LINKING_FLAG_INTERNAL, "reset", "()V");
     label(l);
     mHelper.insertFrameSameStack(l);
   }
