@@ -23,7 +23,7 @@ dependencies {
     implementation localGroovy()
     // Match versions commonly cached in this repository to avoid extra fetches
     implementation 'org.ow2.asm:asm:9.6'
-    implementation 'org.ow2.asm:asm-tree:9.6'
+    implementation 'org.ow2.asm:asm-tree:9.9.1'
 }
 
 gradlePlugin {
