@@ -28,9 +28,9 @@ btraceExtension {
 
 dependencies {
     // API dependencies (no legacy services API)
-    apiCompileOnly 'org.jetbrains:annotations:24.1.0'
+    apiCompileOnly 'org.jetbrains:annotations:26.1.0'
     apiCompileOnly project(':btrace-core')
-    implCompileOnly 'org.jetbrains:annotations:24.1.0'
+    implCompileOnly 'org.jetbrains:annotations:26.1.0'
 
     // Implementation dependencies (will be shaded)
     implImplementation project(':btrace-core')
