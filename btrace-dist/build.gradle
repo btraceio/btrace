@@ -450,7 +450,7 @@ ospackage {
 
     from("${distTarget}/bin") {
         into 'bin'
-        fileMode 0550
+        filePermissions { unix('550') }
     }
 
     from("${distTarget}/libs") {
@@ -491,7 +491,7 @@ task buildDockerContext(type: Copy, dependsOn: [btraceJar, apiJar, copyDtraceLib
 
     from "${distTarget}"
     into "${buildDir}/docker-context/btrace"
-    fileMode = 0644
+    filePermissions { unix('644') }
 
     doLast {
         // Copy entrypoint script
