@@ -198,7 +198,7 @@ jobs:
         run: ./gradlew --no-daemon --parallel --build-cache build
 
       - name: Upload dist build data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-build
           retention-days: 1
@@ -207,7 +207,7 @@ jobs:
             btrace-instr/build/classes/traces
 
       - name: Upload test trace data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-trace
           retention-days: 1
@@ -216,7 +216,7 @@ jobs:
 
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-reports
           path: |
@@ -293,7 +293,7 @@ jobs:
 
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
@@ -646,7 +646,7 @@ jobs:
           ls -la btrace-dist/build/distributions/
 
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-distributions
           retention-days: 7

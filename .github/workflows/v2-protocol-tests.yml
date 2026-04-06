@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload Test Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports-java-${{ matrix.java }}
           retention-days: 7
@@ -122,7 +122,7 @@ jobs:
 
       - name: Upload Negotiation Test Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: negotiation-test-reports
           retention-days: 7
@@ -177,7 +177,7 @@ jobs:
 
       - name: Upload Edge Case Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: edge-case-reports
           retention-days: 7
@@ -219,7 +219,7 @@ jobs:
 
       - name: Upload JMH Results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: jmh-results
           retention-days: 30
@@ -279,7 +279,7 @@ jobs:
 
       - name: Upload Compatibility Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: compatibility-${{ matrix.scenario.name }}
           retention-days: 7
@@ -366,7 +366,7 @@ jobs:
           ./gradlew :btrace-core:test jacocoTestReport
 
       - name: Upload Coverage Reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-reports
           retention-days: 30
