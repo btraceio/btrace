@@ -76,6 +76,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   private final BTraceBCPClassLoader bcpResourceClassLoader;
 
   private volatile BTraceRuntime.Impl rt = null;
+  private volatile Class<?> definedClass = null;
 
   private BTraceTransformer transformer;
   private VerifierException verifierException = null;
@@ -202,11 +203,13 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
 
   @Override
   public Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t) {
-    byte[] code = getBytecode(true);
+    byte[] code = getBytecode(false);
     if (debug.isDumpClasses()) {
       debug.dumpClass(name + "_bcp", code);
     }
     Class<?> clz = delegate.defineClass(rt, code);
+    definedClass = clz;
+    HandlerRepositoryImpl.registerProbe(this);
     t.register(this);
     transformer = t;
     this.rt = rt;
@@ -221,7 +224,14 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       }
       transformer.unregister(this);
     }
+    HandlerRepositoryImpl.unregisterProbe(this);
+    definedClass = null;
     rt = null;
+  }
+
+  @Override
+  public Class<?> getDefinedClass() {
+    return definedClass;
   }
 
   @Override
@@ -265,6 +275,25 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
                 return null;
               }
               return super.visitMethod(access, name, desc, sig, exceptions);
+            }
+          };
+    } else {
+      // Transform AnyType→Object in method descriptors so that the probe class
+      // methods match the INVOKEDYNAMIC call site descriptors.
+      cv =
+          new ClassVisitor(Opcodes.ASM9, cw) {
+            @Override
+            public MethodVisitor visitMethod(
+                int access, String name, String desc, String sig, String[] exceptions) {
+              if (name.startsWith("<")) {
+                return super.visitMethod(access, name, desc, sig, exceptions);
+              }
+              String newDesc = desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC);
+              String newSig =
+                  sig != null
+                      ? sig.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
+                      : null;
+              return super.visitMethod(access, name, newDesc, newSig, exceptions);
             }
           };
     }

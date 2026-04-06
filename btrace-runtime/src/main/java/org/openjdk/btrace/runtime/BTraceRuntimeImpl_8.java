@@ -195,12 +195,28 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @CallerSensitive
   @Override
   public ClassLoader getCallerClassLoader(int stackDec) {
-    return Reflection.getCallerClass(stackDec + 1).getClassLoader();
+    int depth = stackDec + 1;
+    Class<?> cls;
+    while ((cls = Reflection.getCallerClass(depth)) != null) {
+      if (!cls.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+        return cls.getClassLoader();
+      }
+      depth++;
+    }
+    return null;
   }
 
   @Override
   public Class<?> getCallerClass(int stackDec) {
-    return Reflection.getCallerClass(stackDec + 1);
+    int depth = stackDec + 1;
+    Class<?> cls;
+    while ((cls = Reflection.getCallerClass(depth)) != null) {
+      if (!cls.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+        return cls;
+      }
+      depth++;
+    }
+    return null;
   }
 
   @Override

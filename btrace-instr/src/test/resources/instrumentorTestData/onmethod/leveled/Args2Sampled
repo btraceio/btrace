@@ -1,0 +1,84 @@
+ICONST_0
+ISTORE 6
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args2Sampled.$btrace$$level : I
+DUP
+ISTORE 7
+IFLE L0
+L1
+FRAME APPEND [I I]
+ICONST_1
+INVOKEDYNAMIC hit(I)Z [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.runtimeBootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/instr/MethodTracker"
+]
+ISTORE 6
+FRAME SAME
+ILOAD 7
+IFLE L2
+L3
+FRAME SAME
+ILOAD 6
+IFEQ L4
+L2
+FRAME SAME
+ILOAD 7
+ICONST_1
+IF_ICMPLT L4
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$Args2Sampled$args2(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/Args2Sampled"
+]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
+L4
+FRAME SAME
+ILOAD 7
+IFLE L5
+L6
+FRAME SAME
+ILOAD 6
+IFEQ L7
+L5
+FRAME SAME
+ILOAD 7
+ICONST_1
+IF_ICMPLT L7
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L7
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.guardLinking ()I
+POP
+ALOAD 0
+ALOAD 1
+LLOAD 2
+ALOAD 4
+ALOAD 5
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$Args2Sampled$args(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/indy/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/Args2Sampled"
+]
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.reset ()V
+L7
+LINENUMBER 57 L7
+FRAME SAME
+L8
+LOCALVARIABLE this Lresources/OnMethodTest; L7 L8 0
+LOCALVARIABLE a Ljava/lang/String; L7 L8 1
+LOCALVARIABLE b J L7 L8 2
+LOCALVARIABLE c [Ljava/lang/String; L7 L8 4
+LOCALVARIABLE d [I L7 L8 5
+MAXSTACK = 6
+MAXLOCALS = 8

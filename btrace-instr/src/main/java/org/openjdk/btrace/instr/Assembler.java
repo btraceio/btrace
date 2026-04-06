@@ -24,6 +24,9 @@
  */
 package org.openjdk.btrace.instr;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -60,6 +63,7 @@ import static org.objectweb.asm.Opcodes.FSUB;
 import static org.objectweb.asm.Opcodes.GETFIELD;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
 import static org.objectweb.asm.Opcodes.GOTO;
+import static org.objectweb.asm.Opcodes.H_INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.IALOAD;
 import static org.objectweb.asm.Opcodes.IASTORE;
 import static org.objectweb.asm.Opcodes.ICONST_0;
@@ -588,6 +592,35 @@ public final class Assembler {
     return this;
   }
 
+  private static final String INDY_DISPATCHER_INTERNAL = "org/openjdk/btrace/indy/IndyDispatcher";
+  private static final MethodType RUNTIME_BOOTSTRAP_MT =
+      MethodType.methodType(
+          CallSite.class,
+          MethodHandles.Lookup.class,
+          String.class,
+          MethodType.class,
+          String.class);
+  private static final Handle RUNTIME_BOOTSTRAP_HANDLE =
+      new Handle(
+          H_INVOKESTATIC,
+          INDY_DISPATCHER_INTERNAL,
+          "runtimeBootstrap",
+          RUNTIME_BOOTSTRAP_MT.toMethodDescriptorString(),
+          false);
+
+  /**
+   * Emit an INVOKEDYNAMIC instruction that routes through IndyDispatcher.runtimeBootstrap to
+   * resolve a static method in the agent classloader at first invocation.
+   *
+   * @param owner the internal name of the target class
+   * @param method the method name
+   * @param desc the method descriptor
+   */
+  public Assembler invokeRuntime(String owner, String method, String desc) {
+    mv.visitInvokeDynamicInsn(method, desc, RUNTIME_BOOTSTRAP_HANDLE, owner);
+    return this;
+  }
+
   public Assembler invokeDynamic(
       String name, String descriptor, Handle bootstrap, Object... bootstrapArguments) {
     mv.visitInvokeDynamicInsn(name, descriptor, bootstrap, bootstrapArguments);
@@ -689,12 +722,19 @@ public final class Assembler {
   public Label openLinkerCheck() {
     Label l = new Label();
     invokeStatic(Constants.LINKING_FLAG_INTERNAL, "get", "()I");
-    // if the linking flag is 0, then we are not in a reentrant call
+    // if the linking flag is non-zero we are either in a bootstrap/linking call
+    // or inside a probe handler — skip to avoid recursion
     jump(IFNE, l);
+    // Set the flag to prevent re-entrant probe execution: if the probe handler
+    // calls instrumented code (e.g. AtomicLong.getAndIncrement), the nested
+    // openLinkerCheck will see the flag and skip.
+    invokeStatic(Constants.LINKING_FLAG_INTERNAL, "guardLinking", "()I");
+    pop();
     return l;
   }
 
   public void closeLinkerCheck(Label l) {
+    invokeStatic(Constants.LINKING_FLAG_INTERNAL, "reset", "()V");
     label(l);
     mHelper.insertFrameSameStack(l);
   }

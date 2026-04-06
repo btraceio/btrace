@@ -185,7 +185,7 @@ public class MethodTrackingContext {
       asm.loadLocal(Type.INT_TYPE, sHitVar)
           .jump(IFEQ, l)
           .ldc(methodId)
-          .invokeStatic(METHOD_COUNTER_CLASS, "updateEndTs", "(I)V")
+          .invokeRuntime(METHOD_COUNTER_CLASS, "updateEndTs", "(I)V")
           .label(l);
       helper.insertFrameSameStack(l);
     }
@@ -313,10 +313,10 @@ public class MethodTrackingContext {
       asm.ldc(mid);
       switch (samplerKind) {
         case Const:
-          asm.invokeStatic(METHOD_COUNTER_CLASS, "hitTimed", "(I)J");
+          asm.invokeRuntime(METHOD_COUNTER_CLASS, "hitTimed", "(I)J");
           break;
         case Adaptive:
-          asm.invokeStatic(METHOD_COUNTER_CLASS, "hitTimedAdaptive", "(I)J");
+          asm.invokeRuntime(METHOD_COUNTER_CLASS, "hitTimedAdaptive", "(I)J");
           break;
         default:
           // do nothing
@@ -356,10 +356,10 @@ public class MethodTrackingContext {
       asm.ldc(mid);
       switch (samplerKind) {
         case Const:
-          asm.invokeStatic(METHOD_COUNTER_CLASS, "hit", "(I)Z");
+          asm.invokeRuntime(METHOD_COUNTER_CLASS, "hit", "(I)Z");
           break;
         case Adaptive:
-          asm.invokeStatic(METHOD_COUNTER_CLASS, "hitAdaptive", "(I)Z");
+          asm.invokeRuntime(METHOD_COUNTER_CLASS, "hitAdaptive", "(I)Z");
           break;
         default:
           // do nothing
@@ -418,7 +418,7 @@ public class MethodTrackingContext {
     if (!durationComputed) {
       if (entryTsVar != Integer.MIN_VALUE) {
         asm.ldc(mid)
-            .invokeStatic(METHOD_COUNTER_CLASS, "getEndTs", "(I)J")
+            .invokeRuntime(METHOD_COUNTER_CLASS, "getEndTs", "(I)J")
             .loadLocal(Type.LONG_TYPE, entryTsVar)
             .sub(Type.LONG_TYPE);
       } else {
