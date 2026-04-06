@@ -1,5 +1,6 @@
 package org.openjdk.btrace.extension;
 
+import org.openjdk.btrace.extension.impl.EmbeddedExtensionRepository;
 import org.openjdk.btrace.extension.impl.ExtensionConfig;
 import org.openjdk.btrace.extension.impl.ExtensionLoaderImpl;
 import org.openjdk.btrace.extension.impl.FileSystemExtensionRepository;
@@ -27,33 +28,40 @@ public abstract class ExtensionLoader {
         // Create extension repositories in priority order
         List<ExtensionRepository> repositories = new ArrayList<>();
 
-        // 1. Built-in extensions (lowest priority)
-        Path builtinExtPath = new File(btraceHome, "extensions").toPath();
-        repositories.add(
-                new FileSystemExtensionRepository(builtinExtPath, ExtensionRepository.Priority.BUILTIN));
+        // 0. Embedded extensions (lowest priority — filesystem extensions override)
+        repositories.add(new EmbeddedExtensionRepository(parentClassLoader));
 
-        // 2. User extensions (~/.btrace/extensions/)
-        String userHome = System.getProperty("user.home");
-        if (userHome != null) {
-            Path userExtPath = new File(userHome, ".btrace/extensions").toPath();
+        if (btraceHome != null) {
+            // 1. Built-in extensions
+            Path builtinExtPath = new File(btraceHome, "extensions").toPath();
             repositories.add(
-                    new FileSystemExtensionRepository(userExtPath, ExtensionRepository.Priority.USER));
-        }
+                    new FileSystemExtensionRepository(builtinExtPath, ExtensionRepository.Priority.BUILTIN));
 
-        // 3. Environment variable BTRACE_EXT_PATH
-        String extPath = System.getenv("BTRACE_EXT_PATH");
-        if (extPath != null && !extPath.isEmpty()) {
-            String[] paths = extPath.split(File.pathSeparator);
-            for (String path : paths) {
+            // 2. User extensions (~/.btrace/extensions/)
+            String userHome = System.getProperty("user.home");
+            if (userHome != null) {
+                Path userExtPath = new File(userHome, ".btrace/extensions").toPath();
                 repositories.add(
-                        new FileSystemExtensionRepository(
-                                new File(path).toPath(), ExtensionRepository.Priority.ENVIRONMENT));
+                        new FileSystemExtensionRepository(userExtPath, ExtensionRepository.Priority.USER));
             }
+
+            // 3. Environment variable BTRACE_EXT_PATH
+            String extPath = System.getenv("BTRACE_EXT_PATH");
+            if (extPath != null && !extPath.isEmpty()) {
+                String[] paths = extPath.split(File.pathSeparator);
+                for (String path : paths) {
+                    repositories.add(
+                            new FileSystemExtensionRepository(
+                                    new File(path).toPath(), ExtensionRepository.Priority.ENVIRONMENT));
+                }
+            }
+        } else {
+            log.info("BTRACE_HOME not set — running in embedded-only extension mode");
         }
 
         // Load extension configuration
         if (log.isDebugEnabled()) {
-            log.debug("Loading extension config from: {}", btraceHome);
+            log.debug("Loading extension config from: {}", btraceHome != null ? btraceHome : "(embedded-only)");
         }
         ExtensionConfig config = ExtensionConfig.load(btraceHome);
 

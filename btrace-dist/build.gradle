@@ -316,6 +316,16 @@ task btraceJar(type: Jar) {
         include 'org/openjdk/btrace/core/extensions/**/*.class'
     }
 
+    // 7. Include embedded extension resources (metadata, impl classdata, probes)
+    // Populated by prepareEmbeddedExtensions task or fat-agent builds
+    into('META-INF/btrace-extensions') {
+        from("${maskedJarTmpDir}/extensions") {
+            include '**/*.classdata'
+            include '**/extension.properties'
+            include '**/probes/*.class'
+        }
+    }
+
     manifest {
         attributes(
             'Premain-Class': 'org.openjdk.btrace.boot.Loader',
@@ -326,7 +336,8 @@ task btraceJar(type: Jar) {
             'Boot-Class-Path': 'btrace.jar',
             'BTrace-Version': version,
             'BTrace-Agent-Main': 'org.openjdk.btrace.agent.Main',
-            'BTrace-Client-Main': 'org.openjdk.btrace.client.Main'
+            'BTrace-Client-Main': 'org.openjdk.btrace.client.Main',
+            'BTrace-Embedded-Extensions': ''
         )
     }
 

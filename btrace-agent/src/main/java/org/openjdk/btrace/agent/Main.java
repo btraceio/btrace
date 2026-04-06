@@ -99,6 +99,8 @@ import static org.openjdk.btrace.core.Args.STDOUT;
 import static org.openjdk.btrace.core.Args.SYSTEM_CLASS_PATH;
 import static org.openjdk.btrace.core.Args.TRACK_RETRANSFORMS;
 import static org.openjdk.btrace.core.Args.TRUSTED;
+import static org.openjdk.btrace.core.Args.PROBES;
+import static org.openjdk.btrace.core.Args.OUTPUT;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -203,10 +205,6 @@ public final class Main {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing unsafe");
       BTraceRuntime.initUnsafe();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Unsafe initialized");
-      // initialize extension system
-      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
-      initExtensions();
-      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Extensions initialized");
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {
@@ -235,6 +233,21 @@ public final class Main {
       }
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Starting scripts");
       int startedScripts = startScripts();
+
+      // Retransform Thread after startup scripts for early hooks (e.g. Thread.start)
+      if (startedScripts > 0) {
+        try {
+          inst.retransformClasses(Thread.class);
+          log.debug("Retransformed java.lang.Thread after startup scripts");
+        } catch (Throwable t) {
+          log.debug("Unable to retransform java.lang.Thread: {}", t.toString());
+        }
+      }
+
+      // Initialize extension system after transformer is installed
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
+      initExtensions();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Extensions initialized");
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
       // FATAL errors should always be printed
@@ -353,32 +366,75 @@ public final class Main {
 
   /**
    * Initialize the extension system by discovering and loading extensions
-   * from configured extension directories.
+   * from configured extension directories or embedded resources.
    */
   private static void initExtensions() {
     try {
       log.info("Initializing BTrace extension system");
 
-      // Determine BTRACE_HOME from agent JAR location
+      // Determine BTRACE_HOME from agent JAR location (null enables embedded-only mode)
       String btraceHome = getBTraceHome();
       if (log.isDebugEnabled()) {
-        log.debug("BTRACE_HOME={}", btraceHome);
-      }
-      if (btraceHome == null) {
-        log.warn("Could not determine BTRACE_HOME, extensions will not be loaded");
-        System.err.println("[DEBUG] BTRACE_HOME is null, skipping extension initialization");
-        return;
+        log.debug("BTRACE_HOME={}", btraceHome != null ? btraceHome : "(embedded-only mode)");
       }
 
-      // Initialize extension loader with boot classloader as parent, configuration, and instrumentation
+      // Initialize extension loader — handles null btraceHome for embedded-only mode
       ClassLoader bootClassLoader = Main.class.getClassLoader();
       extensionLoader = ExtensionLoader.initialize(btraceHome, bootClassLoader, inst);
 
       // Initialize invokedynamic bridge for extensions after loader is ready
       ExtensionBridgeImpl.initialize(extensionLoader);
 
+      // Load bundled probes from embedded extensions if requested
+      loadBundledProbes();
+
     } catch (Exception e) {
       log.error("Failed to initialize extension system: {}", e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Load bundled probes from embedded extensions based on the {@code probes=} agent argument.
+   */
+  private static void loadBundledProbes() {
+    if (extensionLoader == null) {
+      return;
+    }
+
+    String probesArg = argMap.get(PROBES);
+    if (probesArg == null || probesArg.isEmpty()) {
+      return;
+    }
+
+    String[] requested = probesArg.split(",");
+    for (org.openjdk.btrace.extension.ExtensionDescriptorDTO ext :
+        extensionLoader.getAvailableExtensions()) {
+      if (!ext.isEmbedded()) {
+        continue;
+      }
+      for (String requestedProbe : requested) {
+        String probeName = requestedProbe.trim();
+        if (probeName.isEmpty()) continue;
+
+        for (String bundled : ext.getBundledProbes()) {
+          if (bundled.equals(probeName) || bundled.endsWith("." + probeName)) {
+            String resourcePath =
+                ext.getResourceBasePath() + "/probes/" + probeName + ".class";
+            try (java.io.InputStream is =
+                Main.class.getClassLoader().getResourceAsStream(resourcePath)) {
+              if (is != null) {
+                log.info("Found bundled probe '{}' in extension '{}'", probeName, ext.getId());
+                // Probe bytecode is available — actual probe loading via BTraceProbeFactory
+                // would be wired here when the probe loading pipeline is ready
+              } else {
+                log.debug("Probe resource not found at {}", resourcePath);
+              }
+            } catch (java.io.IOException e) {
+              log.debug("Error reading bundled probe '{}': {}", probeName, e.getMessage());
+            }
+          }
+        }
+      }
     }
   }
 

@@ -165,7 +165,8 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
 
   private boolean doLoad(ExtensionDescriptorDTO descriptor) {
     log.info("Loading extension: {} version {} from {}",
-        descriptor.getId(), descriptor.getVersion(), descriptor.getJarPath());
+        descriptor.getId(), descriptor.getVersion(),
+        descriptor.isEmbedded() ? "embedded" : descriptor.getJarPath());
 
     try {
       // Load any required extensions first
@@ -181,6 +182,10 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
               requiredId, descriptor.getId());
           return false;
         }
+      }
+
+      if (descriptor.isEmbedded()) {
+        return doLoadEmbedded(descriptor);
       }
 
       // Load extension from directory structure:
@@ -227,6 +232,22 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
     }
   }
 
+  private boolean doLoadEmbedded(ExtensionDescriptorDTO descriptor) {
+    // For embedded extensions:
+    // - API classes are already in bootstrap (flattened .class files in the JAR root)
+    // - Impl classes are loaded via ClassDataLoader with an extension-specific prefix
+    String prefix = descriptor.getResourceBasePath() + "/impl/";
+    ClassDataLoader classLoader =
+        new ClassDataLoader(descriptor.getId(), parentClassLoader, parentClassLoader, prefix);
+
+    descriptor.setClassLoader(classLoader);
+    loadedExtensions.put(descriptor.getId(), descriptor);
+
+    log.info(
+        "Successfully loaded embedded extension: {} version {}", descriptor.getId(), descriptor.getVersion());
+    return true;
+  }
+
   /**
    * Ensure the extension API JAR is appended to the bootstrap classpath without
    * attempting to load the implementation JAR. This enables BTrace to generate
@@ -237,6 +258,11 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
    */
   @Override
   public boolean ensureApiOnBootstrap(ExtensionDescriptorDTO descriptor) {
+    if (descriptor.isEmbedded()) {
+      // Embedded extension API classes are already in the bootstrap section of the masked JAR
+      log.debug("API already on bootstrap for embedded extension {}", descriptor.getId());
+      return true;
+    }
     try {
       Path extensionDir = descriptor.getJarPath();
       Path apiJar = findApiJar(extensionDir);
