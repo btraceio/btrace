@@ -51,7 +51,6 @@ import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.annotations.Event;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.BTraceRuntimeBridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,20 +96,6 @@ final class Preprocessor {
   private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
   private static final Type INJECTED_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Injected;");
   private static final Type EVENT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Event;");
-  private static final String TIMERHANDLER_INTERNAL =
-      "org/openjdk/btrace/core/handlers/TimerHandler";
-  private static final String TIMERHANDLER_DESC = "L" + TIMERHANDLER_INTERNAL + ";";
-  private static final String EVENTHANDLER_INTERNAL =
-      "org/openjdk/btrace/core/handlers/EventHandler";
-  private static final String EVENTHANDLER_DESC = "L" + EVENTHANDLER_INTERNAL + ";";
-  private static final String ERRORHANDLER_INTERNAL =
-      "org/openjdk/btrace/core/handlers/ErrorHandler";
-  private static final String ERRORHANDLER_DESC = "L" + ERRORHANDLER_INTERNAL + ";";
-  private static final String EXITHANDLER_INTERNAL = "org/openjdk/btrace/core/handlers/ExitHandler";
-  private static final String EXITHANDLER_DESC = "L" + EXITHANDLER_INTERNAL + ";";
-  private static final String LOWMEMORYHANDLER_INTERNAL =
-      "org/openjdk/btrace/core/handlers/LowMemoryHandler";
-  private static final String LOWMEMORYHANDLER_DESC = "L" + LOWMEMORYHANDLER_INTERNAL + ";";
   private static final String NEW_TLS_DESC =
       "(" + Constants.OBJECT_DESC + ")" + Constants.THREAD_LOCAL_DESC;
   private static final String TLS_SET_DESC =
@@ -123,25 +108,47 @@ final class Preprocessor {
           + Constants.STRING_DESC
           + ")"
           + Constants.VOID_DESC;
-  private static final String BTRACERT_FOR_CLASS_DESC =
-      "("
-          + Constants.CLASS_DESC
-          + "["
-          + TIMERHANDLER_DESC
-          + "["
-          + EVENTHANDLER_DESC
-          + "["
-          + ERRORHANDLER_DESC
-          + "["
-          + EXITHANDLER_DESC
-          + "["
-          + LOWMEMORYHANDLER_DESC
-          + ")"
-          + Constants.BTRACERTBRIDGE_DESC;
-  private static final String BTRACERT_ENTER_DESC =
-      "(" + Constants.BTRACERTBRIDGE_DESC + ")" + Constants.BOOLEAN_DESC;
   private static final String BTRACERT_HANDLE_EXCEPTION_DESC =
       "(" + Constants.THROWABLE_DESC + ")" + Constants.VOID_DESC;
+
+  // INVOKEDYNAMIC descriptors — all BTraceRuntimeBridge/BTraceRuntimeAccess
+  // references are routed through IndyDispatcher.runtimeBootstrap so that the
+  // probe class (defined on the bootstrap classloader) never directly references
+  // masked .classdata classes.
+
+  // runtimeBootstrap handle: (Lookup,String,MethodType,String)CallSite
+  private static final String RUNTIME_BOOTSTRAP_DESC =
+      "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;"
+          + "Ljava/lang/invoke/MethodType;Ljava/lang/String;)"
+          + "Ljava/lang/invoke/CallSite;";
+  private static final Handle RUNTIME_BOOTSTRAP_HANDLE =
+      new Handle(
+          Opcodes.H_INVOKESTATIC,
+          "org/openjdk/btrace/indy/IndyDispatcher",
+          "runtimeBootstrap",
+          RUNTIME_BOOTSTRAP_DESC,
+          false);
+
+  // Indy call site descriptors
+  // initRuntime: (Class)Object
+  private static final String INDY_INIT_RUNTIME_DESC =
+      "(" + Constants.CLASS_DESC + ")" + Constants.OBJECT_DESC;
+  // enter: (Object)Z
+  private static final String INDY_ENTER_DESC =
+      "(" + Constants.OBJECT_DESC + ")" + Constants.BOOLEAN_DESC;
+  // start/leave: (Object)V
+  private static final String INDY_VOID_INSTANCE_DESC =
+      "(" + Constants.OBJECT_DESC + ")" + Constants.VOID_DESC;
+  // handleException: (Object,Throwable)V
+  private static final String INDY_HANDLE_EXCEPTION_DESC =
+      "(" + Constants.OBJECT_DESC + Constants.THROWABLE_DESC + ")" + Constants.VOID_DESC;
+  // newPerfCounter: (Object,Object,String,String)V
+  private static final String INDY_NEW_PERFCOUNTER_DESC =
+      "(" + Constants.OBJECT_DESC + Constants.OBJECT_DESC + Constants.STRING_DESC
+          + Constants.STRING_DESC + ")" + Constants.VOID_DESC;
+  // newThreadLocal: (Object)ThreadLocal
+  private static final String INDY_NEW_TLS_DESC =
+      "(" + Constants.OBJECT_DESC + ")" + Constants.THREAD_LOCAL_DESC;
   private static final String RT_CTX_INTERNAL = "org/openjdk/btrace/core/extensions/ExtensionContext";
   private static final String RT_CTX_DESC = "L" + RT_CTX_INTERNAL + ";";
   private static final Type RT_CTX_TYPE = Type.getType(RT_CTX_DESC);
@@ -619,13 +626,13 @@ final class Preprocessor {
 
   private InsnList tlsInitSequence(ClassNode cn, String name, String desc) {
     InsnList initList = new InsnList();
+    // INVOKEDYNAMIC: avoid direct reference to BTraceRuntimeAccess (.classdata)
     initList.add(
-        new MethodInsnNode(
-            Opcodes.INVOKESTATIC,
-            Constants.BTRACERTACCESS_INTERNAL,
+        new InvokeDynamicInsnNode(
             "newThreadLocal",
-            NEW_TLS_DESC,
-            false));
+            INDY_NEW_TLS_DESC,
+            RUNTIME_BOOTSTRAP_HANDLE,
+            Constants.BTRACERTACCESS_INTERNAL));
     initList.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, name, desc));
     return initList;
   }
@@ -638,17 +645,18 @@ final class Preprocessor {
   private InsnList exportInitSequence(ClassNode cn, String name, String desc) {
     InsnList init = new InsnList();
 
+    // Stack before INVOKEDYNAMIC: [runtime:Object, value:Object, perfName:String, typeDesc:String]
+    // The receiver (runtime) is the first arg of the INDY descriptor.
     init.add(getRuntimeImpl(cn));
     init.add(new InsnNode(Opcodes.SWAP));
     init.add(new LdcInsnNode(perfCounterName(cn, name)));
     init.add(new LdcInsnNode(desc));
     init.add(
-        new MethodInsnNode(
-            Opcodes.INVOKEINTERFACE,
-            Constants.BTRACERTBRIDGE_INTERNAL,
+        new InvokeDynamicInsnNode(
             "newPerfCounter",
-            NEW_PERFCOUNTER_DESC,
-            true));
+            INDY_NEW_PERFCOUNTER_DESC,
+            RUNTIME_BOOTSTRAP_HANDLE,
+            Constants.BTRACERTBRIDGE_INTERNAL));
 
     return init;
   }
@@ -683,7 +691,7 @@ final class Preprocessor {
         addDefaultVal(Type.getType(typeDesc), initList);
       }
     }
-    MethodInsnNode rtStart = findBTraceRuntimeStart();
+    InvokeDynamicInsnNode rtStart = findBTraceRuntimeStart();
     if (rtStart != null) {
       l.insertBefore(rtStart, initList);
     } else {
@@ -842,19 +850,18 @@ final class Preprocessor {
     addRuntimeNode(cn);
     InsnList l = new InsnList();
 
+    // Use INVOKEDYNAMIC so the probe class (on bootstrap classloader) never
+    // directly references BTraceRuntimeAccess or the handler types — all masked
+    // .classdata classes invisible to bootstrap on JDK 8.
+    // HandlerRepositoryImpl.initProbeRuntime resolves the actual BTraceRuntimeBridge
+    // instance at link time using pre-registered handler metadata.
     l.add(new LdcInsnNode(Type.getObjectType(cn.name)));
-    l.add(loadTimerHandlers(cn));
-    l.add(loadEventHandlers(cn));
-    l.add(loadErrorHandlers(cn));
-    l.add(loadExitHandlers(cn));
-    l.add(loadLowMemoryHandlers(cn));
     l.add(
-        new MethodInsnNode(
-            Opcodes.INVOKESTATIC,
-            Constants.BTRACERTACCESS_INTERNAL,
-            "forClass",
-            BTRACERT_FOR_CLASS_DESC,
-            false));
+        new InvokeDynamicInsnNode(
+            "initRuntime",
+            INDY_INIT_RUNTIME_DESC,
+            RUNTIME_BOOTSTRAP_HANDLE,
+            Constants.BTRACERTACCESS_INTERNAL));
     l.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, rtField.name, rtField.desc));
 
     // Mark where the error handler should start (after runtime is set)
@@ -871,257 +878,25 @@ final class Preprocessor {
     startRuntime(cn, clinit);
   }
 
-  private InsnList loadTimerHandlers(ClassNode cn) {
-    InsnList il = new InsnList();
-    int cnt = 0;
-    for (MethodNode mn : cn.methods) {
-      if (mn.visibleAnnotations != null) {
-        AnnotationNode an = mn.visibleAnnotations.get(0);
-        if (an.desc.equals(Constants.ONTIMER_DESC)) {
-          Iterator<?> anValueIterator = an.values != null ? an.values.iterator() : null;
-          if (anValueIterator != null) {
-            long period = -1;
-            String property = null;
-
-            while (anValueIterator.hasNext()) {
-              String key = (String) anValueIterator.next();
-              Object value = anValueIterator.next();
-
-              if (value != null) {
-                switch (key) {
-                  case "value":
-                    {
-                      period = (Long) value;
-                      break;
-                    }
-                  case "from":
-                    {
-                      property = (String) value;
-                      break;
-                    }
-                }
-              }
-            }
-            il.add(new InsnNode(Opcodes.DUP));
-            il.add(new LdcInsnNode(cnt++));
-            il.add(new TypeInsnNode(Opcodes.NEW, TIMERHANDLER_INTERNAL));
-            il.add(new InsnNode(Opcodes.DUP));
-            il.add(new LdcInsnNode(mn.name));
-            il.add(new LdcInsnNode(period));
-            il.add(
-                property != null ? new LdcInsnNode(property) : new InsnNode(Opcodes.ACONST_NULL));
-            il.add(
-                new MethodInsnNode(
-                    Opcodes.INVOKESPECIAL,
-                    TIMERHANDLER_INTERNAL,
-                    "<init>",
-                    "(Ljava/lang/String;JLjava/lang/String;)V",
-                    false));
-            il.add(new InsnNode(Opcodes.AASTORE));
-          }
-        }
-      }
-    }
-    if (cnt > 0) {
-      InsnList newArray = new InsnList();
-      newArray.add(new LdcInsnNode(cnt));
-      newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, TIMERHANDLER_INTERNAL));
-      il.insert(newArray);
-    } else {
-      il.insert(new InsnNode(Opcodes.ACONST_NULL));
-    }
-
-    return il;
-  }
-
-  private InsnList loadEventHandlers(ClassNode cn) {
-    InsnList il = new InsnList();
-    int cnt = 0;
-    for (MethodNode mn : cn.methods) {
-      if (mn.visibleAnnotations != null) {
-        AnnotationNode an = mn.visibleAnnotations.get(0);
-        if (an.desc.equals(Constants.ONEVENT_DESC)) {
-          il.add(new InsnNode(Opcodes.DUP));
-          il.add(new LdcInsnNode(cnt++));
-          il.add(new TypeInsnNode(Opcodes.NEW, EVENTHANDLER_INTERNAL));
-          il.add(new InsnNode(Opcodes.DUP));
-          il.add(new LdcInsnNode(mn.name));
-          il.add(
-              an.values != null
-                  ? new LdcInsnNode(an.values.get(1))
-                  : new InsnNode(Opcodes.ACONST_NULL));
-          il.add(
-              new MethodInsnNode(
-                  Opcodes.INVOKESPECIAL,
-                  EVENTHANDLER_INTERNAL,
-                  "<init>",
-                  "(Ljava/lang/String;Ljava/lang/String;)V",
-                  false));
-          il.add(new InsnNode(Opcodes.AASTORE));
-        }
-      }
-    }
-    if (cnt > 0) {
-      InsnList newArray = new InsnList();
-      newArray.add(new LdcInsnNode(cnt));
-      newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, EVENTHANDLER_INTERNAL));
-      il.insert(newArray);
-    } else {
-      il.insert(new InsnNode(Opcodes.ACONST_NULL));
-    }
-
-    return il;
-  }
-
-  private InsnList loadErrorHandlers(ClassNode cn) {
-    InsnList il = new InsnList();
-    int cnt = 0;
-    for (MethodNode mn : cn.methods) {
-      if (mn.visibleAnnotations != null) {
-        AnnotationNode an = mn.visibleAnnotations.get(0);
-        if (an.desc.equals(Constants.ONERROR_DESC)) {
-          il.add(new InsnNode(Opcodes.DUP));
-          il.add(new LdcInsnNode(cnt++));
-          il.add(new TypeInsnNode(Opcodes.NEW, ERRORHANDLER_INTERNAL));
-          il.add(new InsnNode(Opcodes.DUP));
-          il.add(new LdcInsnNode(mn.name));
-          il.add(
-              new MethodInsnNode(
-                  Opcodes.INVOKESPECIAL,
-                  ERRORHANDLER_INTERNAL,
-                  "<init>",
-                  "(Ljava/lang/String;)V",
-                  false));
-          il.add(new InsnNode(Opcodes.AASTORE));
-        }
-      }
-    }
-    if (cnt > 0) {
-      InsnList newArray = new InsnList();
-      newArray.add(new LdcInsnNode(cnt));
-      newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, ERRORHANDLER_INTERNAL));
-      il.insert(newArray);
-    } else {
-      il.insert(new InsnNode(Opcodes.ACONST_NULL));
-    }
-
-    return il;
-  }
-
-  private InsnList loadExitHandlers(ClassNode cn) {
-    InsnList il = new InsnList();
-    int cnt = 0;
-    for (MethodNode mn : cn.methods) {
-      if (mn.visibleAnnotations != null) {
-        AnnotationNode an = mn.visibleAnnotations.get(0);
-        if (an.desc.equals(Constants.ONEXIT_DESC)) {
-          il.add(new InsnNode(Opcodes.DUP));
-          il.add(new LdcInsnNode(cnt++));
-          il.add(new TypeInsnNode(Opcodes.NEW, EXITHANDLER_INTERNAL));
-          il.add(new InsnNode(Opcodes.DUP));
-          il.add(new LdcInsnNode(mn.name));
-          il.add(
-              new MethodInsnNode(
-                  Opcodes.INVOKESPECIAL,
-                  EXITHANDLER_INTERNAL,
-                  "<init>",
-                  "(Ljava/lang/String;)V",
-                  false));
-          il.add(new InsnNode(Opcodes.AASTORE));
-        }
-      }
-    }
-    if (cnt > 0) {
-      InsnList newArray = new InsnList();
-      newArray.add(new LdcInsnNode(cnt));
-      newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, EXITHANDLER_INTERNAL));
-      il.insert(newArray);
-    } else {
-      il.insert(new InsnNode(Opcodes.ACONST_NULL));
-    }
-
-    return il;
-  }
-
-  private InsnList loadLowMemoryHandlers(ClassNode cn) {
-    InsnList il = new InsnList();
-    int cnt = 0;
-    for (MethodNode mn : cn.methods) {
-      if (mn.visibleAnnotations != null) {
-        AnnotationNode an = mn.visibleAnnotations.get(0);
-        if (an.desc.equals(Constants.ONLOWMEMORY_DESC)) {
-          String pool = "";
-          long threshold = Long.MAX_VALUE;
-          String thresholdProp = null;
-
-          for (int i = 0; i < an.values.size(); i += 2) {
-            String key = (String) an.values.get(i);
-            Object val = an.values.get(i + 1);
-            switch (key) {
-              case "pool":
-                {
-                  pool = (String) val;
-                  break;
-                }
-              case "threshold":
-                {
-                  threshold = (long) val;
-                  break;
-                }
-              case "thresholdFrom":
-                {
-                  thresholdProp = (String) val;
-                  break;
-                }
-            }
-          }
-          il.add(new InsnNode(Opcodes.DUP));
-          il.add(new LdcInsnNode(cnt++));
-          il.add(new TypeInsnNode(Opcodes.NEW, LOWMEMORYHANDLER_INTERNAL));
-          il.add(new InsnNode(Opcodes.DUP));
-          il.add(new LdcInsnNode(mn.name));
-          il.add(new LdcInsnNode(pool));
-          il.add(new LdcInsnNode(threshold));
-          il.add(new LdcInsnNode(thresholdProp));
-          il.add(
-              new MethodInsnNode(
-                  Opcodes.INVOKESPECIAL,
-                  LOWMEMORYHANDLER_INTERNAL,
-                  "<init>",
-                  "(Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;)V",
-                  false));
-          il.add(new InsnNode(Opcodes.AASTORE));
-        }
-      }
-    }
-    if (cnt > 0) {
-      InsnList newArray = new InsnList();
-      newArray.add(new LdcInsnNode(cnt));
-      newArray.add(new TypeInsnNode(Opcodes.ANEWARRAY, EXITHANDLER_INTERNAL));
-      il.insert(newArray);
-    } else {
-      il.insert(new InsnNode(Opcodes.ACONST_NULL));
-    }
-
-    return il;
-  }
-
   private void startRuntime(ClassNode cNode, MethodNode clinit1) {
     for (AbstractInsnNode n = clinit1.instructions.getFirst(); n != null; n = n.getNext()) {
       if (n.getOpcode() == Opcodes.RETURN) {
         AbstractInsnNode prev = n.getPrevious();
-        if (prev != null && prev.getType() == AbstractInsnNode.METHOD_INSN) {
-          MethodInsnNode minNode = (MethodInsnNode) prev;
-          if (minNode.name.equals("leave")) {
-            // don't start the runtime if we are bailing out (BTraceRuntime.leave())
+        if (prev != null && prev.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+          InvokeDynamicInsnNode indyNode = (InvokeDynamicInsnNode) prev;
+          if (indyNode.name.equals("leave")) {
+            // don't start the runtime if we are bailing out (runtime.leave())
             continue;
           }
         }
         InsnList il = new InsnList();
         il.add(getRuntimeImpl(cNode));
         il.add(
-            new MethodInsnNode(
-                Opcodes.INVOKEINTERFACE, Constants.BTRACERTBRIDGE_INTERNAL, "start", "()V", true));
+            new InvokeDynamicInsnNode(
+                "start",
+                INDY_VOID_INSTANCE_DESC,
+                RUNTIME_BOOTSTRAP_HANDLE,
+                Constants.BTRACERTBRIDGE_INTERNAL));
         clinit1.instructions.insertBefore(n, il);
       }
     }
@@ -1135,18 +910,24 @@ final class Preprocessor {
     InsnList il = new InsnList();
     il.add(getRuntimeImpl(cn));
     il.add(
-        new MethodInsnNode(
-            Opcodes.INVOKEINTERFACE, Constants.BTRACERTBRIDGE_INTERNAL, "leave", "()V", true));
+        new InvokeDynamicInsnNode(
+            "leave",
+            INDY_VOID_INSTANCE_DESC,
+            RUNTIME_BOOTSTRAP_HANDLE,
+            Constants.BTRACERTBRIDGE_INTERNAL));
     return il;
   }
 
   private void addRuntimeNode(ClassNode cn) {
+    // Use Object as field type so the probe class (loaded on the bootstrap classloader)
+    // never directly references BTraceRuntimeBridge, which is a masked .classdata file
+    // invisible to the bootstrap classloader on JDK 8.
     rtField =
         new FieldNode(
             Opcodes.ASM9,
             (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC),
             "runtime",
-            Type.getDescriptor(BTraceRuntimeBridge.class),
+            Constants.OBJECT_DESC,
             null,
             null);
     cn.fields.add(0, rtField);
@@ -1173,16 +954,17 @@ final class Preprocessor {
       // add proper stackframe map node
       l.add(throwableHandlerFrame(mn));
 
+      // Stack at handler entry: [throwable:Throwable]
+      // We need: runtime.handleException(throwable) → INDY (Object,Throwable)V
       l.add(getRuntimeImpl(cn));
       l.add(new InsnNode(Opcodes.DUP_X1));
       l.add(new InsnNode(Opcodes.SWAP));
       l.add(
-          new MethodInsnNode(
-              Opcodes.INVOKEINTERFACE,
-              Constants.BTRACERTBRIDGE_INTERNAL,
+          new InvokeDynamicInsnNode(
               "handleException",
-              BTRACERT_HANDLE_EXCEPTION_DESC,
-              true));
+              INDY_HANDLE_EXCEPTION_DESC,
+              RUNTIME_BOOTSTRAP_HANDLE,
+              Constants.BTRACERTBRIDGE_INTERNAL));
       l.add(getReturnSequence(cn, mn, true));
 
       mn.tryCatchBlocks.add(new TryCatchBlockNode(from, to, to, Constants.THROWABLE_INTERNAL));
@@ -1247,13 +1029,16 @@ final class Preprocessor {
 
   private void addRuntimeCheck(ClassNode cn, MethodNode mn, InsnList entryCheck, boolean b) {
     LabelNode start = new LabelNode();
+    // INVOKEDYNAMIC so the probe class never directly references BTraceRuntimeAccess
+    // (masked .classdata, invisible to bootstrap classloader on JDK 8).
+    // The Object on the stack is the runtime field value; resolveRuntime adapts
+    // it to BTraceRuntimeBridge via asType() before calling BTraceRuntimeAccess.enter.
     entryCheck.add(
-        new MethodInsnNode(
-            Opcodes.INVOKESTATIC,
-            Constants.BTRACERTACCESS_INTERNAL,
+        new InvokeDynamicInsnNode(
             "enter",
-            BTRACERT_ENTER_DESC,
-            false));
+            INDY_ENTER_DESC,
+            RUNTIME_BOOTSTRAP_HANDLE,
+            Constants.BTRACERTACCESS_INTERNAL));
     entryCheck.add(new JumpInsnNode(Opcodes.IFNE, start));
     entryCheck.add(getReturnSequence(cn, mn, b));
     entryCheck.add(start);
@@ -1344,14 +1129,14 @@ final class Preprocessor {
     return null;
   }
 
-  private MethodInsnNode findBTraceRuntimeStart() {
+  private InvokeDynamicInsnNode findBTraceRuntimeStart() {
     for (AbstractInsnNode n = clinit.instructions.getFirst(); n != null; n = n.getNext()) {
-      if (n.getType() == AbstractInsnNode.METHOD_INSN) {
-        MethodInsnNode minNode = (MethodInsnNode) n;
-        if (minNode.getOpcode() == Opcodes.INVOKEINTERFACE
-            && minNode.owner.equals(Constants.BTRACERTBRIDGE_INTERNAL)
-            && minNode.name.equals("start")) {
-          return minNode;
+      if (n.getType() == AbstractInsnNode.INVOKE_DYNAMIC_INSN) {
+        InvokeDynamicInsnNode indyNode = (InvokeDynamicInsnNode) n;
+        if (indyNode.name.equals("start")
+            && indyNode.bsmArgs.length > 0
+            && Constants.BTRACERTBRIDGE_INTERNAL.equals(indyNode.bsmArgs[0])) {
+          return indyNode;
         }
       }
     }
@@ -1484,15 +1269,16 @@ final class Preprocessor {
         }
       }
       toInsert.add(new LdcInsnNode(perfCounterName(cn, fin.name)));
+      // INVOKEDYNAMIC: prepend Object receiver (runtime) to the descriptor.
+      // putPerf*: (Object, value, String)V  /  getPerf*: (Object, String)T
+      String indyDesc =
+          isPut
+              ? Type.getMethodDescriptor(
+                  Type.VOID_TYPE, Constants.OBJECT_TYPE, tType, Constants.STRING_TYPE)
+              : Type.getMethodDescriptor(tType, Constants.OBJECT_TYPE, Constants.STRING_TYPE);
       toInsert.add(
-          new MethodInsnNode(
-              Opcodes.INVOKEINTERFACE,
-              Constants.BTRACERTBRIDGE_INTERNAL,
-              methodName,
-              isPut
-                  ? Type.getMethodDescriptor(Type.VOID_TYPE, tType, Constants.STRING_TYPE)
-                  : Type.getMethodDescriptor(tType, Constants.STRING_TYPE),
-              true));
+          new InvokeDynamicInsnNode(
+              methodName, indyDesc, RUNTIME_BOOTSTRAP_HANDLE, Constants.BTRACERTBRIDGE_INTERNAL));
       l.insert(fin, toInsert);
     }
     AbstractInsnNode ret = fin.getNext();

@@ -208,6 +208,9 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
     if (debug.isDumpClasses()) {
       debug.dumpClass(name + "_bcp", code);
     }
+    // Pre-register handler metadata before defineClass triggers <clinit>,
+    // which calls initProbeRuntime via INVOKEDYNAMIC and needs the metadata.
+    HandlerRepositoryImpl.preRegisterProbeBytes(code);
     Class<?> clz = delegate.defineClass(rt, code);
     definedClass = clz;
     HandlerRepositoryImpl.registerProbe(this);

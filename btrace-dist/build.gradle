@@ -241,6 +241,7 @@ task prepareSharedClassdata(type: Copy) {
         include 'org/openjdk/btrace/core/comm/**/*.class'
         include 'org/openjdk/btrace/core/extensions/**/*.class'
         include 'org/openjdk/btrace/core/annotations/**/*.class'
+        include 'org/openjdk/btrace/core/annotations/jaxb.index'
         include 'org/openjdk/btrace/core/messages.properties'
         // HandlerRepository stays in bootstrap (referenced by IndyDispatcher)
         exclude 'org/openjdk/btrace/core/HandlerRepository.class'
@@ -307,6 +308,7 @@ task btraceJar(type: Jar) {
     into('META-INF/btrace/shared') {
         from("${maskedJarTmpDir}/shared") {
             include '**/*.classdata'
+            include '**/jaxb.index'
         }
     }
 

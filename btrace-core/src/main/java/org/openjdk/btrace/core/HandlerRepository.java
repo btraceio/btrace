@@ -62,4 +62,17 @@ public interface HandlerRepository {
    * @param probeName the fully qualified probe class name
    */
   int getLevel(String probeName);
+
+  /**
+   * Initialises the BTrace runtime for the given probe class by constructing handler arrays from
+   * pre-registered metadata and calling {@code BTraceRuntimeAccess.forClass}.
+   *
+   * <p>Called from the probe's {@code <clinit>} via an {@code INVOKEDYNAMIC "initRuntime"} call
+   * site routed through {@link org.openjdk.btrace.indy.IndyDispatcher#runtimeBootstrap}.
+   *
+   * @param probeClass the probe class (resolved at link time from the LDC constant in clinit)
+   * @return the {@code BTraceRuntimeBridge} instance as {@code Object} (avoids bootstrap-visible
+   *     reference to the masked class)
+   */
+  Object initProbeRuntime(Class<?> probeClass);
 }
