@@ -27,8 +27,6 @@ package org.openjdk.btrace.extension.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * ClassLoader that loads classes from {@code .classdata} resources with a configurable path prefix.
@@ -49,7 +47,6 @@ public final class ClassDataLoader extends ClassLoader {
   private final String extensionId;
   private final ClassLoader resourceLoader;
   private final String resourcePrefix;
-  private final ConcurrentMap<String, Class<?>> loadedClasses = new ConcurrentHashMap<>();
 
   /**
    * Creates a ClassDataLoader for loading embedded extension implementation classes.
@@ -71,11 +68,6 @@ public final class ClassDataLoader extends ClassLoader {
 
   @Override
   protected Class<?> findClass(String name) throws ClassNotFoundException {
-    Class<?> cached = loadedClasses.get(name);
-    if (cached != null) {
-      return cached;
-    }
-
     String resourcePath = resourcePrefix + name.replace('.', '/') + CLASSDATA_SUFFIX;
     byte[] classBytes = loadClassData(resourcePath);
     if (classBytes == null) {
@@ -86,9 +78,7 @@ public final class ClassDataLoader extends ClassLoader {
       throw new ClassNotFoundException(name + " (invalid class file format)");
     }
 
-    Class<?> clazz = defineClass(name, classBytes, 0, classBytes.length);
-    Class<?> existing = loadedClasses.putIfAbsent(name, clazz);
-    return existing != null ? existing : clazz;
+    return defineClass(name, classBytes, 0, classBytes.length);
   }
 
   private byte[] loadClassData(String resourcePath) {
@@ -128,12 +118,6 @@ public final class ClassDataLoader extends ClassLoader {
 
   @Override
   public String toString() {
-    return "ClassDataLoader{extension='"
-        + extensionId
-        + "', prefix='"
-        + resourcePrefix
-        + "', classes="
-        + loadedClasses.size()
-        + "}";
+    return "ClassDataLoader{extension='" + extensionId + "', prefix='" + resourcePrefix + "'}";
   }
 }

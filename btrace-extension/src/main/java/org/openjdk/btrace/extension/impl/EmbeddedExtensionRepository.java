@@ -197,7 +197,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
 
   private static List<String> parseList(String value) {
     if (value == null || value.trim().isEmpty()) {
-      return Collections.emptyList();
+      return new ArrayList<>();
     }
     String[] parts = value.split(",");
     List<String> result = new ArrayList<>();
