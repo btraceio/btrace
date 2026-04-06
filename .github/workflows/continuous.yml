@@ -60,7 +60,7 @@ jobs:
                                        --tests "org.openjdk.btrace.core.comm.WireProtocol*"
       - name: Upload dist build data
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-build
           retention-days: 1
@@ -69,7 +69,7 @@ jobs:
             btrace-instr/build/classes/traces
       - name: Upload test trace data
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-trace
           retention-days: 1
@@ -77,7 +77,7 @@ jobs:
             btrace-instr/build/classes/traces
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: |
@@ -143,14 +143,14 @@ jobs:
         run: du -sh ~/.gradle/caches
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
             integration-tests/build/reports/**/*
       - name: Archive binary artifacts
         if: success() && matrix.java == '11'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: btrace-dist
           path: |
