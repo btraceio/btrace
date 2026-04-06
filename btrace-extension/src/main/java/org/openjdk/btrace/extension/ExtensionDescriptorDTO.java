@@ -28,7 +28,9 @@ import org.openjdk.btrace.core.extensions.PermissionSet;
 
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -52,6 +54,9 @@ public final class ExtensionDescriptorDTO {
   private final String resourceBasePath;
   private final String configuratorClass;
   private final List<String> bundledProbes;
+  private final String providedLocatorClass;
+  private final Map<String, String> providedLocatorProperties;
+  private final boolean providedRequired;
 
   private volatile boolean loaded = false;
   private volatile ClassLoader classLoader = null;
@@ -71,7 +76,10 @@ public final class ExtensionDescriptorDTO {
       boolean embedded,
       String resourceBasePath,
       String configuratorClass,
-      List<String> bundledProbes) {
+      List<String> bundledProbes,
+      String providedLocatorClass,
+      Map<String, String> providedLocatorProperties,
+      boolean providedRequired) {
     this.id = Objects.requireNonNull(id, "Extension id cannot be null");
     this.version = Objects.requireNonNull(version, "Extension version cannot be null");
     this.name = name != null ? name : id;
@@ -87,6 +95,11 @@ public final class ExtensionDescriptorDTO {
     this.resourceBasePath = resourceBasePath;
     this.configuratorClass = configuratorClass;
     this.bundledProbes = bundledProbes != null ? Collections.unmodifiableList(bundledProbes) : Collections.emptyList();
+    this.providedLocatorClass = providedLocatorClass;
+    this.providedLocatorProperties = providedLocatorProperties != null
+        ? Collections.unmodifiableMap(new HashMap<>(providedLocatorProperties))
+        : Collections.emptyMap();
+    this.providedRequired = providedRequired;
   }
 
   public String getId() {
@@ -155,6 +168,21 @@ public final class ExtensionDescriptorDTO {
   /** List of bundled probe class names available in this extension. */
   public List<String> getBundledProbes() {
     return bundledProbes;
+  }
+
+  /** Locator class name for provided dependencies (may use {@code [ShortName]} syntax), or {@code null}. */
+  public String getProvidedLocatorClass() {
+    return providedLocatorClass;
+  }
+
+  /** Configuration properties for the provided dependency locator. Keys are stripped of the {@code locator.} prefix. */
+  public Map<String, String> getProvidedLocatorProperties() {
+    return providedLocatorProperties;
+  }
+
+  /** Whether the extension requires provided dependencies to be found, failing load if not. */
+  public boolean isProvidedRequired() {
+    return providedRequired;
   }
 
   public boolean isLoaded() {
@@ -229,6 +257,9 @@ public final class ExtensionDescriptorDTO {
     private String resourceBasePath;
     private String configuratorClass;
     private List<String> bundledProbes;
+    private String providedLocatorClass;
+    private Map<String, String> providedLocatorProperties;
+    private boolean providedRequired;
 
     public Builder id(String id) {
       this.id = id;
@@ -305,6 +336,21 @@ public final class ExtensionDescriptorDTO {
       return this;
     }
 
+    public Builder providedLocatorClass(String providedLocatorClass) {
+      this.providedLocatorClass = providedLocatorClass;
+      return this;
+    }
+
+    public Builder providedLocatorProperties(Map<String, String> providedLocatorProperties) {
+      this.providedLocatorProperties = providedLocatorProperties;
+      return this;
+    }
+
+    public Builder providedRequired(boolean providedRequired) {
+      this.providedRequired = providedRequired;
+      return this;
+    }
+
     public ExtensionDescriptorDTO build() {
       return new ExtensionDescriptorDTO(
           id,
@@ -321,7 +367,10 @@ public final class ExtensionDescriptorDTO {
           embedded,
           resourceBasePath,
           configuratorClass,
-          bundledProbes);
+          bundledProbes,
+          providedLocatorClass,
+          providedLocatorProperties,
+          providedRequired);
     }
   }
 }

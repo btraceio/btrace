@@ -24,18 +24,23 @@
  */
 package org.openjdk.btrace.extension.impl;
 
+import org.openjdk.btrace.core.extensions.LocatorContext;
+import org.openjdk.btrace.core.extensions.ProvidedDependencyLocator;
 import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
 import org.openjdk.btrace.extension.ExtensionLoader;
 import org.openjdk.btrace.extension.ExtensionRepository;
+import org.openjdk.btrace.extension.provided.LocatorContextImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -212,9 +217,22 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
         log.debug("Added {} to bootstrap classpath", apiJar.getFileName());
       }
 
+      // Resolve provided dependencies and create classloader chain
+      ClassLoader implParent = parentClassLoader;
+      List<Path> providedJars = resolveProvidedDeps(descriptor);
+      if (!providedJars.isEmpty()) {
+        URL[] providedUrls = new URL[providedJars.size()];
+        for (int i = 0; i < providedJars.size(); i++) {
+          providedUrls[i] = providedJars.get(i).toUri().toURL();
+        }
+        implParent = new URLClassLoader(providedUrls, parentClassLoader);
+        log.info("Injected {} provided dependency JARs for extension {}",
+            providedUrls.length, descriptor.getId());
+      }
+
       // Create classloader for implementation JAR
       URL implUrl = implJar.toUri().toURL();
-      URLClassLoader classLoader = new URLClassLoader(new URL[] {implUrl}, parentClassLoader);
+      URLClassLoader classLoader = new URLClassLoader(new URL[] {implUrl}, implParent);
 
       descriptor.setClassLoader(classLoader);
       loadedExtensions.put(descriptor.getId(), descriptor);
@@ -236,9 +254,26 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
     // For embedded extensions:
     // - API classes are already in bootstrap (flattened .class files in the JAR root)
     // - Impl classes are loaded via ClassDataLoader with an extension-specific prefix
+    ClassLoader implParent = parentClassLoader;
+    List<Path> providedJars = resolveProvidedDeps(descriptor);
+    if (!providedJars.isEmpty()) {
+      try {
+        URL[] providedUrls = new URL[providedJars.size()];
+        for (int i = 0; i < providedJars.size(); i++) {
+          providedUrls[i] = providedJars.get(i).toUri().toURL();
+        }
+        implParent = new URLClassLoader(providedUrls, parentClassLoader);
+        log.info("Injected {} provided dependency JARs for embedded extension {}",
+            providedUrls.length, descriptor.getId());
+      } catch (Exception e) {
+        log.error("Failed to create provided deps classloader for {}: {}",
+            descriptor.getId(), e.getMessage(), e);
+      }
+    }
+
     String prefix = descriptor.getResourceBasePath() + "/impl/";
     ClassDataLoader classLoader =
-        new ClassDataLoader(descriptor.getId(), parentClassLoader, parentClassLoader, prefix);
+        new ClassDataLoader(descriptor.getId(), parentClassLoader, implParent, prefix);
 
     descriptor.setClassLoader(classLoader);
     loadedExtensions.put(descriptor.getId(), descriptor);
@@ -286,6 +321,73 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
   /**
    * Find the API JAR in the extension directory.
    */
+  private static final String BUILTIN_LOCATOR_PACKAGE = "org.openjdk.btrace.extension.provided.";
+
+  /**
+   * Resolve provided dependencies for an extension using its declared locator.
+   * Returns empty list if no locator is configured or if resolution finds nothing.
+   */
+  private List<Path> resolveProvidedDeps(ExtensionDescriptorDTO descriptor) {
+    String locatorClassName = descriptor.getProvidedLocatorClass();
+    if (locatorClassName == null || locatorClassName.trim().isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    // Resolve [ShortName] syntax to built-in package
+    if (locatorClassName.startsWith("[") && locatorClassName.endsWith("]")) {
+      String shortName = locatorClassName.substring(1, locatorClassName.length() - 1);
+      locatorClassName = BUILTIN_LOCATOR_PACKAGE + shortName;
+    }
+
+    try {
+      Class<?> locatorClass = Class.forName(locatorClassName, true,
+          ExtensionLoaderImpl.class.getClassLoader());
+      ProvidedDependencyLocator locator =
+          (ProvidedDependencyLocator) locatorClass.getDeclaredConstructor().newInstance();
+
+      LocatorContext ctx = new LocatorContextImpl(
+          descriptor.getId(), descriptor.getProvidedLocatorProperties());
+
+      List<Path> resolved = locator.locate(ctx);
+      if (resolved == null) {
+        resolved = Collections.emptyList();
+      }
+
+      // Filter out non-existent files
+      List<Path> valid = new ArrayList<>();
+      for (Path p : resolved) {
+        if (Files.isRegularFile(p)) {
+          valid.add(p);
+        } else {
+          log.debug("Provided dep path is not a regular file, skipping: {}", p);
+        }
+      }
+
+      if (valid.isEmpty() && descriptor.isProvidedRequired()) {
+        throw new RuntimeException(
+            "Required provided dependencies not found for extension '"
+                + descriptor.getId() + "' (locator: " + locatorClassName + ")");
+      }
+
+      if (!valid.isEmpty()) {
+        log.info("Resolved {} provided dependency JAR(s) for extension '{}'",
+            valid.size(), descriptor.getId());
+      }
+
+      return valid;
+
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      log.error("Failed to resolve provided dependencies for '{}': {}",
+          descriptor.getId(), e.getMessage(), e);
+      if (descriptor.isProvidedRequired()) {
+        throw new RuntimeException("Provided dependency resolution failed for " + descriptor.getId(), e);
+      }
+      return Collections.emptyList();
+    }
+  }
+
   private java.nio.file.Path findApiJar(java.nio.file.Path extensionDir) throws java.io.IOException {
     try (java.nio.file.DirectoryStream<java.nio.file.Path> stream =
         java.nio.file.Files.newDirectoryStream(extensionDir, "*-api.jar")) {

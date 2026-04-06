@@ -125,6 +125,35 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
                             if (services) props.setProperty('services', services)
                             def permissions = attrs.getValue('BTrace-Extension-Permissions')
                             if (permissions) props.setProperty('permissions', permissions)
+
+                            // Carry over provided dependency locator config
+                            def providedLocator = attrs.getValue('BTrace-Provided-Locator')
+                            if (providedLocator) {
+                                props.setProperty('provided.locator', providedLocator)
+                                def providedRequired = attrs.getValue('BTrace-Provided-Required')
+                                if (providedRequired) props.setProperty('provided.required', providedRequired)
+                            }
+                        }
+
+                        // Also read locator properties from btrace-extension.properties inside the API JAR
+                        if (apiJar) {
+                            try {
+                                def apiJarFile = new java.util.jar.JarFile(apiJar)
+                                try {
+                                    def propsEntry = apiJarFile.getJarEntry('META-INF/btrace-extension.properties')
+                                    if (propsEntry) {
+                                        def locatorProps = new Properties()
+                                        locatorProps.load(apiJarFile.getInputStream(propsEntry))
+                                        locatorProps.each { k, v ->
+                                            if (k.toString().startsWith('locator.')) {
+                                                props.setProperty("provided.${k}", v.toString())
+                                            }
+                                        }
+                                    }
+                                } finally {
+                                    apiJarFile.close()
+                                }
+                            } catch (Exception ignore) {}
                         }
                     } else {
                         props.setProperty('version', '0.0.0')

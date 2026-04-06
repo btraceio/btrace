@@ -35,6 +35,7 @@ import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
@@ -175,6 +176,17 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
       List<String> services = parseList(servicesStr);
       validateClassNames(services, extId);
 
+      // Parse provided dependency locator config (provided.locator, provided.locator.*, provided.required)
+      String providedLocator = props.getProperty("provided.locator");
+      boolean providedRequired = "true".equalsIgnoreCase(props.getProperty("provided.required"));
+      HashMap<String, String> locatorProps = new HashMap<>();
+      String locatorPrefix = "provided.locator.";
+      for (String key : props.stringPropertyNames()) {
+        if (key.startsWith(locatorPrefix)) {
+          locatorProps.put(key.substring(locatorPrefix.length()), props.getProperty(key));
+        }
+      }
+
       return new ExtensionDescriptorDTO.Builder()
           .id(id)
           .version(version)
@@ -187,6 +199,9 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
           .resourceBasePath(basePath)
           .configuratorClass(configurator)
           .bundledProbes(probes)
+          .providedLocatorClass(providedLocator)
+          .providedLocatorProperties(locatorProps)
+          .providedRequired(providedRequired)
           .build();
 
     } catch (IOException e) {

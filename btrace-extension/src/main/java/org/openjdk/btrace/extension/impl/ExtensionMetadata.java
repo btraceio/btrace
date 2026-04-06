@@ -37,9 +37,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
@@ -64,6 +67,8 @@ final class ExtensionMetadata {
   private static final String ATTR_SERVICES = "BTrace-Extension-Services";
   private static final String ATTR_REQUIRES = "BTrace-Extension-Requires";
   private static final String ATTR_PERMISSIONS = "BTrace-Extension-Permissions";
+  private static final String ATTR_PROVIDED_LOCATOR = "BTrace-Provided-Locator";
+  private static final String ATTR_PROVIDED_REQUIRED = "BTrace-Provided-Required";
 
   private ExtensionMetadata() {}
 
@@ -138,6 +143,14 @@ final class ExtensionMetadata {
     // Also scan META-INF/services directory
     services.addAll(scanServicesDirectory(jar));
 
+    // Parse provided dependency locator config
+    String providedLocator = attrs.getValue(ATTR_PROVIDED_LOCATOR);
+    boolean providedRequired = "true".equalsIgnoreCase(attrs.getValue(ATTR_PROVIDED_REQUIRED));
+    Map<String, String> locatorProps = Collections.emptyMap();
+    if (providedLocator != null) {
+      locatorProps = parseLocatorProperties(jar);
+    }
+
     return new ExtensionDescriptorDTO.Builder()
         .id(id)
         .version(version)
@@ -153,6 +166,9 @@ final class ExtensionMetadata {
         .services(services)
         .requiredExtensions(parseList(attrs.getValue(ATTR_REQUIRES)))
         .requiredPermissions(parsePermissions(attrs.getValue(ATTR_PERMISSIONS)))
+        .providedLocatorClass(providedLocator)
+        .providedLocatorProperties(locatorProps)
+        .providedRequired(providedRequired)
         .repository(repository)
         .build();
   }
@@ -300,6 +316,25 @@ final class ExtensionMetadata {
       return new ArrayList<>();
     }
     return Arrays.asList(value.split("[,\\s]+"));
+  }
+
+  /**
+   * Parse locator properties from btrace-extension.properties inside the JAR.
+   * Keys prefixed with {@code locator.} are extracted and the prefix is stripped.
+   */
+  private static Map<String, String> parseLocatorProperties(JarFile jar) throws IOException {
+    Properties props = loadMetadata(jar);
+    if (props == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, String> result = new HashMap<>();
+    String prefix = "locator.";
+    for (String key : props.stringPropertyNames()) {
+      if (key.startsWith(prefix)) {
+        result.put(key.substring(prefix.length()), props.getProperty(key));
+      }
+    }
+    return result;
   }
 
   private static PermissionSet parsePermissions(String value) {
