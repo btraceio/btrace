@@ -10,6 +10,7 @@ dependencies {
     }
     implementation project(path: ':btrace-core')
     implementation project(path: ':btrace-runtime')
+    implementation project(path: ':btrace-boot')
     runtimeOnly project(path: ':btrace-instr')
 
     testImplementation project(path: ':btrace-instr')

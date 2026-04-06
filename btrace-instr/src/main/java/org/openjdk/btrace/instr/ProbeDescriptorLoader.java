@@ -93,8 +93,11 @@ final class ProbeDescriptorLoader {
   // unmarshall BTrace probe descriptor from XML
   private ProbeDescriptor load(InputStream stream) {
     try {
+      // Use this class's classloader to ensure JAXB finds jaxb.index from masked sections
       JAXBContext jc =
-          JAXBContext.newInstance("org.openjdk.btrace.core.annotations:org.openjdk.btrace.instr");
+          JAXBContext.newInstance(
+              "org.openjdk.btrace.core.annotations:org.openjdk.btrace.instr",
+              ProbeDescriptorLoader.class.getClassLoader());
       Unmarshaller u = jc.createUnmarshaller();
       u.setEventHandler(new DefaultValidationEventHandler());
       ProbeDescriptor pd = (ProbeDescriptor) u.unmarshal(stream);

@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
+ * particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
@@ -17,43 +17,37 @@
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
  */
-package org.openjdk.btrace.core.aggregation;
+
+package org.openjdk.btrace.core;
 
 /**
- * Aggregation function for computing the minimum value.
- *
- * <p>
- *
- * @author Christian Glencross
+ * Minimal bootstrap-visible bridge used by injected code to reach the runtime implementation.
  */
-class Minimum implements AggregationValue {
+public interface BTraceRuntimeBridge {
+  void start();
 
-  long min = Long.MAX_VALUE;
+  void leave();
 
-  @Override
-  public synchronized void clear() {
-    min = Long.MAX_VALUE;
-  }
+  void handleException(Throwable th);
 
-  @Override
-  public synchronized void add(long value) {
-    if (value < min) {
-      min = value;
-    }
-  }
+  boolean isDisabled();
 
-  @Override
-  public synchronized long getValue() {
-    return min;
-  }
+  void newPerfCounter(Object value, String name, String desc);
 
-  @Override
-  public Object getData() {
-    return getValue();
-  }
+  int getPerfInt(String name);
+
+  void putPerfInt(int value, String name);
+
+  float getPerfFloat(String name);
+
+  void putPerfFloat(float value, String name);
+
+  long getPerfLong(String name);
+
+  void putPerfLong(long value, String name);
+
+  String getPerfString(String name);
+
+  void putPerfString(String value, String name);
 }

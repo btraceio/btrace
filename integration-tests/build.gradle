@@ -8,6 +8,7 @@ dependencies {
     implementation project(':btrace-extensions:btrace-metrics')
     testImplementation project(':btrace-client')
     testImplementation project(':btrace-core')
+    testImplementation libs.testcontainers
 }
 
 compileTestJava {
@@ -78,10 +79,78 @@ test {
         project.hasProperty("integration")
     }
     dependsOn cleanTest, buildEventsJar, compileTestProbes,
-             ':btrace-dist:agentJar', ':btrace-dist:clientJar', ':btrace-dist:bootJar',
+             ':btrace-dist:btraceJar',
              ':btrace-dist:explodeExtensions', ':btrace-extensions:buildExtensionsApi'
 
     testLogging.showStandardStreams = true
+
+    def dockerAvailable = false
+    if (project.hasProperty("integration")) {
+        String dockerHost = System.getenv("DOCKER_HOST")
+        try {
+            if (dockerHost == null || dockerHost.trim().isEmpty()) {
+                def defaultSocket = new File("/var/run/docker.sock")
+                if (defaultSocket.exists()) {
+                    dockerHost = "unix:///var/run/docker.sock"
+                }
+                def hostOutput = new ByteArrayOutputStream()
+                def hostResult = exec {
+                    commandLine 'docker', 'context', 'inspect', '--format', '{{.Endpoints.docker.Host}}'
+                    ignoreExitValue true
+                    standardOutput = hostOutput
+                    errorOutput = hostOutput
+                }
+                def hostText = hostOutput.toString().trim()
+                if (hostResult.exitValue == 0 && !hostText.isEmpty()) {
+                    dockerHost = hostText
+                } else {
+                    logger.warn("[integration-tests] Docker context host not available: ${hostText}.")
+                }
+            }
+
+            if (dockerHost != null && !dockerHost.trim().isEmpty()) {
+                def infoOutput = new ByteArrayOutputStream()
+                def infoResult = exec {
+                    commandLine 'docker', 'info', '--format', '{{.ServerVersion}}'
+                    ignoreExitValue true
+                    standardOutput = infoOutput
+                    errorOutput = infoOutput
+                    environment 'DOCKER_HOST', dockerHost
+                }
+                def infoText = infoOutput.toString().trim()
+                if (!(infoResult.exitValue == 0 && !infoText.isEmpty())) {
+                    logger.warn("[integration-tests] Docker not available (docker info returned: ${infoText}).")
+                }
+            } else {
+                logger.warn("[integration-tests] Docker host not configured.")
+            }
+        } catch (Exception e) {
+            logger.warn("[integration-tests] Docker not available (${e.getClass().getSimpleName()}: ${e.getMessage()}).")
+        }
+        dockerAvailable = dockerHost != null && !dockerHost.trim().isEmpty()
+        if (!dockerAvailable) {
+            logger.warn("[integration-tests] Docker not available; skipping tests tagged 'docker'.")
+        } else {
+            if (System.getenv("DOCKER_HOST") == null || System.getenv("DOCKER_HOST").trim().isEmpty()) {
+                environment 'DOCKER_HOST', dockerHost
+            }
+            if (dockerHost.startsWith("unix://")) {
+                environment 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE', dockerHost.replace("unix://", "")
+            }
+            systemProperty 'docker.host', dockerHost
+            if (dockerHost.startsWith("unix://")) {
+                systemProperty 'testcontainers.docker.socket.override', dockerHost.replace("unix://", "")
+                systemProperty 'testcontainers.dockerclient.strategy', 'org.testcontainers.dockerclient.UnixSocketClientProviderStrategy'
+            }
+            logger.lifecycle("[integration-tests] Using DOCKER_HOST=${dockerHost}")
+        }
+        systemProperty 'btrace.docker.available', String.valueOf(dockerAvailable)
+        useJUnitPlatform {
+            if (!dockerAvailable) {
+                excludeTags 'docker'
+            }
+        }
+    }
 
     def props = new Properties()
     props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))

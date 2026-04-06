@@ -25,8 +25,8 @@ private static $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallReturnAugm
 // annotable parameter count: 3 (visible)
 @Lorg/openjdk/btrace/core/annotations/Return;() // parameter 0
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented1.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
-INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented1.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
 IFNE L0
 LLOAD 0
 LRETURN
@@ -37,18 +37,18 @@ INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
 LLOAD 0
 LCONST_1
 LADD
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented1.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented1.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 LRETURN
 L1
 FRAME SAME1 java/lang/Throwable
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented1.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented1.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X1
 SWAP
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
 LLOAD 0
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented1.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallReturnAugmented1.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 LRETURN
 MAXSTACK = 4
 MAXLOCALS = 5

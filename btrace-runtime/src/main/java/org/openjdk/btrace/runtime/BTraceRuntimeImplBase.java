@@ -30,6 +30,7 @@ import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpmcArrayQueue;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.BTraceRuntimeBridge;
 import org.openjdk.btrace.core.BTraceUtils;
 import org.openjdk.btrace.core.Profiler;
 import org.openjdk.btrace.core.SharedSettings;
@@ -38,7 +39,11 @@ import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
+import org.openjdk.btrace.core.comm.GridDataCommand;
 import org.openjdk.btrace.core.comm.MessageCommand;
+import org.openjdk.btrace.core.comm.NumberDataCommand;
+import org.openjdk.btrace.core.comm.NumberMapDataCommand;
+import org.openjdk.btrace.core.comm.StringMapDataCommand;
 import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.handlers.ErrorHandler;
 import org.openjdk.btrace.core.handlers.EventHandler;
@@ -112,7 +117,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author KLynch
  */
 @SuppressWarnings("unchecked")
-public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
+public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTraceRuntimeBridge {
   private static final Logger log = LoggerFactory.getLogger(BTraceRuntimeImplBase.class);
 
   private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
@@ -423,7 +428,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
     this.className = className;
     instrumentation = inst;
 
-    BTraceRuntimeAccess.addRuntime(className, this);
+    BTraceRuntimeAccessImpl.addRuntime(className, this);
 
     cmdThread =
         new Thread(
@@ -557,7 +562,11 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
   }
 
   @Override
-  public final void handleEvent(EventCommand ecmd) {
+  public final void handleEvent(Object cmd) {
+    if (!(cmd instanceof EventCommand)) {
+      return;
+    }
+    EventCommand ecmd = (EventCommand) cmd;
     if (eventHandlers != null) {
       Map<String, Method> localMap = eventHandlerMap;
       if (localMap == null) {
@@ -583,7 +592,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
 
       Method eventHandler = localMap.get(event);
       if (eventHandler != null) {
-        BTraceRuntimeAccess.doWithCurrent(
+        BTraceRuntimeAccessImpl.doWithCurrent(
             (Callable<Void>)
                 () -> {
                   eventHandler.invoke(null, (Object[]) null);
@@ -624,7 +633,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
    */
   @Override
   public final void leave() {
-    BTraceRuntimeAccess.leave();
+    BTraceRuntimeAccessImpl.leaveInternal();
   }
 
   /** Handles exception from BTrace probe actions. */
@@ -633,7 +642,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
     if (currentException.get() != null) {
       return;
     }
-    boolean entered = BTraceRuntimeAccess.enter(this);
+    boolean entered = BTraceRuntimeAccessImpl.enterInternal(this);
     try {
       currentException.set(th);
 
@@ -852,7 +861,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
 
   @Override
   public final boolean enter() {
-    return BTraceRuntimeAccess.enter(this);
+    return BTraceRuntimeAccessImpl.enterInternal(this);
   }
 
   @Override
@@ -860,7 +869,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
     cleanupExtensions();
     exitImpl(exitCode);
     try {
-      cmdThread.join();
+      // Use timeout to prevent indefinite blocking during shutdown
+      // Don't interrupt - let cmdThread finish processing remaining commands
+      cmdThread.join(2000);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -976,7 +987,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
   }
 
   private BTraceRuntimeImplBase getCurrent() {
-    return BTraceRuntimeAccess.getCurrent();
+    return BTraceRuntimeAccessImpl.getCurrent();
   }
 
   private void initThreadPool() {
@@ -1053,6 +1064,37 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
   }
 
   @Override
+  public final void sendCommand(Object cmd) {
+    if (cmd instanceof Command) {
+      send((Command) cmd);
+    }
+  }
+
+  @Override
+  public final void sendNumberData(String name, Number value) {
+    send(new NumberDataCommand(name, value));
+  }
+
+  @Override
+  public final void sendNumberMapData(String name, Map<String, ? extends Number> data) {
+    send(new NumberMapDataCommand(name, data));
+  }
+
+  @Override
+  public final void sendStringMapData(String name, Map<String, String> data) {
+    send(new StringMapDataCommand(name, data));
+  }
+
+  @Override
+  public final void sendGridData(String name, List<Object[]> data) {
+    send(new GridDataCommand(name, data));
+  }
+
+  @Override
+  public final void sendGridData(String name, List<Object[]> data, String format) {
+    send(new GridDataCommand(name, data, format));
+  }
+
   public final void send(Command cmd) {
     boolean speculated = specQueueManager.send(cmd);
     if (!speculated) {

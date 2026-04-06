@@ -39,7 +39,7 @@ on:
         required: true
         type: string
       release_branch:
-        description: 'Release branch (e.g., release/2.3)'
+        description: 'Release branch (e.g., release/2.3._)'
         required: true
         type: string
       next_snapshot:
@@ -59,6 +59,7 @@ defaults:
 env:
   RELEASE_VERSION: ${{ inputs.release_version }}
   RELEASE_TAG: v${{ inputs.release_version }}
+  RC_TAG: v${{ inputs.release_version }}_RC
 
 jobs:
   # ============================================================
@@ -117,6 +118,15 @@ jobs:
             echo "::error::Tag v${{ inputs.release_version }} already exists on remote"
             exit 1
           fi
+          # Check for leftover RC tag
+          if git rev-parse "${RC_TAG}" >/dev/null 2>&1; then
+            echo "::error::RC tag ${RC_TAG} already exists locally. Clean up with: git tag -d ${RC_TAG}"
+            exit 1
+          fi
+          if git ls-remote --tags origin "refs/tags/${RC_TAG}" | grep -q .; then
+            echo "::error::RC tag ${RC_TAG} already exists on remote. Clean up with: git push origin :refs/tags/${RC_TAG}"
+            exit 1
+          fi
           echo "Tag does not exist - OK"
 
       - name: Check if release branch exists
@@ -166,7 +176,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Generate cache key
         id: cache-key
@@ -188,7 +198,7 @@ jobs:
         run: ./gradlew --no-daemon --parallel --build-cache build
 
       - name: Upload dist build data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-build
           retention-days: 1
@@ -197,7 +207,7 @@ jobs:
             btrace-instr/build/classes/traces
 
       - name: Upload test trace data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-trace
           retention-days: 1
@@ -206,7 +216,7 @@ jobs:
 
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-reports
           path: |
@@ -223,7 +233,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8.0.452-tem, 11.0.27-tem, 17.0.15-tem, 21.0.7-tem]
+        java: [8.0.482-tem, 11.0.30-tem, 17.0.18-tem, 21.0.10-tem]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
@@ -236,7 +246,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Prepare OS
         run: |
@@ -249,7 +259,7 @@ jobs:
           source "$HOME/.sdkman/bin/sdkman-init.sh"
           echo 'n' | sdk install java ${{ matrix.java }}
           which java
-          echo 'y' | sdk install java 11.0.25-tem
+          echo 'y' | sdk install java 11.0.30-tem
 
       - name: Cache Gradle
         uses: actions/cache@v5
@@ -262,13 +272,13 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Download build data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-build
           path: btrace-dist/build
 
       - name: Download test trace data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: test-trace
           path: btrace-instr/build/classes/traces
@@ -283,7 +293,7 @@ jobs:
 
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
@@ -338,18 +348,18 @@ jobs:
           echo "sha=${SHA}" >> $GITHUB_OUTPUT
           echo "Release commit: ${SHA}"
 
-      - name: Create tag
+      - name: Create RC tag
         if: ${{ inputs.dry_run != true }}
         run: |
-          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
-          echo "Created tag ${RELEASE_TAG}"
+          git tag -a "${RC_TAG}" -m "Release candidate ${RELEASE_TAG}"
+          echo "Created RC tag ${RC_TAG}"
 
-      - name: Push branch and tag
+      - name: Push branch and RC tag
         if: ${{ inputs.dry_run != true }}
         run: |
           git push origin "${{ inputs.release_branch }}"
-          git push origin "${RELEASE_TAG}"
-          echo "Pushed branch and tag"
+          git push origin "${RC_TAG}"
+          echo "Pushed branch and RC tag"
 
       - name: Dry run summary
         if: ${{ inputs.dry_run == true }}
@@ -357,7 +367,7 @@ jobs:
           echo "::warning::DRY RUN - Branch and tag NOT pushed"
           echo "Would have pushed:"
           echo "  - Branch: ${{ inputs.release_branch }}"
-          echo "  - Tag: ${RELEASE_TAG}"
+          echo "  - RC Tag: ${RC_TAG}"
 
   # ============================================================
   # Job 5: Stage to Maven Central (does NOT release)
@@ -368,10 +378,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
-      - name: Checkout release tag
+      - name: Checkout RC tag
         uses: actions/checkout@v6
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ env.RC_TAG }}
 
       - name: Cache Java binaries
         id: cache-java
@@ -391,7 +401,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Cache Gradle
         uses: actions/cache@v5
@@ -548,6 +558,46 @@ jobs:
           fi
 
   # ============================================================
+  # Job 5d: Finalize release tag (RC -> final)
+  # ============================================================
+  finalize-tag:
+    name: Finalize Release Tag
+    needs: [prepare-release, wait-for-maven]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    steps:
+      - name: Checkout at release SHA
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare-release.outputs.release_sha }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch tags
+        run: git fetch origin --tags
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create final tag
+        run: |
+          git tag -a "${RELEASE_TAG}" -m "Release ${RELEASE_TAG}"
+          echo "Created final tag ${RELEASE_TAG}"
+
+      - name: Push final tag
+        run: |
+          git push origin "${RELEASE_TAG}"
+          echo "Pushed final tag ${RELEASE_TAG}"
+
+      - name: Delete RC tag
+        run: |
+          git tag -d "${RC_TAG}" || true
+          git push origin ":refs/tags/${RC_TAG}" || true
+          echo "Deleted RC tag ${RC_TAG}"
+
+  # ============================================================
   # Job 6: Build distribution packages
   # ============================================================
   build-distributions:
@@ -555,10 +605,10 @@ jobs:
     needs: prepare-release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout release tag
+      - name: Checkout release commit
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.dry_run == true && inputs.commit_sha || env.RELEASE_TAG }}
+          ref: ${{ inputs.dry_run == true && inputs.commit_sha || env.RC_TAG }}
 
       - name: Cache Java binaries
         id: cache-java
@@ -578,7 +628,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Update version for dry run
         if: ${{ inputs.dry_run == true }}
@@ -596,7 +646,7 @@ jobs:
           ls -la btrace-dist/build/distributions/
 
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-distributions
           retention-days: 7
@@ -612,7 +662,7 @@ jobs:
   # ============================================================
   create-github-release:
     name: Create GitHub Release
-    needs: [build-distributions, wait-for-maven]
+    needs: [build-distributions, finalize-tag]
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run != true }}
     steps:
@@ -623,10 +673,29 @@ jobs:
           fetch-depth: 0
 
       - name: Download distribution artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-distributions
           path: distributions
+
+      - name: Download Maven artifact
+        continue-on-error: true
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          BASE_URL="https://repo1.maven.org/maven2/io/btrace/btrace/${VERSION}"
+          mkdir -p maven-artifacts
+          MAX_ATTEMPTS=40
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            if curl -fSL "${BASE_URL}/btrace-${VERSION}.jar" \
+              -o maven-artifacts/btrace-${VERSION}.jar; then
+              echo "Downloaded btrace-${VERSION}.jar"
+              ls -la maven-artifacts/
+              exit 0
+            fi
+            echo "Attempt ${i}/${MAX_ATTEMPTS} failed, retrying in 30s..."
+            sleep 30
+          done
+          echo "::warning::Failed to download Maven JAR after ${MAX_ATTEMPTS} attempts (~20 minutes). GitHub release will proceed without it."
 
       - name: Check for no-release-notes label
         id: check-label
@@ -653,6 +722,7 @@ jobs:
             distributions/btrace-v${{ inputs.release_version }}-sdkman-bin.zip
             distributions/*.deb
             distributions/*.rpm
+            maven-artifacts/*
 
   # ============================================================
   # Job 8: Update SDKMan
@@ -686,7 +756,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Announce to SDKMan
         env:
@@ -861,7 +931,7 @@ jobs:
   # ============================================================
   summary:
     name: Release Summary
-    needs: [create-github-release, update-sdkman, update-milestones, update-jbang-catalog]
+    needs: [create-github-release, update-sdkman, update-milestones, update-jbang-catalog, finalize-tag]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -915,6 +985,7 @@ jobs:
           echo "| Prepare Release | ${{ needs.prepare-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Stage Maven | ${{ needs.stage-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Wait for Maven | ${{ needs.wait-for-maven.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Finalize Tag | ${{ needs.finalize-tag.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| GitHub Release | ${{ needs.create-github-release.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| SDKMan | ${{ needs.update-sdkman.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| JBang Catalog | ${{ needs.update-jbang-catalog.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
@@ -930,7 +1001,7 @@ jobs:
     if: always()
     steps:
       - name: Cleanup temporary artifacts
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         with:
           name: |
             dist-build

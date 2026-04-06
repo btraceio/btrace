@@ -5,6 +5,7 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 final class ProbeRenameVisitor extends ClassVisitor {
   private String oldClassName = null;
@@ -59,6 +60,33 @@ final class ProbeRenameVisitor extends ClassVisitor {
             name,
             descriptor,
             isInterface);
+      }
+
+      @Override
+      public void visitLdcInsn(Object value) {
+        // Rename class constants that reference the old class name
+        if (value instanceof Type) {
+          Type t = (Type) value;
+          if (t.getSort() == Type.OBJECT && t.getInternalName().equals(oldClassName)) {
+            super.visitLdcInsn(Type.getObjectType(newClassName));
+            return;
+          }
+        }
+        // Rename String constants that contain the old class name
+        if (value instanceof String) {
+          String s = (String) value;
+          String oldDotName = oldClassName.replace('/', '.');
+          String newDotName = newClassName.replace('/', '.');
+          if (s.equals(oldDotName)) {
+            super.visitLdcInsn(newDotName);
+            return;
+          }
+          if (s.equals(oldClassName)) {
+            super.visitLdcInsn(newClassName);
+            return;
+          }
+        }
+        super.visitLdcInsn(value);
       }
     };
   }

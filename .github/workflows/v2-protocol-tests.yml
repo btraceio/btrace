@@ -49,7 +49,7 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Cache Gradle packages
         uses: actions/cache@v5
@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload Test Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports-java-${{ matrix.java }}
           retention-days: 7
@@ -104,7 +104,7 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Run Protocol Negotiation Tests
         run: |
@@ -122,7 +122,7 @@ jobs:
 
       - name: Upload Negotiation Test Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: negotiation-test-reports
           retention-days: 7
@@ -156,7 +156,7 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Run Edge Case Tests
         run: |
@@ -177,7 +177,7 @@ jobs:
 
       - name: Upload Edge Case Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: edge-case-reports
           retention-days: 7
@@ -207,7 +207,7 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Run Quick JMH Benchmarks (warmup=1, iterations=2, fork=1)
         run: |
@@ -219,7 +219,7 @@ jobs:
 
       - name: Upload JMH Results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: jmh-results
           retention-days: 30
@@ -268,7 +268,7 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Test ${{ matrix.scenario.name }} Compatibility
         run: |
@@ -279,7 +279,7 @@ jobs:
 
       - name: Upload Compatibility Reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: compatibility-${{ matrix.scenario.name }}
           retention-days: 7
@@ -293,7 +293,7 @@ jobs:
     if: always()
     steps:
       - name: Download All Test Reports
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: test-reports
 
@@ -359,14 +359,14 @@ jobs:
           distribution: temurin
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Run Tests with Coverage
         run: |
           ./gradlew :btrace-core:test jacocoTestReport
 
       - name: Upload Coverage Reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-reports
           retention-days: 30

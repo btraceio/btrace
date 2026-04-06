@@ -15,8 +15,8 @@ private static $btrace$org$openjdk$btrace$runtime$auxiliary$Args$args(Ljava/lang
 // annotable parameter count: 5 (visible)
 @Lorg/openjdk/btrace/core/annotations/Self;() // parameter 0
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
-INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntime$Impl;)Z
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
 IFNE L0
 RETURN
 L0
@@ -48,32 +48,32 @@ INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.cntr : Ljava/lang/ThreadLocal;
 SWAP
 INVOKEVIRTUAL java/lang/ThreadLocal.set (Ljava/lang/Object;)V
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
-LDC "btrace.org/openjdk/btrace/runtime/auxiliary/Args.exported"
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.getPerfLong (Ljava/lang/String;)J
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+LDC "btrace.traces/onmethod/Args.exported"
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.getPerfLong (Ljava/lang/String;)J (itf)
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.str (J)Ljava/lang/String;
 INVOKESTATIC org/openjdk/btrace/core/BTraceUtils.println (Ljava/lang/Object;)V
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
-LDC "btrace.org/openjdk/btrace/runtime/auxiliary/Args.exported"
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.getPerfLong (Ljava/lang/String;)J
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+LDC "btrace.traces/onmethod/Args.exported"
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.getPerfLong (Ljava/lang/String;)J (itf)
 LCONST_1
 LADD
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X2
 POP
-LDC "btrace.org/openjdk/btrace/runtime/auxiliary/Args.exported"
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.putPerfLong (JLjava/lang/String;)V
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+LDC "btrace.traces/onmethod/Args.exported"
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.putPerfLong (JLjava/lang/String;)V (itf)
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 L1
 FRAME SAME1 java/lang/Throwable
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
 DUP_X1
 SWAP
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.handleException (Ljava/lang/Throwable;)V
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/runtime/BTraceRuntimeImplBase;
-INVOKEVIRTUAL org/openjdk/btrace/runtime/BTraceRuntimeImplBase.leave ()V
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
 RETURN
 MAXSTACK = 4
 MAXLOCALS = 6

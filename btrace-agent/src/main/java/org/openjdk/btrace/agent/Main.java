@@ -109,6 +109,7 @@ import static org.openjdk.btrace.core.Args.TRUSTED;
 @SuppressWarnings("RedundantThrows")
 public final class Main {
   public static final int BTRACE_DEFAULT_PORT = 2020;
+  private static final boolean AGENT_DEBUG = Boolean.getBoolean("btrace.agent.debug");
   private static final Pattern KV_PATTERN = Pattern.compile(",");
   private static final SharedSettings settings = SharedSettings.GLOBAL;
   private static final BTraceTransformer transformer =
@@ -141,23 +142,31 @@ public final class Main {
   }
 
   private static synchronized void main(String args, Instrumentation inst) {
+    if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
     if (Main.inst != null) {
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Agent already initialized, skipping");
       return;
     } else {
       Main.inst = inst;
     }
 
     try {
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading arguments");
       loadArgs(args);
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments loaded");
       boolean isDebug = Boolean.parseBoolean(argMap.get(DEBUG));
       // set the debug level based on cmdline config
       settings.setDebug(isDebug);
       DebugSupport.initLoggers(isDebug, log);
 
       // Load defaults from file-based permission policy first
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading permission policy");
       org.openjdk.btrace.extension.PermissionPolicy.get().loadFromDefaults();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Permission policy loaded");
       // Then parse and apply agent args (which override file policy)
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Parsing arguments");
       parseArgs();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments parsed");
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
 
@@ -180,13 +189,24 @@ public final class Main {
                 });
       }
       // set the fall-back instrumentation object to BTraceRuntime
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Setting up runtime");
       BTraceRuntime.instrumentation = inst;
       // force back-registration of BTraceRuntimeImpl in BTraceRuntime
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing BTraceRuntimes");
       BTraceRuntimes.getDefault();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] BTraceRuntimes initialized");
+      // ensure runtime accessor is registered
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Registering runtime accessor");
+      BTraceRuntimes.ensureAccessorRegistered();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Runtime accessor registered");
       // init BTraceRuntime
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing unsafe");
       BTraceRuntime.initUnsafe();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Unsafe initialized");
       // initialize extension system
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
       initExtensions();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Extensions initialized");
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {
@@ -199,17 +219,27 @@ public final class Main {
         }
       }
 
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Adding class transformer");
       log.debug("Adding class transformer");
       inst.addTransformer(transformer, true);
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Transformer added");
       try {
         // the MethodHandleNatives must be instrumented to track start-end of indy linking to avoid deadlocking
+        if (AGENT_DEBUG) System.err.println("[BTrace Agent] Instrumenting MethodHandleNatives");
         Class<?> clz = ClassLoader.getSystemClassLoader().loadClass("java.lang.invoke.MethodHandleNatives");
         inst.retransformClasses(clz);
+        if (AGENT_DEBUG) System.err.println("[BTrace Agent] MethodHandleNatives instrumented");
       } catch (Throwable t) {
+        if (AGENT_DEBUG) System.err.println("[BTrace Agent] Failed to instrument MethodHandleNatives: " + t.getMessage());
         log.debug("Failed to instrument MethodHandleNatives", t);
       }
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Starting scripts");
       int startedScripts = startScripts();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
+      // FATAL errors should always be printed
+      System.err.println("[BTrace Agent] FATAL: Initialization failed: " + t.getClass().getName() + ": " + t.getMessage());
+      t.printStackTrace(System.err);
       log.error("Failed to initialize BTrace agent", t);
       throw new RuntimeException("BTrace agent initialization failed", t);
     } finally {
@@ -363,9 +393,11 @@ public final class Main {
       String agentPath =
           Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 
-      // Agent is typically at BTRACE_HOME/libs/btrace-agent.jar
+      // Agent is typically at BTRACE_HOME/libs/btrace-agent.jar or BTRACE_HOME/libs/btrace.jar
       File agentJar = new File(agentPath);
-      if (agentJar.exists() && agentJar.getName().equals("btrace-agent.jar")) {
+      String jarName = agentJar.getName();
+      if (agentJar.exists()
+          && (jarName.equals("btrace-agent.jar") || jarName.equals("btrace.jar"))) {
         File libsDir = agentJar.getParentFile();
         if (libsDir != null && libsDir.getName().equals("libs")) {
           File btraceHome = libsDir.getParentFile();
@@ -687,16 +719,39 @@ public final class Main {
   }
 
   private static void processClasspaths(String libs) {
-    URL agentJar = Main.class.getResource("Main.class");
-    String bootPath = agentJar.toString().replace("jar:file:", "");
-    int idx = bootPath.indexOf("btrace-agent.jar");
-    if (idx > -1) {
-      bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
+    // Try to find JAR via Loader.class (unmasked bootstrap class)
+    // Main.class won't work because it's loaded from .classdata
+    String bootPath = null;
+    try {
+      Class<?> loaderClass = Class.forName("org.openjdk.btrace.boot.Loader");
+      URL loaderResource = loaderClass.getResource("Loader.class");
+      if (loaderResource != null) {
+        bootPath = loaderResource.toString();
+        if (bootPath.startsWith("jar:file:")) {
+          // Extract JAR path from jar:file:/path/to/btrace.jar!/org/openjdk/btrace/boot/Loader.class
+          bootPath = bootPath.substring("jar:file:".length());
+          int idx = bootPath.indexOf("!");
+          if (idx > -1) {
+            bootPath = bootPath.substring(0, idx);
+          }
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      // Fall back to Main.class if Loader not found (shouldn't happen)
+      URL agentJar = Main.class.getResource("Main.class");
+      if (agentJar != null) {
+        bootPath = agentJar.toString().replace("jar:file:", "");
+        int idx = bootPath.indexOf("btrace-agent.jar");
+        if (idx > -1) {
+          bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
+        }
+      }
     }
+
     String bootClassPath = argMap.get(BOOT_CLASS_PATH);
-    if (bootClassPath == null) {
+    if (bootClassPath == null && bootPath != null) {
       bootClassPath = bootPath;
-    } else {
+    } else if (bootClassPath != null && bootPath != null) {
       if (".".equals(bootClassPath)) {
         bootClassPath = bootPath;
       } else {
@@ -1024,12 +1079,12 @@ public final class Main {
                 log.debug("new Client created {}", client);
               }
               if (client.retransformLoaded()) {
-                client.getRuntime().send(new StatusCommand((byte) 1));
+                client.getRuntime().sendCommand(new StatusCommand((byte) 1));
               }
             } catch (UnmodifiableClassException uce) {
               log.debug("BTrace class retransformation failed", uce);
-              client.getRuntime().send(new ErrorCommand(uce));
-              client.getRuntime().send(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
+              client.getRuntime().sendCommand(new ErrorCommand(uce));
+              client.getRuntime().sendCommand(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
             } finally {
               if (entered) {
                 BTraceRuntime.leave();

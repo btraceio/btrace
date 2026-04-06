@@ -28,6 +28,7 @@ package org.openjdk.btrace.agent;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntimeBridge;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.Command;
@@ -305,6 +306,8 @@ abstract class Client implements CommandListener {
         log.debug("removing instrumentation");
         retransformLoaded();
         log.debug("closing all I/O");
+        // Send EXIT command to notify remote client before closing
+        sendCommand(new ExitCommand(exitCode));
         Thread.sleep(300);
         try {
           closeAll();
@@ -420,7 +423,7 @@ abstract class Client implements CommandListener {
 
     boolean entered = false;
     try {
-      entered = BTraceRuntimeAccess.enter(runtime);
+      entered = BTraceRuntimeAccess.enter((BTraceRuntimeBridge) runtime);
       return probe.register(runtime, transformer);
     } catch (Throwable th) {
       log.debug("Failed to load BTrace probe", th);
@@ -645,7 +648,11 @@ abstract class Client implements CommandListener {
   }
 
   protected void sendCommand(Command command) {
-    runtime.send(command);
+    if (runtime == null) {
+      log.warn("Cannot send command {}, runtime not initialized", command.getClass().getSimpleName());
+      return;
+    }
+    runtime.sendCommand(command);
   }
 
   static Client findClient(String uuid) {
