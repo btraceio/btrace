@@ -202,7 +202,7 @@ public abstract class InstrumentorTestBase {
                           String[] interfaces) {
                     int idx = name.lastIndexOf('/');
                     name =
-                            Auxiliary.class.getPackage().getName().replace('.', '/')
+                            Auxiliary.class.getName().substring(0, Auxiliary.class.getName().lastIndexOf('.')).replace('.', '/')
                                     + '/'
                                     + name.substring(idx + 1);
                     super.visit(version, access, name, signature, superName, interfaces);

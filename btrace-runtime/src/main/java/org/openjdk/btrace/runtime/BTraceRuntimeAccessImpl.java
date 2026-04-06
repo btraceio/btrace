@@ -43,6 +43,15 @@ import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
 public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delegate {
   private static final BTraceRuntimeAccessImpl INSTANCE = new BTraceRuntimeAccessImpl();
 
+  // Auxiliary.class.getPackage() returns null on JDK 8 when the class is dynamically defined
+  // on the bootstrap classloader (the VM package table is only populated for file-loaded classes)
+  private static final String AUXILIARY_PKG;
+
+  static {
+    String name = Auxiliary.class.getName();
+    AUXILIARY_PKG = name.substring(0, name.lastIndexOf('.')).replace('.', '/');
+  }
+
   static final class RTWrapper {
     private BTraceRuntime.Impl rt = null;
 
@@ -140,11 +149,11 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
     int idx = forClassName.lastIndexOf('/');
     if (idx > -1) {
       forClassName =
-          Auxiliary.class.getPackage().getName().replace('.', '/')
+          AUXILIARY_PKG
               + "/"
               + forClassName.substring(idx + 1);
     } else {
-      forClassName = Auxiliary.class.getPackage().getName().replace('.', '/') + "/" + forClassName;
+      forClassName = AUXILIARY_PKG + "/" + forClassName;
     }
 
     if (!BTraceRuntimeAccess.isUniqueClientClassNames()) {
