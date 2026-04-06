@@ -123,12 +123,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Download build data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-build
           path: btrace-dist/build
       - name: Download test trace data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: test-trace
           path: btrace-instr/build/classes/traces
@@ -191,7 +191,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
     - name: Download build data
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@v8
       with:
         name: dist-build
     - name: Deploy Maven

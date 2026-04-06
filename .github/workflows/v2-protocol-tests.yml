@@ -293,7 +293,7 @@ jobs:
     if: always()
     steps:
       - name: Download All Test Reports
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: test-reports
 
