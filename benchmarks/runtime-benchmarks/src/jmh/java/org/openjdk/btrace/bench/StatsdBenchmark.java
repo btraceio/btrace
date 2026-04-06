@@ -26,7 +26,6 @@ package org.openjdk.btrace.bench;
 
 import java.util.concurrent.TimeUnit;
 import org.openjdk.btrace.statsd.Statsd;
-import org.openjdk.btrace.statsd.StatsdImpl;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -56,15 +55,15 @@ public class StatsdBenchmark {
 
   @Setup
   public void setup() {
-    c = new StatsdImpl();
+    c = Statsd.getInstance();
   }
 
   @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
   @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
   @Benchmark
   @Threads(1)
-  public void testIncrement_1() {
-    c.increment("counter1");
+  public void testGauge_1() {
+    c.gauge("g1", 10);
   }
 
   public static void main(String[] args) throws Exception {

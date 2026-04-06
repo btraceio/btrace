@@ -1,0 +1,57 @@
+TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
+TRYCATCHBLOCK L4 L6 L6 java/lang/Throwable
+DUP
+ASTORE 2
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 2
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE69$onSyncEntry(Ljava/lang/Object;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/BTRACE69"
+]
+FRAME APPEND [resources/OnMethodTest resources/OnMethodTest]
+L7
+LINENUMBER 127 L7
+DUP
+ASTORE 3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L8
+ALOAD 3
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE69$onSyncExit(Ljava/lang/Object;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/BTRACE69"
+]
+L8
+FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest]
+GOTO L9
+FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]
+ASTORE 4
+DUP
+ASTORE 5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L10
+ALOAD 5
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE69$onSyncExit(Ljava/lang/Object;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/BTRACE69"
+]
+L10
+FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest T java/lang/Throwable java/lang/Object] [java/lang/Object]
+ALOAD 4
+ATHROW
+L9
+LINENUMBER 128 L9
+FRAME FULL [resources/OnMethodTest T resources/OnMethodTest resources/OnMethodTest] []
+RETURN
+L5
+FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]
+FRAME SAME1 java/lang/Throwable
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0
+MAXLOCALS = 6

@@ -52,6 +52,7 @@ import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.ClassCache;
 import org.openjdk.btrace.instr.ClassFilter;
 import org.openjdk.btrace.instr.ClassInfo;
+import org.openjdk.btrace.instr.HandlerRepositoryImpl;
 import org.openjdk.btrace.instr.InstrumentUtils;
 import org.openjdk.btrace.instr.Instrumentor;
 import org.openjdk.btrace.instr.MethodTrackingContext;
@@ -323,6 +324,7 @@ abstract class Client implements CommandListener {
       } finally {
         runtime.shutdownCmdLine();
         CLIENTS.remove(id);
+        HandlerRepositoryImpl.unregisterProbe(probe);
       }
     }
   }

@@ -7,16 +7,12 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This is used to inject code to set/unset linking flag to make sure no BTrace
  * code is executed while invokedynamic is being linked.
  */
 public final class LinkerInstrumentor {
-    private static final Logger log = LoggerFactory.getLogger(LinkerInstrumentor.class);
-
     private static class LinkerMethodVisitor extends MethodVisitor {
         private final Label tryStart = new Label();
         private final Label tryEnd = new Label();
@@ -81,20 +77,7 @@ public final class LinkerInstrumentor {
     }
     public static byte[] addGuard(byte[] classData) {
         ClassReader cr = new ClassReader(classData);
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES) {
-            @Override
-            protected String getCommonSuperClass(String type1, String type2) {
-                // MethodHandleNatives references package-private types (MemberName, LambdaForm, etc.)
-                // that may not be resolvable via Class.forName() from the agent classloader.
-                // Fall back to Object rather than letting the instrumentation fail entirely.
-                try {
-                    return super.getCommonSuperClass(type1, type2);
-                } catch (RuntimeException e) {
-                    log.debug("getCommonSuperClass({}, {}) failed, falling back to Object", type1, type2, e);
-                    return "java/lang/Object";
-                }
-            }
-        };
+        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES);
         cr.accept(new LinkerClassVisitor(cw), ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();
     }

@@ -95,12 +95,6 @@ public interface BTraceProbe {
 
   void copyHandlers(ClassVisitor copyingVisitor);
 
-  /**
-   * Returns the Class object produced by {@link #register}, or {@code null} if the probe has not
-   * been registered yet.
-   */
-  Class<?> getDefinedClass();
-
   void applyArgs(ArgsMap argsMap);
 
   BTraceRuntime.Impl getRuntime();

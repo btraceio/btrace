@@ -1,29 +1,23 @@
 package org.openjdk.btrace.runtime;
 
 public final class LinkingFlag {
-  private static final ThreadLocal<int[]> linking =
-      new ThreadLocal<int[]>() {
-        @Override
-        protected int[] initialValue() {
-          return new int[] {0};
-        }
-      };
+  private static final ThreadLocal<Integer> linking = new ThreadLocal<>();
 
   public static int guardLinking() {
-    int[] arr = linking.get();
-    int current = arr[0];
-    arr[0] = current + 1;
+    Integer current = linking.get();
+    current = current == null ? 0 : current;
+    linking.set(current + 1);
     return current;
   }
 
   public static int get() {
-    return linking.get()[0];
+    Integer current = linking.get();
+    return current == null ? 0 : current;
   }
 
   public static void reset() {
-    int[] arr = linking.get();
-    if (arr[0] > 0) {
-      arr[0]--;
-    }
+    Integer current = linking.get();
+    current = current == null ? 0 : current;
+    linking.set(current > 0 ? current - 1 : 0);
   }
 }

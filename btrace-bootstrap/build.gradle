@@ -10,10 +10,6 @@ def bootIncludes = {
     if (it.path.endsWith('.jar')) {
         return true
     }
-    // Include IndyDispatcher - bootstrap method for all INVOKEDYNAMIC dispatch
-    if (it.path.startsWith('org/openjdk/btrace/indy/')) {
-        return true
-    }
     if (it.path.startsWith('org/openjdk/btrace/core/')) {
         if (it.path == 'org/openjdk/btrace/core/Messages.class'
                 || it.path == 'org/openjdk/btrace/core/messages.properties') {
@@ -46,8 +42,9 @@ def bootIncludes = {
                 || it.path.startsWith('org/openjdk/btrace/runtime/LinkingFlag')) {
             return true
         }
-        // Include ExtensionIndy bootstrap class (uses volatile field to reach agent implementation)
-        if (it.path.startsWith('org/openjdk/btrace/runtime/ExtensionIndy')) {
+        // Include invokedynamic bootstrap classes (they use volatile fields to reach agent implementations)
+        if (it.path.startsWith('org/openjdk/btrace/runtime/Indy')
+                || it.path.startsWith('org/openjdk/btrace/runtime/ExtensionIndy')) {
             return true
         }
         // Include Auxiliary class - probe classes are defined via MethodHandles.privateLookupIn(Auxiliary.class)

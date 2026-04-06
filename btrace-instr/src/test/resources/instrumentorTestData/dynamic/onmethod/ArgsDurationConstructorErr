@@ -1,0 +1,73 @@
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+L2
+LINENUMBER 41 L2
+LCONST_0
+LSTORE 1
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 3
+L0
+LINENUMBER 42 L0
+L3
+LINENUMBER 43 L3
+L1
+FRAME FULL [resources/OnMethodTest J J] [java/lang/Throwable]
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+DUP
+ASTORE 5
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+ALOAD 0
+LLOAD 1
+ALOAD 5
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args(Ljava/lang/Object;JLjava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr"
+]
+L4
+FRAME FULL [resources/OnMethodTest J J java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0
+MAXSTACK = 5
+MAXLOCALS = 6
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+L2
+LINENUMBER 45 L2
+LCONST_0
+LSTORE 2
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 4
+L0
+LINENUMBER 46 L0
+L3
+LINENUMBER 47 L3
+L1
+FRAME FULL [resources/OnMethodTest java/lang/String J J] [java/lang/Throwable]
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 4
+LSUB
+LSTORE 2
+DUP
+ASTORE 6
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+ALOAD 0
+LLOAD 2
+ALOAD 6
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationConstructorErr$args(Ljava/lang/Object;JLjava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationConstructorErr"
+]
+L4
+FRAME FULL [resources/OnMethodTest java/lang/String J J java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+LOCALVARIABLE this Lresources/OnMethodTest; L2 L1 0
+LOCALVARIABLE a Ljava/lang/String; L2 L1 1
+MAXSTACK = 5
+MAXLOCALS = 7

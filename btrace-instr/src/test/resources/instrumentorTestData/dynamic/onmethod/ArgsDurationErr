@@ -1,0 +1,28 @@
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+LCONST_0
+LSTORE 6
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 8
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J] [java/lang/Throwable]
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 8
+LSUB
+LSTORE 6
+DUP
+ASTORE 10
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 0
+LLOAD 6
+ALOAD 10
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationErr$args(Ljava/lang/Object;JLjava/lang/Throwable;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/ArgsDurationErr"
+]
+L2
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J java/lang/Throwable] [java/lang/Throwable]
+ATHROW
+MAXSTACK = 5
+MAXLOCALS = 11

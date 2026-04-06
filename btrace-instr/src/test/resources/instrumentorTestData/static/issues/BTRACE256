@@ -1,0 +1,102 @@
+LCONST_0
+LSTORE 1
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 3
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.issues.BTRACE256#doStuff"
+INVOKESTATIC resources/issues/BTRACE256.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE256$entry (Ljava/lang/String;)V
+FRAME APPEND [J J]
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+L3
+FRAME SAME
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+LDC "public void resources.issues.BTRACE256#doStuff"
+LLOAD 1
+INVOKESTATIC resources/issues/BTRACE256.$btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE256$exit (Ljava/lang/String;J)V
+L4
+FRAME SAME
+L5
+LOCALVARIABLE this Lresources/issues/BTRACE256; L0 L5 0
+MAXSTACK = 4
+MAXLOCALS = 5
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE256$entry(Ljava/lang/String;)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.BTRACE256/", method="doStuff")
+// annotable parameter count: 1 (visible)
+@Lorg/openjdk/btrace/core/annotations/ProbeMethodName;(fqn=true) // parameter 0
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.swingProfiler : Lorg/openjdk/btrace/core/Profiler;
+ALOAD 0
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils$Profiling.recordEntry (Lorg/openjdk/btrace/core/Profiler;Ljava/lang/String;)V
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+DUP_X1
+SWAP
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
+RETURN
+MAXSTACK = 3
+
+// access flags 0xA
+private static $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE256$exit(Ljava/lang/String;J)V
+@Lorg/openjdk/btrace/core/annotations/OnMethod;(clazz="/.*\\.BTRACE256/", method="doStuff", location=@Lorg/openjdk/btrace/core/annotations/Location;(value=Lorg/openjdk/btrace/core/annotations/Kind;.RETURN))
+// annotable parameter count: 2 (visible)
+@Lorg/openjdk/btrace/core/annotations/ProbeMethodName;(fqn=true) // parameter 0
+@Lorg/openjdk/btrace/core/annotations/Duration;() // parameter 1
+TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKESTATIC org/openjdk/btrace/runtime/BTraceRuntimeAccess.enter (Lorg/openjdk/btrace/core/BTraceRuntimeBridge;)Z
+IFNE L0
+RETURN
+L0
+FRAME SAME
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.swingProfiler : Lorg/openjdk/btrace/core/Profiler;
+ALOAD 0
+LLOAD 1
+INVOKESTATIC org/openjdk/btrace/core/BTraceUtils$Profiling.recordExit (Lorg/openjdk/btrace/core/Profiler;Ljava/lang/String;J)V
+INVOKEDYNAMIC sd()Lorg/openjdk/btrace/statsd/Statsd; [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/ExtensionIndy.bootstrapFieldGet(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org.openjdk.btrace.statsd.Statsd",
+"SIMPLE",
+"",
+0,
+"UNSPECIFIED"
+]
+DUP
+ASTORE 3
+LDC "my.metric.b"
+LDC "regular,distribution:gaussian"
+INVOKEINTERFACE org/openjdk/btrace/statsd/Statsd.increment (Ljava/lang/String;Ljava/lang/String;)V (itf)
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
+RETURN
+L1
+FRAME SAME1 java/lang/Throwable
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+DUP_X1
+SWAP
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.handleException (Ljava/lang/Throwable;)V (itf)
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/BTRACE256.runtime : Lorg/openjdk/btrace/core/BTraceRuntimeBridge;
+INVOKEINTERFACE org/openjdk/btrace/core/BTraceRuntimeBridge.leave ()V (itf)
+RETURN
+MAXSTACK = 4
+MAXLOCALS = 4

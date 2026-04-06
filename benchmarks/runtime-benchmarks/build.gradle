@@ -36,7 +36,7 @@ task btracec(type: JavaExec) {
   args "${buildDir}/classes/java/main/"
   args '-packext'
   args 'btclass'
-  args fileTree(dir: "src/jmh/btrace", include: '*.java')
+  args fileTree(dir: "src/jmh/btrace", include: 'TraceScript.java')
 }
 compileJmhJava.dependsOn btracec
 jmhClasses.dependsOn btracec
@@ -63,6 +63,6 @@ jmh {
   duplicateClassesStrategy = DuplicatesStrategy.WARN
   jvmArgsAppend = ["-Djmh.basedir=${project.buildDir.getParent()}", "-Dproject.version=${project.version}"]
 //  jmhVersion = '1.27'
-  includes = [project.findProperty('jmhInclude') ?: 'org.openjdk.btrace.bench.ClassFilterBenchmark']
+  includes = ['org.openjdk.btrace.bench.ClassFilterBenchmark']
   verbosity = 'EXTRA'
 }

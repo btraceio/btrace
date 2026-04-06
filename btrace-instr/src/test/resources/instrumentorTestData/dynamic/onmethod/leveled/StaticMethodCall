@@ -1,0 +1,31 @@
+LSTORE 4
+ASTORE 6
+ASTORE 7
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticMethodCall.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L2
+INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 6
+LLOAD 4
+ALOAD 7
+LDC "special long resources.OnMethodTest#callTarget(java.lang.String, long)"
+LDC "resources.OnMethodTest"
+LDC "callTopLevelStatic"
+INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$StaticMethodCall$args(Ljava/lang/String;JLjava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"org/openjdk/btrace/runtime/auxiliary/StaticMethodCall"
+]
+L2
+FRAME FULL [java/lang/String J resources/OnMethodTest J java/lang/String resources/OnMethodTest] [J]
+ALOAD 7
+ALOAD 6
+LLOAD 4
+L3
+LOCALVARIABLE a Ljava/lang/String; L0 L3 0
+LOCALVARIABLE b J L0 L3 1
+LOCALVARIABLE instance Lresources/OnMethodTest; L1 L3 3
+MAXSTACK = 9
+MAXLOCALS = 8

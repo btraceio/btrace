@@ -88,16 +88,6 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("sun/invoke/");
     SENSITIVE_CLASSES.add("org/openjdk/btrace/");
 
-    // JDK 8 internal packages (moved to jdk/internal/ in JDK 9+).
-    // Used by MethodHandle/invoke machinery during INVOKEDYNAMIC resolution.
-    try {
-      Class.forName("java.lang.Module");
-    } catch (ClassNotFoundException e) {
-      // JDK 8
-      SENSITIVE_CLASSES.add("sun/misc/");
-      SENSITIVE_CLASSES.add("sun/reflect/");
-    }
-
     // Method-level exclusions for Thread: ThreadLocal accessor/mutator methods create infinite
     // recursion on JDK 25+ where ThreadLocal.createMap calls Thread.setThreadLocals.
     addSensitiveMethod("java/lang/Thread", "threadLocals");
