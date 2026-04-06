@@ -666,7 +666,7 @@ test {
         description "Generates Javadoc API documentation for the btrace-${name}."
 
         title = "btrace-${name}"
-        destinationDir = file("${project.docsDir}/${name}/javadoc")
+        destinationDir = project.layout.buildDirectory.dir("docs/${name}/javadoc").get().asFile
         classpath = files(compileJava.destinationDirectory) + configurations.artifact.asFileTree
         options.addStringOption('Xdoclint:all,-missing', '-quiet')
         failOnError false
