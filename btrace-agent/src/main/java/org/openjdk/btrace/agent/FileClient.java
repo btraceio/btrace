@@ -65,6 +65,20 @@ class FileClient extends Client {
     }
   }
 
+  /**
+   * Create a FileClient from raw probe bytecode (for bundled/embedded probes).
+   *
+   * @param ctx client context
+   * @param probeBytecode pre-compiled probe class bytes
+   * @param probeName probe name for diagnostics
+   */
+  FileClient(ClientContext ctx, byte[] probeBytecode, String probeName) throws IOException {
+    super(ctx);
+    if (!init(probeBytecode)) {
+      log.warn("Unable to load bundled probe {}", probeName);
+    }
+  }
+
   private static byte[] readAll(InputStream is, long size) throws IOException {
     if (is == null) throw new NullPointerException();
 

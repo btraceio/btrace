@@ -395,6 +395,7 @@ public final class Main {
 
   /**
    * Load bundled probes from embedded extensions based on the {@code probes=} agent argument.
+   * Follows the same loading pipeline as {@link #loadBTraceScript(String, boolean)}.
    */
   private static void loadBundledProbes() {
     if (extensionLoader == null) {
@@ -404,6 +405,16 @@ public final class Main {
     String probesArg = argMap.get(PROBES);
     if (probesArg == null || probesArg.isEmpty()) {
       return;
+    }
+
+    // Determine output mode: output= agent arg, falling back to stdout= flag
+    String outputArg = argMap.get(OUTPUT);
+    boolean traceToStdOut;
+    if (outputArg != null) {
+      traceToStdOut = "stdout".equalsIgnoreCase(outputArg);
+    } else {
+      String stdoutFlag = argMap.get(STDOUT);
+      traceToStdOut = stdoutFlag != null && !"false".equals(stdoutFlag);
     }
 
     String[] requested = probesArg.split(",");
@@ -418,23 +429,63 @@ public final class Main {
 
         for (String bundled : ext.getBundledProbes()) {
           if (bundled.equals(probeName) || bundled.endsWith("." + probeName)) {
-            String resourcePath =
-                ext.getResourceBasePath() + "/probes/" + probeName + ".class";
-            try (java.io.InputStream is =
-                Main.class.getClassLoader().getResourceAsStream(resourcePath)) {
-              if (is != null) {
-                log.info("Found bundled probe '{}' in extension '{}'", probeName, ext.getId());
-                // Probe bytecode is available — actual probe loading via BTraceProbeFactory
-                // would be wired here when the probe loading pipeline is ready
-              } else {
-                log.debug("Probe resource not found at {}", resourcePath);
-              }
-            } catch (java.io.IOException e) {
-              log.debug("Error reading bundled probe '{}': {}", probeName, e.getMessage());
-            }
+            loadEmbeddedProbe(ext, probeName, traceToStdOut);
           }
         }
       }
+    }
+  }
+
+  private static void loadEmbeddedProbe(
+      org.openjdk.btrace.extension.ExtensionDescriptorDTO ext,
+      String probeName,
+      boolean traceToStdOut) {
+    String resourcePath = ext.getResourceBasePath() + "/probes/" + probeName + ".class";
+    byte[] probeBytes;
+    try (java.io.InputStream is = Main.class.getClassLoader().getResourceAsStream(resourcePath)) {
+      if (is == null) {
+        log.debug("Probe resource not found at {}", resourcePath);
+        return;
+      }
+      java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+      byte[] buf = new byte[8192];
+      int read;
+      while ((read = is.read(buf)) != -1) {
+        baos.write(buf, 0, read);
+      }
+      probeBytes = baos.toByteArray();
+    } catch (java.io.IOException e) {
+      log.warn("Failed to read bundled probe '{}': {}", probeName, e.getMessage());
+      return;
+    }
+
+    try {
+      SharedSettings probeSettings = new SharedSettings();
+      probeSettings.from(settings);
+      probeSettings.setClientName(probeName);
+      if (traceToStdOut) {
+        probeSettings.setOutputFile("::stdout");
+      } else {
+        String traceOutput = probeSettings.getOutputFile();
+        if (traceOutput == null || traceOutput.isEmpty()) {
+          probeSettings.setOutputFile("${client}-${agent}.${ts}.btrace[default]");
+        }
+      }
+
+      ClientContext ctx = new ClientContext(inst, transformer, argMap, probeSettings);
+      Client client = new FileClient(ctx, probeBytes, probeName);
+      if (client.isInitialized()) {
+        handleNewClient(client).get();
+        log.info("Loaded bundled probe '{}' from extension '{}'", probeName, ext.getId());
+      } else {
+        log.warn("Bundled probe '{}' from extension '{}' failed to initialize", probeName, ext.getId());
+      }
+    } catch (RuntimeException | java.io.IOException e) {
+      log.warn("Failed to load bundled probe '{}': {}", probeName, e.getMessage(), e);
+    } catch (java.util.concurrent.ExecutionException e) {
+      log.warn("Failed to start bundled probe '{}': {}", probeName, e.getMessage(), e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
   }
 
