@@ -1,0 +1,44 @@
+/**
+ * Example: Building a fat BTrace agent JAR with embedded extensions and probes.
+ *
+ * This project shows how to create a single deployable agent JAR that bundles
+ * BTrace with specific extensions and pre-compiled probes. The resulting JAR
+ * can be deployed to production with:
+ *
+ *   java -javaagent:my-app-agent.jar=probes=MyTracer,stdout=true -jar my-app.jar
+ *
+ * No BTRACE_HOME or separate extension directories needed.
+ */
+plugins {
+    id 'org.openjdk.btrace.fat-agent'
+}
+
+// The base btrace.jar can come from:
+// 1. A local file:      btraceFatAgent { agentJar = file('libs/btrace.jar') }
+// 2. Maven dependency:  dependencies { btraceAgent 'org.openjdk.btrace:btrace:2.3.0' }
+// 3. A sibling project: btraceFatAgent { agentJar = project(':btrace-dist').file('build/.../btrace.jar') }
+
+btraceFatAgent {
+    // For this example, reference the btrace.jar built by btrace-dist
+    agentJar = rootProject.file("btrace-dist/build/resources/main/v${rootProject.version}/libs/btrace.jar")
+
+    // Output name for the fat agent JAR
+    outputName = 'my-app-agent'
+
+    // Embed extensions (pick any combination)
+    extensions {
+        // From a sibling project in this build
+        project ':btrace-extensions:btrace-metrics'
+
+        // From a local file
+        // file 'libs/custom-extension.zip'
+
+        // From Maven Central
+        // maven 'org.openjdk.btrace:btrace-metrics:2.3.0:extension@zip'
+    }
+
+    // Bundle pre-compiled probe classes
+    probes {
+        from 'src/probes'  // Directory containing compiled .class files
+    }
+}

@@ -34,6 +34,12 @@ gradlePlugin {
             displayName = 'BTrace Extension Plugin'
             description = 'Builds and packages BTrace extensions, scanning permissions and wiring manifests.'
         }
+        btraceFatAgent {
+            id = 'org.openjdk.btrace.fat-agent'
+            implementationClass = 'org.openjdk.btrace.gradle.BTraceFatAgentPlugin'
+            displayName = 'BTrace Fat Agent Plugin'
+            description = 'Assembles a fat BTrace agent JAR with embedded extensions and bundled probes.'
+        }
     }
 }
 
