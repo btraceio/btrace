@@ -176,7 +176,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Generate cache key
         id: cache-key
@@ -198,7 +198,7 @@ jobs:
         run: ./gradlew --no-daemon --parallel --build-cache build
 
       - name: Upload dist build data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-build
           retention-days: 1
@@ -207,7 +207,7 @@ jobs:
             btrace-instr/build/classes/traces
 
       - name: Upload test trace data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-trace
           retention-days: 1
@@ -216,7 +216,7 @@ jobs:
 
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-reports
           path: |
@@ -246,7 +246,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Prepare OS
         run: |
@@ -272,13 +272,13 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Download build data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-build
           path: btrace-dist/build
 
       - name: Download test trace data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: test-trace
           path: btrace-instr/build/classes/traces
@@ -293,7 +293,7 @@ jobs:
 
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
@@ -401,7 +401,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Cache Gradle
         uses: actions/cache@v5
@@ -628,7 +628,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Update version for dry run
         if: ${{ inputs.dry_run == true }}
@@ -646,7 +646,7 @@ jobs:
           ls -la btrace-dist/build/distributions/
 
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-distributions
           retention-days: 7
@@ -673,7 +673,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download distribution artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-distributions
           path: distributions
@@ -756,7 +756,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Announce to SDKMan
         env:
@@ -1001,7 +1001,7 @@ jobs:
     if: always()
     steps:
       - name: Cleanup temporary artifacts
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         with:
           name: |
             dist-build
