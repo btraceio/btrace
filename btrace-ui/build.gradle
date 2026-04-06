@@ -5,8 +5,10 @@ buildscript { scriptHandler ->
     apply from: rootProject.file('buildSrc/shared.gradle'), to: scriptHandler
 }
 
-sourceCompatibility = '11'
-targetCompatibility = '11'
+java {
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+}
 
 dependencies {
     implementation project(':btrace-core')
