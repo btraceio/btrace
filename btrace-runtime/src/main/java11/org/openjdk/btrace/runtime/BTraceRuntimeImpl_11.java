@@ -27,6 +27,7 @@ package org.openjdk.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -112,7 +113,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException ignored) {}
+    } catch (NoSuchMethodException | InaccessibleObjectException ignored) {}
     findBootstrapOrNullMtd = m;
   }
 
@@ -124,7 +125,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException ignored) {}
+    } catch (NoSuchMethodException | InaccessibleObjectException ignored) {}
     findBootstrapOrNullMtd = m;
   }
 
