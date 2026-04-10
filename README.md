@@ -88,8 +88,8 @@ See [Installation Guide](docs/GettingStarted.md#installation) for Docker, packag
 | [Getting Started](docs/GettingStarted.md) | Step-by-step first trace tutorial |
 | [Full Tutorial](docs/BTraceTutorial.md) | Complete walkthrough of all features |
 | [Oneliners](docs/OnelinerGuide.md) | DTrace-style quick probes |
-| [Extensions](docs/Extensions.md) | StatsD, custom integrations |
-| [Documentation Hub](docs/Readme.md) | All docs and guides |
+| [Extensions](docs/BTraceExtensionDevelopmentGuide.md) | StatsD, custom integrations |
+| [Documentation Hub](docs/README.md) | All docs and guides |
 
 ---
 
