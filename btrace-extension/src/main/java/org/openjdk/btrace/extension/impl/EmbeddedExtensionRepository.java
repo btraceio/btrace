@@ -137,7 +137,14 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
           Attributes attrs = manifest.getMainAttributes();
           String embeddedExtensions = attrs.getValue(MANIFEST_ATTR);
           if (embeddedExtensions != null && !embeddedExtensions.trim().isEmpty()) {
-            return Arrays.asList(embeddedExtensions.split(","));
+            List<String> ids = new ArrayList<>();
+            for (String entry : embeddedExtensions.split(",")) {
+              String trimmed = entry.trim();
+              if (!trimmed.isEmpty()) {
+                ids.add(trimmed);
+              }
+            }
+            return ids;
           }
         }
       }
@@ -186,8 +193,8 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
         configurator = null;
       }
 
-      // Discover bundled probes
-      List<String> bundledProbes = discoverBundledProbes(extensionId);
+      // Discover bundled probes (declared via the 'probes' property)
+      List<String> bundledProbes = discoverBundledProbes(extensionId, props);
 
       // For embedded extensions, jarPath points to a virtual path
       // The actual loading happens via ClassDataLoader
@@ -214,13 +221,23 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
   }
 
   /**
-   * Discovers bundled probe class files in the extension's probes/ directory.
+   * Discovers bundled probe class names for an extension by reading the {@code probes}
+   * property from its {@code extension.properties}. The value is a comma-separated list
+   * of fully-qualified probe class names; entries are trimmed and validated.
    */
-  private List<String> discoverBundledProbes(String extensionId) {
-    // Note: Discovering resources without filesystem access is tricky.
-    // The probes list should be declared in extension.properties instead.
-    // For now, return empty and rely on extension.properties "probes" property.
-    return Collections.emptyList();
+  private List<String> discoverBundledProbes(String extensionId, Properties props) {
+    String probesStr = props.getProperty("probes", "");
+    if (probesStr.isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<String> raw = new ArrayList<>();
+    for (String entry : probesStr.split(",")) {
+      String trimmed = entry.trim();
+      if (!trimmed.isEmpty()) {
+        raw.add(trimmed);
+      }
+    }
+    return validateClassNames(raw, "probe");
   }
 
   @Override

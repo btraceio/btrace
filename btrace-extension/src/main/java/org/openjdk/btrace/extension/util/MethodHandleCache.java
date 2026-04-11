@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class MethodHandleCache {
   private final ConcurrentHashMap<Key, MethodHandle> cache = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Key, LookupRuntimeException> negativeCache = new ConcurrentHashMap<>();
   private final MethodHandles.Lookup publicLookup = MethodHandles.publicLookup();
 
   public MethodHandleCache() {}
@@ -20,30 +21,44 @@ public final class MethodHandleCache {
       throws NoSuchMethodException, IllegalAccessException {
     MethodType mt = MethodType.methodType(rtype, ptypes);
     Key k = Key.of(receiver, name, mt, false);
-    return cache.computeIfAbsent(
-        k,
-        key -> {
-          try {
-            return publicLookup.findVirtual(receiver, name, mt);
-          } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new LookupRuntimeException(e);
-          }
-        });
+    LookupRuntimeException cachedFailure = negativeCache.get(k);
+    if (cachedFailure != null) throw cachedFailure;
+    try {
+      return cache.computeIfAbsent(
+          k,
+          key -> {
+            try {
+              return publicLookup.findVirtual(receiver, name, mt);
+            } catch (NoSuchMethodException | IllegalAccessException e) {
+              throw new LookupRuntimeException(e);
+            }
+          });
+    } catch (LookupRuntimeException e) {
+      negativeCache.putIfAbsent(k, e);
+      throw e;
+    }
   }
 
   public MethodHandle findStatic(Class<?> owner, String name, Class<?> rtype, Class<?>... ptypes)
       throws NoSuchMethodException, IllegalAccessException {
     MethodType mt = MethodType.methodType(rtype, ptypes);
     Key k = Key.of(owner, name, mt, true);
-    return cache.computeIfAbsent(
-        k,
-        key -> {
-          try {
-            return publicLookup.findStatic(owner, name, mt);
-          } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new LookupRuntimeException(e);
-          }
-        });
+    LookupRuntimeException cachedFailure = negativeCache.get(k);
+    if (cachedFailure != null) throw cachedFailure;
+    try {
+      return cache.computeIfAbsent(
+          k,
+          key -> {
+            try {
+              return publicLookup.findStatic(owner, name, mt);
+            } catch (NoSuchMethodException | IllegalAccessException e) {
+              throw new LookupRuntimeException(e);
+            }
+          });
+    } catch (LookupRuntimeException e) {
+      negativeCache.putIfAbsent(k, e);
+      throw e;
+    }
   }
 
   public static final class LookupRuntimeException extends RuntimeException {

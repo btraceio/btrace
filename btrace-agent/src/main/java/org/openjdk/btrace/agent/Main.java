@@ -472,37 +472,29 @@ public final class Main {
 
   /**
    * Load an embedded probe from classpath resources.
+   *
+   * <p>Embedded probe activation is not yet wired through {@code BTraceProbeFactory} and the
+   * transformer pipeline, so this method currently verifies the resource exists and warns the
+   * operator that the {@code probes=} argument is a no-op. It returns {@code false} so the caller
+   * does not emit a misleading "Loaded bundled probe" info line.
    */
   private static boolean loadEmbeddedProbe(String resourcePath, String probeName, boolean traceToStdOut) {
-    try {
-      InputStream is = Main.class.getClassLoader().getResourceAsStream(resourcePath);
+    try (InputStream is = Main.class.getClassLoader().getResourceAsStream(resourcePath)) {
       if (is == null) {
         log.debug("Probe resource not found: {}", resourcePath);
         return false;
       }
-
       byte[] probeBytes = readAllBytes(is);
-      is.close();
-
-      // Create settings for this probe
-      SharedSettings probeSettings = new SharedSettings();
-      probeSettings.from(settings);
-      probeSettings.setClientName(probeName);
-      if (traceToStdOut) {
-        probeSettings.setOutputFile("::stdout");
-      }
-
-      ClientContext ctx = new ClientContext(inst, transformer, argMap, probeSettings);
-      // Load as bytes - similar to how Client handles compiled probes
-      // This is a simplified version; full implementation would use BTraceProbeFactory
-      log.debug("Loaded probe bytes for: {} ({} bytes)", probeName, probeBytes.length);
-
-      // For now, log that probe loading from embedded resources is available
-      // Full implementation would instantiate and activate the probe
-      return true;
-
-    } catch (Exception e) {
-      log.warn("Failed to load embedded probe {}: {}", probeName, e.getMessage());
+      log.warn(
+          "Embedded probe {} found at {} ({} bytes) but probe activation is not yet implemented; "
+              + "the 'probes=' agent argument is currently a no-op. Configure the probe via the "
+              + "client submit path instead.",
+          probeName,
+          resourcePath,
+          probeBytes.length);
+      return false;
+    } catch (IOException e) {
+      log.warn("Failed to read embedded probe {}: {}", probeName, e.getMessage());
       return false;
     }
   }
@@ -652,12 +644,10 @@ public final class Main {
 
     String libs = argMap.get(LIBS);
     if (libs != null && !libs.isEmpty()) {
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "The 'libs' profile feature is deprecated and will be removed in a future release. "
-                + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
-                + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
-      }
+      log.warn(
+          "The 'libs' profile feature is deprecated and will be removed in a future release. "
+              + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
+              + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
     }
     String config = argMap.get(CONFIG);
     processClasspaths(libs);
@@ -1049,16 +1039,19 @@ public final class Main {
   private static void appendBootJar(Path jarPath) {
     try {
       Path rp = jarPath.toAbsolutePath().normalize();
-      if (BOOT_ADDED.contains(rp)) {
-        if (log.isDebugEnabled()) log.debug("Skipping duplicate bootstrap jar: {}", rp);
-        return;
-      }
       if (!Files.exists(rp)) {
         if (log.isDebugEnabled()) log.debug("Bootstrap jar does not exist: {}", rp);
         return;
       }
-      inst.appendToBootstrapClassLoaderSearch(asJarFile(rp.toFile()));
-      BOOT_ADDED.add(rp);
+      // Synchronize the check-then-act so two threads cannot both pass the "not yet added"
+      // check and both call appendToBootstrapClassLoaderSearch for the same jar.
+      synchronized (BOOT_ADDED) {
+        if (!BOOT_ADDED.add(rp)) {
+          if (log.isDebugEnabled()) log.debug("Skipping duplicate bootstrap jar: {}", rp);
+          return;
+        }
+        inst.appendToBootstrapClassLoaderSearch(asJarFile(rp.toFile()));
+      }
       if (log.isDebugEnabled()) log.debug("Added to bootstrap: {}", rp);
     } catch (IOException e) {
       log.debug("Failed to append bootstrap jar {}: {}", jarPath, e.toString());
@@ -1068,16 +1061,17 @@ public final class Main {
   private static void appendSystemJar(Path jarPath) {
     try {
       Path rp = jarPath.toAbsolutePath().normalize();
-      if (SYSTEM_ADDED.contains(rp)) {
-        if (log.isDebugEnabled()) log.debug("Skipping duplicate system jar: {}", rp);
-        return;
-      }
       if (!Files.exists(rp)) {
         if (log.isDebugEnabled()) log.debug("System jar does not exist: {}", rp);
         return;
       }
-      inst.appendToSystemClassLoaderSearch(asJarFile(rp.toFile()));
-      SYSTEM_ADDED.add(rp);
+      synchronized (SYSTEM_ADDED) {
+        if (!SYSTEM_ADDED.add(rp)) {
+          if (log.isDebugEnabled()) log.debug("Skipping duplicate system jar: {}", rp);
+          return;
+        }
+        inst.appendToSystemClassLoaderSearch(asJarFile(rp.toFile()));
+      }
       if (log.isDebugEnabled()) log.debug("Added to system: {}", rp);
     } catch (IOException e) {
       log.debug("Failed to append system jar {}: {}", jarPath, e.toString());

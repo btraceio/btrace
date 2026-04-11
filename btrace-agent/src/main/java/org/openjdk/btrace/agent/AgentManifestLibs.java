@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -122,12 +123,8 @@ final class AgentManifestLibs {
       URL url = anchor.getProtectionDomain().getCodeSource().getLocation();
       if (url == null) return null;
       URI uri = url.toURI();
-      Path p = Paths.get(uri);
-      if (Files.isDirectory(p)) {
-        return p; // exploded
-      }
-      return p;
-    } catch (URISyntaxException e) {
+      return Paths.get(uri);
+    } catch (URISyntaxException | IllegalArgumentException | FileSystemNotFoundException e) {
       if (log.isDebugEnabled()) log.debug("Failed to locate agent path: {}", e.toString());
       return null;
     }
@@ -168,10 +165,10 @@ final class AgentManifestLibs {
 
   // Package-private for testing
   static void scanLibTree(Path root, Set<Path> out) {
-    try {
-      if (root == null || !Files.exists(root)) return;
-      Files.walk(root)
-          .filter(f -> Files.isRegularFile(f))
+    if (root == null || !Files.exists(root)) return;
+    try (java.util.stream.Stream<Path> stream = Files.walk(root)) {
+      stream
+          .filter(Files::isRegularFile)
           .filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
           .forEach(out::add);
     } catch (IOException e) {
@@ -231,12 +228,21 @@ final class AgentManifestLibs {
               continue;
             }
           } catch (IOException e) {
-            // toRealPath failed (file may not exist or path issue); fall back to non-canonical check
+            // toRealPath failed (file may not exist or path issue); fall back to a
+            // normalized non-canonical check. Use the same absolute+normalize pipeline as np
+            // so the comparison is apples-to-apples, and surface the weakened check so operators
+            // know symlink resolution could not be applied.
             if (log.isDebugEnabled()) log.debug("toRealPath failed for {}: {}", np, e.getMessage());
-            if (!np.startsWith(home)) {
-              log.warn("Rejecting manifest lib outside BTRACE_HOME: {}", np);
+            Path normalizedHome = home.toAbsolutePath().normalize();
+            if (!np.startsWith(normalizedHome)) {
+              log.warn(
+                  "Rejecting manifest lib outside BTRACE_HOME (symlink resolution failed, using normalized path): {}",
+                  np);
               continue;
             }
+            log.warn(
+                "Symlink resolution failed for manifest lib {}; accepted against normalized BTRACE_HOME only",
+                np);
           }
         }
         out.add(np);

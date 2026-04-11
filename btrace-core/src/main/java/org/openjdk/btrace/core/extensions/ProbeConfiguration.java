@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -65,7 +66,7 @@ public final class ProbeConfiguration {
     if (output == null || output.isEmpty()) {
       return this;
     }
-    switch (output.toLowerCase()) {
+    switch (output.toLowerCase(Locale.ROOT)) {
       case "jfr":
         this.output = Output.JFR;
         break;
