@@ -281,7 +281,8 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     }
     // Basic validation: must be a valid Java identifier pattern
     // Allows: package.Class, package.Class$Inner
-    return className.matches("^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_$]*)*(\\$[a-zA-Z_][a-zA-Z0-9_$]*)*$");
+    return className.matches(
+        "^[a-zA-Z_][a-zA-Z0-9_]*+(\\.[a-zA-Z_][a-zA-Z0-9_$]*+)*+(\\$[a-zA-Z_][a-zA-Z0-9_$]*+)*+$");
   }
 
   /**
