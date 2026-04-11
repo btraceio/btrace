@@ -57,7 +57,7 @@ dependencyResolutionManagement {
             version('testcontainers', '2.0.4')
 
             // *** Gradle plugins ***
-            plugin ('spotless', 'com.diffplug.spotless').version('6.11.0')
+            plugin ('spotless', 'com.diffplug.spotless').version('7.0.2')
             plugin ('versioning', 'net.nemerosa.versioning').version('2.15.1')
             plugin ('ospackage', 'com.netflix.nebula.ospackage').version('11.11.2')
             plugin ('publish', 'io.github.gradle-nexus.publish-plugin').version('2.0.0')

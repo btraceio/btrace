@@ -103,7 +103,7 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException ignored) {}
+    } catch (NoSuchMethodException | RuntimeException ignored) {}
     findBootstrapOrNullMtd = m;
   }
 
@@ -123,7 +123,7 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException ignored) {}
+    } catch (NoSuchMethodException | RuntimeException ignored) {}
     findBootstrapOrNullMtd = m;
   }
 

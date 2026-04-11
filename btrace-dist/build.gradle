@@ -227,6 +227,15 @@ task prepareClientClassdata(type: Copy) {
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
 
+    // Messages is excluded from the core/** block above but is required by Main.usage().
+    // It cannot be in bootstrap (Messages.class.getClassLoader() would return null there,
+    // breaking ResourceBundle.getBundle()), so it must be in the client masked section.
+    from(provider { zipTree(allClassesShadow.archiveFile) }) {
+        include 'org/openjdk/btrace/core/Messages.class'
+        include 'org/openjdk/btrace/core/messages.properties'
+        rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
+    }
+
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
@@ -702,8 +711,8 @@ test {
 }
 
 sdkman {
-    consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_API_KEY')
-    consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_API_TOKEN')
+    consumerKey = project.hasProperty("sdkman.key") ? project.property("sdkman.key") : System.getenv('SDKMAN_KEY')
+    consumerToken = project.hasProperty("sdkman.token") ? project.property("sdkman.token") : System.getenv('SDKMAN_TOKEN')
     candidate = "btrace"
     version = "${project.version}"
     url = "https://github.com/btraceio/btrace/releases/download/v${project.version}/btrace-v${project.version}-sdkman-bin.zip"
