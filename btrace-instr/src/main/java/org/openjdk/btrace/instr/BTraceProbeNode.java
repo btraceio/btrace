@@ -260,7 +260,14 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
                 // @OnMethod handlers are invoked via INVOKEDYNAMIC (IndyDispatcher.bootstrap),
                 // so the handler method body must be present in the bootstrap-CL probe class.
                 if (bmn.isBcpRequired() || bmn.getOnMethod() != null) {
-                  return super.visitMethod(access, name, desc, sig, exceptions);
+                  // @OnMethod handlers: rewrite descriptor AnyType → Object to match the
+                  // INDY call site type (Instrumentor.invokeBTraceAction replaces AnyType
+                  // with Object in the INDY descriptor for JVM stack compatibility).
+                  String effectiveDesc =
+                      bmn.getOnMethod() != null
+                          ? desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
+                          : desc;
+                  return super.visitMethod(access, name, effectiveDesc, sig, exceptions);
                 }
                 for (BTraceMethodNode c : bmn.getCallers()) {
                   if (c.isBcpRequired() || c.getOnMethod() != null) {
