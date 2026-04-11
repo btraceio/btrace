@@ -256,11 +256,14 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
               }
               BTraceMethodNode bmn = idmap.get(CallGraph.methodId(name, desc));
               if (bmn != null) {
-                if (bmn.isBcpRequired()) {
+                // Include BCP-required methods AND @OnMethod handler methods:
+                // @OnMethod handlers are invoked via INVOKEDYNAMIC (IndyDispatcher.bootstrap),
+                // so the handler method body must be present in the bootstrap-CL probe class.
+                if (bmn.isBcpRequired() || bmn.getOnMethod() != null) {
                   return super.visitMethod(access, name, desc, sig, exceptions);
                 }
                 for (BTraceMethodNode c : bmn.getCallers()) {
-                  if (c.isBcpRequired()) {
+                  if (c.isBcpRequired() || c.getOnMethod() != null) {
                     return super.visitMethod(access, name, desc, sig, exceptions);
                   }
                 }
