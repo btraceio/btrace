@@ -31,8 +31,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
 import org.openjdk.btrace.core.HandlerRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * INVOKEDYNAMIC bootstrap class for BTrace probe handler dispatch.
@@ -45,10 +43,14 @@ import org.slf4j.LoggerFactory;
  * <p>The {@link #repository} field is wired up by {@code HandlerRepositoryImpl}'s static
  * initializer, bridging from the bootstrap classloader (this class) to the agent classloader
  * (HandlerRepositoryImpl).
+ *
+ * <p><b>Important:</b> This class lives in the bootstrap classloader and must not reference
+ * SLF4J or any other logging framework. SLF4J initialization in the bootstrap classloader
+ * context can fail, causing this class's static initializer to throw, which prevents the
+ * repository from being wired up. Handler resolution failures are logged by
+ * {@code HandlerRepositoryImpl.resolveHandler()} on the agent-classloader side.
  */
 public final class IndyDispatcher {
-
-  private static final Logger log = LoggerFactory.getLogger(IndyDispatcher.class);
 
   /**
    * Bridge to the HandlerRepository implementation (HandlerRepositoryImpl in agent CL).
@@ -74,9 +76,8 @@ public final class IndyDispatcher {
       try {
         mh = repo.resolveHandler(probeClassName, name, type);
       } catch (Throwable t) {
-        log.warn("IndyDispatcher: handler resolution failed for probe '{}', method '{}': {}",
-            probeClassName, name, t.toString());
-        // fall through to noop
+        // Resolution failures are logged on the agent-CL side (HandlerRepositoryImpl).
+        // Do not log here: SLF4J must not be referenced from this bootstrap CL class.
       }
     }
     if (mh == null) {
