@@ -42,3 +42,4 @@ gradle.properties
 gradle-wrapper.properties
 
 /.java.versions
+compile.log

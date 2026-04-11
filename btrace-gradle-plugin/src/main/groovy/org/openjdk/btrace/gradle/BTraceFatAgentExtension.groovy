@@ -351,7 +351,10 @@ class MavenExtensionSource extends ExtensionSource {
     }
 
     private ResolvedExtension extractFromZip(File zipFile) {
-        def tempDir = new File(project.buildDir, "fat-agent-staging/maven/${coordinates.replace(':', '_')}")
+        def tempDir = project.layout.buildDirectory
+            .dir("fat-agent-staging/maven/${coordinates.replace(':', '_')}")
+            .get()
+            .asFile
         tempDir.mkdirs()
 
         // Extract ZIP
@@ -417,7 +420,10 @@ class FileExtensionSource extends ExtensionSource {
     }
 
     private ResolvedExtension extractFromZip(File zipFile) {
-        def tempDir = new File(project.buildDir, "fat-agent-staging/file/${zipFile.name.replace('.zip', '')}")
+        def tempDir = project.layout.buildDirectory
+            .dir("fat-agent-staging/file/${zipFile.name.replace('.zip', '')}")
+            .get()
+            .asFile
         tempDir.mkdirs()
 
         project.copy {
