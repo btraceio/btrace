@@ -7,7 +7,7 @@ ALOAD 4
 ILOAD 3
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArrayGetBeforeAny$args(Ljava/lang/Object;Ljava/lang/Object;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArrayGetBeforeAny"
 ]

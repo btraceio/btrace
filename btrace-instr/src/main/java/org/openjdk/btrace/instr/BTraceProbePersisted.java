@@ -565,6 +565,7 @@ public class BTraceProbePersisted implements BTraceProbe {
       debug.dumpClass(delegate.getClassName(true) + "_bcp", code);
     }
     Class<?> clz = delegate.defineClass(rt, code);
+    HandlerRepositoryImpl.registerProbe(this);
     t.register(this);
     transformer = t;
     this.rt = rt;
@@ -573,6 +574,7 @@ public class BTraceProbePersisted implements BTraceProbe {
 
   @Override
   public void unregister() {
+    HandlerRepositoryImpl.unregisterProbe(this);
     if (transformer != null && isTransforming()) {
       if (log.isDebugEnabled()) {
         log.debug("onExit: removing transformer for {}", getClassName());
