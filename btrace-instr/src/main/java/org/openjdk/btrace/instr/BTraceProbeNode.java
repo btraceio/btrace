@@ -256,21 +256,25 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
               }
               BTraceMethodNode bmn = idmap.get(CallGraph.methodId(name, desc));
               if (bmn != null) {
-                // Include BCP-required methods AND @OnMethod handler methods:
-                // @OnMethod handlers are invoked via INVOKEDYNAMIC (IndyDispatcher.bootstrap),
+                // Include BCP-required methods AND probe handler methods:
+                // Handlers are invoked via INVOKEDYNAMIC (IndyDispatcher.bootstrap),
                 // so the handler method body must be present in the bootstrap-CL probe class.
-                if (bmn.isBcpRequired() || bmn.getOnMethod() != null) {
-                  // @OnMethod handlers: rewrite descriptor AnyType → Object to match the
-                  // INDY call site type (Instrumentor.invokeBTraceAction replaces AnyType
-                  // with Object in the INDY descriptor for JVM stack compatibility).
+                // This applies to @OnMethod handlers (om != null) and @OnProbe handlers
+                // (op != null — mapped to @OnMethod entries via mapOnProbes()).
+                boolean isHandler = bmn.getOnMethod() != null || bmn.getOnProbe() != null;
+                if (bmn.isBcpRequired() || isHandler) {
+                  // Handlers: rewrite descriptor AnyType → Object to match the INDY call site
+                  // type (Instrumentor.invokeBTraceAction replaces AnyType with Object in
+                  // the INDY descriptor for JVM stack compatibility).
                   String effectiveDesc =
-                      bmn.getOnMethod() != null
+                      isHandler
                           ? desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
                           : desc;
                   return super.visitMethod(access, name, effectiveDesc, sig, exceptions);
                 }
                 for (BTraceMethodNode c : bmn.getCallers()) {
-                  if (c.isBcpRequired() || c.getOnMethod() != null) {
+                  boolean callerIsHandler = c.getOnMethod() != null || c.getOnProbe() != null;
+                  if (c.isBcpRequired() || callerIsHandler) {
                     return super.visitMethod(access, name, desc, sig, exceptions);
                   }
                 }

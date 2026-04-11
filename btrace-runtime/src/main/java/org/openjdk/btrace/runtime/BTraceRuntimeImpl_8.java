@@ -195,12 +195,25 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @CallerSensitive
   @Override
   public ClassLoader getCallerClassLoader(int stackDec) {
-    return Reflection.getCallerClass(stackDec + 1).getClassLoader();
+    Class<?> c = Reflection.getCallerClass(stackDec + 1);
+    // Phase 3: probe handlers run in the bootstrap CL as
+    // org.openjdk.btrace.runtime.auxiliary.* classes (INDY dispatch).
+    // Skip that frame to find the real application caller, mirroring
+    // BTraceRuntimeImpl_9's StackWalker skip of auxiliary.* frames.
+    if (c != null && c.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+      c = Reflection.getCallerClass(stackDec + 2);
+    }
+    return c != null ? c.getClassLoader() : null;
   }
 
+  @CallerSensitive
   @Override
   public Class<?> getCallerClass(int stackDec) {
-    return Reflection.getCallerClass(stackDec + 1);
+    Class<?> c = Reflection.getCallerClass(stackDec + 1);
+    if (c != null && c.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+      c = Reflection.getCallerClass(stackDec + 2);
+    }
+    return c;
   }
 
   @Override
