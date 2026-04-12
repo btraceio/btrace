@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,7 +60,7 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
   }
 
   @Test
-  public void testExtensionInitializeAndCloseCalled() throws Exception {
+  public void testExtensionMethodCalled() throws Exception {
     attachDelayMs = 500;
     testDynamic(
         "resources.Main",
@@ -90,6 +91,7 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertEquals(1, retcode, "Script should have exited with code 1");
             // Extension should still be called even on error exit
             assertTrue(
                 stdout.contains("LIFECYCLE: extension method called"),

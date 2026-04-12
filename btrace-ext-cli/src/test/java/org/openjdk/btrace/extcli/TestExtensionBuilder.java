@@ -27,8 +27,10 @@ package org.openjdk.btrace.extcli;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -63,13 +65,13 @@ class TestExtensionBuilder {
       jos.closeEntry();
 
       jos.putNextEntry(new JarEntry("META-INF/btrace/exports.index"));
-      jos.write("org.example.TestService\n".getBytes());
+      jos.write("org.example.TestService\n".getBytes(StandardCharsets.UTF_8));
       jos.closeEntry();
 
       // Add permissions.properties if privileged
       if (privileged) {
         jos.putNextEntry(new JarEntry("META-INF/btrace/permissions.properties"));
-        jos.write("permissions=IO,NETWORK\n".getBytes());
+        jos.write("permissions=IO,NETWORK\n".getBytes(StandardCharsets.UTF_8));
         jos.closeEntry();
       }
     }
@@ -92,7 +94,7 @@ class TestExtensionBuilder {
       jos.closeEntry();
 
       jos.putNextEntry(new JarEntry("META-INF/services/org.example.TestService"));
-      jos.write("org.example.TestServiceImpl\n".getBytes());
+      jos.write("org.example.TestServiceImpl\n".getBytes(StandardCharsets.UTF_8));
       jos.closeEntry();
 
       // Add a dummy class file
@@ -128,10 +130,16 @@ class TestExtensionBuilder {
         addFileToZip(zos, implJar, implJar.getFileName().toString());
       }
     } finally {
-      // Cleanup temp files
-      Files.deleteIfExists(tempDir.resolve(id + "-" + version + "-api.jar"));
-      Files.deleteIfExists(tempDir.resolve(id + "-" + version + "-impl.jar"));
-      Files.deleteIfExists(tempDir);
+      // Recursively clean up temp directory and all contents
+      Files.walk(tempDir)
+          .sorted(Comparator.reverseOrder())
+          .forEach(
+              p -> {
+                try {
+                  Files.deleteIfExists(p);
+                } catch (IOException ignored) {
+                }
+              });
     }
   }
 
@@ -162,47 +170,68 @@ class TestExtensionBuilder {
   }
 
   /**
-   * Creates a minimal valid Java class file for testing.
-   * This is a class file for an empty class that extends Object.
+   * Creates a minimal structurally valid Java class file for testing.
+   *
+   * <p>Constant pool layout:
+   *
+   * <pre>
+   *   #1 CONSTANT_Class -> #3
+   *   #2 CONSTANT_Class -> #4
+   *   #3 CONSTANT_Utf8  "org/example/TestServiceImpl"
+   *   #4 CONSTANT_Utf8  "java/lang/Object"
+   * </pre>
    */
   private static byte[] createMinimalClassFile() {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    // Java class file magic number
-    baos.write(0xCA);
-    baos.write(0xFE);
-    baos.write(0xBA);
-    baos.write(0xBE);
-    // Minor version: 0
-    baos.write(0x00);
-    baos.write(0x00);
-    // Major version: 52 (Java 8)
-    baos.write(0x00);
-    baos.write(0x34);
-    // Constant pool count: 1 (no constants)
-    baos.write(0x00);
-    baos.write(0x01);
+    // Magic number
+    writeU4(baos, 0xCAFEBABEL);
+    // Minor version: 0, Major version: 52 (Java 8)
+    writeU2(baos, 0);
+    writeU2(baos, 52);
+    // Constant pool count: 5 (entries 1..4)
+    writeU2(baos, 5);
+    // #1 CONSTANT_Class -> #3
+    baos.write(7);
+    writeU2(baos, 3);
+    // #2 CONSTANT_Class -> #4
+    baos.write(7);
+    writeU2(baos, 4);
+    // #3 CONSTANT_Utf8 "org/example/TestServiceImpl"
+    byte[] thisName = "org/example/TestServiceImpl".getBytes(StandardCharsets.UTF_8);
+    baos.write(1);
+    writeU2(baos, thisName.length);
+    baos.write(thisName, 0, thisName.length);
+    // #4 CONSTANT_Utf8 "java/lang/Object"
+    byte[] superName = "java/lang/Object".getBytes(StandardCharsets.UTF_8);
+    baos.write(1);
+    writeU2(baos, superName.length);
+    baos.write(superName, 0, superName.length);
     // Access flags: public
-    baos.write(0x00);
-    baos.write(0x21);
-    // This class: 0
-    baos.write(0x00);
-    baos.write(0x00);
-    // Super class: 0 (java.lang.Object)
-    baos.write(0x00);
-    baos.write(0x00);
+    writeU2(baos, 0x0021);
+    // This class: #1
+    writeU2(baos, 1);
+    // Super class: #2
+    writeU2(baos, 2);
     // Interfaces count: 0
-    baos.write(0x00);
-    baos.write(0x00);
+    writeU2(baos, 0);
     // Fields count: 0
-    baos.write(0x00);
-    baos.write(0x00);
+    writeU2(baos, 0);
     // Methods count: 0
-    baos.write(0x00);
-    baos.write(0x00);
+    writeU2(baos, 0);
     // Attributes count: 0
-    baos.write(0x00);
-    baos.write(0x00);
-
+    writeU2(baos, 0);
     return baos.toByteArray();
+  }
+
+  private static void writeU2(ByteArrayOutputStream baos, int value) {
+    baos.write((value >> 8) & 0xFF);
+    baos.write(value & 0xFF);
+  }
+
+  private static void writeU4(ByteArrayOutputStream baos, long value) {
+    baos.write((int) ((value >> 24) & 0xFF));
+    baos.write((int) ((value >> 16) & 0xFF));
+    baos.write((int) ((value >> 8) & 0xFF));
+    baos.write((int) (value & 0xFF));
   }
 }

@@ -1523,7 +1523,7 @@ public abstract class RuntimeTest {
   }
 
   protected int getBTracePort() {
-    return Integer.getInteger("btrace.port", 2020);
+    return btracePort > 0 ? btracePort : Integer.getInteger("btrace.port", 2020);
   }
 
   protected String getEventsClassPath() {
