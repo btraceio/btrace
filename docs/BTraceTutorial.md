@@ -1,5 +1,7 @@
 # BTrace Tutorial (BTrace 2.3.0)
 
+> **Note:** Examples use `btrace.jar` -- the single masked JAR. If using a legacy multi-JAR distribution, substitute `btrace.jar`.
+
 ## 1. Hello World
 
 Accustoms the learner to 'btrace' command and the way it is used.
@@ -96,7 +98,7 @@ Once you are attached to the target JVM you can press Ctrl-C in the terminal to 
 
 ###### Directly
 
-`java -javaagent:btrace-agent.jar=[<agent-arg>[,<agent-arg>]*]? <launch-args>`
+`java -javaagent:btrace.jar=[<agent-arg>[,<agent-arg>]*]? <launch-args>`
 
 The agent takes a list of comma separated arguments.
 
@@ -762,7 +764,7 @@ btrace --grant=NETWORK,THREADS <pid> MetricsProbe.class
 
 ###### Using the Java agent
 ```bash
-java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
+java -javaagent:btrace.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
 ```
 
 ###### Grant all permissions (use with caution)
@@ -771,16 +773,16 @@ btrace --grantAll=true <pid> MetricsProbe.class
 ```
 or
 ```bash
-java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grantAll=true ...
+java -javaagent:btrace.jar=script=MetricsProbe.class,grantAll=true ...
 ```
 
 ##### Per-Extension Allow/Deny (Simplified Policy)
 - Allow specific extensions to link implementations via agent args:
-  - `-javaagent:btrace-agent.jar=...,allowExtensions=btrace-statsd,my-metrics`
+  - `-javaagent:btrace.jar=...,allowExtensions=btrace-statsd,my-metrics`
 - Deny specific extensions (implementation blocked; SHIM fallback):
-  - `-javaagent:btrace-agent.jar=...,denyExtensions=legacy-foo`
+  - `-javaagent:btrace.jar=...,denyExtensions=legacy-foo`
 - Allow all privileged extensions:
-  - `-javaagent:btrace-agent.jar=...,allowPrivileged=true`
+  - `-javaagent:btrace.jar=...,allowPrivileged=true`
 - Optional process-local policy file:
   - `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`
   - Example content:

@@ -1,5 +1,7 @@
 # BTrace Agent Manifest-Driven Library Paths — Design
 
+> **Historical Note:** This document describes the legacy agent manifest library loading design based on separate `btrace-agent.jar` and `btrace-boot.jar` files. The new masked JAR architecture (`btrace.jar`) supersedes this pattern by consolidating agent and boot classes into a single JAR. The concepts here remain relevant for understanding the evolution of the classpath loading strategy.
+
 ## Overview
 
 The BTrace agent needs a reliable, declarative way to discover and load required library JARs onto:

@@ -15,7 +15,7 @@ Extensions are isolated while exposing only their API to scripts:
 ```
 Bootstrap ClassLoader
 ├── JRE classes
-├── btrace-boot.jar (BTrace core + extension APIs)
+├── btrace.jar bootstrap section (BTrace core + extension APIs)
 └── Extension ClassLoaders (isolated)
     ├── Extension 1 (e.g., btrace-metrics)
     ├── Extension 2 (e.g., btrace-statsd)

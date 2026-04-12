@@ -179,9 +179,8 @@ plugins {
 btraceFatAgent {
     baseName = 'my-custom-agent'
 
-    // Reference base agent JARs (required for standalone builds)
-    agentJarTask = 'agentJar'  // or provide path
-    bootJarTask = 'bootJar'
+    // Reference base BTrace JAR (required for standalone builds)
+    agentJarTask = 'btraceJar'  // or provide path
 
     embedExtensions {
         maven('io.btrace:btrace-metrics:2.3.0')

@@ -6,10 +6,12 @@ The Fat Agent Plugin (`org.openjdk.btrace.fat-agent`) creates self-contained age
 
 ## Problem Statement
 
-Standard BTrace deployment requires:
+Standard BTrace deployment previously required:
 1. Agent JAR (`btrace-agent.jar`)
 2. Boot JAR (`btrace-boot.jar`)
 3. Extension JARs in `$BTRACE_HOME/extensions/`
+
+> **Note:** The masked JAR architecture now consolidates agent and boot into a single `btrace.jar`. The multi-JAR layout above is the legacy approach.
 
 This multi-JAR setup is problematic for:
 - **Spark/Hadoop**: Driver and executors need extensions without shared filesystem
@@ -104,8 +106,7 @@ fatAgentJar
 ├── stageProbes (optional)
 │   ├── copyCompiledProbes() → META-INF/btrace-probes/
 │   └── compileSourceProbes()
-├── agentJar (from btrace-dist)
-└── bootJar (from btrace-dist)
+└── btraceJar (single masked JAR from btrace-dist)
 ```
 
 ## Implementation Details
@@ -209,15 +210,21 @@ At agent startup:
 
 ### ClassDataLoader
 
-The `ClassDataLoader` loads `.classdata` files as classes:
+The `ClassDataLoader` loads `.classdata` files as classes. It registers as parallel-capable via `ClassLoader.registerAsParallelCapable()` and uses per-class-name locking via `getClassLoadingLock(name)` to allow concurrent loading of different classes while serializing attempts to load the same class:
 
 ```java
 public class ClassDataLoader {
-    public Class<?> loadClass(String className) {
-        String resourceName = className.replace('.', '/') + ".classdata";
-        InputStream is = getResourceAsStream(resourceName);
-        byte[] bytes = is.readAllBytes();
-        return defineClass(className, bytes, 0, bytes.length);
+    static {
+        ClassLoader.registerAsParallelCapable();
+    }
+
+    public Class<?> findClass(String className) {
+        synchronized (getClassLoadingLock(className)) {
+            String resourceName = className.replace('.', '/') + ".classdata";
+            InputStream is = getResourceAsStream(resourceName);
+            byte[] bytes = is.readAllBytes();
+            return defineClass(className, bytes, 0, bytes.length);
+        }
     }
 }
 ```
@@ -302,7 +309,7 @@ For Maven users, the `btrace-maven-plugin` provides equivalent functionality:
 
 The Maven plugin follows the same staging process as the Gradle plugin:
 
-1. Resolves `btrace-agent` and `btrace-boot` from Maven Central
+1. Resolves the `btrace` artifact (single masked JAR) from Maven Central
 2. Resolves each extension artifact (API JAR with classifier `api`, impl JAR with classifier `impl`)
 3. Stages API classes as `.class` files (bootstrap)
 4. Stages impl classes as `.classdata` files (runtime-loaded)
@@ -317,7 +324,6 @@ The Maven plugin follows the same staging process as the Gradle plugin:
 
 ## Related Documentation
 
-- [Extension Development Guide](../btrace-extension-development-guide.md)
+- [Extension Development Guide](../BTraceExtensionDevelopmentGuide.md)
 - [Provided-Style Extensions](provided-style-extensions.md)
-- [Extension Configuration](extension-configuration.md)
 - [Migrating from libs/profiles](migrating-from-libs-profiles.md)
