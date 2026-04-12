@@ -365,9 +365,8 @@ btraceFatAgent {
     baseName = 'btrace-agent-fat'
     outputDir = libsDir
 
-    // Reference agent and boot JAR tasks
-    agentJarTask = 'agentJar'
-    bootJarTask = 'bootJar'
+    // Reference the single masked JAR (agent + boot merged into btraceJar)
+    agentJarTask = 'btraceJar'
 
     // Auto-discover extensions from subprojects
     autoDiscover = true
