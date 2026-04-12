@@ -84,12 +84,11 @@ jbang btrace@btraceio <PID> <script.java>
 jbang io.btrace:btrace-client:<version> --extract-agent ~/.btrace
 
 # This creates:
-#   ~/.btrace/btrace-agent.jar
-#   ~/.btrace/btrace-boot.jar
+#   ~/.btrace/btrace.jar (single masked JAR — primary)
+#   ~/.btrace/btrace-agent.jar and ~/.btrace/btrace-boot.jar (legacy, backward compat)
 
-# Then use them explicitly:
-jbang btrace@btraceio --agent-jar ~/.btrace/btrace-agent.jar \
-             --boot-jar ~/.btrace/btrace-boot.jar \
+# Then use it explicitly:
+jbang btrace@btraceio --agent-jar ~/.btrace/btrace.jar \
              <PID> <script.java>
 ```
 
@@ -97,13 +96,15 @@ jbang btrace@btraceio --agent-jar ~/.btrace/btrace-agent.jar \
 After jbang downloads BTrace, find the JARs in your local Maven repository (default `~/.m2`):
 ```bash
 # JARs are cached at:
-~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
-~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
+~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 
-# Use them directly:
-jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
-             --boot-jar ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
+# Use it directly:
+jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar \
              <PID> <script.java>
+
+# Legacy coordinates (backward compat):
+# ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
+# ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
 ```
 
 **Benefits:**
@@ -336,13 +337,11 @@ jbang btrace@btraceio -v 12345 MyTrace.java arg1 arg2
 
 # Extract agent JARs, then use them explicitly
 jbang btrace@btraceio --extract-agent ~/.btrace
-jbang btrace@btraceio --agent-jar ~/.btrace/btrace-agent.jar \
-             --boot-jar ~/.btrace/btrace-boot.jar \
+jbang btrace@btraceio --agent-jar ~/.btrace/btrace.jar \
              12345 MyTrace.java
 
 # Or use JARs from Maven local repository (after jbang downloads them)
-jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
-             --boot-jar ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
+jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar \
              12345 MyTrace.java
 ```
 
@@ -382,7 +381,7 @@ btrace -v 12345 MyTrace.java arg1 arg2
 Start a Java application with BTrace agent and a pre-compiled script:
 
 ```bash
-java -javaagent:btrace-agent.jar=script=<script.class>[,arg1=value1]... YourApp
+java -javaagent:btrace.jar=script=<script.class>[,arg1=value1]... YourApp
 ```
 
 **When to use:**
@@ -396,7 +395,7 @@ java -javaagent:btrace-agent.jar=script=<script.class>[,arg1=value1]... YourApp
 btracec MyTrace.java
 
 # Then run with agent
-java -javaagent:/path/to/btrace-agent.jar=script=MyTrace.class MyApp
+java -javaagent:/path/to/btrace.jar=script=MyTrace.class MyApp
 ```
 
 ### 4. Launcher Mode (btracer)
@@ -692,7 +691,7 @@ For environments where managing multiple JARs is impractical (Spark executors, H
 ### Why Fat Agent?
 
 Standard BTrace deployment requires multiple files:
-- `btrace-agent.jar` + `btrace-boot.jar`
+- `btrace.jar` (or legacy `btrace-agent.jar` + `btrace-boot.jar`)
 - Extension JARs in `$BTRACE_HOME/extensions/`
 
 The fat agent bundles everything into a single JAR that works without `$BTRACE_HOME`.

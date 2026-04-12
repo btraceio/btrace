@@ -496,7 +496,7 @@ btracer MyTrace.class java -Xmx2g -jar myapp.jar
 ### Java Agent Mode
 Start app with BTrace agent directly.
 ```bash
-java -javaagent:/path/to/btrace-agent.jar=script=<script.class>[,arg=value]... YourApp
+java -javaagent:/path/to/btrace.jar=script=<script.class>[,arg=value]... YourApp
 ```
 
 **Agent Parameters:**
@@ -509,10 +509,10 @@ java -javaagent:/path/to/btrace-agent.jar=script=<script.class>[,arg=value]... Y
 **Examples:**
 ```bash
 # Basic agent mode
-java -javaagent:btrace-agent.jar=script=MyTrace.class MyApp
+java -javaagent:btrace.jar=script=MyTrace.class MyApp
 
 # With custom port
-java -javaagent:btrace-agent.jar=script=MyTrace.class,port=2020 MyApp
+java -javaagent:btrace.jar=script=MyTrace.class,port=2020 MyApp
 ```
 
 ## Built-in Functions

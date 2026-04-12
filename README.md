@@ -155,13 +155,14 @@ jbang btrace <PID> <script.java>
 # Extract embedded JARs
 jbang btrace --extract-agent ~/.btrace
 
-# This creates ~/.btrace/btrace-agent.jar and ~/.btrace/btrace-boot.jar
+# This creates ~/.btrace/btrace.jar (single masked JAR)
 # Then use them:
-jbang btrace --agent-jar ~/.btrace/btrace-agent.jar --boot-jar ~/.btrace/btrace-boot.jar <PID> <script.java>
+jbang btrace --agent-jar ~/.btrace/btrace.jar <PID> <script.java>
 
-# Or find them in Maven local repository (after first jbang run):
-# ~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
-# ~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
+# Or find in Maven local repository (after first jbang run):
+# ~/.m2/repository/org/openjdk/btrace/btrace/<version>/btrace-<version>.jar
+#
+# Legacy jar names (btrace-agent.jar, btrace-boot.jar) are still extracted for backward compatibility.
 ```
 
 See [Getting Started Guide](docs/GettingStarted.md#jbang-installation-recommended-for-quick-start) for complete JBang documentation and examples.
@@ -343,8 +344,8 @@ Note: Extension “required permissions” are informational and help operators 
 
 #### Agent Policy and Allow/Deny Lists
 - Launch-time policy can be set via agent args (operator-controlled):
-  - `-javaagent:btrace-agent.jar=...,grant=NETWORK,THREADS,grantAll=false`
-  - `-javaagent:btrace-agent.jar=...,allowExtensions=btrace-statsd,my-metrics,denyExtensions=legacy-foo`
+  - `-javaagent:btrace.jar=...,grant=NETWORK,THREADS,grantAll=false`
+  - `-javaagent:btrace.jar=...,allowExtensions=btrace-statsd,my-metrics,denyExtensions=legacy-foo`
 - Optional policy file (process-local): `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`.
 - When an extension impl is blocked, the API remains on bootstrap so SHIMs can be generated.
 
