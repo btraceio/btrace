@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
+import java.util.regex.Pattern;
 import org.openjdk.btrace.core.extensions.PermissionSet;
 import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
 import org.openjdk.btrace.extension.ExtensionRepository;
@@ -70,6 +71,10 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
 
   /** Priority for embedded extensions (lowest - can be overridden by filesystem extensions). */
   public static final int EMBEDDED_PRIORITY = -100;
+
+  private static final Pattern VALID_CLASS_NAME_PATTERN =
+      Pattern.compile(
+          "^[a-zA-Z_][a-zA-Z0-9_]*+(\\.[a-zA-Z_][a-zA-Z0-9_$]*+)*+(\\$[a-zA-Z_][a-zA-Z0-9_$]*+)*+$");
 
   private static final String EXTENSIONS_BASE = "META-INF/btrace-extensions/";
   private static final String MANIFEST_ATTR = "BTrace-Embedded-Extensions";
@@ -298,8 +303,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     }
     // Basic validation: must be a valid Java identifier pattern
     // Allows: package.Class, package.Class$Inner
-    return className.matches(
-        "^[a-zA-Z_][a-zA-Z0-9_]*+(\\.[a-zA-Z_][a-zA-Z0-9_$]*+)*+(\\$[a-zA-Z_][a-zA-Z0-9_$]*+)*+$");
+    return VALID_CLASS_NAME_PATTERN.matcher(className).matches();
   }
 
   /**
