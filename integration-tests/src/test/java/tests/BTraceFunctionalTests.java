@@ -464,8 +464,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
   @Test
   public void testOnMethodUnattended() throws Exception {
     TestApp testApp = launchTestApp("resources.Main");
-    try {
-      File traceFile = locateTrace("btrace/OnMethodTest.java");
+    File traceFile = locateTrace("btrace/OnMethodTest.java");
 
     String pid = String.valueOf(testApp.getPid());
     String host = "localhost";
