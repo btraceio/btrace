@@ -28,12 +28,16 @@ public class ManifestLibsTests extends RuntimeTest {
     // Toggle manifest-libs feature and skip libs for these tests
     System.setProperty("btrace.feature.manifestLibs", "true");
     System.setProperty("btrace.test.skipLibs", "true");
+    // Use a distinct port to avoid contention with other test classes
+    // that may leave port 2020 briefly occupied after teardown
+    System.setProperty("btrace.port", "2022");
   }
 
   @AfterEach
   public void cleanupProps() {
     System.clearProperty("btrace.feature.manifestLibs");
     System.clearProperty("btrace.test.skipLibs");
+    System.clearProperty("btrace.port");
   }
 
   @Test
