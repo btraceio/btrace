@@ -895,7 +895,7 @@ public final class Main {
         if (idx > -1) {
           bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
         }
-      } (feat(agent,client,extension,docs,tests): add manifest-libs (flag) + libs deprecation; provided-style helpers; examples; tests\n\n- agent: manifest-driven libs (flagged), centralized classpath append with dedup + diagnostics; deprecate libs (debug log); add single-jar system CL escape hatch; test knob scoped to manifest-libs\n- client: pass-through of btrace.* props to agent using $ system props\n- extension: add ClassLoadingUtil and MethodHandleCache for provided-style extensions\n- examples: add btrace-extensions/examples/{btrace-spark,btrace-hadoop} with README\n- docs: research + provided-style guide + migration + examples index; README deprecation note\n- tests: add ManifestLibsTests; gradle knob for btrace.test.skipLibs\n\nBREAKING CHANGE: libs/profiles deprecated with planned removal after N+2; prefer extensions)
+      }
     }
 
     String bootClassPath = argMap.get(BOOT_CLASS_PATH);
