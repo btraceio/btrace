@@ -60,11 +60,12 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
 
   @Test
   public void testExtensionInitializeAndCloseCalled() throws Exception {
+    attachDelayMs = 500;
     testDynamic(
         "resources.Main",
         "btrace/ExtensionLifecycleFullTest.java",
         new String[] {"extensionCloseTest=true"},
-        2,
+        10,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -80,11 +81,12 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
 
   @Test
   public void testExtensionCloseCalledOnError() throws Exception {
+    attachDelayMs = 500;
     testDynamic(
         "resources.Main",
         "btrace/ExtensionLifecycleErrorTest.java",
         new String[] {"extensionCloseTest=true"},
-        2,
+        10,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
@@ -101,11 +103,12 @@ public class ExtensionLifecycleIntegrationTest extends RuntimeTest {
 
   @Test
   public void testMultipleExtensionsAllClosed() throws Exception {
+    attachDelayMs = 500;
     testDynamic(
         "resources.Main",
         "btrace/ExtensionLifecycleMultipleTest.java",
         new String[] {"extensionCloseTest=true"},
-        3,
+        10,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
