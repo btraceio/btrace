@@ -51,6 +51,10 @@ import java.util.concurrent.ConcurrentMap;
  */
 public final class ClassDataLoader extends ClassLoader {
 
+  static {
+    registerAsParallelCapable();
+  }
+
   private static final String CLASSDATA_SUFFIX = ".classdata";
   private static final int BUFFER_SIZE = 8192;
 
@@ -76,32 +80,21 @@ public final class ClassDataLoader extends ClassLoader {
     // Lock-free fast path for warm cache: avoids taking the per-name class-loading lock
     // when the class has already been defined.
     Class<?> cached = loadedClasses.get(name);
-    if (cached != null) {
-      return cached;
-    }
+    if (cached != null) return cached;
 
     // Serialize the defineClass path per name so two threads racing on the same class
-    // cannot both reach defineClass and trigger a LinkageError. getClassLoadingLock
-    // returns this when the ClassLoader is not parallel-capable, giving us a single
-    // lock that still works correctly under all JVM delegation paths (including any
-    // direct findClass callers that bypass loadClass).
+    // cannot both reach defineClass and trigger a LinkageError.
     synchronized (getClassLoadingLock(name)) {
       cached = loadedClasses.get(name);
-      if (cached != null) {
-        return cached;
-      }
-
+      if (cached != null) return cached;
       String resourcePath = name.replace('.', '/') + CLASSDATA_SUFFIX;
       byte[] classBytes = loadClassData(resourcePath);
       if (classBytes == null) {
         throw new ClassNotFoundException(name + " (no .classdata resource found)");
       }
-
-      // Validate bytecode before defining - ensures we're loading a valid class file
       if (!isValidClassFile(classBytes)) {
         throw new ClassNotFoundException(name + " (invalid class file format)");
       }
-
       Class<?> clazz = defineClass(name, classBytes, 0, classBytes.length);
       loadedClasses.put(name, clazz);
       return clazz;
