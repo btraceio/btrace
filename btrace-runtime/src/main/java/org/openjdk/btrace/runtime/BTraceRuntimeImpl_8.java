@@ -85,15 +85,6 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
 
   private static Perf perf;
 
-  /**
-   * Re-entrancy guard for isBootstrapClass(): on JDK 8, calling findBootstrapOrNullMtd.invoke()
-   * after 15 invocations triggers reflection inflation which creates sun/reflect/GeneratedMethodAccessorN.
-   * If that class-creation callback re-enters isBootstrapClass() (via BTraceTransformer.transform()
-   * → getCommonSuperClass() → ClassInfo → inferClassLoader()), the inflation would recurse
-   * indefinitely, causing StackOverflowError. This ThreadLocal breaks the cycle.
-   */
-  private static final ThreadLocal<Boolean> inBootstrapCheck = new ThreadLocal<>();
-
   private final boolean hasJfr;
 
   private final Method findBootstrapOrNullMtd;
@@ -237,21 +228,9 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
 
   @Override
   public boolean isBootstrapClass(String className) {
-    if (findBootstrapOrNullMtd == null) return false;
-    // Guard against re-entrant calls triggered by JDK 8 reflection inflation:
-    // the first invoke() past the 15-call threshold creates sun/reflect/GeneratedMethodAccessorN,
-    // whose class-loading triggers BTraceTransformer.transform() → ClassInfo → inferClassLoader()
-    // → isBootstrapClass() again. Without this guard that creates an unbounded recursion.
-    if (Boolean.TRUE.equals(inBootstrapCheck.get())) {
-      return false;
-    }
-    inBootstrapCheck.set(Boolean.TRUE);
     try {
-      return findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
+      return findBootstrapOrNullMtd != null && findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
     } catch (IllegalAccessException | InvocationTargetException ignored) {}
-    finally {
-      inBootstrapCheck.remove();
-    }
     return false;
   }
 

@@ -127,6 +127,26 @@ public final class BTraceTransformer implements ClassFileTransformer {
         return transformed;
       }
 
+      // Skip JVM-synthesized reflective accessor classes regardless of class loader.
+      // On JDK 8, when the agent makes any reflective Method.invoke() call past the
+      // inflation threshold (~15 calls per Method instance), the JVM generates
+      // "sun/reflect/GeneratedMethodAccessorN" via ClassLoader.defineClass() in a
+      // sun.reflect.DelegatingClassLoader. That loader is neither null nor the system
+      // CL, so the loader-gated isSensitiveClass() check below does NOT filter these
+      // classes. Without this early-exit, transforming the synthetic accessor calls
+      // ASM's getCommonSuperClass() → ClassInfo.inferClassLoader() → BTraceRuntimeImpl_8
+      // .isBootstrapClass() → another reflective invoke() → another inflation → another
+      // transform() callback → recursion → StackOverflowError. Tracing JVM-synthesized
+      // reflective trampolines also serves no purpose: they are 1:1 forwarders to the
+      // target Method, which user probes can already trace directly. The "Generated"
+      // discriminator subsumes Method/Constructor/SerializationConstructor accessors;
+      // JDK 9–16 names them under jdk/internal/reflect; JDK 17+ uses hidden classes
+      // that are never reported by name to ClassFileTransformer.transform().
+      if (className.startsWith("sun/reflect/Generated")
+          || className.startsWith("jdk/internal/reflect/Generated")) {
+        return null;
+      }
+
       if (probes.isEmpty()) return null;
       if ((loader == null || loader.equals(ClassLoader.getSystemClassLoader()))
           && isSensitiveClass(className)) {
