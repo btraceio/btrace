@@ -50,22 +50,22 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 4. **Cloud Deployments** → [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes), [FAQ: K8s](FAQ.md#can-i-use-btrace-with-microservices)
 5. **Fat Agent JAR** → [Getting Started: Fat Agent](GettingStarted.md#fat-agent-jar-single-jar-deployment) for single-JAR deployment
 6. **Level Filtering** → [Quick Reference: @Level](QuickReference.md#level)
-7. **Extensions Architecture** → [Extension invokedynamic Bridge](architecture/extension-invokedynamic-bridge.md)
+7. **Extensions Architecture** → [Extension invokedynamic Bridge](architecture/ExtensionInvokeDynamicBridge.md)
 
 ## Documentation by Topic
 
 ### Core Features
-- **Method Tracing** → [Tutorial Lesson 1](btraceTutorial.md), [Quick Reference: @OnMethod](quickReference.md#onmethod)
-- **Timing & Duration** → [Quick Reference: @Duration](quickReference.md#parameter-annotations), [Pattern: Method Timing](quickReference.md#pattern-1-method-entrye xit-timing)
-- **Exception Tracking** → [Quick Reference: Kind.ERROR](quickReference.md#location-kinds), [Pattern: Exception Tracking](quickReference.md#pattern-3-exception-tracking)
-- **Field Access** → [Quick Reference: Kind.FIELD_GET/SET](quickReference.md#location-kinds)
+- **Method Tracing** → [Tutorial Lesson 1](BTraceTutorial.md), [Quick Reference: @OnMethod](QuickReference.md#onmethod)
+- **Timing & Duration** → [Quick Reference: @Duration](QuickReference.md#parameter-annotations), [Pattern: Method Timing](QuickReference.md#pattern-1-method-entrye xit-timing)
+- **Exception Tracking** → [Quick Reference: Kind.ERROR](QuickReference.md#location-kinds), [Pattern: Exception Tracking](QuickReference.md#pattern-3-exception-tracking)
+- **Field Access** → [Quick Reference: Kind.FIELD_GET/SET](QuickReference.md#location-kinds)
 
 ### Advanced Features
-- **JFR Integration** → [Getting Started: JFR](gettingStarted.md#advanced-jfr-integration), [Quick Reference: @Event](quickReference.md#event), [FAQ: JFR](faq.md#jfr-integration)
-- **Sampling** → [Quick Reference: @Sampled](quickReference.md#sampled), [FAQ: Performance](faq.md#btrace-causes-significant-slowdown)
-- **Level Control** → [Quick Reference: @Level](quickReference.md#level)
-- **Aggregations** → [Quick Reference: Aggregation Functions](quickReference.md#aggregation-functions)
-- **Periodic Events** → [Quick Reference: @OnTimer](quickReference.md#ontimer), [@PeriodicEvent](quickReference.md#periodicevent)
+- **JFR Integration** → [Getting Started: JFR](GettingStarted.md#advanced-jfr-integration), [Quick Reference: @Event](QuickReference.md#event), [FAQ: JFR](FAQ.md#jfr-integration)
+- **Sampling** → [Quick Reference: @Sampled](QuickReference.md#sampled), [FAQ: Performance](FAQ.md#btrace-causes-significant-slowdown)
+- **Level Control** → [Quick Reference: @Level](QuickReference.md#level)
+- **Aggregations** → [Quick Reference: Aggregation Functions](QuickReference.md#aggregation-functions)
+- **Periodic Events** → [Quick Reference: @OnTimer](QuickReference.md#ontimer), [@PeriodicEvent](QuickReference.md#periodicevent)
 
 ### Deployment & Operations
 - **Installation** → [Getting Started: Installation](GettingStarted.md#installation)
@@ -77,17 +77,17 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 - **Extensions CLI (btracex)** → [Permission Policy](PermissionPolicy.md) for allow/deny and quick inspection
 
 ### Problem Solving
-- **No Output** → [Troubleshooting: No Output](troubleshooting.md#no-output-from-scripts)
-- **Attachment Fails** → [Troubleshooting: JVM Attachment](troubleshooting.md#jvm-attachment-issues)
-- **Verification Errors** → [Troubleshooting: Verification](troubleshooting.md#script-verification-errors)
-- **Performance Issues** → [Troubleshooting: Performance](troubleshooting.md#performance-issues)
-- **Compatibility** → [Troubleshooting: Compatibility](troubleshooting.md#compatibility-issues)
+- **No Output** → [Troubleshooting: No Output](Troubleshooting.md#no-output-from-scripts)
+- **Attachment Fails** → [Troubleshooting: JVM Attachment](Troubleshooting.md#jvm-attachment-issues)
+- **Verification Errors** → [Troubleshooting: Verification](Troubleshooting.md#script-verification-errors)
+- **Performance Issues** → [Troubleshooting: Performance](Troubleshooting.md#performance-issues)
+- **Compatibility** → [Troubleshooting: Compatibility](Troubleshooting.md#compatibility-issues)
 
 ### Integration
-- **Spring Boot** → [FAQ: Spring Boot](faq.md#can-i-use-btrace-with-spring-boot-applications)
-- **Third-Party Libraries** → [FAQ: Third-Party](faq.md#how-do-i-trace-methods-from-third-party-libraries)
-- **JMX Export** → [Quick Reference: @Export](quickReference.md#export), [FAQ: Monitoring Integration](faq.md#can-i-integrate-btrace-with-monitoring-systems)
-- **Service Mesh** → [FAQ: Service Mesh](faq.md#does-btrace-work-with-service-meshes-istiolinkerd)
+- **Spring Boot** → [FAQ: Spring Boot](FAQ.md#can-i-use-btrace-with-spring-boot-applications)
+- **Third-Party Libraries** → [FAQ: Third-Party](FAQ.md#how-do-i-trace-methods-from-third-party-libraries)
+- **JMX Export** → [Quick Reference: @Export](QuickReference.md#export), [FAQ: Monitoring Integration](FAQ.md#can-i-integrate-btrace-with-monitoring-systems)
+- **Service Mesh** → [FAQ: Service Mesh](FAQ.md#does-btrace-work-with-service-meshes-istiolinkerd)
 
 ### Architecture
 - **Masked JAR** → [Masked JAR Architecture](architecture/MaskedJarArchitecture.md) — single-JAR distribution with classdata masking

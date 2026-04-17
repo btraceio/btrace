@@ -1,6 +1,6 @@
 # BTrace Tutorial (BTrace 2.3.0)
 
-> **Note:** Examples use `btrace.jar` -- the single masked JAR. If using a legacy multi-JAR distribution, substitute `btrace.jar`.
+> **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
 
 ## 1. Hello World
 

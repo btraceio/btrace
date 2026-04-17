@@ -479,7 +479,10 @@ public final class Main {
    * does not emit a misleading "Loaded bundled probe" info line.
    */
   private static boolean loadEmbeddedProbe(String resourcePath, String probeName, boolean traceToStdOut) {
-    try (InputStream is = Main.class.getClassLoader().getResourceAsStream(resourcePath)) {
+    ClassLoader loader = Main.class.getClassLoader();
+    try (InputStream is = loader != null
+        ? loader.getResourceAsStream(resourcePath)
+        : ClassLoader.getSystemResourceAsStream(resourcePath)) {
       if (is == null) {
         log.debug("Probe resource not found: {}", resourcePath);
         return false;
@@ -1046,11 +1049,12 @@ public final class Main {
       // Synchronize the check-then-act so two threads cannot both pass the "not yet added"
       // check and both call appendToBootstrapClassLoaderSearch for the same jar.
       synchronized (BOOT_ADDED) {
-        if (!BOOT_ADDED.add(rp)) {
+        if (BOOT_ADDED.contains(rp)) {
           if (log.isDebugEnabled()) log.debug("Skipping duplicate bootstrap jar: {}", rp);
           return;
         }
         inst.appendToBootstrapClassLoaderSearch(asJarFile(rp.toFile()));
+        BOOT_ADDED.add(rp);
       }
       if (log.isDebugEnabled()) log.debug("Added to bootstrap: {}", rp);
     } catch (IOException e) {
@@ -1066,11 +1070,12 @@ public final class Main {
         return;
       }
       synchronized (SYSTEM_ADDED) {
-        if (!SYSTEM_ADDED.add(rp)) {
+        if (SYSTEM_ADDED.contains(rp)) {
           if (log.isDebugEnabled()) log.debug("Skipping duplicate system jar: {}", rp);
           return;
         }
         inst.appendToSystemClassLoaderSearch(asJarFile(rp.toFile()));
+        SYSTEM_ADDED.add(rp);
       }
       if (log.isDebugEnabled()) log.debug("Added to system: {}", rp);
     } catch (IOException e) {

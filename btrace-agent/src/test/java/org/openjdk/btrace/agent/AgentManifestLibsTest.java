@@ -10,6 +10,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -422,8 +423,8 @@ class AgentManifestLibsTest {
     @Test
     @DisplayName("stores boot and system jars")
     void storesJars() {
-      List<Path> boot = List.of(tempDir.resolve("boot.jar"));
-      List<Path> system = List.of(tempDir.resolve("sys.jar"));
+      List<Path> boot = Collections.singletonList(tempDir.resolve("boot.jar"));
+      List<Path> system = Collections.singletonList(tempDir.resolve("sys.jar"));
 
       AgentManifestLibs.ResolvedLibs resolved = new AgentManifestLibs.ResolvedLibs(boot, system);
 

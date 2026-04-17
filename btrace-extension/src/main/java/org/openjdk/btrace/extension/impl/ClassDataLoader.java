@@ -72,7 +72,7 @@ public final class ClassDataLoader extends ClassLoader {
   public ClassDataLoader(String extensionId, ClassLoader resourceLoader, ClassLoader parent) {
     super(parent);
     this.extensionId = extensionId;
-    this.resourceLoader = resourceLoader;
+    this.resourceLoader = resourceLoader != null ? resourceLoader : ClassLoader.getSystemClassLoader();
   }
 
   @Override

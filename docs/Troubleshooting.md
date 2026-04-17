@@ -2,7 +2,7 @@
 
 This guide helps you diagnose and resolve common BTrace issues.
 
-> **Note:** Examples use `btrace.jar` -- the single masked JAR. If using a legacy multi-JAR distribution, substitute `btrace.jar`.
+> **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
 
 ## Table of Contents
 1. [JVM Attachment Issues](#jvm-attachment-issues)
