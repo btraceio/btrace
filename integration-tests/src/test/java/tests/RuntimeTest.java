@@ -1323,10 +1323,6 @@ public abstract class RuntimeTest {
     if (unattended) {
       argVals.add("-x");
     }
-    if (btracePort > 0) {
-      argVals.add("-p");
-      argVals.add(String.valueOf(btracePort));
-    }
     argVals.addAll(Arrays.asList(pid, traceFile.getAbsolutePath()));
     if (cmdArgs != null) {
       argVals.addAll(Arrays.asList(cmdArgs));
