@@ -253,7 +253,7 @@ public final class BTraceProbeSupport {
       if (log.isDebugEnabled()) {
         log.debug("about to defineClass {}", getClassName(false));
       }
-      Class<?> clz = rt.defineClass(code, isTransforming());
+      Class<?> clz = rt.defineClass(code);
       if (log.isDebugEnabled()) {
         log.debug("defineClass succeeded for {}", getClassName(false));
       }

@@ -128,7 +128,7 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
+  public Class<?> defineClass(byte[] code) {
     Unsafe unsafe = BTraceRuntime.initUnsafe();
     if (unsafe != null) {
       // Use stack trace instead of Reflection.getCallerClass() to avoid
@@ -141,9 +141,7 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       }
       // Always define the probe in a fresh, isolated ClassLoader (parented to bootstrap).
       // This makes the probe class unloadable once the probe's MethodHandles and its
-      // BTraceProbe.probeClass reference are cleared on unregister. The mustBeBootstrap
-      // parameter is retained in the signature for source compatibility; a follow-up will
-      // drop it.
+      // BTraceProbe.probeClass reference are cleared on unregister.
       ClassLoader loader = new ClassLoader(null) {};
       Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
       unsafe.ensureClassInitialized(cl);

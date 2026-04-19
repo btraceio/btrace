@@ -125,6 +125,19 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
     runtimes.put(className, rt);
   }
 
+  /**
+   * Drop the {@link BTraceRuntime.Impl} previously registered for {@code className}.
+   *
+   * <p>Releases the strong GC root the registry map holds on a runtime (and anything it
+   * transitively reaches — notably {@code Class<?>}, {@code MethodHandle}s, and its
+   * defining {@code ClassLoader}). Callers that create a runtime via
+   * {@code BTraceRuntimes.getRuntime(...)} and then abort <strong>must</strong> call this
+   * to avoid a permanent Metaspace / object leak.
+   */
+  static void removeRuntime(String className) {
+    runtimes.remove(className);
+  }
+
   /** Enter method is called by every probed method just before the probe actions start. */
   static boolean enterInternal(BTraceRuntime.Impl currentRt) {
     BTraceRuntimeImplBase current = (BTraceRuntimeImplBase) currentRt;

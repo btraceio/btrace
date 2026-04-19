@@ -23,7 +23,7 @@ import org.openjdk.btrace.runtime.BTraceRuntimes;
 
 /**
  * Verifies that a probe {@code Class<?>} defined through
- * {@link BTraceRuntime.Impl#defineClass(byte[], boolean)} becomes weakly reachable once
+ * {@link BTraceRuntime.Impl#defineClass(byte[])} becomes weakly reachable once
  * all caller-held strong references are dropped.
  *
  * <p>This test asserts <strong>weak reachability</strong> only — it does NOT assert that
@@ -37,8 +37,9 @@ import org.openjdk.btrace.runtime.BTraceRuntimes;
  *   <li>JDK 9-10 → {@code privateLookupIn(anchor, ...).defineClass} where {@code anchor}
  *       is a per-probe class in a fresh unnamed loader.</li>
  *   <li>JDK 11-14 → same anchor-based path as 9-10.</li>
- *   <li>JDK 15+ → {@code defineHiddenClass(..., STRONG)}; hidden-class lifetime is tied to
- *       the returned {@code Class<?>} reachability rather than a per-probe loader.</li>
+ *   <li>JDK 15+ path uses {@code defineHiddenClass(code, true)} with no
+ *       {@code ClassOption}, so the hidden class is unloadable when its
+ *       {@code Class<?>} mirror becomes unreachable.</li>
  * </ul>
  *
  * <p>On JDK 15+ the probe's reported {@code ClassLoader} is the loader of
@@ -80,7 +81,12 @@ public class ProbeClassUnloadingTest {
    * All strong references to the probe {@code Class<?>}, its {@code ClassLoader}, and
    * the {@link BTraceRuntime.Impl} live only in this helper method's frame. When it
    * returns, those locals go out of scope, enabling GC to collect the class.
+   *
+   * <p>Correctness depends on this helper not being inlined into the {@code @Test}
+   * method: inlining would keep the Impl and probe-{@code Class<?>} locals alive in the
+   * test frame across the GC loop, masking any retention regression.
    */
+  // WARNING: do not inline — test depends on helper-frame locals going out of scope before GC
   private static WeakReference<?>[] defineAndDropProbe() {
     // Use the Auxiliary package so the bytes are in the same package as the Lookup
     // class on the JDK 15+ hidden-class path.
@@ -97,7 +103,7 @@ public class ProbeClassUnloadingTest {
     Assertions.assertNotNull(rt, "runtime must be created");
 
     byte[] bytes = generateMinimalClass(probeName);
-    Class<?> probeClass = rt.defineClass(bytes, false);
+    Class<?> probeClass = rt.defineClass(bytes);
     Assertions.assertNotNull(probeClass, "defineClass must succeed");
 
     ClassLoader probeLoader = probeClass.getClassLoader();
@@ -110,19 +116,8 @@ public class ProbeClassUnloadingTest {
     WeakReference<ClassLoader> weakLoader =
         loaderIsIsolated ? new WeakReference<>(probeLoader) : null;
 
-    // Release the strong Impl registration in BTraceRuntimeAccessImpl.runtimes so the
-    // runtime (and any field chain it might host later) is also collectable.
-    try {
-      Class<?> access =
-          Class.forName("org.openjdk.btrace.runtime.BTraceRuntimeAccessImpl");
-      java.lang.reflect.Field f = access.getDeclaredField("runtimes");
-      f.setAccessible(true);
-      java.util.Map<?, ?> m = (java.util.Map<?, ?>) f.get(null);
-      m.remove(probeName);
-    } catch (ReflectiveOperationException ignored) {
-      // Non-fatal: on the hidden-class path the probe Class<?> isn't retained by the
-      // runtime map anyway (the runtime's `clazz` field is only set by init()).
-    }
+    // Release the runtime GC root in BTraceRuntimeAccessImpl.runtimes so the class can be collected.
+    BTraceRuntimes.removeRuntime(probeName);
 
     return new WeakReference<?>[] {weakClass, weakLoader};
   }

@@ -37,7 +37,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
 import org.openjdk.btrace.core.ArgsMap;
@@ -83,8 +82,6 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
 
   private static Perf perf;
 
-  private static final AtomicLong ANCHOR_SEQ = new AtomicLong();
-
   private final Method findBootstrapOrNullMtd;
 
   public BTraceRuntimeImpl_9() {
@@ -127,7 +124,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
+  public Class<?> defineClass(byte[] code) {
     try {
       // Use StackWalker instead of Reflection.getCallerClass() to avoid
       // CallerSensitive annotation requirement (only works from bootstrap CL)
@@ -144,7 +141,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
       // ClassLoader. The probe ends up in that loader; once we drop our references
       // and the HandlerRepository evicts its MethodHandles, the loader becomes
       // unreachable and the probe class is unloadable.
-      Class<?> anchor = defineAnchorClass();
+      Class<?> anchor = ProbeAnchor.defineAnchor();
       Class<?> clz =
           MethodHandles.privateLookupIn(anchor, MethodHandles.lookup()).defineClass(code);
       // initialize the class by creating a dummy instance
@@ -161,131 +158,12 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   }
 
   /**
-   * Emit a tiny, unique, public anchor class into a brand-new unnamed {@link ClassLoader}
-   * so that a subsequent {@code privateLookupIn(anchor, ...).defineClass(probeBytes)}
-   * places the probe into that isolated loader.
+   * Test-only helper: load the provided class bytes into the shared {@code Auxiliary}
+   * loader via {@code privateLookupIn}. Used by instrumentation unit tests that inspect
+   * rewritten probe bytecode alongside the agent's own classes; production probe loading
+   * goes through {@link #defineClass(byte[])} which isolates each probe in its own loader.
    */
-  private static Class<?> defineAnchorClass() {
-    long seq = ANCHOR_SEQ.incrementAndGet();
-    final String binaryName = "org.openjdk.btrace.runtime.auxiliary.Anchor$" + seq;
-    final String internalName = binaryName.replace('.', '/');
-    final byte[] bytes = generateAnchorBytes(internalName);
-    ClassLoader cl = new ClassLoader(null) {
-      @Override
-      protected Class<?> findClass(String name) throws ClassNotFoundException {
-        if (name.equals(binaryName)) {
-          return defineClass(name, bytes, 0, bytes.length);
-        }
-        throw new ClassNotFoundException(name);
-      }
-    };
-    try {
-      return Class.forName(binaryName, true, cl);
-    } catch (ClassNotFoundException e) {
-      throw new IllegalStateException("failed to define probe anchor class", e);
-    }
-  }
-
-  /**
-   * Hand-assembled class file for:
-   * <pre>public final class &lt;internalName&gt; { public &lt;init&gt;() { super(); } }</pre>
-   * No ASM dependency on the runtime module's classpath.
-   */
-  private static byte[] generateAnchorBytes(String internalName) {
-    // Build a minimal class file targeting version 52 (Java 8) — works on 9+.
-    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-    java.io.DataOutputStream dos = new java.io.DataOutputStream(baos);
-    try {
-      // Constant pool entries:
-      //  #1 Methodref  #2.#3     -> java/lang/Object."<init>":()V
-      //  #2 Class      #4        -> java/lang/Object
-      //  #3 NameAndType #5:#6    -> <init>:()V
-      //  #4 Utf8       java/lang/Object
-      //  #5 Utf8       <init>
-      //  #6 Utf8       ()V
-      //  #7 Class      #8        -> this class
-      //  #8 Utf8       internalName
-      //  #9 Utf8       Code
-      dos.writeInt(0xCAFEBABE);
-      dos.writeShort(0); // minor
-      dos.writeShort(52); // major (Java 8 classfile)
-      dos.writeShort(10); // constant_pool_count = entries + 1
-      // #1 Methodref
-      dos.writeByte(10);
-      dos.writeShort(2);
-      dos.writeShort(3);
-      // #2 Class java/lang/Object
-      dos.writeByte(7);
-      dos.writeShort(4);
-      // #3 NameAndType <init>:()V
-      dos.writeByte(12);
-      dos.writeShort(5);
-      dos.writeShort(6);
-      // #4 Utf8 "java/lang/Object"
-      dos.writeByte(1);
-      dos.writeUTF("java/lang/Object");
-      // #5 Utf8 "<init>"
-      dos.writeByte(1);
-      dos.writeUTF("<init>");
-      // #6 Utf8 "()V"
-      dos.writeByte(1);
-      dos.writeUTF("()V");
-      // #7 Class this
-      dos.writeByte(7);
-      dos.writeShort(8);
-      // #8 Utf8 internalName
-      dos.writeByte(1);
-      dos.writeUTF(internalName);
-      // #9 Utf8 "Code"
-      dos.writeByte(1);
-      dos.writeUTF("Code");
-
-      // access_flags: public(0x0001) + final(0x0010) + super(0x0020)
-      dos.writeShort(0x0001 | 0x0010 | 0x0020);
-      dos.writeShort(7); // this_class
-      dos.writeShort(2); // super_class (Object)
-      dos.writeShort(0); // interfaces_count
-      dos.writeShort(0); // fields_count
-
-      // methods_count = 1  (public <init>()V)
-      dos.writeShort(1);
-      dos.writeShort(0x0001); // access_flags = public
-      dos.writeShort(5); // name_index = <init>
-      dos.writeShort(6); // descriptor_index = ()V
-      dos.writeShort(1); // attributes_count = 1 (Code)
-
-      // Code attribute bytes: aload_0; invokespecial #1; return
-      byte[] codeBytes = new byte[] {
-          0x2A,            // aload_0
-          (byte) 0xB7, 0x00, 0x01, // invokespecial #1
-          (byte) 0xB1      // return
-      };
-      // attribute_length = 2(max_stack)+2(max_locals)+4(code_length)+code.length+2(exc)+2(attrs)
-      int attrLen = 2 + 2 + 4 + codeBytes.length + 2 + 2;
-      dos.writeShort(9);        // attribute_name_index = "Code"
-      dos.writeInt(attrLen);
-      dos.writeShort(1);        // max_stack
-      dos.writeShort(1);        // max_locals
-      dos.writeInt(codeBytes.length);
-      dos.write(codeBytes);
-      dos.writeShort(0);        // exception_table_length
-      dos.writeShort(0);        // attributes_count (inside Code)
-
-      dos.writeShort(0); // class attributes_count
-      dos.flush();
-      return baos.toByteArray();
-    } catch (java.io.IOException e) {
-      throw new IllegalStateException("failed to assemble anchor class bytes", e);
-    }
-  }
-
-  /**
-   * A utility class to load class data in JPMS (Java 9+)
-   *
-   * @param code class data
-   * @return loaded class
-   */
-  public static Class<?> defineClass(byte[] code) {
+  public static Class<?> defineClassInAuxiliary(byte[] code) {
     try {
       Class<?> clz =
           MethodHandles.privateLookupIn(Auxiliary.class, MethodHandles.lookup()).defineClass(code);

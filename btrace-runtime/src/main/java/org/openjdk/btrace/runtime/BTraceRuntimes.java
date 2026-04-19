@@ -72,4 +72,18 @@ public final class BTraceRuntimes {
       String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
     return FACTORY != null ? FACTORY.getRuntime(className, args, cmdListener, inst) : null;
   }
+
+  /**
+   * Drop a runtime previously registered via {@link #getRuntime(String, ArgsMap,
+   * CommandListener, java.lang.instrument.Instrumentation)}.
+   *
+   * <p>This releases the internal registry's strong reference to the {@link
+   * BTraceRuntime.Impl} so its class, defining loader, and cached method handles can be
+   * collected. Required for any caller that creates a runtime and then aborts before
+   * attaching it through the normal lifecycle; without it the registry leaks one entry
+   * per aborted attach.
+   */
+  public static void removeRuntime(String className) {
+    BTraceRuntimeAccessImpl.removeRuntime(className);
+  }
 }
