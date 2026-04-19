@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
 import org.openjdk.btrace.core.ArgsMap;
@@ -81,6 +82,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   private static final int PERF_STRING_LIMIT = 256;
 
   private static Perf perf;
+
+  private static final AtomicLong ANCHOR_SEQ = new AtomicLong();
 
   private final Set<JfrEventFactoryImpl> eventFactories =
       new java.util.concurrent.CopyOnWriteArraySet<>();
@@ -212,12 +215,41 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
         throw new SecurityException("unsafe defineClass");
       }
 
+      if (Runtime.version().feature() >= 15) {
+        // Hidden class path: lifetime is tied to Class<?> reachability, so no
+        // per-probe ClassLoader is needed. defineHiddenClass(..., initialize=true, ...)
+        // also performs class initialization, so we skip the explicit newInstance()
+        // that older paths use.
+        //
+        // Reflective invocation because this source set targets JDK 11 where
+        // defineHiddenClass and Lookup.ClassOption do not exist yet.
+        MethodHandles.Lookup lookup =
+            MethodHandles.privateLookupIn(Auxiliary.class, MethodHandles.lookup());
+        // No ClassOption.STRONG: with the default (non-strong) policy the hidden class
+        // is unloadable as soon as the Class<?> mirror is no longer strongly reachable
+        // from outside the JVM. STRONG would tie its lifetime to the defining loader
+        // (i.e. the Auxiliary loader, shared with the agent) which defeats unloading.
+        Class<?> classOptionClass =
+            Class.forName("java.lang.invoke.MethodHandles$Lookup$ClassOption");
+        Object optionArray = java.lang.reflect.Array.newInstance(classOptionClass, 0);
+        Method defineHidden =
+            MethodHandles.Lookup.class.getMethod(
+                "defineHiddenClass", byte[].class, boolean.class, optionArray.getClass());
+        Object hiddenLookup = defineHidden.invoke(lookup, code, true, optionArray);
+        Method lookupClassMtd = hiddenLookup.getClass().getMethod("lookupClass");
+        return (Class<?>) lookupClassMtd.invoke(hiddenLookup);
+      }
+
+      // JDK 11-14: fall back to per-probe anchor + isolated ClassLoader so the
+      // probe class and its defining loader become unreachable on detach.
+      Class<?> anchor = defineAnchorClass();
       Class<?> clz =
-          MethodHandles.privateLookupIn(Auxiliary.class, MethodHandles.lookup()).defineClass(code);
+          MethodHandles.privateLookupIn(anchor, MethodHandles.lookup()).defineClass(code);
       // initialize the class by creating a dummy instance
       clz.getConstructor().newInstance();
       return clz;
     } catch (IllegalAccessException
+        | ClassNotFoundException
         | NoSuchMethodException
         | SecurityException
         | InstantiationException
@@ -225,6 +257,86 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
     }
     return null;
+  }
+
+  /**
+   * Emit a tiny, unique, public anchor class into a brand-new unnamed {@link ClassLoader}
+   * so that a subsequent {@code privateLookupIn(anchor, ...).defineClass(probeBytes)}
+   * places the probe into that isolated loader. Used only on JDK 11-14; JDK 15+ uses
+   * hidden classes instead.
+   */
+  private static Class<?> defineAnchorClass() {
+    long seq = ANCHOR_SEQ.incrementAndGet();
+    final String binaryName = "org.openjdk.btrace.runtime.auxiliary.Anchor$" + seq;
+    final byte[] bytes = generateAnchorBytes(binaryName.replace('.', '/'));
+    ClassLoader cl = new ClassLoader(null) {
+      @Override
+      protected Class<?> findClass(String name) throws ClassNotFoundException {
+        if (name.equals(binaryName)) {
+          return defineClass(name, bytes, 0, bytes.length);
+        }
+        throw new ClassNotFoundException(name);
+      }
+    };
+    try {
+      return Class.forName(binaryName, true, cl);
+    } catch (ClassNotFoundException e) {
+      throw new IllegalStateException("failed to define probe anchor class", e);
+    }
+  }
+
+  /**
+   * Hand-assembled class file for:
+   * <pre>public final class &lt;internalName&gt; { public &lt;init&gt;() { super(); } }</pre>
+   * No ASM dependency on the runtime module's classpath.
+   */
+  private static byte[] generateAnchorBytes(String internalName) {
+    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+    java.io.DataOutputStream dos = new java.io.DataOutputStream(baos);
+    try {
+      dos.writeInt(0xCAFEBABE);
+      dos.writeShort(0);
+      dos.writeShort(52); // Java 8 classfile; loadable on 11+
+      dos.writeShort(10);
+      dos.writeByte(10); dos.writeShort(2); dos.writeShort(3); // #1 Methodref
+      dos.writeByte(7);  dos.writeShort(4);                    // #2 Class java/lang/Object
+      dos.writeByte(12); dos.writeShort(5); dos.writeShort(6); // #3 NameAndType
+      dos.writeByte(1);  dos.writeUTF("java/lang/Object");     // #4
+      dos.writeByte(1);  dos.writeUTF("<init>");               // #5
+      dos.writeByte(1);  dos.writeUTF("()V");                  // #6
+      dos.writeByte(7);  dos.writeShort(8);                    // #7 this class
+      dos.writeByte(1);  dos.writeUTF(internalName);           // #8
+      dos.writeByte(1);  dos.writeUTF("Code");                 // #9
+
+      dos.writeShort(0x0001 | 0x0010 | 0x0020); // public final super
+      dos.writeShort(7);
+      dos.writeShort(2);
+      dos.writeShort(0);
+      dos.writeShort(0);
+
+      dos.writeShort(1);
+      dos.writeShort(0x0001);
+      dos.writeShort(5);
+      dos.writeShort(6);
+      dos.writeShort(1);
+
+      byte[] codeBytes = new byte[] {0x2A, (byte) 0xB7, 0x00, 0x01, (byte) 0xB1};
+      int attrLen = 2 + 2 + 4 + codeBytes.length + 2 + 2;
+      dos.writeShort(9);
+      dos.writeInt(attrLen);
+      dos.writeShort(1);
+      dos.writeShort(1);
+      dos.writeInt(codeBytes.length);
+      dos.write(codeBytes);
+      dos.writeShort(0);
+      dos.writeShort(0);
+
+      dos.writeShort(0);
+      dos.flush();
+      return baos.toByteArray();
+    } catch (java.io.IOException e) {
+      throw new IllegalStateException("failed to assemble anchor class bytes", e);
+    }
   }
 
   @Override
