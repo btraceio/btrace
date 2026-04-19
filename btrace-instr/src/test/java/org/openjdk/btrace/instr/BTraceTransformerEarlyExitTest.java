@@ -76,4 +76,63 @@ class BTraceTransformerEarlyExitTest {
                 new byte[]{0, 0});
         assertNull(result, "synthetic JDK 9-16 accessor must NOT be transformed (returns null)");
     }
+
+    @Test
+    void nullClassNameReturnsNull() throws Exception {
+        BTraceTransformer transformer = newTransformer();
+        byte[] result = transformer.transform(
+                nonBootstrapNonSystemLoader(),
+                null,
+                null,
+                null,
+                new byte[]{0, 0});
+        assertNull(result, "classes with no binary name (JDK 8 host-anonymous, JDK 15+ hidden) must NOT be transformed");
+    }
+
+    @Test
+    void jdk8LambdaWrapperReturnsNull() throws Exception {
+        BTraceTransformer transformer = newTransformer();
+        byte[] result = transformer.transform(
+                nonBootstrapNonSystemLoader(),
+                "org/openjdk/btrace/agent/Main$$Lambda$36",
+                null,
+                null,
+                new byte[]{0, 0});
+        assertNull(result, "JDK 8 synthetic lambda wrapper (Main$$Lambda$N) must NOT be transformed");
+    }
+
+    @Test
+    void jdk11LambdaWrapperReturnsNull() throws Exception {
+        BTraceTransformer transformer = newTransformer();
+        byte[] result = transformer.transform(
+                nonBootstrapNonSystemLoader(),
+                "org/openjdk/btrace/agent/Main$$Lambda$12/0x00000008000ab040",
+                null,
+                null,
+                new byte[]{0, 0});
+        assertNull(result, "JDK 11+ synthetic lambda wrapper (Main$$Lambda$N/0x...) must NOT be transformed");
+    }
+
+    @Test
+    void userClassWithDoubleDollarInNameIsNotSkipped() {
+        // A class whose internal name merely contains "$$" but NOT the specific
+        // "$$Lambda$<digit>" pattern is a legitimate user class (e.g. Kotlin,
+        // Scala, or Groovy synthetic) and must remain eligible for tracing.
+        // Bypassing the short-circuit ensures the regex is anchored correctly.
+        org.junit.jupiter.api.Assertions.assertFalse(
+                BTraceTransformer.isSyntheticLambda("com/example/My$$Bridge"),
+                "user class without Lambda$<digit> must NOT match the synthetic-lambda predicate");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                BTraceTransformer.isSyntheticLambda("com/example/My$$Lambda$"),
+                "malformed name with no digit after $$Lambda$ must NOT match");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                BTraceTransformer.isSyntheticLambda("com/example/My$$LambdaBridge"),
+                "substring match without the trailing $ must NOT match");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                BTraceTransformer.isSyntheticLambda("Foo$$Lambda$0"),
+                "JDK 8-style Lambda wrapper must match");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                BTraceTransformer.isSyntheticLambda("Foo$$Lambda$99/0xdeadbeef"),
+                "JDK 11+ named-hidden Lambda wrapper must match");
+    }
 }

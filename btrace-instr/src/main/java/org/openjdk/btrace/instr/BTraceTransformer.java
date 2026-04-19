@@ -76,6 +76,20 @@ public final class BTraceTransformer implements ClassFileTransformer {
     return ClassFilter.isSensitiveClass(name);
   }
 
+  // JDK lambda wrapper names from LambdaMetafactory:
+  //   JDK 8:   <owner>$$Lambda$<N>                    (e.g. Main$$Lambda$36)
+  //   JDK 11+: <owner>$$Lambda$<N>/0x<hex>            (hidden-class suffix)
+  // Both forms are recognised by the "$$Lambda$" infix followed by digits.
+  static boolean isSyntheticLambda(String internalName) {
+    if (internalName == null) return false;
+    int idx = internalName.indexOf("$$Lambda$");
+    if (idx < 0) return false;
+    int digitStart = idx + "$$Lambda$".length();
+    if (digitStart >= internalName.length()) return false;
+    // Next char must be a digit (the Lambda serial number)
+    return Character.isDigit(internalName.charAt(digitStart));
+  }
+
   public void register(BTraceProbe p) {
     try {
       setupLock.writeLock().lock();
@@ -111,7 +125,16 @@ public final class BTraceTransformer implements ClassFileTransformer {
     try {
       setupLock.readLock().lock();
 
-      className = className != null ? className : "<anonymous>";
+      // Skip JVM-synthesized classes that have no binary name (JDK 8
+      // Unsafe.defineAnonymousClass host-anonymous classes, JDK 15+ hidden
+      // classes). These are never a user-intended tracing target: a
+      // @OnMethod(clazz="<pattern>") matcher targets classes the user
+      // authored, not the VM's lambda/LambdaForm scaffolding. Instrumenting
+      // them also re-enters the invokedynamic machinery that the probe
+      // dispatch itself uses, leading to unbounded recursion on JDK 8.
+      if (className == null) {
+        return null;
+      }
 
       // A special case for patching the Indy linking in order to be able to safely skip
       // BTrace probes while linking is still in progress.
@@ -127,23 +150,16 @@ public final class BTraceTransformer implements ClassFileTransformer {
         return transformed;
       }
 
-      // Skip JVM-synthesized reflective accessor classes regardless of class loader.
-      // On JDK 8, when the agent makes any reflective Method.invoke() call past the
-      // inflation threshold (~15 calls per Method instance), the JVM generates
-      // "sun/reflect/GeneratedMethodAccessorN" via ClassLoader.defineClass() in a
-      // sun.reflect.DelegatingClassLoader. That loader is neither null nor the system
-      // CL, so the loader-gated isSensitiveClass() check below does NOT filter these
-      // classes. Without this early-exit, transforming the synthetic accessor calls
-      // ASM's getCommonSuperClass() → ClassInfo.inferClassLoader() → BTraceRuntimeImpl_8
-      // .isBootstrapClass() → another reflective invoke() → another inflation → another
-      // transform() callback → recursion → StackOverflowError. Tracing JVM-synthesized
-      // reflective trampolines also serves no purpose: they are 1:1 forwarders to the
-      // target Method, which user probes can already trace directly. The "Generated"
-      // discriminator subsumes Method/Constructor/SerializationConstructor accessors;
-      // JDK 9–16 names them under jdk/internal/reflect; JDK 17+ uses hidden classes
-      // that are never reported by name to ClassFileTransformer.transform().
+      // Skip JVM-synthesized classes: reflection accessors (sun/reflect/Generated*,
+      // jdk/internal/reflect/Generated*) and lambda wrappers (LambdaMetafactory names
+      // them "<owner>$$Lambda$N" on JDK 8 and "<owner>$$Lambda$N/0x<hex>" on JDK 11+).
+      // Instrumenting these serves no tracing purpose — they are 1:1 trampolines to a
+      // target Method or a captured functional method the user can trace directly —
+      // and it recursively re-enters the invokedynamic/LambdaMetafactory machinery
+      // that Phase 3 probe dispatch relies on.
       if (className.startsWith("sun/reflect/Generated")
-          || className.startsWith("jdk/internal/reflect/Generated")) {
+          || className.startsWith("jdk/internal/reflect/Generated")
+          || isSyntheticLambda(className)) {
         return null;
       }
 
