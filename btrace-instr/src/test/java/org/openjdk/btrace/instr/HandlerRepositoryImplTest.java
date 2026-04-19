@@ -142,7 +142,7 @@ public class HandlerRepositoryImplTest {
   @Test
   void testResolvesRealHandlerFromLoadedClass() throws Throwable {
     String probeName = HandlerRepositoryImplTest.class.getName().replace('.', '/');
-    BTraceProbe probe = stubProbe(probeName);
+    BTraceProbe probe = stubProbe(probeName, HandlerRepositoryImplTest.class);
     try {
       HandlerRepositoryImpl.registerProbe(probe);
 
@@ -166,7 +166,7 @@ public class HandlerRepositoryImplTest {
   @Test
   void testBootstrapReturnsMutableCallSiteOnImmediateResolution() throws Throwable {
     String probeName = HandlerRepositoryImplTest.class.getName().replace('.', '/');
-    BTraceProbe probe = stubProbe(probeName);
+    BTraceProbe probe = stubProbe(probeName, HandlerRepositoryImplTest.class);
     try {
       HandlerRepositoryImpl.registerProbe(probe);
 
@@ -194,7 +194,7 @@ public class HandlerRepositoryImplTest {
   @Test
   void testUnregisterRelinksLiveCallSiteToNoop() throws Throwable {
     String probeName = HandlerRepositoryImplTest.class.getName().replace('.', '/');
-    BTraceProbe probe = stubProbe(probeName);
+    BTraceProbe probe = stubProbe(probeName, HandlerRepositoryImplTest.class);
     HandlerRepositoryImpl.registerProbe(probe);
 
     CallSite cs = IndyDispatcher.bootstrap(
@@ -229,7 +229,7 @@ public class HandlerRepositoryImplTest {
 
     // Probe B: this test class — actually resolves a real handler.
     String probeBName = HandlerRepositoryImplTest.class.getName().replace('.', '/');
-    BTraceProbe probeB = stubProbe(probeBName);
+    BTraceProbe probeB = stubProbe(probeBName, HandlerRepositoryImplTest.class);
     HandlerRepositoryImpl.registerProbe(probeB);
     try {
       CallSite csB = IndyDispatcher.bootstrap(
@@ -259,7 +259,7 @@ public class HandlerRepositoryImplTest {
   @Test
   void testUnregisterRelinksAllLiveSitesForProbe() throws Throwable {
     String probeName = HandlerRepositoryImplTest.class.getName().replace('.', '/');
-    BTraceProbe probe = stubProbe(probeName);
+    BTraceProbe probe = stubProbe(probeName, HandlerRepositoryImplTest.class);
     HandlerRepositoryImpl.registerProbe(probe);
 
     CallSite cs1 = IndyDispatcher.bootstrap(
@@ -307,7 +307,7 @@ public class HandlerRepositoryImplTest {
     cs.dynamicInvoker().invokeExact();
     assertFalse(HANDLER_CALLED.get(), "Handler must not fire while probe is unregistered");
 
-    BTraceProbe probe = stubProbe(probeName);
+    BTraceProbe probe = stubProbe(probeName, HandlerRepositoryImplTest.class);
     try {
       HandlerRepositoryImpl.registerProbe(probe);
 
@@ -339,6 +339,29 @@ public class HandlerRepositoryImplTest {
       cs.dynamicInvoker().invokeExact(); // must not throw
     } finally {
       IndyDispatcher.repository = saved;
+    }
+  }
+
+  @Test
+  void testResolveHandlerUsesProbeClassAccessorNotClassForName() throws Throwable {
+    // Use a probeName that is NOT resolvable by Class.forName (no such class exists),
+    // but pass the test class as the getProbeClass() value. If resolveHandler still
+    // returns a live MethodHandle, it means resolution went through probe.getProbeClass()
+    // and bypassed any Class.forName lookup of the fake probe name.
+    String unresolvableProbeName = "non/existent/FakeProbe$" + System.nanoTime();
+    BTraceProbe probe = stubProbe(unresolvableProbeName, HandlerRepositoryImplTest.class);
+    try {
+      HandlerRepositoryImpl.registerProbe(probe);
+      MethodHandle mh = HandlerRepositoryImpl.resolveHandler(
+          unresolvableProbeName,
+          "FakeProbe$ping",
+          MethodType.methodType(void.class));
+      assertNotNull(mh,
+          "resolveHandler must find handler via probe.getProbeClass(), not via Class.forName(probeName)");
+      mh.invokeExact();
+      assertTrue(HANDLER_CALLED.get(), "Resolved handler must invoke the test's ping()");
+    } finally {
+      HandlerRepositoryImpl.unregisterProbe(probe);
     }
   }
 }

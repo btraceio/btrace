@@ -98,15 +98,14 @@ public final class HandlerRepositoryImpl {
       // Probe not registered yet. Do not cache — IndyDispatcher's trampoline will retry.
       return null;
     }
+    Class<?> probeClass = probe.getProbeClass();
+    if (probeClass == null) {
+      // defineClass has not populated probeClass yet (race with register()).
+      // Do not cache — IndyDispatcher's trampoline will retry.
+      return null;
+    }
 
     try {
-      // Production probes are defined in the bootstrap CL (via Unsafe.defineClass with
-      // loader=null). We look them up through the current CL: its parent chain includes
-      // bootstrap, so bootstrap-defined probe classes resolve via parent-first delegation.
-      // This also keeps unit tests workable (test probe classes on the system CL resolve
-      // directly). An explicit loader=null lookup would fail for test-only probe classes.
-      Class<?> probeClass = Class.forName(probeName.replace('/', '.'));
-
       // Strip probe-name prefix from handler name (e.g. "MyTrace$onMethod" → "onMethod")
       int dollarIdx = handlerName.lastIndexOf('$');
       String simpleHandlerName =
