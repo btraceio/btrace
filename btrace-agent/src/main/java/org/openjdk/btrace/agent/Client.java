@@ -510,7 +510,14 @@ abstract class Client implements CommandListener {
 
   private void cleanupTransformers() {
     if (probe != null) {
+      String probeName = probe.getClassName();
       probe.unregister();
+      // Drop the registry's strong reference to the BTraceRuntime.Impl created in
+      // initialize() via BTraceRuntimes.getRuntime(probe.getClassName(), ...). Without
+      // this, the registry keeps the Impl (and, transitively, the probe Class<?> and
+      // its per-probe ClassLoader) reachable forever, defeating probe class unloading.
+      // Must use the same key that was used to register — here, the dotted class name.
+      BTraceRuntimes.removeRuntime(probeName);
     }
   }
 
