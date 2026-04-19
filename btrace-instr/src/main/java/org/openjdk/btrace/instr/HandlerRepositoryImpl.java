@@ -1,6 +1,5 @@
 package org.openjdk.btrace.instr;
 
-import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.HandlerRepository;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.runtime.IndyDispatcher;
@@ -43,8 +42,8 @@ public final class HandlerRepositoryImpl {
   /** Maps probe class name (internal form) → live BTraceProbe instance. */
   private static final Map<String, BTraceProbe> probeMap = new ConcurrentHashMap<>();
 
-  /** Maps "{probeName}#{handlerName}{handlerDesc}" → resolved MethodHandle. */
-  private static final Map<String, MethodHandle> handlerCache = new ConcurrentHashMap<>();
+  /** Maps (probeName, handlerName, MethodType) → resolved MethodHandle. */
+  private static final Map<HandlerKey, MethodHandle> handlerCache = new ConcurrentHashMap<>();
 
   /**
    * Register a probe after its class has been defined in the JVM. Must be called before
@@ -70,8 +69,7 @@ public final class HandlerRepositoryImpl {
   public static void unregisterProbe(BTraceProbe probe) {
     String probeName = probe.getClassName(true);
     probeMap.remove(probeName);
-    String prefix = probeName + "#";
-    handlerCache.keySet().removeIf(key -> key.startsWith(prefix));
+    handlerCache.keySet().removeIf(k -> k.probe.equals(probeName));
     IndyDispatcher.invalidateProbe(probeName);
   }
 
@@ -88,7 +86,7 @@ public final class HandlerRepositoryImpl {
    */
   public static MethodHandle resolveHandler(
       String probeName, String handlerName, MethodType handlerType) {
-    String cacheKey = probeName + "#" + handlerName + handlerType.toMethodDescriptorString();
+    HandlerKey cacheKey = new HandlerKey(probeName, handlerName, handlerType);
 
     MethodHandle cached = handlerCache.get(cacheKey);
     if (cached != null) {
@@ -119,7 +117,7 @@ public final class HandlerRepositoryImpl {
 
       handlerCache.put(cacheKey, mh);
 
-      if (new DebugSupport(SharedSettings.GLOBAL).isDumpClasses()) {
+      if (SharedSettings.GLOBAL.isDumpClasses()) {
         log.debug("BTrace INDY handler resolved: {}.{}", probeName, simpleHandlerName);
       }
 
@@ -131,6 +129,36 @@ public final class HandlerRepositoryImpl {
       // to recur until the probe class/bytecode is fixed.
       log.warn("Failed to resolve handler '{}' in probe '{}'", handlerName, probeName, e);
       return null;
+    }
+  }
+
+  private static final class HandlerKey {
+    final String probe;
+    final String handler;
+    final MethodType type;
+    private final int hash;
+
+    HandlerKey(String probe, String handler, MethodType type) {
+      this.probe = probe;
+      this.handler = handler;
+      this.type = type;
+      this.hash = (probe.hashCode() * 31 + handler.hashCode()) * 31 + type.hashCode();
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof HandlerKey)) return false;
+      HandlerKey k = (HandlerKey) o;
+      return hash == k.hash
+          && probe.equals(k.probe)
+          && handler.equals(k.handler)
+          && type.equals(k.type);
     }
   }
 }
