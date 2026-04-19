@@ -156,7 +156,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
       // Instrumenting these serves no tracing purpose — they are 1:1 trampolines to a
       // target Method or a captured functional method the user can trace directly —
       // and it recursively re-enters the invokedynamic/LambdaMetafactory machinery
-      // that Phase 3 probe dispatch relies on.
+      // that the probe dispatch path relies on.
       if (className.startsWith("sun/reflect/Generated")
           || className.startsWith("jdk/internal/reflect/Generated")
           || isSyntheticLambda(className)) {

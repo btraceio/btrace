@@ -334,15 +334,25 @@ if (origVar.isPresent()) {
 
 ## Part 2: High-Impact Performance Issues (P1)
 
-### Issue 3: Handler Bytecode Regeneration
+### Issue 3: Handler Bytecode Regeneration — RESOLVED
 
-**Priority**: P1 (High Performance Impact)
-**File**: `btrace-instr/src/main/java/org/openjdk/btrace/instr/HandlerRepositoryImpl.java:43-77`
-**Type**: Hot Path Allocation
+**Status**: Obsolete. The root cause (per-linkage bytecode regeneration via `CopyingVisitor`)
+was eliminated when handler dispatch moved to direct `MethodHandle` resolution. Handler
+methods are now resolved directly against the probe class via
+`MethodHandles.publicLookup().findStatic()` from `HandlerRepositoryImpl.resolveHandler()`,
+and dispatched by `IndyDispatcher.bootstrap()`. No handler bytecode is generated or copied
+at runtime. `CopyingVisitor` has been deleted.
 
-#### Problem Description
+The sections below describe the *old* design and are retained purely for historical
+context. Do not use them as a reference for current code.
 
-The `getProbeHandler()` method regenerates identical bytecode on **every invokedynamic linkage** (Java 15+ only). This is called from `Indy.bootstrap()` during invokedynamic callsite linking.
+---
+
+#### Historical Problem Description
+
+The `getProbeHandler()` method regenerated identical bytecode on **every invokedynamic
+linkage** (Java 15+ only). This was called from `Indy.bootstrap()` during invokedynamic
+callsite linking.
 
 **Current Code Flow**:
 ```java

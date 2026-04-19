@@ -3,6 +3,7 @@ package org.openjdk.btrace.instr;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.HandlerRepository;
 import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.runtime.IndyDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,36 +18,23 @@ import java.util.concurrent.ConcurrentHashMap;
  * via {@link MethodHandles#publicLookup()}.findStatic() on the probe class.
  *
  * <p>Probe handler methods stay in the probe class (bootstrap CL). No bytecode copying is
- * performed. A sentinel handle ({@link #UNRESOLVED}) is stored for failed lookups so that
- * the lookup is retried on the next bootstrap invocation (after probe re-registration).
+ * performed.
+ *
+ * <p><b>Caching:</b> only successful resolutions are cached; failures are returned as
+ * {@code null} without poisoning the cache. IndyDispatcher handles transient failure by
+ * installing a {@code MutableCallSite} trampoline that retries on each invocation, so a
+ * negative cache is not needed — and would in fact defeat the self-healing behaviour.
  */
 public final class HandlerRepositoryImpl {
   private static final Logger log = LoggerFactory.getLogger(HandlerRepositoryImpl.class);
 
-  /** Sentinel stored in cache for failed handler lookups — allows retry after probe reload. */
-  private static final MethodHandle UNRESOLVED;
-
   static {
-    try {
-      UNRESOLVED =
-          MethodHandles.lookup()
-              .findStatic(
-                  HandlerRepositoryImpl.class,
-                  "unresolvedSentinel",
-                  MethodType.methodType(void.class));
-    } catch (ReflectiveOperationException e) {
-      throw new ExceptionInInitializerError(e);
-    }
-
     // Wire up to IndyDispatcher (bootstrap CL) via reflection.
-    // IndyDispatcher.repository is set to a lambda calling our resolveHandler().
+    // IndyDispatcher.repository is set to a method-reference calling our resolveHandler().
     try {
-      Class<?> dispatcherClz =
-          Class.forName("org.openjdk.btrace.runtime.IndyDispatcher");
+      Class<?> dispatcherClz = Class.forName("org.openjdk.btrace.runtime.IndyDispatcher");
       HandlerRepository hook = HandlerRepositoryImpl::resolveHandler;
       dispatcherClz.getField("repository").set(null, hook);
-    } catch (UnsupportedClassVersionError ignored) {
-      // pre-Java-8 — should not happen since IndyDispatcher compiles to Java 8
     } catch (Throwable t) {
       log.warn("Unable to initialize BTrace IndyDispatcher support", t);
     }
@@ -55,39 +43,48 @@ public final class HandlerRepositoryImpl {
   /** Maps probe class name (internal form) → live BTraceProbe instance. */
   private static final Map<String, BTraceProbe> probeMap = new ConcurrentHashMap<>();
 
-  /**
-   * Maps "{probeName}#{handlerName}{handlerDesc}" → resolved MethodHandle (or UNRESOLVED
-   * sentinel).
-   */
+  /** Maps "{probeName}#{handlerName}{handlerDesc}" → resolved MethodHandle. */
   private static final Map<String, MethodHandle> handlerCache = new ConcurrentHashMap<>();
 
-  /** Register a probe after its class has been defined in the JVM. */
+  /**
+   * Register a probe after its class has been defined in the JVM. Must be called before
+   * any instrumented call site targeting this probe is invoked. If invocation arrives
+   * first, {@link org.openjdk.btrace.runtime.IndyDispatcher} installs a self-relinking
+   * trampoline that will pick up the probe on its next invocation.
+   */
   public static void registerProbe(BTraceProbe probe) {
     String probeName = probe.getClassName(true);
     probeMap.put(probeName, probe);
-    // Evict any UNRESOLVED sentinels that were cached before this probe was registered.
-    // This can happen if a bootstrap call raced ahead of registration.
-    String prefix = probeName + "#";
-    handlerCache.keySet().removeIf(key -> key.startsWith(prefix));
   }
 
-  /** Unregister a probe and clear all cached handles for it. */
+  /**
+   * Unregister a probe and clear all cached handles for it. Also invalidates every live
+   * {@link java.lang.invoke.MutableCallSite} targeting this probe via
+   * {@link IndyDispatcher#invalidateProbe(String)}, swapping their targets to a noop so
+   * in-flight and subsequent invocations do not enter probe handler bodies after the
+   * associated {@code BTraceRuntime} state has been torn down. This is the dispatch-level
+   * equivalent of the older "cushion" approach, which stubbed probe method bodies via
+   * bytecode redefine on detach — both exist to keep the instrumented application from
+   * crashing when a probe is undeployed while call sites are still live.
+   */
   public static void unregisterProbe(BTraceProbe probe) {
     String probeName = probe.getClassName(true);
     probeMap.remove(probeName);
     String prefix = probeName + "#";
     handlerCache.keySet().removeIf(key -> key.startsWith(prefix));
+    IndyDispatcher.invalidateProbe(probeName);
   }
 
   /**
    * Resolve a probe handler MethodHandle. Called from IndyDispatcher.bootstrap() on first
-   * execution of each instrumented call site.
+   * execution of each instrumented call site, and subsequently from the trampoline on
+   * every retry until resolution succeeds.
    *
-   * @param probeName   internal class name of the probe (e.g. "com/example/MyTrace")
-   * @param handlerName handler method name (probe-prefixed, e.g. "MyTrace$onMethod")
+   * @param probeName   internal class name of the probe (e.g. {@code "com/example/MyTrace"})
+   * @param handlerName handler method name (probe-prefixed, e.g. {@code "MyTrace$onMethod"})
    * @param handlerType the MethodType of the call site
-   * @return the resolved MethodHandle, or {@code null} if resolution fails
-   *         (IndyDispatcher will install a noop in that case)
+   * @return the resolved MethodHandle, or {@code null} if resolution fails (caller must
+   *         treat null as transient and retry)
    */
   public static MethodHandle resolveHandler(
       String probeName, String handlerName, MethodType handlerType) {
@@ -95,45 +92,45 @@ public final class HandlerRepositoryImpl {
 
     MethodHandle cached = handlerCache.get(cacheKey);
     if (cached != null) {
-      return cached == UNRESOLVED ? null : cached;
+      return cached;
     }
 
     BTraceProbe probe = probeMap.get(probeName);
     if (probe == null) {
-      // Probe not registered yet; store sentinel so we don't hammer the map on every call
-      handlerCache.put(cacheKey, UNRESOLVED);
+      // Probe not registered yet. Do not cache — IndyDispatcher's trampoline will retry.
       return null;
     }
 
     try {
-      // The probe script class is always defined in the bootstrap CL (via Unsafe.defineClass with
-      // loader=null, because mustBeBootstrap=isTransforming()=true for all transforming probes).
-      // probe.getClass() is the BTraceProbeNode/BTraceProbePersisted wrapper in agent CL — we
-      // never use that directly; we load the script class from bootstrap CL by name.
-      Class<?> probeClass = Class.forName(probeName.replace('/', '.'), false, null);
+      // Production probes are defined in the bootstrap CL (via Unsafe.defineClass with
+      // loader=null). We look them up through the current CL: its parent chain includes
+      // bootstrap, so bootstrap-defined probe classes resolve via parent-first delegation.
+      // This also keeps unit tests workable (test probe classes on the system CL resolve
+      // directly). An explicit loader=null lookup would fail for test-only probe classes.
+      Class<?> probeClass = Class.forName(probeName.replace('/', '.'));
 
       // Strip probe-name prefix from handler name (e.g. "MyTrace$onMethod" → "onMethod")
       int dollarIdx = handlerName.lastIndexOf('$');
-      String simpleHandlerName = dollarIdx >= 0 ? handlerName.substring(dollarIdx + 1) : handlerName;
+      String simpleHandlerName =
+          dollarIdx >= 0 ? handlerName.substring(dollarIdx + 1) : handlerName;
 
       MethodHandle mh =
           MethodHandles.publicLookup().findStatic(probeClass, simpleHandlerName, handlerType);
 
       handlerCache.put(cacheKey, mh);
 
-      DebugSupport debug = new DebugSupport(SharedSettings.GLOBAL);
-      if (debug.isDumpClasses()) {
+      if (new DebugSupport(SharedSettings.GLOBAL).isDumpClasses()) {
         log.debug("BTrace INDY handler resolved: {}.{}", probeName, simpleHandlerName);
       }
 
       return mh;
     } catch (Throwable e) {
+      // Log loudly: unlike transient null-repository or unregistered-probe failures,
+      // findStatic exceptions usually mean a real problem (signature mismatch, module
+      // access). Don't cache — the trampoline will retry, but the same failure is likely
+      // to recur until the probe class/bytecode is fixed.
       log.warn("Failed to resolve handler '{}' in probe '{}'", handlerName, probeName, e);
-      handlerCache.put(cacheKey, UNRESOLVED);
       return null;
     }
   }
-
-  /** Sentinel method — never called directly. */
-  private static void unresolvedSentinel() {}
 }

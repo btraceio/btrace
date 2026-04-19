@@ -29,6 +29,7 @@ import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.invoke.MutableCallSite;
 import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -57,6 +58,7 @@ import org.openjdk.jmh.infra.Blackhole;
 public class DispatchBenchmark {
 
   private MethodHandle constantTarget;
+  private MethodHandle mutableTarget;
 
   @Setup(Level.Trial)
   public void setup() throws Exception {
@@ -70,6 +72,9 @@ public class DispatchBenchmark {
                 MethodType.methodType(void.class, int.class));
     CallSite cs = new ConstantCallSite(mh);
     constantTarget = cs.dynamicInvoker();
+    MutableCallSite mcs = new MutableCallSite(mh.type());
+    mcs.setTarget(mh);
+    mutableTarget = mcs.dynamicInvoker();
   }
 
   /** Direct static call — baseline with zero dispatch overhead. */
@@ -86,6 +91,18 @@ public class DispatchBenchmark {
   @Benchmark
   public void instrumented(Blackhole bh) throws Throwable {
     constantTarget.invokeExact(42);
+  }
+
+  /**
+   * Dispatch through a MutableCallSite whose target is stable (set once, never re-linked).
+   * Simulates the IndyDispatcher-post-detach-safety variant. HotSpot should treat the target
+   * as @Stable and inline through it comparably to ConstantCallSite.
+   */
+  @Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+  @Measurement(iterations = 5, time = 2, timeUnit = TimeUnit.SECONDS)
+  @Benchmark
+  public void instrumentedMutable(Blackhole bh) throws Throwable {
+    mutableTarget.invokeExact(42);
   }
 
   /** Simulated probe handler method. */
