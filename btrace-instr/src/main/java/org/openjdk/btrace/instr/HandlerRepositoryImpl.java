@@ -42,9 +42,6 @@ public final class HandlerRepositoryImpl {
   /** Maps probe class name (internal form) → live BTraceProbe instance. */
   private static final Map<String, BTraceProbe> probeMap = new ConcurrentHashMap<>();
 
-  /** Maps (probeName, handlerName, MethodType) → resolved MethodHandle. */
-  private static final Map<HandlerKey, MethodHandle> handlerCache = new ConcurrentHashMap<>();
-
   /**
    * Register a probe after its class has been defined in the JVM. Must be called before
    * any instrumented call site targeting this probe is invoked. If invocation arrives
@@ -57,19 +54,20 @@ public final class HandlerRepositoryImpl {
   }
 
   /**
-   * Unregister a probe and clear all cached handles for it. Also invalidates every live
-   * {@link java.lang.invoke.MutableCallSite} targeting this probe via
-   * {@link IndyDispatcher#invalidateProbe(String)}, swapping their targets to a noop so
-   * in-flight and subsequent invocations do not enter probe handler bodies after the
-   * associated {@code BTraceRuntime} state has been torn down. This is the dispatch-level
-   * equivalent of the older "cushion" approach, which stubbed probe method bodies via
-   * bytecode redefine on detach — both exist to keep the instrumented application from
-   * crashing when a probe is undeployed while call sites are still live.
+   * Unregister a probe. Also invalidates every live {@link java.lang.invoke.MutableCallSite}
+   * targeting this probe via {@link IndyDispatcher#invalidateProbe(String)}, swapping their
+   * targets to a noop so in-flight and subsequent invocations do not enter probe handler
+   * bodies after the associated {@code BTraceRuntime} state has been torn down. This is the
+   * dispatch-level equivalent of the older "cushion" approach, which stubbed probe method
+   * bodies via bytecode redefine on detach — both exist to keep the instrumented application
+   * from crashing when a probe is undeployed while call sites are still live.
+   *
+   * <p>The handler {@link MethodHandle} cache is per-probe (see {@link BTraceProbe#cacheHandler})
+   * so nothing to scan here — the cache dies with the probe object.
    */
   public static void unregisterProbe(BTraceProbe probe) {
     String probeName = probe.getClassName(true);
     probeMap.remove(probeName);
-    handlerCache.keySet().removeIf(k -> k.probe.equals(probeName));
     IndyDispatcher.invalidateProbe(probeName);
   }
 
@@ -86,18 +84,17 @@ public final class HandlerRepositoryImpl {
    */
   public static MethodHandle resolveHandler(
       String probeName, String handlerName, MethodType handlerType) {
-    HandlerKey cacheKey = new HandlerKey(probeName, handlerName, handlerType);
-
-    MethodHandle cached = handlerCache.get(cacheKey);
-    if (cached != null) {
-      return cached;
-    }
-
     BTraceProbe probe = probeMap.get(probeName);
     if (probe == null) {
       // Probe not registered yet. Do not cache — IndyDispatcher's trampoline will retry.
       return null;
     }
+
+    MethodHandle cached = probe.getCachedHandler(handlerName, handlerType);
+    if (cached != null) {
+      return cached;
+    }
+
     Class<?> probeClass = probe.getProbeClass();
     if (probeClass == null) {
       // defineClass has not populated probeClass yet (race with register()).
@@ -114,7 +111,7 @@ public final class HandlerRepositoryImpl {
       MethodHandle mh =
           MethodHandles.publicLookup().findStatic(probeClass, simpleHandlerName, handlerType);
 
-      handlerCache.put(cacheKey, mh);
+      probe.cacheHandler(handlerName, handlerType, mh);
 
       if (SharedSettings.GLOBAL.isDumpClasses()) {
         log.debug("BTrace INDY handler resolved: {}.{}", probeName, simpleHandlerName);
@@ -128,36 +125,6 @@ public final class HandlerRepositoryImpl {
       // to recur until the probe class/bytecode is fixed.
       log.warn("Failed to resolve handler '{}' in probe '{}'", handlerName, probeName, e);
       return null;
-    }
-  }
-
-  private static final class HandlerKey {
-    final String probe;
-    final String handler;
-    final MethodType type;
-    private final int hash;
-
-    HandlerKey(String probe, String handler, MethodType type) {
-      this.probe = probe;
-      this.handler = handler;
-      this.type = type;
-      this.hash = (probe.hashCode() * 31 + handler.hashCode()) * 31 + type.hashCode();
-    }
-
-    @Override
-    public int hashCode() {
-      return hash;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (!(o instanceof HandlerKey)) return false;
-      HandlerKey k = (HandlerKey) o;
-      return hash == k.hash
-          && probe.equals(k.probe)
-          && handler.equals(k.handler)
-          && type.equals(k.type);
     }
   }
 }

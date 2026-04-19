@@ -220,6 +220,18 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   }
 
   @Override
+  public java.lang.invoke.MethodHandle getCachedHandler(
+      String handlerName, java.lang.invoke.MethodType type) {
+    return delegate.getCachedHandler(handlerName, type);
+  }
+
+  @Override
+  public void cacheHandler(
+      String handlerName, java.lang.invoke.MethodType type, java.lang.invoke.MethodHandle mh) {
+    delegate.cacheHandler(handlerName, type, mh);
+  }
+
+  @Override
   public void unregister() {
     HandlerRepositoryImpl.unregisterProbe(this);
     if (transformer != null && isTransforming()) {
