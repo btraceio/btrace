@@ -16,8 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Implementation of {@link HandlerRepository} that resolves probe handler {@link MethodHandle}s
  * via {@link MethodHandles#publicLookup()}.findStatic() on the probe class.
  *
- * <p>Probe handler methods stay in the probe class (bootstrap CL). No bytecode copying is
- * performed.
+ * <p>Probe handler methods stay in the probe class (per-probe ClassLoader on JDK 8/9-14, or
+ * a hidden class on JDK 15+). No bytecode copying is performed.
  *
  * <p><b>Caching:</b> only successful resolutions are cached; failures are returned as
  * {@code null} without poisoning the cache. IndyDispatcher handles transient failure by

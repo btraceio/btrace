@@ -43,9 +43,10 @@ import org.openjdk.btrace.core.HandlerRepository;
  * INVOKEDYNAMIC bootstrap class for BTrace probe handler dispatch.
  *
  * <p>Works with Java 8+. Replaces the Java 15-specific {@code Indy} class that used
- * {@code defineHiddenClass}. Probe handler methods stay in the probe class (bootstrap CL)
- * and are resolved via {@link MethodHandles#publicLookup()}.findStatic() — no bytecode
- * copying required.
+ * {@code defineHiddenClass}. Probe handler methods live in the probe class — defined in a
+ * per-probe {@link ClassLoader} on JDK 8/9-14, or as a hidden class on JDK 15+ — and are
+ * resolved via {@link MethodHandles#publicLookup()}.findStatic() — no bytecode copying
+ * required.
  *
  * <p><b>Dispatch strategy:</b> every call site is a {@link MutableCallSite}. On bootstrap
  * we attempt immediate resolution; on success the MCS target is set to the resolved
@@ -53,12 +54,16 @@ import org.openjdk.btrace.core.HandlerRepository;
  * on every invocation until resolution succeeds.
  *
  * <p><b>Why always MutableCallSite</b> (and not {@code ConstantCallSite} even for the
- * immediate-success path): a {@code ConstantCallSite} cannot be relinked, so once the JVM
- * decoration pins an instrumented method to a resolved handler handle, unregistering the
- * probe is <i>impossible</i> — the handler keeps firing even after {@code BTraceRuntime}
- * state is torn down, leading to NPEs inside the instrumented application. By making
- * every dispatch site mutable we can re-point the target to a noop when
- * {@link #invalidateProbe(String)} is called from the agent at detach time.
+ * immediate-success path): BTrace does not retransform target classes on probe detach, so
+ * the INVOKEDYNAMIC call sites woven into instrumented methods persist after the probe is
+ * gone. A {@code ConstantCallSite} cannot be relinked, so once it is pinned to a resolved
+ * handler handle, unregistering the probe is <i>impossible</i> — the handler keeps firing
+ * even after {@code BTraceRuntime} state is torn down, leading to NPEs inside the
+ * instrumented application. By making every dispatch site mutable we can re-point the
+ * target to a noop when {@link #invalidateProbe(String)} is called from the agent at
+ * detach time. (Note: probe classes themselves are unloadable — they live in per-probe
+ * ClassLoaders / hidden classes — but the residual call sites in target classes are what
+ * force the mutable choice.)
  *
  * <p><b>Important:</b> This class lives in the bootstrap classloader and must not reference
  * SLF4J or any other logging framework. SLF4J initialization in the bootstrap classloader

@@ -50,6 +50,44 @@ import org.openjdk.btrace.runtime.BTraceRuntimes;
  */
 public class ProbeClassUnloadingTest {
 
+  private static final CommandListener NOOP_LISTENER =
+      new CommandListener() {
+        @Override
+        public void onCommand(Command cmd) throws IOException {}
+      };
+
+  @Test
+  public void sameProbeNameCanBeDefinedTwice() throws Exception {
+    // With bootstrap-CL residency this threw LinkageError on the second defineClass.
+    // With per-probe ClassLoader / hidden class, each attach gets its own class
+    // mirror, so the same internal name is legal.
+    String probeName =
+        "org.openjdk.btrace.runtime.auxiliary.SameNameProbe$" + System.nanoTime();
+    byte[] bytes = generateMinimalClass(probeName);
+    Class<?> first = defineProbe(probeName, bytes);
+    Class<?> second = defineProbe(probeName, bytes);
+    Assertions.assertNotNull(first);
+    Assertions.assertNotNull(second);
+    Assertions.assertNotSame(
+        first,
+        second,
+        "Re-define of same-named probe must yield a distinct Class mirror");
+    // Clean up both runtimes (removeRuntime is idempotent; second call is a no-op).
+    BTraceRuntimes.removeRuntime(probeName);
+  }
+
+  private static Class<?> defineProbe(String probeName, byte[] bytes) {
+    BTraceRuntime.Impl rt =
+        BTraceRuntimes.getRuntime(probeName, new ArgsMap(), NOOP_LISTENER, null);
+    Assertions.assertNotNull(rt, "runtime must be created");
+    Class<?> probeClass = rt.defineClass(bytes);
+    Assertions.assertNotNull(probeClass, "defineClass must succeed");
+    // Release the runtime GC root so a subsequent getRuntime() for the same name
+    // can install a fresh Impl (and thus a fresh ClassLoader / hidden-class group).
+    BTraceRuntimes.removeRuntime(probeName);
+    return probeClass;
+  }
+
   @Test
   public void probeClassWeaklyReachableAfterDefine() throws Exception {
     WeakReference<?>[] refs = defineAndDropProbe();
