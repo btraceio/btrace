@@ -33,6 +33,15 @@ public class HandlerRepositoryImplTest {
 
   /** Minimal stub BTraceProbe for lifecycle-only tests. */
   private static BTraceProbe stubProbe(String internalName) {
+    return stubProbe(internalName, null);
+  }
+
+  /**
+   * Stub {@link BTraceProbe} that returns {@code probeClass} from {@code getProbeClass()}.
+   * Use when a test needs resolution to succeed against a specific loadable class (the
+   * production resolver reads the class via {@code probe.getProbeClass()}).
+   */
+  private static BTraceProbe stubProbe(String internalName, Class<?> probeClass) {
     return new BTraceProbe() {
       @Override public String getClassName() { return internalName.replace('/', '.'); }
       @Override public String getClassName(boolean internal) {
@@ -45,7 +54,8 @@ public class HandlerRepositoryImplTest {
       @Override public Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr) { return Collections.emptyList(); }
       @Override public Iterable<OnMethod> onmethods() { return Collections.emptyList(); }
       @Override public Iterable<OnProbe> onprobes() { return Collections.emptyList(); }
-      @Override public Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t) { return null; }
+      @Override public Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t) { return probeClass; }
+      @Override public Class<?> getProbeClass() { return probeClass; }
       @Override public void unregister() {}
       @Override public byte[] getFullBytecode() { return new byte[0]; }
       @Override public byte[] getDataHolderBytecode() { return new byte[0]; }
@@ -71,6 +81,12 @@ public class HandlerRepositoryImplTest {
   @AfterEach
   void cleanup() {
     HANDLER_CALLED.set(false);
+  }
+
+  @Test
+  void testGetProbeClassExposesClassOnStubProbe() {
+    BTraceProbe probe = stubProbe("test/accessor/StubProbe", HandlerRepositoryImplTest.class);
+    assertSame(HandlerRepositoryImplTest.class, probe.getProbeClass());
   }
 
   @Test

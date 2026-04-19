@@ -55,6 +55,7 @@ public final class BTraceProbeSupport {
   private boolean trustedScript = false;
   private boolean classRenamed = false;
   private String className, origName;
+  private volatile Class<?> probeClass;
 
   BTraceProbeSupport() {
     onMethods = new ArrayList<>();
@@ -232,6 +233,14 @@ public final class BTraceProbeSupport {
     return trustedScript;
   }
 
+  Class<?> getProbeClass() {
+    return probeClass;
+  }
+
+  void clearProbeClass() {
+    this.probeClass = null;
+  }
+
   Class<?> defineClass(BTraceRuntime.Impl rt, byte[] code) {
     // This extra BTraceRuntime.enter is needed to
     // check whether we have already entered before.
@@ -248,6 +257,7 @@ public final class BTraceProbeSupport {
       if (log.isDebugEnabled()) {
         log.debug("defineClass succeeded for {}", getClassName(false));
       }
+      this.probeClass = clz;
       return clz;
     } finally {
       // leave BTraceRuntime enter state as it was before

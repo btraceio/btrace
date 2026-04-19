@@ -87,6 +87,12 @@ public interface BTraceProbe {
 
   Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t);
 
+  /**
+   * @return the defined probe {@link Class}, or {@code null} if the probe has not been
+   *         registered (or has been unregistered).
+   */
+  Class<?> getProbeClass();
+
   void unregister();
 
   boolean willInstrument(Class<?> clz);

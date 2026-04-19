@@ -215,6 +215,11 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   }
 
   @Override
+  public Class<?> getProbeClass() {
+    return delegate.getProbeClass();
+  }
+
+  @Override
   public void unregister() {
     HandlerRepositoryImpl.unregisterProbe(this);
     if (transformer != null && isTransforming()) {
@@ -223,6 +228,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       }
       transformer.unregister(this);
     }
+    delegate.clearProbeClass();
     rt = null;
   }
 
