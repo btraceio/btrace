@@ -203,30 +203,16 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
   }
 
   /**
-   * Resolve the probe handler class for the given probe name.
+   * Resolve the probe handler class via the runtime registry.
    *
-   * <p>{@link Class#forName(String)} uses the caller's ClassLoader, which is the
-   * agent's loader. Since commit {@code 906d924d} (per-probe ClassLoader /
-   * hidden class isolation), probe classes no longer live in the agent's loader,
-   * so {@code Class.forName} throws {@code ClassNotFoundException} and the
-   * periodic-event registration is silently skipped.
-   *
-   * <p>This helper looks up the {@link BTraceRuntimeImplBase} registered under
-   * the probe name (the hidden-class suffix is stripped via
-   * {@link BTraceRuntimeAccessImpl#normalizeProbeName}) and returns the actual
-   * defined {@link Class} via {@link BTraceRuntimeImplBase#getProbeClass}. That
-   * bypasses loader-delegation entirely because the runtime was registered by
-   * the agent itself after {@code defineClass} returned.
-   *
-   * @return the probe class, or {@code null} if no runtime is registered for
-   *     this probe (in which case the caller should fall back)
+   * <p>{@link Class#forName} doesn't see probes defined in isolated or hidden
+   * class loaders, so go through the registry the agent populated at
+   * defineClass time. Returns {@code null} if no runtime is registered — the
+   * caller falls back to {@code Class.forName} for deployments (notably the
+   * JDK 8 path) that define probes directly into the agent's loader.
    */
   private static Class<?> resolveHandlerClass(String probeName) {
-    if (probeName == null) {
-      return null;
-    }
-    String key = BTraceRuntimeAccessImpl.normalizeProbeName(probeName);
-    BTraceRuntimeImplBase rt = BTraceRuntimeAccessImpl.runtimes.get(key);
+    BTraceRuntimeImplBase rt = BTraceRuntimeAccessImpl.getRuntime(probeName);
     return rt != null ? rt.getProbeClass() : null;
   }
 }

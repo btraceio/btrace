@@ -6,26 +6,18 @@ public final class Auxiliary {
   private Auxiliary() {}
 
   /**
-   * Returns a {@link MethodHandles.Lookup} captured inside this class.
+   * Returns a {@link MethodHandles.Lookup} anchored on this class.
    *
-   * <p>Why this indirection exists: on JDK 15+, probe classes are installed via
-   * {@link MethodHandles.Lookup#defineHiddenClass}, which requires a lookup
-   * with both PRIVATE and MODULE access (see
-   * {@link MethodHandles.Lookup#hasFullPrivilegeAccess}). Probes are renamed into
-   * {@code Auxiliary}'s runtime package, so the defining lookup must target
-   * this class.
+   * <p>Probes on JDK 15+ are installed via {@link MethodHandles.Lookup#defineHiddenClass}
+   * into {@code Auxiliary}'s runtime package and require a lookup with full privilege
+   * access. Obtaining the lookup here (rather than via {@code privateLookupIn} from a
+   * caller in a different module) keeps the MODULE bit and avoids
+   * {@code IllegalAccessException} when the caller's class loader is distinct from
+   * this class's — e.g. a masked-jar deployment where the agent sits on
+   * {@code MaskedClassLoader} and {@code Auxiliary} sits on the bootstrap loader.
    *
-   * <p>The natural callsite — {@code BTraceRuntimeImpl_11} — lives on the
-   * agent's {@code MaskedClassLoader} while {@code Auxiliary} lives on the
-   * bootstrap loader. Calling
-   * {@code MethodHandles.privateLookupIn(Auxiliary.class, MethodHandles.lookup())}
-   * from there crosses a module boundary and yields a lookup without the
-   * MODULE bit, so {@code defineHiddenClass} fails with
-   * {@code IllegalAccessException: ... does not have full privilege access}.
-   *
-   * <p>Capturing the lookup from within {@code Auxiliary} keeps both the
-   * lookup class and the class-being-defined anchored in the same module,
-   * preserving full privilege access.
+   * <p>Public because the primary caller lives in the sibling package
+   * {@code org.openjdk.btrace.runtime}.
    */
   public static MethodHandles.Lookup lookup() {
     return MethodHandles.lookup();

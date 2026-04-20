@@ -219,14 +219,9 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
         // that older paths use.
         //
         // Reflective invocation because this source set targets JDK 11 where
-        // defineHiddenClass and Lookup.ClassOption do not exist yet.
-        //
-        // The Lookup must come from inside Auxiliary itself rather than from
-        // privateLookupIn(Auxiliary.class, MethodHandles.lookup()): the latter
-        // crosses a module boundary because Auxiliary sits on the bootstrap
-        // loader while BTraceRuntimeImpl_11 sits on the agent's MaskedClassLoader.
-        // Crossing module boundaries drops the MODULE bit, and
-        // defineHiddenClass requires hasFullPrivilegeAccess() (PRIVATE + MODULE).
+        // defineHiddenClass and Lookup.ClassOption do not exist yet. The lookup
+        // must originate inside Auxiliary so it keeps the MODULE bit in
+        // masked-jar deployments — see Auxiliary#lookup.
         MethodHandles.Lookup lookup = Auxiliary.lookup();
         // No ClassOption.STRONG: with the default (non-strong) policy the hidden class
         // is unloadable as soon as the Class<?> mirror is no longer strongly reachable
@@ -263,12 +258,8 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
         | SecurityException
         | InstantiationException
         | InvocationTargetException e) {
-      // Surface the underlying failure instead of returning a bare null. The
-      // previous catch-and-ignore surfaced upstream as a causeless
-      // "can not load BTrace class" RuntimeException, making a real JDK API
-      // mismatch indistinguishable from every other define failure.
-      Throwable root = (e instanceof InvocationTargetException && e.getCause() != null)
-          ? e.getCause()
+      Throwable root = e instanceof InvocationTargetException
+          ? ((InvocationTargetException) e).getTargetException()
           : e;
       throw new IllegalStateException(
           "BTrace probe defineClass failed on JDK " + Runtime.version().feature(), root);

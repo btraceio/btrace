@@ -126,6 +126,15 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
   }
 
   /**
+   * Look up a registered runtime by probe class name. The name is normalized via
+   * {@link #normalizeProbeName}, so hidden-class names with a
+   * {@code "/0x..."} suffix resolve to the plain name used at registration.
+   */
+  static BTraceRuntimeImplBase getRuntime(String probeName) {
+    return probeName == null ? null : runtimes.get(normalizeProbeName(probeName));
+  }
+
+  /**
    * Drop the {@link BTraceRuntime.Impl} previously registered for {@code className}.
    *
    * <p>Releases the strong GC root the registry map holds on a runtime (and anything it

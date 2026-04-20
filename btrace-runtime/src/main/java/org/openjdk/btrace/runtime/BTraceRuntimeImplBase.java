@@ -256,13 +256,9 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   private Class clazz;
 
   /**
-   * Returns the probe {@link Class} instance associated with this runtime, or
-   * {@code null} if {@link #init} has not yet populated it.
-   *
-   * <p>Needed by callers that want to resolve probe methods reflectively without
-   * going through {@link Class#forName}: with per-probe ClassLoader isolation
-   * (JDK 11-14) and hidden classes (JDK 15+), the probe class is not visible
-   * to {@code Class.forName} from the agent's loader.
+   * The probe class (after {@link #init}) or {@code null}. Callers that need
+   * reflective access bypass {@link Class#forName}, which can't see probes
+   * defined in isolated or hidden class loaders.
    */
   Class<?> getProbeClass() {
     return clazz;
