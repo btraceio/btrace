@@ -1,9 +1,6 @@
 LSTORE 4
 ASTORE 6
 ASTORE 7
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/StaticMethodCall.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
 ALOAD 6

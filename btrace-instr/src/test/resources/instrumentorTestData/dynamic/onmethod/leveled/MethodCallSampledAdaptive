@@ -1,36 +1,21 @@
 ICONST_0
 ISTORE 4
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallSampledAdaptive.$btrace$$level : I
-DUP
-ISTORE 5
-IFLE L1
-L2
-FRAME FULL [resources/OnMethodTest java/lang/String J I I] [resources/OnMethodTest java/lang/String J]
 ICONST_2
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitAdaptive (I)Z
 ISTORE 4
-L1
-FRAME FULL [resources/OnMethodTest java/lang/String J I I] [resources/OnMethodTest java/lang/String J]
-LSTORE 6
+LSTORE 5
+ASTORE 7
 ASTORE 8
-ASTORE 9
-ILOAD 5
-IFLE L3
-L4
-FRAME APPEND [J java/lang/String resources/OnMethodTest]
 ILOAD 4
-IFEQ L5
-L3
-FRAME SAME
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/MethodCallSampledAdaptive.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L5
+IFEQ L1
+L2
+FRAME FULL [resources/OnMethodTest java/lang/String J I J java/lang/String resources/OnMethodTest] []
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L5
+IFNE L1
 ALOAD 0
+ALOAD 7
+LLOAD 5
 ALOAD 8
-LLOAD 6
-ALOAD 9
 LDC "special long resources.OnMethodTest#callTarget(java.lang.String, long)"
 LDC "resources.OnMethodTest"
 LDC "callTopLevel"
@@ -40,14 +25,14 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/MethodCallSampledAdaptive"
 ]
-L5
+L1
 FRAME SAME
-ALOAD 9
 ALOAD 8
-LLOAD 6
-L6
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
-LOCALVARIABLE a Ljava/lang/String; L0 L6 1
-LOCALVARIABLE b J L0 L6 2
+ALOAD 7
+LLOAD 5
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+LOCALVARIABLE a Ljava/lang/String; L0 L3 1
+LOCALVARIABLE b J L0 L3 2
 MAXSTACK = 8
-MAXLOCALS = 10
+MAXLOCALS = 9

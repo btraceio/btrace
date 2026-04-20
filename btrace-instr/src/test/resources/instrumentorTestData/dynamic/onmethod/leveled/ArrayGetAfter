@@ -1,21 +1,12 @@
 DUP2
+ISTORE 3
 ASTORE 4
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArrayGetAfter.$btrace$$level : I
-ICONST_1
-ISUB
 DUP
 ISTORE 5
-IFLT L2
-FRAME FULL [resources/OnMethodTest I [I I [I I] [[I I]
-IALOAD
-ILOAD 5
-IFLT L3
-DUP
-ISTORE 6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L3
+IFNE L2
 ALOAD 0
-ILOAD 6
+ILOAD 5
 ALOAD 4
 ILOAD 3
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArrayGetAfter$args(Ljava/lang/Object;I[II)V [
@@ -24,17 +15,16 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArrayGetAfter"
 ]
+FRAME FULL [resources/OnMethodTest I [I I [I I] [I]
+ISTORE 6
 L3
-FRAME FULL [resources/OnMethodTest I [I I [I I I] [I]
-ISTORE 7
+LINENUMBER 97 L3
 L4
-LINENUMBER 97 L4
+LINENUMBER 98 L4
 L5
-LINENUMBER 98 L5
-L6
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
-LOCALVARIABLE a I L0 L6 1
-LOCALVARIABLE arr [I L1 L6 2
-LOCALVARIABLE b I L4 L6 7
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
+LOCALVARIABLE a I L0 L5 1
+LOCALVARIABLE arr [I L1 L5 2
+LOCALVARIABLE b I L3 L5 6
 MAXSTACK = 5
-MAXLOCALS = 8
+MAXLOCALS = 7

@@ -11,6 +11,8 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 FRAME SAME
 LCONST_0
 LSTORE 1
+LCONST_0
+LSTORE 3
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 3
 INVOKESTATIC java/lang/System.nanoTime ()J

@@ -1,32 +1,18 @@
 ICONST_0
 ISTORE 6
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturnSampled.$btrace$$level : I
-DUP
-ISTORE 7
-IFLE L0
-L1
-FRAME APPEND [I I]
 ICONST_1
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hit (I)Z
 ISTORE 6
-FRAME SAME
-ILOAD 7
-IFLE L2
-L3
-FRAME SAME1 J
 ILOAD 6
-IFEQ L4
+IFEQ L1
 L2
-FRAME SAME1 J
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturnSampled.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L4
+FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I I] [J]
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L4
+IFNE L1
 DUP2
-LSTORE 8
+LSTORE 7
 ALOAD 0
-LLOAD 8
+LLOAD 7
 ALOAD 1
 LLOAD 2
 ALOAD 4
@@ -37,13 +23,13 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArgsReturnSampled"
 ]
-L4
+L1
 FRAME SAME1 J
-L5
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
-LOCALVARIABLE a Ljava/lang/String; L0 L5 1
-LOCALVARIABLE b J L0 L5 2
-LOCALVARIABLE c [Ljava/lang/String; L0 L5 4
-LOCALVARIABLE d [I L0 L5 5
+L3
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+LOCALVARIABLE a Ljava/lang/String; L0 L3 1
+LOCALVARIABLE b J L0 L3 2
+LOCALVARIABLE c [Ljava/lang/String; L0 L3 4
+LOCALVARIABLE d [I L0 L3 5
 MAXSTACK = 10
-MAXLOCALS = 10
+MAXLOCALS = 9

@@ -1,7 +1,4 @@
 TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncEntry.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L6
 DUP
 ASTORE 2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -20,12 +17,14 @@ FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest
 L7
 LINENUMBER 127 L7
 GOTO L8
+FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]
 ASTORE 3
 ALOAD 3
 L8
 LINENUMBER 128 L8
+FRAME FULL [resources/OnMethodTest T resources/OnMethodTest] []
 L5
-FRAME SAME1 java/lang/Throwable
+FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]
 ATHROW
 LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0
 MAXSTACK = 4

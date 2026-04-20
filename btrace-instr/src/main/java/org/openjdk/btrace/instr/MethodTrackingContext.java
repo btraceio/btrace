@@ -53,13 +53,11 @@ public class MethodTrackingContext {
   private boolean sampled = false;
   private Sampled.Sampler samplerKind = Sampled.Sampler.None;
   private int samplerMean = -1;
-  private final Collection<Interval> levelIntervals = new ArrayList<>();
 
   // State (per entry point)
   private int entryTsVar = Integer.MIN_VALUE;
   private int sHitVar = Integer.MIN_VALUE;
   private int durationVar = Integer.MIN_VALUE;
-  private int globalLevelVar = Integer.MIN_VALUE;
   private boolean durationComputed = false;
   private boolean prologueEmitted = false;
   private Label elseLabel = null;
@@ -98,11 +96,6 @@ public class MethodTrackingContext {
     this.samplerKind = samplerKind;
     this.samplerMean = samplerMean;
     this.sampled = samplerKind != Sampled.Sampler.None && samplerMean > 0;
-
-    if (levelStr != null && !levelStr.isEmpty()) {
-      Interval itv = Interval.fromString(levelStr);
-      levelIntervals.add(itv);
-    }
 
     if (sampled) {
       MethodTracker.registerCounter(methodId, samplerMean);
@@ -195,7 +188,6 @@ public class MethodTrackingContext {
   public void reset() {
     entryTsVar = Integer.MIN_VALUE;
     sHitVar = Integer.MIN_VALUE;
-    globalLevelVar = Integer.MIN_VALUE;
     durationComputed = false;
   }
 
@@ -224,21 +216,6 @@ public class MethodTrackingContext {
       }
       durationComputed = true;
     }
-  }
-
-  /**
-   * Emit level check for a handler.
-   *
-   * Level checks moved to MethodHandle layer (HandlerRepositoryImpl.applyLevelGuard).
-   * No bytecode-level checks are needed; INVOKEDYNAMIC will execute unconditionally,
-   * and the linked MethodHandle performs the level guard.
-   *
-   * @param levelStr level match condition (e.g., {@code ">=1"})
-   * @return Label to jump to if level check fails, or null if no check needed
-   */
-  public Label emitHandlerLevelCheck(String levelStr) {
-    // Level checks now happen in the MethodHandle layer, not in bytecode
-    return null;
   }
 
   // Private helper methods for bytecode generation

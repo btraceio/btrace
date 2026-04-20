@@ -856,12 +856,7 @@ public class Instrumentor extends ClassVisitor {
                 int mid = MethodID.getMethodId(className, name, desc);
                 trackingCtx.emitTestSample(true, mid);
               }
-              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
               injectBtrace();
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
               if (om.getSamplerKind() != Sampled.Sampler.None) {
                 trackingCtx.emitElse();
               }
@@ -933,8 +928,6 @@ public class Instrumentor extends ClassVisitor {
                     }
                   };
 
-              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
-
               Label l1 = asm.openLinkerCheck();
 
               loadArguments(vr, actionArgTypes, isStatic(), actionArgs);
@@ -942,11 +935,6 @@ public class Instrumentor extends ClassVisitor {
               invokeBTraceAction(asm, om);
 
               asm.closeLinkerCheck(l1);
-
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
             }
           }
 
@@ -1571,17 +1559,12 @@ public class Instrumentor extends ClassVisitor {
               int mid = MethodID.getMethodId(className, name, desc);
               trackingCtx.emitTestSample(true, mid);
 
-              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
               if (numActionArgs == 0) {
                 invokeBTraceAction(asm, om);
               } else {
                 callAction(opcode);
               }
               trackingCtx.emitElse();
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
             }
           }
 

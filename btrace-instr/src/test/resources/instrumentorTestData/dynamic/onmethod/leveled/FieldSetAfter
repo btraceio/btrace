@@ -2,18 +2,8 @@ ISTORE 1
 DUP
 ASTORE 2
 ILOAD 1
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/FieldSetAfter.$btrace$$level : I
-ICONST_1
-ISUB
-DUP
-ISTORE 3
-IFLT L1
-L1
-FRAME FULL [resources/OnMethodTest I resources/OnMethodTest I] [resources/OnMethodTest I]
-ILOAD 3
-IFLT L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L2
+IFNE L1
 ALOAD 0
 ALOAD 2
 LDC "field"
@@ -24,10 +14,6 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/FieldSetAfter"
 ]
-L2
-LINENUMBER 102 L2
-FRAME SAME
-L3
-LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
+FRAME APPEND [I resources/OnMethodTest]
 MAXSTACK = 4
-MAXLOCALS = 4
+MAXLOCALS = 3

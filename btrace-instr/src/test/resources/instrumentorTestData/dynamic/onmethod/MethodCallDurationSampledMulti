@@ -1,5 +1,9 @@
 LCONST_0
 LSTORE 4
+LCONST_0
+LSTORE 6
+ICONST_0
+ISTORE 8
 ICONST_2
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitTimed (I)J
 DUP2
@@ -30,6 +34,10 @@ L1
 FRAME FULL [resources/OnMethodTest java/lang/String J J J I J java/lang/String resources/OnMethodTest] [J]
 LCONST_0
 LSTORE 15
+LCONST_0
+LSTORE 17
+ICONST_0
+ISTORE 19
 ICONST_3
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitTimed (I)J
 DUP2

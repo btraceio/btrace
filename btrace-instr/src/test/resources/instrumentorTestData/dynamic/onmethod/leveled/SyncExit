@@ -1,9 +1,6 @@
 TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
 L6
 LINENUMBER 127 L6
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncExit.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L7
 DUP
 ASTORE 2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -21,9 +18,6 @@ L7
 FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest]
 GOTO L8
 ASTORE 3
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncExit.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L9
 DUP
 ASTORE 4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -42,9 +36,9 @@ FRAME FULL [resources/OnMethodTest java/lang/Object T java/lang/Throwable java/l
 ALOAD 3
 L8
 LINENUMBER 128 L8
-FRAME FULL [resources/OnMethodTest] []
+FRAME FULL [resources/OnMethodTest T resources/OnMethodTest] []
 L5
-FRAME SAME1 java/lang/Throwable
+FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]
 ATHROW
 LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0
 MAXSTACK = 4

@@ -1,6 +1,3 @@
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/CheckcastAfter.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L2
 DUP
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
@@ -23,7 +20,7 @@ L5
 LINENUMBER 120 L5
 L4
 LINENUMBER 122 L4
-FRAME FULL [resources/OnMethodTest java/util/Map T java/util/HashMap] []
+FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap java/util/HashMap] []
 L6
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
 LOCALVARIABLE c Ljava/util/Map; L1 L6 1

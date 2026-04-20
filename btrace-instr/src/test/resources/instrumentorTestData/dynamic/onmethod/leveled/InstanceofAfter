@@ -1,8 +1,5 @@
 DUP
 ASTORE 3
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/InstanceofAfter.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0

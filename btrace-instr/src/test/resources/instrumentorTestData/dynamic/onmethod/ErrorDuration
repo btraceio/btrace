@@ -1,6 +1,8 @@
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
 LCONST_0
 LSTORE 1
+LCONST_0
+LSTORE 3
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 3
 FRAME FULL [resources/OnMethodTest J J] [java/lang/Throwable]

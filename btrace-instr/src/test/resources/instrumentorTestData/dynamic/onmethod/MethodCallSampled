@@ -1,3 +1,5 @@
+ICONST_0
+ISTORE 4
 ICONST_2
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hit (I)Z
 ISTORE 4

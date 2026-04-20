@@ -1,5 +1,9 @@
 LCONST_0
 LSTORE 4
+LCONST_0
+LSTORE 6
+ICONST_0
+ISTORE 8
 ICONST_2
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitTimed (I)J
 DUP2
