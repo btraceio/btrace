@@ -141,37 +141,48 @@ Initial analysis was incorrect - when using javap with full disassembly (`-c -pr
 - The INVOKEDYNAMIC is guarded by: `if (LinkingFlag.get() != 0) skip invokedynamic`
 - INVOKEDYNAMIC is inserted at correct locations in the method bodies
 
-**Critical observation:**
-- System.err.println added to IndyDispatcher.bootstrap() never fires
-- This means bootstrap() is never called despite INVOKEDYNAMIC being present
-- The linkingFlag guard might be preventing execution, OR
-- The INVOKEDYNAMIC instructions themselves aren't being reached during test execution
+**CRITICAL ROOT CAUSE IDENTIFIED:**
+- The `$btrace$$level` static field in the probe class is initialized to 0
+- Instrumented code checks: `if (probeClass.$btrace$$level >= 100) { invokedynamic }`
+- Since level is 0 and the check requires >= 100, the condition is ALWAYS FALSE
+- Therefore INVOKEDYNAMIC is never executed, bootstrap is never called, handlers never run
+- The field is never updated to the correct level value (100, 150) from @Level annotations
 
-**Next investigation:**
-1. Verify if LinkingFlag is non-zero during test execution
-2. Determine why bootstrap() is never called despite INVOKEDYNAMIC presence
-3. Check if issue is JDK-version-specific (test runs on JDK 11)
+This explains:
+- Why INVOKEDYNAMIC instruction exists in bytecode but isn't executed
+- Why IndyDispatcher.bootstrap() is never called
+- Why probe handlers produce zero output
+- Why tests are failing on all JDK versions
 
-## Next steps on resume
+**The issue is NOT related to per-probe ClassLoaders** - it's a probe-level initialization problem that existed before or was introduced by recent changes.
 
-1. **Determine why bootstrap() is never called despite INVOKEDYNAMIC presence:**
-   - Add debug logging to LinkingFlag to see if linking flag blocks INVOKEDYNAMIC execution
-   - Add debug logging to the instrumented callA/callB to see if they're being reached
-   - Verify that method guards/level checks aren't preventing INVOKEDYNAMIC execution
-   - Check if the per-probe ClassLoader change affected INVOKEDYNAMIC linking somehow
+## CRITICAL FIX REQUIRED
 
-2. **If LinkingFlag is the issue:**
-   - Investigate why it would be non-zero during normal method execution
-   - Check if something in the per-probe ClassLoader setup is incrementing it permanently
+**The probe level field is not being initialized to the enableAt level values (100, 150)**
 
-3. **If it's not LinkingFlag:**
-   - Trace the exact execution path of callA()/callB() to see where INVOKEDYNAMIC should fire
-   - Verify that the INVOKEDYNAMIC bytecode offsets match actual method execution
+The `$btrace$$level` static field must be set during probe class initialization to match the @Level values from @OnMethod annotations. Currently it stays at 0, so the level check always fails.
 
-2. **Alternative approaches if INDY is root cause:**
-   - Investigate if lookup context or private lookups need different handling for isolated CLs
-   - Check if module accessibility (JDK 9+) blocks access in isolated CLs
-   - Verify bytecode instrumentation is working (does it even instrument the target method?)
+### Next session must fix:
+
+1. **Find where `$btrace$$level` should be initialized**
+   - Search BTraceProbeSupport.defineClass() and related code
+   - Check BTraceProbePersisted for probe registration logic
+   - Look for where Level metadata is converted to runtime values
+
+2. **Understand the initialization flow**
+   - How does the probe class get the correct level value (100, 150)?
+   - Was this initialization code broken by per-probe ClassLoader changes?
+   - Does the isolated ClassLoader prevent normal field access/modification?
+
+3. **Implement the fix**
+   - Set `$btrace$$level = <enableAt level value>` when probe class is initialized
+   - Ensure this works with per-probe ClassLoaders and hidden classes
+   - May need reflection to set the field if normal access is blocked
+
+4. **Verify the fix**
+   - Run testOnMethodLevel - handlers should now execute
+   - Verify output contains "[this, noargs]", "[this, args]", "{xxx}"
+   - Check all failing tests pass
 
 3. **Verify no leftover debug code** in BTraceRuntimeAccessImpl.java (already confirmed clean).
 
