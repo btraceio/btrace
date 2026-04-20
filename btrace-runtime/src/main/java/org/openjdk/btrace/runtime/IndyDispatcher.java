@@ -254,7 +254,7 @@ public final class IndyDispatcher {
     return MethodHandles.dropArguments(body, 0, type.parameterArray());
   }
 
-  private static Object defaultValueFor(Class<?> t) {
+  public static Object defaultValueFor(Class<?> t) {
     if (!t.isPrimitive()) return null;
     if (t == boolean.class) return Boolean.FALSE;
     if (t == byte.class) return (byte) 0;
@@ -264,7 +264,7 @@ public final class IndyDispatcher {
     if (t == long.class) return 0L;
     if (t == float.class) return 0f;
     if (t == double.class) return 0d;
-    return null; // unreachable
+    return null;
   }
 
   @SuppressWarnings("unused") // referenced via MethodHandle

@@ -255,10 +255,16 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   // BTrace Class object corresponding to this client
   private Class clazz;
 
-  // instrumentation level field for each runtime (legacy, may not exist)
+  // instrumentation level field for each runtime (legacy, may not exist).
+  // Only used for backward compatibility with old bytecode-based level checks.
+  // Primary storage is now in levelValue (see below).
   private Field level;
 
-  // instrumentation level value (fallback when Field is not available)
+  // instrumentation level value (PRIMARY source of truth for level checking).
+  // This is the canonical level storage for MethodHandle-based guards.
+  // The legacy $btrace$$level field in the probe class is only updated for
+  // backward compatibility; level checking now happens at the MethodHandle layer.
+  // See HandlerRepositoryImpl.applyLevelGuard() for how this value is used.
   private volatile int levelValue = 0;
 
   // array of timer callback methods
@@ -890,25 +896,29 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   public final int getLevel() {
-    // First try to read from the probe class field (legacy)
+    // First try to read from the probe class field (legacy, for backward compatibility)
     if (level != null) {
       try {
         return (int) level.get(null);
-      } catch (IllegalAccessException ignored) {
+      } catch (IllegalAccessException e) {
+        // Field exists but cannot be accessed; use fallback
+        log.debug("Cannot access legacy level field, using runtime value", e);
       }
     }
-    // Fall back to runtime-stored level value
+    // Fall back to runtime-stored level value (primary source)
     return levelValue;
   }
 
   public final void setLevel(int level) {
-    // Always store in runtime value field
+    // Always store in runtime value field (primary source)
     this.levelValue = level;
-    // Also try to set on probe class field if it exists (legacy)
+    // Also try to set on probe class field if it exists (legacy, for backward compatibility)
     if (this.level != null) {
       try {
         this.level.set(null, level);
-      } catch (IllegalAccessException ignored) {
+      } catch (IllegalAccessException e) {
+        // Field exists but cannot be accessed; that's okay, levelValue is primary
+        log.debug("Cannot update legacy level field (will use runtime value)", e);
       }
     }
   }

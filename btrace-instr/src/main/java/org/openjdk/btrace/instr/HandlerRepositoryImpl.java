@@ -191,34 +191,9 @@ public final class HandlerRepositoryImpl {
    */
   private static MethodHandle createNoopMH(MethodType handlerType) throws Throwable {
     Class<?> returnType = handlerType.returnType();
-    MethodHandle noop;
-
-    if (returnType == void.class) {
-      noop = MethodHandles.constant(void.class, null);
-    } else if (returnType.isPrimitive()) {
-      if (returnType == boolean.class) {
-        noop = MethodHandles.constant(boolean.class, false);
-      } else if (returnType == byte.class) {
-        noop = MethodHandles.constant(byte.class, (byte) 0);
-      } else if (returnType == short.class) {
-        noop = MethodHandles.constant(short.class, (short) 0);
-      } else if (returnType == int.class) {
-        noop = MethodHandles.constant(int.class, 0);
-      } else if (returnType == long.class) {
-        noop = MethodHandles.constant(long.class, 0L);
-      } else if (returnType == float.class) {
-        noop = MethodHandles.constant(float.class, 0f);
-      } else if (returnType == double.class) {
-        noop = MethodHandles.constant(double.class, 0d);
-      } else if (returnType == char.class) {
-        noop = MethodHandles.constant(char.class, (char) 0);
-      } else {
-        noop = MethodHandles.constant(returnType, null);
-      }
-    } else {
-      noop = MethodHandles.constant(returnType, null);
-    }
-
+    // Reuse shared default value logic from IndyDispatcher
+    Object defaultValue = IndyDispatcher.defaultValueFor(returnType);
+    MethodHandle noop = MethodHandles.constant(returnType, defaultValue);
     // Drop arguments so the noop accepts the handler's parameters but ignores them
     return MethodHandles.dropArguments(noop, 0, handlerType.parameterArray());
   }
