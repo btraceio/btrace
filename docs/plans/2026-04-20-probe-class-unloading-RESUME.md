@@ -129,28 +129,44 @@ The per-probe ClassLoader change (906d924d) creates each probe in a fresh unname
 
 **Revised diagnosis**: Issue is INVOKEDYNAMIC dispatch or handler resolution failure when probe in isolated CL.
 
-## Session 3 Work Summary - ROOT CAUSE FOUND
+## Session 3 Work Summary - REFINED DIAGNOSIS
 
-**Critical discovery:** The instrumented Main.class bytecode is completely missing the callA() and callB() methods that were supposed to be instrumented with probe handlers. 
+**CORRECTED: Methods ARE present in instrumented bytecode**
 
-**Evidence from bytecode inspection:**
-- Original Main_orig.class (1861 bytes) → contains callA(), callB(), private methods
-- Instrumented Main.class (2641 bytes) → only contains: startWork(), constructor, main(), print()
-- callA() and callB() are completely absent from the instrumented version
-- javap output confirms no callA/callB methods; no INVOKEDYNAMIC instructions anywhere
-- This explains why bootstrap() is never called: there are NO instrumented call sites at all
+Initial analysis was incorrect - when using javap with full disassembly (`-c -private`), callA() and callB() ARE present in the instrumented bytecode with proper INVOKEDYNAMIC instructions.
 
-**Root cause:** The bytecode instrumentation is removing methods instead of instrumenting them. This is a critical failure in the instrumentation code path. The fact that the instrumented class is larger (2641 vs 1861 bytes) suggests code was added somewhere, but the targeted methods disappeared.
+**What we found:**
+- Instrumented Main.class HAS callA() and callB() methods
+- Both methods contain conditional INVOKEDYNAMIC instructions that invoke probe handlers
+- The INVOKEDYNAMIC is guarded by: `if (LinkingFlag.get() != 0) skip invokedynamic`
+- INVOKEDYNAMIC is inserted at correct locations in the method bodies
 
-**Next action:** Investigate the instrumentation code (btrace-instr module) to understand why methods are being removed when they should be instrumented. This is NOT a handler resolution issue - it's a bytecode transformation issue.
+**Critical observation:**
+- System.err.println added to IndyDispatcher.bootstrap() never fires
+- This means bootstrap() is never called despite INVOKEDYNAMIC being present
+- The linkingFlag guard might be preventing execution, OR
+- The INVOKEDYNAMIC instructions themselves aren't being reached during test execution
+
+**Next investigation:**
+1. Verify if LinkingFlag is non-zero during test execution
+2. Determine why bootstrap() is never called despite INVOKEDYNAMIC presence
+3. Check if issue is JDK-version-specific (test runs on JDK 11)
 
 ## Next steps on resume
 
-1. **CRITICAL: Fix bytecode instrumentation**
-   - Search btrace-instr code for where callA/callB would be instrumented
-   - Verify that instrumentation is not accidentally removing methods
-   - Check if per-probe ClassLoader change affected method discovery or instrumentation logic
-   - Compare instrumentation behavior on commit 73c3422d (last working) vs 906d924d (broken)
+1. **Determine why bootstrap() is never called despite INVOKEDYNAMIC presence:**
+   - Add debug logging to LinkingFlag to see if linking flag blocks INVOKEDYNAMIC execution
+   - Add debug logging to the instrumented callA/callB to see if they're being reached
+   - Verify that method guards/level checks aren't preventing INVOKEDYNAMIC execution
+   - Check if the per-probe ClassLoader change affected INVOKEDYNAMIC linking somehow
+
+2. **If LinkingFlag is the issue:**
+   - Investigate why it would be non-zero during normal method execution
+   - Check if something in the per-probe ClassLoader setup is incrementing it permanently
+
+3. **If it's not LinkingFlag:**
+   - Trace the exact execution path of callA()/callB() to see where INVOKEDYNAMIC should fire
+   - Verify that the INVOKEDYNAMIC bytecode offsets match actual method execution
 
 2. **Alternative approaches if INDY is root cause:**
    - Investigate if lookup context or private lookups need different handling for isolated CLs
