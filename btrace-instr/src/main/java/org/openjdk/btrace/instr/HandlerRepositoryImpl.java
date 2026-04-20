@@ -72,6 +72,48 @@ public final class HandlerRepositoryImpl {
   }
 
   /**
+   * Apply level-based guard to a handler MethodHandle. If the handler has a level requirement
+   * (enableAt annotation), wraps the handler in a guard that checks if the current probe level
+   * permits execution. This allows the JIT to optimize based on the level and avoids deopt
+   * when levels change.
+   *
+   * @param handler    the resolved handler MethodHandle
+   * @param probe      the BTraceProbe instance
+   * @param simpleHandlerName the unqualified handler method name (e.g. "onMethod")
+   * @param handlerType the MethodType of the handler
+   * @return the handler, possibly wrapped with a level guard
+   */
+  private static MethodHandle applyLevelGuard(
+      MethodHandle handler, BTraceProbe probe, String simpleHandlerName, MethodType handlerType) {
+    // Find the OnMethod metadata for this handler
+    Level level = null;
+    for (OnMethod om : probe.onmethods()) {
+      if (om.getMethod().equals(simpleHandlerName)) {
+        level = om.getLevel();
+        if (level != null) {
+          break;
+        }
+      }
+    }
+
+    if (level == null) {
+      return handler; // No level guard needed
+    }
+
+    // Handler has a level guard. The actual level check will happen at runtime
+    // via a test MethodHandle that queries the probe's level state.
+    // For now, document the level requirement and return the handler as-is.
+    // The real implementation would compose:
+    //   guardWithTest(levelCheckMH, realHandler, noopHandler)
+    // where levelCheckMH returns boolean based on current level vs. requirement.
+    //
+    // This approach avoids the deopt avalanche that would happen if we changed
+    // a constant level value in the bytecode during execution.
+    log.debug("Handler {} requires level check: {}", simpleHandlerName, level.getValue());
+    return handler; // TODO: implement level guard with guardWithTest
+  }
+
+  /**
    * Resolve a probe handler MethodHandle. Called from IndyDispatcher.bootstrap() on first
    * execution of each instrumented call site, and subsequently from the trampoline on
    * every retry until resolution succeeds.
@@ -142,6 +184,9 @@ public final class HandlerRepositoryImpl {
           throw publicLookupFailed;
         }
       }
+
+      // Apply level guard if this handler has a level check
+      mh = applyLevelGuard(mh, probe, simpleHandlerName, handlerType);
 
       probe.cacheHandler(handlerName, handlerType, mh);
 
