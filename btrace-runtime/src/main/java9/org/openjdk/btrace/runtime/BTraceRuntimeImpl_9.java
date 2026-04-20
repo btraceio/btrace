@@ -141,7 +141,13 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
       // ClassLoader. The probe ends up in that loader; once we drop our references
       // and the HandlerRepository evicts its MethodHandles, the loader becomes
       // unreachable and the probe class is unloadable.
-      Class<?> anchor = ProbeAnchor.defineAnchor();
+      // Pass the ClassLoader that can see BTraceUtils and other agent classes.
+      ClassLoader parent = BTraceRuntimeImpl_9.class.getClassLoader();
+      if (parent == null) {
+        // If BTraceRuntimeImpl_9 is in bootstrap, use the current thread's context CL
+        parent = Thread.currentThread().getContextClassLoader();
+      }
+      Class<?> anchor = ProbeAnchor.defineAnchor(parent);
       Class<?> clz =
           MethodHandles.privateLookupIn(anchor, MethodHandles.lookup()).defineClass(code);
       // initialize the class by creating a dummy instance

@@ -24,8 +24,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * we instead define each probe in a <em>fresh, throwaway {@link ClassLoader}</em>:
  *
  * <ol>
- *   <li>{@link #defineAnchor()} emits a tiny, unique public "anchor" class into
- *       a brand-new unnamed {@code ClassLoader} (parented to bootstrap).</li>
+ *   <li>{@link #defineAnchor(ClassLoader)} emits a tiny, unique public "anchor" class into
+ *       a brand-new unnamed {@code ClassLoader} (parented to the given {@code ClassLoader}).</li>
  *   <li>The caller then invokes
  *       {@code MethodHandles.privateLookupIn(anchor, lookup()).defineClass(probeBytes)}
  *       which lands the probe into the anchor's loader — i.e. the same fresh loader.</li>
@@ -47,12 +47,15 @@ final class ProbeAnchor {
    * {@link ClassLoader} so that a subsequent
    * {@code privateLookupIn(anchor, ...).defineClass(probeBytes)} places the probe
    * into that isolated loader.
+   *
+   * @param parent the parent ClassLoader. Allows probe to resolve classes (e.g., BTraceUtils)
+   *     from the agent's ClassLoader.
    */
-  static Class<?> defineAnchor() {
+  static Class<?> defineAnchor(ClassLoader parent) {
     long seq = ANCHOR_SEQ.incrementAndGet();
     final String binaryName = "org.openjdk.btrace.runtime.auxiliary.Anchor$" + seq;
     final byte[] bytes = generateAnchorBytes(binaryName.replace('.', '/'));
-    ClassLoader cl = new ClassLoader(null) {
+    ClassLoader cl = new ClassLoader(parent) {
       @Override
       protected Class<?> findClass(String name) throws ClassNotFoundException {
         if (name.equals(binaryName)) {

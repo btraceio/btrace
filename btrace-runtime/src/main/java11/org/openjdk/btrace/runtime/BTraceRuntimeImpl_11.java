@@ -239,7 +239,13 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
 
       // JDK 11-14: fall back to per-probe anchor + isolated ClassLoader so the
       // probe class and its defining loader become unreachable on detach.
-      Class<?> anchor = ProbeAnchor.defineAnchor();
+      // Pass the ClassLoader that can see BTraceUtils and other agent classes.
+      ClassLoader parent = BTraceRuntimeImpl_11.class.getClassLoader();
+      if (parent == null) {
+        // If BTraceRuntimeImpl_11 is in bootstrap, use the current thread's context CL
+        parent = Thread.currentThread().getContextClassLoader();
+      }
+      Class<?> anchor = ProbeAnchor.defineAnchor(parent);
       Class<?> clz =
           MethodHandles.privateLookupIn(anchor, MethodHandles.lookup()).defineClass(code);
       // initialize the class by creating a dummy instance

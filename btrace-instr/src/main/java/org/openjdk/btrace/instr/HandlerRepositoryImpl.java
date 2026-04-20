@@ -87,11 +87,13 @@ public final class HandlerRepositoryImpl {
     BTraceProbe probe = probeMap.get(probeName);
     if (probe == null) {
       // Probe not registered yet. Do not cache — IndyDispatcher's trampoline will retry.
+      log.debug("[INDY] probe {} not registered, probeMap.size={}", probeName, probeMap.size());
       return null;
     }
 
     MethodHandle cached = probe.getCachedHandler(handlerName, handlerType);
     if (cached != null) {
+      log.debug("[INDY] cached handler {} for {}", cached, handlerName);
       return cached;
     }
 
@@ -99,8 +101,11 @@ public final class HandlerRepositoryImpl {
     if (probeClass == null) {
       // defineClass has not populated probeClass yet (race with register()).
       // Do not cache — IndyDispatcher's trampoline will retry.
+      log.debug("[INDY] probeClass null for {}", probeName);
       return null;
     }
+
+    log.debug("[INDY] resolving {}.{} in {}", probeName, handlerName, probeClass.getClassLoader());
 
     try {
       // Strip probe-name prefix from handler name (e.g. "MyTrace$onMethod" → "onMethod")

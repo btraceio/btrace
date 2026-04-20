@@ -139,10 +139,15 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       if (callerClassName == null || !callerClassName.startsWith("org.openjdk.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
-      // Always define the probe in a fresh, isolated ClassLoader (parented to bootstrap).
+      // Always define the probe in a fresh, isolated ClassLoader parented to the app CL.
       // This makes the probe class unloadable once the probe's MethodHandles and its
-      // BTraceProbe.probeClass reference are cleared on unregister.
-      ClassLoader loader = new ClassLoader(null) {};
+      // BTraceProbe.probeClass reference are cleared on unregister, while allowing the
+      // probe to access BTraceUtils and other agent classes.
+      ClassLoader parent = BTraceRuntimeImpl_8.class.getClassLoader();
+      if (parent == null) {
+        parent = Thread.currentThread().getContextClassLoader();
+      }
+      ClassLoader loader = new ClassLoader(parent) {};
       Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
       unsafe.ensureClassInitialized(cl);
       return cl;
