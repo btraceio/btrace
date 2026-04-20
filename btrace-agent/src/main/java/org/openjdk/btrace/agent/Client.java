@@ -327,7 +327,7 @@ abstract class Client implements CommandListener {
     }
   }
 
-  final Class<?> loadClass(InstrumentCommand instr) throws IOException {
+  final synchronized Class<?> loadClass(InstrumentCommand instr) throws IOException {
     ArgsMap args = instr.getArguments();
     byte[] btraceCode = instr.getCode();
     try {
