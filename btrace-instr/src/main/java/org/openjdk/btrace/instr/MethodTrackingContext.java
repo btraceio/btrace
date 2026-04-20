@@ -227,65 +227,18 @@ public class MethodTrackingContext {
   }
 
   /**
-   * Emit level check for a handler. Uses cached level variable to avoid multiple loads.
-   * Can be called multiple times for different handlers - first call loads and caches the level,
-   * subsequent calls reuse the cached value.
+   * Emit level check for a handler.
+   *
+   * Level checks moved to MethodHandle layer (HandlerRepositoryImpl.applyLevelGuard).
+   * No bytecode-level checks are needed; INVOKEDYNAMIC will execute unconditionally,
+   * and the linked MethodHandle performs the level guard.
    *
    * @param levelStr level match condition (e.g., {@code ">=1"})
    * @return Label to jump to if level check fails, or null if no check needed
    */
   public Label emitHandlerLevelCheck(String levelStr) {
-    if (levelStr == null || levelStr.isEmpty()) {
-      return null;
-    }
-
-    Interval itv = Interval.fromString(levelStr);
-
-    // Check if level check is actually needed
-    if (itv.getA() <= 0 && itv.getB() >= Integer.MAX_VALUE) {
-      return null; // Always passes
-    }
-
-    Label skipLabel = new Label();
-
-    // Load level variable (cached if multiple handlers need it)
-    if (helper.shouldCacheLevelVar()) {
-      if (globalLevelVar == Integer.MIN_VALUE) {
-        asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
-        globalLevelVar = helper.storeAsNew();
-      } else {
-        asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-      }
-    } else {
-      // Single handler case: just load without caching
-      asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC);
-    }
-
-    // Perform comparison based on interval
-    if (itv.getA() > 0 && itv.getB() >= Integer.MAX_VALUE) {
-      // Check level >= A (or level < A, skip)
-      asm.ldc(itv.getA()).jump(IF_ICMPLT, skipLabel);
-    } else if (itv.getA() <= 0 && itv.getB() < Integer.MAX_VALUE) {
-      // Check level <= B (or level > B, skip)
-      asm.ldc(itv.getB()).jump(IF_ICMPGT, skipLabel);
-    } else {
-      // Range check: A <= level <= B
-      // Check both lower and upper bounds
-      if (itv.getA() > 0) {
-        asm.ldc(itv.getA()).jump(IF_ICMPLT, skipLabel); // Skip if level < A
-        // Reload for second check (from cache if available, otherwise from static field)
-        if (helper.shouldCacheLevelVar()) {
-          asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-        } else {
-          asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC);
-        }
-      }
-      if (itv.getB() < Integer.MAX_VALUE) {
-        asm.ldc(itv.getB()).jump(IF_ICMPGT, skipLabel); // Skip if level > B
-      }
-    }
-
-    return skipLabel;
+    // Level checks now happen in the MethodHandle layer, not in bytecode
+    return null;
   }
 
   // Private helper methods for bytecode generation
