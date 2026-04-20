@@ -86,4 +86,17 @@ public final class BTraceRuntimes {
   public static void removeRuntime(String className) {
     BTraceRuntimeAccessImpl.removeRuntime(className);
   }
+
+  /**
+   * Get the current instrumentation level for the active BTrace probe.
+   * Used by MethodHandle-based level guards to query the level at handler invocation time.
+   * Returns 0 if no runtime is active.
+   */
+  public static int getCurrentLevel() {
+    BTraceRuntimeImplBase current = BTraceRuntimeAccessImpl.getCurrent();
+    if (current != null) {
+      return current.getInstrumentationLevel();
+    }
+    return 0;
+  }
 }

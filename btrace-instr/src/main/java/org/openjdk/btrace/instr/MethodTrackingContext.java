@@ -453,65 +453,12 @@ public class MethodTrackingContext {
   }
 
   private Label addLevelChecks(Label skip, Runnable initializer) {
-    Label skipTarget = null;
-    if (!levelIntervals.isEmpty()) {
-      List<Interval> optimized = Interval.invert(levelIntervals);
-      boolean generateBranch = true;
-
-      if (optimized.size() == 1) {
-        Interval i = optimized.get(0);
-        if (i.isNone() || (i.getA() == Integer.MIN_VALUE && i.getB() == -1)) {
-          generateBranch = false;
-        }
-      }
-
-      if (generateBranch) {
-        if (initializer != null) {
-          initializer.run();
-        }
-
-        skipTarget = skip != null ? skip : new Label();
-
-        for (Interval i : optimized) {
-          Label nextCheck = new Label();
-          if (globalLevelVar == Integer.MIN_VALUE) {
-            asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
-            globalLevelVar = helper.storeAsNew();
-          } else {
-            asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-          }
-
-          boolean stackConsumed = false;
-          if (i.getA() > Integer.MIN_VALUE) {
-            stackConsumed = true;
-            if (i.getA() == 0) {
-              asm.jump(IFLT, nextCheck);
-            } else {
-              asm.ldc(i.getA()).jump(IF_ICMPLT, nextCheck);
-            }
-          }
-
-          if (i.getB() < Integer.MAX_VALUE) {
-            if (stackConsumed) {
-              asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-            }
-            if (i.getB() == 0) {
-              asm.jump(IFLE, skipTarget);
-            } else {
-              asm.ldc(i.getB()).jump(IF_ICMPLE, skipTarget);
-            }
-          } else {
-            Label l = new Label();
-            asm.label(l);
-            helper.insertFrameSameStack(l);
-            asm.jump(GOTO, skipTarget);
-          }
-
-          asm.label(nextCheck);
-          helper.insertFrameSameStack(nextCheck);
-        }
-      }
+    // Level checks moved to MethodHandle layer (HandlerRepositoryImpl.applyLevelGuard)
+    // No bytecode-level guards needed; INVOKEDYNAMIC always executes, and the linked
+    // MethodHandle performs the level check before invoking the real handler.
+    if (initializer != null) {
+      initializer.run();
     }
-    return skipTarget;
+    return skip;
   }
 }

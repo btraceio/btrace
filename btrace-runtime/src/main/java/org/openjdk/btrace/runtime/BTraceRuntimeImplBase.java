@@ -255,8 +255,11 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   // BTrace Class object corresponding to this client
   private Class clazz;
 
-  // instrumentation level field for each runtime
+  // instrumentation level field for each runtime (legacy, may not exist)
   private Field level;
+
+  // instrumentation level value (fallback when Field is not available)
+  private volatile int levelValue = 0;
 
   // array of timer callback methods
   private TimerHandler[] timerHandlers;
@@ -500,15 +503,23 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     exitHandlers = eHandlers;
     lowMemoryHandlers = lmHandlers;
 
+    // Level is now stored on the runtime instance instead of the probe class field.
+    // This allows level checking to happen at MethodHandle linking time without relying
+    // on a bytecode-level field that was never properly initialized.
+    int levelVal = BTraceRuntime.parseInt(args.get("level"), Integer.MIN_VALUE);
+    if (levelVal > Integer.MIN_VALUE) {
+      setLevel(levelVal);
+    }
+
+    // Attempt to set the legacy $btrace$$level field if it exists (for backward compatibility)
     try {
       level = cl.getDeclaredField("$btrace$$level");
       level.setAccessible(true);
-      int levelVal = BTraceRuntime.parseInt(args.get("level"), Integer.MIN_VALUE);
       if (levelVal > Integer.MIN_VALUE) {
         level.set(null, levelVal);
       }
     } catch (Throwable e) {
-      log.debug("Instrumentation level setting not available", e);
+      log.debug("Instrumentation level field not available (this is OK with MethodHandle-based guards)", e);
     }
 
     BTraceMBean.registerMBean(clazz);
@@ -879,18 +890,26 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   public final int getLevel() {
-    try {
-      return (int) level.get(null);
-    } catch (IllegalAccessException ignored) {
+    // First try to read from the probe class field (legacy)
+    if (level != null) {
+      try {
+        return (int) level.get(null);
+      } catch (IllegalAccessException ignored) {
+      }
     }
-
-    return 0;
+    // Fall back to runtime-stored level value
+    return levelValue;
   }
 
   public final void setLevel(int level) {
-    try {
-      this.level.set(null, level);
-    } catch (IllegalAccessException ignored) {
+    // Always store in runtime value field
+    this.levelValue = level;
+    // Also try to set on probe class field if it exists (legacy)
+    if (this.level != null) {
+      try {
+        this.level.set(null, level);
+      } catch (IllegalAccessException ignored) {
+      }
     }
   }
 

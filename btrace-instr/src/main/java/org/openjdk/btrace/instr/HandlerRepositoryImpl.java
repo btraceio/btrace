@@ -3,6 +3,8 @@ package org.openjdk.btrace.instr;
 import org.openjdk.btrace.core.HandlerRepository;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.runtime.IndyDispatcher;
+import org.openjdk.btrace.runtime.Interval;
+import org.openjdk.btrace.runtime.BTraceRuntimes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,17 +102,125 @@ public final class HandlerRepositoryImpl {
       return handler; // No level guard needed
     }
 
-    // Handler has a level guard. The actual level check will happen at runtime
-    // via a test MethodHandle that queries the probe's level state.
-    // For now, document the level requirement and return the handler as-is.
-    // The real implementation would compose:
-    //   guardWithTest(levelCheckMH, realHandler, noopHandler)
-    // where levelCheckMH returns boolean based on current level vs. requirement.
-    //
-    // This approach avoids the deopt avalanche that would happen if we changed
-    // a constant level value in the bytecode during execution.
+    // Compose the handler with a level guard. The guard will:
+    // 1. Check if current instrumentation level satisfies the requirement
+    // 2. If yes, invoke the real handler
+    // 3. If no, invoke a noop that returns the default value for the type
+
     log.debug("Handler {} requires level check: {}", simpleHandlerName, level.getValue());
-    return handler; // TODO: implement level guard with guardWithTest
+
+    try {
+      // Create a test MethodHandle that checks the level requirement.
+      // It takes the same arguments as the handler but returns boolean.
+      MethodType testType = handlerType.changeReturnType(boolean.class);
+      MethodHandle levelTest = createLevelCheckMH(level, testType);
+
+      // Create a noop handler that returns default value for the return type
+      MethodHandle noop = createNoopMH(handlerType);
+
+      // Compose: if level check passes, invoke handler; otherwise noop
+      return MethodHandles.guardWithTest(levelTest, handler, noop);
+    } catch (Throwable e) {
+      log.warn("Failed to create level guard for handler {}", simpleHandlerName, e);
+      return handler; // Fall back to unguarded handler on error
+    }
+  }
+
+  /**
+   * Create a MethodHandle that tests if the current instrumentation level satisfies
+   * the given level requirement. Returns true if level check passes, false otherwise.
+   */
+  private static MethodHandle createLevelCheckMH(Level level, MethodType testType) throws Throwable {
+    // Get the Interval requirement (e.g., ">=100" → [100, MAX_VALUE])
+    Interval interval = level.getValue();
+
+    // Create a static helper method that checks: currentLevel >= a && currentLevel <= b
+    // We need to invoke this helper with the level bounds and call the level getter
+    // The tricky part: we need access to BTraceRuntime to query the current level,
+    // but we don't have it as a parameter. We must create a method that can access it.
+
+    // Use a custom MethodHandle that invokes our level-checking logic
+    MethodHandle levelChecker = createLevelCheckerMH(interval);
+
+    // Drop arguments to match testType (accept same params as handler, return boolean)
+    return MethodHandles.dropArguments(levelChecker, 0, testType.parameterArray());
+  }
+
+  /**
+   * Helper: create a MethodHandle that queries BTraceRuntime.getInstrumentationLevel()
+   * and checks if it falls within the given interval.
+   */
+  private static MethodHandle createLevelCheckerMH(Interval interval) throws Throwable {
+    int minLevel = interval.getA();
+    int maxLevel = interval.getB();
+
+    // Create a MethodHandle that returns true if currentLevel is in [minLevel, maxLevel]
+    MethodHandles.Lookup lookup = MethodHandles.lookup();
+    MethodHandle checkMH = lookup.findStatic(
+        HandlerRepositoryImpl.class,
+        "checkLevelInRange",
+        MethodType.methodType(boolean.class, int.class, int.class, int.class));
+
+    // Bind the interval bounds as arguments at positions 0 and 1
+    // After binding: (minLevel=bound, maxLevel=bound, currentLevel=?) -> boolean
+    MethodHandle bound = MethodHandles.insertArguments(checkMH, 0, minLevel, maxLevel);
+    // After binding: (currentLevel) -> boolean
+
+    // Compose with a getter that queries the current level
+    MethodHandle getCurrentLevelMH = lookup.findStatic(
+        BTraceRuntimes.class,
+        "getCurrentLevel",
+        MethodType.methodType(int.class));
+    // getCurrentLevel: () -> int
+
+    // Fold: getCurrentLevel() returns int, pass result as first arg to bound
+    // Result: () -> boolean
+    return MethodHandles.foldArguments(bound, getCurrentLevelMH);
+  }
+
+  /**
+   * Static helper invoked via MethodHandle: check if level is in [min, max] range.
+   */
+  @SuppressWarnings("unused") // invoked via MethodHandle
+  private static boolean checkLevelInRange(int minLevel, int maxLevel, int currentLevel) {
+    return currentLevel >= minLevel && currentLevel <= maxLevel;
+  }
+
+  /**
+   * Create a noop MethodHandle that returns the default value for the given type.
+   */
+  private static MethodHandle createNoopMH(MethodType handlerType) throws Throwable {
+    Class<?> returnType = handlerType.returnType();
+    MethodHandle noop;
+
+    if (returnType == void.class) {
+      noop = MethodHandles.constant(void.class, null);
+    } else if (returnType.isPrimitive()) {
+      if (returnType == boolean.class) {
+        noop = MethodHandles.constant(boolean.class, false);
+      } else if (returnType == byte.class) {
+        noop = MethodHandles.constant(byte.class, (byte) 0);
+      } else if (returnType == short.class) {
+        noop = MethodHandles.constant(short.class, (short) 0);
+      } else if (returnType == int.class) {
+        noop = MethodHandles.constant(int.class, 0);
+      } else if (returnType == long.class) {
+        noop = MethodHandles.constant(long.class, 0L);
+      } else if (returnType == float.class) {
+        noop = MethodHandles.constant(float.class, 0f);
+      } else if (returnType == double.class) {
+        noop = MethodHandles.constant(double.class, 0d);
+      } else if (returnType == char.class) {
+        noop = MethodHandles.constant(char.class, (char) 0);
+      } else {
+        noop = MethodHandles.constant(returnType, null);
+      }
+    } else {
+      noop = MethodHandles.constant(returnType, null);
+    }
+
+    // Drop arguments so the noop accepts the handler's parameters but ignores them
+    return MethodHandles.dropArguments(noop, 0, handlerType.parameterArray());
   }
 
   /**
