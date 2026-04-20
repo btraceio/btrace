@@ -150,8 +150,16 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
 
   private void addJfrPeriodicEvent(JfrEvent.Template template) {
     try {
-      Class<?> handlerClass = Class.forName(template.getOwner());
-      Method handlerMethod = handlerClass.getMethod(template.getPeriodicHandler(), JfrEvent.class);
+      Class<?> handlerClass = resolveHandlerClass(template.getOwner());
+      if (handlerClass == null) {
+        // No registered runtime — fall back to the agent's loader. Preserves the
+        // JDK 8 path (probes are defined into the agent's loader via
+        // unsafe.defineClass) and any other pre-hidden-class deployment.
+        handlerClass = Class.forName(template.getOwner());
+      }
+      Method handlerMethod =
+          handlerClass.getDeclaredMethod(template.getPeriodicHandler(), JfrEvent.class);
+      handlerMethod.setAccessible(true);
       Runnable hook =
           (Runnable)
               Proxy.newProxyInstance(
@@ -192,5 +200,33 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
       FlightRecorder.removePeriodicEvent(periodicHook);
     }
     eventFactory.unregister();
+  }
+
+  /**
+   * Resolve the probe handler class for the given probe name.
+   *
+   * <p>{@link Class#forName(String)} uses the caller's ClassLoader, which is the
+   * agent's loader. Since commit {@code 906d924d} (per-probe ClassLoader /
+   * hidden class isolation), probe classes no longer live in the agent's loader,
+   * so {@code Class.forName} throws {@code ClassNotFoundException} and the
+   * periodic-event registration is silently skipped.
+   *
+   * <p>This helper looks up the {@link BTraceRuntimeImplBase} registered under
+   * the probe name (the hidden-class suffix is stripped via
+   * {@link BTraceRuntimeAccessImpl#normalizeProbeName}) and returns the actual
+   * defined {@link Class} via {@link BTraceRuntimeImplBase#getProbeClass}. That
+   * bypasses loader-delegation entirely because the runtime was registered by
+   * the agent itself after {@code defineClass} returned.
+   *
+   * @return the probe class, or {@code null} if no runtime is registered for
+   *     this probe (in which case the caller should fall back)
+   */
+  private static Class<?> resolveHandlerClass(String probeName) {
+    if (probeName == null) {
+      return null;
+    }
+    String key = BTraceRuntimeAccessImpl.normalizeProbeName(probeName);
+    BTraceRuntimeImplBase rt = BTraceRuntimeAccessImpl.runtimes.get(key);
+    return rt != null ? rt.getProbeClass() : null;
   }
 }

@@ -255,6 +255,19 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   // BTrace Class object corresponding to this client
   private Class clazz;
 
+  /**
+   * Returns the probe {@link Class} instance associated with this runtime, or
+   * {@code null} if {@link #init} has not yet populated it.
+   *
+   * <p>Needed by callers that want to resolve probe methods reflectively without
+   * going through {@link Class#forName}: with per-probe ClassLoader isolation
+   * (JDK 11-14) and hidden classes (JDK 15+), the probe class is not visible
+   * to {@code Class.forName} from the agent's loader.
+   */
+  Class<?> getProbeClass() {
+    return clazz;
+  }
+
   // instrumentation level field for each runtime (legacy, may not exist).
   // Only used for backward compatibility with old bytecode-based level checks.
   // Primary storage is now in levelValue (see below).
