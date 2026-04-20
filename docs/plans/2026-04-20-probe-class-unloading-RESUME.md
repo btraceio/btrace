@@ -156,33 +156,48 @@ This explains:
 
 **The issue is NOT related to per-probe ClassLoaders** - it's a probe-level initialization problem that existed before or was introduced by recent changes.
 
-## CRITICAL FIX REQUIRED
+## ARCHITECTURAL REFINEMENT - MOVE LEVEL CHECKING TO METH HANDLE LAYER
 
-**The probe level field is not being initialized to the enableAt level values (100, 150)**
+**Better design: Level checking should happen during INVOKEDYNAMIC linking, not in bytecode**
 
-The `$btrace$$level` static field must be set during probe class initialization to match the @Level values from @OnMethod annotations. Currently it stays at 0, so the level check always fails.
+The root cause is clear: `$btrace$$level` field stays at 0 because it's never initialized. But instead of fixing the initialization, move the level check to where it belongs - the MethodHandle linking layer.
 
-### Next session must fix:
+### New approach (f3780e60):
 
-1. **Find where `$btrace$$level` should be initialized**
-   - Search BTraceProbeSupport.defineClass() and related code
-   - Check BTraceProbePersisted for probe registration logic
-   - Look for where Level metadata is converted to runtime values
+1. **Remove bytecode-level level check**
+   - No need to initialize `$btrace$$level` in probe class
+   - Delete the level guard from instrumented methods
 
-2. **Understand the initialization flow**
-   - How does the probe class get the correct level value (100, 150)?
-   - Was this initialization code broken by per-probe ClassLoader changes?
-   - Does the isolated ClassLoader prevent normal field access/modification?
+2. **Implement level checking in `HandlerRepositoryImpl.applyLevelGuard()`**
+   - Called during INVOKEDYNAMIC bootstrap (handler resolution)
+   - Extracts level from OnMethod metadata
+   - Composes handler with level guard using MethodHandles.guardWithTest()
 
-3. **Implement the fix**
-   - Set `$btrace$$level = <enableAt level value>` when probe class is initialized
-   - Ensure this works with per-probe ClassLoaders and hidden classes
-   - May need reflection to set the field if normal access is blocked
+3. **Benefits of this approach**
+   - No runtime initialization of probe class fields
+   - JIT can optimize based on known level value
+   - Prevents deopt avalanche when level changes
+   - Cleaner separation of concerns
+
+### Next session completion:
+
+1. **Implement MethodHandle.guardWithTest composition**
+   ```java
+   MethodHandle levelCheck = createLevelTestMH(level.getValue());
+   return MethodHandles.guardWithTest(levelCheck, realHandler, noop());
+   ```
+
+2. **Remove level checks from instrumented bytecode**
+   - Delete the conditional INVOKEDYNAMIC guard in Assembler/MethodTrackingContext
+   - This simplifies probe bytecode significantly
+
+3. **Create runtime level query MethodHandle**
+   - Hook into BTraceRuntime to query current instrumentation level
+   - Return boolean that can be used in guardWithTest
 
 4. **Verify the fix**
-   - Run testOnMethodLevel - handlers should now execute
-   - Verify output contains "[this, noargs]", "[this, args]", "{xxx}"
-   - Check all failing tests pass
+   - Tests should pass with proper level-guarded handlers
+   - No need for any probe class field modifications
 
 3. **Verify no leftover debug code** in BTraceRuntimeAccessImpl.java (already confirmed clean).
 
