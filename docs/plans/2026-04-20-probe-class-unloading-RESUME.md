@@ -97,9 +97,32 @@ With `BTRACE_TEST_DEBUG=true` set, you get the full `[traced app] [btrace out] [
 
 Also failing: `tests.BTraceFunctionalTests.testJfr` (JDK 11 only), `tests.JBangAttachDockerTest.testAttachWithMaskedJar` (both). The JBang one failed on CI but local run skips it if Docker isn't running.
 
+## Root Cause Analysis (Per-Probe ClassLoader Issue)
+
+The per-probe ClassLoader change (906d924d) creates each probe in a fresh unnamed `ClassLoader(null)` with bootstrap as parent (ProbeAnchor.defineAnchor()). This isolation is correct for unloading, but suspect causes:
+
+1. **Visibility issue**: The per-probe CL can't see classes in the app CL (e.g., BTraceUtils which is loaded in the app CL). When probe methods call BTraceUtils.println(), it might fail silently or NPE.
+
+2. **Bytecode instrumentation issue**: The instrumentation that wires up calls to the probe might not work correctly when the probe class is in an isolated CL. The INVOKEDYNAMIC dispatch might fail to resolve the MethodHandle.
+
+3. **Output capture issue**: Less likely but possible - the test's output capture mechanism might not be getting stdout from the traced app.
+
+**Investigation needed**: Run test with detailed logging to determine:
+- Is the traced app's callA() method being invoked?
+- Are the probe methods being invoked?
+- If yes, what happens when they call BTraceUtils or print?
+- Is there an exception being swallowed?
+
 ## Next steps on resume
 
-1. **Clean up leftover debug code** in `btrace-runtime/src/main/java/org/openjdk/btrace/runtime/BTraceRuntimeAccessImpl.java`:
+1. **Investigate why traced app produces no output after per-probe ClassLoader change:**
+   - Add detailed instrumentation logging to understand if probe methods are being called
+   - Check if there's a ClassNotFoundException when probe tries to access BTraceUtils
+   - Verify that the traced app itself (resources.Main.callA) is executing and calling print()
+   - Check if the issue is visibility (app CL classes not visible from per-probe CL) or INDY dispatch failure
+   - Consider making the per-probe CL less isolated (e.g., also parent to app CL) if the issue is visibility
+
+2. **Verify no leftover debug code** in `btrace-runtime/src/main/java/org/openjdk/btrace/runtime/BTraceRuntimeAccessImpl.java`:
    - Lines ~124 (`addRuntime`) and ~191 (`forClassInternal`) had `System.err.println` probes added and were reverted — verify with `git diff btrace-runtime/src/main/java/org/openjdk/btrace/runtime/BTraceRuntimeAccessImpl.java` that no debug prints remain.
 
 2. **Re-run the failing integration test** after the `synchronized loadClass` edit to confirm or refute the fix:
