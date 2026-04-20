@@ -99,31 +99,51 @@ Also failing: `tests.BTraceFunctionalTests.testJfr` (JDK 11 only), `tests.JBangA
 
 ## Root Cause Analysis (Per-Probe ClassLoader Issue)
 
-The per-probe ClassLoader change (906d924d) creates each probe in a fresh unnamed `ClassLoader(null)` with bootstrap as parent (ProbeAnchor.defineAnchor()). This isolation is correct for unloading, but suspect causes:
+The per-probe ClassLoader change (906d924d) creates each probe in a fresh unnamed ClassLoader. Initial hypothesis was ClassLoader visibility issue (probe can't see BTraceUtils).
 
-1. **Visibility issue**: The per-probe CL can't see classes in the app CL (e.g., BTraceUtils which is loaded in the app CL). When probe methods call BTraceUtils.println(), it might fail silently or NPE.
+**Attempt 1 - Add app ClassLoader as parent**: Updated all BTraceRuntimeImpl versions to pass app ClassLoader as parent to per-probe ClassLoader. **Result: FAILED**. Tests still fail with zero output from probes.
 
-2. **Bytecode instrumentation issue**: The instrumentation that wires up calls to the probe might not work correctly when the probe class is in an isolated CL. The INVOKEDYNAMIC dispatch might fail to resolve the MethodHandle.
+**Revised hypothesis**: The issue is NOT ClassLoader visibility but something deeper:
+- Probes load successfully ("Successfully started BTrace probe" appears)
+- But traced app produces ZERO output, not different output
+- This suggests the instrumented bytecode in traced app is not invoking the probe at all
+- Likely cause: INVOKEDYNAMIC dispatch or handler resolution broken when probe is in isolated CL
 
-3. **Output capture issue**: Less likely but possible - the test's output capture mechanism might not be getting stdout from the traced app.
+**Evidence**:
+- Test passes on 07842ea8 with full probe output: `[btrace out] none [this, noargs]`
+- Test fails on 906d924d with zero output from probes
+- ClassLoader parent fix didn't help, ruling out visibility as root cause
+- Handler cache refactoring (73c3422d) is still suspect - needs investigation
 
-**Investigation needed**: Run test with detailed logging to determine:
-- Is the traced app's callA() method being invoked?
-- Are the probe methods being invoked?
-- If yes, what happens when they call BTraceUtils or print?
-- Is there an exception being swallowed?
+## Session 2 Work Summary
+
+**Investigation & Attempts:**
+1. Added `synchronized` to `Client.loadClass` to prevent race condition (valid fix but doesn't solve test failure)
+2. Used git bisection to identify 906d924d (per-probe ClassLoader) as breaking change
+3. Hypothesized ClassLoader visibility issue (per-probe CL can't see BTraceUtils)
+4. **Fix Attempt**: Pass app ClassLoader as parent to per-probe ClassLoader
+   - Modified ProbeAnchor.defineAnchor() to accept parent parameter
+   - Updated BTraceRuntimeImpl_8/9/11 to pass app CL as parent
+   - **Result**: FAILED - tests still produce zero output from probes
+   - **Conclusion**: Visibility is NOT the root cause
+
+**Revised diagnosis**: Issue is INVOKEDYNAMIC dispatch or handler resolution failure when probe in isolated CL.
 
 ## Next steps on resume
 
-1. **Investigate why traced app produces no output after per-probe ClassLoader change:**
-   - Add detailed instrumentation logging to understand if probe methods are being called
-   - Check if there's a ClassNotFoundException when probe tries to access BTraceUtils
-   - Verify that the traced app itself (resources.Main.callA) is executing and calling print()
-   - Check if the issue is visibility (app CL classes not visible from per-probe CL) or INDY dispatch failure
-   - Consider making the per-probe CL less isolated (e.g., also parent to app CL) if the issue is visibility
+1. **Investigate INVOKEDYNAMIC/handler resolution in isolated CLs:**
+   - Determine if MethodHandle.publicLookup().findStatic() can resolve isolated probe class methods
+   - Review handler cache refactoring (73c3422d) for isolated CL impact
+   - Check IndyDispatcher for module access or CL binding issues
+   - Trace handler resolution with debug logging to see where it fails
+   - Look for exceptions being swallowed
 
-2. **Verify no leftover debug code** in `btrace-runtime/src/main/java/org/openjdk/btrace/runtime/BTraceRuntimeAccessImpl.java`:
-   - Lines ~124 (`addRuntime`) and ~191 (`forClassInternal`) had `System.err.println` probes added and were reverted — verify with `git diff btrace-runtime/src/main/java/org/openjdk/btrace/runtime/BTraceRuntimeAccessImpl.java` that no debug prints remain.
+2. **Alternative approaches if INDY is root cause:**
+   - Investigate if lookup context or private lookups need different handling for isolated CLs
+   - Check if module accessibility (JDK 9+) blocks access in isolated CLs
+   - Verify bytecode instrumentation is working (does it even instrument the target method?)
+
+3. **Verify no leftover debug code** in BTraceRuntimeAccessImpl.java (already confirmed clean).
 
 2. **Re-run the failing integration test** after the `synchronized loadClass` edit to confirm or refute the fix:
    ```
