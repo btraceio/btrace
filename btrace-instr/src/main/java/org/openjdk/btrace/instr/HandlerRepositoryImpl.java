@@ -113,8 +113,35 @@ public final class HandlerRepositoryImpl {
       String simpleHandlerName =
           dollarIdx >= 0 ? handlerName.substring(dollarIdx + 1) : handlerName;
 
-      MethodHandle mh =
-          MethodHandles.publicLookup().findStatic(probeClass, simpleHandlerName, handlerType);
+      MethodHandle mh;
+      try {
+        // Try public lookup first (works for normal, accessible classes).
+        mh = MethodHandles.publicLookup().findStatic(probeClass, simpleHandlerName, handlerType);
+      } catch (IllegalAccessException publicLookupFailed) {
+        // publicLookup has limited access across classloader boundaries. For probes defined
+        // in isolated/unnamed ClassLoaders (per-probe isolation on JDK 8/9-14, or hidden
+        // classes on JDK 15+), publicLookup cannot see the handler methods. Fall back to
+        // a reflection-based approach: get the method via getDeclaredMethod, then convert
+        // it to a MethodHandle using unreflect. This works on all JDK versions.
+        log.debug(
+            "publicLookup denied access to {}.{}, falling back to reflection-based resolution",
+            probeName, simpleHandlerName);
+        try {
+          // Extract parameter types from the handler MethodType.
+          Class<?>[] paramTypes = new Class<?>[handlerType.parameterCount()];
+          for (int i = 0; i < paramTypes.length; i++) {
+            paramTypes[i] = handlerType.parameterType(i);
+          }
+          java.lang.reflect.Method method =
+              probeClass.getDeclaredMethod(simpleHandlerName, paramTypes);
+          method.setAccessible(true);
+          mh = MethodHandles.lookup().unreflect(method);
+        } catch (Throwable fallbackEx) {
+          // Reflection-based approach also failed. Re-throw the original exception from
+          // publicLookup so it gets logged with proper context in the outer catch.
+          throw publicLookupFailed;
+        }
+      }
 
       probe.cacheHandler(handlerName, handlerType, mh);
 

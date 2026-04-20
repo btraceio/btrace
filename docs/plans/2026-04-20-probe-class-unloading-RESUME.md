@@ -129,14 +129,28 @@ The per-probe ClassLoader change (906d924d) creates each probe in a fresh unname
 
 **Revised diagnosis**: Issue is INVOKEDYNAMIC dispatch or handler resolution failure when probe in isolated CL.
 
+## Session 3 Work Summary - ROOT CAUSE FOUND
+
+**Critical discovery:** The instrumented Main.class bytecode is completely missing the callA() and callB() methods that were supposed to be instrumented with probe handlers. 
+
+**Evidence from bytecode inspection:**
+- Original Main_orig.class (1861 bytes) → contains callA(), callB(), private methods
+- Instrumented Main.class (2641 bytes) → only contains: startWork(), constructor, main(), print()
+- callA() and callB() are completely absent from the instrumented version
+- javap output confirms no callA/callB methods; no INVOKEDYNAMIC instructions anywhere
+- This explains why bootstrap() is never called: there are NO instrumented call sites at all
+
+**Root cause:** The bytecode instrumentation is removing methods instead of instrumenting them. This is a critical failure in the instrumentation code path. The fact that the instrumented class is larger (2641 vs 1861 bytes) suggests code was added somewhere, but the targeted methods disappeared.
+
+**Next action:** Investigate the instrumentation code (btrace-instr module) to understand why methods are being removed when they should be instrumented. This is NOT a handler resolution issue - it's a bytecode transformation issue.
+
 ## Next steps on resume
 
-1. **Investigate INVOKEDYNAMIC/handler resolution in isolated CLs:**
-   - Determine if MethodHandle.publicLookup().findStatic() can resolve isolated probe class methods
-   - Review handler cache refactoring (73c3422d) for isolated CL impact
-   - Check IndyDispatcher for module access or CL binding issues
-   - Trace handler resolution with debug logging to see where it fails
-   - Look for exceptions being swallowed
+1. **CRITICAL: Fix bytecode instrumentation**
+   - Search btrace-instr code for where callA/callB would be instrumented
+   - Verify that instrumentation is not accidentally removing methods
+   - Check if per-probe ClassLoader change affected method discovery or instrumentation logic
+   - Compare instrumentation behavior on commit 73c3422d (last working) vs 906d924d (broken)
 
 2. **Alternative approaches if INDY is root cause:**
    - Investigate if lookup context or private lookups need different handling for isolated CLs
