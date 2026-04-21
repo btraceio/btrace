@@ -52,7 +52,10 @@ import java.util.concurrent.ConcurrentMap;
 public final class ClassDataLoader extends ClassLoader {
 
   static {
-    registerAsParallelCapable();
+    // Register as parallel-capable so getClassLoadingLock(name) works correctly.
+    // Canonical pattern — see ClassLoader.registerAsParallelCapable() javadoc:
+    // "This method should be called during class initialization."
+    ClassLoader.registerAsParallelCapable();
   }
 
   private static final String CLASSDATA_SUFFIX = ".classdata";
@@ -88,7 +91,12 @@ public final class ClassDataLoader extends ClassLoader {
       cached = loadedClasses.get(name);
       if (cached != null) return cached;
       String resourcePath = name.replace('.', '/') + CLASSDATA_SUFFIX;
-      byte[] classBytes = loadClassData(resourcePath);
+      byte[] classBytes;
+      try {
+        classBytes = loadClassData(resourcePath);
+      } catch (IOException e) {
+        throw new ClassNotFoundException(name + " (error reading .classdata resource)", e);
+      }
       if (classBytes == null) {
         throw new ClassNotFoundException(name + " (no .classdata resource found)");
       }
@@ -101,14 +109,12 @@ public final class ClassDataLoader extends ClassLoader {
     }
   }
 
-  private byte[] loadClassData(String resourcePath) {
+  private byte[] loadClassData(String resourcePath) throws IOException {
     try (InputStream is = resourceLoader.getResourceAsStream(resourcePath)) {
       if (is == null) {
         return null;
       }
       return readAllBytes(is);
-    } catch (IOException e) {
-      return null;
     }
   }
 

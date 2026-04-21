@@ -242,6 +242,9 @@ public final class Main {
       }
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Starting scripts");
       int startedScripts = startScripts();
+      // Thread.class retransform fires after startScripts() but before initExtensions()
+      // deliberately: retransformation only rewrites bytecode; extension service calls
+      // happen at invocation time (Thread.start events). No race with extension init.
       // Ensure early hooks (e.g., Thread.start) are applied even if Thread was already loaded
       if (startedScripts > 0) {
         try {
@@ -250,9 +253,7 @@ public final class Main {
             log.debug("Proactively retransformed java.lang.Thread after startup scripts");
           }
         } catch (Throwable t) {
-          if (log.isDebugEnabled()) {
-            log.debug("Unable to proactively retransform java.lang.Thread: {}", t.toString());
-          }
+          log.warn("Thread.class retransform failed; early Thread hooks may be inactive: {}", t.toString());
         }
       }
 
@@ -409,6 +410,9 @@ public final class Main {
    * Load bundled probes from embedded extensions based on agent args or configurator.
    */
   private static void loadBundledProbes() {
+    // FIXME(pr791): loadBundledProbes() is an unimplemented placeholder.
+    //   Must be implemented before bundled-probes feature is released, otherwise
+    //   embedded probes in the fat agent will silently fail to load.
     if (extensionLoader == null) {
       return;
     }
@@ -860,6 +864,11 @@ public final class Main {
   private static void processClasspaths(String libs) {
     // Experimental: prefer manifest-driven libs when enabled
     boolean useManifestLibs = Boolean.getBoolean("btrace.feature.manifestLibs");
+    boolean hasLegacyLibs = libs != null && !libs.isEmpty();
+    boolean hasManifestLibs = useManifestLibs;
+    if (hasManifestLibs && hasLegacyLibs) {
+      log.warn("Both libs= and manifest-attributes are present; libs= is deprecated and will be removed in N+2. Prefer manifest-based declaration.");
+    }
     if (useManifestLibs) {
       if (log.isDebugEnabled()) log.debug("Using manifest-driven libs resolution");
       AgentManifestLibs.ResolvedLibs libsFromMf = AgentManifestLibs.resolveFromManifest(Main.class);
@@ -1058,7 +1067,7 @@ public final class Main {
       }
       if (log.isDebugEnabled()) log.debug("Added to bootstrap: {}", rp);
     } catch (IOException e) {
-      log.debug("Failed to append bootstrap jar {}: {}", jarPath, e.toString());
+      log.warn("Failed to append bootstrap jar {}: {}", jarPath, e.toString());
     }
   }
 
@@ -1079,7 +1088,7 @@ public final class Main {
       }
       if (log.isDebugEnabled()) log.debug("Added to system: {}", rp);
     } catch (IOException e) {
-      log.debug("Failed to append system jar {}: {}", jarPath, e.toString());
+      log.warn("Failed to append system jar {}: {}", jarPath, e.toString());
     }
   }
 

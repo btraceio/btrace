@@ -105,7 +105,12 @@ public class ClassFilter {
     // Interrupt-related methods used in exception handling and thread coordination
     addSensitiveMethod("java/lang/Thread", "setInterrupt");
     addSensitiveMethod("java/lang/Thread", "clearInterrupt");
-    // Uncaught exception handling - dispatchUncaughtException calls getUncaughtExceptionHandler
+    // Thread-method exclusions (JDK 25+):
+    //   - dispatchUncaughtException: recursion source — must be excluded to prevent
+    //     probe re-entry during exception dispatch.
+    //   - getUncaughtExceptionHandler: called by dispatchUncaughtException internally.
+    //     Kept in the exclusion list because probes hooking the getter could re-enter
+    //     the dispatcher path even though the getter itself is read-only.
     addSensitiveMethod("java/lang/Thread", "dispatchUncaughtException");
     addSensitiveMethod("java/lang/Thread", "getUncaughtExceptionHandler");
   }

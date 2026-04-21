@@ -212,11 +212,11 @@ final class AgentManifestLibs {
       try {
         Path np = p.toAbsolutePath().normalize();
         if (!Files.exists(np)) {
-          if (log.isDebugEnabled()) log.debug("Skipping non-existent manifest entry: {}", np);
+          log.info("Skipping non-existent manifest entry: {}", np);
           continue;
         }
         if (!np.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar")) {
-          if (log.isDebugEnabled()) log.debug("Skipping non-jar manifest entry: {}", np);
+          log.info("Skipping non-jar manifest entry: {}", np);
           continue;
         }
         if (!allowExternal && home != null) {
@@ -247,7 +247,7 @@ final class AgentManifestLibs {
         }
         out.add(np);
       } catch (Exception e) {
-        if (log.isDebugEnabled()) log.debug("Failed resolving manifest entry {}: {}", p, e.toString());
+        log.warn("Failed resolving manifest entry {}: {}", p, e.toString());
       }
     }
     return out;
