@@ -46,8 +46,6 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
   private static final Map<String, String> targetClassMap = new HashMap<>();
   private static final Map<String, Boolean> verifyFlagMap = new HashMap<>();
 
-  private static Field instrHiddenClassesFlagFld = null;
-
   static {
     targetClassMap.put("onmethod/MatchDerived", "DerivedClass");
     targetClassMap.put("issues/BTRACE22", "issues/BTRACE22");
@@ -77,19 +75,15 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
     Field f = RandomIntProvider.class.getDeclaredField("useBtraceEnter");
     f.setAccessible(true);
     f.setBoolean(null, false);
-
-    instrHiddenClassesFlagFld = Instrumentor.class.getDeclaredField("useHiddenClassesInTest");
-    instrHiddenClassesFlagFld.setAccessible(true);
   }
 
   @ParameterizedTest
   @MethodSource("listTransformations")
-  void testTransformation(String trace, String targetClass, boolean verify, boolean useHiddenClasses) throws Exception {
-    instrHiddenClassesFlagFld.set(null, useHiddenClasses);
+  void testTransformation(String trace, String targetClass, boolean verify) throws Exception {
     loadTargetClass(targetClass);
     transform(trace);
 
-    checkTransformation((useHiddenClasses ? "dynamic" : "static") + "/" + trace, verify);
+    checkTransformation("dynamic/" + trace, verify);
   }
 
   @SuppressWarnings("resource")
@@ -100,11 +94,8 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
               .map(root::relativize)
               .map(Path::toString)
               .map(p -> p.replace(".class", ""))
-              .flatMap(p ->
-                Stream.of(
-                        Arguments.of(Named.of("Trace: " + p, p), Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)), Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)), Named.of("Dispatcher: INVOKESTATIC", false)),
-                        Arguments.of(Named.of("Trace: " + p, p), Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)), Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)), Named.of("Dispatcher: INVOKEDYNAMIC", true))
-                )
+              .map(p ->
+                Arguments.of(Named.of("Trace: " + p, p), Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)), Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)))
               );
   }
 

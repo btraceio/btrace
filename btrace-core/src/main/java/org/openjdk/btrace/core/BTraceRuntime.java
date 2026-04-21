@@ -1208,7 +1208,7 @@ public final class BTraceRuntime {
 
     List<GarbageCollectorMXBean> getGCMBeans();
 
-    Class<?> defineClass(byte[] code, boolean mustBeBootstrap);
+    Class<?> defineClass(byte[] code);
 
     ClassLoader getCallerClassLoader(int stackDec);
 

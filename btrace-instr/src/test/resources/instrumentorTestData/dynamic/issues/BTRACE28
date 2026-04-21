@@ -4,7 +4,7 @@ LDC "resources.issues.BTRACE28"
 LDC "<init>"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE28$tracker(Ljava/lang/String;Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE28"
 ]
@@ -24,7 +24,7 @@ LDC "resources.issues.BTRACE28"
 LDC "serveResource"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE28$tracker(Ljava/lang/String;Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/BTRACE28"
 ]

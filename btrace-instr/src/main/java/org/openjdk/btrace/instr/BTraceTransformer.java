@@ -24,11 +24,6 @@
  */
 package org.openjdk.btrace.instr;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.MethodNode;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.DebugSupport;
 import org.slf4j.Logger;
@@ -40,7 +35,6 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -64,7 +58,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
   private final ReentrantReadWriteLock setupLock = new ReentrantReadWriteLock();
   private final Collection<BTraceProbe> probes = new ArrayList<>(3);
   private final Filter filter = new Filter();
-  private final Collection<MethodNode> cushionMethods = new HashSet<>();
 
   public BTraceTransformer(DebugSupport d) {
     debug = d;
@@ -81,6 +74,20 @@ public final class BTraceTransformer implements ClassFileTransformer {
    */
   private static boolean isSensitiveClass(String name) {
     return ClassFilter.isSensitiveClass(name);
+  }
+
+  // JDK lambda wrapper names from LambdaMetafactory:
+  //   JDK 8:   <owner>$$Lambda$<N>                    (e.g. Main$$Lambda$36)
+  //   JDK 11+: <owner>$$Lambda$<N>/0x<hex>            (hidden-class suffix)
+  // Both forms are recognised by the "$$Lambda$" infix followed by digits.
+  static boolean isSyntheticLambda(String internalName) {
+    if (internalName == null) return false;
+    int idx = internalName.indexOf("$$Lambda$");
+    if (idx < 0) return false;
+    int digitStart = idx + "$$Lambda$".length();
+    if (digitStart >= internalName.length()) return false;
+    // Next char must be a digit (the Lambda serial number)
+    return Character.isDigit(internalName.charAt(digitStart));
   }
 
   public void register(BTraceProbe p) {
@@ -101,25 +108,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
       probes.remove(p);
       for (OnMethod om : p.onmethods()) {
         filter.remove(om);
-        MethodNode cushionMethod =
-            new MethodNode(
-                Opcodes.ASM9,
-                Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC,
-                Instrumentor.getActionMethodName(p, om.getTargetName()),
-                om.getTargetDescriptor(),
-                null,
-                null);
-        InsnList code = new InsnList();
-        code.add(new InsnNode(Opcodes.RETURN));
-        cushionMethod.instructions = code;
-        int localSize = 0;
-        for (Type t : Type.getArgumentTypes(om.getTargetDescriptor())) {
-          localSize += t.getSize();
-        }
-        cushionMethod.maxLocals = localSize;
-        cushionMethods.add(cushionMethod);
       }
-
     } finally {
       setupLock.writeLock().unlock();
     }
@@ -136,7 +125,16 @@ public final class BTraceTransformer implements ClassFileTransformer {
     try {
       setupLock.readLock().lock();
 
-      className = className != null ? className : "<anonymous>";
+      // Skip JVM-synthesized classes that have no binary name (JDK 8
+      // Unsafe.defineAnonymousClass host-anonymous classes, JDK 15+ hidden
+      // classes). These are never a user-intended tracing target: a
+      // @OnMethod(clazz="<pattern>") matcher targets classes the user
+      // authored, not the VM's lambda/LambdaForm scaffolding. Instrumenting
+      // them also re-enters the invokedynamic machinery that the probe
+      // dispatch itself uses, leading to unbounded recursion on JDK 8.
+      if (className == null) {
+        return null;
+      }
 
       // A special case for patching the Indy linking in order to be able to safely skip
       // BTrace probes while linking is still in progress.
@@ -150,6 +148,19 @@ public final class BTraceTransformer implements ClassFileTransformer {
           log.debug("Failed to instrument indy linking", t);
         }
         return transformed;
+      }
+
+      // Skip JVM-synthesized classes: reflection accessors (sun/reflect/Generated*,
+      // jdk/internal/reflect/Generated*) and lambda wrappers (LambdaMetafactory names
+      // them "<owner>$$Lambda$N" on JDK 8 and "<owner>$$Lambda$N/0x<hex>" on JDK 11+).
+      // Instrumenting these serves no tracing purpose — they are 1:1 trampolines to a
+      // target Method or a captured functional method the user can trace directly —
+      // and it recursively re-enters the invokedynamic/LambdaMetafactory machinery
+      // that the probe dispatch path relies on.
+      if (className.startsWith("sun/reflect/Generated")
+          || className.startsWith("jdk/internal/reflect/Generated")
+          || isSyntheticLambda(className)) {
+        return null;
       }
 
       if (probes.isEmpty()) return null;
@@ -170,7 +181,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
         }
         BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
         BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
-        cw.addCushionMethods(cushionMethods);
         for (BTraceProbe p : probes) {
           p.notifyTransform(className);
           cw.addInstrumentor(p, loader);

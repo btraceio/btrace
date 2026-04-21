@@ -1,6 +1,3 @@
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsReturnAugmented1.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L1
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 LSTORE 6
@@ -12,7 +9,7 @@ ALOAD 4
 ALOAD 5
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsReturnAugmented1$args(Ljava/lang/Object;JLjava/lang/String;J[Ljava/lang/String;[I)J [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ArgsReturnAugmented1"
 ]

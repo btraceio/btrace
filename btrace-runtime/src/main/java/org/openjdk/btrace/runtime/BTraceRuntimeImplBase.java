@@ -255,8 +255,26 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   // BTrace Class object corresponding to this client
   private Class clazz;
 
-  // instrumentation level field for each runtime
+  /**
+   * The probe class (after {@link #init}) or {@code null}. Callers that need
+   * reflective access bypass {@link Class#forName}, which can't see probes
+   * defined in isolated or hidden class loaders.
+   */
+  Class<?> getProbeClass() {
+    return clazz;
+  }
+
+  // instrumentation level field for each runtime (legacy, may not exist).
+  // Only used for backward compatibility with old bytecode-based level checks.
+  // Primary storage is now in levelValue (see below).
   private Field level;
+
+  // instrumentation level value (PRIMARY source of truth for level checking).
+  // This is the canonical level storage for MethodHandle-based guards.
+  // The legacy $btrace$$level field in the probe class is only updated for
+  // backward compatibility; level checking now happens at the MethodHandle layer.
+  // See HandlerRepositoryImpl.applyLevelGuard() for how this value is used.
+  private volatile int levelValue = 0;
 
   // array of timer callback methods
   private TimerHandler[] timerHandlers;
@@ -500,15 +518,23 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     exitHandlers = eHandlers;
     lowMemoryHandlers = lmHandlers;
 
+    // Level is now stored on the runtime instance instead of the probe class field.
+    // This allows level checking to happen at MethodHandle linking time without relying
+    // on a bytecode-level field that was never properly initialized.
+    int levelVal = BTraceRuntime.parseInt(args.get("level"), Integer.MIN_VALUE);
+    if (levelVal > Integer.MIN_VALUE) {
+      setLevel(levelVal);
+    }
+
+    // Attempt to set the legacy $btrace$$level field if it exists (for backward compatibility)
     try {
       level = cl.getDeclaredField("$btrace$$level");
       level.setAccessible(true);
-      int levelVal = BTraceRuntime.parseInt(args.get("level"), Integer.MIN_VALUE);
       if (levelVal > Integer.MIN_VALUE) {
         level.set(null, levelVal);
       }
     } catch (Throwable e) {
-      log.debug("Instrumentation level setting not available", e);
+      log.debug("Instrumentation level field not available (this is OK with MethodHandle-based guards)", e);
     }
 
     BTraceMBean.registerMBean(clazz);
@@ -879,18 +905,30 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   public final int getLevel() {
-    try {
-      return (int) level.get(null);
-    } catch (IllegalAccessException ignored) {
+    // First try to read from the probe class field (legacy, for backward compatibility)
+    if (level != null) {
+      try {
+        return (int) level.get(null);
+      } catch (IllegalAccessException e) {
+        // Field exists but cannot be accessed; use fallback
+        log.debug("Cannot access legacy level field, using runtime value", e);
+      }
     }
-
-    return 0;
+    // Fall back to runtime-stored level value (primary source)
+    return levelValue;
   }
 
   public final void setLevel(int level) {
-    try {
-      this.level.set(null, level);
-    } catch (IllegalAccessException ignored) {
+    // Always store in runtime value field (primary source)
+    this.levelValue = level;
+    // Also try to set on probe class field if it exists (legacy, for backward compatibility)
+    if (this.level != null) {
+      try {
+        this.level.set(null, level);
+      } catch (IllegalAccessException e) {
+        // Field exists but cannot be accessed; that's okay, levelValue is primary
+        log.debug("Cannot update legacy level field (will use runtime value)", e);
+      }
     }
   }
 

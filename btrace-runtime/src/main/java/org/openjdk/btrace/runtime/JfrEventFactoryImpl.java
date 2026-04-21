@@ -150,8 +150,16 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
 
   private void addJfrPeriodicEvent(JfrEvent.Template template) {
     try {
-      Class<?> handlerClass = Class.forName(template.getOwner());
-      Method handlerMethod = handlerClass.getMethod(template.getPeriodicHandler(), JfrEvent.class);
+      Class<?> handlerClass = resolveHandlerClass(template.getOwner());
+      if (handlerClass == null) {
+        // No registered runtime — fall back to the agent's loader. Preserves the
+        // JDK 8 path (probes are defined into the agent's loader via
+        // unsafe.defineClass) and any other pre-hidden-class deployment.
+        handlerClass = Class.forName(template.getOwner());
+      }
+      Method handlerMethod =
+          handlerClass.getDeclaredMethod(template.getPeriodicHandler(), JfrEvent.class);
+      handlerMethod.setAccessible(true);
       Runnable hook =
           (Runnable)
               Proxy.newProxyInstance(
@@ -192,5 +200,19 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
       FlightRecorder.removePeriodicEvent(periodicHook);
     }
     eventFactory.unregister();
+  }
+
+  /**
+   * Resolve the probe handler class via the runtime registry.
+   *
+   * <p>{@link Class#forName} doesn't see probes defined in isolated or hidden
+   * class loaders, so go through the registry the agent populated at
+   * defineClass time. Returns {@code null} if no runtime is registered — the
+   * caller falls back to {@code Class.forName} for deployments (notably the
+   * JDK 8 path) that define probes directly into the agent's loader.
+   */
+  private static Class<?> resolveHandlerClass(String probeName) {
+    BTraceRuntimeImplBase rt = BTraceRuntimeAccessImpl.getRuntime(probeName);
+    return rt != null ? rt.getProbeClass() : null;
   }
 }

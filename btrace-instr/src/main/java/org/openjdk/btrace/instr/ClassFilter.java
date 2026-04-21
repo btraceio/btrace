@@ -86,6 +86,7 @@ public class ClassFilter {
 
     SENSITIVE_CLASSES.add("jdk/internal/");
     SENSITIVE_CLASSES.add("sun/invoke/");
+    SENSITIVE_CLASSES.add("sun/reflect/");
     SENSITIVE_CLASSES.add("org/openjdk/btrace/");
 
     // Method-level exclusions for Thread: ThreadLocal accessor/mutator methods create infinite

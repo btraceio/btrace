@@ -55,15 +55,20 @@ public class StatsdBenchmark {
 
   @Setup
   public void setup() {
-    c = Statsd.getInstance();
+    // Inline no-op impl — the benchmark measures dispatch through the extension API,
+    // not the network-layer Statsd implementation.
+    c = new Statsd() {
+      @Override public void increment(String name) {}
+      @Override public void increment(String name, String tags) {}
+    };
   }
 
   @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
   @Measurement(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
   @Benchmark
   @Threads(1)
-  public void testGauge_1() {
-    c.gauge("g1", 10);
+  public void testIncrement_1() {
+    c.increment("g1");
   }
 
   public static void main(String[] args) throws Exception {

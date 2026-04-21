@@ -1,5 +1,9 @@
 LCONST_0
 LSTORE 4
+LCONST_0
+LSTORE 6
+ICONST_0
+ISTORE 8
 ICONST_2
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitTimed (I)J
 DUP2
@@ -22,7 +26,7 @@ ALOAD 11
 LLOAD 9
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDurationSampled$args(JJLjava/lang/String;J)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/MethodCallDurationSampled"
 ]

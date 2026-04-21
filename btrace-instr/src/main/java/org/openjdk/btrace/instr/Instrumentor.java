@@ -43,7 +43,6 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.MethodID;
 import org.openjdk.btrace.core.annotations.Kind;
 import org.openjdk.btrace.core.annotations.Sampled;
@@ -63,20 +62,11 @@ public class Instrumentor extends ClassVisitor {
 
   private String className, superName;
 
-  private final boolean useHiddenClasses;
-
-  // Allow forcing INDY-based dispatch (no handler copying) on all JDKs via property
-  private static boolean useHiddenClassesInTest = false;
-
   private Instrumentor(
       ClassLoader cl, BTraceProbe bcn, Collection<OnMethod> applicables, ClassVisitor cv) {
     super(ASM9, cv);
     this.cl = cl;
     this.bcn = bcn;
-    BTraceRuntime.Impl rt = bcn.getRuntime();
-    // 'rt' is null only during instrumentation tests; we want to default to in-situ instrumentation
-    // there
-    useHiddenClasses = useHiddenClassesInTest || (rt != null && rt.version() >= 15);
     applicableOnMethods = applicables;
   }
 
@@ -866,12 +856,7 @@ public class Instrumentor extends ClassVisitor {
                 int mid = MethodID.getMethodId(className, name, desc);
                 trackingCtx.emitTestSample(true, mid);
               }
-              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
               injectBtrace();
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
               if (om.getSamplerKind() != Sampled.Sampler.None) {
                 trackingCtx.emitElse();
               }
@@ -943,8 +928,6 @@ public class Instrumentor extends ClassVisitor {
                     }
                   };
 
-              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
-
               Label l1 = asm.openLinkerCheck();
 
               loadArguments(vr, actionArgTypes, isStatic(), actionArgs);
@@ -952,11 +935,6 @@ public class Instrumentor extends ClassVisitor {
               invokeBTraceAction(asm, om);
 
               asm.closeLinkerCheck(l1);
-
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
             }
           }
 
@@ -1581,17 +1559,12 @@ public class Instrumentor extends ClassVisitor {
               int mid = MethodID.getMethodId(className, name, desc);
               trackingCtx.emitTestSample(true, mid);
 
-              Label l = trackingCtx.emitHandlerLevelCheck(getLevelStrSafe(om));
               if (numActionArgs == 0) {
                 invokeBTraceAction(asm, om);
               } else {
                 callAction(opcode);
               }
               trackingCtx.emitElse();
-              if (l != null) {
-                mv.visitLabel(l);
-                insertFrameSameStack(l);
-              }
             }
           }
 
@@ -1847,15 +1820,6 @@ public class Instrumentor extends ClassVisitor {
 
   @Override
   public void visitEnd() {
-    if (!useHiddenClasses) {
-      bcn.copyHandlers(
-          new CopyingVisitor(className, false, this) {
-            @Override
-            protected String getActionMethodName(String name) {
-              return Instrumentor.this.getActionMethodName(name);
-            }
-          });
-    }
     cv.visitEnd();
   }
 
@@ -1868,31 +1832,24 @@ public class Instrumentor extends ClassVisitor {
   }
 
   private void invokeBTraceAction(Assembler asm, OnMethod om) {
-    if (useHiddenClasses) {
-      MethodType mt =
-          MethodType.methodType(
-              CallSite.class,
-              MethodHandles.Lookup.class,
-              String.class,
-              MethodType.class,
-              String.class);
+    MethodType mt =
+        MethodType.methodType(
+            CallSite.class,
+            MethodHandles.Lookup.class,
+            String.class,
+            MethodType.class,
+            String.class);
 
-      asm.invokeDynamic(
-          getActionMethodName(om.getTargetName()),
-          om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
-          new Handle(
-              H_INVOKESTATIC,
-              "org/openjdk/btrace/runtime/Indy",
-              "bootstrap",
-              mt.toMethodDescriptorString(),
-              false),
-          bcn.getClassName(true));
-    } else {
-      asm.invokeStatic(
-          className,
-          getActionMethodName(om.getTargetName()),
-          om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC));
-    }
+    asm.invokeDynamic(
+        getActionMethodName(om.getTargetName()),
+        om.getTargetDescriptor().replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC),
+        new Handle(
+            H_INVOKESTATIC,
+            "org/openjdk/btrace/runtime/IndyDispatcher",
+            "bootstrap",
+            mt.toMethodDescriptorString(),
+            false),
+        bcn.getClassName(true));
     calledOnMethods.add(om);
     om.setCalled();
   }
@@ -1935,7 +1892,4 @@ public class Instrumentor extends ClassVisitor {
     }
   }
 
-  boolean hasCushionMethods() {
-    return !useHiddenClasses;
-  }
 }

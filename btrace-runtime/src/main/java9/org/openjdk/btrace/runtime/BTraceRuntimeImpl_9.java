@@ -124,7 +124,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
+  public Class<?> defineClass(byte[] code) {
     try {
       // Use StackWalker instead of Reflection.getCallerClass() to avoid
       // CallerSensitive annotation requirement (only works from bootstrap CL)
@@ -137,8 +137,19 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
         throw new SecurityException("unsafe defineClass");
       }
 
+      // Define the probe inside a fresh per-probe anchor class in a new unnamed
+      // ClassLoader. The probe ends up in that loader; once we drop our references
+      // and the HandlerRepository evicts its MethodHandles, the loader becomes
+      // unreachable and the probe class is unloadable.
+      // Pass the ClassLoader that can see BTraceUtils and other agent classes.
+      ClassLoader parent = BTraceRuntimeImpl_9.class.getClassLoader();
+      if (parent == null) {
+        // If BTraceRuntimeImpl_9 is in bootstrap, use the current thread's context CL
+        parent = Thread.currentThread().getContextClassLoader();
+      }
+      Class<?> anchor = ProbeAnchor.defineAnchor(parent);
       Class<?> clz =
-          MethodHandles.privateLookupIn(Auxiliary.class, MethodHandles.lookup()).defineClass(code);
+          MethodHandles.privateLookupIn(anchor, MethodHandles.lookup()).defineClass(code);
       // initialize the class by creating a dummy instance
       clz.getConstructor().newInstance();
       return clz;
@@ -153,12 +164,12 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
   }
 
   /**
-   * A utility class to load class data in JPMS (Java 9+)
-   *
-   * @param code class data
-   * @return loaded class
+   * Test-only helper: load the provided class bytes into the shared {@code Auxiliary}
+   * loader via {@code privateLookupIn}. Used by instrumentation unit tests that inspect
+   * rewritten probe bytecode alongside the agent's own classes; production probe loading
+   * goes through {@link #defineClass(byte[])} which isolates each probe in its own loader.
    */
-  public static Class<?> defineClass(byte[] code) {
+  public static Class<?> defineClassInAuxiliary(byte[] code) {
     try {
       Class<?> clz =
           MethodHandles.privateLookupIn(Auxiliary.class, MethodHandles.lookup()).defineClass(code);
@@ -223,6 +234,9 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
     StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
         .forEach(
             f -> {
+              if (f.getClassName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+                return;
+              }
               if (cont.getAndDecrement() == 0) {
                 cl.compareAndSet(null, f.getDeclaringClass().getClassLoader());
               }
@@ -237,6 +251,9 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
     StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
         .forEach(
             f -> {
+              if (f.getClassName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+                return;
+              }
               if (cont.getAndDecrement() == 0) {
                 cl.compareAndSet(null, f.getDeclaringClass());
               }

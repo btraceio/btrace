@@ -52,7 +52,6 @@ import org.openjdk.btrace.instr.BTraceTransformer;
 import org.openjdk.btrace.instr.ClassCache;
 import org.openjdk.btrace.instr.ClassFilter;
 import org.openjdk.btrace.instr.ClassInfo;
-import org.openjdk.btrace.instr.HandlerRepositoryImpl;
 import org.openjdk.btrace.instr.InstrumentUtils;
 import org.openjdk.btrace.instr.Instrumentor;
 import org.openjdk.btrace.instr.MethodTrackingContext;
@@ -324,12 +323,11 @@ abstract class Client implements CommandListener {
       } finally {
         runtime.shutdownCmdLine();
         CLIENTS.remove(id);
-        HandlerRepositoryImpl.unregisterProbe(probe);
       }
     }
   }
 
-  final Class<?> loadClass(InstrumentCommand instr) throws IOException {
+  final synchronized Class<?> loadClass(InstrumentCommand instr) throws IOException {
     ArgsMap args = instr.getArguments();
     byte[] btraceCode = instr.getCode();
     try {
@@ -512,7 +510,14 @@ abstract class Client implements CommandListener {
 
   private void cleanupTransformers() {
     if (probe != null) {
+      String probeName = probe.getClassName();
       probe.unregister();
+      // Drop the registry's strong reference to the BTraceRuntime.Impl created in
+      // initialize() via BTraceRuntimes.getRuntime(probe.getClassName(), ...). Without
+      // this, the registry keeps the Impl (and, transitively, the probe Class<?> and
+      // its per-probe ClassLoader) reachable forever, defeating probe class unloading.
+      // Must use the same key that was used to register — here, the dotted class name.
+      BTraceRuntimes.removeRuntime(probeName);
     }
   }
 

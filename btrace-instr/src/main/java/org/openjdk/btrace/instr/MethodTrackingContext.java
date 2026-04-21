@@ -53,13 +53,11 @@ public class MethodTrackingContext {
   private boolean sampled = false;
   private Sampled.Sampler samplerKind = Sampled.Sampler.None;
   private int samplerMean = -1;
-  private final Collection<Interval> levelIntervals = new ArrayList<>();
 
   // State (per entry point)
   private int entryTsVar = Integer.MIN_VALUE;
   private int sHitVar = Integer.MIN_VALUE;
   private int durationVar = Integer.MIN_VALUE;
-  private int globalLevelVar = Integer.MIN_VALUE;
   private boolean durationComputed = false;
   private boolean prologueEmitted = false;
   private Label elseLabel = null;
@@ -98,11 +96,6 @@ public class MethodTrackingContext {
     this.samplerKind = samplerKind;
     this.samplerMean = samplerMean;
     this.sampled = samplerKind != Sampled.Sampler.None && samplerMean > 0;
-
-    if (levelStr != null && !levelStr.isEmpty()) {
-      Interval itv = Interval.fromString(levelStr);
-      levelIntervals.add(itv);
-    }
 
     if (sampled) {
       MethodTracker.registerCounter(methodId, samplerMean);
@@ -195,7 +188,6 @@ public class MethodTrackingContext {
   public void reset() {
     entryTsVar = Integer.MIN_VALUE;
     sHitVar = Integer.MIN_VALUE;
-    globalLevelVar = Integer.MIN_VALUE;
     durationComputed = false;
   }
 
@@ -224,68 +216,6 @@ public class MethodTrackingContext {
       }
       durationComputed = true;
     }
-  }
-
-  /**
-   * Emit level check for a handler. Uses cached level variable to avoid multiple loads.
-   * Can be called multiple times for different handlers - first call loads and caches the level,
-   * subsequent calls reuse the cached value.
-   *
-   * @param levelStr level match condition (e.g., {@code ">=1"})
-   * @return Label to jump to if level check fails, or null if no check needed
-   */
-  public Label emitHandlerLevelCheck(String levelStr) {
-    if (levelStr == null || levelStr.isEmpty()) {
-      return null;
-    }
-
-    Interval itv = Interval.fromString(levelStr);
-
-    // Check if level check is actually needed
-    if (itv.getA() <= 0 && itv.getB() >= Integer.MAX_VALUE) {
-      return null; // Always passes
-    }
-
-    Label skipLabel = new Label();
-
-    // Load level variable (cached if multiple handlers need it)
-    if (helper.shouldCacheLevelVar()) {
-      if (globalLevelVar == Integer.MIN_VALUE) {
-        asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
-        globalLevelVar = helper.storeAsNew();
-      } else {
-        asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-      }
-    } else {
-      // Single handler case: just load without caching
-      asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC);
-    }
-
-    // Perform comparison based on interval
-    if (itv.getA() > 0 && itv.getB() >= Integer.MAX_VALUE) {
-      // Check level >= A (or level < A, skip)
-      asm.ldc(itv.getA()).jump(IF_ICMPLT, skipLabel);
-    } else if (itv.getA() <= 0 && itv.getB() < Integer.MAX_VALUE) {
-      // Check level <= B (or level > B, skip)
-      asm.ldc(itv.getB()).jump(IF_ICMPGT, skipLabel);
-    } else {
-      // Range check: A <= level <= B
-      // Check both lower and upper bounds
-      if (itv.getA() > 0) {
-        asm.ldc(itv.getA()).jump(IF_ICMPLT, skipLabel); // Skip if level < A
-        // Reload for second check (from cache if available, otherwise from static field)
-        if (helper.shouldCacheLevelVar()) {
-          asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-        } else {
-          asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC);
-        }
-      }
-      if (itv.getB() < Integer.MAX_VALUE) {
-        asm.ldc(itv.getB()).jump(IF_ICMPGT, skipLabel); // Skip if level > B
-      }
-    }
-
-    return skipLabel;
   }
 
   // Private helper methods for bytecode generation
@@ -453,65 +383,12 @@ public class MethodTrackingContext {
   }
 
   private Label addLevelChecks(Label skip, Runnable initializer) {
-    Label skipTarget = null;
-    if (!levelIntervals.isEmpty()) {
-      List<Interval> optimized = Interval.invert(levelIntervals);
-      boolean generateBranch = true;
-
-      if (optimized.size() == 1) {
-        Interval i = optimized.get(0);
-        if (i.isNone() || (i.getA() == Integer.MIN_VALUE && i.getB() == -1)) {
-          generateBranch = false;
-        }
-      }
-
-      if (generateBranch) {
-        if (initializer != null) {
-          initializer.run();
-        }
-
-        skipTarget = skip != null ? skip : new Label();
-
-        for (Interval i : optimized) {
-          Label nextCheck = new Label();
-          if (globalLevelVar == Integer.MIN_VALUE) {
-            asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
-            globalLevelVar = helper.storeAsNew();
-          } else {
-            asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-          }
-
-          boolean stackConsumed = false;
-          if (i.getA() > Integer.MIN_VALUE) {
-            stackConsumed = true;
-            if (i.getA() == 0) {
-              asm.jump(IFLT, nextCheck);
-            } else {
-              asm.ldc(i.getA()).jump(IF_ICMPLT, nextCheck);
-            }
-          }
-
-          if (i.getB() < Integer.MAX_VALUE) {
-            if (stackConsumed) {
-              asm.loadLocal(Type.INT_TYPE, globalLevelVar);
-            }
-            if (i.getB() == 0) {
-              asm.jump(IFLE, skipTarget);
-            } else {
-              asm.ldc(i.getB()).jump(IF_ICMPLE, skipTarget);
-            }
-          } else {
-            Label l = new Label();
-            asm.label(l);
-            helper.insertFrameSameStack(l);
-            asm.jump(GOTO, skipTarget);
-          }
-
-          asm.label(nextCheck);
-          helper.insertFrameSameStack(nextCheck);
-        }
-      }
+    // Level checks moved to MethodHandle layer (HandlerRepositoryImpl.applyLevelGuard)
+    // No bytecode-level guards needed; INVOKEDYNAMIC always executes, and the linked
+    // MethodHandle performs the level check before invoking the real handler.
+    if (initializer != null) {
+      initializer.run();
     }
-    return skipTarget;
+    return skip;
   }
 }
