@@ -8,7 +8,7 @@ public final class Auxiliary {
   /**
    * Returns a {@link MethodHandles.Lookup} anchored on this class.
    *
-   * <p>Probes on JDK 15+ are installed via {@link MethodHandles.Lookup#defineHiddenClass}
+   * <p>Probes on JDK 15+ are installed via {@code MethodHandles.Lookup.defineHiddenClass}
    * into {@code Auxiliary}'s runtime package and require a lookup with full privilege
    * access. Obtaining the lookup here (rather than via {@code privateLookupIn} from a
    * caller in a different module) keeps the MODULE bit and avoids
