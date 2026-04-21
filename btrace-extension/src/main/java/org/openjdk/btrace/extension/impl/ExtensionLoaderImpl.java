@@ -249,7 +249,13 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
     // (they were flattened into the agent JAR at build time as .class files)
     log.debug("API classes for {} already on bootstrap classpath", descriptor.getId());
 
-    // Create ClassDataLoader for implementation classes (.classdata resources)
+    // Create ClassDataLoader for implementation classes (.classdata resources).
+    // parentClassLoader may be null when the caller wants the JVM bootstrap classloader
+    // as the parent (e.g. the BTrace agent itself runs on the bootstrap classpath).
+    // ClassDataLoader passes it directly to ClassLoader(ClassLoader), which accepts null
+    // as a well-defined signal meaning "use the bootstrap classloader as parent" — no
+    // NullPointerException is thrown. API classes are already on bootstrap via
+    // Boot-Class-Path, so bootstrap delegation is the correct behaviour in that case.
     ClassLoader resourceLoader = ExtensionLoaderImpl.class.getClassLoader();
     ClassDataLoader classLoader = new ClassDataLoader(
         descriptor.getId(), resourceLoader, parentClassLoader);

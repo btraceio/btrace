@@ -205,7 +205,19 @@ final class AgentManifestLibs {
     return parent != null ? parent.toPath() : null;
   }
 
-  // Package-private for testing
+  /**
+   * Filters {@code entries} to JAR paths that exist and are within {@code home} (unless {@code
+   * allowExternal} is {@code true}), then returns them as a list.
+   *
+   * <p><strong>Ordering contract:</strong> The returned list preserves the iteration order of
+   * {@code entries}. Callers pass a {@link java.util.LinkedHashSet} built by processing manifest
+   * attributes in declaration order, so the list reflects manifest iteration order. When the same
+   * class name is defined in more than one JAR the JVM resolves the <em>first</em> matching entry;
+   * callers must therefore ensure that the set passed in is already in the desired precedence
+   * order before invoking this method.
+   *
+   * <p>Package-private for testing.
+   */
   static List<Path> filterAndNormalize(Set<Path> entries, Path home, boolean allowExternal) {
     List<Path> out = new ArrayList<>();
     for (Path p : entries) {
