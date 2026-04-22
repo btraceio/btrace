@@ -125,6 +125,28 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
     runtimes.put(className, rt);
   }
 
+  /**
+   * Look up a registered runtime by probe class name. The name is normalized via
+   * {@link #normalizeProbeName}, so hidden-class names with a
+   * {@code "/0x..."} suffix resolve to the plain name used at registration.
+   */
+  static BTraceRuntimeImplBase getRuntime(String probeName) {
+    return probeName == null ? null : runtimes.get(normalizeProbeName(probeName));
+  }
+
+  /**
+   * Drop the {@link BTraceRuntime.Impl} previously registered for {@code className}.
+   *
+   * <p>Releases the strong GC root the registry map holds on a runtime (and anything it
+   * transitively reaches — notably {@code Class<?>}, {@code MethodHandle}s, and its
+   * defining {@code ClassLoader}). Callers that create a runtime via
+   * {@code BTraceRuntimes.getRuntime(...)} and then abort <strong>must</strong> call this
+   * to avoid a permanent Metaspace / object leak.
+   */
+  static void removeRuntime(String className) {
+    runtimes.remove(className);
+  }
+
   /** Enter method is called by every probed method just before the probe actions start. */
   static boolean enterInternal(BTraceRuntime.Impl currentRt) {
     BTraceRuntimeImplBase current = (BTraceRuntimeImplBase) currentRt;
@@ -175,9 +197,25 @@ public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delega
       ErrorHandler[] errHandlers,
       ExitHandler[] eHandlers,
       LowMemoryHandler[] lmHandlers) {
-    BTraceRuntimeImplBase runtime = runtimes.get(cl.getName());
+    BTraceRuntimeImplBase runtime = runtimes.get(normalizeProbeName(cl.getName()));
     runtime.init(cl, tHandlers, evHandlers, errHandlers, eHandlers, lmHandlers);
     return runtime;
+  }
+
+  /**
+   * Strip the hidden-class suffix from a probe class name so it maps to the
+   * registry key used by {@link #addRuntime(String, BTraceRuntimeImplBase)}.
+   *
+   * <p>On JDK 15+, probes are defined via {@code Lookup.defineHiddenClass}. Hidden
+   * classes report their {@link Class#getName()} as {@code "pkg.Name/0xNNNN..."},
+   * where the suffix after the slash is assigned by the VM. The registry is keyed
+   * by the plain {@code "pkg.Name"} because that's the name the runtime is
+   * registered under, before defineClass runs. Plain class names never contain
+   * a {@code '/'}, so stripping from the first slash is safe on all paths.
+   */
+  static String normalizeProbeName(String rawName) {
+    int slash = rawName.indexOf('/');
+    return slash > 0 ? rawName.substring(0, slash) : rawName;
   }
 
   /**

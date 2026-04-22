@@ -25,15 +25,12 @@
 package org.openjdk.btrace.instr;
 
 import java.util.ArrayDeque;
-import java.util.Collection;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.MethodNode;
 
 /**
  * A hacked version of <a
@@ -50,7 +47,6 @@ final class BTraceClassWriter extends ClassWriter {
   private final Deque<Instrumentor> instrumentors = new ArrayDeque<>();
   private final ClassLoader targetCL;
   private final BTraceClassReader cr;
-  private final Collection<MethodNode> cushionMethods = new HashSet<>();
 
   BTraceClassWriter(ClassLoader cl, int flags) {
     super(flags);
@@ -84,18 +80,7 @@ final class BTraceClassWriter extends ClassWriter {
     if (instrumentors.isEmpty()) return null;
 
     Instrumentor top = instrumentors.peekLast();
-    ClassVisitor cv =
-        new ClassVisitor(Opcodes.ASM9, top != null ? top : this) {
-          @Override
-          public void visitEnd() {
-            if (top != null && top.hasCushionMethods()) {
-              for (MethodNode m : cushionMethods) {
-                m.accept(this);
-              }
-            }
-            super.visitEnd();
-          }
-        };
+    ClassVisitor cv = top != null ? top : this;
     InstrumentUtils.accept(cr, cv);
     for (Instrumentor i : instrumentors) {
       hit |= i.hasMatch();
@@ -121,15 +106,4 @@ final class BTraceClassWriter extends ClassWriter {
     return Constants.OBJECT_INTERNAL;
   }
 
-  /**
-   * Add dummy cushion methods to account for an instrumented code in hot loop still running even
-   * once the instrumentation was removed (code can not be hotswapped as long as the affected method
-   * is on stack so it may happen that an instrumentation from a disconnected BTrace client will be
-   * running for a long time)
-   *
-   * @param pillowMethods the methods to create cushions for
-   */
-  public void addCushionMethods(Collection<MethodNode> pillowMethods) {
-    cushionMethods.addAll(pillowMethods);
-  }
 }

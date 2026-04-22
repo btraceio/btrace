@@ -128,7 +128,7 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
+  public Class<?> defineClass(byte[] code) {
     Unsafe unsafe = BTraceRuntime.initUnsafe();
     if (unsafe != null) {
       // Use stack trace instead of Reflection.getCallerClass() to avoid
@@ -139,10 +139,15 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       if (callerClassName == null || !callerClassName.startsWith("org.openjdk.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
-      ClassLoader loader = null;
-      if (!mustBeBootstrap) {
-        loader = new ClassLoader(null) {};
+      // Always define the probe in a fresh, isolated ClassLoader parented to the app CL.
+      // This makes the probe class unloadable once the probe's MethodHandles and its
+      // BTraceProbe.probeClass reference are cleared on unregister, while allowing the
+      // probe to access BTraceUtils and other agent classes.
+      ClassLoader parent = BTraceRuntimeImpl_8.class.getClassLoader();
+      if (parent == null) {
+        parent = Thread.currentThread().getContextClassLoader();
       }
+      ClassLoader loader = new ClassLoader(parent) {};
       Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
       unsafe.ensureClassInitialized(cl);
       return cl;
@@ -195,12 +200,25 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @CallerSensitive
   @Override
   public ClassLoader getCallerClassLoader(int stackDec) {
-    return Reflection.getCallerClass(stackDec + 1).getClassLoader();
+    Class<?> c = Reflection.getCallerClass(stackDec + 1);
+    // Probe handlers run in the bootstrap CL as
+    // org.openjdk.btrace.runtime.auxiliary.* classes (INDY dispatch).
+    // Skip that frame to find the real application caller, mirroring
+    // BTraceRuntimeImpl_9's StackWalker skip of auxiliary.* frames.
+    if (c != null && c.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+      c = Reflection.getCallerClass(stackDec + 2);
+    }
+    return c != null ? c.getClassLoader() : null;
   }
 
+  @CallerSensitive
   @Override
   public Class<?> getCallerClass(int stackDec) {
-    return Reflection.getCallerClass(stackDec + 1);
+    Class<?> c = Reflection.getCallerClass(stackDec + 1);
+    if (c != null && c.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+      c = Reflection.getCallerClass(stackDec + 2);
+    }
+    return c;
   }
 
   @Override

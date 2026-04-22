@@ -89,6 +89,7 @@ public class ClassFilter {
 
     SENSITIVE_CLASSES.add("jdk/internal/");
     SENSITIVE_CLASSES.add("sun/invoke/");
+    SENSITIVE_CLASSES.add("sun/reflect/");
     SENSITIVE_CLASSES.add("org/openjdk/btrace/");
 
     // JDK 25+ added accessor methods for thread-local fields (previously direct field access).

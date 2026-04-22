@@ -207,6 +207,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
       debug.dumpClass(name + "_bcp", code);
     }
     Class<?> clz = delegate.defineClass(rt, code);
+    HandlerRepositoryImpl.registerProbe(this);
     t.register(this);
     transformer = t;
     this.rt = rt;
@@ -214,13 +215,32 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   }
 
   @Override
+  public Class<?> getProbeClass() {
+    return delegate.getProbeClass();
+  }
+
+  @Override
+  public java.lang.invoke.MethodHandle getCachedHandler(
+      String handlerName, java.lang.invoke.MethodType type) {
+    return delegate.getCachedHandler(handlerName, type);
+  }
+
+  @Override
+  public void cacheHandler(
+      String handlerName, java.lang.invoke.MethodType type, java.lang.invoke.MethodHandle mh) {
+    delegate.cacheHandler(handlerName, type, mh);
+  }
+
+  @Override
   public void unregister() {
+    HandlerRepositoryImpl.unregisterProbe(this);
     if (transformer != null && isTransforming()) {
       if (log.isDebugEnabled()) {
         log.debug("onExit: removing transformer for {}", getClassName());
       }
       transformer.unregister(this);
     }
+    delegate.clearProbeClass();
     rt = null;
   }
 
@@ -254,11 +274,25 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
               }
               BTraceMethodNode bmn = idmap.get(CallGraph.methodId(name, desc));
               if (bmn != null) {
-                if (bmn.isBcpRequired()) {
-                  return super.visitMethod(access, name, desc, sig, exceptions);
+                // Include BCP-required methods AND probe handler methods:
+                // Handlers are invoked via INVOKEDYNAMIC (IndyDispatcher.bootstrap),
+                // so the handler method body must be present in the bootstrap-CL probe class.
+                // This applies to @OnMethod handlers (om != null) and @OnProbe handlers
+                // (op != null — mapped to @OnMethod entries via mapOnProbes()).
+                boolean isHandler = bmn.getOnMethod() != null || bmn.getOnProbe() != null;
+                if (bmn.isBcpRequired() || isHandler) {
+                  // Handlers: rewrite descriptor AnyType → Object to match the INDY call site
+                  // type (Instrumentor.invokeBTraceAction replaces AnyType with Object in
+                  // the INDY descriptor for JVM stack compatibility).
+                  String effectiveDesc =
+                      isHandler
+                          ? desc.replace(Constants.ANYTYPE_DESC, Constants.OBJECT_DESC)
+                          : desc;
+                  return super.visitMethod(access, name, effectiveDesc, sig, exceptions);
                 }
                 for (BTraceMethodNode c : bmn.getCallers()) {
-                  if (c.isBcpRequired()) {
+                  boolean callerIsHandler = c.getOnMethod() != null || c.getOnProbe() != null;
+                  if (c.isBcpRequired() || callerIsHandler) {
                     return super.visitMethod(access, name, desc, sig, exceptions);
                   }
                 }

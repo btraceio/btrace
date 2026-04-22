@@ -332,17 +332,17 @@ jobs:
             git checkout -b "${BRANCH}"
           fi
 
-      - name: Update version in common.gradle
+      - name: Update version in build.gradle
         run: |
           VERSION="${{ inputs.release_version }}"
-          sed -i "s/project.version = '.*'/project.version = '${VERSION}'/" common.gradle
+          sed -i "s/version = '.*'/version = '${VERSION}'/" build.gradle
           echo "Updated version to ${VERSION}"
-          grep "project.version" common.gradle
+          grep "version = " build.gradle
 
       - name: Commit version change
         id: commit
         run: |
-          git add common.gradle
+          git add build.gradle
           git commit -m "Release ${RELEASE_TAG}"
           SHA=$(git rev-parse HEAD)
           echo "sha=${SHA}" >> $GITHUB_OUTPUT
