@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.publish)
 }
 
+// Applied to the root project AND every subproject. The root project needs group/version
+// so the nexus-publish plugin can resolve its packageGroup (defaults to rootProject.group)
+// and so the SNAPSHOT-skip guard below evaluates against a real version.
+allprojects {
+    group = 'org.openjdk.btrace'
+    version = '3.0.0-SNAPSHOT'
+}
+
 repositories {
     mavenCentral()
 }
