@@ -726,15 +726,31 @@ public class Client {
       String allowExternalLibs = System.getProperty("btrace.allowExternalLibs");
       String testSkipLibs = System.getProperty("btrace.test.skipLibs");
       if (manifestLibs != null && !manifestLibs.isEmpty()) {
+        if (manifestLibs.indexOf(',') >= 0) {
+          throw new IllegalArgumentException(
+              "System property btrace.feature.manifestLibs must not contain ','");
+        }
         agentArgs += "," + "$btrace.feature.manifestLibs" + "=" + manifestLibs;
       }
       if (sysAppendJar != null && !sysAppendJar.isEmpty()) {
+        if (sysAppendJar.indexOf(',') >= 0) {
+          throw new IllegalArgumentException(
+              "System property btrace.system.appendJar must not contain ','");
+        }
         agentArgs += "," + "$btrace.system.appendJar" + "=" + sysAppendJar;
       }
       if (allowExternalLibs != null && !allowExternalLibs.isEmpty()) {
+        if (allowExternalLibs.indexOf(',') >= 0) {
+          throw new IllegalArgumentException(
+              "System property btrace.allowExternalLibs must not contain ','");
+        }
         agentArgs += "," + "$btrace.allowExternalLibs" + "=" + allowExternalLibs;
       }
       if (testSkipLibs != null && !testSkipLibs.isEmpty()) {
+        if (testSkipLibs.indexOf(',') >= 0) {
+          throw new IllegalArgumentException(
+              "System property btrace.test.skipLibs must not contain ','");
+        }
         agentArgs += "," + "$btrace.test.skipLibs" + "=" + testSkipLibs;
       }
       if (log.isDebugEnabled()) {
