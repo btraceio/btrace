@@ -4,7 +4,7 @@ Welcome to the BTrace documentation! BTrace is a safe, dynamic tracing tool for 
 
 ## Quick Start
 
-**New to BTrace?** Start here → [Getting Started Guide](gettingStarted.md)
+**New to BTrace?** Start here → [Getting Started Guide](GettingStarted.md)
 
 Get up and running in 5 minutes with installation, your first script, and common usage patterns.
 
@@ -12,36 +12,36 @@ Get up and running in 5 minutes with installation, your first script, and common
 
 | Document | Description | Target Audience |
 |----------|-------------|-----------------|
-| **[Getting Started](gettingStarted.md)** | Installation, first script, deployment modes, common pitfalls | New users, quick start |
-| **[Oneliner Guide](onelinerGuide.md)** | DTrace-style oneliners for quick debugging without scripts | Quick debugging, ops/SRE |
-| **[Quick Reference](quickReference.md)** | Annotations, patterns, CLI commands, built-in functions | Experienced users, quick lookup |
-| **[BTrace Tutorial](btraceTutorial.md)** | Comprehensive lessons covering all features | All users, in-depth learning |
-| **[Troubleshooting Guide](troubleshooting.md)** | Common errors, debugging, performance, compatibility | Problem-solving, debugging |
-| **[FAQ](faq.md)** | Common questions, best practices, comparisons | All users, decision-making |
+| **[Getting Started](GettingStarted.md)** | Installation, first script, deployment modes, common pitfalls | New users, quick start |
+| **[Oneliner Guide](OnelinerGuide.md)** | DTrace-style oneliners for quick debugging without scripts | Quick debugging, ops/SRE |
+| **[Quick Reference](QuickReference.md)** | Annotations, patterns, CLI commands, built-in functions | Experienced users, quick lookup |
+| **[BTrace Tutorial](BTraceTutorial.md)** | Comprehensive lessons covering all features | All users, in-depth learning |
+| **[Troubleshooting Guide](Troubleshooting.md)** | Common errors, debugging, performance, compatibility | Problem-solving, debugging |
+| **[FAQ](FAQ.md)** | Common questions, best practices, comparisons | All users, decision-making |
 
 ## Learning Paths
 
 ### I'm New to BTrace
-1. Read [Getting Started Guide](gettingStarted.md) (10 minutes)
+1. Read [Getting Started Guide](GettingStarted.md) (10 minutes)
 2. Try the 5-minute quick start example
-3. Learn [Oneliner syntax](onelinerGuide.md) for quick debugging (5 minutes)
-4. Explore [BTrace Tutorial](btraceTutorial.md) lessons 1-3
-5. Keep [Quick Reference](quickReference.md) handy
+3. Learn [Oneliner syntax](OnelinerGuide.md) for quick debugging (5 minutes)
+4. Explore [BTrace Tutorial](BTraceTutorial.md) lessons 1-3
+5. Keep [Quick Reference](QuickReference.md) handy
 
-Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension](gettingStarted.md#quick-start-histogram-metrics-extension) and the tutorial section [Using the Histogram Metrics Extension](btraceTutorial.md#using-the-histogram-metrics-extension-btrace-metrics).
+Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension](GettingStarted.md#quick-start-histogram-metrics-extension) and the tutorial section [Using the Histogram Metrics Extension](BTraceTutorial.md#using-the-histogram-metrics-extension-btrace-metrics).
 
 ### I Need to Solve a Problem
-1. Check [Troubleshooting Guide](troubleshooting.md) for your error
-2. Search [FAQ](faq.md) for similar issues
-3. Review [Getting Started](gettingStarted.md) common pitfalls
+1. Check [Troubleshooting Guide](Troubleshooting.md) for your error
+2. Search [FAQ](FAQ.md) for similar issues
+3. Review [Getting Started](GettingStarted.md) common pitfalls
 4. Ask on [Slack](http://btrace.slack.com/) or [Gitter](https://gitter.im/btraceio/btrace)
 
 ### I Need a Quick Lookup
-- **Quick Debug?** → [Oneliner Guide](onelinerGuide.md) for DTrace-style one-line commands
-- **Annotations?** → [Quick Reference: Core Annotations](quickReference.md#core-annotations)
-- **CLI Commands?** → [Quick Reference: CLI Commands](quickReference.md#cli-commands)
-- **Common Patterns?** → [Quick Reference: Common Patterns](quickReference.md#common-patterns)
-- **Built-in Functions?** → [Quick Reference: Built-in Functions](quickReference.md#built-in-functions)
+- **Quick Debug?** → [Oneliner Guide](OnelinerGuide.md) for DTrace-style one-line commands
+- **Annotations?** → [Quick Reference: Core Annotations](QuickReference.md#core-annotations)
+- **CLI Commands?** → [Quick Reference: CLI Commands](QuickReference.md#cli-commands)
+- **Common Patterns?** → [Quick Reference: Common Patterns](QuickReference.md#common-patterns)
+- **Built-in Functions?** → [Quick Reference: Built-in Functions](QuickReference.md#built-in-functions)
 
 ### I Want Advanced Features
 1. **JFR Integration** → [Getting Started: JFR Integration](GettingStarted.md#advanced-jfr-integration), [Tutorial Lesson 5](BTraceTutorial.md)
@@ -56,7 +56,7 @@ Tip: Want latency histograms fast? See [Quick Start: Histogram Metrics Extension
 
 ### Core Features
 - **Method Tracing** → [Tutorial Lesson 1](BTraceTutorial.md), [Quick Reference: @OnMethod](QuickReference.md#onmethod)
-- **Timing & Duration** → [Quick Reference: @Duration](QuickReference.md#parameter-annotations), [Pattern: Method Timing](QuickReference.md#pattern-1-method-entrye xit-timing)
+- **Timing & Duration** → [Quick Reference: @Duration](QuickReference.md#parameter-annotations), [Pattern: Method Timing](QuickReference.md#pattern-1-method-entryexit-timing)
 - **Exception Tracking** → [Quick Reference: Kind.ERROR](QuickReference.md#location-kinds), [Pattern: Exception Tracking](QuickReference.md#pattern-3-exception-tracking)
 - **Field Access** → [Quick Reference: Kind.FIELD_GET/SET](QuickReference.md#location-kinds)
 
@@ -145,4 +145,4 @@ Found an issue with the documentation? Please:
 
 ---
 
-**Ready to get started?** → [Getting Started Guide](gettingStarted.md)
+**Ready to get started?** → [Getting Started Guide](GettingStarted.md)
