@@ -15,6 +15,7 @@ Build and package BTrace extensions with sane defaults.
 - Scans implementation bytecode to infer minimal required permissions
 - Writes extension metadata into the API JAR manifest
 - Produces three artifacts: API JAR, Impl JAR (shadowed), and distributable ZIP
+- Auto-registers the `@ExternalType` annotation processor on the api source set (generates typed, lazy-resolution adapters for application types — see `docs/architecture/provided-style-extensions.md`)
 
 ### Apply the Plugin
 
