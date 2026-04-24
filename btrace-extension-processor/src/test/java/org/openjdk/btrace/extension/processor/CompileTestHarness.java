@@ -59,7 +59,66 @@ public final class CompileTestHarness {
     return new Result(ok, mgr.generatedSources(), diags.getDiagnostics());
   }
 
-  private static final class StringSource extends SimpleJavaFileObject {
+  public static final class RunnableResult {
+    public final boolean success;
+    public final List<Diagnostic<? extends JavaFileObject>> diagnostics;
+    public final ClassLoader loader;
+
+    RunnableResult(
+        boolean success,
+        List<Diagnostic<? extends JavaFileObject>> diags,
+        ClassLoader loader) {
+      this.success = success;
+      this.diagnostics = diags;
+      this.loader = loader;
+    }
+
+    public String errors() {
+      return diagnostics.stream()
+          .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
+          .map(Object::toString)
+          .collect(Collectors.joining("\n"));
+    }
+  }
+
+  public static RunnableResult compileAndLoad(Map<String, String> sources) throws IOException {
+    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+    if (compiler == null) {
+      throw new IllegalStateException("No JavaCompiler available — run tests on a JDK, not JRE");
+    }
+    DiagnosticCollector<JavaFileObject> diags = new DiagnosticCollector<>();
+    StandardJavaFileManager std =
+        compiler.getStandardFileManager(diags, Locale.ROOT, StandardCharsets.UTF_8);
+    InMemoryFileManager mgr = new InMemoryFileManager(std);
+
+    List<JavaFileObject> units = new ArrayList<>();
+    for (Map.Entry<String, String> e : sources.entrySet()) {
+      units.add(new StringSource(e.getKey(), e.getValue()));
+    }
+    List<String> options =
+        Arrays.asList(
+            "-classpath", System.getProperty("java.class.path"),
+            "-processor", ExternalTypeProcessor.class.getName());
+
+    JavaCompiler.CompilationTask task =
+        compiler.getTask(null, mgr, diags, options, null, units);
+    boolean ok = task.call();
+    if (!ok) return new RunnableResult(false, diags.getDiagnostics(), null);
+
+    ClassLoader loader =
+        new ClassLoader(CompileTestHarness.class.getClassLoader()) {
+          @Override
+          protected Class<?> findClass(String name) throws ClassNotFoundException {
+            ByteArrayOutputStream baos = mgr.bytes.get(name);
+            if (baos == null) throw new ClassNotFoundException(name);
+            byte[] b = baos.toByteArray();
+            return defineClass(name, b, 0, b.length);
+          }
+        };
+    return new RunnableResult(true, diags.getDiagnostics(), loader);
+  }
+
+  static final class StringSource extends SimpleJavaFileObject {
     private final String src;
 
     StringSource(String fqn, String src) {
