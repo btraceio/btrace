@@ -120,4 +120,34 @@ class ExternalTypeProcessorTest {
     int got = (int) m.invoke(null, instance);
     assertEquals(42, got);
   }
+
+  @Test
+  void rejectsAnnotationOnClass() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.NotAnInterface", ""
+        + "package com.example;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"com.example.app.Real\")\n"
+        + "public class NotAnInterface {}\n");
+
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertFalse(r.success, "expected compile to fail");
+    assertTrue(r.errors().contains("@ExternalType can only be applied to interfaces"),
+        r.errors());
+  }
+
+  @Test
+  void rejectsEmptyValue() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.Empty", ""
+        + "package com.example;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"\")\n"
+        + "public interface Empty { int x(); }\n");
+
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertFalse(r.success, "expected compile to fail");
+    assertTrue(r.errors().contains("@ExternalType.value() must be a non-empty class name"),
+        r.errors());
+  }
 }
