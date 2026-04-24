@@ -150,4 +150,27 @@ class ExternalTypeProcessorTest {
     assertTrue(r.errors().contains("@ExternalType.value() must be a non-empty class name"),
         r.errors());
   }
+
+  @Test
+  void generatedAdapterHandlesParameterizedTypes() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.Listy", ""
+        + "package com.example;\n"
+        + "import java.util.List;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"com.example.app.Real\")\n"
+        + "public interface Listy {\n"
+        + "  java.util.List<java.lang.String> items();\n"
+        + "  void process(java.util.List<java.lang.String> items);\n"
+        + "}\n");
+
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertTrue(r.success, "compile failed; generated source likely has a bad type literal. errors:\n"
+        + r.errors());
+    String adapter = r.generatedSources.get("com.example.Listy$Ext");
+    assertNotNull(adapter);
+    // Raw type must appear in the MethodType literal (no angle brackets).
+    assertTrue(adapter.contains("MethodType.methodType(java.util.List.class"), adapter);
+    assertFalse(adapter.contains("java.util.List<java.lang.String>.class"), adapter);
+  }
 }

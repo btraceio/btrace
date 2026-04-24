@@ -9,7 +9,6 @@ import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -22,8 +21,13 @@ import javax.tools.JavaFileObject;
 import org.openjdk.btrace.core.extensions.ExternalType;
 
 @SupportedAnnotationTypes("org.openjdk.btrace.core.extensions.ExternalType")
-@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public final class ExternalTypeProcessor extends AbstractProcessor {
+
+  @Override
+  public SourceVersion getSupportedSourceVersion() {
+    return SourceVersion.latestSupported();
+  }
+
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     for (Element e : roundEnv.getElementsAnnotatedWith(ExternalType.class)) {
@@ -76,9 +80,11 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
       ExecutableElement em = (ExecutableElement) m;
       if (em.isDefault() || em.getModifiers().contains(Modifier.STATIC)) continue;
       boolean isStatic = em.getAnnotation(ExternalType.Static.class) != null;
-      String rt = em.getReturnType().toString();
+      String rt = processingEnv.getTypeUtils().erasure(em.getReturnType()).toString();
       List<String> params = new ArrayList<>();
-      for (VariableElement p : em.getParameters()) params.add(p.asType().toString());
+      for (VariableElement p : em.getParameters()) {
+        params.add(processingEnv.getTypeUtils().erasure(p.asType()).toString());
+      }
       methods.add(new MethodSpec(em.getSimpleName().toString(), rt, params, isStatic));
     }
     return new AdapterSpec(pkg, simple, externalFqn, methods);
