@@ -88,6 +88,13 @@ public final class CompileTestHarness {
       if (kind == JavaFileObject.Kind.SOURCE) {
         return new SimpleJavaFileObject(
             URI.create("mem:///" + className.replace('.', '/') + kind.extension), kind) {
+          private String content = null;
+
+          @Override
+          public CharSequence getCharContent(boolean ignoreEncodingErrors) {
+            return content != null ? content : "";
+          }
+
           @Override
           public Writer openWriter() {
             StringWriter sw = new StringWriter();
@@ -102,7 +109,8 @@ public final class CompileTestHarness {
 
               @Override
               public void close() {
-                sources.put(className, sw.toString());
+                content = sw.toString();
+                sources.put(className, content);
               }
             };
           }
