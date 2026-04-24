@@ -25,4 +25,27 @@ class ExternalTypeProcessorTest {
     assertTrue(r.generatedSources.containsKey("com.example.JobStart$Ext"),
         "expected adapter com.example.JobStart$Ext; generated: " + r.generatedSources.keySet());
   }
+
+  @Test
+  void generatedAdapterContainsDispatchersForEachMethod() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.JobStart", ""
+        + "package com.example;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"com.example.app.Real\")\n"
+        + "public interface JobStart {\n"
+        + "  int jobId();\n"
+        + "  long time();\n"
+        + "  @ExternalType.Static\n"
+        + "  Object create(String name);\n"
+        + "}\n");
+
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertTrue(r.success, r.errors());
+    String adapter = r.generatedSources.get("com.example.JobStart$Ext");
+    assertNotNull(adapter);
+    assertTrue(adapter.contains("public static int jobId("), adapter);
+    assertTrue(adapter.contains("public static long time("), adapter);
+    assertTrue(adapter.contains("public static java.lang.Object create("), adapter);
+  }
 }

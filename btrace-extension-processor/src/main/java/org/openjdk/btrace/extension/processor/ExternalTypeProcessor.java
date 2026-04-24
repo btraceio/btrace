@@ -1,7 +1,10 @@
 /* (C) 2024 */
 package org.openjdk.btrace.extension.processor;
 
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -10,7 +13,10 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import org.openjdk.btrace.core.extensions.ExternalType;
@@ -23,19 +29,9 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
     for (Element e : roundEnv.getElementsAnnotatedWith(ExternalType.class)) {
       if (e.getKind() != ElementKind.INTERFACE) continue;
       TypeElement iface = (TypeElement) e;
-      String pkg =
-          processingEnv.getElementUtils().getPackageOf(iface).getQualifiedName().toString();
-      String simple = iface.getSimpleName().toString();
-      String adapterFqn = (pkg.isEmpty() ? "" : pkg + ".") + simple + "$Ext";
+      AdapterSpec spec = buildSpec(iface);
       try {
-        JavaFileObject jfo = processingEnv.getFiler().createSourceFile(adapterFqn, iface);
-        try (PrintWriter w = new PrintWriter(jfo.openWriter())) {
-          if (!pkg.isEmpty()) w.println("package " + pkg + ";");
-          w.println();
-          w.println("public final class " + simple + "$Ext {");
-          w.println("  private " + simple + "$Ext() {}");
-          w.println("}");
-        }
+        emit(spec, iface);
       } catch (Exception ex) {
         processingEnv
             .getMessager()
@@ -46,5 +42,31 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
       }
     }
     return true;
+  }
+
+  private AdapterSpec buildSpec(TypeElement iface) {
+    String pkg =
+        processingEnv.getElementUtils().getPackageOf(iface).getQualifiedName().toString();
+    String simple = iface.getSimpleName().toString();
+    String externalFqn = iface.getAnnotation(ExternalType.class).value();
+    List<MethodSpec> methods = new ArrayList<>();
+    for (Element m : iface.getEnclosedElements()) {
+      if (m.getKind() != ElementKind.METHOD) continue;
+      ExecutableElement em = (ExecutableElement) m;
+      if (em.isDefault() || em.getModifiers().contains(Modifier.STATIC)) continue;
+      boolean isStatic = em.getAnnotation(ExternalType.Static.class) != null;
+      String rt = em.getReturnType().toString();
+      List<String> params = new ArrayList<>();
+      for (VariableElement p : em.getParameters()) params.add(p.asType().toString());
+      methods.add(new MethodSpec(em.getSimpleName().toString(), rt, params, isStatic));
+    }
+    return new AdapterSpec(pkg, simple, externalFqn, methods);
+  }
+
+  private void emit(AdapterSpec spec, TypeElement origin) throws IOException {
+    JavaFileObject jfo = processingEnv.getFiler().createSourceFile(spec.adapterFqn(), origin);
+    try (PrintWriter w = new PrintWriter(jfo.openWriter())) {
+      new AdapterEmitter(spec).render(w);
+    }
   }
 }
