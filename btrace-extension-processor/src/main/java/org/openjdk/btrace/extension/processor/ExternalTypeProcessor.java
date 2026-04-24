@@ -27,8 +27,29 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     for (Element e : roundEnv.getElementsAnnotatedWith(ExternalType.class)) {
-      if (e.getKind() != ElementKind.INTERFACE) continue;
+      if (e.getKind() != ElementKind.INTERFACE) {
+        processingEnv
+            .getMessager()
+            .printMessage(
+                Diagnostic.Kind.ERROR,
+                "@ExternalType can only be applied to interfaces; found "
+                    + e.getKind()
+                    + " "
+                    + e,
+                e);
+        continue;
+      }
       TypeElement iface = (TypeElement) e;
+      String externalFqn = iface.getAnnotation(ExternalType.class).value();
+      if (externalFqn == null || externalFqn.isEmpty()) {
+        processingEnv
+            .getMessager()
+            .printMessage(
+                Diagnostic.Kind.ERROR,
+                "@ExternalType.value() must be a non-empty class name on " + iface.getQualifiedName(),
+                iface);
+        continue;
+      }
       AdapterSpec spec = buildSpec(iface);
       try {
         emit(spec, iface);
