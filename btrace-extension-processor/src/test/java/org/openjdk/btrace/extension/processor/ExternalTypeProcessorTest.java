@@ -48,4 +48,24 @@ class ExternalTypeProcessorTest {
     assertTrue(adapter.contains("public static long time("), adapter);
     assertTrue(adapter.contains("public static java.lang.Object create("), adapter);
   }
+
+  @Test
+  void virtualDispatcherUsesLazyMethodHandle() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.JobStart", ""
+        + "package com.example;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"com.example.app.Real\")\n"
+        + "public interface JobStart {\n"
+        + "  int jobId();\n"
+        + "}\n");
+
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertTrue(r.success, r.errors());
+    String adapter = r.generatedSources.get("com.example.JobStart$Ext");
+    assertTrue(adapter.contains("private static volatile java.lang.invoke.MethodHandle"), adapter);
+    assertTrue(adapter.contains("findVirtual"), adapter);
+    assertTrue(adapter.contains("self.getClass().getClassLoader()"), adapter);
+    assertTrue(adapter.contains("(int)"), adapter);
+  }
 }
