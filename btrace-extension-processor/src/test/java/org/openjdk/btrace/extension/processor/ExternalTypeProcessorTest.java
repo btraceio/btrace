@@ -89,4 +89,35 @@ class ExternalTypeProcessorTest {
     assertFalse(adapter.contains("java.lang.Object self"),
         "static dispatcher must not take a receiver parameter: " + adapter);
   }
+
+  @Test
+  void generatedAdapterInvokesRealMethod() throws Exception {
+    // The "external" class is just a regular class in the compile unit.
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.target.Counter", ""
+        + "package com.example.target;\n"
+        + "public class Counter {\n"
+        + "  private final int v;\n"
+        + "  public Counter(int v) { this.v = v; }\n"
+        + "  public int value() { return v; }\n"
+        + "}\n");
+    sources.put("com.example.adapter.CounterApi", ""
+        + "package com.example.adapter;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"com.example.target.Counter\")\n"
+        + "public interface CounterApi {\n"
+        + "  int value();\n"
+        + "}\n");
+
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    Class<?> counter = r.loader.loadClass("com.example.target.Counter");
+    Object instance = counter.getConstructor(int.class).newInstance(42);
+
+    Class<?> adapter = r.loader.loadClass("com.example.adapter.CounterApi$Ext");
+    java.lang.reflect.Method m = adapter.getMethod("value", Object.class);
+    int got = (int) m.invoke(null, instance);
+    assertEquals(42, got);
+  }
 }
