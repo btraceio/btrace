@@ -68,4 +68,25 @@ class ExternalTypeProcessorTest {
     assertTrue(adapter.contains("self.getClass().getClassLoader()"), adapter);
     assertTrue(adapter.contains("(int)"), adapter);
   }
+
+  @Test
+  void staticDispatcherUsesTccl() throws Exception {
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.SparkUtils", ""
+        + "package com.example;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"com.example.app.SparkUtils\")\n"
+        + "public interface SparkUtils {\n"
+        + "  @ExternalType.Static\n"
+        + "  java.lang.String version();\n"
+        + "}\n");
+
+    CompileTestHarness.Result r = CompileTestHarness.compile(sources);
+    assertTrue(r.success, r.errors());
+    String adapter = r.generatedSources.get("com.example.SparkUtils$Ext");
+    assertTrue(adapter.contains("findStatic"), adapter);
+    assertTrue(adapter.contains("Thread.currentThread().getContextClassLoader()"), adapter);
+    assertFalse(adapter.contains("java.lang.Object self"),
+        "static dispatcher must not take a receiver parameter: " + adapter);
+  }
 }
