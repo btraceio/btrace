@@ -19,8 +19,7 @@ public final class MethodHandleCache {
 
   public MethodHandleCache() {}
 
-  public MethodHandle findVirtual(Class<?> receiver, String name, Class<?> rtype, Class<?>... ptypes)
-      throws NoSuchMethodException, IllegalAccessException {
+  public MethodHandle findVirtual(Class<?> receiver, String name, Class<?> rtype, Class<?>... ptypes) {
     MethodType mt = MethodType.methodType(rtype, ptypes);
     Key k = Key.of(receiver, name, mt, false);
     MethodHandle cached = cache.get(k);
@@ -34,8 +33,7 @@ public final class MethodHandleCache {
     }
   }
 
-  public MethodHandle findStatic(Class<?> owner, String name, Class<?> rtype, Class<?>... ptypes)
-      throws NoSuchMethodException, IllegalAccessException {
+  public MethodHandle findStatic(Class<?> owner, String name, Class<?> rtype, Class<?>... ptypes) {
     MethodType mt = MethodType.methodType(rtype, ptypes);
     Key k = Key.of(owner, name, mt, true);
     MethodHandle cached = cache.get(k);

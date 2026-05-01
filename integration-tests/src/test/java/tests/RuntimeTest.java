@@ -1000,7 +1000,8 @@ public abstract class RuntimeTest {
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
     if (debugBTrace) {
-      argVals.add(4, "-v"); // insert after Main class name
+      int mainClassIdx = argVals.indexOf("org.openjdk.btrace.boot.Loader");
+      argVals.add(mainClassIdx + 1, "-v");
     }
     argVals.addAll(Arrays.asList(args));
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
@@ -1136,7 +1137,8 @@ public abstract class RuntimeTest {
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
     if (debugBTrace) {
-      argVals.add(4, "-v"); // insert after Main class name
+      int mainClassIdx = argVals.indexOf("org.openjdk.btrace.boot.Loader");
+      argVals.add(mainClassIdx + 1, "-v");
     }
     argVals.addAll(Arrays.asList(args));
     if (Files.exists(Paths.get(javaHome, "jmods"))) {

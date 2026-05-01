@@ -682,7 +682,7 @@ kubectl logs <pod-name> -c btrace
 3. **Security Policies**: Pod Security Policies may block ptrace; adjust as needed
 4. **Resource Limits**: BTrace overhead may trigger CPU/memory limits
 
-For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](troubleshooting.md#kubernetes-and-cloud-deployments).
+For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](Troubleshooting.md#kubernetes-and-cloud-deployments).
 
 ## Fat Agent JAR (Single-JAR Deployment)
 
