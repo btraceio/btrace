@@ -126,9 +126,9 @@ BTrace includes 50+ sample scripts demonstrating real-world use cases:
 BTrace is an open-source project welcoming contributions. To contribute:
 
 1. Sign the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/)
-2. Read the [Contributing Guidelines](../Readme.md#contributing---important)
+2. Read the [Contributing Guidelines](../README.md#contributing---important)
 3. Fork the repository and create a pull request
-4. See [Build Instructions](../Readme.md#building-btrace) for development setup
+4. See [Build Instructions](../README.md#building-btrace) for development setup
 
 ## Version Information
 

@@ -412,7 +412,7 @@ public class ScriptName {
 ## Troubleshooting
 
 ### Why isn't my script producing output?
-See [Troubleshooting Guide](troubleshooting.md#no-output-from-scripts) for detailed solutions.
+See [Troubleshooting Guide](Troubleshooting.md#no-output-from-scripts) for detailed solutions.
 
 Quick checklist:
 1. Class/method names correct and fully qualified?
@@ -520,7 +520,7 @@ public class JfrIntegration {
 }
 ```
 
-See [Getting Started: JFR Integration](gettingStarted.md#advanced-jfr-integration) for complete guide.
+See [Getting Started: JFR Integration](GettingStarted.md#advanced-jfr-integration) for complete guide.
 
 ### When should I use JFR events vs. println output?
 
@@ -617,7 +617,7 @@ In a future JDK release, dynamic agent loading will be **disabled by default**. 
    ```
 2. **Prepare now**: Add `-XX:+EnableDynamicAgentLoading` to your JVM startup scripts for future compatibility
 
-For details, see [JEP 451: Prepare to Disallow the Dynamic Loading of Agents](https://openjdk.org/jeps/451) and [Troubleshooting: JVM Attachment Issues](troubleshooting.md#jvm-attachment-issues).
+For details, see [JEP 451: Prepare to Disallow the Dynamic Loading of Agents](https://openjdk.org/jeps/451) and [Troubleshooting: JVM Attachment Issues](Troubleshooting.md#jvm-attachment-issues).
 
 ### How do I use BTrace in Kubernetes?
 
@@ -650,7 +650,7 @@ done
 - Same user permissions as target JVM
 - `shareProcessNamespace: true` for sidecar pattern
 
-See [Getting Started: Kubernetes](gettingStarted.md#btrace-in-containers-and-kubernetes) and [Troubleshooting: Kubernetes](troubleshooting.md#kubernetes-and-cloud-deployments) for comprehensive guides.
+See [Getting Started: Kubernetes](GettingStarted.md#btrace-in-containers-and-kubernetes) and [Troubleshooting: Kubernetes](Troubleshooting.md#kubernetes-and-cloud-deployments) for comprehensive guides.
 
 ### Can I trace multiple pods simultaneously?
 
@@ -687,7 +687,7 @@ data:
     }
 ```
 
-Then mount and use across all pods. See [Troubleshooting: Batch Tracing](troubleshooting.md#batch-tracing-across-pods).
+Then mount and use across all pods. See [Troubleshooting: Batch Tracing](Troubleshooting.md#batch-tracing-across-pods).
 
 ### What about sidecar vs. init container patterns for BTrace?
 
@@ -818,22 +818,22 @@ Use both together for comprehensive observability.
 3. Create a feature branch
 4. Submit a pull request
 
-See [Contributing Guide](../Readme.md#contributing) for details.
+See [Contributing Guide](../README.md#contributing) for details.
 
 ### Where can I find more examples?
 - **Sample scripts**: `btrace-dist/src/main/resources/samples/` (50+ examples)
-- **Tutorial**: [BTrace Tutorial](btraceTutorial.md)
+- **Tutorial**: [BTrace Tutorial](BTraceTutorial.md)
 - **Wiki**: [BTrace Wiki](https://github.com/btraceio/btrace/wiki)
 - **GitHub**: [BTrace Issues](https://github.com/btraceio/btrace/issues) (search for examples)
 
 ## Resources
 
 ### Documentation
-- **[Documentation Hub](Readme.md)** - Complete documentation map and learning paths
-- [Getting Started Guide](gettingStarted.md)
-- [Quick Reference](quickReference.md)
-- [Troubleshooting Guide](troubleshooting.md)
-- [BTrace Tutorial](btraceTutorial.md)
+- **[Documentation Hub](README.md)** - Complete documentation map and learning paths
+- [Getting Started Guide](GettingStarted.md)
+- [Quick Reference](QuickReference.md)
+- [Troubleshooting Guide](Troubleshooting.md)
+- [BTrace Tutorial](BTraceTutorial.md)
 - [BTrace Wiki](https://github.com/btraceio/btrace/wiki/Home)
 
 ### Community

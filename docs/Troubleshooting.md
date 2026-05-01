@@ -958,7 +958,7 @@ spec:
 oc adm policy add-scc-to-user anyuid -z default
 ```
 
-For more K8s deployment patterns, see [Getting Started: K8s](gettingStarted.md#btrace-in-containers-and-kubernetes) and [FAQ: Microservices](faq.md#can-i-use-btrace-with-microservices).
+For more K8s deployment patterns, see [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes) and [FAQ: Microservices](FAQ.md#can-i-use-btrace-with-microservices).
 
 ## Known Limitations
 
@@ -1024,8 +1024,8 @@ If issues persist:
 
 ## See Also
 
-- **[Documentation Hub](Readme.md)** - Complete documentation map and learning paths
-- **[Getting Started Guide](gettingStarted.md)** - Installation, first script, and quick start
-- **[Quick Reference](quickReference.md)** - Annotation and API cheat sheet
-- **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
-- **[FAQ](faq.md)** - Common questions and best practices
+- **[Documentation Hub](README.md)** - Complete documentation map and learning paths
+- **[Getting Started Guide](GettingStarted.md)** - Installation, first script, and quick start
+- **[Quick Reference](QuickReference.md)** - Annotation and API cheat sheet
+- **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
+- **[FAQ](FAQ.md)** - Common questions and best practices

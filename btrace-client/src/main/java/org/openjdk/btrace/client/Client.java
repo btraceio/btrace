@@ -640,8 +640,8 @@ public class Client {
    * classpath and boot classpath optionally.
    */
   public void attach(String pid, String agentPath, String sysCp, String bootCp) throws IOException {
+    VirtualMachine vm = null;
     try {
-      VirtualMachine vm = null;
       if (log.isDebugEnabled()) {
         log.debug("attaching to {}", pid);
       }
@@ -801,6 +801,13 @@ public class Client {
       System.err.println("[DEBUG] Exception during attach:");
       exp.printStackTrace();
       throw new IOException("Failed to attach to PID " + pid, exp);
+    } finally {
+      if (vm != null) {
+        try {
+          vm.detach();
+        } catch (IOException ignored) {
+        }
+      }
     }
   }
 
