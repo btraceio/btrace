@@ -43,3 +43,4 @@ gradle-wrapper.properties
 
 /.java.versions
 compile.log
+.worktrees/
