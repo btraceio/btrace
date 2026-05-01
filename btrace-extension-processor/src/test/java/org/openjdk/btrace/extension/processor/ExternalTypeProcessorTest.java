@@ -122,6 +122,69 @@ class ExternalTypeProcessorTest {
   }
 
   @Test
+  void staticDispatcherResolvesViaContextClassLoader() throws Exception {
+    // The "external" class lives only in the in-memory loader; static dispatch must
+    // use the TCCL (set here) to find it at runtime.
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.target.Greeter", ""
+        + "package com.example.target;\n"
+        + "public class Greeter {\n"
+        + "  public static String hello() { return \"hello\"; }\n"
+        + "}\n");
+    sources.put("com.example.adapter.GreeterApi", ""
+        + "package com.example.adapter;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"com.example.target.Greeter\")\n"
+        + "public interface GreeterApi {\n"
+        + "  @ExternalType.Static\n"
+        + "  java.lang.String hello();\n"
+        + "}\n");
+
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(r.loader);
+      Class<?> adapter = r.loader.loadClass("com.example.adapter.GreeterApi$Ext");
+      java.lang.reflect.Method m = adapter.getMethod("hello");
+      assertEquals("hello", m.invoke(null));
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+  }
+
+  @Test
+  void staticDispatcherFallsBackToSystemLoaderWhenTcclNull() throws Exception {
+    // Simulates a bootstrap/JVM-internal thread where TCCL is null.
+    // The adapter must fall back to ClassLoader.getSystemClassLoader() instead of throwing NPE.
+    // Uses java.lang.System, which is always on the boot/system classloader.
+    Map<String, String> sources = new LinkedHashMap<>();
+    sources.put("com.example.SysApi", ""
+        + "package com.example;\n"
+        + "import org.openjdk.btrace.core.extensions.ExternalType;\n"
+        + "@ExternalType(\"java.lang.System\")\n"
+        + "public interface SysApi {\n"
+        + "  @ExternalType.Static\n"
+        + "  long currentTimeMillis();\n"
+        + "}\n");
+
+    CompileTestHarness.RunnableResult r = CompileTestHarness.compileAndLoad(sources);
+    assertTrue(r.success, r.errors());
+
+    ClassLoader saved = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(null);
+      Class<?> adapter = r.loader.loadClass("com.example.SysApi$Ext");
+      java.lang.reflect.Method m = adapter.getMethod("currentTimeMillis");
+      long ts = (long) m.invoke(null);
+      assertTrue(ts > 0, "expected valid timestamp via system-CL fallback; got " + ts);
+    } finally {
+      Thread.currentThread().setContextClassLoader(saved);
+    }
+  }
+
+  @Test
   void rejectsAnnotationOnClass() throws Exception {
     Map<String, String> sources = new LinkedHashMap<>();
     sources.put("com.example.NotAnInterface", ""

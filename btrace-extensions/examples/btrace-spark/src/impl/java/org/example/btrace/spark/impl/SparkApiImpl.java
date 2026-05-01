@@ -47,6 +47,7 @@ public final class SparkApiImpl extends Extension implements SparkApi {
               // println("Tasks: "+tasks)
             } catch (MethodHandleCache.LookupRuntimeException ignored) {}
           } catch (Throwable ignored) {
+            // example: swallow; real impl should log via BTrace runtime logger
           }
           return null;
         });

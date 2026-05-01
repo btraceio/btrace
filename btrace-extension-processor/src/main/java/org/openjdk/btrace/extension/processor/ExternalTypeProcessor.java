@@ -54,8 +54,8 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
                 iface);
         continue;
       }
-      AdapterSpec spec = buildSpec(iface);
       try {
+        AdapterSpec spec = buildSpec(iface, externalFqn);
         emit(spec, iface);
       } catch (Exception ex) {
         processingEnv
@@ -69,11 +69,10 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
     return true;
   }
 
-  private AdapterSpec buildSpec(TypeElement iface) {
+  private AdapterSpec buildSpec(TypeElement iface, String externalFqn) {
     String pkg =
         processingEnv.getElementUtils().getPackageOf(iface).getQualifiedName().toString();
     String simple = iface.getSimpleName().toString();
-    String externalFqn = iface.getAnnotation(ExternalType.class).value();
     List<MethodSpec> methods = new ArrayList<>();
     for (Element m : iface.getEnclosedElements()) {
       if (m.getKind() != ElementKind.METHOD) continue;

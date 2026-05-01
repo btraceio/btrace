@@ -1,0 +1,28 @@
+plugins {
+    id 'org.openjdk.btrace.extension'
+    alias(libs.plugins.shadow)
+}
+
+java {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
+btraceExtension {
+    id = 'btrace-ext-test'
+    name = 'BTrace External-Type Integration Test Extension'
+    description = 'Minimal extension used solely by integration tests to verify @ExternalType end-to-end'
+    services = ['org.openjdk.btrace.test.ext.ExternalTypeTestService']
+}
+
+dependencies {
+    apiCompileOnly project(':btrace-core')
+    implCompileOnly project(':btrace-core')
+    implCompileOnly project(':btrace-extension')
+}

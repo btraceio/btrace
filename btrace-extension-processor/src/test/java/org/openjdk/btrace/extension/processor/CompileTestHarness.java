@@ -27,10 +27,7 @@ public final class CompileTestHarness {
     }
 
     public String errors() {
-      return diagnostics.stream()
-          .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
-          .map(Object::toString)
-          .collect(Collectors.joining("\n"));
+      return formatErrors(diagnostics);
     }
   }
 
@@ -74,11 +71,15 @@ public final class CompileTestHarness {
     }
 
     public String errors() {
-      return diagnostics.stream()
-          .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
-          .map(Object::toString)
-          .collect(Collectors.joining("\n"));
+      return formatErrors(diagnostics);
     }
+  }
+
+  static String formatErrors(List<Diagnostic<? extends JavaFileObject>> diags) {
+    return diags.stream()
+        .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
+        .map(Object::toString)
+        .collect(Collectors.joining("\n"));
   }
 
   public static RunnableResult compileAndLoad(Map<String, String> sources) throws IOException {

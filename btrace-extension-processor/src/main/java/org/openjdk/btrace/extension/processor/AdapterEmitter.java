@@ -26,11 +26,12 @@ final class AdapterEmitter {
 
   private void renderMethod(PrintWriter w, MethodSpec m) {
     String mhField = "$" + m.name + "$mh";
-    String paramList = paramList(m);
-    String argList = argList(m);
+    String[] lists = paramAndArgLists(m);
+    String paramList = lists[0];
+    String argList = lists[1];
     String loaderExpr =
         m.isStatic
-            ? "Thread.currentThread().getContextClassLoader()"
+            ? "(Thread.currentThread().getContextClassLoader() != null ? Thread.currentThread().getContextClassLoader() : ClassLoader.getSystemClassLoader())"
             : "self.getClass().getClassLoader()";
 
     w.println();
@@ -81,23 +82,19 @@ final class AdapterEmitter {
     w.println("  }");
   }
 
-  private String paramList(MethodSpec m) {
-    StringBuilder sb = new StringBuilder();
-    if (!m.isStatic) sb.append("java.lang.Object self");
-    for (int i = 0; i < m.paramTypes.size(); i++) {
-      if (sb.length() > 0) sb.append(", ");
-      sb.append(m.paramTypes.get(i)).append(" p").append(i);
+  private String[] paramAndArgLists(MethodSpec m) {
+    StringBuilder params = new StringBuilder();
+    StringBuilder args = new StringBuilder();
+    if (!m.isStatic) {
+      params.append("java.lang.Object self");
+      args.append("self");
     }
-    return sb.toString();
-  }
-
-  private String argList(MethodSpec m) {
-    StringBuilder sb = new StringBuilder();
-    if (!m.isStatic) sb.append("self");
     for (int i = 0; i < m.paramTypes.size(); i++) {
-      if (sb.length() > 0) sb.append(", ");
-      sb.append("p").append(i);
+      if (params.length() > 0) params.append(", ");
+      if (args.length() > 0) args.append(", ");
+      params.append(m.paramTypes.get(i)).append(" p").append(i);
+      args.append("p").append(i);
     }
-    return sb.toString();
+    return new String[]{params.toString(), args.toString()};
   }
 }

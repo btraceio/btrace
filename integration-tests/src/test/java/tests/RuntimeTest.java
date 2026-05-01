@@ -203,7 +203,7 @@ public abstract class RuntimeTest {
       Files.createDirectories(permsDir);
       Path perms = permsDir.resolve("permissions.properties");
       String content = "allowPrivileged=true\n" +
-                       "allowExtensions=btrace-metrics,btrace-utils,btrace-statsd\n";
+                       "allowExtensions=btrace-metrics,btrace-utils,btrace-statsd,btrace-ext-test\n";
       Files.write(perms, content.getBytes(StandardCharsets.UTF_8));
       permissionsFile = perms.toAbsolutePath().toString();
     } catch (IOException ioe) {

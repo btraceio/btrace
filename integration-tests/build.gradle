@@ -6,6 +6,7 @@ apply plugin: 'java'
 dependencies {
     implementation project(':btrace-compiler')
     implementation project(':btrace-extensions:btrace-metrics')
+    implementation project(':btrace-extensions:btrace-ext-test')
     testImplementation project(':btrace-client')
     testImplementation project(':btrace-core')
     testImplementation libs.testcontainers
