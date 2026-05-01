@@ -84,9 +84,9 @@ shadowJar {
     include bootIncludes
 
     configurations = [project.configurations.runtimeClasspath]
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+    relocate 'org.jctools', 'io.btrace.libs.boot.org.jctools'
+    relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'
 }
 
 assemble.dependsOn shadowJar

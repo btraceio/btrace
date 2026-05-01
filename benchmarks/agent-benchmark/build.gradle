@@ -24,7 +24,7 @@ task btracec(type: JavaExec) {
 
   environment('BTRACE_HOME', "$projectDir")
   classpath configurations.runtimeClasspath
-  mainClass = 'org.openjdk.btrace.compiler.Compiler'
+  mainClass = 'io.btrace.compiler.Compiler'
   args '-d'
   args "${buildDir}/classes/java/main/"
   args '-packext'

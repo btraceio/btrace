@@ -31,12 +31,12 @@ task compileTestProbes {
         def path = project(':integration-tests').sourceSets.main.runtimeClasspath
 
         def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
-        def compiler = loader.loadClass('org.openjdk.btrace.compiler.Compiler')
+        def compiler = loader.loadClass('io.btrace.compiler.Compiler')
         def rtCp = sourceSets.main.runtimeClasspath
         // Ensure the BTrace extension API JAR(s) (with manifest attributes) are present on classpath
         def extApiJars = []
         rootProject.subprojects.each { sp ->
-            if (sp.plugins.hasPlugin('org.openjdk.btrace.extension')) {
+            if (sp.plugins.hasPlugin('io.btrace.extension')) {
                 try {
                     def apiJar = sp.tasks.named('buildApiJar').get().archiveFile.get().asFile
                     extApiJars << apiJar
@@ -44,7 +44,7 @@ task compileTestProbes {
             }
         }
         if (extApiJars.isEmpty()) {
-            logger.lifecycle("[integration-tests] No extension API JARs found. If you renamed an extension module, ensure it applies id 'org.openjdk.btrace.extension'.")
+            logger.lifecycle("[integration-tests] No extension API JARs found. If you renamed an extension module, ensure it applies id 'io.btrace.extension'.")
         } else {
             rtCp = rtCp.plus(files(extApiJars))
             logger.lifecycle("[integration-tests] Using extension API JARs: ${extApiJars}")

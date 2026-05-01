@@ -21,7 +21,7 @@ dependencies {
 
 task nativeHeaders(type:Exec) {
     def classpath = sourceSets.main.runtimeClasspath.asPath
-    commandLine "javah", "-d", nativeHeadersDir, "-classpath", classpath, "org.openjdk.btrace.core.BTraceRuntime"
+    commandLine "javah", "-d", nativeHeadersDir, "-classpath", classpath, "io.btrace.core.BTraceRuntime"
 
     dependsOn classes
 }
