@@ -3,7 +3,7 @@ package org.openjdk.btrace.test.ext;
 import org.openjdk.btrace.core.extensions.ExternalType;
 
 /**
- * @ExternalType contract for resources.ExternalData — a class that exists only in the
+ * {@linkplain ExternalType} contract for resources.ExternalData — a class that exists only in the
  * target application's classloader and is never on the extension's compile classpath.
  */
 @ExternalType("resources.ExternalData")
