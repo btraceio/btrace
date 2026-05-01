@@ -26,4 +26,3 @@ dependencies {
     implCompileOnly project(':btrace-extension')
     implCompileOnly project(':btrace-core')
 }
-

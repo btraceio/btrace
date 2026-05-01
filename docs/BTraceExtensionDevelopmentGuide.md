@@ -2,7 +2,7 @@
 
 ## Overview
 
-BTrace extensions provide reusable services that can be injected into BTrace scripts. This guide covers the recommended, plugin-based workflow using a single Gradle module with two source sets (`api`, `impl`). The plugin separates artifacts, generates metadata, shades implementation dependencies, and prepares distributables.
+BTrace extensions provide reusable services that can be injected into BTrace scripts. This guide covers the recommended, plugin-based workflow using a single Gradle module with a single authored source tree under `src/main`. The plugin still separates runtime artifacts, generates metadata, shades implementation dependencies, and prepares distributables.
 
 For API authoring rules that the build verifies, see `docs/ExtensionInterfaceRules.md`.
 
@@ -26,23 +26,35 @@ Script ClassLoader (parent = null)
 └── Accesses extensions via invokedynamic bridge
 ```
 
-### Single Module, Dual Source Sets
+### Single Module, Single Source Tree
 
-Use a single Gradle module with two source sets:
+Use a single Gradle module with one authored source tree:
 
 ```
 your-extension/
 ├── build.gradle
 └── src/
-    ├── api/java/...        (public API visible to scripts; JDK-only deps)
-    ├── api/resources/...
-    ├── impl/java/...       (implementation; can use external libraries)
-    └── impl/resources/...
+    ├── main/java/...       (API + impl authored together)
+    └── main/resources/...
 ```
 
 - API types are resolved by scripts (end up on bootstrap).
 - Impl is isolated behind an extension classloader with shaded deps.
 - The plugin produces an API JAR, a shadowed Impl JAR, and a distributable ZIP.
+
+```gradle
+btraceExtension {
+  services = [ "org.example.myext.api.MyService" ]
+  additionalExports = [ "org.example.myext.api.MyValueType" ] // optional
+}
+```
+
+- Java sources live under `src/main/java`
+- resources live under `src/main/resources`
+- the plugin computes the API closure from declared services and any `additionalExports`
+- output artifacts remain unchanged
+
+Package-level API/impl separation is still strongly recommended even though the physical source root is shared.
 
 ## Gradle Setup (Plugin-Based)
 
@@ -100,6 +112,7 @@ Outputs produced by the plugin:
 - Distribution ZIP: `build/distributions/<name>-<version>-extension.zip` (bundles API + Impl)
 
 Advanced (optional) knobs in `btraceExtension`:
+- `additionalExports` / `excludedExports`: optional overrides for the computed exported API set.
 - `autoApplyShadow` (default true): auto-apply Shadow plugin if not applied.
 - `nullableAnnotations`/`nonnullAnnotations`: additional nullability annotations (FQCN) for API linting.
 - `nullabilitySeverity` (`off`|`warn`|`error`): nullability lint severity.
@@ -109,7 +122,7 @@ Advanced (optional) knobs in `btraceExtension`:
 
 ## Authoring the API and Impl
 
-### API (src/api/java)
+### API
 
 Define injectable service interfaces. Use the descriptors to help discovery and permission modeling.
 
@@ -127,7 +140,7 @@ public interface MyService {
 
 Keep API signatures to JDK and your own API types; avoid external library types.
 
-### Implementation (src/impl/java)
+### Implementation
 
 Provide concrete implementations and extend `Extension` to access the runtime context when needed.
 
@@ -313,7 +326,7 @@ See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) for implem
 
 ## Checklist
 
-- [ ] Single module using `src/api` and `src/impl`
+- [ ] Single module using `src/main`
 - [ ] Apply `org.openjdk.btrace.extension` plugin
 - [ ] Set `btraceExtension.id`, declare/annotate `services`
 - [ ] Configure `shadedPackages`; optionally tune `requiredPermissions`
@@ -363,7 +376,7 @@ class HistoProbe {
 ## Troubleshooting
 
 ### ClassNotFoundException
-- Script references a type not present in API → move it to `src/api/java` as an interface.
+- Script references a type not present in API → export it from the API closure. Keep it in `src/main/java` and add it to `additionalExports` if the plugin cannot infer it.
 
 ### NoSuchMethodError
 - Impl does not fully implement the API → keep API and Impl in lockstep.
@@ -376,4 +389,4 @@ class HistoProbe {
 
 ## Summary
 
-Use a single module with `api` and `impl` source sets and the BTrace extension plugin to produce clean, isolated, and self-describing extensions. The plugin handles artifact separation, metadata, permissions, shading, and packaging, so you can focus on a stable API and solid implementation.
+Use a single module with `src/main` and the BTrace extension plugin to produce clean, isolated, and self-describing extensions. The plugin handles artifact separation, metadata, permissions, shading, packaging, and API export computation, so you can focus on a stable API and solid implementation.

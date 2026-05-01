@@ -25,7 +25,7 @@ This guide shows how to migrate profile-based integrations (e.g., Spark/Hadoop) 
 ## API Sketch (Spark example)
 
 ```java
-// api module (on bootstrap)
+// exported API (on bootstrap)
 package org.example.btrace.spark.api;
 public interface SparkApi {
   void onJobStart(Object jobStartEvent);
@@ -36,7 +36,7 @@ public interface SparkApi {
 ## Impl Sketch
 
 ```java
-// impl module (extension CL)
+// implementation (extension CL)
 package org.example.btrace.spark.impl;
 import org.example.btrace.spark.api.SparkApi;
 import org.openjdk.btrace.extension.util.ClassLoadingUtil;
@@ -74,7 +74,7 @@ The `@ExternalType` annotation + build-time annotation processor removes all thr
 
 ### How it works
 
-Declare an interface in your extension's `api` source set marked with `@ExternalType("fully.qualified.AppType")`. The BTrace extension Gradle plugin auto-registers the annotation processor, which generates a companion `<InterfaceSimpleName>$Ext` class in the same package with typed `public static` dispatchers for each method.
+Declare an interface in your extension's exported API set marked with `@ExternalType("fully.qualified.AppType")`. In practice this means an API-facing interface under `src/main/java`. The BTrace extension Gradle plugin auto-registers the annotation processor, which generates a companion `<InterfaceSimpleName>$Ext` class in the same package with typed `public static` dispatchers for each method.
 
 ```java
 package com.example.spark.api;

@@ -51,9 +51,9 @@ task compileTestProbes {
                 buildDir.toPath().resolve("classes/java/java11_dummy"),
                 buildDir.toPath().resolve("resources/test")
         )
-        // Include extension API outputs explicitly to avoid jar task coupling
-        def utilsApi = project(':btrace-extensions:btrace-utils').sourceSets.api.output
-        def statsdApi = project(':btrace-extensions:btrace-statsd').sourceSets.api.output
+        // Include exported extension APIs explicitly without depending on internal source-set names.
+        def utilsApi = files(project(':btrace-extensions:btrace-utils').tasks.named('buildApiJar'))
+        def statsdApi = files(project(':btrace-extensions:btrace-statsd').tasks.named('buildApiJar'))
         def fullCp = rtCp.plus(extraCp).plus(utilsApi).plus(statsdApi)
         def cpPath = fullCp.getAsPath()
         def args = [

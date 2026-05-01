@@ -15,7 +15,8 @@ Build and package BTrace extensions with sane defaults.
 - Scans implementation bytecode to infer minimal required permissions
 - Writes extension metadata into the API JAR manifest
 - Produces three artifacts: API JAR, Impl JAR (shadowed), and distributable ZIP
-- Auto-registers the `@ExternalType` annotation processor on the api source set (generates typed, lazy-resolution adapters for application types — see `docs/architecture/provided-style-extensions.md`)
+- Uses a single authored source tree while preserving the API/impl runtime artifact split
+- Auto-registers the `@ExternalType` annotation processor on the main source set (generates typed, lazy-resolution adapters for application types — see `docs/architecture/provided-style-extensions.md`)
 
 ### Apply the Plugin
 
@@ -32,8 +33,8 @@ repositories {
 
 ### Project Layout
 
-- `src/api/java`, `src/api/resources`: Public API package visible to BTrace scripts and the agent (ends up on bootstrap)
-- `src/impl/java`, `src/impl/resources`: Implementation package shadowed and isolated behind the API manifest
+- `src/main/java`, `src/main/resources`: Single authored source tree
+- The plugin derives the exported API closure from declared services and keeps the same runtime artifact split (`*-api.jar` + `*-impl.jar`)
 
 ### DSL Configuration
 
@@ -46,6 +47,13 @@ btraceExtension {
     // Optional: omit to auto-detect from @ServiceDescriptor annotations
     services = [
         "com.example.myext.api.MyService"
+    ]
+
+    additionalExports = [
+        // optional extra API types to include in the exported API set
+    ]
+    excludedExports = [
+        // optional exclusions from the computed API export set
     ]
 
     requiresExtensions = [
@@ -79,7 +87,7 @@ btraceExtension {
 ### Tasks
 
 - `buildApiJar`: Builds the API JAR and writes extension metadata into the manifest
-- `shadowJar`: Builds the impl JAR from `impl` source set with relocations
+- `shadowJar`: Builds the impl JAR from the implementation portion of the extension with relocations
 - `packageExtension`: Bundles API + Impl into a ZIP
 
 ---
