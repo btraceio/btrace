@@ -55,13 +55,12 @@ final class AgentManifestLibs {
       return new ResolvedLibs(Collections.emptyList(), Collections.emptyList());
     }
 
-    Manifest mf = readManifest(anchor);
+    Path agentJarPath = locateAgentPath(anchor);
+    Manifest mf = readManifest(agentJarPath);
     if (mf == null) {
       if (log.isDebugEnabled()) log.debug("No manifest found for agent; skipping manifest libs");
       return new ResolvedLibs(Collections.emptyList(), Collections.emptyList());
     }
-
-    Path agentJarPath = locateAgentPath(anchor);
     Path baseDir = agentJarPath != null ? agentJarPath.getParent() : null;
     // Default libs root: BTRACE_HOME/libs if the agent is under .../libs/btrace-agent.jar
     Path libsRoot = resolveLibsRoot(mf, baseDir);
@@ -96,10 +95,9 @@ final class AgentManifestLibs {
     return new ResolvedLibs(bootList, sysList);
   }
 
-  private static Manifest readManifest(Class<?> anchor) {
+  private static Manifest readManifest(Path agentPath) {
+    if (agentPath == null) return null;
     try {
-      Path agentPath = locateAgentPath(anchor);
-      if (agentPath == null) return null;
       if (Files.isRegularFile(agentPath) && agentPath.toString().toLowerCase(Locale.ROOT).endsWith(".jar")) {
         try (JarFile jf = new JarFile(agentPath.toFile())) {
           return jf.getManifest();
@@ -136,7 +134,6 @@ final class AgentManifestLibs {
     return v != null && !v.trim().isEmpty() ? v.trim() : null;
   }
 
-  // Package-private for testing
   static void addEntries(Set<Path> out, String value, Path baseDir) {
     if (value == null || value.isEmpty()) return;
     // Space-separated entries (manifest convention)
@@ -147,7 +144,6 @@ final class AgentManifestLibs {
     }
   }
 
-  // Package-private for testing
   static Path resolveEntry(String entry, Path baseDir) {
     try {
       if (entry.startsWith("file:")) {
@@ -163,7 +159,6 @@ final class AgentManifestLibs {
     return p;
   }
 
-  // Package-private for testing
   static void scanLibTree(Path root, Set<Path> out) {
     if (root == null || !Files.exists(root)) return;
     try (java.util.stream.Stream<Path> stream = Files.walk(root)) {
@@ -220,6 +215,15 @@ final class AgentManifestLibs {
    */
   static List<Path> filterAndNormalize(Set<Path> entries, Path home, boolean allowExternal) {
     List<Path> out = new ArrayList<>();
+    Path realHome = null;
+    if (!allowExternal && home != null) {
+      try {
+        realHome = home.toRealPath();
+      } catch (IOException e) {
+        if (log.isDebugEnabled()) log.debug("toRealPath failed for home {}: {}", home, e.getMessage());
+        realHome = home.toAbsolutePath().normalize();
+      }
+    }
     for (Path p : entries) {
       try {
         Path np = p.toAbsolutePath().normalize();
@@ -231,22 +235,18 @@ final class AgentManifestLibs {
           log.info("Skipping non-jar manifest entry: {}", np);
           continue;
         }
-        if (!allowExternal && home != null) {
+        if (!allowExternal && realHome != null) {
           try {
-            Path hp = home.toRealPath();
             Path rp = np.toRealPath();
-            if (!rp.startsWith(hp)) {
+            if (!rp.startsWith(realHome)) {
               log.warn("Rejecting manifest lib outside BTRACE_HOME: {}", rp);
               continue;
             }
           } catch (IOException e) {
-            // toRealPath failed (file may not exist or path issue); fall back to a
-            // normalized non-canonical check. Use the same absolute+normalize pipeline as np
-            // so the comparison is apples-to-apples, and surface the weakened check so operators
-            // know symlink resolution could not be applied.
+            // np.toRealPath() failed; fall back to the pre-resolved realHome (which may itself
+            // be a normalized non-canonical path if its toRealPath() failed above).
             if (log.isDebugEnabled()) log.debug("toRealPath failed for {}: {}", np, e.getMessage());
-            Path normalizedHome = home.toAbsolutePath().normalize();
-            if (!np.startsWith(normalizedHome)) {
+            if (!np.startsWith(realHome)) {
               log.warn(
                   "Rejecting manifest lib outside BTRACE_HOME (symlink resolution failed, using normalized path): {}",
                   np);

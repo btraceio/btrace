@@ -219,13 +219,6 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
     }
 
     /**
-     * Resolve all configured extension sources.
-     */
-    private List<ResolvedExtension> resolveExtensions(Project project, BTraceFatAgentExtension extension) {
-        return resolveExtensionsFromExt(project, extension)
-    }
-
-    /**
      * Resolve extensions using duck-typed extension object (avoids classloader issues).
      */
     private List resolveExtensionsFromExt(Project project, def extension) {

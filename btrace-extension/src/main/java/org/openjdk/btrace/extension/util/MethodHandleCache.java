@@ -26,8 +26,8 @@ public final class MethodHandleCache {
     if (cached != null) return cached;
     try {
       MethodHandle mh = publicLookup.findVirtual(receiver, name, mt);
-      cache.putIfAbsent(k, mh);
-      return cache.get(k);
+      MethodHandle winner = cache.putIfAbsent(k, mh);
+      return winner != null ? winner : mh;
     } catch (NoSuchMethodException | IllegalAccessException e) {
       throw new LookupRuntimeException(e);
     }
@@ -40,8 +40,8 @@ public final class MethodHandleCache {
     if (cached != null) return cached;
     try {
       MethodHandle mh = publicLookup.findStatic(owner, name, mt);
-      cache.putIfAbsent(k, mh);
-      return cache.get(k);
+      MethodHandle winner = cache.putIfAbsent(k, mh);
+      return winner != null ? winner : mh;
     } catch (NoSuchMethodException | IllegalAccessException e) {
       throw new LookupRuntimeException(e);
     }
