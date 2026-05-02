@@ -319,12 +319,12 @@ public final class Main {
             createCommandListener(client),
             new String[] {probeCommand, probeCommandArg});
       } else if (listProbes) {
-        registerExitHook(client);
+        // Don't register exit hook for list-only operations - they shouldn't remove probes
         client.attach(pid.toString(), null, classPath);
         client.connectAndListProbes(host, createCommandListener(client));
         System.exit(0);
       } else if (listFailedExtensions) {
-        registerExitHook(client);
+        // Don't register exit hook for list-only operations - they shouldn't remove probes
         client.attach(pid.toString(), null, classPath);
         client.connectAndListFailedExtensions(host, createCommandListener(client));
         System.exit(0);

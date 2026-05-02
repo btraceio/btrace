@@ -147,7 +147,7 @@ final class ExtensionMetadata {
                      attrs.getValue(ATTR_EXTENSION_DESC) : "")
         .jarPath(jarPath)
         .btraceApiVersion(attrs.getValue(ATTR_API_VERSION) != null ?
-                          attrs.getValue(ATTR_API_VERSION) : "2.0+")
+                          attrs.getValue(ATTR_API_VERSION) : "3.0+")
         .javaVersion(attrs.getValue(ATTR_JAVA_VERSION) != null ?
                      attrs.getValue(ATTR_JAVA_VERSION) : "8+")
         .services(services)
@@ -183,7 +183,7 @@ final class ExtensionMetadata {
         .name(props.getProperty("extension.name", id))
         .description(props.getProperty("extension.description", ""))
         .jarPath(jarPath)
-        .btraceApiVersion(props.getProperty("btrace.api.version", "2.0+"))
+        .btraceApiVersion(props.getProperty("btrace.api.version", "3.0+"))
         .javaVersion(props.getProperty("java.version", "8+"))
         .services(services)
         .requiredExtensions(parseList(props.getProperty("requires.extensions", "")))
