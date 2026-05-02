@@ -1,40 +1,18 @@
 /*
- * Copyright (c) 2008 Sun Microsystems, Inc. All Rights Reserved.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * - Redistribution of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * - Redistribution in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in the
- *   documentation and/or other materials provided with the distribution.
- *
- * Neither the name of Sun Microsystems, Inc. or the names of
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * This software is provided "AS IS," without a warranty of any kind. ALL
- * EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES,
- * INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A
- * PARTICULAR PURPOSE OR NON-INFRINGEMENT, ARE HEREBY EXCLUDED. SUN
- * MICROSYSTEMS, INC. ("SUN") AND ITS LICENSORS SHALL NOT BE LIABLE FOR
- * ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING OR
- * DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES. IN NO EVENT WILL SUN OR
- * ITS LICENSORS BE LIABLE FOR ANY LOST REVENUE, PROFIT OR DATA, OR FOR
- * DIRECT, INDIRECT, SPECIAL, CONSEQUENTIAL, INCIDENTAL OR PUNITIVE
- * DAMAGES, HOWEVER CAUSED AND REGARDLESS OF THE THEORY OF LIABILITY,
- * ARISING OUT OF THE USE OF OR INABILITY TO USE THIS SOFTWARE, EVEN IF
- * SUN HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
- *
- * You acknowledge that this software is not designed or intended for use
- * in the design, construction, operation or maintenance of any nuclear
- * facility.
- *
- * Sun gratefully acknowledges that this software was originally authored
- * and developed by Kenneth Bradley Russell and Christopher John Kline.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.compiler;
 
@@ -43,43 +21,54 @@ import java.io.FilterReader;
 import java.io.IOException;
 
 /**
- * This code is based on PCPP code from the GlueGen project.
- *
- * <p>A Reader implementation which finds lines ending in the backslash character ('\') and
- * concatenates them with the next line.
- *
- * @author Kenneth B. Russell (original author)
- * @author A. Sundararajan (changes documented below)
- *     <p>Changes:
- *     <p>* Changed the package name. * Formatted with NetBeans.
+ * A {@link FilterReader} that implements C-preprocessor line-continuation: any line whose last
+ * character is {@code \} is joined to the immediately following line without an intervening
+ * newline.
  */
-public class ConcatenatingReader extends FilterReader {
-  private static final String NEW_LINE = System.getProperty("line.separator");
-  private final BufferedReader inReader;
-  // Any leftover characters go here
-  private char[] curBuf;
-  private int curPos;
+final class ConcatenatingReader extends FilterReader {
 
-  /**
-   * This class requires that the input reader be a BufferedReader so it can do line-oriented
-   * operations.
-   */
-  public ConcatenatingReader(BufferedReader in) {
+  private static final String LINE_SEP = System.lineSeparator();
+
+  private final BufferedReader source;
+  private char[] pending;
+  private int pos;
+
+  ConcatenatingReader(BufferedReader in) {
     super(in);
-    inReader = in;
+    this.source = in;
   }
 
   @Override
   public int read() throws IOException {
-    char[] tmp = new char[1];
-    int num = read(tmp, 0, 1);
-    if (num < 0) {
-      return -1;
-    }
-    return tmp[0];
+    char[] buf = new char[1];
+    return read(buf, 0, 1) < 0 ? -1 : buf[0];
   }
 
-  // It's easier not to support mark/reset since we don't need it
+  @Override
+  public int read(char[] cbuf, int off, int len) throws IOException {
+    if (pending == null) {
+      loadLine();
+    }
+    if (pending == null) {
+      return -1;
+    }
+    int copied = 0;
+    while (len > 0 && pending != null && pos < pending.length) {
+      cbuf[off++] = pending[pos++];
+      len--;
+      copied++;
+      if (pos == pending.length) {
+        loadLine();
+      }
+    }
+    return copied;
+  }
+
+  @Override
+  public boolean ready() throws IOException {
+    return pending != null || source.ready();
+  }
+
   @Override
   public boolean markSupported() {
     return false;
@@ -96,95 +85,28 @@ public class ConcatenatingReader extends FilterReader {
   }
 
   @Override
-  public boolean ready() throws IOException {
-    return curBuf != null || inReader.ready();
-  }
-
-  @Override
-  public int read(char[] cbuf, int off, int len) throws IOException {
-    if (curBuf == null) {
-      nextLine();
-    }
-
-    if (curBuf == null) {
-      return -1;
-    }
-
-    int numRead = 0;
-
-    while ((len > 0) && (curBuf != null) && (curPos < curBuf.length)) {
-      cbuf[off] = curBuf[curPos];
-      ++curPos;
-      ++off;
-      --len;
-      ++numRead;
-      if (curPos == curBuf.length) {
-        nextLine();
-      }
-    }
-
-    return numRead;
-  }
-
-  @Override
   public long skip(long n) throws IOException {
-    long numSkipped = 0;
-
+    long skipped = 0;
+    char[] buf = new char[512];
     while (n > 0) {
-      int intN = (int) n;
-      char[] tmp = new char[intN];
-      int numRead = read(tmp, 0, intN);
-      n -= numRead;
-      numSkipped += numRead;
-      if (numRead < intN) {
-        break;
-      }
+      int chunk = (int) Math.min(n, buf.length);
+      int r = read(buf, 0, chunk);
+      if (r < 0) break;
+      skipped += r;
+      n -= r;
     }
-    return numSkipped;
+    return skipped;
   }
 
-  private void nextLine() throws IOException {
-    String cur = inReader.readLine();
-    if (cur == null) {
-      curBuf = null;
+  private void loadLine() throws IOException {
+    String line = source.readLine();
+    if (line == null) {
+      pending = null;
       return;
     }
-    // The trailing newline was trimmed by the readLine() method. See
-    // whether we have to put it back or not, depending on whether the
-    // last character of the line is the concatenation character.
-    int numChars = cur.length();
-    boolean needNewline = true;
-    if ((numChars > 0) && (cur.charAt(cur.length() - 1) == '\\')) {
-      --numChars;
-      needNewline = false;
-    }
-    char[] buf = new char[numChars + (needNewline ? NEW_LINE.length() : 0)];
-    cur.getChars(0, numChars, buf, 0);
-    if (needNewline) {
-      NEW_LINE.getChars(0, NEW_LINE.length(), buf, numChars);
-    }
-    curBuf = buf;
-    curPos = 0;
+    boolean continuation = !line.isEmpty() && line.charAt(line.length() - 1) == '\\';
+    String content = continuation ? line.substring(0, line.length() - 1) : line + LINE_SEP;
+    pending = content.toCharArray();
+    pos = 0;
   }
-
-  // Test harness
-  /*
-  public static void main(String[] args) throws IOException {
-  if (args.length != 1) {
-  System.out.println("Usage: java ConcatenatingReader [file name]");
-  System.exit(1);
-  }
-  ConcatenatingReader reader = new ConcatenatingReader(new BufferedReader(new FileReader(args[0])));
-  OutputStreamWriter writer = new OutputStreamWriter(System.out);
-  char[] buf = new char[8192];
-  boolean done = false;
-  while (!done && reader.ready()) {
-  int numRead = reader.read(buf, 0, buf.length);
-  writer.write(buf, 0, numRead);
-  if (numRead < buf.length)
-  done = true;
-  }
-  writer.flush();
-  }
-   */
 }
