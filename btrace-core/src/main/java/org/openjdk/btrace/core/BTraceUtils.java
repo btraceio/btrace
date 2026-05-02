@@ -40,7 +40,6 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -3036,29 +3035,25 @@ public class BTraceUtils {
     }
   }
 
+  private static Field lookupField(Class<?> clazz, String name) throws NoSuchFieldException {
+    for (Class<?> type = clazz; type != null; type = type.getSuperclass()) {
+      try {
+        Field f = type.getDeclaredField(name);
+        f.setAccessible(true);
+        return f;
+      } catch (NoSuchFieldException skip) {
+        // field not declared in this type; check superclass next
+      }
+    }
+    throw new NoSuchFieldException(name);
+  }
+
   private static Field getField(Class<?> clazz, String name, boolean throwError) {
     return AccessController.doPrivileged(
         (PrivilegedAction<Field>)
             () -> {
-              Field field = null;
-              Class<?> cClass = clazz;
               try {
-                while (Objects.isNull(field) && Objects.nonNull(cClass)) {
-                  try {
-                    field = cClass.getDeclaredField(name);
-                  } catch (NoSuchFieldException exp) {
-                    // Ignore the exception and continue looking for the parent class
-                    cClass = cClass.getSuperclass();
-                  }
-                }
-
-                if (Objects.isNull(cClass)) {
-                  throw new NoSuchFieldException(name);
-                }
-
-                field.setAccessible(true);
-
-                return field;
+                return lookupField(clazz, name);
               } catch (Exception exp) {
                 if (throwError) {
                   throw translate(exp);
