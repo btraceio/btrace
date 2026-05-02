@@ -37,7 +37,11 @@ compileTestJava {
 }
 
 task compileTestProbes {
-    dependsOn compileTestJava, processTestResources
+    // Wire explicit task dependencies so the API JARs are guaranteed to exist before the classpath
+    // is evaluated (mirrors the pattern used in integration-tests/build.gradle).
+    dependsOn compileTestJava, processTestResources,
+            ':btrace-extensions:btrace-utils:buildApiJar',
+            ':btrace-extensions:btrace-statsd:buildApiJar'
     doLast {
         def path = project(':btrace-instr').sourceSets.main.runtimeClasspath
 
@@ -51,9 +55,10 @@ task compileTestProbes {
                 buildDir.toPath().resolve("classes/java/java11_dummy"),
                 buildDir.toPath().resolve("resources/test")
         )
-        // Include exported extension APIs explicitly without depending on internal source-set names.
-        def utilsApi = files(project(':btrace-extensions:btrace-utils').tasks.named('buildApiJar'))
-        def statsdApi = files(project(':btrace-extensions:btrace-statsd').tasks.named('buildApiJar'))
+        // Resolve API JARs via archiveFile (not files(task)) so the path is concrete and
+        // the task dependency above guarantees they exist.
+        def utilsApi = files(project(':btrace-extensions:btrace-utils').tasks.named('buildApiJar').get().archiveFile.get().asFile)
+        def statsdApi = files(project(':btrace-extensions:btrace-statsd').tasks.named('buildApiJar').get().archiveFile.get().asFile)
         def fullCp = rtCp.plus(extraCp).plus(utilsApi).plus(statsdApi)
         def cpPath = fullCp.getAsPath()
         def args = [

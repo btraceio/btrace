@@ -4,6 +4,7 @@ package org.openjdk.btrace.extension.processor;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
@@ -74,17 +75,32 @@ public final class ExternalTypeProcessor extends AbstractProcessor {
         processingEnv.getElementUtils().getPackageOf(iface).getQualifiedName().toString();
     String simple = iface.getSimpleName().toString();
     List<MethodSpec> methods = new ArrayList<>();
+    Set<String> seen = new HashSet<>();
     for (Element m : iface.getEnclosedElements()) {
       if (m.getKind() != ElementKind.METHOD) continue;
       ExecutableElement em = (ExecutableElement) m;
       if (em.isDefault() || em.getModifiers().contains(Modifier.STATIC)) continue;
+      String methodName = em.getSimpleName().toString();
+      if (!seen.add(methodName)) {
+        processingEnv
+            .getMessager()
+            .printMessage(
+                Diagnostic.Kind.ERROR,
+                "@ExternalType does not support overloaded methods: '"
+                    + methodName
+                    + "' is declared more than once in "
+                    + iface.getQualifiedName()
+                    + ". Rename the methods or use MethodHandleCache directly for overloaded dispatch.",
+                em);
+        continue;
+      }
       boolean isStatic = em.getAnnotation(ExternalType.Static.class) != null;
       String rt = processingEnv.getTypeUtils().erasure(em.getReturnType()).toString();
       List<String> params = new ArrayList<>();
       for (VariableElement p : em.getParameters()) {
         params.add(processingEnv.getTypeUtils().erasure(p.asType()).toString());
       }
-      methods.add(new MethodSpec(em.getSimpleName().toString(), rt, params, isStatic));
+      methods.add(new MethodSpec(methodName, rt, params, isStatic));
     }
     return new AdapterSpec(pkg, simple, externalFqn, methods);
   }
