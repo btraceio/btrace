@@ -45,7 +45,7 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
         "resources.Main",
         "btrace/ExternalTypeAdapterTest.java",
         null,
-        2,
+        10,
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
