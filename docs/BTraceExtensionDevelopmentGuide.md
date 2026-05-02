@@ -180,6 +180,58 @@ public class MyProbe {
 }
 ```
 
+## App-Type Adapters with `@ExternalType`
+
+When an extension's impl needs to interact with application-specific classes (Spark event objects, Hadoop types, custom framework classes), use the `@ExternalType` annotation to generate reflective adapters at build time. The extension Gradle plugin auto-registers the annotation processor.
+
+### How It Works
+
+Declare an interface in `src/main/java` annotated with `@ExternalType("fully.qualified.AppType")`:
+
+```java
+package org.example.ext.api;
+
+import org.openjdk.btrace.core.extensions.ExternalType;
+
+@ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
+public interface JobStartEvent {
+    int jobId();
+    long time();
+}
+```
+
+The processor generates `JobStartEvent$Ext` in the same package with a typed `public static` dispatcher per method. Each dispatcher uses a `volatile MethodHandle` field with lazy resolution: on first call it looks up the target class via `self.getClass().getClassLoader()` (virtual methods) or TCCL (static methods), then caches the handle. If the external class is not yet loaded, the resolver throws and the field stays `null`, so the next call retries — no `ExceptionInInitializerError` at extension load time.
+
+Use the generated class directly in the impl:
+
+```java
+// No manual MethodHandle or try/catch needed
+int  id = JobStartEvent$Ext.jobId(event);
+long ts = JobStartEvent$Ext.time(event);
+```
+
+### Rules
+
+- **Target:** interfaces only (`ElementType.TYPE`). The processor emits a compile error for classes.
+- **Annotation value:** non-empty fully-qualified class name. Empty string is a compile error.
+- **Method types:** use `Object` for types that only exist at runtime and can't be on the compile classpath.
+- **Static methods:** add `@ExternalType.Static` on the interface method — the dispatcher calls `findStatic` with TCCL-based class loading.
+- **Default methods and static interface methods:** skipped (they already have bodies).
+
+### Current Scope Limits (Planned for Future Versions)
+
+The following are not yet handled by the processor. Use `ClassLoadingUtil` / `MethodHandleCache` directly as a workaround; these are all planned for a future `@ExternalType` version:
+
+| Feature | Status | Manual workaround |
+|---------|--------|-------------------|
+| Field read/write | Planned | `MethodHandleCache.findGetter` / `findSetter` |
+| Constructors | Planned | `MethodHandleCache.findConstructor` |
+| `instanceof` / `checkcast` on external types | Planned | `ClassLoadingUtil.load(...)` + `Class.isInstance` |
+| Chained `@ExternalType` return types | Planned | Manual adapter per level |
+| Non-`public` methods | Planned | `MethodHandles.privateLookupIn` (Java 9+) |
+
+The hand-written pattern in [`docs/architecture/provided-style-extensions.md`](architecture/provided-style-extensions.md) works alongside `@ExternalType`-generated adapters in the same impl class until these gaps are closed.
+
 ## Metadata and Permissions (Auto-Generated)
 
 The plugin writes extension metadata into the API JAR manifest and a dedicated properties file; manual manifest editing is not needed. Key attributes include:

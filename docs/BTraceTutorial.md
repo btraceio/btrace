@@ -962,7 +962,7 @@ public final class SparkApiImpl extends Extension implements SparkApi {
 
 Resolution happens lazily on the first call via the event object's own class loader; the handle is cached for subsequent calls. If the external class isn't loaded yet, the resolver retries next call — no `ExceptionInInitializerError` at extension startup.
 
-For fields, constructors, non-public methods, or chained external types, use `ClassLoadingUtil` / `MethodHandleCache` directly (see [Provided-Style Extensions](architecture/provided-style-extensions.md)).
+Field access, constructors, non-public methods, and chained external types are **not yet handled** by the processor — they are planned for a future `@ExternalType` version. Use `ClassLoadingUtil` / `MethodHandleCache` directly in the meantime (see [Provided-Style Extensions](architecture/provided-style-extensions.md) for the full scope-limits table and workarounds).
 
 For the full `@ExternalType` reference, see [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md).
 

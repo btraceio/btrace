@@ -109,17 +109,19 @@ If the external class isn't yet loaded when the dispatcher is first called, the 
 - **Static methods:** annotate with `@ExternalType.Static` on the interface method — the generated dispatcher calls `findStatic` and uses TCCL for class loading.
 - **Default methods and static interface methods:** skipped (they already have bodies).
 
-### Scope limits (v1)
+### Scope limits (v1) — Planned for Future Versions
 
-Not handled by the processor; use `ClassLoadingUtil` / `MethodHandleCache` directly for:
+The following are not yet handled by the processor. Use `ClassLoadingUtil` / `MethodHandleCache` directly as a workaround; all items in the table below are planned for a future `@ExternalType` version:
 
-- Field access (read/write)
-- Constructors (`new ExternalType(...)`)
-- `instanceof` / `checkcast` on external types
-- Chained `@ExternalType` references (an interface method whose return type is itself `@ExternalType`-annotated)
-- Method visibility other than `public` — only `publicLookup` is used
+| Feature | Status | Manual workaround |
+|---------|--------|-------------------|
+| Field access (read/write) | Planned | `MethodHandleCache.findGetter` / `findSetter` |
+| Constructors (`new ExternalType(...)`) | Planned | `MethodHandleCache.findConstructor` |
+| `instanceof` / `checkcast` on external types | Planned | `ClassLoadingUtil.load(...)` + `Class.isInstance` |
+| Chained `@ExternalType` references | Planned | Manual adapter per level |
+| Non-`public` methods | Planned | `MethodHandles.privateLookupIn` (Java 9+) |
 
-If you hit any of these, the hand-written pattern in the "Impl Sketch" section above still works alongside `@ExternalType`-based adapters in the same impl class.
+The hand-written pattern in the "Impl Sketch" section above works alongside `@ExternalType`-based adapters in the same impl class until these gaps are closed.
 
 ## Role Detection & Config
 
