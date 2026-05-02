@@ -26,7 +26,6 @@ package org.openjdk.btrace.extension.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -57,6 +56,8 @@ public final class NestedJarExtensionClassLoader extends URLClassLoader {
   private final Path apiJarPath;
   private final Path implJarPath;
   private final Path tempDir;
+  // Kept open for the lifetime of the classloader; the JVM reads classes from it via bootstrap.
+  private final JarFile apiJar;
 
   /**
    * Create a nested JAR extension classloader.
@@ -94,12 +95,13 @@ public final class NestedJarExtensionClassLoader extends URLClassLoader {
 
     log.debug("Extracted api.jar to {} and impl.jar to {}", apiJarPath, implJarPath);
 
-    // Add API JAR to bootstrap classpath
+    // Add API JAR to bootstrap classpath; keep the JarFile open (JVM reads from it).
     if (instrumentation != null) {
-      JarFile apiJar = new JarFile(apiJarPath.toFile());
+      apiJar = new JarFile(apiJarPath.toFile());
       instrumentation.appendToBootstrapClassLoaderSearch(apiJar);
       log.info("Added extension API to bootstrap classpath: {} ({})", extensionId, apiJarPath.getFileName());
     } else {
+      apiJar = null;
       log.warn("Instrumentation not available, cannot add API JAR to bootstrap: {}", extensionId);
     }
 
@@ -131,13 +133,8 @@ public final class NestedJarExtensionClassLoader extends URLClassLoader {
     if (!targetFile.startsWith(targetDir)) {
       throw new IOException("Zip Slip: entry would extract outside target dir: " + entryName);
     }
-    try (InputStream in = extensionJar.getInputStream(entry);
-        OutputStream out = Files.newOutputStream(targetFile)) {
-      byte[] buffer = new byte[8192];
-      int read;
-      while ((read = in.read(buffer)) != -1) {
-        out.write(buffer, 0, read);
-      }
+    try (InputStream in = extensionJar.getInputStream(entry)) {
+      Files.copy(in, targetFile);
     }
 
     targetFile.toFile().deleteOnExit();
@@ -160,6 +157,17 @@ public final class NestedJarExtensionClassLoader extends URLClassLoader {
 
   public Path getImplJarPath() {
     return implJarPath;
+  }
+
+  @Override
+  public void close() throws IOException {
+    try {
+      super.close();
+    } finally {
+      if (apiJar != null) {
+        apiJar.close();
+      }
+    }
   }
 
   @Override

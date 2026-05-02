@@ -2,6 +2,8 @@
 
 This guide helps you diagnose and resolve common BTrace issues.
 
+> **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
+
 ## Table of Contents
 1. [JVM Attachment Issues](#jvm-attachment-issues)
 2. [Script Compilation Errors](#script-compilation-errors)
@@ -52,7 +54,7 @@ com.sun.tools.attach.AttachNotSupportedException: Unable to attach to target VM
    - **Note**: In a future JDK release, dynamic agent loading will be **disabled by default**. The `-XX:+EnableDynamicAgentLoading` flag will be required to use BTrace's attach mode.
    - **Alternative**: Use BTrace in agent mode (attach at startup) instead of dynamic attach:
      ```bash
-     java -javaagent:/path/to/btrace-agent.jar=script=YourScript.class -jar your-application.jar
+     java -javaagent:/path/to/btrace.jar=script=YourScript.class -jar your-application.jar
      ```
 
 3. **JRE instead of JDK**
@@ -521,20 +523,20 @@ No methods matched for probe: ...
 
 **Error message:**
 ```
-Error opening zip file or JAR manifest missing : /path/to/btrace-agent.jar
+Error opening zip file or JAR manifest missing : /path/to/btrace.jar
 ```
 
 **Solutions:**
 ```bash
 # Verify JAR exists
-ls -la /path/to/btrace-agent.jar
+ls -la /path/to/btrace.jar
 
 # Use absolute path
-java -javaagent:/absolute/path/to/btrace-agent.jar=script=Script.class MyApp
+java -javaagent:/absolute/path/to/btrace.jar=script=Script.class MyApp
 
 # Or set BTRACE_HOME
 export BTRACE_HOME=/path/to/btrace
-java -javaagent:$BTRACE_HOME/libs/btrace-agent.jar=script=Script.class MyApp
+java -javaagent:$BTRACE_HOME/libs/btrace.jar=script=Script.class MyApp
 ```
 
 ### Script class not found in agent mode
@@ -547,14 +549,24 @@ ClassNotFoundException: MyTrace
 **Solutions:**
 ```bash
 # Specify absolute path to script
-java -javaagent:btrace-agent.jar=script=/absolute/path/MyTrace.class MyApp
+java -javaagent:btrace.jar=script=/absolute/path/MyTrace.class MyApp
 
 # Or add to classpath
-java -javaagent:btrace-agent.jar=script=MyTrace.class \
+java -javaagent:btrace.jar=script=MyTrace.class \
      -cp /path/to/scripts:app.jar MyApp
 ```
 
 ## Compatibility Issues
+
+### JDK 25+ Thread Method Exclusions
+
+BTrace automatically excludes certain `java.lang.Thread` methods from instrumentation on JDK 25+ to prevent infinite recursion and interference with JVM internals:
+
+- **ThreadLocal accessors** — `threadLocals()`, `setThreadLocals()`, `inheritableThreadLocals()`, `setInheritableThreadLocals()`, `terminatingThreadLocals()`, `setTerminatingThreadLocals()`: JDK 25 changed direct field access to accessor methods. Instrumenting these causes infinite recursion when BTrace runtime uses `ThreadLocal`.
+- **Interrupt methods** — `getAndClearInterrupt()`, `setInterrupt()`, `clearInterrupt()`: Used internally by `Thread.interrupted()`, which BTrace's own runtime calls.
+- **Exception dispatch** — `dispatchUncaughtException()`, `getUncaughtExceptionHandler()`: Instrumenting these interferes with thread exception handling.
+
+These exclusions are enforced in `ClassFilter.SENSITIVE_METHODS` and cannot be overridden by user scripts. If you see "method not instrumented" warnings for these methods, this is expected behavior.
 
 ### Java Version Mismatch
 
@@ -922,7 +934,7 @@ spec:
     image: myapp:latest
     env:
     - name: JAVA_TOOL_OPTIONS
-      value: "-javaagent:/opt/btrace/lib/btrace-agent.jar=script=/scripts/trace.class"
+      value: "-javaagent:/opt/btrace/lib/btrace.jar=script=/scripts/trace.class"
 ```
 
 ### Cloud-Specific Issues
@@ -946,7 +958,7 @@ spec:
 oc adm policy add-scc-to-user anyuid -z default
 ```
 
-For more K8s deployment patterns, see [Getting Started: K8s](gettingStarted.md#btrace-in-containers-and-kubernetes) and [FAQ: Microservices](faq.md#can-i-use-btrace-with-microservices).
+For more K8s deployment patterns, see [Getting Started: K8s](GettingStarted.md#btrace-in-containers-and-kubernetes) and [FAQ: Microservices](FAQ.md#can-i-use-btrace-with-microservices).
 
 ## Known Limitations
 
@@ -1012,8 +1024,8 @@ If issues persist:
 
 ## See Also
 
-- **[Documentation Hub](Readme.md)** - Complete documentation map and learning paths
-- **[Getting Started Guide](gettingStarted.md)** - Installation, first script, and quick start
-- **[Quick Reference](quickReference.md)** - Annotation and API cheat sheet
-- **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
-- **[FAQ](faq.md)** - Common questions and best practices
+- **[Documentation Hub](README.md)** - Complete documentation map and learning paths
+- **[Getting Started Guide](GettingStarted.md)** - Installation, first script, and quick start
+- **[Quick Reference](QuickReference.md)** - Annotation and API cheat sheet
+- **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
+- **[FAQ](FAQ.md)** - Common questions and best practices

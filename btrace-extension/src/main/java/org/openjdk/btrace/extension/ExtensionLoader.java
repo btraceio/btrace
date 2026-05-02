@@ -1,5 +1,6 @@
 package org.openjdk.btrace.extension;
 
+import org.openjdk.btrace.extension.impl.EmbeddedExtensionRepository;
 import org.openjdk.btrace.extension.impl.ExtensionConfig;
 import org.openjdk.btrace.extension.impl.ExtensionLoaderImpl;
 import org.openjdk.btrace.extension.impl.FileSystemExtensionRepository;
@@ -23,32 +24,40 @@ public abstract class ExtensionLoader {
         return implRef.get();
     }
 
-    public static ExtensionLoader initialize(String btraceHome, ClassLoader parentClassLoader, Instrumentation instrumentation) {
+    public static ExtensionLoader initialize(String btraceHome, ClassLoader parentClassLoader, Instrumentation instrumentation, String btraceVersion) {
         // Create extension repositories in priority order
         List<ExtensionRepository> repositories = new ArrayList<>();
 
-        // 1. Built-in extensions (lowest priority)
-        Path builtinExtPath = new File(btraceHome, "extensions").toPath();
-        repositories.add(
-                new FileSystemExtensionRepository(builtinExtPath, ExtensionRepository.Priority.BUILTIN));
+        // 0. Embedded extensions (lowest priority - can be overridden by any filesystem extension)
+        repositories.add(new EmbeddedExtensionRepository(ExtensionLoader.class.getClassLoader()));
 
-        // 2. User extensions (~/.btrace/extensions/)
-        String userHome = System.getProperty("user.home");
-        if (userHome != null) {
-            Path userExtPath = new File(userHome, ".btrace/extensions").toPath();
+        // Skip filesystem repositories if btraceHome is null (embedded-only mode)
+        if (btraceHome != null) {
+            // 1. Built-in extensions
+            Path builtinExtPath = new File(btraceHome, "extensions").toPath();
             repositories.add(
-                    new FileSystemExtensionRepository(userExtPath, ExtensionRepository.Priority.USER));
-        }
+                    new FileSystemExtensionRepository(builtinExtPath, ExtensionRepository.Priority.BUILTIN));
 
-        // 3. Environment variable BTRACE_EXT_PATH
-        String extPath = System.getenv("BTRACE_EXT_PATH");
-        if (extPath != null && !extPath.isEmpty()) {
-            String[] paths = extPath.split(File.pathSeparator);
-            for (String path : paths) {
+            // 2. User extensions (~/.btrace/extensions/)
+            String userHome = System.getProperty("user.home");
+            if (userHome != null) {
+                Path userExtPath = new File(userHome, ".btrace/extensions").toPath();
                 repositories.add(
-                        new FileSystemExtensionRepository(
-                                new File(path).toPath(), ExtensionRepository.Priority.ENVIRONMENT));
+                        new FileSystemExtensionRepository(userExtPath, ExtensionRepository.Priority.USER));
             }
+
+            // 3. Environment variable BTRACE_EXT_PATH
+            String extPath = System.getenv("BTRACE_EXT_PATH");
+            if (extPath != null && !extPath.isEmpty()) {
+                String[] paths = extPath.split(File.pathSeparator);
+                for (String path : paths) {
+                    repositories.add(
+                            new FileSystemExtensionRepository(
+                                    new File(path).toPath(), ExtensionRepository.Priority.ENVIRONMENT));
+                }
+            }
+        } else {
+            log.info("BTRACE_HOME not set; using embedded extensions only");
         }
 
         // Load extension configuration
@@ -57,7 +66,7 @@ public abstract class ExtensionLoader {
         }
         ExtensionConfig config = ExtensionConfig.load(btraceHome);
 
-        ExtensionLoader instance =  new ExtensionLoaderImpl(repositories, parentClassLoader, config, instrumentation);
+        ExtensionLoader instance =  new ExtensionLoaderImpl(repositories, parentClassLoader, config, instrumentation, btraceVersion);
         // Register service declaration resolver for bytecode-level validation.
         // Bytecode verifier (instr) uses this to check @Injected fields without loading classes.
         // Runtime reflection in Client#validateDeclaredServices complements this by checking
@@ -77,6 +86,7 @@ public abstract class ExtensionLoader {
         }
         log.info("Extension system initialized with {} available extension(s)",
                 instance.getAvailableExtensions().size());
+        implRef.set((ExtensionLoaderImpl) instance);
         return instance;
     }
 

@@ -31,4 +31,8 @@ public final class Args {
   public static final String ALLOW_EXTENSIONS = "allowExtensions";
   public static final String DENY_EXTENSIONS = "denyExtensions";
   public static final String ALLOW_PRIVILEGED = "allowPrivileged";
+
+  // Embedded extension probe arguments
+  public static final String PROBES = "probes";
+  public static final String OUTPUT = "output";
 }

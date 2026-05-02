@@ -98,6 +98,8 @@ public class Client {
   private static final String DTRACE_DESC;
   private static final String DTRACE_REF_DESC;
   private static boolean dtraceEnabled;
+  private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> MASKED_JAR_CACHE =
+      new java.util.concurrent.ConcurrentHashMap<>();
   private static Method submitFile;
   private static Method submitString;
 
@@ -626,7 +628,6 @@ public class Client {
           effectiveBootCp = agentPath + File.pathSeparator + bootCp;
         }
       }
-
       attach(pid, agentPath, sysCp, effectiveBootCp);
     } catch (RuntimeException | IOException e) {
       throw e;
@@ -641,8 +642,8 @@ public class Client {
    * classpath and boot classpath optionally.
    */
   public void attach(String pid, String agentPath, String sysCp, String bootCp) throws IOException {
+    VirtualMachine vm = null;
     try {
-      VirtualMachine vm = null;
       if (log.isDebugEnabled()) {
         log.debug("attaching to {}", pid);
       }
@@ -652,6 +653,7 @@ public class Client {
       }
       Properties serverVmProps = vm.getSystemProperties();
       int serverPort = Integer.parseInt(serverVmProps.getProperty("btrace.port", "-1"));
+      boolean agentAlreadyRunning = false;
       if (serverPort != -1) {
         if (serverPort != port) {
           throw new IOException(
@@ -663,10 +665,21 @@ public class Client {
                   + serverPort
                   + "!");
         }
+        agentAlreadyRunning = true;
+        if (log.isDebugEnabled()) {
+          log.debug("agent already running on port {}", port);
+        }
       } else {
         if (!isPortAvailable(port)) {
           throw new IOException("Port " + port + " unavailable.");
         }
+      }
+
+      if (agentAlreadyRunning) {
+        if (log.isDebugEnabled()) {
+          log.debug("skipping loadAgent, agent already active");
+        }
+        return;
       }
 
       if (log.isDebugEnabled()) {
@@ -707,6 +720,41 @@ public class Client {
         agentArgs += ",=" + Args.CMD_QUEUE_LIMIT + cmdQueueLimit;
       }
       agentArgs += "," + Args.PROBE_DESC_PATH + "=" + probeDescPath;
+
+      // Pass-through selected system properties as agent system props via "$" args
+      // so the agent can read them at startup. These become system properties in the target JVM.
+      String manifestLibs = System.getProperty("btrace.feature.manifestLibs");
+      String sysAppendJar = System.getProperty("btrace.system.appendJar");
+      String allowExternalLibs = System.getProperty("btrace.allowExternalLibs");
+      String testSkipLibs = System.getProperty("btrace.test.skipLibs");
+      if (manifestLibs != null && !manifestLibs.isEmpty()) {
+        if (manifestLibs.indexOf(',') >= 0) {
+          throw new IllegalArgumentException(
+              "System property btrace.feature.manifestLibs must not contain ','");
+        }
+        agentArgs += "," + "$btrace.feature.manifestLibs" + "=" + manifestLibs;
+      }
+      if (sysAppendJar != null && !sysAppendJar.isEmpty()) {
+        if (sysAppendJar.indexOf(',') >= 0) {
+          throw new IllegalArgumentException(
+              "System property btrace.system.appendJar must not contain ','");
+        }
+        agentArgs += "," + "$btrace.system.appendJar" + "=" + sysAppendJar;
+      }
+      if (allowExternalLibs != null && !allowExternalLibs.isEmpty()) {
+        if (allowExternalLibs.indexOf(',') >= 0) {
+          throw new IllegalArgumentException(
+              "System property btrace.allowExternalLibs must not contain ','");
+        }
+        agentArgs += "," + "$btrace.allowExternalLibs" + "=" + allowExternalLibs;
+      }
+      if (testSkipLibs != null && !testSkipLibs.isEmpty()) {
+        if (testSkipLibs.indexOf(',') >= 0) {
+          throw new IllegalArgumentException(
+              "System property btrace.test.skipLibs must not contain ','");
+        }
+        agentArgs += "," + "$btrace.test.skipLibs" + "=" + testSkipLibs;
+      }
       if (log.isDebugEnabled()) {
         log.debug("agent args: {}", agentArgs);
       }
@@ -755,6 +803,13 @@ public class Client {
       System.err.println("[DEBUG] Exception during attach:");
       exp.printStackTrace();
       throw new IOException("Failed to attach to PID " + pid, exp);
+    } finally {
+      if (vm != null) {
+        try {
+          vm.detach();
+        } catch (IOException ignored) {
+        }
+      }
     }
   }
 
@@ -777,8 +832,7 @@ public class Client {
       }
 
       if (sock == null) {
-        log.debug("server not available. exiting.");
-        System.exit(1);
+        throw new IOException("BTrace server not available at port " + port);
       }
       protocol = createProtocol(sock, host, true);
       protocol.write(new ListProbesCommand());
@@ -819,8 +873,7 @@ public class Client {
       }
 
       if (sock == null) {
-        log.debug("server not available. exiting.");
-        System.exit(1);
+        throw new IOException("BTrace server not available at port " + port);
       }
       protocol = createProtocol(sock, host, true);
       protocol.write(new ListFailedExtensionsCommand());
@@ -862,8 +915,7 @@ public class Client {
       }
 
       if (sock == null) {
-        log.debug("server not available. exiting.");
-        System.exit(1);
+        throw new IOException("BTrace server not available at port " + port);
       }
       protocol = createProtocol(sock, host, true);
 
@@ -1144,6 +1196,15 @@ public class Client {
    * Check if a JAR file has the masked JAR structure (contains Loader and masked .classdata files)
    */
   private boolean isMaskedJar(File jarFile) {
+    String key = jarFile.getAbsolutePath();
+    Boolean cached = MASKED_JAR_CACHE.get(key);
+    if (cached != null) return cached;
+    boolean result = computeIsMaskedJar(jarFile);
+    MASKED_JAR_CACHE.put(key, result);
+    return result;
+  }
+
+  private boolean computeIsMaskedJar(File jarFile) {
     try (JarFile jar = new JarFile(jarFile)) {
       // Check for Loader class (unmasked entry point)
       if (jar.getJarEntry("org/openjdk/btrace/boot/Loader.class") == null) {

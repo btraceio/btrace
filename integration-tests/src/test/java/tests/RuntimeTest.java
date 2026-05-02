@@ -203,7 +203,7 @@ public abstract class RuntimeTest {
       Files.createDirectories(permsDir);
       Path perms = permsDir.resolve("permissions.properties");
       String content = "allowPrivileged=true\n" +
-                       "allowExtensions=btrace-metrics,btrace-utils,btrace-statsd\n";
+                       "allowExtensions=btrace-metrics,btrace-utils,btrace-statsd,btrace-ext-test\n";
       Files.write(perms, content.getBytes(StandardCharsets.UTF_8));
       permissionsFile = perms.toAbsolutePath().toString();
     } catch (IOException ioe) {
@@ -995,11 +995,14 @@ public abstract class RuntimeTest {
                 "-cp",
                 cp,
                 "org.openjdk.btrace.boot.Loader",
-                debugBTrace ? "-v" : "",
                 "-cp",
                 eventsClassPath,
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
+    if (debugBTrace) {
+      int mainClassIdx = argVals.indexOf("org.openjdk.btrace.boot.Loader");
+      argVals.add(mainClassIdx + 1, "-v");
+    }
     argVals.addAll(Arrays.asList(args));
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
@@ -1129,11 +1132,14 @@ public abstract class RuntimeTest {
                 "-cp",
                 cp,
                 "org.openjdk.btrace.boot.Loader",
-                debugBTrace ? "-v" : "",
                 "-cp",
                 eventsClassPath,
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
+    if (debugBTrace) {
+      int mainClassIdx = argVals.indexOf("org.openjdk.btrace.boot.Loader");
+      argVals.add(mainClassIdx + 1, "-v");
+    }
     argVals.addAll(Arrays.asList(args));
     if (Files.exists(Paths.get(javaHome, "jmods"))) {
       argVals.addAll(
@@ -1286,10 +1292,13 @@ public abstract class RuntimeTest {
                 "-Dbtrace.comm.protocol=2",
                 "-Dbtrace.comm.autoNegotiate=false",
                 "-Dbtrace.comm.forceVersion=true",
+                "-Dbtrace.port=" + getBTracePort(),
                 "-Dbtrace.libs=" + System.getProperty("btrace.libs"),
                 "-cp",
                 cp,
                 "org.openjdk.btrace.boot.Loader",
+                "-p",
+                String.valueOf(getBTracePort()),
                 "-cp",
                 eventsClassPath,
                 "-d",
@@ -1307,10 +1316,6 @@ public abstract class RuntimeTest {
     }
     if (unattended) {
       argVals.add("-x");
-    }
-    if (btracePort > 0) {
-      argVals.add("-p");
-      argVals.add(String.valueOf(btracePort));
     }
     argVals.addAll(Arrays.asList(pid, traceFile.getAbsolutePath()));
     if (cmdArgs != null) {

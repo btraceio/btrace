@@ -1,5 +1,7 @@
 # BTrace Tutorial (BTrace 2.3.0)
 
+> **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
+
 ## 1. Hello World
 
 Accustoms the learner to 'btrace' command and the way it is used.
@@ -96,7 +98,7 @@ Once you are attached to the target JVM you can press Ctrl-C in the terminal to 
 
 ###### Directly
 
-`java -javaagent:btrace-agent.jar=[<agent-arg>[,<agent-arg>]*]? <launch-args>`
+`java -javaagent:btrace.jar=[<agent-arg>[,<agent-arg>]*]? <launch-args>`
 
 The agent takes a list of comma separated arguments.
 
@@ -762,7 +764,7 @@ btrace --grant=NETWORK,THREADS <pid> MetricsProbe.class
 
 ###### Using the Java agent
 ```bash
-java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
+java -javaagent:btrace.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
 ```
 
 ###### Grant all permissions (use with caution)
@@ -771,16 +773,16 @@ btrace --grantAll=true <pid> MetricsProbe.class
 ```
 or
 ```bash
-java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grantAll=true ...
+java -javaagent:btrace.jar=script=MetricsProbe.class,grantAll=true ...
 ```
 
 ##### Per-Extension Allow/Deny (Simplified Policy)
 - Allow specific extensions to link implementations via agent args:
-  - `-javaagent:btrace-agent.jar=...,allowExtensions=btrace-statsd,my-metrics`
+  - `-javaagent:btrace.jar=...,allowExtensions=btrace-statsd,my-metrics`
 - Deny specific extensions (implementation blocked; SHIM fallback):
-  - `-javaagent:btrace-agent.jar=...,denyExtensions=legacy-foo`
+  - `-javaagent:btrace.jar=...,denyExtensions=legacy-foo`
 - Allow all privileged extensions:
-  - `-javaagent:btrace-agent.jar=...,allowPrivileged=true`
+  - `-javaagent:btrace.jar=...,allowPrivileged=true`
 - Optional process-local policy file:
   - `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`
   - Example content:
@@ -928,6 +930,88 @@ Configuration (optional):
 - You can tune defaults in `btrace.conf` (see Architecture: Extension Configuration):
   - `btrace-metrics.histogram.default-precision=3`
   - `btrace-metrics.histogram.max-value=3600000000`
+
+##### Building App Integration Extensions with @ExternalType
+
+When an extension needs to interact with application-specific types (Spark events, Hadoop objects, custom framework classes), use the `@ExternalType` annotation to eliminate manual reflective boilerplate. The BTrace extension plugin auto-registers the annotation processor.
+
+Declare an interface in `src/main/java` annotated with `@ExternalType("fully.qualified.AppType")`:
+
+```java
+// src/main/java/org/example/spark/api/JobStartEvent.java
+@ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
+public interface JobStartEvent {
+    int jobId();
+    long time();
+}
+```
+
+The processor generates `JobStartEvent$Ext` with lazy, cached `MethodHandle` dispatchers. Use them directly in the impl — no `try/catch` or cache setup required:
+
+```java
+// src/main/java/org/example/spark/impl/SparkApiImpl.java
+public final class SparkApiImpl extends Extension implements SparkApi {
+    @Override
+    public void onJobStart(Object event) {
+        int  id = JobStartEvent$Ext.jobId(event);
+        long ts = JobStartEvent$Ext.time(event);
+        // emit metrics / logs...
+    }
+}
+```
+
+Resolution happens lazily on the first call via the event object's own class loader; the handle is cached for subsequent calls. If the external class isn't loaded yet, the resolver retries next call — no `ExceptionInInitializerError` at extension startup.
+
+Field access, constructors, non-public methods, and chained external types are **not yet handled** by the processor — they are planned for a future `@ExternalType` version. Use `ClassLoadingUtil` / `MethodHandleCache` directly in the meantime (see [Provided-Style Extensions](architecture/provided-style-extensions.md) for the full scope-limits table and workarounds).
+
+For the full `@ExternalType` reference, see [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md).
+
+##### Zero-Config Probe Auto-Selection (ExtensionConfigurator)
+
+For fat agent deployments (Spark executors, Hadoop nodes, Kubernetes pods), extensions can automatically select the right bundled probes without operator input.
+
+**1. List probe names and declare the configurator in `extension.properties`:**
+
+```properties
+probes=DriverTracer,ExecutorTracer
+configurator=org.example.spark.SparkConfigurator
+```
+
+**2. Stage the compiled probe `.class` files in the fat agent plugin:**
+
+```groovy
+btraceFatAgent {
+    embedExtensions { project(':my-spark-extension') }
+    bundledProbes { from 'src/probes/compiled' }
+}
+```
+
+**3. Implement `ExtensionConfigurator`:**
+
+```java
+public final class SparkConfigurator implements ExtensionConfigurator {
+    @Override
+    public ProbeConfiguration configure(RuntimeEnvironment env, Map<String, String> args) {
+        ProbeConfiguration config = new ProbeConfiguration();
+        if (env.hasClass("org.apache.spark.SparkContext")) {
+            config.enable("DriverTracer");
+        } else if (env.hasClass("org.apache.spark.executor.Executor")) {
+            config.enable("ExecutorTracer");
+        }
+        return config;
+    }
+}
+```
+
+`RuntimeEnvironment` provides `hasClass(String)`, `getSystemProperty(String)`, `getEnv(String)`, and `getMainClassName()` for environment detection.
+
+**4. Operator attaches — no `probes=` argument needed:**
+
+```bash
+java -javaagent:my-btrace-agent-fat.jar spark-submit ...
+```
+
+If the operator supplies `probes=`, it takes priority and the configurator is skipped. See [Extension Development Guide — Bundled Probes](BTraceExtensionDevelopmentGuide.md#bundled-probes-and-zero-config-auto-selection) for the full API.
 
 ##### Troubleshooting Failed Extensions
 

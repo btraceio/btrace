@@ -49,6 +49,12 @@ public final class ExtensionDescriptorDTO {
   private final ExtensionRepository repository;
   private final PermissionSet requiredPermissions;
 
+  // Embedded extension support
+  private final boolean embedded;
+  private final String resourceBasePath;
+  private final String configuratorClass;
+  private final List<String> bundledProbes;
+
   private volatile boolean loaded = false;
   private volatile ClassLoader classLoader = null;
 
@@ -63,18 +69,26 @@ public final class ExtensionDescriptorDTO {
       List<String> services,
       List<String> requiredExtensions,
       ExtensionRepository repository,
-      PermissionSet requiredPermissions) {
+      PermissionSet requiredPermissions,
+      boolean embedded,
+      String resourceBasePath,
+      String configuratorClass,
+      List<String> bundledProbes) {
     this.id = Objects.requireNonNull(id, "Extension id cannot be null");
     this.version = Objects.requireNonNull(version, "Extension version cannot be null");
     this.name = name != null ? name : id;
     this.description = description != null ? description : "";
     this.jarPath = Objects.requireNonNull(jarPath, "Extension jar path cannot be null");
-    this.btraceApiVersion = btraceApiVersion != null ? btraceApiVersion : "2.0+";
+    this.btraceApiVersion = btraceApiVersion != null ? btraceApiVersion : "3.0+";
     this.javaVersion = javaVersion != null ? javaVersion : "8+";
     this.services = services != null ? Collections.unmodifiableList(services) : Collections.emptyList();
     this.requiredExtensions = requiredExtensions != null ? Collections.unmodifiableList(requiredExtensions) : Collections.emptyList();
     this.repository = repository;
     this.requiredPermissions = requiredPermissions != null ? requiredPermissions : PermissionSet.empty();
+    this.embedded = embedded;
+    this.resourceBasePath = resourceBasePath;
+    this.configuratorClass = configuratorClass;
+    this.bundledProbes = bundledProbes != null ? Collections.unmodifiableList(bundledProbes) : Collections.emptyList();
   }
 
   public String getId() {
@@ -123,6 +137,36 @@ public final class ExtensionDescriptorDTO {
    */
   public PermissionSet getRequiredPermissions() {
     return requiredPermissions;
+  }
+
+  /**
+   * Returns whether this is an embedded extension (bundled in agent JAR).
+   */
+  public boolean isEmbedded() {
+    return embedded;
+  }
+
+  /**
+   * Returns the resource base path for embedded extensions (e.g., "META-INF/btrace-extensions/ext-id").
+   * Returns null for filesystem extensions.
+   */
+  public String getResourceBasePath() {
+    return resourceBasePath;
+  }
+
+  /**
+   * Returns the configurator class name for environment-aware probe selection.
+   * Returns null if no configurator is defined.
+   */
+  public String getConfiguratorClass() {
+    return configuratorClass;
+  }
+
+  /**
+   * Returns the list of bundled probe class names.
+   */
+  public List<String> getBundledProbes() {
+    return bundledProbes;
   }
 
   public boolean isLoaded() {
@@ -193,6 +237,10 @@ public final class ExtensionDescriptorDTO {
     private List<String> requiredExtensions;
     private ExtensionRepository repository;
     private PermissionSet requiredPermissions;
+    private boolean embedded;
+    private String resourceBasePath;
+    private String configuratorClass;
+    private List<String> bundledProbes;
 
     public Builder id(String id) {
       this.id = id;
@@ -249,6 +297,26 @@ public final class ExtensionDescriptorDTO {
       return this;
     }
 
+    public Builder embedded(boolean embedded) {
+      this.embedded = embedded;
+      return this;
+    }
+
+    public Builder resourceBasePath(String resourceBasePath) {
+      this.resourceBasePath = resourceBasePath;
+      return this;
+    }
+
+    public Builder configuratorClass(String configuratorClass) {
+      this.configuratorClass = configuratorClass;
+      return this;
+    }
+
+    public Builder bundledProbes(List<String> bundledProbes) {
+      this.bundledProbes = bundledProbes;
+      return this;
+    }
+
     public ExtensionDescriptorDTO build() {
       return new ExtensionDescriptorDTO(
           id,
@@ -261,7 +329,11 @@ public final class ExtensionDescriptorDTO {
           services,
           requiredExtensions,
           repository,
-          requiredPermissions);
+          requiredPermissions,
+          embedded,
+          resourceBasePath,
+          configuratorClass,
+          bundledProbes);
     }
   }
 }

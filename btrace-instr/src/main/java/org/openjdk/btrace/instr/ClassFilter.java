@@ -54,7 +54,10 @@ import java.util.regex.PatternSyntaxException;
 public class ClassFilter {
   private static final Class<?> REFERENCE_CLASS = Reference.class;
   private static final PrefixMap SENSITIVE_CLASSES = new PrefixMap();
-  // Method-level sensitive filter: internalClassName -> set of "name+desc" signatures
+  // Method-level sensitive filter: internalClassName -> set of method names.
+  // We filter by name only (not descriptor) because these are specific JDK internal methods
+  // that don't have overloads. Filtering by name is more conservative - if JDK ever added
+  // overloads, we'd rather block them all than risk infinite recursion.
   private static final Map<String, Set<String>> SENSITIVE_METHODS = new HashMap<>();
 
   static {
@@ -89,12 +92,28 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("sun/reflect/");
     SENSITIVE_CLASSES.add("org/openjdk/btrace/");
 
-    // Method-level exclusions for Thread: ThreadLocal accessor/mutator methods create infinite
-    // recursion on JDK 25+ where ThreadLocal.createMap calls Thread.setThreadLocals.
+    // JDK 25+ added accessor methods for thread-local fields (previously direct field access).
+    // ThreadLocal.get() calls Thread.threadLocals() which triggers infinite recursion if instrumented.
+    // ThreadLocal.createMap() calls the setter variants when initializing thread-local storage.
     addSensitiveMethod("java/lang/Thread", "threadLocals");
     addSensitiveMethod("java/lang/Thread", "setThreadLocals");
+    addSensitiveMethod("java/lang/Thread", "inheritableThreadLocals");
+    addSensitiveMethod("java/lang/Thread", "setInheritableThreadLocals");
     addSensitiveMethod("java/lang/Thread", "terminatingThreadLocals");
     addSensitiveMethod("java/lang/Thread", "setTerminatingThreadLocals");
+    // Thread.interrupted() calls getAndClearInterrupt(); BTrace runtime uses Thread.interrupted()
+    addSensitiveMethod("java/lang/Thread", "getAndClearInterrupt");
+    // Interrupt-related methods used in exception handling and thread coordination
+    addSensitiveMethod("java/lang/Thread", "setInterrupt");
+    addSensitiveMethod("java/lang/Thread", "clearInterrupt");
+    // Thread-method exclusions (JDK 25+):
+    //   - dispatchUncaughtException: recursion source — must be excluded to prevent
+    //     probe re-entry during exception dispatch.
+    //   - getUncaughtExceptionHandler: called by dispatchUncaughtException internally.
+    //     Kept in the exclusion list because probes hooking the getter could re-enter
+    //     the dispatcher path even though the getter itself is read-only.
+    addSensitiveMethod("java/lang/Thread", "dispatchUncaughtException");
+    addSensitiveMethod("java/lang/Thread", "getUncaughtExceptionHandler");
   }
 
   private final List<OnMethod> onMethods;
@@ -191,6 +210,18 @@ public class ClassFilter {
     return SENSITIVE_CLASSES.contains(name);
   }
 
+  /**
+   * Check if a method should be excluded from instrumentation.
+   *
+   * <p>Note: The {@code desc} parameter is accepted for API consistency but currently ignored.
+   * Filtering is by method name only, which is intentionally conservative - if JDK added
+   * overloads of sensitive methods, we'd rather block all of them than risk infinite recursion.
+   *
+   * @param owner internal class name (e.g., "java/lang/Thread")
+   * @param name method name
+   * @param desc method descriptor (currently unused, reserved for future use)
+   * @return true if the method should not be instrumented
+   */
   public static boolean isSensitiveMethod(String owner, String name, String desc) {
     Set<String> methods = SENSITIVE_METHODS.get(owner);
     return methods != null && !methods.isEmpty() && methods.contains(name);

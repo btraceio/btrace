@@ -84,12 +84,11 @@ jbang btrace@btraceio <PID> <script.java>
 jbang io.btrace:btrace-client:<version> --extract-agent ~/.btrace
 
 # This creates:
-#   ~/.btrace/btrace-agent.jar
-#   ~/.btrace/btrace-boot.jar
+#   ~/.btrace/btrace.jar (single masked JAR — primary)
+#   ~/.btrace/btrace-agent.jar and ~/.btrace/btrace-boot.jar (legacy, backward compat)
 
-# Then use them explicitly:
-jbang btrace@btraceio --agent-jar ~/.btrace/btrace-agent.jar \
-             --boot-jar ~/.btrace/btrace-boot.jar \
+# Then use it explicitly:
+jbang btrace@btraceio --agent-jar ~/.btrace/btrace.jar \
              <PID> <script.java>
 ```
 
@@ -97,13 +96,15 @@ jbang btrace@btraceio --agent-jar ~/.btrace/btrace-agent.jar \
 After jbang downloads BTrace, find the JARs in your local Maven repository (default `~/.m2`):
 ```bash
 # JARs are cached at:
-~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
-~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
+~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar
 
-# Use them directly:
-jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
-             --boot-jar ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
+# Use it directly:
+jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar \
              <PID> <script.java>
+
+# Legacy coordinates (backward compat):
+# ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
+# ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
 ```
 
 **Benefits:**
@@ -154,7 +155,7 @@ class-pattern::method-pattern @location [filter] { action }
 - **Actions**: `print`, `count`, `time`, `stack`
 - **Filters**: `if duration>NUMBERms`, `if args[N]==VALUE`
 
-**For complete oneliner documentation**, see [Oneliner Guide](onelinerGuide.md).
+**For complete oneliner documentation**, see [Oneliner Guide](OnelinerGuide.md).
 
 **Want full BTrace power?** Continue to the full 5-minute quick start below.
 
@@ -336,13 +337,11 @@ jbang btrace@btraceio -v 12345 MyTrace.java arg1 arg2
 
 # Extract agent JARs, then use them explicitly
 jbang btrace@btraceio --extract-agent ~/.btrace
-jbang btrace@btraceio --agent-jar ~/.btrace/btrace-agent.jar \
-             --boot-jar ~/.btrace/btrace-boot.jar \
+jbang btrace@btraceio --agent-jar ~/.btrace/btrace.jar \
              12345 MyTrace.java
 
 # Or use JARs from Maven local repository (after jbang downloads them)
-jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace-agent/<version>/btrace-agent-<version>.jar \
-             --boot-jar ~/.m2/repository/io/btrace/btrace-boot/<version>/btrace-boot-<version>.jar \
+jbang btrace@btraceio --agent-jar ~/.m2/repository/io/btrace/btrace/<version>/btrace-<version>.jar \
              12345 MyTrace.java
 ```
 
@@ -382,7 +381,7 @@ btrace -v 12345 MyTrace.java arg1 arg2
 Start a Java application with BTrace agent and a pre-compiled script:
 
 ```bash
-java -javaagent:btrace-agent.jar=script=<script.class>[,arg1=value1]... YourApp
+java -javaagent:btrace.jar=script=<script.class>[,arg1=value1]... YourApp
 ```
 
 **When to use:**
@@ -396,7 +395,7 @@ java -javaagent:btrace-agent.jar=script=<script.class>[,arg1=value1]... YourApp
 btracec MyTrace.java
 
 # Then run with agent
-java -javaagent:/path/to/btrace-agent.jar=script=MyTrace.class MyApp
+java -javaagent:/path/to/btrace.jar=script=MyTrace.class MyApp
 ```
 
 ### 4. Launcher Mode (btracer)
@@ -558,7 +557,7 @@ jmc recording.jfr
 - Can be analyzed offline
 - Timeline visualization in Mission Control
 
-For complete JFR documentation, see [BTrace Tutorial Lesson 5](btraceTutorial.md) and [FAQ: JFR Integration](faq.md#jfr-integration).
+For complete JFR documentation, see [BTrace Tutorial Lesson 5](BTraceTutorial.md) and [FAQ: JFR Integration](FAQ.md#jfr-integration).
 
 ## BTrace in Containers and Kubernetes
 
@@ -604,7 +603,7 @@ ENV BTRACE_HOME=/opt/btrace-2.2.2
 ENV PATH=$PATH:$BTRACE_HOME/bin
 ```
 
-See [docker/Readme.md](../docker/Readme.md) for more Docker usage patterns.
+See [docker/README.md](../docker/README.md) for more Docker usage patterns.
 
 ### Kubernetes Pods
 
@@ -683,7 +682,145 @@ kubectl logs <pod-name> -c btrace
 3. **Security Policies**: Pod Security Policies may block ptrace; adjust as needed
 4. **Resource Limits**: BTrace overhead may trigger CPU/memory limits
 
-For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](troubleshooting.md#kubernetes-and-cloud-deployments).
+For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](Troubleshooting.md#kubernetes-and-cloud-deployments).
+
+## Fat Agent JAR (Single-JAR Deployment)
+
+For environments where managing multiple JARs is impractical (Spark executors, Hadoop nodes, minimal containers), BTrace provides a **fat agent JAR** with embedded extensions.
+
+### Why Fat Agent?
+
+Standard BTrace deployment requires multiple files:
+- `btrace.jar` (or legacy `btrace-agent.jar` + `btrace-boot.jar`)
+- Extension JARs in `$BTRACE_HOME/extensions/`
+
+The fat agent bundles everything into a single JAR that works without `$BTRACE_HOME`.
+
+### Building the Fat Agent
+
+```bash
+# Build with all available extensions
+./gradlew :btrace-dist:fatAgentJar
+
+# Build with specific extensions only
+./gradlew :btrace-dist:fatAgentJar -PembedExtensions=btrace-metrics,btrace-statsd
+
+# Output location
+ls btrace-dist/build/resources/main/v*/libs/btrace-agent-fat.jar
+```
+
+### Using the Fat Agent
+
+```bash
+# Start application with fat agent
+java -javaagent:/path/to/btrace-agent-fat.jar MyApp
+
+# With agent options
+java -javaagent:/path/to/btrace-agent-fat.jar=debug=true,port=2021 MyApp
+
+# Verify embedded extensions loaded (look for "Extension system initialized with N")
+java -javaagent:/path/to/btrace-agent-fat.jar=debug=true MyApp 2>&1 | grep "Extension"
+```
+
+### Spark Example
+
+```bash
+# Copy fat agent to cluster-accessible location
+hdfs dfs -put btrace-agent-fat.jar /btrace/
+
+# Submit with agent
+spark-submit \
+  --conf spark.driver.extraJavaOptions="-javaagent:btrace-agent-fat.jar" \
+  --conf spark.executor.extraJavaOptions="-javaagent:btrace-agent-fat.jar" \
+  --files btrace-agent-fat.jar \
+  myapp.jar
+```
+
+### Kubernetes Example
+
+```dockerfile
+# Minimal container with fat agent only
+FROM openjdk:17-slim
+
+# Copy only the fat agent (no BTRACE_HOME needed)
+COPY btrace-agent-fat.jar /opt/btrace/
+
+# Your application
+COPY myapp.jar /app/
+ENTRYPOINT ["java", "-javaagent:/opt/btrace/btrace-agent-fat.jar", "-jar", "/app/myapp.jar"]
+```
+
+### Custom Fat Agent Builds
+
+For custom extension combinations, use the Gradle plugin:
+
+```groovy
+plugins {
+    id 'org.openjdk.btrace.fat-agent'
+}
+
+btraceFatAgent {
+    baseName = 'my-btrace-agent'
+
+    embedExtensions {
+        // From Maven Central
+        maven('io.btrace:btrace-metrics:2.3.0')
+        maven('io.btrace:btrace-statsd:2.3.0')
+
+        // Local extension
+        file('libs/my-custom-extension.zip')
+    }
+}
+```
+
+#### Writing Extensions That Integrate With App Types (@ExternalType)
+
+When your extension needs to interact with application-specific classes (Spark events, Hadoop objects, etc.), use `@ExternalType` to generate lazy reflective dispatchers at build time — no manual `MethodHandle` boilerplate:
+
+```java
+// src/main/java/org/example/ext/api/JobEvent.java
+@ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
+public interface JobEvent {
+    int jobId();
+    long time();
+}
+```
+
+The plugin auto-registers the annotation processor, which generates `JobEvent$Ext` with cached, lazy-resolving static methods. See [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for details.
+
+#### Zero-Config Probe Auto-Selection
+
+Extensions embedded in a fat agent can automatically activate the right bundled probes by implementing `ExtensionConfigurator`. The agent calls the configurator at startup to detect the environment (driver vs executor, namenode vs datanode, etc.) and enables the matching probes — no `probes=` argument needed. See [Extension Development Guide — Bundled Probes](BTraceExtensionDevelopmentGuide.md#bundled-probes-and-zero-config-auto-selection).
+
+### Maven Plugin
+
+For Maven users, a Maven plugin is also available:
+
+```xml
+<plugin>
+    <groupId>org.openjdk.btrace</groupId>
+    <artifactId>btrace-maven-plugin</artifactId>
+    <version>${btrace.version}</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>fat-agent</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <outputName>my-btrace-agent</outputName>
+        <extensions>
+            <extension>io.btrace:btrace-metrics:${btrace.version}</extension>
+            <extension>io.btrace:btrace-statsd:${btrace.version}</extension>
+        </extensions>
+    </configuration>
+</plugin>
+```
+
+Build with `mvn package` to create `target/my-btrace-agent.jar`.
+
+See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) and [Gradle Plugin README](../btrace-gradle-plugin/README.md) for complete documentation.
 
 ## Common Pitfalls and Solutions
 
@@ -697,7 +834,7 @@ For comprehensive troubleshooting, see [Troubleshooting: Kubernetes](troubleshoo
 - **JDK 21+**: Add `-XX:+EnableDynamicAgentLoading` to target JVM to suppress warnings and ensure compatibility
 - Verify JDK (not JRE) is installed
 
-**Note**: Starting with JDK 21, dynamic agent loading triggers warnings. In a future JDK release, it will be disabled by default, requiring `-XX:+EnableDynamicAgentLoading` to use BTrace's attach mode. See [Troubleshooting: JVM Attachment Issues](troubleshooting.md#jvm-attachment-issues) for details.
+**Note**: Starting with JDK 21, dynamic agent loading triggers warnings. In a future JDK release, it will be disabled by default, requiring `-XX:+EnableDynamicAgentLoading` to use BTrace's attach mode. See [Troubleshooting: JVM Attachment Issues](Troubleshooting.md#jvm-attachment-issues) for details.
 
 ### 2. Script Verification Errors
 
@@ -752,10 +889,10 @@ btrace -Dfile.encoding=UTF-8 <PID> script.java
 
 Now that you have BTrace running, explore these resources:
 
-1. **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
-2. **[Quick Reference](quickReference.md)** - Annotation and API cheat sheet
+1. **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
+2. **[Quick Reference](QuickReference.md)** - Annotation and API cheat sheet
 3. **[Sample Scripts](../btrace-dist/src/main/resources/samples/)** - 50+ real-world examples
-4. **[Troubleshooting Guide](troubleshooting.md)** - Solutions to common problems
+4. **[Troubleshooting Guide](Troubleshooting.md)** - Solutions to common problems
 5. **[BTrace Wiki](https://github.com/btraceio/btrace/wiki/Home)** - Comprehensive user guide
 
 ## Tips for Success
@@ -769,11 +906,11 @@ Now that you have BTrace running, explore these resources:
 
 ## See Also
 
-- **[Documentation Hub](Readme.md)** - Complete documentation map and learning paths
-- **[Quick Reference](quickReference.md)** - Annotation and API cheat sheet
-- **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
-- **[Troubleshooting Guide](troubleshooting.md)** - Solutions to common problems
-- **[FAQ](faq.md)** - Common questions and best practices
+- **[Documentation Hub](README.md)** - Complete documentation map and learning paths
+- **[Quick Reference](QuickReference.md)** - Annotation and API cheat sheet
+- **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
+- **[Troubleshooting Guide](Troubleshooting.md)** - Solutions to common problems
+- **[FAQ](FAQ.md)** - Common questions and best practices
 
 ## Getting Help
 

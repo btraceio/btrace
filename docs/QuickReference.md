@@ -1,6 +1,6 @@
 # BTrace Quick Reference
 
-A cheat sheet for experienced users. For step-by-step instructions, see [Getting Started](gettingStarted.md). Back to [README](../Readme.md).
+A cheat sheet for experienced users. For step-by-step instructions, see [Getting Started](GettingStarted.md). Back to [README](../README.md).
 
 ---
 
@@ -113,7 +113,7 @@ private static JfrEvent.Factory myEventFactory;
 
 **Field Kinds:** TIMESTAMP, TIMESPAN, DATAAMOUNT, FREQUENCY, MEMORYADDRESS, PERCENTAGE, BOOLEANFLAG, UNSIGNED
 
-See [Getting Started: JFR Integration](gettingStarted.md#advanced-jfr-integration) and Pattern #9 below.
+See [Getting Started: JFR Integration](GettingStarted.md#advanced-jfr-integration) and Pattern #9 below.
 
 ### @PeriodicEvent
 Define a handler for periodic JFR events (OpenJDK 8 or Java 11+).
@@ -496,7 +496,7 @@ btracer MyTrace.class java -Xmx2g -jar myapp.jar
 ### Java Agent Mode
 Start app with BTrace agent directly.
 ```bash
-java -javaagent:/path/to/btrace-agent.jar=script=<script.class>[,arg=value]... YourApp
+java -javaagent:/path/to/btrace.jar=script=<script.class>[,arg=value]... YourApp
 ```
 
 **Agent Parameters:**
@@ -509,10 +509,10 @@ java -javaagent:/path/to/btrace-agent.jar=script=<script.class>[,arg=value]... Y
 **Examples:**
 ```bash
 # Basic agent mode
-java -javaagent:btrace-agent.jar=script=MyTrace.class MyApp
+java -javaagent:btrace.jar=script=MyTrace.class MyApp
 
 # With custom port
-java -javaagent:btrace-agent.jar=script=MyTrace.class,port=2020 MyApp
+java -javaagent:btrace.jar=script=MyTrace.class,port=2020 MyApp
 ```
 
 ## Built-in Functions
@@ -625,8 +625,8 @@ Use `-u` (unsafe mode) to bypass restrictions, but only in controlled environmen
 
 ## See Also
 
-- **[Documentation Hub](Readme.md)** - Complete documentation map and learning paths
-- **[Getting Started Guide](gettingStarted.md)** - Installation, first script, and quick start
-- **[BTrace Tutorial](btraceTutorial.md)** - Progressive lessons covering all features
-- **[Troubleshooting Guide](troubleshooting.md)** - Solutions to common problems
-- **[FAQ](faq.md)** - Common questions and best practices
+- **[Documentation Hub](README.md)** - Complete documentation map and learning paths
+- **[Getting Started Guide](GettingStarted.md)** - Installation, first script, and quick start
+- **[BTrace Tutorial](BTraceTutorial.md)** - Progressive lessons covering all features
+- **[Troubleshooting Guide](Troubleshooting.md)** - Solutions to common problems
+- **[FAQ](FAQ.md)** - Common questions and best practices

@@ -51,7 +51,8 @@ class ExtensionLoaderImplConcurrencyTest {
             Collections.emptyList(),
             getClass().getClassLoader(),
             ExtensionConfig.createDefault(),
-            instrumentation);
+            instrumentation,
+            "3.0.0");
 
     ExtensionDescriptorDTO descriptor =
         new ExtensionDescriptorDTO.Builder()
