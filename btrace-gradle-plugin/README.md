@@ -156,6 +156,50 @@ btraceFatAgent {
 }
 ```
 
+### Zero-Config Probe Auto-Selection (Configurator)
+
+Extensions can declare an `ExtensionConfigurator` class that the agent calls at
+startup to decide which bundled probes to activate automatically — without the
+operator passing `probes=` on the command line.
+
+**Extension `extension.properties`:**
+```properties
+id=btrace-spark
+probes=SparkJobTracer,SparkStageTracer,SparkExecutorTracer
+configurator=org.example.spark.SparkConfigurator
+```
+
+**Configurator class (in the extension's impl artifact):**
+```java
+public final class SparkConfigurator implements ExtensionConfigurator {
+    @Override
+    public ProbeConfiguration configure(RuntimeEnvironment env, Map<String, String> args) {
+        ProbeConfiguration config = new ProbeConfiguration();
+        if (env.hasClass("org.apache.spark.SparkContext")) {
+            config.enable("SparkJobTracer", "SparkStageTracer");
+        } else if (env.hasClass("org.apache.spark.executor.Executor")) {
+            config.enable("SparkExecutorTracer");
+        }
+        config.setOutput(args.getOrDefault("output", "jfr"));
+        return config;
+    }
+}
+```
+
+**Operator usage** — attach the fat agent; no `probes=` needed:
+```bash
+java -javaagent:my-btrace-agent-fat.jar MyApp
+```
+
+If `probes=` is supplied by the operator it takes priority and the configurator
+is skipped entirely:
+```bash
+java -javaagent:my-btrace-agent-fat.jar=probes=SparkJobTracer MyApp
+```
+
+See [BTraceExtensionDevelopmentGuide.md](../docs/BTraceExtensionDevelopmentGuide.md)
+for the full configurator API reference.
+
 ### Auto-Discovery Mode
 
 When `autoDiscover = true`, the plugin automatically finds all subprojects with the `org.openjdk.btrace.extension` plugin applied:

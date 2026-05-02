@@ -53,6 +53,7 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
   private final ClassLoader parentClassLoader;
   private final ExtensionConfig config;
   private final Instrumentation instrumentation;
+  private final String btraceVersion;
   private final Map<String, ExtensionDescriptorDTO> loadedExtensions;
   // Populated once by discoverExtensions() at startup; read-only after that.
   private final Map<String, ExtensionDescriptorDTO> availableExtensions;
@@ -70,11 +71,13 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
       List<ExtensionRepository> repositories,
       ClassLoader parentClassLoader,
       ExtensionConfig config,
-      Instrumentation instrumentation) {
+      Instrumentation instrumentation,
+      String btraceVersion) {
     this.repositories = new ArrayList<>(repositories);
     this.parentClassLoader = parentClassLoader;
     this.config = config != null ? config : ExtensionConfig.createDefault();
     this.instrumentation = instrumentation;
+    this.btraceVersion = btraceVersion != null ? btraceVersion : "unknown";
     this.loadedExtensions = new HashMap<>();
     this.availableExtensions = new HashMap<>();
   }
@@ -168,6 +171,18 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
   private boolean doLoad(ExtensionDescriptorDTO descriptor) {
     log.info("Loading extension: {} version {} from {}",
         descriptor.getId(), descriptor.getVersion(), descriptor.getJarPath());
+
+    // Reject extensions that require a newer BTrace than what is running.
+    String requiredApi = descriptor.getBtraceApiVersion();
+    if (requiredApi != null && !requiredApi.isEmpty()) {
+      BTraceVersionRange requirement = BTraceVersionRange.parse(requiredApi);
+      if (!requirement.satisfiedBy(btraceVersion)) {
+        log.error(
+            "Extension {} {} requires BTrace API {} but running version is {} — skipping",
+            descriptor.getId(), descriptor.getVersion(), requiredApi, btraceVersion);
+        return false;
+      }
+    }
 
     try {
       // Load any required extensions first
@@ -382,9 +397,10 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
 
   @Override
   public void close() {
-    for (JarFile jf : openApiJars) {
-      try { jf.close(); } catch (java.io.IOException ignore) {}
-    }
+    // openApiJars were registered with the bootstrap classloader via
+    // appendToBootstrapClassLoaderSearch and must not be closed; the JVM may
+    // continue reading class bytes from them after registration. The OS reclaims
+    // file descriptors at JVM exit.
     openApiJars.clear();
   }
 

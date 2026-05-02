@@ -79,7 +79,7 @@ public final class ExtensionDescriptorDTO {
     this.name = name != null ? name : id;
     this.description = description != null ? description : "";
     this.jarPath = Objects.requireNonNull(jarPath, "Extension jar path cannot be null");
-    this.btraceApiVersion = btraceApiVersion != null ? btraceApiVersion : "2.0+";
+    this.btraceApiVersion = btraceApiVersion != null ? btraceApiVersion : "3.0+";
     this.javaVersion = javaVersion != null ? javaVersion : "8+";
     this.services = services != null ? Collections.unmodifiableList(services) : Collections.emptyList();
     this.requiredExtensions = requiredExtensions != null ? Collections.unmodifiableList(requiredExtensions) : Collections.emptyList();

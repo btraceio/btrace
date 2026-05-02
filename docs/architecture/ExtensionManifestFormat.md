@@ -107,6 +107,37 @@ BTrace-Extension-Description: This is a very long description that excee
  ing space character.
 ```
 
+## Embedded Extension Properties (`extension.properties`)
+
+Embedded extensions (shipped inside a fat agent JAR) are described by a
+`META-INF/btrace-extensions/{id}/extension.properties` file rather than a
+MANIFEST.MF. The agent reads the following keys from that file:
+
+| Key | Required | Example | Description |
+|-----|----------|---------|-------------|
+| `id` | no (defaults to directory name) | `btrace-spark` | Extension identifier |
+| `version` | no (defaults to `0.0.0`) | `1.2.0` | Semantic version |
+| `name` | no | `BTrace Spark` | Human-readable name |
+| `description` | no | `Spark job tracing` | Short description |
+| `btrace.api.version` | no (defaults to `3.0+`) | `3.0.0` | Minimum BTrace API version |
+| `java.version` | no (defaults to `8+`) | `11+` | Minimum Java version |
+| `services` | no | `org.example.SparkService` | Comma-separated service class names |
+| `probes` | no | `SparkJobTracer,SparkStageTracer` | Comma-separated bundled probe class names |
+| `configurator` | no | `org.example.SparkConfigurator` | Fully qualified `ExtensionConfigurator` class for zero-config probe auto-selection (see below) |
+
+### `configurator` — Zero-Config Probe Auto-Selection
+
+When a `configurator` class is declared, the agent calls it during startup to
+decide which bundled probes to activate based on the running JVM's environment.
+This allows the extension to enable the right probes automatically (e.g. Spark
+driver probes vs. executor probes) without the operator having to pass a
+`probes=` agent argument.
+
+The class must implement `org.openjdk.btrace.core.extensions.ExtensionConfigurator`
+and have a public no-arg constructor. It is loaded via the extension's own
+classloader. See [BTraceExtensionDevelopmentGuide.md](../BTraceExtensionDevelopmentGuide.md)
+for a full example.
+
 ## Backward Compatibility
 
 The extension loader supports both formats:

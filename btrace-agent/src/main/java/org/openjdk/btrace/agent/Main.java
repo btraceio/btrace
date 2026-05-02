@@ -24,24 +24,9 @@
  */
 package org.openjdk.btrace.agent;
 
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.WireIO;
-import org.openjdk.btrace.extension.ExtensionLoader;
-import org.openjdk.btrace.extension.impl.ExtensionBridgeImpl;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
-import org.openjdk.btrace.instr.BTraceTransformer;
-import org.openjdk.btrace.instr.Constants;
-import org.openjdk.btrace.runtime.BTraceRuntimes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
@@ -59,20 +44,42 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.LinkedHashSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
+
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.Messages;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
+import org.openjdk.btrace.core.comm.WireIO;
+import org.openjdk.btrace.core.extensions.ExtensionConfigurator;
+import org.openjdk.btrace.core.extensions.ProbeConfiguration;
+import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
+import org.openjdk.btrace.extension.ExtensionLoader;
+import org.openjdk.btrace.extension.impl.ExtensionBridgeImpl;
+import org.openjdk.btrace.instr.BTraceProbeFactory;
+import org.openjdk.btrace.instr.BTraceTransformer;
+import org.openjdk.btrace.instr.Constants;
+import org.openjdk.btrace.runtime.BTraceRuntimes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.openjdk.btrace.core.Args.ALLOW_EXTENSIONS;
 import static org.openjdk.btrace.core.Args.ALLOW_PRIVILEGED;
@@ -141,6 +148,10 @@ public final class Main {
       Collections.synchronizedSet(new LinkedHashSet<>());
   private static final Set<Path> SYSTEM_ADDED =
       Collections.synchronizedSet(new LinkedHashSet<>());
+  // Hold strong references to JarFiles passed to appendToBootstrap/SystemClassLoaderSearch so
+  // that GC cannot close their file descriptors before the JVM is done reading class bytes.
+  private static final List<JarFile> BOOT_JARS = new ArrayList<>();
+  private static final List<JarFile> SYSTEM_JARS = new ArrayList<>();
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
@@ -396,7 +407,7 @@ public final class Main {
       if (bootClassLoader == null) {
         bootClassLoader = ClassLoader.getSystemClassLoader();
       }
-      extensionLoader = ExtensionLoader.initialize(btraceHome, bootClassLoader, inst);
+      extensionLoader = ExtensionLoader.initialize(btraceHome, bootClassLoader, inst, readBTraceVersion());
 
       // Initialize invokedynamic bridge for extensions after loader is ready
       ExtensionBridgeImpl.initialize(extensionLoader);
@@ -409,64 +420,109 @@ public final class Main {
     }
   }
 
-  /**
-   * Load bundled probes from embedded extensions based on agent args or configurator.
-   */
+  /** Load bundled probes from embedded extensions based on agent args or configurator. */
   private static void loadBundledProbes() {
     if (extensionLoader == null) {
       return;
     }
 
-    // Check for probes= agent argument
     String probesArg = argMap.get(PROBES);
     String outputArg = argMap.get(OUTPUT);
 
-    if (probesArg == null || probesArg.isEmpty()) {
-      // No explicit probes requested; configurators could auto-select but not implemented yet
-      return;
-    }
-
-    // Parse requested probes
-    String[] requestedProbes = probesArg.split(",");
-    if (requestedProbes.length == 0) {
-      return;
-    }
-
-    log.info("Loading bundled probes: {}", probesArg);
-
-    // Configure output settings based on output= argument
-    boolean traceToStdOut = "stdout".equalsIgnoreCase(outputArg);
-    if (outputArg != null && !outputArg.isEmpty()) {
-      if ("jfr".equalsIgnoreCase(outputArg)) {
-        // JFR output - probes should emit JFR events
-        log.info("Bundled probes will output to JFR");
-      } else if ("file".equalsIgnoreCase(outputArg)) {
-        log.info("Bundled probes will output to file");
-      } else if (traceToStdOut) {
-        log.info("Bundled probes will output to stdout");
+    if (probesArg != null && !probesArg.isEmpty()) {
+      // Explicit probes= argument: honour it directly.
+      log.info("Loading bundled probes: {}", probesArg);
+      boolean toStdOut = "stdout".equalsIgnoreCase(outputArg);
+      if (outputArg != null && !outputArg.isEmpty()) {
+        if ("jfr".equalsIgnoreCase(outputArg)) {
+          log.info("Bundled probes will output to JFR");
+        } else if ("file".equalsIgnoreCase(outputArg)) {
+          log.info("Bundled probes will output to file");
+        } else if (toStdOut) {
+          log.info("Bundled probes will output to stdout");
+        }
+      }
+      List<String> requested = new ArrayList<>();
+      for (String p : probesArg.split(",")) {
+        requested.add(p.trim());
+      }
+      loadProbesFromNames(requested, toStdOut);
+    } else {
+      // No explicit probes= — ask each extension's configurator.
+      AgentRuntimeEnvironment env = new AgentRuntimeEnvironment();
+      Map<String, String> agentArgs = new LinkedHashMap<>();
+      for (Map.Entry<String, String> e : argMap) {
+        agentArgs.put(e.getKey(), e.getValue());
+      }
+      for (ExtensionDescriptorDTO ext : extensionLoader.getAvailableExtensions()) {
+        if (!ext.isEmbedded()) {
+          continue;
+        }
+        String configuratorClass = ext.getConfiguratorClass();
+        if (configuratorClass == null) {
+          continue;
+        }
+        ProbeConfiguration config = runConfigurator(ext, configuratorClass, env, agentArgs);
+        if (config == null || !config.hasEnabledProbes()) {
+          continue;
+        }
+        boolean toStdOut = config.getOutput() == ProbeConfiguration.Output.STDOUT;
+        log.info(
+            "Extension {} configurator enabled probes: {}", ext.getId(), config.getEnabledProbes());
+        loadProbesFromNames(config.getEnabledProbes(), toStdOut);
       }
     }
+  }
 
-    // Search for probe classes in embedded extensions
-    for (org.openjdk.btrace.extension.ExtensionDescriptorDTO ext : extensionLoader.getAvailableExtensions()) {
+  /**
+   * Instantiate and run the named {@link ExtensionConfigurator} class from the given extension,
+   * returning its {@link ProbeConfiguration} or null on failure.
+   */
+  private static ProbeConfiguration runConfigurator(
+      ExtensionDescriptorDTO ext,
+      String configuratorClass,
+      AgentRuntimeEnvironment env,
+      Map<String, String> agentArgs) {
+    try {
+      ClassLoader cl = ext.getClassLoader();
+      if (cl == null) {
+        cl = Main.class.getClassLoader();
+      }
+      Class<?> cls = Class.forName(configuratorClass, true, cl);
+      ExtensionConfigurator configurator =
+          (ExtensionConfigurator) cls.getDeclaredConstructor().newInstance();
+      return configurator.configure(env, agentArgs);
+    } catch (Exception e) {
+      log.warn(
+          "Configurator {} for extension {} failed: {}",
+          configuratorClass,
+          ext.getId(),
+          e.toString());
+      return null;
+    }
+  }
+
+  /** Load the named probes from embedded extensions. */
+  private static void loadProbesFromNames(List<String> probeNames, boolean traceToStdOut) {
+    for (ExtensionDescriptorDTO ext : extensionLoader.getAvailableExtensions()) {
       if (!ext.isEmbedded()) {
         continue;
       }
-
       List<String> bundledProbes = ext.getBundledProbes();
       if (bundledProbes.isEmpty()) {
         continue;
       }
-
-      for (String probeName : requestedProbes) {
-        String trimmed = probeName.trim();
-        // Check if this extension has the requested probe
+      for (String probeName : probeNames) {
+        if (!probeName.matches("[A-Za-z0-9_.]+")) {
+          log.warn("Ignoring probe with invalid name: '{}'", probeName);
+          continue;
+        }
         for (String bundledProbe : bundledProbes) {
-          if (bundledProbe.endsWith("." + trimmed) || bundledProbe.equals(trimmed)) {
-            // Found the probe - try to load it
-            String probeResourcePath = ext.getResourceBasePath() + "/probes/" + trimmed + ".class";
-            if (loadEmbeddedProbe(probeResourcePath, trimmed, traceToStdOut)) {
-              log.info("Loaded bundled probe: {} from extension {}", trimmed, ext.getId());
+          if (bundledProbe.endsWith("." + probeName) || bundledProbe.equals(probeName)) {
+            String path = ext.getResourceBasePath() + "/probes/" + probeName + ".class";
+            if (loadEmbeddedProbe(path, probeName, traceToStdOut)) {
+              log.info("Loaded bundled probe: {} from extension {}", probeName, ext.getId());
+              break;
             }
           }
         }
@@ -487,23 +543,25 @@ public final class Main {
         return false;
       }
       byte[] probeBytes = readAllBytes(is);
-      java.io.File tmp = java.io.File.createTempFile("btrace-probe-" + probeName, ".class");
-      tmp.deleteOnExit();
-      try (java.io.FileOutputStream fos = new java.io.FileOutputStream(tmp)) {
-        fos.write(probeBytes);
+      File tmp = File.createTempFile("btrace-probe-", ".class");
+      try {
+        try (FileOutputStream fos = new FileOutputStream(tmp)) {
+          fos.write(probeBytes);
+        }
+        return loadBTraceScript(tmp.getAbsolutePath(), traceToStdOut);
+      } finally {
+        if (!tmp.delete()) {
+          tmp.deleteOnExit();
+        }
       }
-      return loadBTraceScript(tmp.getAbsolutePath(), traceToStdOut);
     } catch (IOException e) {
       log.warn("Failed to load embedded probe {}: {}", probeName, e.getMessage());
       return false;
     }
   }
 
-  /**
-   * Read all bytes from an input stream.
-   */
   private static byte[] readAllBytes(InputStream is) throws IOException {
-    java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     byte[] data = new byte[4096];
     int nRead;
     while ((nRead = is.read(data, 0, data.length)) != -1) {
@@ -548,6 +606,25 @@ public final class Main {
     }
 
     return null;
+  }
+
+  private static String readBTraceVersion() {
+    try {
+      String agentPath =
+          Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+      try (JarFile jar = new JarFile(new File(agentPath))) {
+        Manifest mf = jar.getManifest();
+        if (mf != null) {
+          String v = mf.getMainAttributes().getValue("BTrace-Version");
+          if (v != null && !v.isEmpty()) {
+            return v;
+          }
+        }
+      }
+    } catch (Exception e) {
+      log.debug("Could not read BTrace-Version from agent JAR manifest: {}", e.getMessage());
+    }
+    return "unknown";
   }
 
   /**
@@ -1066,8 +1143,10 @@ public final class Main {
           if (log.isDebugEnabled()) log.debug("Skipping duplicate bootstrap jar: {}", rp);
           return;
         }
-        inst.appendToBootstrapClassLoaderSearch(asJarFile(rp.toFile()));
+        JarFile jf = asJarFile(rp.toFile());
+        inst.appendToBootstrapClassLoaderSearch(jf);
         BOOT_ADDED.add(rp);
+        BOOT_JARS.add(jf);
       }
       if (log.isDebugEnabled()) log.debug("Added to bootstrap: {}", rp);
     } catch (IOException e) {
@@ -1087,8 +1166,10 @@ public final class Main {
           if (log.isDebugEnabled()) log.debug("Skipping duplicate system jar: {}", rp);
           return;
         }
-        inst.appendToSystemClassLoaderSearch(asJarFile(rp.toFile()));
+        JarFile jf = asJarFile(rp.toFile());
+        inst.appendToSystemClassLoaderSearch(jf);
         SYSTEM_ADDED.add(rp);
+        SYSTEM_JARS.add(jf);
       }
       if (log.isDebugEnabled()) log.debug("Added to system: {}", rp);
     } catch (IOException e) {

@@ -318,6 +318,128 @@ Build with `mvn package` to create the fat agent JAR.
 
 See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) for implementation details.
 
+## Bundled Probes and Zero-Config Auto-Selection
+
+### Overview
+
+Extensions can ship pre-compiled BTrace probe classes inside the fat agent JAR
+and optionally declare a *configurator* that tells the agent which probes to
+activate automatically, without any operator input.
+
+There are two activation modes:
+
+| Mode | How triggered | When to use |
+|------|--------------|-------------|
+| **Explicit** | `probes=ProbeName` agent argument | Operator knows exactly which probe to run |
+| **Automatic** | Configurator detects the environment | Extension selects the right probe based on the running framework/role |
+
+### Declaring Bundled Probes
+
+List probe class simple names in `extension.properties`:
+
+```properties
+probes=SparkJobTracer,SparkStageTracer,SparkExecutorTracer
+```
+
+The corresponding `.class` files must be present in the fat agent JAR under:
+```
+META-INF/btrace-probes/{probe-simple-name}.class
+```
+
+The fat agent plugin stages them automatically when you use `bundledProbes {}` in `btraceFatAgent`.
+
+### Implementing a Configurator
+
+Implement `ExtensionConfigurator` and provide a public no-arg constructor:
+
+```java
+package org.example.spark;
+
+import org.openjdk.btrace.core.extensions.ExtensionConfigurator;
+import org.openjdk.btrace.core.extensions.ProbeConfiguration;
+import org.openjdk.btrace.core.extensions.RuntimeEnvironment;
+import java.util.Map;
+
+public final class SparkConfigurator implements ExtensionConfigurator {
+
+    @Override
+    public ProbeConfiguration configure(RuntimeEnvironment env, Map<String, String> args) {
+        ProbeConfiguration config = new ProbeConfiguration();
+
+        if (env.hasClass("org.apache.spark.SparkContext")) {
+            // Running as a Spark driver
+            config.enable("SparkJobTracer", "SparkStageTracer");
+        } else if (env.hasClass("org.apache.spark.executor.Executor")) {
+            // Running as a Spark executor
+            config.enable("SparkExecutorTracer");
+        } else {
+            // Not a Spark JVM — enable nothing
+            return config;
+        }
+
+        // Honour an explicit output= agent argument if present; default to JFR
+        String output = args.getOrDefault("output", "jfr");
+        config.setOutput(output);
+
+        return config;
+    }
+}
+```
+
+`RuntimeEnvironment` provides:
+- `hasClass(String)` — true if the class is loadable from the application classloader
+- `getSystemProperty(String)` / `getSystemProperty(String, String)` — `System.getProperty`
+- `getEnv(String)` — `System.getenv`
+- `getClassLoader()` — the thread-context classloader (application loader)
+- `getMainClassName()` — the JVM main class (from `sun.java.command`)
+
+`ProbeConfiguration` lets you:
+- `enable(String... probeNames)` — add probes to activate
+- `setOutput(Output)` or `setOutput(String)` — choose `JFR`, `FILE`, or `STDOUT`
+- `setOutputPath(String)` — file path for `FILE` output
+- `setProbeParam(String probe, String key, String value)` — per-probe parameters
+
+### Registering the Configurator
+
+Declare the configurator class in `extension.properties`:
+
+```properties
+id=btrace-spark
+version=1.0.0
+probes=SparkJobTracer,SparkStageTracer,SparkExecutorTracer
+configurator=org.example.spark.SparkConfigurator
+```
+
+The class must be in the extension's implementation classloader (i.e. part of
+the impl JAR, not the API JAR).
+
+### Operator Experience
+
+With a configurator in place, operators simply attach the fat agent:
+
+```bash
+# No probes= needed — the configurator selects the right probes automatically
+java -javaagent:my-btrace-agent-fat.jar org.apache.spark.deploy.SparkSubmit ...
+```
+
+If the operator does supply `probes=`, the explicit list takes priority and the
+configurator is not called:
+
+```bash
+# Override: load only SparkJobTracer regardless of what the configurator would choose
+java -javaagent:my-btrace-agent-fat.jar=probes=SparkJobTracer org.apache.spark.deploy.SparkSubmit ...
+```
+
+### Checklist for Configurator Extensions
+
+- [ ] Probe `.class` files listed under `probes=` in `extension.properties`
+- [ ] Fat agent plugin `bundledProbes {}` block stages the probe classes
+- [ ] Configurator has a public no-arg constructor
+- [ ] Configurator class is in the impl artifact (not the API JAR)
+- [ ] `configurator=` key set in `extension.properties`
+- [ ] `enable()` returns an empty config (not null) when the framework is absent
+- [ ] Unit-tested with a mock `RuntimeEnvironment`
+
 ## Testing
 
 - Unit test Impl logic normally (JUnit 5).
@@ -334,6 +456,8 @@ See [Fat Agent Plugin Architecture](architecture/fat-agent-plugin.md) for implem
 - [ ] Build and install ZIP into extensions dir (or embed in fat agent)
 - [ ] Unit + integration tests pass on supported JDKs
 - [ ] Consider fat agent packaging for cloud/distributed deployments
+- [ ] If shipping bundled probes: declare `probes=` in `extension.properties` and stage via `bundledProbes {}`
+- [ ] If probes need auto-selection: implement `ExtensionConfigurator`, declare `configurator=` in `extension.properties`
 
 ## Best Practices
 

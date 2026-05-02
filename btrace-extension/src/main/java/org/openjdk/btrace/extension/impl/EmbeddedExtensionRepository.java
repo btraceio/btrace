@@ -215,7 +215,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
       String version = props.getProperty("version", "0.0.0");
       String name = props.getProperty("name", id);
       String description = props.getProperty("description", "");
-      String btraceApiVersion = props.getProperty("btrace.api.version", "2.0+");
+      String btraceApiVersion = props.getProperty("btrace.api.version", "3.0+");
       String javaVersion = props.getProperty("java.version", "8+");
       String servicesStr = props.getProperty("services", "");
       String configurator = props.getProperty("configurator");
