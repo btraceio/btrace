@@ -8,6 +8,10 @@ import java.util.Map;
  * <p>Extensions can provide a configurator class that BTrace calls during agent initialization to
  * determine which bundled probes to enable based on runtime environment detection.
  *
+ * <p>When an extension declares a configurator, BTrace instantiates it during agent
+ * initialization and invokes {@link #configure(RuntimeEnvironment, Map)} to determine probe
+ * selection and related configuration from the detected runtime environment and agent arguments.
+ *
  * <p><b>Example:</b>
  *
  * <pre>

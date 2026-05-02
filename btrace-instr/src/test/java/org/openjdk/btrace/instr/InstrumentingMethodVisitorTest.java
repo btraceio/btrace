@@ -3,7 +3,12 @@ package org.openjdk.btrace.instr;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -215,6 +220,142 @@ public class InstrumentingMethodVisitorTest {
     mv.visitMaxs(3, 0);
     mv.visitEnd();
 
+  }
+
+  @Test
+  void computeFrameLocalsFuzz() {
+    long seed = Long.getLong("btrace.test.seed", 0x5EED5EEDL);
+    Random random = new Random(seed);
+    for (int i = 0; i < 500; i++) {
+      int slotCount = 1 + random.nextInt(30);
+      List<Object> locals = buildLocals(random, slotCount);
+      int argsSize = random.nextInt(Math.min(slotCount + 1, 6));
+      VariableMapper mapper = new VariableMapper(argsSize);
+
+      int remapOps = random.nextInt(10);
+      for (int r = 0; r < remapOps; r++) {
+        int idx = random.nextInt(slotCount);
+        int size = random.nextBoolean() ? 1 : 2;
+        mapper.remap(idx, size);
+      }
+      int newVars = random.nextInt(5);
+      for (int n = 0; n < newVars; n++) {
+        mapper.newVarIdx(random.nextBoolean() ? 1 : 2);
+      }
+
+      Set<InstrumentingMethodVisitor.LocalVarSlot> newLocals = new HashSet<>();
+      int newLocalCount = random.nextInt(6);
+      for (int n = 0; n < newLocalCount; n++) {
+        int idx = random.nextInt(slotCount + 6);
+        Object type = randomSlotType(random);
+        InstrumentingMethodVisitor.LocalVarSlot slot =
+            new InstrumentingMethodVisitor.LocalVarSlot(idx, type);
+        if (random.nextBoolean()) {
+          slot.expire();
+        }
+        newLocals.add(slot);
+      }
+
+      Object[] result =
+          InstrumentingMethodVisitor.computeFrameLocals(argsSize, locals, newLocals, mapper);
+      assertNotNull(result);
+      for (int p = 0; p < result.length; p++) {
+        Object val = result[p];
+        assertNotNull(val, "null local at index " + p);
+        if (val == InstrumentingMethodVisitor.TOP_EXT) {
+          assertTrue(p > 0, "TOP_EXT at index 0");
+          Object prev = result[p - 1];
+          assertTrue(prev == Opcodes.LONG || prev == Opcodes.DOUBLE, "TOP_EXT without LONG/DOUBLE");
+        }
+        if (val == Opcodes.LONG || val == Opcodes.DOUBLE) {
+          assertTrue(p + 1 < result.length, "LONG/DOUBLE without TOP_EXT");
+          assertEquals(
+              InstrumentingMethodVisitor.TOP_EXT,
+              result[p + 1],
+              "LONG/DOUBLE missing TOP_EXT");
+        }
+      }
+    }
+    // Deterministic reference case: verify args region (indices 0..argsSize-1) round-trips correctly.
+    // A mapper with no remaps should leave args-region locals unchanged.
+    {
+      int argCount = 2;
+      List<Object> refLocals = new ArrayList<>();
+      refLocals.add(Opcodes.INTEGER);
+      refLocals.add(Opcodes.FLOAT);
+      VariableMapper refMapper = new VariableMapper(argCount);
+      // No remaps — args region should be identity-mapped.
+      Object[] result = InstrumentingMethodVisitor.computeFrameLocals(argCount, refLocals, null, refMapper);
+      assertNotNull(result);
+      // args region must appear at indices 0 and 1 in the output
+      assertTrue(result.length >= argCount);
+      assertEquals(Opcodes.INTEGER, result[0]);
+      assertEquals(Opcodes.FLOAT, result[1]);
+    }
+  }
+
+  private static List<Object> buildLocals(Random random, int slotCount) {
+    List<Object> locals = new ArrayList<>(slotCount);
+    int slots = 0;
+    while (slots < slotCount) {
+      int remaining = slotCount - slots;
+      Object type = randomSlotType(random);
+      if ((type == Opcodes.LONG || type == Opcodes.DOUBLE) && remaining >= 2) {
+        locals.add(type);
+        locals.add(Opcodes.TOP);
+        slots += 2;
+      } else if (type == Opcodes.LONG || type == Opcodes.DOUBLE) {
+        locals.add(Opcodes.INTEGER);
+        slots += 1;
+      } else {
+        locals.add(type);
+        slots += 1;
+      }
+    }
+    return locals;
+  }
+
+  private static Object randomSlotType(Random random) {
+    int pick = random.nextInt(6);
+    switch (pick) {
+      case 0:
+        return Opcodes.INTEGER;
+      case 1:
+        return Opcodes.FLOAT;
+      case 2:
+        return Opcodes.LONG;
+      case 3:
+        return Opcodes.DOUBLE;
+      case 4:
+        return Opcodes.TOP;
+      default:
+        return "java/lang/Object";
+    }
+  }
+
+  @Test
+  void computeFrameLocalsCompactLongThenRef() {
+    // Reproduces FutureTask.get(long, TimeUnit): compact locals [owner, LONG, TimeUnit]
+    // with no variable remapping (nextMappedVar == argsSize) triggers the else branch.
+    // The else branch must expand LONG to [LONG, TOP_EXT] to avoid overwriting TimeUnit.
+    int argsSize = 4; // this(1) + long(2) + ref(1)
+    List<Object> locals =
+        Arrays.asList(
+            "java/util/concurrent/FutureTask",
+            Opcodes.LONG,
+            "java/util/concurrent/TimeUnit");
+    VariableMapper mapper = new VariableMapper(argsSize);
+
+    Object[] result =
+        InstrumentingMethodVisitor.computeFrameLocals(argsSize, locals, null, mapper);
+
+    Object[] expected = {
+      "java/util/concurrent/FutureTask",
+      Opcodes.LONG,
+      InstrumentingMethodVisitor.TOP_EXT,
+      "java/util/concurrent/TimeUnit"
+    };
+    assertArrayEquals(expected, result);
   }
 
   @ParameterizedTest
@@ -578,7 +719,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn("hello"); // value
     instance.visitInsn(Opcodes.AASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -588,7 +729,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn("hello"); // value
     instance.visitInsn(Opcodes.AASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -597,7 +738,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn("hello"); // value
     instance.visitInsn(Opcodes.AASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -605,7 +746,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn("hello"); // value
     instance.visitInsn(Opcodes.AASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -615,7 +756,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.IASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -624,7 +765,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.IASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -632,7 +773,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.IASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -642,7 +783,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.BASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -651,7 +792,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.BASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -659,7 +800,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.BASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -669,7 +810,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.CASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -678,7 +819,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.CASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -686,7 +827,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.CASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -696,7 +837,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.SASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -705,7 +846,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.SASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -713,7 +854,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.SASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -723,7 +864,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1f); // value
     instance.visitInsn(Opcodes.FASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -732,7 +873,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1f); // value
     instance.visitInsn(Opcodes.FASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -740,7 +881,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1f); // value
     instance.visitInsn(Opcodes.FASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -750,7 +891,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1L); // value
     instance.visitInsn(Opcodes.LASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -759,7 +900,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1L); // value
     instance.visitInsn(Opcodes.LASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -767,7 +908,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.LASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -777,7 +918,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1d); // value
     instance.visitInsn(Opcodes.DASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -786,7 +927,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1d); // value
     instance.visitInsn(Opcodes.DASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -794,7 +935,7 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(0); // index
     instance.visitLdcInsn(1); // value
     instance.visitInsn(Opcodes.DASTORE);
-    assertEquals(Opcodes.TOP, instance.introspect().stack.peek());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -1770,19 +1911,19 @@ public class InstrumentingMethodVisitorTest {
     instance.visitLdcInsn(1);
     instance.visitLdcInsn("hello");
     instance.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "test/Main", "main", desc, false);
-    assertEquals(0, i.stack.size());
+    assertEquals(0, instance.introspect().stack.size());
 
     instance.visitVarInsn(Opcodes.ALOAD, 0);
     instance.visitLdcInsn(1);
     instance.visitLdcInsn("hello");
     instance.visitMethodInsn(Opcodes.INVOKEINTERFACE, "test/Main", "main", desc, true);
-    assertEquals(0, i.stack.size());
+    assertEquals(0, instance.introspect().stack.size());
 
     instance.visitVarInsn(Opcodes.ALOAD, 0);
     instance.visitLdcInsn(1);
     instance.visitLdcInsn("hello");
     instance.visitMethodInsn(Opcodes.INVOKESPECIAL, "test/Main", "<init>", desc, false);
-    assertEquals(0, i.stack.size());
+    assertEquals(0, instance.introspect().stack.size());
   }
 
   @Test
@@ -1792,20 +1933,21 @@ public class InstrumentingMethodVisitorTest {
 
     String desc = "(ILjava/lang/String;)I";
     instance.visitMethodInsn(Opcodes.INVOKESTATIC, "test/Main", "main", desc, false);
-    InstrumentingMethodVisitor.Introspection i = instance.introspect();
-    assertEquals(1, i.stack.size());
+    assertEquals(1, instance.introspect().stack.size());
+    instance.visitInsn(Opcodes.POP);
 
     instance.visitVarInsn(Opcodes.ALOAD, 0);
     instance.visitLdcInsn(1);
     instance.visitLdcInsn("hello");
     instance.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "test/Main", "main", desc, false);
-    assertEquals(1, i.stack.size());
+    assertEquals(1, instance.introspect().stack.size());
+    instance.visitInsn(Opcodes.POP);
 
     instance.visitVarInsn(Opcodes.ALOAD, 0);
     instance.visitLdcInsn(1);
     instance.visitLdcInsn("hello");
     instance.visitMethodInsn(Opcodes.INVOKEINTERFACE, "test/Main", "main", desc, true);
-    assertEquals(1, i.stack.size());
+    assertEquals(1, instance.introspect().stack.size());
   }
 
   @Test

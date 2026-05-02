@@ -11,7 +11,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
 **Purpose:** Main continuous integration pipeline for all BTrace components.
 
 **Triggers:**
-- Push to `develop` or `master` branches
+- Push to `develop` branch
 - Pull requests to `develop`
 - Manual workflow dispatch
 
@@ -27,7 +27,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
   - Downloads build artifacts from previous job
   - Runs integration tests with `-Pintegration` flag
 - **publish:** Publishes artifacts to Maven Central
-  - Only on `develop` or `master` branches
+  - Only on `develop` branch
   - Requires GPG signing credentials
 - **cleanup:** Removes temporary artifacts
 
@@ -109,9 +109,17 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 ### 5. `release.yml` - Release Management
 
-**Purpose:** Handles release creation and artifact publishing.
+**Purpose:** Handles the complete release process with a manual checkpoint for Maven Central.
 
-**Trigger:** Tag push matching version patterns
+**Trigger:** Manual via `scripts/release.sh` or workflow_dispatch
+
+**Key Features:**
+- Stages artifacts to Maven Central (does NOT auto-release)
+- Waits up to 30 minutes for manual release via Central Portal
+- Creates GitHub release only after Maven artifacts are available
+- Updates SDKMan and manages milestones
+
+**Manual Checkpoint:** After staging, you must release via [Central Portal](https://central.sonatype.com/publishing/deployments). This allows reviewing artifacts before they become permanent.
 
 ## V2 Protocol Test Coverage
 
@@ -317,7 +325,7 @@ git commit -m "Optimize binary protocol [benchmark]"
 
 ## References
 
-- [BTrace v2 Protocol Architecture](../../docs/architecture/v2-protocol-architecture.md)
+- [BTrace v2 Protocol Architecture](../../docs/architecture/Version2ProtocolArchitecture.md)
 - [Phase 3 Integration Guide](../../docs/architecture/phase3-integration-guide.md)
 - [V2 Implementation Summary](../../docs/architecture/v2-implementation-summary.md)
 - [JMH Benchmarks Guide](../../btrace-core/JMH_BENCHMARKS.md)

@@ -1,5 +1,7 @@
 LCONST_0
 LSTORE 4
+LCONST_0
+LSTORE 6
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 6
 LSTORE 8
@@ -10,6 +12,8 @@ ALOAD 10
 LLOAD 8
 LCONST_0
 LSTORE 12
+LCONST_0
+LSTORE 14
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 14
 LSTORE 16
@@ -28,7 +32,7 @@ ALOAD 18
 LLOAD 16
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration2$args0(JJLjava/lang/String;J)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2"
 ]
@@ -44,7 +48,7 @@ ALOAD 10
 LLOAD 8
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration2$args1(JJLjava/lang/String;J)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/MethodCallDuration2"
 ]

@@ -10,11 +10,6 @@ sourceSets {
             srcDirs = ['src/main/java11']
         }
     }
-    java15 {
-        java {
-            srcDirs = ['src/main/java15']
-        }
-    }
 }
 
 compileJava {
@@ -45,15 +40,6 @@ compileJava11Java {
     options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
 }
 
-compileJava15Java {
-    sourceCompatibility = 15
-    targetCompatibility = 15
-    javaCompiler = javaToolchains.compilerFor {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
-    options.compilerArgs.addAll(['--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.perf=ALL-UNNAMED'])
-}
-
 dependencies {
     java9Implementation files(sourceSets.main.output.classesDirs) {
         builtBy compileJava
@@ -61,24 +47,18 @@ dependencies {
     java11Implementation files(sourceSets.main.output.classesDirs) {
         builtBy compileJava
     }
-    java15Implementation files(sourceSets.main.output.classesDirs) {
-        builtBy compileJava
-    }
 
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
     implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
 
     // https://mvnrepository.com/artifact/org.jctools/jctools-core
-    implementation(group: 'org.jctools', name: 'jctools-core', version: '4.0.5')
+    implementation(group: 'org.jctools', name: 'jctools-core', version: '4.0.6')
 
     java9Implementation project(':btrace-core')
     java9Implementation project(':btrace-extension')
 
     java11Implementation project(':btrace-core')
     java11Implementation project(':btrace-extension')
-
-    java15Implementation project(':btrace-core')
-    java15Implementation project(':btrace-extension')
 
     implementation project(':btrace-core')
     implementation project(':btrace-extension')
@@ -92,8 +72,5 @@ jar {
     }
     into('') {
         from sourceSets.java11.output
-    }
-    into('') {
-        from sourceSets.java15.output
     }
 }

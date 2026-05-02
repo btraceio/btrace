@@ -44,6 +44,8 @@
  */
 package org.openjdk.btrace.instr;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.util.Collection;
 import java.util.Set;
 import org.objectweb.asm.ClassVisitor;
@@ -87,6 +89,12 @@ public interface BTraceProbe {
 
   Class<?> register(BTraceRuntime.Impl rt, BTraceTransformer t);
 
+  /**
+   * @return the defined probe {@link Class}, or {@code null} if the probe has not been
+   *         registered (or has been unregistered).
+   */
+  Class<?> getProbeClass();
+
   void unregister();
 
   boolean willInstrument(Class<?> clz);
@@ -105,4 +113,23 @@ public interface BTraceProbe {
    * @return unmodifiable set of required permissions
    */
   Set<Permission> getRequiredPermissions();
+
+  /**
+   * Look up a previously cached {@link MethodHandle} for a handler on this probe.
+   *
+   * <p>The cache is per-probe so it dies naturally when the probe object is collected —
+   * no cross-probe scan required on unregister. Returns {@code null} on miss, or when
+   * the probe implementation has no cache (e.g. stub probes in tests).
+   */
+  default MethodHandle getCachedHandler(String handlerName, MethodType type) {
+    return null;
+  }
+
+  /**
+   * Store a resolved handler {@link MethodHandle} for subsequent lookups. Implementations
+   * without a backing cache (e.g. stub probes in tests) may silently drop the entry.
+   */
+  default void cacheHandler(String handlerName, MethodType type, MethodHandle mh) {
+    // no-op by default
+  }
 }

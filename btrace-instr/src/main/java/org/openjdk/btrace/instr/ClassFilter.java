@@ -85,9 +85,11 @@ public class ClassFilter {
     SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractQueuedSynchronizer$Node");
     SENSITIVE_CLASSES.add("java/util/concurrent/locks/AbstractOwnableSynchronizer");
     SENSITIVE_CLASSES.add("java/util/concurrent/locks/ReentrantLock");
+    SENSITIVE_CLASSES.add("java/util/concurrent/ConcurrentHashMap");
 
     SENSITIVE_CLASSES.add("jdk/internal/");
     SENSITIVE_CLASSES.add("sun/invoke/");
+    SENSITIVE_CLASSES.add("sun/reflect/");
     SENSITIVE_CLASSES.add("org/openjdk/btrace/");
 
     // JDK 25+ added accessor methods for thread-local fields (previously direct field access).
@@ -104,7 +106,12 @@ public class ClassFilter {
     // Interrupt-related methods used in exception handling and thread coordination
     addSensitiveMethod("java/lang/Thread", "setInterrupt");
     addSensitiveMethod("java/lang/Thread", "clearInterrupt");
-    // Uncaught exception handling - dispatchUncaughtException calls getUncaughtExceptionHandler
+    // Thread-method exclusions (JDK 25+):
+    //   - dispatchUncaughtException: recursion source — must be excluded to prevent
+    //     probe re-entry during exception dispatch.
+    //   - getUncaughtExceptionHandler: called by dispatchUncaughtException internally.
+    //     Kept in the exclusion list because probes hooking the getter could re-enter
+    //     the dispatcher path even though the getter itself is read-only.
     addSensitiveMethod("java/lang/Thread", "dispatchUncaughtException");
     addSensitiveMethod("java/lang/Thread", "getUncaughtExceptionHandler");
   }

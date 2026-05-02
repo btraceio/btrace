@@ -1,28 +1,14 @@
 ICONST_0
 ISTORE 6
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/Args2Sampled.$btrace$$level : I
-DUP
-ISTORE 7
-IFLE L0
-L1
-FRAME APPEND [I I]
 ICONST_1
 INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hit (I)Z
 ISTORE 6
-FRAME SAME
-ILOAD 7
-IFLE L2
-L3
-FRAME SAME
 ILOAD 6
-IFEQ L4
-L2
-FRAME SAME
-ILOAD 7
-ICONST_1
-IF_ICMPLT L4
+IFEQ L0
+L1
+FRAME APPEND [I]
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L4
+IFNE L0
 ALOAD 0
 ALOAD 1
 LLOAD 2
@@ -30,25 +16,17 @@ ALOAD 4
 ALOAD 5
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$Args2Sampled$args2(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/Args2Sampled"
 ]
-L4
-FRAME SAME
-ILOAD 7
-IFLE L5
-L6
 FRAME SAME
 ILOAD 6
-IFEQ L7
-L5
+IFEQ L2
+L3
 FRAME SAME
-ILOAD 7
-ICONST_1
-IF_ICMPLT L7
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
-IFNE L7
+IFNE L2
 ALOAD 0
 ALOAD 1
 LLOAD 2
@@ -56,18 +34,18 @@ ALOAD 4
 ALOAD 5
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$Args2Sampled$args(Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/Args2Sampled"
 ]
-L7
-LINENUMBER 57 L7
+L2
+LINENUMBER 57 L2
 FRAME SAME
-L8
-LOCALVARIABLE this Lresources/OnMethodTest; L7 L8 0
-LOCALVARIABLE a Ljava/lang/String; L7 L8 1
-LOCALVARIABLE b J L7 L8 2
-LOCALVARIABLE c [Ljava/lang/String; L7 L8 4
-LOCALVARIABLE d [I L7 L8 5
+L4
+LOCALVARIABLE this Lresources/OnMethodTest; L2 L4 0
+LOCALVARIABLE a Ljava/lang/String; L2 L4 1
+LOCALVARIABLE b J L2 L4 2
+LOCALVARIABLE c [Ljava/lang/String; L2 L4 4
+LOCALVARIABLE d [I L2 L4 5
 MAXSTACK = 6
-MAXLOCALS = 8
+MAXLOCALS = 7

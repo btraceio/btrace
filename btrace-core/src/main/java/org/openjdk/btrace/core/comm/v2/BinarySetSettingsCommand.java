@@ -21,7 +21,14 @@ public class BinarySetSettingsCommand extends BinaryCommand {
 
     private final Map<String, Object> params;
     private static final ScalarEncoding SCALAR =
-        new ScalarEncoding((byte)0, TYPE_STRING, TYPE_INTEGER, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE, TYPE_BOOLEAN);
+        new ScalarEncoding(
+            (byte)0,
+            TYPE_STRING,
+            TYPE_INTEGER,
+            TYPE_LONG,
+            TYPE_FLOAT,
+            TYPE_DOUBLE,
+            TYPE_BOOLEAN);
 
     static {
         // Register this command type

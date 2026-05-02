@@ -33,10 +33,11 @@ subDirs.each { File dir ->
     if (dir.name.startsWith("btrace-")) {
         include dir.name
     }
-    include "integration-tests"
-    include "benchmarks:agent-benchmark"
-    include "benchmarks:runtime-benchmarks"
 }
+
+include "integration-tests"
+include "benchmarks:agent-benchmark"
+include "benchmarks:runtime-benchmarks"
 
 // Explicitly include nested extension modules
 include 'btrace-extensions'
@@ -45,6 +46,7 @@ include 'btrace-extensions:btrace-utils'
 include 'btrace-extensions:btrace-statsd'
 include 'btrace-extensions:examples:btrace-spark'
 include 'btrace-extensions:examples:btrace-hadoop'
+include 'btrace-extensions:btrace-ext-test'
 
 dependencyResolutionManagement {
     versionCatalogs {
@@ -55,9 +57,10 @@ dependencyResolutionManagement {
             version('jmhGradlePlugin', '0.7.3')
             version('slf4j', '1.7.36')
             version('junit', '5.11.4')
+            version('testcontainers', '2.0.4')
 
             // *** Gradle plugins ***
-            plugin ('spotless', 'com.diffplug.spotless').version('6.11.0')
+            plugin ('spotless', 'com.diffplug.spotless').version('7.0.2')
             plugin ('versioning', 'net.nemerosa.versioning').version('2.15.1')
             plugin ('ospackage', 'com.netflix.nebula.ospackage').version('11.11.2')
             plugin ('publish', 'io.github.gradle-nexus.publish-plugin').version('2.0.0')
@@ -72,7 +75,7 @@ dependencyResolutionManagement {
             // https://mvnrepository.com/artifact/com.google.auto.service
             library ('autoService', 'com.google.auto.service', 'auto-service').version('1.1.1')
             // https://mvnrepository.com/artifact/org.jctools
-            library ('jctools', 'org.jctools', 'jctools-core').version('4.0.5')
+            library ('jctools', 'org.jctools', 'jctools-core').version('4.0.6')
 
 
             // https://mvnrepository.com/artifact/org.slf4j
@@ -91,6 +94,8 @@ dependencyResolutionManagement {
             // https://mvnrepository.com/artifact/org.junit.jupiter
             library ('junit', 'org.junit', 'junit-bom').versionRef('junit')
             library ('junit-jupiter', 'org.junit.jupiter', 'junit-jupiter').versionRef('junit')
+            library ('testcontainers', 'org.testcontainers', 'testcontainers').versionRef('testcontainers')
+            library ('testcontainers-junit-jupiter', 'org.testcontainers', 'junit-jupiter').versionRef('testcontainers')
 
             // https://mvnrepository.com/artifact/org.hdrhistogram/HdrHistogram
             library ('hdrhistogram', 'org.hdrhistogram', 'HdrHistogram').version('2.2.2')

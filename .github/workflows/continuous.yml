@@ -5,7 +5,7 @@ name: BTrace CI/CD
 
 on:
   push:
-    branches: [ develop, master ]
+    branches: [ develop ]
   pull_request:
     branches: [ develop ]
   workflow_dispatch:
@@ -18,7 +18,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Cache Java binaries
+        id: cache-java
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.tool_cache }}/Java_*
+          key: java-${{ runner.os }}-temurin-11
       - name: Set up Java
+        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: 11
@@ -28,7 +35,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
       - name: Generate cache key
         id: cache-key
         run: |
@@ -53,7 +60,7 @@ jobs:
                                        --tests "org.openjdk.btrace.core.comm.WireProtocol*"
       - name: Upload dist build data
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-build
           retention-days: 1
@@ -62,7 +69,7 @@ jobs:
             btrace-instr/build/classes/traces
       - name: Upload test trace data
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-trace
           retention-days: 1
@@ -70,7 +77,7 @@ jobs:
             btrace-instr/build/classes/traces
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: |
@@ -85,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 8.0.452-tem, 11.0.27-tem, 17.0.15-tem, 21.0.7-tem, 25-tem, 26.ea.2-open ]
+        java: [ 8.0.482-tem, 11.0.30-tem, 17.0.18-tem, 21.0.10-tem, 25.0.2-tem, 26.ea.35-open ]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
@@ -94,7 +101,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
       - name: Prepare OS
         run: |
           sudo apt-get update
@@ -105,7 +112,7 @@ jobs:
           source "$HOME/.sdkman/bin/sdkman-init.sh"
           echo 'n' | sdk install java ${{ matrix.java }}
           which java
-          echo 'y' | sdk install java 11.0.25-tem
+          echo 'y' | sdk install java 11.0.30-tem
       - name: Cache Gradle
         uses: actions/cache@v5
         with:
@@ -116,12 +123,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Download build data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-build
           path: btrace-dist/build
       - name: Download test trace data
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: test-trace
           path: btrace-instr/build/classes/traces
@@ -136,21 +143,21 @@ jobs:
         run: du -sh ~/.gradle/caches
       - name: Integration test reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-reports-${{ matrix.java }}
           path: |
             integration-tests/build/reports/**/*
       - name: Archive binary artifacts
         if: success() && matrix.java == '11'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: btrace-dist
           path: |
             btrace-dist/build/distributions/**/btrace-*-bin*.tar.gz
 
   publish:
-    if: github.ref ==  'refs/heads/develop' || github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/develop'
     needs: 
       - test
       - build
@@ -161,8 +168,15 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v5
+      uses: gradle/actions/setup-gradle@v6
+    - name: Cache Java binaries
+      id: cache-java
+      uses: actions/cache@v5
+      with:
+        path: ${{ runner.tool_cache }}/Java_*
+        key: java-${{ runner.os }}-temurin-11
     - name: Set up Java
+      if: steps.cache-java.outputs.cache-hit != 'true'
       uses: actions/setup-java@v5
       with:
         java-version: 11
@@ -177,7 +191,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
     - name: Download build data
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@v8
       with:
         name: dist-build
     - name: Deploy Maven
@@ -193,6 +207,6 @@ jobs:
     needs: publish
     steps:
       - name: Cleanup temporary artifacts
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         with:
           name: dist-build

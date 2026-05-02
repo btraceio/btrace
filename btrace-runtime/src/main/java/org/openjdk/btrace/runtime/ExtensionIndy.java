@@ -26,6 +26,8 @@ package org.openjdk.btrace.runtime;
 
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.annotations.InjectionMode;
+import org.openjdk.btrace.core.extensions.Extension;
+import org.openjdk.btrace.core.extensions.ExtensionContext;
 import org.openjdk.btrace.extension.ExtensionBridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,7 +88,8 @@ public final class ExtensionIndy {
     boolean linkLog = isLinkLogEnabled();
     try {
       Class<?> serviceClass = requireServiceClass(serviceClassName);
-      mh = findInstantiationHandle(serviceClass, factoryMethod);
+      Object instance = createServiceInstance(serviceClass, factoryMethod, serviceClassName);
+      mh = MethodHandles.constant(type.returnType(), instance);
       if (linkLog) logger.info("Linked service '{}' to '{}'", serviceClassName, serviceClass.getName());
 
     } catch (Throwable t) {
@@ -179,6 +182,37 @@ public final class ExtensionIndy {
     } catch (Throwable t) {
       logger.debug("Instantiation handle resolution failed for '{}': {}", serviceClass.getName(), t.toString());
       throw new IllegalStateException("Unable to create service instance for " + serviceClass.getName(), t);
+    }
+  }
+
+  private static Object createServiceInstance(
+      Class<?> serviceClass, String factoryMethod, String serviceClassName) throws Exception {
+    MethodHandle mh = findInstantiationHandle(serviceClass, factoryMethod);
+    Object instance;
+    try {
+      instance = mh.invokeWithArguments();
+    } catch (Throwable t) {
+      throw new IllegalStateException("Unable to instantiate service " + serviceClassName, t);
+    }
+    if (instance instanceof Extension) {
+      Extension ext = (Extension) instance;
+      ExtensionContext ctx = BTraceRuntimeAccess.currentContext();
+      if (ctx == null) {
+        throw new IllegalStateException("Extension context not available for " + serviceClassName);
+      }
+      ext.initialize(ctx);
+      tryRegisterExtension(ctx, ext);
+    }
+    return instance;
+  }
+
+  private static void tryRegisterExtension(ExtensionContext ctx, Extension ext) {
+    try {
+      Method m = ctx.getClass().getDeclaredMethod("registerExtension", Extension.class);
+      m.setAccessible(true);
+      m.invoke(ctx, ext);
+    } catch (Throwable ignore) {
+      // best effort; closing will be skipped if registration fails
     }
   }
 
@@ -281,8 +315,9 @@ public final class ExtensionIndy {
 
     private static java.util.Map<String, ShimTarget> load(ClassLoader cl) {
       java.util.Map<String, ShimTarget> map = new java.util.HashMap<>();
-      java.io.InputStream is = (cl != null ? cl : ClassLoader.getSystemClassLoader())
-          .getResourceAsStream("META-INF/btrace/shims.index");
+      ClassLoader loader = ExtensionIndy.class.getClassLoader();
+      if (loader == null) loader = ClassLoader.getSystemClassLoader();
+      java.io.InputStream is = loader.getResourceAsStream("META-INF/btrace/shims.index");
       if (is == null) return map;
       try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
         String line;

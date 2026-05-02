@@ -15,6 +15,8 @@ Build and package BTrace extensions with sane defaults.
 - Scans implementation bytecode to infer minimal required permissions
 - Writes extension metadata into the API JAR manifest
 - Produces three artifacts: API JAR, Impl JAR (shadowed), and distributable ZIP
+- Uses a single authored source tree while preserving the API/impl runtime artifact split
+- Auto-registers the `@ExternalType` annotation processor on the main source set (generates typed, lazy-resolution adapters for application types — see `docs/architecture/provided-style-extensions.md`)
 
 ### Apply the Plugin
 
@@ -31,8 +33,8 @@ repositories {
 
 ### Project Layout
 
-- `src/api/java`, `src/api/resources`: Public API package visible to BTrace scripts and the agent (ends up on bootstrap)
-- `src/impl/java`, `src/impl/resources`: Implementation package shadowed and isolated behind the API manifest
+- `src/main/java`, `src/main/resources`: Single authored source tree
+- The plugin derives the exported API closure from declared services and keeps the same runtime artifact split (`*-api.jar` + `*-impl.jar`)
 
 ### DSL Configuration
 
@@ -45,6 +47,13 @@ btraceExtension {
     // Optional: omit to auto-detect from @ServiceDescriptor annotations
     services = [
         "com.example.myext.api.MyService"
+    ]
+
+    additionalExports = [
+        // optional extra API types to include in the exported API set
+    ]
+    excludedExports = [
+        // optional exclusions from the computed API export set
     ]
 
     requiresExtensions = [
@@ -78,7 +87,7 @@ btraceExtension {
 ### Tasks
 
 - `buildApiJar`: Builds the API JAR and writes extension metadata into the manifest
-- `shadowJar`: Builds the impl JAR from `impl` source set with relocations
+- `shadowJar`: Builds the impl JAR from the implementation portion of the extension with relocations
 - `packageExtension`: Bundles API + Impl into a ZIP
 
 ---
@@ -147,6 +156,50 @@ btraceFatAgent {
 }
 ```
 
+### Zero-Config Probe Auto-Selection (Configurator)
+
+Extensions can declare an `ExtensionConfigurator` class that the agent calls at
+startup to decide which bundled probes to activate automatically — without the
+operator passing `probes=` on the command line.
+
+**Extension `extension.properties`:**
+```properties
+id=btrace-spark
+probes=SparkJobTracer,SparkStageTracer,SparkExecutorTracer
+configurator=org.example.spark.SparkConfigurator
+```
+
+**Configurator class (in the extension's impl artifact):**
+```java
+public final class SparkConfigurator implements ExtensionConfigurator {
+    @Override
+    public ProbeConfiguration configure(RuntimeEnvironment env, Map<String, String> args) {
+        ProbeConfiguration config = new ProbeConfiguration();
+        if (env.hasClass("org.apache.spark.SparkContext")) {
+            config.enable("SparkJobTracer", "SparkStageTracer");
+        } else if (env.hasClass("org.apache.spark.executor.Executor")) {
+            config.enable("SparkExecutorTracer");
+        }
+        config.setOutput(args.getOrDefault("output", "jfr"));
+        return config;
+    }
+}
+```
+
+**Operator usage** — attach the fat agent; no `probes=` needed:
+```bash
+java -javaagent:my-btrace-agent-fat.jar MyApp
+```
+
+If `probes=` is supplied by the operator it takes priority and the configurator
+is skipped entirely:
+```bash
+java -javaagent:my-btrace-agent-fat.jar=probes=SparkJobTracer MyApp
+```
+
+See [BTraceExtensionDevelopmentGuide.md](../docs/BTraceExtensionDevelopmentGuide.md)
+for the full configurator API reference.
+
 ### Auto-Discovery Mode
 
 When `autoDiscover = true`, the plugin automatically finds all subprojects with the `org.openjdk.btrace.extension` plugin applied:
@@ -179,9 +232,8 @@ plugins {
 btraceFatAgent {
     baseName = 'my-custom-agent'
 
-    // Reference base agent JARs (required for standalone builds)
-    agentJarTask = 'agentJar'  // or provide path
-    bootJarTask = 'bootJar'
+    // Reference base BTrace JAR (required for standalone builds)
+    agentJarTask = 'btraceJar'  // or provide path
 
     embedExtensions {
         maven('io.btrace:btrace-metrics:2.3.0')

@@ -1,55 +1,115 @@
-[![Dev build](https://github.com/btraceio/btrace/workflows/BTrace%20CI%2FCD/badge.svg?branch=develop)](https://github.com/btraceio/btrace/actions?query=workflow%3A%22BTrace+CI%2FCD%22+branch%3Adevelop) [![Download](https://img.shields.io/github/v/release/btraceio/btrace?sort=semver)](https://github.com/btraceio/btrace/releases/latest) [![codecov.io](https://codecov.io/github/btraceio/btrace/coverage.svg?branch=develop)](https://codecov.io/github/btraceio/btrace?branch=develop) [![huhu](https://img.shields.io/badge/Slack-join%20chat-brightgreen")](http://btrace.slack.com/) [![Join the chat at https://gitter.im/jbachorik/btrace](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/btraceio/btrace?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Project Stats](https://www.openhub.net/p/btrace/widgets/project_thin_badge.gif)](https://www.openhub.net/p/btrace)
-
 # BTrace
 
-A safe, dynamic tracing tool for the Java platform
+**Safe, dynamic tracing for Java applications**
 
-## Overview
+[![CI](https://github.com/btraceio/btrace/workflows/BTrace%20CI%2FCD/badge.svg?branch=develop)](https://github.com/btraceio/btrace/actions)
+[![Release](https://img.shields.io/github/v/release/btraceio/btrace?sort=semver)](https://github.com/btraceio/btrace/releases/latest)
+[![codecov](https://codecov.io/github/btraceio/btrace/coverage.svg?branch=develop)](https://codecov.io/github/btraceio/btrace?branch=develop)
 
-BTrace dynamically instruments running Java applications to inject tracing code at runtime, without stopping the application or recompiling code. Similar to DTrace for OpenSolaris, BTrace uses bytecode instrumentation to trace methods, monitor performance, and diagnose issues in production environments.
+BTrace dynamically instruments running Java applications to inject tracing code at runtime. No restarts. No recompilation. Production-safe.
 
-## Credits
-* Based on [ASM](http://asm.ow2.org/)
-* Powered by [JCTools](https://github.com/JCTools/JCTools)
-* Powered by [hppcrt](https://github.com/vsonnier/hppcrt)
-* Optimized with [JProfiler Java Profiler](http://www.ej-technologies.com/products/jprofiler/overview.html)
-* Build env helper using [SDKMAN!](https://sdkman.io/)
+> **Quick links:** [Quick Reference](docs/QuickReference.md) · [Step-by-Step Tutorial](docs/GettingStarted.md)
 
-## Building BTrace
+---
 
-### Setup
-You will need the following applications installed
+## Why BTrace?
 
-* [Git](http://git-scm.com/downloads)
-* (optionally, the default launcher is the bundled `gradlew` wrapper) [Gradle](http://gradle.org)
+- **Zero downtime** - Attach to running JVMs without restart
+- **Production safe** - Verified scripts can't crash your application
+- **Flexible probes** - Method entry/exit, timings, field access, allocations
+- **Low overhead** - Bytecode injection with minimal performance impact
 
+---
 
-### Build
+## Get Started in 30 Seconds
 
 ```sh
-cd <btrace>
+# Install via JBang (easiest)
+curl -Ls https://sh.jbang.dev | bash -s - app setup
+
+# Add the BTrace JBang catalog (one time)
+jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
+
+# Trace slow methods in your running app
+jbang btrace@btraceio -n 'com.myapp.*::* @return if duration>100ms { print method, duration }' $(pgrep -f myapp)
+```
+
+---
+
+## Trace Anything
+
+**Method timing:**
+```sh
+btrace -n 'java.sql.Statement::execute* @return { print method, duration }' <PID>
+```
+
+**Exception tracking:**
+```sh
+btrace -n 'java.lang.Exception::<init> @return { print self, stack(5) }' <PID>
+```
+
+**Custom probes:**
+```java
+@BTrace public class Trace {
+    @OnMethod(clazz = "com.example.OrderService", method = "checkout")
+    public static void onCheckout(@Self Object self, @Duration long ns) {
+        println(strcat("checkout: ", str(ns/1_000_000) + "ms"));
+    }
+}
+```
+
+See the [Oneliner Guide](docs/OnelinerGuide.md) for complete syntax.
+
+---
+
+## Install
+
+```sh
+# JBang (recommended - zero installation)
+jbang catalog add --name btraceio https://raw.githubusercontent.com/btraceio/jbang-catalog/main/jbang-catalog.json
+jbang btrace@btraceio <PID> script.java
+
+# SDKMan
+sdk install btrace
+
+# Manual download
+curl -LO https://github.com/btraceio/btrace/releases/latest/download/btrace-bin.tar.gz
+```
+
+See [Installation Guide](docs/GettingStarted.md#installation) for Docker, package managers, and more options.
+
+---
+
+## Documentation
+
+| Resource | Description |
+|----------|-------------|
+| [Quick Reference](docs/QuickReference.md) | Cheat sheet for experienced users |
+| [Getting Started](docs/GettingStarted.md) | Step-by-step first trace tutorial |
+| [Full Tutorial](docs/BTraceTutorial.md) | Complete walkthrough of all features |
+| [Oneliners](docs/OnelinerGuide.md) | DTrace-style quick probes |
+| [Extensions](docs/BTraceExtensionDevelopmentGuide.md) | StatsD, custom integrations |
+| [Documentation Hub](docs/README.md) | All docs and guides |
+
+---
+
+## Building from Source
+
+```sh
+git clone https://github.com/btraceio/btrace.git
+cd btrace
 ./gradlew :btrace-dist:build
 ```
 
-**Output locations:**
-- Binary distributions: `btrace-dist/build/distributions/` (*.tar.gz, *.zip, *.rpm, *.deb)
-- Exploded binary (BTRACE_HOME): `btrace-dist/build/resources/main/`
+See [CLAUDE.md](CLAUDE.md) for development setup and architecture.
 
-**Updating golden files:**
-When instrumentor code changes, update test golden files with:
-```sh
-./gradlew test -PupdateTestData
-```
-Commit the regenerated golden files to Git.
+---
 
-### How To Run Tests
+## Community & Contributing
 
-For a fast local cycle, run unit tests and skip integration tests (which start forked JVMs):
+**Get help:** [Slack](http://btrace.slack.com/) · [Gitter](https://gitter.im/btraceio/btrace) · [GitHub Issues](https://github.com/btraceio/btrace/issues)
 
-```sh
-export GRADLE_USER_HOME="$PWD/.gradle-home"   # keep caches inside the repo (optional)
-./gradlew --no-daemon test -x integration-tests:test
-```
+**Contribute:** Pull requests require signing the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/).
 
 Tips:
 - Prefer IPv4 if your environment has odd local IPs: set `GRADLE_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
@@ -95,13 +155,14 @@ jbang btrace <PID> <script.java>
 # Extract embedded JARs
 jbang btrace --extract-agent ~/.btrace
 
-# This creates ~/.btrace/btrace-agent.jar and ~/.btrace/btrace-boot.jar
+# This creates ~/.btrace/btrace.jar (single masked JAR)
 # Then use them:
-jbang btrace --agent-jar ~/.btrace/btrace-agent.jar --boot-jar ~/.btrace/btrace-boot.jar <PID> <script.java>
+jbang btrace --agent-jar ~/.btrace/btrace.jar <PID> <script.java>
 
-# Or find them in Maven local repository (after first jbang run):
-# ~/.m2/repository/org/openjdk/btrace/btrace-agent/<version>/btrace-agent-<version>.jar
-# ~/.m2/repository/org/openjdk/btrace/btrace-boot/<version>/btrace-boot-<version>.jar
+# Or find in Maven local repository (after first jbang run):
+# ~/.m2/repository/org/openjdk/btrace/btrace/<version>/btrace-<version>.jar
+#
+# Legacy jar names (btrace-agent.jar, btrace-boot.jar) are still extracted for backward compatibility.
 ```
 
 See [Getting Started Guide](docs/GettingStarted.md#jbang-installation-recommended-for-quick-start) for complete JBang documentation and examples.
@@ -283,8 +344,8 @@ Note: Extension “required permissions” are informational and help operators 
 
 #### Agent Policy and Allow/Deny Lists
 - Launch-time policy can be set via agent args (operator-controlled):
-  - `-javaagent:btrace-agent.jar=...,grant=NETWORK,THREADS,grantAll=false`
-  - `-javaagent:btrace-agent.jar=...,allowExtensions=btrace-statsd,my-metrics,denyExtensions=legacy-foo`
+  - `-javaagent:btrace.jar=...,grant=NETWORK,THREADS,grantAll=false`
+  - `-javaagent:btrace.jar=...,allowExtensions=btrace-statsd,my-metrics,denyExtensions=legacy-foo`
 - Optional policy file (process-local): `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`.
 - When an extension impl is blocked, the API remains on bootstrap so SHIMs can be generated.
 
@@ -351,4 +412,8 @@ See [CLAUDE.md](CLAUDE.md) for detailed development guidelines and project archi
 
 ## License
 
-BTrace is licensed under GPLv2 with the Classpath Exception. See [LICENSE](LICENSE) for details.
+GPLv2 with Classpath Exception. See [LICENSE](LICENSE).
+
+---
+
+**Credits:** Built with [ASM](http://asm.ow2.org/), [JCTools](https://github.com/JCTools/JCTools), [hppcrt](https://github.com/vsonnier/hppcrt). Optimized with [JProfiler](http://www.ej-technologies.com/products/jprofiler/overview.html).

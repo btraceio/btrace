@@ -3,7 +3,7 @@ IFNE L1
 LDC "public void resources.OnMethodTest#<init>"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -13,7 +13,7 @@ IFNE L1
 LDC "private void resources.OnMethodTest#<init>(java.lang.String)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -23,7 +23,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#noargs"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -34,7 +34,7 @@ IFNE L0
 LDC "public static void resources.OnMethodTest#noargs$static"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -45,7 +45,7 @@ IFNE L0
 LDC "public long resources.OnMethodTest#args(java.lang.String, long, java.lang.String[], int[])"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -55,7 +55,7 @@ IFNE L0
 LDC "public static long resources.OnMethodTest#args$static(java.lang.String, long, java.lang.String[], int[])"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -65,7 +65,7 @@ IFNE L0
 LDC "public static long resources.OnMethodTest#callTopLevelStatic(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -75,7 +75,7 @@ IFNE L0
 LDC "public static long resources.OnMethodTest#callTargetStatic(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -85,7 +85,7 @@ IFNE L0
 LDC "public long resources.OnMethodTest#callTopLevel(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -95,7 +95,7 @@ IFNE L0
 LDC "private long resources.OnMethodTest#callTarget(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -105,7 +105,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#exception"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -115,7 +115,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#uncaught"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -125,7 +125,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#array(int)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -135,7 +135,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#field"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -145,7 +145,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#newObject"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -155,7 +155,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#newArray"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -165,7 +165,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#casts"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -175,7 +175,7 @@ IFNE L4
 LDC "public void resources.OnMethodTest#sync"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -185,7 +185,7 @@ IFNE L0
 LDC "public long resources.OnMethodTest#callTopLevel1(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -195,7 +195,7 @@ IFNE L0
 LDC "private long resources.OnMethodTest#calLTargetX(java.lang.String, long)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -205,7 +205,7 @@ IFNE L0
 LDC "public long resources.OnMethodTest#argsMultiReturn(java.lang.String, long, java.lang.String[], int[])"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -215,7 +215,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#staticField"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -225,7 +225,7 @@ IFNE L4
 LDC "public void resources.OnMethodTest#syncM"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -235,7 +235,7 @@ IFNE L0
 LDC "public java.lang.String resources.OnMethodTest#argsTypeMatch(java.util.ArrayList)"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]
@@ -245,7 +245,7 @@ IFNE L0
 LDC "public void resources.OnMethodTest#caught"
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$TraceAllTest$doall(Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/TraceAllTest"
 ]

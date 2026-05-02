@@ -25,7 +25,7 @@ This guide shows how to migrate profile-based integrations (e.g., Spark/Hadoop) 
 ## API Sketch (Spark example)
 
 ```java
-// api module (on bootstrap)
+// exported API (on bootstrap)
 package org.example.btrace.spark.api;
 public interface SparkApi {
   void onJobStart(Object jobStartEvent);
@@ -36,7 +36,7 @@ public interface SparkApi {
 ## Impl Sketch
 
 ```java
-// impl module (extension CL)
+// implementation (extension CL)
 package org.example.btrace.spark.impl;
 import org.example.btrace.spark.api.SparkApi;
 import org.openjdk.btrace.extension.util.ClassLoadingUtil;
@@ -65,6 +65,63 @@ public final class SparkApiImpl implements SparkApi {
   }
 }
 ```
+
+## External Type Adapters (Recommended)
+
+Writing reflective adapters by hand with `ClassLoadingUtil` + `MethodHandleCache` works but has three ergonomic costs: string method names aren't refactor-safe, eager `static final MethodHandle` fields fail extension init if the target class isn't yet visible, and every reflective call expands into 5+ lines of try/catch and cache plumbing.
+
+The `@ExternalType` annotation + build-time annotation processor removes all three.
+
+### How it works
+
+Declare an interface in your extension's exported API set marked with `@ExternalType("fully.qualified.AppType")`. In practice this means an API-facing interface under `src/main/java`. The BTrace extension Gradle plugin auto-registers the annotation processor, which generates a companion `<InterfaceSimpleName>$Ext` class in the same package with typed `public static` dispatchers for each method.
+
+```java
+package com.example.spark.api;
+
+import org.openjdk.btrace.core.extensions.ExternalType;
+
+@ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
+public interface JobStart {
+  int jobId();
+  long time();
+}
+```
+
+The generated `JobStart$Ext` can then be called directly from the impl:
+
+```java
+int id = JobStart$Ext.jobId(event);
+long ts = JobStart$Ext.time(event);
+```
+
+### What the generated code does
+
+Each dispatcher uses a per-method `volatile MethodHandle` field with lazy resolution: on first call the method looks up the target class via `self.getClass().getClassLoader()` (virtual methods) or `Thread.currentThread().getContextClassLoader()` (static methods, see below), then calls `MethodHandles.publicLookup().findVirtual` / `findStatic`. Subsequent calls reuse the cached handle — once warm, the `volatile` read + `MethodHandle.invoke` is JIT-inlineable.
+
+If the external class isn't yet loaded when the dispatcher is first called, the resolver throws; the `volatile` field stays `null`, so the next call retries. No eager init, no `ExceptionInInitializerError` at extension load.
+
+### Rules
+
+- **Target:** `ElementType.TYPE`, interface only. The processor rejects classes with a compile error.
+- **Annotation value:** non-empty fully-qualified class name. Empty string is a compile error.
+- **Method return and parameter types:** anything resolvable at build time is fine. Types you can't put on the extension's compile classpath (app-private types, classes that only exist at runtime) must be typed as `Object`.
+- **Static methods:** annotate with `@ExternalType.Static` on the interface method — the generated dispatcher calls `findStatic` and uses TCCL for class loading.
+- **Default methods and static interface methods:** skipped (they already have bodies).
+
+### Scope limits (v1) — Planned for Future Versions
+
+The following are not yet handled by the processor. Use `ClassLoadingUtil` / `MethodHandleCache` directly as a workaround; all items in the table below are planned for a future `@ExternalType` version:
+
+| Feature | Status | Manual workaround |
+|---------|--------|-------------------|
+| Field access (read/write) | Planned | `MethodHandleCache.findGetter` / `findSetter` |
+| Constructors (`new ExternalType(...)`) | Planned | `MethodHandleCache.findConstructor` |
+| `instanceof` / `checkcast` on external types | Planned | `ClassLoadingUtil.load(...)` + `Class.isInstance` |
+| Chained `@ExternalType` references | Planned | Manual adapter per level |
+| Non-`public` methods | Planned | `MethodHandles.privateLookupIn` (Java 9+) |
+
+The hand-written pattern in the "Impl Sketch" section above works alongside `@ExternalType`-based adapters in the same impl class until these gaps are closed.
 
 ## Role Detection & Config
 

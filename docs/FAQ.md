@@ -146,7 +146,7 @@ btrace <PID> MyTrace.java filterValue=custom
 
 Or via agent:
 ```bash
-java -javaagent:btrace-agent.jar=script=MyTrace.class,filterValue=custom MyApp
+java -javaagent:btrace.jar=script=MyTrace.class,filterValue=custom MyApp
 ```
 
 ### Can I use BTrace with microservices?
@@ -246,7 +246,7 @@ Use `@Injected` without parameters for all services/extensions. The invokedynami
 detects how to construct injected services and extensions. If an extension requires runtime
 context, it is initialized via `Extension.initialize(ExtensionContext)`.
 
-See also: Architecture → `architecture/extension-invokedynamic-bridge.md` and
+See also: Architecture → `architecture/ExtensionInvokeDynamicBridge.md` and
 Extension Development Guide → `btrace-extension-development-guide.md`.
 
 ### What are BTrace anti-patterns?
@@ -613,7 +613,7 @@ In a future JDK release, dynamic agent loading will be **disabled by default**. 
 **Alternatives:**
 1. **Use agent mode** (no attach warnings):
    ```bash
-   java -javaagent:/path/to/btrace-agent.jar=script=YourScript.class -jar app.jar
+   java -javaagent:/path/to/btrace.jar=script=YourScript.class -jar app.jar
    ```
 2. **Prepare now**: Add `-XX:+EnableDynamicAgentLoading` to your JVM startup scripts for future compatibility
 
@@ -727,7 +727,7 @@ spec:
 ```yaml
 env:
 - name: JAVA_TOOL_OPTIONS
-  value: "-javaagent:/opt/btrace-agent.jar=script=/scripts/trace.class"
+  value: "-javaagent:/opt/btrace.jar=script=/scripts/trace.class"
 ```
 
 **Pros:** Active from process start

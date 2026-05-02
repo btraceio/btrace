@@ -1,6 +1,8 @@
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
 LCONST_0
 LSTORE 1
+LCONST_0
+LSTORE 3
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 3
 FRAME FULL [resources/OnMethodTest J J] [java/lang/Throwable]
@@ -18,7 +20,7 @@ LLOAD 1
 ALOAD 5
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ErrorDuration$args(Ljava/lang/Object;Ljava/lang/String;JLjava/lang/Throwable;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/ErrorDuration"
 ]

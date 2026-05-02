@@ -1310,32 +1310,75 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
         } else {
           try {
             int var = variableMapper.map(idx);
+            if (var >= localsArr.length) {
+              localsArr = Arrays.copyOf(localsArr, var + 1);
+            }
             localsArr[var] = e;
             if (e == LONG || e == DOUBLE) {
               int off = var + 1;
-              if (off == localsArr.length) {
-                localsArr = Arrays.copyOf(localsArr, localsArr.length + 1);
+              if (off >= localsArr.length) {
+                localsArr = Arrays.copyOf(localsArr, off + 1);
               }
               localsArr[off] = TOP_EXT;
               idx++;
             }
           } catch (InstrumentationException ex) {
-            // Skip unmapped variables during frame computation - this is expected when
-            // variables haven't been remapped yet at certain instrumentation points
-            // Original behavior was to silently skip these with 0xFFFFFFFF check
+            // When locals haven't been remapped yet (common with early Duration instrumentation),
+            // proactively remap so stack frames stay consistent.
+            int size = (e == LONG || e == DOUBLE) ? 2 : 1;
+            int var = variableMapper.remap(idx, size);
+            int required = var + size;
+            if (required > localsArr.length) {
+              localsArr = Arrays.copyOf(localsArr, required);
+            }
+            localsArr[var] = e;
+            if (size == 2) {
+              int off = var + 1;
+              if (off >= localsArr.length) {
+                localsArr = Arrays.copyOf(localsArr, off + 1);
+              }
+              localsArr[off] = TOP_EXT;
+              idx++;
+            }
           }
         }
         idx++;
       }
-      for (LocalVarSlot lvs : newLocals) {
-        int ptr = lvs.idx != Integer.MIN_VALUE ? lvs.idx : 0;
-        localsArr[ptr] = lvs.isExpired() ? TOP : lvs.type;
-        if (lvs.type == LONG || lvs.type == DOUBLE) {
-          localsArr[ptr + 1] = TOP_EXT;
+      if (!newLocals.isEmpty()) {
+        int required = localsArr.length;
+        for (LocalVarSlot lvs : newLocals) {
+          int ptr = lvs.idx != Integer.MIN_VALUE ? lvs.idx : 0;
+          int size = (lvs.type == LONG || lvs.type == DOUBLE) ? 2 : 1;
+          required = Math.max(required, ptr + size);
+        }
+        if (required > localsArr.length) {
+          localsArr = Arrays.copyOf(localsArr, required);
+        }
+        for (LocalVarSlot lvs : newLocals) {
+          int ptr = lvs.idx != Integer.MIN_VALUE ? lvs.idx : 0;
+          localsArr[ptr] = lvs.isExpired() ? TOP : lvs.type;
+          if (lvs.type == LONG || lvs.type == DOUBLE) {
+            localsArr[ptr + 1] = TOP_EXT;
+          }
         }
       }
     } else {
-      localsArr = locals.toArray(new Object[0]);
+      // Expand compact locals list into slot-indexed array.
+      // The locals list stores LONG/DOUBLE as single entries but they
+      // occupy 2 JVM slots. We must insert TOP_EXT companions to
+      // prevent ensureTopExtSlots() from overwriting the next real local.
+      int slotCount = 0;
+      for (Object e : locals) {
+        slotCount += (e == LONG || e == DOUBLE) ? 2 : 1;
+      }
+      localsArr = new Object[slotCount];
+      int slot = 0;
+      for (Object e : locals) {
+        localsArr[slot++] = e;
+        if (e == LONG || e == DOUBLE) {
+          localsArr[slot++] = TOP_EXT;
+        }
+      }
     }
     for (int m : variableMapper.mappings()) {
       if (m != 0) {
@@ -1345,7 +1388,55 @@ public final class InstrumentingMethodVisitor extends MethodVisitor
       }
     }
     localsArr = trimLocalVars(localsArr);
+    localsArr = ensureTopExtSlots(localsArr);
     return localsArr;
+  }
+
+  private static Object[] ensureTopExtSlots(Object[] localsArr) {
+    if (localsArr == null || localsArr.length == 0) {
+      return localsArr;
+    }
+    Object[] arr = localsArr;
+    for (int i = 0; i < arr.length; i++) {
+      Object val = arr[i];
+      if (val == LONG || val == DOUBLE) {
+        int next = i + 1;
+        if (next >= arr.length) {
+          arr = Arrays.copyOf(arr, next + 1);
+          arr[next] = TOP_EXT;
+          i = next;
+          continue;
+        }
+        if (arr[next] == TOP_EXT) {
+          i = next;
+          continue;
+        }
+        arr = insertTopExtSlot(arr, next);
+        i = next;
+        continue;
+      }
+      if (val == TOP_EXT && (i == 0 || (arr[i - 1] != LONG && arr[i - 1] != DOUBLE))) {
+        arr = removeTopExtSlot(arr, i);
+        i--;
+      }
+    }
+    return arr;
+  }
+
+  private static Object[] insertTopExtSlot(Object[] arr, int index) {
+    Object[] expanded = Arrays.copyOf(arr, arr.length + 1);
+    System.arraycopy(arr, index, expanded, index + 1, arr.length - index);
+    expanded[index] = TOP_EXT;
+    return expanded;
+  }
+
+  private static Object[] removeTopExtSlot(Object[] arr, int index) {
+    Object[] compacted = new Object[arr.length - 1];
+    System.arraycopy(arr, 0, compacted, 0, index);
+    if (index < compacted.length) {
+      System.arraycopy(arr, index + 1, compacted, index, compacted.length - index);
+    }
+    return compacted;
   }
 
   private static Object[] trimLocalVars(Object[] localsArr) {

@@ -12,6 +12,8 @@ Build (from repo root):
 ./gradlew :btrace-extensions:examples:btrace-hadoop:build
 ```
 
+Both example modules use the default extension layout (`src/main`) while still producing the standard BTrace extension artifacts (`*-api.jar`, `*-impl.jar`, `*-extension.zip`).
+
 Enable in `extensions.conf` (examples):
 
 ```
@@ -39,4 +41,3 @@ Notes
 - Prefer packaging application libraries with the application; avoid external classpath hints when possible.
 - For rare, short-term needs, the agent supports a single-jar escape hatch (discouraged):
   - `-Dbtrace.system.appendJar=/abs/path/lib.jar -Dbtrace.trusted=true`
-

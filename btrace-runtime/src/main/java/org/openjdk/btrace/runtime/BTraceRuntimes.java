@@ -18,7 +18,7 @@ public final class BTraceRuntimes {
             || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9$Factory")
             || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_8$Factory");
     log.debug("BTraceRuntime loaded: {}", loaded);
-    BTraceRuntimeAccess.registerRuntimeAccessor();
+    BTraceRuntimeAccessImpl.install();
   }
 
   private static boolean loadFactory(String className) {
@@ -55,11 +55,48 @@ public final class BTraceRuntimes {
   }
 
   public static BTraceRuntime.Impl getDefault() {
+    // Ensure runtime accessor is registered (must be done after static init completes)
+    BTraceRuntimeAccessImpl.ensureRegistered(FACTORY);
     return FACTORY != null ? FACTORY.getDefault() : null;
+  }
+
+  /**
+   * Ensures the runtime accessor is registered in BTraceRuntime.
+   * This must be called after getDefault() to complete initialization.
+   */
+  public static void ensureAccessorRegistered() {
+    BTraceRuntimeAccessImpl.ensureRegistered(FACTORY);
   }
 
   public static BTraceRuntime.Impl getRuntime(
       String className, ArgsMap args, CommandListener cmdListener, Instrumentation inst) {
     return FACTORY != null ? FACTORY.getRuntime(className, args, cmdListener, inst) : null;
+  }
+
+  /**
+   * Drop a runtime previously registered via {@link #getRuntime(String, ArgsMap,
+   * CommandListener, java.lang.instrument.Instrumentation)}.
+   *
+   * <p>This releases the internal registry's strong reference to the {@link
+   * BTraceRuntime.Impl} so its class, defining loader, and cached method handles can be
+   * collected. Required for any caller that creates a runtime and then aborts before
+   * attaching it through the normal lifecycle; without it the registry leaks one entry
+   * per aborted attach.
+   */
+  public static void removeRuntime(String className) {
+    BTraceRuntimeAccessImpl.removeRuntime(className);
+  }
+
+  /**
+   * Get the current instrumentation level for the active BTrace probe.
+   * Used by MethodHandle-based level guards to query the level at handler invocation time.
+   * Returns 0 if no runtime is active.
+   */
+  public static int getCurrentLevel() {
+    BTraceRuntimeImplBase current = BTraceRuntimeAccessImpl.getCurrent();
+    if (current != null) {
+      return current.getInstrumentationLevel();
+    }
+    return 0;
   }
 }

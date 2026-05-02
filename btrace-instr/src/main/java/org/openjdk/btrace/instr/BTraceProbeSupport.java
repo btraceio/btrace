@@ -21,6 +21,8 @@
  */
 package org.openjdk.btrace.instr;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
 import org.openjdk.btrace.core.ArgsMap;
@@ -55,6 +58,18 @@ public final class BTraceProbeSupport {
   private boolean trustedScript = false;
   private boolean classRenamed = false;
   private String className, origName;
+  private volatile Class<?> probeClass;
+
+  /**
+   * Per-probe handler {@link MethodHandle} cache. Holding it on the probe means it dies
+   * with the probe object — no cross-probe scan on unregister, and no accidental retention
+   * of the probe's defined {@code Class<?>} / {@code ClassLoader} via a static map outlasting
+   * the probe.
+   *
+   * <p>The key omits the probe name (redundant given the cache is per-probe). Sized small on
+   * purpose: a typical probe has O(10) handlers.
+   */
+  private final Map<HandlerSubKey, MethodHandle> handlerCache = new ConcurrentHashMap<>();
 
   BTraceProbeSupport() {
     onMethods = new ArrayList<>();
@@ -232,6 +247,55 @@ public final class BTraceProbeSupport {
     return trustedScript;
   }
 
+  Class<?> getProbeClass() {
+    return probeClass;
+  }
+
+  void clearProbeClass() {
+    this.probeClass = null;
+    // Drop cached MethodHandles — they resolve into the now-released probe Class and would
+    // otherwise keep it (and its ClassLoader) reachable across a detach.
+    handlerCache.clear();
+  }
+
+  MethodHandle getCachedHandler(String handlerName, MethodType type) {
+    return handlerCache.get(new HandlerSubKey(handlerName, type));
+  }
+
+  void cacheHandler(String handlerName, MethodType type, MethodHandle mh) {
+    handlerCache.put(new HandlerSubKey(handlerName, type), mh);
+  }
+
+  /**
+   * Cache key for the per-probe handler cache. The probe component is implicit (the map
+   * lives on the probe) so we only carry {@code (handlerName, type)}. Hash is precomputed
+   * because the key is recomputed on every resolve.
+   */
+  private static final class HandlerSubKey {
+    final String handler;
+    final MethodType type;
+    private final int hash;
+
+    HandlerSubKey(String handler, MethodType type) {
+      this.handler = handler;
+      this.type = type;
+      this.hash = handler.hashCode() * 31 + type.hashCode();
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof HandlerSubKey)) return false;
+      HandlerSubKey k = (HandlerSubKey) o;
+      return hash == k.hash && handler.equals(k.handler) && type.equals(k.type);
+    }
+  }
+
   Class<?> defineClass(BTraceRuntime.Impl rt, byte[] code) {
     // This extra BTraceRuntime.enter is needed to
     // check whether we have already entered before.
@@ -244,10 +308,11 @@ public final class BTraceProbeSupport {
       if (log.isDebugEnabled()) {
         log.debug("about to defineClass {}", getClassName(false));
       }
-      Class<?> clz = rt.defineClass(code, isTransforming());
+      Class<?> clz = rt.defineClass(code);
       if (log.isDebugEnabled()) {
         log.debug("defineClass succeeded for {}", getClassName(false));
       }
+      this.probeClass = clz;
       return clz;
     } finally {
       // leave BTraceRuntime enter state as it was before

@@ -1,6 +1,15 @@
 plugins {
     id "jacoco"
     alias(libs.plugins.spotless)
+    alias(libs.plugins.publish)
+}
+
+// Applied to the root project AND every subproject. The root project needs group/version
+// so the nexus-publish plugin can resolve its packageGroup (defaults to rootProject.group)
+// and so the SNAPSHOT-skip guard below evaluates against a real version.
+allprojects {
+    group = 'org.openjdk.btrace'
+    version = '3.0.0-SNAPSHOT'
 }
 
 repositories {
@@ -36,5 +45,49 @@ spotless {
         formatAnnotations()  // fixes formatting of type annotations, see below
 
         licenseHeader '/* (C) $YEAR */' // or licenseHeaderFile
+    }
+}
+
+// Nexus Publishing configuration for Maven Central release automation
+// This enables the closeAndReleaseStagingRepositories task for automated releases
+// Uses the new Central Portal URLs (OSSRH was sunset on June 30, 2025)
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+            // Use Central Portal user token credentials (different from legacy OSSRH credentials)
+            username = findProperty("sonatype.user")
+                    ?: findProperty("sonatype.username")
+                    ?: System.getenv("SONATYPE_USER")
+                    ?: System.getenv("SONATYPE_USERNAME")
+            password = findProperty("sonatype.password")
+                    ?: System.getenv("SONATYPE_PASSWORD")
+        }
+    }
+}
+
+def sonatypeUsername = findProperty("sonatype.user")
+        ?: findProperty("sonatype.username")
+        ?: System.getenv("SONATYPE_USER")
+        ?: System.getenv("SONATYPE_USERNAME")
+def sonatypePassword = findProperty("sonatype.password")
+        ?: System.getenv("SONATYPE_PASSWORD")
+def hasSonatypeCredentials =
+        sonatypeUsername != null && !sonatypeUsername.toString().trim().isEmpty()
+                && sonatypePassword != null
+                && !sonatypePassword.toString().trim().isEmpty()
+
+if (!hasSonatypeCredentials || project.version.endsWith("-SNAPSHOT")) {
+    logger.lifecycle("Sonatype credentials not provided or running with snapshot; skipping Nexus staging initialization and release tasks.")
+    def skipTheseTasks = [
+        "initializeSonatypeStagingRepository",
+        "publishToSonatype",
+        "closeSonatypeStagingRepository",
+        "dropSonatypeStagingRepository",
+        "releaseSonatypeStagingRepository",
+    ]
+    tasks.matching { skipTheseTasks.contains(it.name) }.configureEach {
+        enabled = false
     }
 }

@@ -28,21 +28,30 @@ package tests;
 import jdk.jfr.EventType;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.openjdk.btrace.client.Client;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.DisconnectCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -182,6 +191,44 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   @Test
+  public void testOnelinerRuntime() throws Exception {
+    dumpOneliner = Boolean.getBoolean("btrace.oneliner.dump");
+    dumpVerifierErrors = Boolean.getBoolean("btrace.verifier.dump");
+    String oneLiner = "resources.Main::callB @entry { print method, args }";
+    testDynamicOneliner(
+        "resources.Main",
+        oneLiner,
+        30,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("callB"), "Expected oneliner output");
+            assertTrue(stdout.contains("Hello World"), "Expected oneliner args output");
+          }
+        });
+  }
+
+  @Test
+  public void testExtensionLifecycleClose() throws Exception {
+    attachDelayMs = 500;
+    testDynamic(
+        "resources.Main",
+        "btrace/ExtensionLifecycleTest.java",
+        new String[] {"extensionCloseTest=true"},
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("extension close: btrace-utils"));
+          }
+        });
+  }
+
+  @Test
   public void testTraceAll() throws Exception {
       String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
       if (testJavaHome == null) testJavaHome = System.getenv().get("JAVA_TEST_HOME");
@@ -211,7 +258,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
             assertFalse(stdout.contains("FAILED"), "Script should not have failed");
-            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
             assertTrue(stdout.contains("[invocations="));
           }
         });
@@ -289,6 +336,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testProbeArgs() throws Exception {
+//    debugBTrace = true;
+//    debugTestApp = true;
     isUnsafe = true;
     testDynamic(
         "resources.Main",
@@ -414,123 +463,80 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testOnMethodUnattended() throws Exception {
-    // NOTE: This test is flaky in CI due to timing and attach/disconnect nuances.
-    // When running in CI (enable via Gradle -PCI), skip it and rely on manual runs locally
-    // for correctness until a deterministic strategy is implemented.
-    assumeFalse(
-        Boolean.getBoolean("CI")
-            || "true".equalsIgnoreCase(System.getProperty("CI"))
-            || System.getenv("CI") != null,
-        "Skipping unattended test in CI: run locally for correctness");
-
     TestApp testApp = launchTestApp("resources.Main");
-    try {
-      File traceFile = locateTrace("btrace/OnMethodTest.java");
+    File traceFile = locateTrace("btrace/OnMethodTest.java");
 
-      String pid = String.valueOf(testApp.getPid());
-      // Allow time for the worker thread to start after "ready:" is printed
-      try {
-        Thread.sleep(500L);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-      }
-      AtomicBoolean hasError = new AtomicBoolean(false);
-      AtomicBoolean probeStarted = new AtomicBoolean(false);
-      System.out.println("===> btrace -x (unattended)");
-    runBTrace(
-        new String[] {"-x", pid, traceFile.toString()},
-        new ProcessOutputProcessor() {
-          @Override
-          public boolean onStdout(int lineno, String line) {
-            System.out.println("[btrace #" + lineno + "] " + line);
-            if (line.contains("BTrace Probe:") || line.contains("Successfully started")) {
-              probeStarted.set(true);
-            }
-            return lineno < 500;
-          }
+    String pid = String.valueOf(testApp.getPid());
+    String host = "localhost";
+    Client client = createClientForTests(traceFile.getParentFile().getAbsolutePath());
+    client.attach(pid, null, getEventsClassPath());
+    byte[] code = client.compile(traceFile.getAbsolutePath(), getEventsClassPath());
+    assertNotNull(code, "BTrace compilation failed");
 
-          @Override
-          public boolean onStderr(int lineno, String line) {
-            System.err.println("[btrace err] " + line);
-            hasError.set(true);
-            return lineno < 10;
-          }
-        });
-
-    assertFalse(hasError.get(), "btrace -x reported errors");
-    System.out.println("===> probe started: " + probeStarted.get());
-
-    // Poll list of probes to discover the probe id reliably
-    System.out.println("===> polling btrace -lp for probe id");
-    final String[] probeId = new String[1];
-    final int[] matchCount = new int[1];
-    long start = System.currentTimeMillis();
-    while ((System.currentTimeMillis() - start) < 15000) {
-      // reset per-iteration state
-      matchCount[0] = 0;
-      probeId[0] = null;
-      runBTrace(
-          new String[] {"-lp", pid},
-          new ProcessOutputProcessor() {
-            @Override
-            public boolean onStdout(int lineno, String line) {
-              System.out.println("[btrace #" + lineno + "] " + line);
-              // Format: "N: <uuid> [<class>]"
-              int idx = line.indexOf(':');
-              if (idx > -1) {
-                String rest = line.substring(idx + 1).trim();
-                int sp = rest.indexOf(' ');
-                int lb = rest.indexOf('[');
-                int rb = rest.indexOf(']');
-                if (sp > 0 && lb > sp && rb > lb) {
-                  String id = rest.substring(0, sp).trim();
-                  String cls = rest.substring(lb + 1, rb).trim();
-                  if (cls.endsWith("OnMethodTest")) {
-                    matchCount[0]++;
-                    if (matchCount[0] == 1) {
-                      probeId[0] = id;
-                    }
-                    if (matchCount[0] > 1) {
-                      // No need to read further in this iteration
-                      return false;
-                    }
-                  }
+    CompletableFuture<String> probeIdFuture = new CompletableFuture<>();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    Future<?> submitFuture =
+        executor.submit(
+            () -> {
+              try {
+                client.submit(
+                    host,
+                    traceFile.getName(),
+                    code,
+                    new String[0],
+                    cmd -> {
+                      if (cmd.getType() == Command.STATUS) {
+                        StatusCommand status = (StatusCommand) cmd;
+                        if (status.getFlag() == StatusCommand.STATUS_FLAG && status.isSuccess()) {
+                          try {
+                            client.sendDisconnect();
+                          } catch (IOException e) {
+                            probeIdFuture.completeExceptionally(e);
+                          }
+                        } else if (!status.isSuccess()) {
+                          probeIdFuture.completeExceptionally(
+                              new IllegalStateException("Probe startup failed"));
+                        }
+                      } else if (cmd.getType() == Command.DISCONNECT) {
+                        DisconnectCommand disconnect = (DisconnectCommand) cmd;
+                        probeIdFuture.complete(disconnect.getProbeId());
+                      }
+                    });
+              } catch (IOException e) {
+                if (!probeIdFuture.isDone()) {
+                  probeIdFuture.completeExceptionally(e);
                 }
               }
-              return lineno < 50;
-            }
+            });
 
-            @Override
-            public boolean onStderr(int lineno, String line) {
-              System.err.println("[btrace #" + lineno + "] " + line);
-              return false;
-            }
-          });
-      if (matchCount[0] == 1) {
-        break; // exactly one match found
-      }
-      if (matchCount[0] > 1) {
-        break; // over-matched; fail via assertion below
-      }
-      // No matches; wait and retry until timeout
-      try {
-        Thread.sleep(300);
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-        try {
-          // break outer loop on interrupt
-          break;
-        } catch (Exception ignore) {}
-      }
-    }
-
-      // Assert exactly one matching probe is present
-      org.junit.jupiter.api.Assertions.assertEquals(1, matchCount[0],
-          "expected exactly one OnMethodTest probe listed by -lp");
-      assertNotNull(probeId[0], "probe id not found in -lp within timeout");
+    String probeId = probeIdFuture.get(15, TimeUnit.SECONDS);
+    client.close();
+    try {
+      submitFuture.get(5, TimeUnit.SECONDS);
+    } catch (Exception ignore) {
+      // best effort; disconnect closes the socket and may surface as a submit error
     } finally {
-      testApp.stop();
+      executor.shutdownNow();
     }
+
+    List<String> probes = listProbesWithProtocol(host);
+    long matches =
+        probes.stream()
+            .filter(p -> extractProbeClassName(p).endsWith("OnMethodTest"))
+            .count();
+    assertEquals(1, matches, "expected exactly one OnMethodTest probe listed by -lp");
+    assertTrue(
+        probes.stream().anyMatch(p -> p.startsWith(probeId + " ")),
+        "probe id not present in -lp output");
+  }
+
+  private static String extractProbeClassName(String probeEntry) {
+    int lb = probeEntry.indexOf('[');
+    int rb = probeEntry.indexOf(']');
+    if (lb > -1 && rb > lb) {
+      return probeEntry.substring(lb + 1, rb).trim();
+    }
+    return "";
   }
 
     @ParameterizedTest(name = "testThreadStart: dynamic={0}")
@@ -630,4 +636,103 @@ public class BTraceFunctionalTests extends RuntimeTest {
         }
         return true;
     }
+
+  @Test
+  public void testOnelinerMethodEntry() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callA @entry { print method }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callA"), "Method entry not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithArguments() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @entry { print args }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("[1, Hello World]"), "Arguments not captured correctly");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithReturn() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @return { print method, duration }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callB"), "Return method name not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithRegexClassMatch() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "/resources\\..*Main/::callA @entry { print method }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callA"), "Regex class matching not working");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerStack() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @entry { stack }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(
+                stdout.contains("resources.Main.callA") || stdout.contains("resources.Main"),
+                "Stack trace not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerCompilationError() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @invalid { print }",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            // Compilation errors should be reported
+            assertTrue(
+                !stderr.isEmpty() || stdout.contains("error") || stdout.contains("Error"),
+                "Expected compilation error not reported");
+          }
+        });
+  }
 }

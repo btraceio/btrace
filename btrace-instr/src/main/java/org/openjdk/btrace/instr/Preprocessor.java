@@ -51,7 +51,7 @@ import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.annotations.Event;
 import org.openjdk.btrace.core.annotations.Return;
 import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.runtime.BTraceRuntimeImplBase;
+import org.openjdk.btrace.core.BTraceRuntimeBridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,9 +137,9 @@ final class Preprocessor {
           + "["
           + LOWMEMORYHANDLER_DESC
           + ")"
-          + Constants.BTRACERTBASE_DESC;
+          + Constants.BTRACERTBRIDGE_DESC;
   private static final String BTRACERT_ENTER_DESC =
-      "(" + Constants.BTRACERTIMPL_DESC + ")" + Constants.BOOLEAN_DESC;
+      "(" + Constants.BTRACERTBRIDGE_DESC + ")" + Constants.BOOLEAN_DESC;
   private static final String BTRACERT_HANDLE_EXCEPTION_DESC =
       "(" + Constants.THROWABLE_DESC + ")" + Constants.VOID_DESC;
   private static final String RT_CTX_INTERNAL = "org/openjdk/btrace/core/extensions/ExtensionContext";
@@ -206,6 +206,8 @@ final class Preprocessor {
 
   private final Map<MethodNode, EnumSet<MethodClassifier>> classifierMap = new HashMap<>();
   private AbstractInsnNode clinitEntryPoint;
+  // Label marking where the <clinit> error handler should start (after runtime is set)
+  private LabelNode clinitErrorHandlerStart;
 
   // Determines if the given ASM Type represents a class that is a BTrace Extension
   private static boolean isExtensionType(Type implType, ClassLoader loader) {
@@ -642,11 +644,11 @@ final class Preprocessor {
     init.add(new LdcInsnNode(desc));
     init.add(
         new MethodInsnNode(
-            Opcodes.INVOKEVIRTUAL,
-            Constants.BTRACERTBASE_INTERNAL,
+            Opcodes.INVOKEINTERFACE,
+            Constants.BTRACERTBRIDGE_INTERNAL,
             "newPerfCounter",
             NEW_PERFCOUNTER_DESC,
-            false));
+            true));
 
     return init;
   }
@@ -854,6 +856,10 @@ final class Preprocessor {
             BTRACERT_FOR_CLASS_DESC,
             false));
     l.add(new FieldInsnNode(Opcodes.PUTSTATIC, cn.name, rtField.name, rtField.desc));
+
+    // Mark where the error handler should start (after runtime is set)
+    clinitErrorHandlerStart = new LabelNode();
+    l.add(clinitErrorHandlerStart);
 
     l.add(getRuntimeImpl(cn));
     addRuntimeCheck(cn, clinit, l, true);
@@ -1115,7 +1121,7 @@ final class Preprocessor {
         il.add(getRuntimeImpl(cNode));
         il.add(
             new MethodInsnNode(
-                Opcodes.INVOKEVIRTUAL, Constants.BTRACERTBASE_INTERNAL, "start", "()V", false));
+                Opcodes.INVOKEINTERFACE, Constants.BTRACERTBRIDGE_INTERNAL, "start", "()V", true));
         clinit1.instructions.insertBefore(n, il);
       }
     }
@@ -1130,7 +1136,7 @@ final class Preprocessor {
     il.add(getRuntimeImpl(cn));
     il.add(
         new MethodInsnNode(
-            Opcodes.INVOKEVIRTUAL, Constants.BTRACERTBASE_INTERNAL, "leave", "()V", false));
+            Opcodes.INVOKEINTERFACE, Constants.BTRACERTBRIDGE_INTERNAL, "leave", "()V", true));
     return il;
   }
 
@@ -1140,7 +1146,7 @@ final class Preprocessor {
             Opcodes.ASM9,
             (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC),
             "runtime",
-            Type.getDescriptor(BTraceRuntimeImplBase.class),
+            Type.getDescriptor(BTraceRuntimeBridge.class),
             null,
             null);
     cn.fields.add(0, rtField);
@@ -1151,10 +1157,18 @@ final class Preprocessor {
 
     EnumSet<MethodClassifier> clsf = getClassifiers(mn);
     if (!clsf.isEmpty()) {
-      LabelNode from = new LabelNode();
+      LabelNode from;
       LabelNode to = new LabelNode();
       InsnList l = mn.instructions;
-      l.insert(from);
+
+      // For <clinit>, start the error handler AFTER the runtime is set
+      // to avoid NPE when handling exceptions thrown during runtime setup
+      if (mn.name.equals("<clinit>") && clinitErrorHandlerStart != null) {
+        from = clinitErrorHandlerStart;
+      } else {
+        from = new LabelNode();
+        l.insert(from);
+      }
       l.add(to);
       // add proper stackframe map node
       l.add(throwableHandlerFrame(mn));
@@ -1164,11 +1178,11 @@ final class Preprocessor {
       l.add(new InsnNode(Opcodes.SWAP));
       l.add(
           new MethodInsnNode(
-              Opcodes.INVOKEVIRTUAL,
-              Constants.BTRACERTBASE_INTERNAL,
+              Opcodes.INVOKEINTERFACE,
+              Constants.BTRACERTBRIDGE_INTERNAL,
               "handleException",
               BTRACERT_HANDLE_EXCEPTION_DESC,
-              false));
+              true));
       l.add(getReturnSequence(cn, mn, true));
 
       mn.tryCatchBlocks.add(new TryCatchBlockNode(from, to, to, Constants.THROWABLE_INTERNAL));
@@ -1334,8 +1348,8 @@ final class Preprocessor {
     for (AbstractInsnNode n = clinit.instructions.getFirst(); n != null; n = n.getNext()) {
       if (n.getType() == AbstractInsnNode.METHOD_INSN) {
         MethodInsnNode minNode = (MethodInsnNode) n;
-        if (minNode.getOpcode() == Opcodes.INVOKEVIRTUAL
-            && minNode.owner.equals(Constants.BTRACERTBASE_INTERNAL)
+        if (minNode.getOpcode() == Opcodes.INVOKEINTERFACE
+            && minNode.owner.equals(Constants.BTRACERTBRIDGE_INTERNAL)
             && minNode.name.equals("start")) {
           return minNode;
         }
@@ -1472,13 +1486,13 @@ final class Preprocessor {
       toInsert.add(new LdcInsnNode(perfCounterName(cn, fin.name)));
       toInsert.add(
           new MethodInsnNode(
-              Opcodes.INVOKEVIRTUAL,
-              Constants.BTRACERTBASE_INTERNAL,
+              Opcodes.INVOKEINTERFACE,
+              Constants.BTRACERTBRIDGE_INTERNAL,
               methodName,
               isPut
                   ? Type.getMethodDescriptor(Type.VOID_TYPE, tType, Constants.STRING_TYPE)
                   : Type.getMethodDescriptor(tType, Constants.STRING_TYPE),
-              false));
+              true));
       l.insert(fin, toInsert);
     }
     AbstractInsnNode ret = fin.getNext();
@@ -1827,6 +1841,9 @@ final class Preprocessor {
       Type[] args = Type.getArgumentTypes(mn.desc);
       for (Type t : args) {
         offset += t.getSize();
+      }
+      if (mn.maxLocals > offset) {
+        offset = mn.maxLocals;
       }
     }
 

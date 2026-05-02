@@ -192,10 +192,15 @@ public final class DTraceExtension extends Extension {
     cons.setOption(Option.unodefs, "");
     // allow zero matching of probes (needed for late loading)
     cons.setOption(Option.zdefs, "");
-    try {
-      int pid = Integer.parseInt(args[0]);
-      cons.grabProcess(pid);
-    } catch (Exception ignored) {
+    if (args != null && args.length > 0) {
+      try {
+        int pid = Integer.parseInt(args[0]);
+        cons.grabProcess(pid);
+      } catch (NumberFormatException e) {
+        log.debug("First argument '{}' is not a valid PID, skipping process grab", args[0]);
+      } catch (Exception e) {
+        log.warn("Failed to grab process with PID '{}': {}", args[0], e.getMessage());
+      }
     }
     return cons;
   }

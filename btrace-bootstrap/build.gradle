@@ -1,0 +1,92 @@
+plugins {
+    id 'java-library'
+    alias(libs.plugins.shadow)
+}
+
+def bootIncludes = {
+    if (it.directory) {
+        return true
+    }
+    if (it.path.endsWith('.jar')) {
+        return true
+    }
+    if (it.path.startsWith('org/openjdk/btrace/core/')) {
+        if (it.path == 'org/openjdk/btrace/core/Messages.class'
+                || it.path == 'org/openjdk/btrace/core/messages.properties') {
+            return false
+        }
+        if (it.path.startsWith('org/openjdk/btrace/core/extensions/')) {
+            return false
+        }
+        // Include handlers - probe classes need them in their static initializers
+        if (it.path.startsWith('org/openjdk/btrace/core/handlers/')) {
+            return true
+        }
+        if (it.path.startsWith('org/openjdk/btrace/core/comm/')) {
+            return false
+        }
+        // Include annotations - needed by compiler at compile-time
+        if (it.path.startsWith('org/openjdk/btrace/core/annotations/')) {
+            return true
+        }
+        return true
+    }
+    if (it.path.startsWith('META-INF/services')) {
+        return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
+    }
+    // Include BTraceRuntimeAccess and LinkingFlag from btrace-core (bootstrap classes)
+    if (it.path.startsWith('org/openjdk/btrace/runtime/')) {
+        // Match BTraceRuntimeAccess but NOT BTraceRuntimeAccessImpl
+        if (it.path.startsWith('org/openjdk/btrace/runtime/BTraceRuntimeAccess.class')
+                || it.path.startsWith('org/openjdk/btrace/runtime/BTraceRuntimeAccess$')
+                || it.path.startsWith('org/openjdk/btrace/runtime/LinkingFlag')) {
+            return true
+        }
+        // Include invokedynamic bootstrap classes (they use volatile fields to reach agent implementations)
+        if (it.path.startsWith('org/openjdk/btrace/runtime/Indy')
+                || it.path.startsWith('org/openjdk/btrace/runtime/ExtensionIndy')) {
+            return true
+        }
+        // Include Auxiliary class - probe classes are defined via MethodHandles.privateLookupIn(Auxiliary.class)
+        // and must be bootstrap-visible so they're accessible from application classloaders
+        if (it.path.startsWith('org/openjdk/btrace/runtime/auxiliary/Auxiliary')) {
+            return true
+        }
+        return false
+    }
+    // Include ExtensionBridge interface (referenced by ExtensionIndy)
+    if (it.path == 'org/openjdk/btrace/extension/ExtensionBridge.class') {
+        return true
+    }
+    // Include slf4j for bootstrap classes (DebugSupport needs it)
+    if (it.path.startsWith('org/slf4j/')) {
+        return true
+    }
+    return false
+}
+
+dependencies {
+    implementation project(':btrace-core')
+    implementation project(':btrace-runtime')
+    implementation project(':btrace-instr')
+    implementation project(':btrace-extension')
+}
+
+jar {
+    enabled = false
+}
+
+shadowJar {
+    archiveBaseName.set('btrace-bootstrap')
+    archiveVersion.set('')
+    archiveClassifier.set('')
+
+    include bootIncludes
+
+    configurations = [project.configurations.runtimeClasspath]
+    relocate 'org.jctools', 'org.openjdk.btrace.libs.boot.org.jctools'
+    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+}
+
+assemble.dependsOn shadowJar

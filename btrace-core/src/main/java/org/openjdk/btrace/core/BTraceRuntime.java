@@ -55,27 +55,15 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.openjdk.btrace.core.aggregation.Aggregation;
-import org.openjdk.btrace.core.aggregation.AggregationFunction;
-import org.openjdk.btrace.core.aggregation.AggregationKey;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.EventCommand;
-import org.openjdk.btrace.core.comm.GridDataCommand;
-import org.openjdk.btrace.core.comm.NumberDataCommand;
-import org.openjdk.btrace.core.comm.NumberMapDataCommand;
-import org.openjdk.btrace.core.comm.StringMapDataCommand;
 import org.openjdk.btrace.core.jfr.JfrEvent;
 import org.openjdk.btrace.core.types.AnyType;
 import org.openjdk.btrace.core.types.BTraceCollection;
 import org.openjdk.btrace.core.types.BTraceDeque;
 import org.openjdk.btrace.core.types.BTraceMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
 @SuppressWarnings("deprecation")
 public final class BTraceRuntime {
-  private static final Logger log = LoggerFactory.getLogger(BTraceRuntime.class);
 
   public static final String CMD_QUEUE_LIMIT_KEY = "org.openjdk.btrace.core.cmdQueueLimit";
   private static final boolean messageTimestamp = false;
@@ -141,7 +129,7 @@ public final class BTraceRuntime {
         unsafe = Unsafe.getUnsafe();
       }
     } catch (SecurityException e) {
-      log.warn("Unable to initialize Unsafe. BTrace will not function properly");
+      System.err.println("BTrace warning: unable to initialize Unsafe. BTrace will not function properly");
     }
     return unsafe;
   }
@@ -459,15 +447,15 @@ public final class BTraceRuntime {
   }
 
   static void printNumber(String name, Number value) {
-    getRt().send(new NumberDataCommand(name, value));
+    getRt().sendNumberData(name, value);
   }
 
   static void printNumberMap(String name, Map<String, ? extends Number> data) {
-    getRt().send(new NumberMapDataCommand(name, data));
+    getRt().sendNumberMapData(name, data);
   }
 
   static void printStringMap(String name, Map<String, String> data) {
-    getRt().send(new StringMapDataCommand(name, data));
+    getRt().sendStringMapData(name, data);
   }
 
   // BTrace exit built-in function
@@ -513,7 +501,6 @@ public final class BTraceRuntime {
       return target.isAssignableFrom(objClass);
     } catch (ClassNotFoundException e) {
       // non-existing class
-      log.debug("Class {} can not be found by classloader {}", className, cl, e);
       return false;
     }
   }
@@ -1056,37 +1043,8 @@ public final class BTraceRuntime {
     return getRt().isBootstrapClass(className);
   }
 
-  // BTrace aggregation support
-  static Aggregation newAggregation(AggregationFunction type) {
-    return new Aggregation(type);
-  }
-
-  static AggregationKey newAggregationKey(Object... elements) {
-    return new AggregationKey(elements);
-  }
-
-  static void addToAggregation(Aggregation aggregation, long value) {
-    aggregation.add(value);
-  }
-
-  static void addToAggregation(Aggregation aggregation, AggregationKey key, long value) {
-    aggregation.add(key, value);
-  }
-
-  static void clearAggregation(Aggregation aggregation) {
-    aggregation.clear();
-  }
-
-  static void truncateAggregation(Aggregation aggregation, int count) {
-    aggregation.truncate(count);
-  }
-
-  static void printAggregation(String name, Aggregation aggregation) {
-    getRt().send(new GridDataCommand(name, aggregation.getData()));
-  }
-
   static void printSnapshot(String name, Profiler.Snapshot snapshot) {
-    getRt().send(new GridDataCommand(name, snapshot.getGridData()));
+    getRt().sendGridData(name, snapshot.getGridData());
   }
 
   /**
@@ -1100,60 +1058,7 @@ public final class BTraceRuntime {
    * @see String#format(java.lang.String, java.lang.Object[])
    */
   static void printSnapshot(String name, Profiler.Snapshot snapshot, String format) {
-    getRt().send(new GridDataCommand(name, snapshot.getGridData(), format));
-  }
-
-  /**
-   * Precondition: Only values from the first Aggregation are printed. If the subsequent
-   * aggregations have values for keys which the first aggregation does not have, these rows are
-   * ignored.
-   *
-   * @param name
-   * @param format
-   * @param aggregationArray
-   */
-  static void printAggregation(String name, String format, Aggregation[] aggregationArray) {
-    if (aggregationArray.length > 1 && aggregationArray[0].getKeyData().size() > 1) {
-      int aggregationDataSize =
-          aggregationArray[0].getKeyData().get(0).getElements().length + aggregationArray.length;
-
-      List<Object[]> aggregationData = new ArrayList<>();
-
-      // Iterate through all keys in the first Aggregation and build up an array of aggregationData
-      for (AggregationKey aggKey : aggregationArray[0].getKeyData()) {
-        int aggDataIndex = 0;
-        Object[] currAggregationData = new Object[aggregationDataSize];
-
-        // Add the key to the from of the current aggregation Data
-        for (Object obj : aggKey.getElements()) {
-          currAggregationData[aggDataIndex] = obj;
-          aggDataIndex++;
-        }
-
-        for (Aggregation agg : aggregationArray) {
-          currAggregationData[aggDataIndex] = agg.getValueForKey(aggKey);
-          aggDataIndex++;
-        }
-
-        aggregationData.add(currAggregationData);
-      }
-
-      getRt().send(new GridDataCommand(name, aggregationData, format));
-    }
-  }
-
-  /**
-   * Prints aggregation using the provided format
-   *
-   * @param name The name of the aggregation to be used in the textual output
-   * @param aggregation The aggregation to print
-   * @param format The format to use. It mimics {@linkplain String#format(java.lang.String,
-   *     java.lang.Object[]) } behaviour with the addition of the ability to address the key title
-   *     as a 0-indexed item
-   * @see String#format(java.lang.String, java.lang.Object[])
-   */
-  static void printAggregation(String name, Aggregation aggregation, String format) {
-    getRt().send(new GridDataCommand(name, aggregation.getData(), format));
+    getRt().sendGridData(name, snapshot.getGridData(), format);
   }
 
   /**
@@ -1223,7 +1128,17 @@ public final class BTraceRuntime {
   public interface Impl {
     void send(String msg);
 
-    void send(Command cmd);
+    void sendCommand(Object cmd);
+
+    void sendNumberData(String name, Number value);
+
+    void sendNumberMapData(String name, Map<String, ? extends Number> data);
+
+    void sendStringMapData(String name, Map<String, String> data);
+
+    void sendGridData(String name, List<Object[]> data);
+
+    void sendGridData(String name, List<Object[]> data, String format);
 
     boolean enter();
 
@@ -1273,7 +1188,7 @@ public final class BTraceRuntime {
 
     boolean isDTraceEnabled();
 
-    void handleEvent(EventCommand cmd);
+    void handleEvent(Object cmd);
 
     void handleExit(int i);
 
@@ -1293,7 +1208,7 @@ public final class BTraceRuntime {
 
     List<GarbageCollectorMXBean> getGCMBeans();
 
-    Class<?> defineClass(byte[] code, boolean mustBeBootstrap);
+    Class<?> defineClass(byte[] code);
 
     ClassLoader getCallerClassLoader(int stackDec);
 

@@ -12,13 +12,11 @@ import java.util.List
 import java.util.Set
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
-import java.util.zip.ZipInputStream
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.FieldInsnNode
-import org.objectweb.asm.tree.InvokeDynamicInsnNode
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.LdcInsnNode
 
@@ -79,24 +77,6 @@ final class PermissionScanner {
             }
         }
         return perms
-    }
-
-    private static void scanClass(InputStream in, Set<String> perms) {
-        ClassReader cr = new ClassReader(in)
-        ClassNode cn = new ClassNode()
-        cr.accept(cn, 0)
-
-        cn.methods.each { m ->
-            for (AbstractInsnNode insn = m.instructions.first; insn != null; insn = insn.next) {
-                if (insn instanceof MethodInsnNode) {
-                    handleMethod(((MethodInsnNode) insn), perms, m, insn)
-                } else if (insn instanceof FieldInsnNode) {
-                    handleField(((FieldInsnNode) insn), perms)
-                } else if (insn instanceof InvokeDynamicInsnNode) {
-                    // no-op for now
-                }
-            }
-        }
     }
 
     private static void handleMethod(MethodInsnNode min, Set<String> perms, def methodNode, AbstractInsnNode current) {
@@ -226,10 +206,13 @@ final class PermissionScanner {
             } else if (f.name.endsWith('.jar')) {
                 try {
                     def zip = new ZipFile(f)
-                    def ze = zip.getEntry(entry)
-                    if (ze != null) {
-                        return zip.getInputStream(ze)
-                    } else {
+                    try {
+                        def ze = zip.getEntry(entry)
+                        if (ze != null) {
+                            byte[] bytes = zip.getInputStream(ze).bytes
+                            return new java.io.ByteArrayInputStream(bytes)
+                        }
+                    } finally {
                         zip.close()
                     }
                 } catch (IOException ignored) { }

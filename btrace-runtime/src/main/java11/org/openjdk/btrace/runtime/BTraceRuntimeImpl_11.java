@@ -27,6 +27,7 @@ package org.openjdk.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -38,8 +39,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
-import jdk.internal.reflect.CallerSensitive;
-import jdk.internal.reflect.Reflection;
 import org.openjdk.btrace.core.ArgsMap;
 import org.openjdk.btrace.core.BTraceRuntime;
 import org.openjdk.btrace.core.comm.CommandListener;
@@ -114,7 +113,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException ignored) {}
+    } catch (NoSuchMethodException | InaccessibleObjectException ignored) {}
     findBootstrapOrNullMtd = m;
   }
 
@@ -126,7 +125,7 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException ignored) {}
+    } catch (NoSuchMethodException | InaccessibleObjectException ignored) {}
     findBootstrapOrNullMtd = m;
   }
 
@@ -200,27 +199,71 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
   }
 
   @Override
-  @CallerSensitive
-  public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
+  public Class<?> defineClass(byte[] code) {
     try {
-      Class<?> caller = Reflection.getCallerClass();
-      if (!caller.getName().startsWith("org.openjdk.btrace.")) {
+      // Use StackWalker instead of Reflection.getCallerClass() to avoid
+      // CallerSensitive annotation requirement (only works from bootstrap CL)
+      Class<?> caller =
+          StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+              .walk(frames -> frames.skip(1).findFirst())
+              .map(StackWalker.StackFrame::getDeclaringClass)
+              .orElse(null);
+      if (caller == null || !caller.getName().startsWith("org.openjdk.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
 
+      if (Runtime.version().feature() >= 15) {
+        // Hidden class path: lifetime is tied to Class<?> reachability, so no
+        // per-probe ClassLoader is needed. defineHiddenClass(..., initialize=true, ...)
+        // also performs class initialization, so we skip the explicit newInstance()
+        // that older paths use.
+        //
+        // Reflective invocation because this source set targets JDK 11 where
+        // defineHiddenClass and Lookup.ClassOption do not exist yet. The lookup
+        // must originate inside Auxiliary so it keeps the MODULE bit in
+        // masked-jar deployments — see Auxiliary#lookup.
+        MethodHandles.Lookup lookup = Auxiliary.lookup();
+        // No ClassOption.STRONG: with the default (non-strong) policy the hidden class
+        // is unloadable as soon as the Class<?> mirror is no longer strongly reachable
+        // from outside the JVM. STRONG would tie its lifetime to the defining loader
+        // (i.e. the Auxiliary loader, shared with the agent) which defeats unloading.
+        Class<?> classOptionClass =
+            Class.forName("java.lang.invoke.MethodHandles$Lookup$ClassOption");
+        Object optionArray = java.lang.reflect.Array.newInstance(classOptionClass, 0);
+        Method defineHidden =
+            MethodHandles.Lookup.class.getMethod(
+                "defineHiddenClass", byte[].class, boolean.class, optionArray.getClass());
+        Object hiddenLookup = defineHidden.invoke(lookup, code, true, optionArray);
+        Method lookupClassMtd = hiddenLookup.getClass().getMethod("lookupClass");
+        return (Class<?>) lookupClassMtd.invoke(hiddenLookup);
+      }
+
+      // JDK 11-14: fall back to per-probe anchor + isolated ClassLoader so the
+      // probe class and its defining loader become unreachable on detach.
+      // Pass the ClassLoader that can see BTraceUtils and other agent classes.
+      ClassLoader parent = BTraceRuntimeImpl_11.class.getClassLoader();
+      if (parent == null) {
+        // If BTraceRuntimeImpl_11 is in bootstrap, use the current thread's context CL
+        parent = Thread.currentThread().getContextClassLoader();
+      }
+      Class<?> anchor = ProbeAnchor.defineAnchor(parent);
       Class<?> clz =
-          MethodHandles.privateLookupIn(Auxiliary.class, MethodHandles.lookup()).defineClass(code);
+          MethodHandles.privateLookupIn(anchor, MethodHandles.lookup()).defineClass(code);
       // initialize the class by creating a dummy instance
       clz.getConstructor().newInstance();
       return clz;
     } catch (IllegalAccessException
+        | ClassNotFoundException
         | NoSuchMethodException
         | SecurityException
         | InstantiationException
-        | InvocationTargetException ignored) {
-
+        | InvocationTargetException e) {
+      Throwable root = e instanceof InvocationTargetException
+          ? ((InvocationTargetException) e).getTargetException()
+          : e;
+      throw new IllegalStateException(
+          "BTrace probe defineClass failed on JDK " + Runtime.version().feature(), root);
     }
-    return null;
   }
 
   @Override
@@ -271,6 +314,9 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
         .forEach(
             f -> {
+              if (f.getClassName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+                return;
+              }
               if (cont.getAndDecrement() == 0) {
                 cl.compareAndSet(null, f.getDeclaringClass().getClassLoader());
               }
@@ -285,6 +331,9 @@ public final class BTraceRuntimeImpl_11 extends BTraceRuntimeImplBase {
     StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
         .forEach(
             f -> {
+              if (f.getClassName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+                return;
+              }
               if (cont.getAndDecrement() == 0) {
                 cl.compareAndSet(null, f.getDeclaringClass());
               }

@@ -52,19 +52,73 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         // Create extension for metadata
         def extension = project.extensions.create('btraceExtension', BTraceExtensionMetadata)
         extension.version = project.version
-
-        // Configure source sets
-        project.sourceSets {
-            api {
-                java.srcDir 'src/api/java'
-                resources.srcDir 'src/api/resources'
+        def authoredSourceSet = {
+            project.sourceSets.main
+        }
+        def authoredOutput = {
+            authoredSourceSet().output
+        }
+        def authoredClassesDirs = {
+            authoredOutput().classesDirs.files
+        }
+        def authoredResourcesDir = {
+            authoredSourceSet().output.resourcesDir
+        }
+        def authoredCompileClasspath = {
+            authoredSourceSet().compileClasspath.files
+        }
+        def authoredCompileTask = {
+            project.tasks.named('compileJava')
+        }
+        def explicitServiceTypes = {
+            def services = extension.services as List<String>
+            if (services != null && !services.isEmpty()) {
+                return services
             }
-            impl {
-                java.srcDir 'src/impl/java'
-                resources.srcDir 'src/impl/resources'
-                compileClasspath += api.output
-                runtimeClasspath += api.output
+            return SingleSourceApiPartition.detectServiceTypes(authoredClassesDirs()) as List<String>
+        }
+        def apiIncludes = {
+            return SingleSourceApiPartition.classFileIncludes(
+                authoredClassesDirs(),
+                explicitServiceTypes(),
+                extension.additionalExports,
+                extension.excludedExports)
+        }
+        def apiTypes = {
+            return SingleSourceApiPartition.computeExportedTypes(
+                authoredClassesDirs(),
+                explicitServiceTypes(),
+                extension.additionalExports,
+                extension.excludedExports)
+        }
+        def isExportedApiType = { String fqcn ->
+            apiTypes().contains(fqcn)
+        }
+        def implTypes = {
+            def allTypes = SingleSourceApiPartition.collectAllTypes(authoredClassesDirs())
+            allTypes.removeAll(apiTypes())
+            return allTypes
+        }
+        def apiSourceIncludes = {
+            def includes = [] as LinkedHashSet<String>
+            def packages = [] as LinkedHashSet<String>
+            apiTypes().each { String fqcn ->
+                includes.add(fqcn.replace('.', '/') + '.java')
+                int idx = fqcn.lastIndexOf('.')
+                packages.add(idx >= 0 ? fqcn.substring(0, idx) : '')
             }
+            packages.each { String pkg ->
+                if (pkg == null || pkg.isEmpty()) {
+                    includes.add('package-info.java')
+                } else {
+                    includes.add(pkg.replace('.', '/') + '/package-info.java')
+                }
+            }
+            includes.add('module-info.java')
+            return includes
+        }
+        def apiSourceTree = {
+            project.fileTree(dir: project.file('src/main/java'), includes: apiSourceIncludes() as List<String>)
         }
 
         // Configure dependency configurations
@@ -75,6 +129,40 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             implImplementation.extendsFrom implementation
             implImplementation.extendsFrom apiImplementation
             implCompileOnly.extendsFrom compileOnly
+            implRuntimeClasspath {
+                canBeConsumed = false
+                canBeResolved = true
+                extendsFrom implImplementation
+            }
+        }
+        project.configurations.compileClasspath.extendsFrom(
+            project.configurations.apiCompileOnly,
+            project.configurations.implCompileOnly,
+            project.configurations.implImplementation,
+            project.configurations.apiImplementation)
+        project.configurations.runtimeClasspath.extendsFrom(
+            project.configurations.implImplementation,
+            project.configurations.apiImplementation)
+        project.configurations.testCompileClasspath.extendsFrom(
+            project.configurations.apiCompileOnly,
+            project.configurations.implCompileOnly,
+            project.configurations.implImplementation,
+            project.configurations.apiImplementation)
+        project.configurations.testRuntimeClasspath.extendsFrom(
+            project.configurations.apiCompileOnly,
+            project.configurations.implCompileOnly,
+            project.configurations.implImplementation,
+            project.configurations.apiImplementation)
+
+        // Auto-register @ExternalType annotation processor on the main source set.
+        // In-tree builds reference the sibling subproject directly; external consumers resolve
+        // the published artifact by version.
+        def processorProject = project.rootProject.findProject(':btrace-extension-processor')
+        if (processorProject != null) {
+            project.dependencies.add('annotationProcessor', processorProject)
+        } else {
+            project.dependencies.add('annotationProcessor',
+                "org.openjdk.btrace:btrace-extension-processor:${project.version}")
         }
 
         // Configure duplicate handling for resource tasks
@@ -84,24 +172,35 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         // Task: Build API JAR
         def buildApiJar = project.tasks.register('buildApiJar', Jar) {
-            from project.sourceSets.api.output
+            dependsOn(authoredCompileTask, project.tasks.named('processResources'))
+            from({
+                return project.files(authoredClassesDirs()).asFileTree.matching {
+                    include apiIncludes()
+                }
+            })
+            from({
+                def resourcesDir = authoredResourcesDir()
+                return resourcesDir != null ? project.files(resourcesDir) : project.files()
+            })
             archiveClassifier = 'api'
             archiveBaseName = project.name
         }
 
         // Task: Validate API service interfaces (practical subset of rules)
         def validateServiceApis = project.tasks.register('validateServiceApis') {
-            dependsOn project.tasks.named('compileApiJava')
+            dependsOn(authoredCompileTask)
             doLast {
                 // Lint: API classes with public constructors (discouraged; use service-provided builders)
                 def apiCtorIssues = [] as List<String>
-                project.sourceSets.api.output.classesDirs.files.each { File dir ->
+                authoredClassesDirs().each { File dir ->
                     if (!dir.exists()) return
                     dir.eachFileRecurse { f ->
                         if (!f.name.endsWith('.class')) return
                         def rel = dir.toPath().relativize(f.toPath()).toString()
                         def internalName = rel.replace(File.separatorChar, (char)'/').replaceAll(/\.class$/, '')
                         if (internalName.endsWith('package-info') || internalName.endsWith('module-info')) return
+                        def fqcn = internalName.replace('/', '.')
+                        if (!isExportedApiType(fqcn)) return
                         FileInputStream is = new FileInputStream(f)
                         byte[] bytes
                         try { bytes = is.bytes } finally { try { is.close() } catch (Throwable ignore) {} }
@@ -154,8 +253,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                         if (has) extDescCount++
                     }
                 }
-                project.sourceSets.api.output.classesDirs.files.each { scanForPkgDescriptors(it) }
-                try { project.sourceSets.impl.output.classesDirs.files.each { scanForPkgDescriptors(it) } } catch (Throwable ignore) {}
+                authoredClassesDirs().each { scanForPkgDescriptors(it) }
                 if (extDescCount > 1) {
                     throw new GradleException("[BTRACE-EXT] Found ${extDescCount} package-level @ExtensionDescriptor annotations. Only one is allowed per extension project (place it in API package-info.java).")
                 }
@@ -164,12 +262,13 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                 def services = extension.services as List<String>
                 if (!services || services.isEmpty()) {
                     def detected = new LinkedHashSet<String>()
-                    project.sourceSets.api.output.classesDirs.files.each { File dir ->
+                    authoredClassesDirs().each { File dir ->
                         if (!dir.exists()) return
                         dir.eachFileRecurse { f ->
                             if (!f.name.endsWith('.class')) return
                             def rel = dir.toPath().relativize(f.toPath()).toString()
                             def fq = rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, '')
+                            if (!isExportedApiType(fq)) return
                             FileInputStream is = new FileInputStream(f)
                             byte[] bytes
                             try { bytes = is.bytes } finally { try { is.close() } catch (Throwable ignore) {} }
@@ -192,8 +291,8 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                     }
                 }
                 def cp = new LinkedHashSet<File>()
-                cp.addAll(project.sourceSets.api.output.classesDirs.files)
-                try { cp.addAll(project.sourceSets.api.compileClasspath.files) } catch (Throwable ignore) {}
+                cp.addAll(authoredClassesDirs())
+                try { cp.addAll(authoredCompileClasspath()) } catch (Throwable ignore) {}
                 URLClassLoader cl = new URLClassLoader(cp.collect { it.toURI().toURL() } as URL[], (ClassLoader) null)
                 def errors = []
                 def warnings = []
@@ -201,27 +300,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                 def perServiceWarn = new LinkedHashMap<String, List<String>>()
 
                 // Build set of impl class names for purity checks
-                def implClassNames = new HashSet<String>()
-                project.sourceSets.impl.output.classesDirs.files.each { File dir ->
-                    if (!dir.exists()) return
-                    dir.eachFileRecurse { f ->
-                        if (f.name.endsWith('.class')) {
-                            def rel = dir.toPath().relativize(f.toPath()).toString()
-                            implClassNames.add(rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, ''))
-                        }
-                    }
-                }
-                // Build set of api class names to avoid false positives when impl and api share packages/types
-                def apiClassNames = new HashSet<String>()
-                project.sourceSets.api.output.classesDirs.files.each { File dir ->
-                    if (!dir.exists()) return
-                    dir.eachFileRecurse { f ->
-                        if (f.name.endsWith('.class')) {
-                            def rel = dir.toPath().relativize(f.toPath()).toString()
-                            apiClassNames.add(rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, ''))
-                        }
-                    }
-                }
+                def implClassNames = new HashSet<String>(implTypes())
 
                 // Nullability annotation descriptors (configurable)
                 def toDesc = { String fqcn -> 'L' + fqcn.replace('.', '/') + ';' }
@@ -261,7 +340,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                         def resName = fqcn.replace('.', '/') + '.class'
                         def is = cl.getResourceAsStream(resName)
                         if (is == null) {
-                            def msg = "Declared service '${fqcn}' not found in API output; ensure it is compiled in 'api' source set\n  Fix: Add interface to src/api/java and to btraceExtension.services."
+                            def msg = "Declared service '${fqcn}' not found in the exported API output\n  Fix: Keep the interface under src/main/java, ensure it is reachable from the export set, or list it in btraceExtension.services."
                             errors << msg; perService.computeIfAbsent(fqcn) { [] } << msg
                             return
                         }
@@ -393,7 +472,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                                     errors << msg; errs << msg
                                 }
                                 if (implClassNames.contains(n)) {
-                                    def msg = "API surface leaks implementation type in signature: ${n}\n  Fix: Do not expose implementation types from src/impl in API signatures."
+                                    def msg = "API surface leaks implementation type in signature: ${n}\n  Fix: Do not expose implementation-only types in API signatures."
                                     errors << msg; errs << msg
                                 }
                             }
@@ -442,7 +521,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                         // names to prevent false positives (e.g., substring matches in class names).
                         // Purity is enforced via explicit signature/generic parsing above.
                     } catch (ClassNotFoundException cnf) {
-                        def msg = "Declared service '${fqcn}' not found in API output; ensure it is compiled in 'api' source set\n  Fix: Add interface to src/api/java and to btraceExtension.services."
+                        def msg = "Declared service '${fqcn}' not found in the exported API output\n  Fix: Keep the interface under src/main/java, ensure it is reachable from the export set, or list it in btraceExtension.services."
                         errors << msg; perService.computeIfAbsent(fqcn) { [] } << msg
                     } catch (Throwable t) {
                         def msg = "Failed to analyze service '${fqcn}': ${t.message}"
@@ -505,7 +584,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         // Summary report task that never fails; emits grouped violations with fixes
         def serviceApiValidationReport = project.tasks.register('serviceApiValidationReport') {
-            dependsOn project.tasks.named('compileApiJava')
+            dependsOn(authoredCompileTask)
             doLast {
                 // Reuse the validation task to produce the report; do not fail build
                 try {
@@ -529,7 +608,12 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             def shadowJarProvider = project.tasks.named('shadowJar', Jar)
             project.afterEvaluate {
                 shadowJarProvider.configure {
-                    from project.sourceSets.impl.output
+                    dependsOn(authoredCompileTask)
+                    from({
+                        return project.files(authoredClassesDirs()).asFileTree.matching {
+                            exclude apiIncludes()
+                        }
+                    })
                     configurations = [project.configurations.implRuntimeClasspath]
                     archiveClassifier = 'impl'
                     archiveBaseName = project.name
@@ -570,6 +654,9 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                 dependsOn { implJarProviderRef[0] }
                 inputs.files(implArchiveProvider)
                 inputs.files(project.configurations.implRuntimeClasspath)
+                inputs.property('btraceExtension.services', { explicitServiceTypes().join(',') })
+                inputs.property('btraceExtension.additionalExports', { extension.additionalExports.join(',') })
+                inputs.property('btraceExtension.excludedExports', { extension.excludedExports.join(',') })
                 doFirst {
                     // Compute permissions: scan impl jar and transitive classpath, then merge with overrides
                     def implJar = implArchiveProvider.get().asFile
@@ -595,8 +682,8 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                     // Cross-check: ensure manifest permissions cover descriptor-declared requirements
                     try {
                         def cp = new LinkedHashSet<File>()
-                        cp.addAll(project.sourceSets.api.output.classesDirs.files)
-                        try { cp.addAll(project.sourceSets.api.compileClasspath.files) } catch (Throwable ignore) {}
+                        cp.addAll(authoredClassesDirs())
+                        try { cp.addAll(authoredCompileClasspath()) } catch (Throwable ignore) {}
                         URLClassLoader cl = new URLClassLoader(cp.collect { it.toURI().toURL() } as URL[], (ClassLoader) null)
                         def enumConstName = { Object enumConst ->
                             if (enumConst instanceof List && enumConst.size() >= 2) {
@@ -605,7 +692,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                             return null
                         }
                         Set<String> annotatedPerms = [] as Set
-                        (extension.services as List<String>).each { String fqcn ->
+                        explicitServiceTypes().each { String fqcn ->
                             try {
                                 def res = fqcn.replace('.', '/') + '.class'
                                 def is = cl.getResourceAsStream(res)
@@ -644,7 +731,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                             } catch (Throwable ignore) { }
                         }
                         // Also include package-level ExtensionDescriptor.permissions()
-                        project.sourceSets.api.output.classesDirs.files.each { File dir ->
+                        authoredClassesDirs().each { File dir ->
                             if (!dir.exists()) return
                             dir.eachFileRecurse { f ->
                                 if (!f.name.equals('package-info.class')) return
@@ -710,26 +797,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                             'BTrace-Extension-Services': {
                                 if (servicesStr && !servicesStr.isEmpty()) return servicesStr
                                 // If not explicitly configured, detect services via @ServiceDescriptor in API output
-                                def detected = new LinkedHashSet<String>()
-                                project.sourceSets.api.output.classesDirs.files.each { File dir ->
-                                    if (!dir.exists()) return
-                                    dir.eachFileRecurse { f ->
-                                        if (!f.name.endsWith('.class')) return
-                                        def rel = dir.toPath().relativize(f.toPath()).toString()
-                                        def fq = rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, '')
-                                        FileInputStream is = new FileInputStream(f)
-                                        byte[] bytes
-                                        try { bytes = is.bytes } finally { try { is.close() } catch (Throwable ignore) {} }
-                                        def cr = new ClassReader(bytes)
-                                        def cn = new ClassNode(); cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
-                                        boolean isInterface = (cn.access & Opcodes.ACC_INTERFACE) != 0
-                                        boolean hasMarker = false
-                                        (cn.visibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') }
-                                        (cn.invisibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') }
-                                        if (hasMarker && isInterface) detected.add(fq)
-                                    }
-                                }
-                                return detected.join(',')
+                                return explicitServiceTypes().join(',')
                             }.call(),
                             'BTrace-Extension-Requires': requiresStr,
                             'BTrace-Shaded-Packages': shadedPkgs,
@@ -765,22 +833,23 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         def shimsResDir = new File(project.buildDir, 'generated/resources/btraceShims')
 
         def generateServiceShims = project.tasks.register('generateServiceShims') {
-            dependsOn project.tasks.named('compileApiJava')
+            dependsOn(authoredCompileTask)
             doLast {
                 shimsSrcDir.mkdirs()
                 // Build ClassLoader over API outputs to reflect methods
                 def cp = new LinkedHashSet<File>()
-                cp.addAll(project.sourceSets.api.output.classesDirs.files)
-                try { cp.addAll(project.sourceSets.api.compileClasspath.files) } catch (Throwable ignore) {}
+                cp.addAll(authoredClassesDirs())
+                try { cp.addAll(authoredCompileClasspath()) } catch (Throwable ignore) {}
                 URLClassLoader cl = new URLClassLoader(cp.collect { it.toURI().toURL() } as URL[], (ClassLoader) null)
                 // Discover ALL API interfaces in the api output
                 def apiInterfaces = new LinkedHashSet<String>()
-                project.sourceSets.api.output.classesDirs.files.each { File dir ->
+                authoredClassesDirs().each { File dir ->
                     if (!dir.exists()) return
                     dir.eachFileRecurse { f ->
                         if (f.name.endsWith('.class')) {
                             def rel = dir.toPath().relativize(f.toPath()).toString()
                             def fq = rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, '')
+                            if (!isExportedApiType(fq)) return
                             // Use ASM to filter interfaces (skip annotations)
                             def is = new FileInputStream(f)
                             byte[] bytes
@@ -802,7 +871,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                 // Optionally restrict to interfaces reachable from services via descriptors + generics
                 def targetInterfaces = new LinkedHashSet<String>()
                 if (extension.generateShimsReachableOnly) {
-                    def services = (extension.services as List<String>) ?: []
+                    def services = explicitServiceTypes() ?: []
                     // BFS closure over referenced API interface types
                     def visited = new HashSet<String>()
                     def queue = new ArrayDeque<String>(services)
@@ -975,7 +1044,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             dependsOn generateServiceShims
             source = project.fileTree(shimsSrcDir)
             destinationDirectory.set(shimsClsDir)
-            classpath = project.files(project.sourceSets.api.output.classesDirs, project.sourceSets.api.compileClasspath)
+            classpath = project.files(authoredClassesDirs(), authoredCompileClasspath())
             options.release = 8
         }
 
@@ -984,12 +1053,13 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             doLast {
                 // Recompute the same target set as generateServiceShims (respect generateShimsReachableOnly)
                 def apiInterfaces = new LinkedHashSet<String>()
-                project.sourceSets.api.output.classesDirs.files.each { File dir ->
+                authoredClassesDirs().each { File dir ->
                     if (!dir.exists()) return
                     dir.eachFileRecurse { f ->
                         if (f.name.endsWith('.class')) {
                             def rel = dir.toPath().relativize(f.toPath()).toString()
                             def fq = rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, '')
+                            if (!isExportedApiType(fq)) return
                             def is = new FileInputStream(f)
                             byte[] bytes
                             try { bytes = is.bytes } finally { try { is.close() } catch (Throwable ignore) {} }
@@ -1003,15 +1073,15 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                 }
                 if (apiInterfaces.isEmpty()) return
                 def cp = new LinkedHashSet<File>()
-                cp.addAll(project.sourceSets.api.output.classesDirs.files)
-                try { cp.addAll(project.sourceSets.api.compileClasspath.files) } catch (Throwable ignore) {}
+                cp.addAll(authoredClassesDirs())
+                try { cp.addAll(authoredCompileClasspath()) } catch (Throwable ignore) {}
                 URLClassLoader cl = new URLClassLoader(cp.collect { it.toURI().toURL() } as URL[], (ClassLoader) null)
                 def targetInterfaces = new LinkedHashSet<String>()
                 if (extension.generateShimsReachableOnly) {
-                    def services = (extension.services as List<String>) ?: []
+                    def services = explicitServiceTypes() ?: []
                     if (services.isEmpty()) {
                         // fall back to detected annotated services
-                        project.sourceSets.api.output.classesDirs.files.each { File dir ->
+                        authoredClassesDirs().each { File dir ->
                             if (!dir.exists()) return
                             dir.eachFileRecurse { f ->
                                 if (!f.name.endsWith('.class')) return
@@ -1095,58 +1165,18 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         // Exports index: collect all API types referenced in service method signatures (return and params)
         def exportsResDir = new File(project.buildDir, 'generated/resources/btraceExports')
         def generateExportsIndex = project.tasks.register('generateExportsIndex') {
-            dependsOn project.tasks.named('compileApiJava')
+            dependsOn(authoredCompileTask)
             doLast {
-                def services = extension.services as List<String>
-                if (!services || services.isEmpty()) {
-                    def detected = new LinkedHashSet<String>()
-                    project.sourceSets.api.output.classesDirs.files.each { File dir ->
-                        if (!dir.exists()) return
-                        dir.eachFileRecurse { f ->
-                            if (!f.name.endsWith('.class')) return
-                            def rel = dir.toPath().relativize(f.toPath()).toString()
-                            def fq = rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, '')
-                            FileInputStream is = new FileInputStream(f)
-                            byte[] bytes
-                            try { bytes = is.bytes } finally { try { is.close() } catch (Throwable ignore) {} }
-                            def cr = new ClassReader(bytes)
-                            def cn = new ClassNode(); cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG)
-                            boolean isInterface = (cn.access & Opcodes.ACC_INTERFACE) != 0
-                            boolean hasMarker = false
-                            (cn.visibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') }
-                            (cn.invisibleAnnotations ?: []).each { hasMarker |= (it.desc == 'Lorg/openjdk/btrace/core/extensions/ServiceDescriptor;') }
-                            if (hasMarker && isInterface) detected.add(fq)
-                        }
-                    }
-                    services = detected as List<String>
-                }
+                def services = explicitServiceTypes()
                 if (!services || services.isEmpty()) return
                 def cp = new LinkedHashSet<File>()
-                cp.addAll(project.sourceSets.api.output.classesDirs.files)
-                try { cp.addAll(project.sourceSets.api.compileClasspath.files) } catch (Throwable ignore) {}
+                cp.addAll(authoredClassesDirs())
+                try { cp.addAll(authoredCompileClasspath()) } catch (Throwable ignore) {}
                 URLClassLoader cl = new URLClassLoader(cp.collect { it.toURI().toURL() } as URL[], (ClassLoader) null)
 
                 // Collect known API/impl class names to validate placement
-                def apiClassNames = new HashSet<String>()
-                project.sourceSets.api.output.classesDirs.files.each { File dir ->
-                    if (!dir.exists()) return
-                    dir.eachFileRecurse { f ->
-                        if (f.name.endsWith('.class')) {
-                            def rel = dir.toPath().relativize(f.toPath()).toString()
-                            apiClassNames.add(rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, ''))
-                        }
-                    }
-                }
-                def implClassNames = new HashSet<String>()
-                project.sourceSets.impl.output.classesDirs.files.each { File dir ->
-                    if (!dir.exists()) return
-                    dir.eachFileRecurse { f ->
-                        if (f.name.endsWith('.class')) {
-                            def rel = dir.toPath().relativize(f.toPath()).toString()
-                            implClassNames.add(rel.replace(File.separatorChar, (char)'.').replaceAll(/\.class$/, ''))
-                        }
-                    }
-                }
+                def apiClassNames = new HashSet<String>(apiTypes())
+                def implClassNames = new HashSet<String>(implTypes())
 
                 def exports = new LinkedHashSet<String>()
                 services.each { String fqcn ->
@@ -1288,14 +1318,17 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         // Aux tasks: API sources and javadoc jars
         def apiSourcesJar = project.tasks.register('apiSourcesJar', Jar) {
+            dependsOn(authoredCompileTask)
             archiveBaseName = project.name
             archiveClassifier = 'api-sources'
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            from project.sourceSets.api.allSource
+            from({ apiSourceTree() })
+            from(project.sourceSets.main.resources)
         }
         def apiJavadoc = project.tasks.register('apiJavadoc', Javadoc) {
-            source = project.sourceSets.api.allJava
-            classpath = project.files(project.sourceSets.api.output.classesDirs, project.sourceSets.api.compileClasspath)
+            dependsOn(authoredCompileTask)
+            source = project.files({ apiSourceTree() })
+            classpath = project.files(authoredClassesDirs(), authoredCompileClasspath())
             destinationDir = new File(project.buildDir, 'docs/api')
             options.encoding = 'UTF-8'
         }
@@ -1332,8 +1365,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         // Tests can see both api and impl outputs
         project.afterEvaluate {
             project.dependencies {
-                testImplementation project.sourceSets.api.output
-                testImplementation project.sourceSets.impl.output
+                testImplementation project.sourceSets.main.output
             }
             // Fail build on validation errors via check lifecycle
             project.tasks.matching { it.name == 'check' }.configureEach { it.dependsOn validateServiceApis }
@@ -1347,6 +1379,8 @@ class BTraceExtensionMetadata {
     String name
     String description
     List<String> services = []
+    List<String> additionalExports = []
+    List<String> excludedExports = []
     List<String> requiresExtensions = []
     Map<String, String> shadedPackages = [:]
     // Whether to auto-apply the Shadow plugin. Default: true

@@ -43,6 +43,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
@@ -126,9 +127,10 @@ public class FatAgentMojo extends AbstractMojo {
 
     getLog().info("Building BTrace fat agent JAR...");
 
+    Path stagingDir = null;
     try {
       // Create staging directory
-      Path stagingDir = Files.createTempDirectory("btrace-fat-agent-staging");
+      stagingDir = Files.createTempDirectory("btrace-fat-agent-staging");
 
       // Resolve and extract base agent JAR
       File agentJar = resolveArtifact(BTRACE_GROUP_ID, BTRACE_AGENT_ARTIFACT_ID, btraceVersion);
@@ -168,11 +170,21 @@ public class FatAgentMojo extends AbstractMojo {
       // Attach artifact to project
       project.getArtifact().setFile(outputJar);
 
-      // Cleanup
-      deleteDirectory(stagingDir.toFile());
-
     } catch (IOException e) {
       throw new MojoExecutionException("Failed to build fat agent JAR", e);
+    } finally {
+      if (stagingDir != null) {
+        try {
+          deleteDirectory(stagingDir.toFile());
+        } catch (RuntimeException cleanupFailure) {
+          getLog()
+              .warn(
+                  "Failed to clean up fat-agent staging directory "
+                      + stagingDir
+                      + ": "
+                      + cleanupFailure);
+        }
+      }
     }
   }
 
@@ -444,21 +456,24 @@ public class FatAgentMojo extends AbstractMojo {
       Set<String> addedEntries = new HashSet<>();
       addedEntries.add("META-INF/MANIFEST.MF"); // Already added via constructor
 
-      Files.walk(sourceDir).forEach(path -> {
-        if (Files.isRegularFile(path)) {
-          String entryName = sourceDir.relativize(path).toString().replace('\\', '/');
-          if (!addedEntries.contains(entryName)) {
-            try {
-              jos.putNextEntry(new ZipEntry(entryName));
-              Files.copy(path, jos);
-              jos.closeEntry();
-              addedEntries.add(entryName);
-            } catch (IOException e) {
-              throw new RuntimeException("Failed to add entry: " + entryName, e);
-            }
-          }
-        }
-      });
+      try (Stream<Path> stream = Files.walk(sourceDir)) {
+        stream.forEach(
+            path -> {
+              if (Files.isRegularFile(path)) {
+                String entryName = sourceDir.relativize(path).toString().replace('\\', '/');
+                if (!addedEntries.contains(entryName)) {
+                  try {
+                    jos.putNextEntry(new ZipEntry(entryName));
+                    Files.copy(path, jos);
+                    jos.closeEntry();
+                    addedEntries.add(entryName);
+                  } catch (IOException e) {
+                    throw new RuntimeException("Failed to add entry: " + entryName, e);
+                  }
+                }
+              }
+            });
+      }
     }
   }
 

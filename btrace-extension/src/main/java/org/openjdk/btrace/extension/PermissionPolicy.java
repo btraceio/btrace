@@ -6,9 +6,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Minimal process-wide policy: per-extension allow/deny plus a global allowPrivileged flag.
@@ -24,9 +24,9 @@ public final class PermissionPolicy {
     return INSTANCE;
   }
 
-  // allow/deny lists (extension IDs)
-  private final Set<String> allowExtIds = new HashSet<>();
-  private final Set<String> denyExtIds = new HashSet<>();
+  // allow/deny lists (extension IDs) - use thread-safe sets
+  private final Set<String> allowExtIds = ConcurrentHashMap.newKeySet();
+  private final Set<String> denyExtIds = ConcurrentHashMap.newKeySet();
 
   // global switch to allow all privileged extensions
   private volatile boolean allowPrivileged = false;

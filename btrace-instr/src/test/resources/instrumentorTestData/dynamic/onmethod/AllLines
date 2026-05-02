@@ -5,7 +5,7 @@ LDC "<init>"
 LDC 41
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -16,7 +16,7 @@ LDC "<init>"
 LDC 42
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -32,7 +32,7 @@ LDC "<init>"
 LDC 43
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -47,7 +47,7 @@ LDC "<init>"
 LDC 45
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -58,7 +58,7 @@ LDC "<init>"
 LDC 46
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -74,7 +74,7 @@ LDC "<init>"
 LDC 47
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -90,7 +90,7 @@ LDC "noargs"
 LDC 50
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -106,7 +106,7 @@ LDC "noargs$static"
 LDC 53
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -120,7 +120,7 @@ LDC "args"
 LDC 57
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -140,7 +140,7 @@ LDC "args$static"
 LDC 61
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -159,7 +159,7 @@ LDC "callTopLevelStatic"
 LDC 65
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -174,7 +174,7 @@ LDC "callTopLevelStatic"
 LDC 66
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -191,7 +191,7 @@ LDC "callTargetStatic"
 LDC 70
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -207,7 +207,7 @@ LDC "callTopLevel"
 LDC 74
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -225,7 +225,7 @@ LDC "callTarget"
 LDC 78
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -243,7 +243,7 @@ LDC "exception"
 LDC 83
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -256,7 +256,7 @@ LDC "exception"
 LDC 84
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -271,7 +271,7 @@ LDC "exception"
 LDC 85
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -286,7 +286,7 @@ LDC "exception"
 LDC 87
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -303,7 +303,7 @@ LDC "uncaught"
 LDC 90
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -318,7 +318,7 @@ LDC "array"
 LDC 94
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -333,7 +333,7 @@ LDC "array"
 LDC 96
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -348,7 +348,7 @@ LDC "array"
 LDC 97
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -363,7 +363,7 @@ LDC "array"
 LDC 98
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -380,7 +380,7 @@ LDC "field"
 LDC 101
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -396,7 +396,7 @@ LDC "field"
 LDC 102
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -411,7 +411,7 @@ LDC "newObject"
 LDC 105
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -426,7 +426,7 @@ LDC "newObject"
 LDC 106
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -443,7 +443,7 @@ LDC "newArray"
 LDC 109
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -458,7 +458,7 @@ LDC "newArray"
 LDC 110
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -473,7 +473,7 @@ LDC "newArray"
 LDC 111
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -488,7 +488,7 @@ LDC "newArray"
 LDC 112
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -503,7 +503,7 @@ LDC "newArray"
 LDC 113
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -523,7 +523,7 @@ LDC "casts"
 LDC 116
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -538,7 +538,7 @@ LDC "casts"
 LDC 117
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -553,7 +553,7 @@ LDC "casts"
 LDC 119
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -569,7 +569,7 @@ LDC "casts"
 LDC 120
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -584,7 +584,7 @@ LDC "casts"
 LDC 122
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -601,7 +601,7 @@ LDC "sync"
 LDC 125
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -615,7 +615,7 @@ LDC "sync"
 LDC 126
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -630,7 +630,7 @@ LDC "sync"
 LDC 127
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -646,7 +646,7 @@ LDC "sync"
 LDC 128
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -661,7 +661,7 @@ LDC "callTopLevel1"
 LDC 131
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -677,7 +677,7 @@ LDC "callTopLevel1"
 LDC 132
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -695,7 +695,7 @@ LDC "calLTargetX"
 LDC 136
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -713,7 +713,7 @@ LDC "argsMultiReturn"
 LDC 140
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -729,7 +729,7 @@ LDC "argsMultiReturn"
 LDC 141
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -744,7 +744,7 @@ LDC "argsMultiReturn"
 LDC 144
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -759,7 +759,7 @@ LDC "argsMultiReturn"
 LDC 145
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -774,7 +774,7 @@ LDC "argsMultiReturn"
 LDC 149
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -788,7 +788,7 @@ LDC "argsMultiReturn"
 LDC 150
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -807,7 +807,7 @@ LDC "staticField"
 LDC 161
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -822,7 +822,7 @@ LDC "staticField"
 LDC 162
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -836,7 +836,7 @@ LDC "syncM"
 LDC 165
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -850,7 +850,7 @@ LDC "syncM"
 LDC 166
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -865,7 +865,7 @@ LDC "syncM"
 LDC 167
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -882,7 +882,7 @@ LDC "syncM"
 LDC 168
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -898,7 +898,7 @@ LDC "argsTypeMatch"
 LDC 173
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -915,7 +915,7 @@ LDC "caught"
 LDC 178
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -928,7 +928,7 @@ LDC "caught"
 LDC 179
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -943,7 +943,7 @@ LDC "caught"
 LDC 180
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]
@@ -958,7 +958,7 @@ LDC "caught"
 LDC 182
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/AllLines"
 ]

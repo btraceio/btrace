@@ -38,12 +38,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import org.openjdk.btrace.core.aggregation.HistogramData;
 
 /**
  * A data command that holds tabular data.
  *
- * <p>The elements contained within the grid must be of type Number, String or HistogramData.
+ * <p>The elements contained within the grid must be of type Number or String.
  *
  * @author Christian Glencross
  */
@@ -63,6 +62,7 @@ public class GridDataCommand extends DataCommand {
     typeFormats.put(String.class, "%-50s");
   }
 
+  private List<String> columnNames;
   private List<Object[]> data;
   private String format;
 
@@ -82,7 +82,7 @@ public class GridDataCommand extends DataCommand {
    * @param data The aggregation data
    */
   public GridDataCommand(String name, List<Object[]> data) {
-    this(name, data, null);
+    this(name, null, data, null);
   }
 
   /**
@@ -96,13 +96,26 @@ public class GridDataCommand extends DataCommand {
    * @see String#format(java.lang.String, java.lang.Object[])
    */
   public GridDataCommand(String name, List<Object[]> data, String format) {
+    this(name, null, data, format);
+  }
+
+  public GridDataCommand(String name, List<String> columnNames, List<Object[]> data) {
+    this(name, columnNames, data, null);
+  }
+
+  public GridDataCommand(String name, List<String> columnNames, List<Object[]> data, String format) {
     super(GRID_DATA, name, false);
+    this.columnNames = columnNames != null ? new ArrayList<>(columnNames) : null;
     this.data = data;
     this.format = format;
   }
 
   public List<Object[]> getData() {
     return data;
+  }
+
+  public List<String> getColumnNames() {
+    return columnNames != null ? new ArrayList<>(columnNames) : null;
   }
 
   /**
@@ -142,18 +155,11 @@ public class GridDataCommand extends DataCommand {
         if (dataRow == null) {
           continue;
         }
-        // Convert histograms to strings, and pretty-print multi-line text
+        // Pretty-print multi-line text
         Object[] printRow = dataRow.clone();
         for (int i = 0; i < printRow.length; i++) {
           if (printRow[i] == null) {
             printRow[i] = "<null>";
-          }
-          if (printRow[i] instanceof HistogramData) {
-            StringWriter buffer = new StringWriter();
-            PrintWriter writer = new PrintWriter(buffer);
-            ((HistogramData) printRow[i]).print(writer);
-            writer.flush();
-            printRow[i] = buffer.toString();
           }
           if (printRow[i] instanceof String) {
             String value = (String) printRow[i];
@@ -222,8 +228,16 @@ public class GridDataCommand extends DataCommand {
   @Override
   protected void write(ObjectOutput out) throws IOException {
     out.writeUTF(name != null ? name : "");
+    out.writeUTF(format != null ? format : "");
+    if (columnNames != null) {
+      out.writeInt(columnNames.size());
+      for (String columnName : columnNames) {
+        out.writeUTF(columnName != null ? columnName : "");
+      }
+    } else {
+      out.writeInt(0);
+    }
     if (data != null) {
-      out.writeUTF(format != null ? format : "");
       out.writeInt(data.size());
       for (Object[] row : data) {
         out.writeInt(row.length);
@@ -241,6 +255,13 @@ public class GridDataCommand extends DataCommand {
     name = in.readUTF();
     format = in.readUTF();
     if (format.length() == 0) format = null;
+
+    int columnCount = in.readInt();
+    columnNames = new ArrayList<>(columnCount);
+    for (int i = 0; i < columnCount; i++) {
+      String columnName = in.readUTF();
+      columnNames.add(columnName.length() == 0 ? null : columnName);
+    }
 
     int rowCount = in.readInt();
     data = new ArrayList<>(rowCount);

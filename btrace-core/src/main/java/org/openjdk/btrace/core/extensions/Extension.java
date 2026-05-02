@@ -44,7 +44,7 @@ package org.openjdk.btrace.core.extensions;
  * </pre>
  */
 public abstract class Extension implements AutoCloseable {
-  private ExtensionContext context;
+  private volatile ExtensionContext context;
 
   /**
    * Initializes this extension with the provided context.

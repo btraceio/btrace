@@ -211,7 +211,7 @@ public abstract class InstrumentorTestBase {
         cr.accept(cv, ClassReader.SKIP_DEBUG);
         code = cw.toByteArray();
         Class<?> rtClz = Class.forName("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9");
-        rtClz.getMethod("defineClass", byte[].class).invoke(null, code);
+        rtClz.getMethod("defineClassInAuxiliary", byte[].class).invoke(null, code);
       }
     } else {
       System.err.println("Unable to process trace " + origName);

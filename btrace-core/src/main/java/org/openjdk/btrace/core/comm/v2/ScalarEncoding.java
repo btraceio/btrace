@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+
 /**
  * Helper to encode/decode common scalar types with configurable type codes.
  * Supported: null, String, Integer, Long, Float, Double, Boolean.
@@ -16,7 +17,6 @@ final class ScalarEncoding {
   private final byte floatCode;
   private final byte doubleCode;
   private final byte booleanCode;
-
   ScalarEncoding(
       byte nullCode,
       byte stringCode,
@@ -85,4 +85,3 @@ final class ScalarEncoding {
     }
   }
 }
-

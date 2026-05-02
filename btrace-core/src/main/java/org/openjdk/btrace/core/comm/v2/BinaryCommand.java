@@ -30,16 +30,34 @@ public abstract class BinaryCommand {
     public static final byte LIST_PROBES = 14;
     public static final byte DISCONNECT = 15;
     public static final byte RECONNECT = 16;
+    public static final byte LIST_FAILED_EXTENSIONS = 17;
 
     public static final byte FIRST_COMMAND = ERROR;
-    public static final byte LAST_COMMAND = RECONNECT;
+    public static final byte LAST_COMMAND = LIST_FAILED_EXTENSIONS;
 
     // Used for command registration and creation
     private static final Map<Byte, Supplier<BinaryCommand>> COMMAND_FACTORIES = new HashMap<>();
 
     // Register command factories
     static {
-        // Commands will register themselves here
+        registerCommand(ERROR, BinaryErrorCommand::new);
+        registerCommand(EVENT, BinaryEventCommand::new);
+        registerCommand(EXIT, BinaryExitCommand::new);
+        registerCommand(INSTRUMENT, BinaryInstrumentCommand::new);
+        registerCommand(MESSAGE, BinaryMessageCommand::new);
+        registerCommand(RENAME, BinaryRenameCommand::new);
+        registerCommand(STATUS, BinaryStatusCommand::new);
+        registerCommand(NUMBER_MAP, BinaryNumberMapDataCommand::new);
+        registerCommand(STRING_MAP, BinaryStringMapDataCommand::new);
+        registerCommand(NUMBER, BinaryNumberDataCommand::new);
+        registerCommand(GRID_DATA, BinaryGridDataCommand::new);
+        registerCommand(RETRANSFORMATION_START, BinaryRetransformationStartNotification::new);
+        registerCommand(RETRANSFORM_CLASS, BinaryRetransformClassNotification::new);
+        registerCommand(SET_PARAMS, BinarySetSettingsCommand::new);
+        registerCommand(LIST_PROBES, BinaryListProbesCommand::new);
+        registerCommand(DISCONNECT, BinaryDisconnectCommand::new);
+        registerCommand(RECONNECT, BinaryReconnectCommand::new);
+        registerCommand(LIST_FAILED_EXTENSIONS, BinaryListFailedExtensionsCommand::new);
     }
 
     /**

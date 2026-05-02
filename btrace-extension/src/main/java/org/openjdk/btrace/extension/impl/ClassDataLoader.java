@@ -51,6 +51,13 @@ import java.util.concurrent.ConcurrentMap;
  */
 public final class ClassDataLoader extends ClassLoader {
 
+  static {
+    // Register as parallel-capable so getClassLoadingLock(name) works correctly.
+    // Canonical pattern — see ClassLoader.registerAsParallelCapable() javadoc:
+    // "This method should be called during class initialization."
+    ClassLoader.registerAsParallelCapable();
+  }
+
   private static final String CLASSDATA_SUFFIX = ".classdata";
   private static final int BUFFER_SIZE = 8192;
 
@@ -68,41 +75,46 @@ public final class ClassDataLoader extends ClassLoader {
   public ClassDataLoader(String extensionId, ClassLoader resourceLoader, ClassLoader parent) {
     super(parent);
     this.extensionId = extensionId;
-    this.resourceLoader = resourceLoader;
+    this.resourceLoader = resourceLoader != null ? resourceLoader : ClassLoader.getSystemClassLoader();
   }
 
   @Override
   protected Class<?> findClass(String name) throws ClassNotFoundException {
-    // Check cache first
+    // Lock-free fast path for warm cache: avoids taking the per-name class-loading lock
+    // when the class has already been defined.
     Class<?> cached = loadedClasses.get(name);
-    if (cached != null) {
-      return cached;
-    }
+    if (cached != null) return cached;
 
-    String resourcePath = name.replace('.', '/') + CLASSDATA_SUFFIX;
-    byte[] classBytes = loadClassData(resourcePath);
-    if (classBytes == null) {
-      throw new ClassNotFoundException(name + " (no .classdata resource found)");
+    // Serialize the defineClass path per name so two threads racing on the same class
+    // cannot both reach defineClass and trigger a LinkageError.
+    synchronized (getClassLoadingLock(name)) {
+      cached = loadedClasses.get(name);
+      if (cached != null) return cached;
+      String resourcePath = name.replace('.', '/') + CLASSDATA_SUFFIX;
+      byte[] classBytes;
+      try {
+        classBytes = loadClassData(resourcePath);
+      } catch (IOException e) {
+        throw new ClassNotFoundException(name + " (error reading .classdata resource)", e);
+      }
+      if (classBytes == null) {
+        throw new ClassNotFoundException(name + " (no .classdata resource found)");
+      }
+      if (!isValidClassFile(classBytes)) {
+        throw new ClassNotFoundException(name + " (invalid class file format)");
+      }
+      Class<?> clazz = defineClass(name, classBytes, 0, classBytes.length);
+      loadedClasses.put(name, clazz);
+      return clazz;
     }
-
-    // Validate bytecode before defining - ensures we're loading a valid class file
-    if (!isValidClassFile(classBytes)) {
-      throw new ClassNotFoundException(name + " (invalid class file format)");
-    }
-
-    Class<?> clazz = defineClass(name, classBytes, 0, classBytes.length);
-    Class<?> existing = loadedClasses.putIfAbsent(name, clazz);
-    return existing != null ? existing : clazz;
   }
 
-  private byte[] loadClassData(String resourcePath) {
+  private byte[] loadClassData(String resourcePath) throws IOException {
     try (InputStream is = resourceLoader.getResourceAsStream(resourcePath)) {
       if (is == null) {
         return null;
       }
       return readAllBytes(is);
-    } catch (IOException e) {
-      return null;
     }
   }
 

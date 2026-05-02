@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'org.openjdk.btrace'
-version = '2.3.0-SNAPSHOT'
+version = rootProject.version
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11

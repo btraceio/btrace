@@ -1,0 +1,21 @@
+plugins {
+    id 'java-library'
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+            'Premain-Class': 'org.openjdk.btrace.boot.Loader',
+            'Agent-Class': 'org.openjdk.btrace.boot.Loader',
+            'Main-Class': 'org.openjdk.btrace.boot.Loader',
+            'Can-Redefine-Classes': true,
+            'Can-Retransform-Classes': true
+        )
+    }
+}

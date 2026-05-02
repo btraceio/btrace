@@ -456,20 +456,10 @@ public class MethodInstrumentor extends BTraceMethodVisitor {
   }
 
   private Label levelCheck(OnMethod om, String className, boolean saveResult) {
-    Label l = null;
-    Level level = om.getLevel();
-    if (isLevelCheck(level)) {
-      l = new Label();
-      if (saveResult) {
-        // must store the level in a local var to be consistent
-        asm.compareLevel(className, level).dup();
-        levelCheckVar = storeAsNew();
-        asm.jump(IFLT, l);
-      } else {
-        asm.addLevelCheck(className, level, l);
-      }
-    }
-    return l;
+    // Level checks moved to MethodHandle layer (HandlerRepositoryImpl.applyLevelGuard).
+    // No bytecode-level level guards are needed; the INVOKEDYNAMIC will execute
+    // unconditionally, and the linked MethodHandle will perform the level check.
+    return null;
   }
 
   protected Label levelCheck(OnMethod om, String className) {

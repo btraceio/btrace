@@ -6,6 +6,7 @@ import java.io.ObjectOutput;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -24,6 +25,10 @@ public class ListProbesCommand extends Command implements PrintableCommand {
     if (probes != null && !probes.isEmpty()) {
       this.probes.addAll(probes);
     }
+  }
+
+  public List<String> getProbes() {
+    return new ArrayList<>(probes);
   }
 
   @Override
