@@ -98,6 +98,8 @@ public class Client {
   private static final String DTRACE_DESC;
   private static final String DTRACE_REF_DESC;
   private static boolean dtraceEnabled;
+  private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> MASKED_JAR_CACHE =
+      new java.util.concurrent.ConcurrentHashMap<>();
   private static Method submitFile;
   private static Method submitString;
 
@@ -830,8 +832,7 @@ public class Client {
       }
 
       if (sock == null) {
-        log.debug("server not available. exiting.");
-        System.exit(1);
+        throw new IOException("BTrace server not available at port " + port);
       }
       protocol = createProtocol(sock, host, true);
       protocol.write(new ListProbesCommand());
@@ -872,8 +873,7 @@ public class Client {
       }
 
       if (sock == null) {
-        log.debug("server not available. exiting.");
-        System.exit(1);
+        throw new IOException("BTrace server not available at port " + port);
       }
       protocol = createProtocol(sock, host, true);
       protocol.write(new ListFailedExtensionsCommand());
@@ -915,8 +915,7 @@ public class Client {
       }
 
       if (sock == null) {
-        log.debug("server not available. exiting.");
-        System.exit(1);
+        throw new IOException("BTrace server not available at port " + port);
       }
       protocol = createProtocol(sock, host, true);
 
@@ -1197,6 +1196,15 @@ public class Client {
    * Check if a JAR file has the masked JAR structure (contains Loader and masked .classdata files)
    */
   private boolean isMaskedJar(File jarFile) {
+    String key = jarFile.getAbsolutePath();
+    Boolean cached = MASKED_JAR_CACHE.get(key);
+    if (cached != null) return cached;
+    boolean result = computeIsMaskedJar(jarFile);
+    MASKED_JAR_CACHE.put(key, result);
+    return result;
+  }
+
+  private boolean computeIsMaskedJar(File jarFile) {
     try (JarFile jar = new JarFile(jarFile)) {
       // Check for Loader class (unmasked entry point)
       if (jar.getJarEntry("org/openjdk/btrace/boot/Loader.class") == null) {

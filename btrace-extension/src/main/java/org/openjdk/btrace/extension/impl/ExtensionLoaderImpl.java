@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 /**
  * Manages discovery, loading, and lifecycle of BTrace extensions.
  */
-public final class ExtensionLoaderImpl extends ExtensionLoader {
+public final class ExtensionLoaderImpl extends ExtensionLoader implements java.io.Closeable {
   private static final Logger log = LoggerFactory.getLogger(ExtensionLoaderImpl.class);
 
   private final List<ExtensionRepository> repositories;
@@ -54,7 +54,9 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
   private final ExtensionConfig config;
   private final Instrumentation instrumentation;
   private final Map<String, ExtensionDescriptorDTO> loadedExtensions;
+  // Populated once by discoverExtensions() at startup; read-only after that.
   private final Map<String, ExtensionDescriptorDTO> availableExtensions;
+  private final List<JarFile> openApiJars = new ArrayList<>();
 
   /**
    * Create an extension loader.
@@ -205,12 +207,12 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
       }
 
       // Add API JAR to bootstrap classpath
-      // Note: JarFile must be closed after appendToBootstrapClassLoaderSearch as the
-      // instrumentation API does not take ownership of the file handle
-      try (JarFile apiJarFile = new JarFile(apiJar.toFile())) {
-        instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
-        log.debug("Added {} to bootstrap classpath", apiJar.getFileName());
-      }
+      // Keep the JarFile open for the lifetime of the loader; HotSpot may need
+      // the file descriptor to read class bytes after appendToBootstrapClassLoaderSearch.
+      JarFile apiJarFile = new JarFile(apiJar.toFile());
+      instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
+      openApiJars.add(apiJarFile);
+      log.debug("Added {} to bootstrap classpath", apiJar.getFileName());
 
       // Create classloader for implementation JAR
       URL implUrl = implJar.toUri().toURL();
@@ -292,12 +294,12 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
         log.warn("No API JAR found for extension {} in {}", descriptor.getId(), extensionDir);
         return false;
       }
-      // Note: JarFile must be closed after appendToBootstrapClassLoaderSearch as the
-      // instrumentation API does not take ownership of the file handle
-      try (JarFile apiJarFile = new JarFile(apiJar.toFile())) {
-        instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
-        log.debug("Ensured API on bootstrap for extension {} via {}", descriptor.getId(), apiJar.getFileName());
-      }
+      // Keep the JarFile open for the lifetime of the loader; HotSpot may need
+      // the file descriptor to read class bytes after appendToBootstrapClassLoaderSearch.
+      JarFile apiJarFile = new JarFile(apiJar.toFile());
+      instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
+      openApiJars.add(apiJarFile);
+      log.debug("Ensured API on bootstrap for extension {} via {}", descriptor.getId(), apiJar.getFileName());
       return true;
     } catch (Exception e) {
       log.warn("Failed to ensure API on bootstrap for {}: {}", descriptor.getId(), e.getMessage(), e);
@@ -376,6 +378,14 @@ public final class ExtensionLoaderImpl extends ExtensionLoader {
    */
   public ExtensionDescriptorDTO getExtension(String extensionId) {
     return availableExtensions.get(extensionId);
+  }
+
+  @Override
+  public void close() {
+    for (JarFile jf : openApiJars) {
+      try { jf.close(); } catch (java.io.IOException ignore) {}
+    }
+    openApiJars.clear();
   }
 
   /**

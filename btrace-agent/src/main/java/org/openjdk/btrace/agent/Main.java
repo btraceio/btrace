@@ -393,6 +393,9 @@ public final class Main {
       // Initialize extension loader with boot classloader as parent, configuration, and instrumentation
       // Passing null btraceHome enables embedded-only mode (extensions from JAR resources)
       ClassLoader bootClassLoader = Main.class.getClassLoader();
+      if (bootClassLoader == null) {
+        bootClassLoader = ClassLoader.getSystemClassLoader();
+      }
       extensionLoader = ExtensionLoader.initialize(btraceHome, bootClassLoader, inst);
 
       // Initialize invokedynamic bridge for extensions after loader is ready
@@ -476,11 +479,6 @@ public final class Main {
 
   /**
    * Load an embedded probe from classpath resources.
-   *
-   * <p>Embedded probe activation is not yet wired through {@code BTraceProbeFactory} and the
-   * transformer pipeline, so this method currently verifies the resource exists and warns the
-   * operator that the {@code probes=} argument is a no-op. It returns {@code false} so the caller
-   * does not emit a misleading "Loaded bundled probe" info line.
    */
   private static boolean loadEmbeddedProbe(String resourcePath, String probeName, boolean traceToStdOut) {
     ClassLoader loader = Main.class.getClassLoader();
@@ -492,16 +490,14 @@ public final class Main {
         return false;
       }
       byte[] probeBytes = readAllBytes(is);
-      log.warn(
-          "Embedded probe {} found at {} ({} bytes) but probe activation is not yet implemented; "
-              + "the 'probes=' agent argument is currently a no-op. Configure the probe via the "
-              + "client submit path instead.",
-          probeName,
-          resourcePath,
-          probeBytes.length);
-      return false;
+      java.io.File tmp = java.io.File.createTempFile("btrace-probe-" + probeName, ".class");
+      tmp.deleteOnExit();
+      try (java.io.FileOutputStream fos = new java.io.FileOutputStream(tmp)) {
+        fos.write(probeBytes);
+      }
+      return loadBTraceScript(tmp.getAbsolutePath(), traceToStdOut);
     } catch (IOException e) {
-      log.warn("Failed to read embedded probe {}: {}", probeName, e.getMessage());
+      log.warn("Failed to load embedded probe {}: {}", probeName, e.getMessage());
       return false;
     }
   }
@@ -922,17 +918,21 @@ public final class Main {
     }
     log.debug("Bootstrap ClassPath: {}", bootClassPath);
 
-    StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
-    while (tokenizer.hasMoreTokens()) {
-      String path = tokenizer.nextToken();
-      File f = new File(path);
-      if (!f.exists()) {
-        log.debug("BTrace bootstrap classpath resource [{}] does not exist", path);
-      } else {
-        if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-          appendBootJar(f.toPath());
+    if (bootClassPath == null || bootClassPath.isEmpty()) {
+      log.debug("No boot classpath configured; skipping bootstrap jar setup");
+    } else {
+      StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
+      while (tokenizer.hasMoreTokens()) {
+        String path = tokenizer.nextToken();
+        File f = new File(path);
+        if (!f.exists()) {
+          log.debug("BTrace bootstrap classpath resource [{}] does not exist", path);
         } else {
-          log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
+          if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+            appendBootJar(f.toPath());
+          } else {
+            log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
+          }
         }
       }
     }
@@ -940,7 +940,7 @@ public final class Main {
     String systemClassPath = argMap.get(SYSTEM_CLASS_PATH);
     if (systemClassPath != null) {
       log.debug("System ClassPath: {}", systemClassPath);
-      tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
+      StringTokenizer tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
       while (tokenizer.hasMoreTokens()) {
         String path = tokenizer.nextToken();
         File f = new File(path);
@@ -1024,26 +1024,33 @@ public final class Main {
     }
   }
 
+  // Resolved once; null means pre-JPMS JarFile constructor should be used.
+  private static final java.lang.reflect.Constructor<?> JPMS_JAR_CTOR = resolveJpmsJarCtor();
+
+  @SuppressWarnings("JavaReflectionMemberAccess")
+  private static java.lang.reflect.Constructor<?> resolveJpmsJarCtor() {
+    try {
+      Class.forName("java.lang.Module");
+      Class<Runtime> rtClass = Runtime.class;
+      java.lang.reflect.Method m = rtClass.getMethod("version");
+      Object version = m.invoke(null);
+      return JarFile.class.getConstructor(
+          File.class, boolean.class, int.class, version.getClass());
+    } catch (Exception ignore) {
+      return null;
+    }
+  }
+
   @SuppressWarnings("JavaReflectionMemberAccess")
   private static JarFile asJarFile(File path) throws IOException {
-    try {
-      Class.forName("java.lang.Module"); // bail out early if on pre Java 9 version
-      Class<Runtime> rtClass = Runtime.class;
-      Method m = rtClass.getMethod("version");
-      Object version = m.invoke(null);
-      // JPMS enabled version of JarFile has different constructor signature
-      return JarFile.class
-          .getConstructor(File.class, boolean.class, int.class, version.getClass())
-          .newInstance(path, true, ZipFile.OPEN_READ, version);
-    } catch (ClassNotFoundException
-        | NoSuchMethodException
-        | InstantiationException
-        | IllegalAccessException
-        | IllegalArgumentException
-        | InvocationTargetException
-        | SecurityException ignore) {
+    if (JPMS_JAR_CTOR != null) {
+      try {
+        Class<Runtime> rtClass = Runtime.class;
+        Object version = rtClass.getMethod("version").invoke(null);
+        return (JarFile) JPMS_JAR_CTOR.newInstance(path, true, ZipFile.OPEN_READ, version);
+      } catch (Exception ignore) {
+      }
     }
-
     return new JarFile(path);
   }
 
@@ -1249,9 +1256,7 @@ public final class Main {
         log.debug("script {} does not exist!", filePath, e);
       }
     } catch (RuntimeException | IOException | ExecutionException re) {
-      if (log.isDebugEnabled()) {
-        log.debug("Failed to load BTrace script {}", filePath, re);
-      }
+      log.warn("Failed to load BTrace script {}", filePath, re);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -1316,9 +1321,7 @@ public final class Main {
         Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
       } catch (RuntimeException | IOException re) {
         if (serverRunning) {
-          if (log.isDebugEnabled()) {
-            log.debug("BTrace server failed", re);
-          }
+          log.warn("BTrace server accept failed", re);
         }
       }
     }

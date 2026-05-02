@@ -86,6 +86,7 @@ public abstract class ExtensionLoader {
         }
         log.info("Extension system initialized with {} available extension(s)",
                 instance.getAvailableExtensions().size());
+        implRef.set((ExtensionLoaderImpl) instance);
         return instance;
     }
 

@@ -49,7 +49,7 @@ public final class ExtensionBridgeImpl implements ExtensionBridge {
   /** Initialize the invokedynamic bridge with a live ExtensionLoader. */
   public static void initialize(ExtensionLoader loader) {
     try {
-      Class<?> indyClz = Class.forName("org.openjdk.btrace.runtime.ExtensionIndy");
+      Class<?> indyClz = Class.forName("org.openjdk.btrace.runtime.ExtensionIndy", false, null);
       ExtensionBridge bridge = new ExtensionBridgeImpl(loader);
       indyClz.getField("bridge").set(null, bridge);
       log.debug("ExtensionIndy.bridge initialized");

@@ -315,8 +315,9 @@ public final class ExtensionIndy {
 
     private static java.util.Map<String, ShimTarget> load(ClassLoader cl) {
       java.util.Map<String, ShimTarget> map = new java.util.HashMap<>();
-      java.io.InputStream is = (cl != null ? cl : ClassLoader.getSystemClassLoader())
-          .getResourceAsStream("META-INF/btrace/shims.index");
+      ClassLoader loader = ExtensionIndy.class.getClassLoader();
+      if (loader == null) loader = ClassLoader.getSystemClassLoader();
+      java.io.InputStream is = loader.getResourceAsStream("META-INF/btrace/shims.index");
       if (is == null) return map;
       try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
         String line;

@@ -206,10 +206,13 @@ final class PermissionScanner {
             } else if (f.name.endsWith('.jar')) {
                 try {
                     def zip = new ZipFile(f)
-                    def ze = zip.getEntry(entry)
-                    if (ze != null) {
-                        return zip.getInputStream(ze)
-                    } else {
+                    try {
+                        def ze = zip.getEntry(entry)
+                        if (ze != null) {
+                            byte[] bytes = zip.getInputStream(ze).bytes
+                            return new java.io.ByteArrayInputStream(bytes)
+                        }
+                    } finally {
                         zip.close()
                     }
                 } catch (IOException ignored) { }
