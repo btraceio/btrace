@@ -684,7 +684,7 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     ModifiersTree mt = node.getModifiers();
     List<? extends AnnotationTree> annos = mt.getAnnotations();
     for (AnnotationTree at : annos) {
-      String annFqn = verifier.annotationName(at);
+      String annFqn = verifier.resolveAnnotationTypeName(at);
       if (ON_ERROR_TYPE.equals(annFqn)) {
         return true;
       }
@@ -696,7 +696,7 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     ModifiersTree mt = node.getModifiers();
     List<? extends AnnotationTree> annos = mt.getAnnotations();
     for (AnnotationTree at : annos) {
-      String annFqn = verifier.annotationName(at);
+      String annFqn = verifier.resolveAnnotationTypeName(at);
       if (ON_EXIT_TYPE.equals(annFqn)) {
         return true;
       }
@@ -708,7 +708,7 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     ModifiersTree mt = node.getModifiers();
     List<? extends AnnotationTree> annos = mt.getAnnotations();
     for (AnnotationTree at : annos) {
-      String annFqn = verifier.annotationName(at);
+      String annFqn = verifier.resolveAnnotationTypeName(at);
       if (annFqn != null && annFqn.startsWith("org.openjdk.btrace.core.annotations")) {
         return true;
       }

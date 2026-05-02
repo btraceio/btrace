@@ -26,18 +26,18 @@
 package org.openjdk.btrace.compiler;
 
 import com.sun.source.tree.AnnotationTree;
-import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ExpressionTree;
-import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.Tree;
-import com.sun.source.util.JavacTask;
+import com.sun.source.tree.AssignmentTree;
+import com.sun.source.tree.IdentifierTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TaskEvent;
+import com.sun.source.util.JavacTask;
 import com.sun.source.util.TaskListener;
-import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
+import com.sun.source.util.TreePath;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -50,8 +50,8 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
@@ -77,8 +77,8 @@ public class Verifier extends AbstractProcessor implements TaskListener {
   public synchronized void init(ProcessingEnvironment pe) {
     super.init(pe);
     treeUtils = Trees.instance(pe);
-    JavacTask task = JavacTask.instance(processingEnv);
-    task.addTaskListener(listener);
+    JavacTask javacTask = JavacTask.instance(processingEnv);
+    javacTask.addTaskListener(listener);
   }
 
   @Override
@@ -103,10 +103,10 @@ public class Verifier extends AbstractProcessor implements TaskListener {
       return;
     }
     TypeElement elem = e.getTypeElement();
+    TreePath compilationRoot = new TreePath(e.getCompilationUnit());
     for (Tree t : e.getCompilationUnit().getTypeDecls()) {
-      TreePath topLevel = new TreePath(e.getCompilationUnit());
       if (t.getKind() == Tree.Kind.CLASS) {
-        if (elem.equals(getTreeUtils().getElement(new TreePath(topLevel, t)))) {
+        if (elem.equals(getTreeUtils().getElement(new TreePath(compilationRoot, t)))) {
           currentClass = (ClassTree) t;
           break;
         }
@@ -160,13 +160,19 @@ public class Verifier extends AbstractProcessor implements TaskListener {
     return processingEnv.getLocale();
   }
 
-  String annotationName(AnnotationTree at) {
-    TreePath tp = getTreeUtils().getPath(getCompilationUnit(), at.getAnnotationType());
-    Element el = getTreeUtils().getElement(tp);
-    if (el == null || el.getKind() != ElementKind.ANNOTATION_TYPE) {
-      return null;
+  /**
+   * Resolves the fully-qualified type name of an annotation in the current compilation unit.
+   * Returns {@code null} if the type cannot be resolved or is not an annotation type.
+   */
+  String resolveAnnotationTypeName(AnnotationTree annotation) {
+    Trees treeApi = getTreeUtils();
+    Tree annotationTypeTree = annotation.getAnnotationType();
+    TreePath typePath = treeApi.getPath(getCompilationUnit(), annotationTypeTree);
+    Element resolved = treeApi.getElement(typePath);
+    if (resolved != null && resolved.getKind() == ElementKind.ANNOTATION_TYPE) {
+      return ((TypeElement) resolved).getQualifiedName().toString();
     }
-    return ((TypeElement) el).getQualifiedName().toString();
+    return null;
   }
 
   // verify each BTrace class
@@ -187,27 +193,27 @@ public class Verifier extends AbstractProcessor implements TaskListener {
 
   /** Detects if the class is annotated as @BTrace(trusted=true). */
   private boolean hasTrustedAnnotation(ClassTree ct, Element topElement) {
-    for (AnnotationTree at : ct.getModifiers().getAnnotations()) {
-      String annFqn = annotationName(at);
-      if (!BTrace.class.getName().equals(annFqn)) {
+    for (AnnotationTree annotation : ct.getModifiers().getAnnotations()) {
+      String qualifiedName = resolveAnnotationTypeName(annotation);
+      if (!BTrace.class.getName().equals(qualifiedName)) {
         continue;
       }
       // now we have @BTrace, look for unsafe = xxx or trusted = xxx
-      for (ExpressionTree ext : at.getArguments()) {
-        if (ext.getKind() != Tree.Kind.ASSIGNMENT) {
+      for (ExpressionTree attr : annotation.getArguments()) {
+        if (attr.getKind() != Tree.Kind.ASSIGNMENT) {
           continue;
         }
-        AssignmentTree assign = (AssignmentTree) ext;
-        String name = ((IdentifierTree) assign.getVariable()).getName().toString();
-        if (!"unsafe".equals(name) && !"trusted".equals(name)) {
+        AssignmentTree assignment = (AssignmentTree) attr;
+        String attrName = ((IdentifierTree) assignment.getVariable()).getName().toString();
+        if (!"unsafe".equals(attrName) && !"trusted".equals(attrName)) {
           continue;
         }
         // now rhs is the value of @BTrace.unsafe.
         // The value can be complex (!!true, 1 == 2, etc.) - we support only booleans
-        String val = assign.getExpression().toString();
-        if ("true".equals(val)) {
+        String attrValue = assignment.getExpression().toString();
+        if ("true".equals(attrValue)) {
           return true; // bingo!
-        } else if (!"false".equals(val)) {
+        } else if (!"false".equals(attrValue)) {
           processingEnv
               .getMessager()
               .printMessage(Kind.WARNING, Messages.get("no.complex.unsafe.value"), topElement);
@@ -224,10 +230,10 @@ public class Verifier extends AbstractProcessor implements TaskListener {
     public void finished(TaskEvent e) {
       if (e.getKind() != TaskEvent.Kind.ANALYZE) return;
       TypeElement elem = e.getTypeElement();
-      TreePath topLevel = new TreePath(e.getCompilationUnit());
+      TreePath compilationRoot = new TreePath(e.getCompilationUnit());
       for (Tree t : e.getCompilationUnit().getTypeDecls()) {
         if (t.getKind() == Tree.Kind.CLASS) {
-          if (elem.equals(getTreeUtils().getElement(new TreePath(topLevel, t)))) {
+          if (elem.equals(getTreeUtils().getElement(new TreePath(compilationRoot, t)))) {
             currentClass = (ClassTree) t;
             break;
           }
