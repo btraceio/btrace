@@ -12,7 +12,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 L3
 FRAME FULL [resources/OnMethodTest [I [[I] [I]
 L4
-LINENUMBER 112 L4
+LINENUMBER 103 L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
@@ -27,7 +27,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 L5
 FRAME FULL [resources/OnMethodTest [I [[I [Ljava/lang/String;] [I I]
 L6
-LINENUMBER 113 L6
+LINENUMBER 104 L6
 L7
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L7 0
 LOCALVARIABLE a [I L1 L7 1

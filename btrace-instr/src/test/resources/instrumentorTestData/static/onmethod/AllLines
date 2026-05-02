@@ -2,24 +2,24 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "<init>"
-LDC 41
+LDC 32
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 FRAME FULL [resources/OnMethodTest] []
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
 LDC "<init>"
-LDC 42
+LDC 33
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L2
 FRAME SAME
 ALOAD 0
 L3
-LINENUMBER 43 L3
+LINENUMBER 34 L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L4
 ALOAD 0
 LDC "<init>"
-LDC 43
+LDC 34
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L4
 FRAME SAME
@@ -29,24 +29,24 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "<init>"
-LDC 45
+LDC 36
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 FRAME FULL [resources/OnMethodTest java/lang/String] []
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
 LDC "<init>"
-LDC 46
+LDC 37
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L2
 FRAME SAME
 ALOAD 0
 L3
-LINENUMBER 47 L3
+LINENUMBER 38 L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L4
 ALOAD 0
 LDC "<init>"
-LDC 47
+LDC 38
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L4
 FRAME SAME
@@ -57,7 +57,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "noargs"
-LDC 50
+LDC 41
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -68,7 +68,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ACONST_NULL
 LDC "noargs$static"
-LDC 53
+LDC 44
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -77,7 +77,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "args"
-LDC 57
+LDC 48
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -92,7 +92,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ACONST_NULL
 LDC "args$static"
-LDC 61
+LDC 52
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -106,17 +106,17 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ACONST_NULL
 LDC "callTopLevelStatic"
-LDC 65
+LDC 56
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 L2
-LINENUMBER 66 L2
+LINENUMBER 57 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ACONST_NULL
 LDC "callTopLevelStatic"
-LDC 66
+LDC 57
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME APPEND [resources/OnMethodTest]
@@ -128,7 +128,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ACONST_NULL
 LDC "callTargetStatic"
-LDC 70
+LDC 61
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -139,7 +139,7 @@ MAXSTACK = 3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 LDC "callTopLevel"
-LDC 74
+LDC 65
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -152,7 +152,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "callTarget"
-LDC 78
+LDC 69
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -165,7 +165,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
 ALOAD 0
 LDC "exception"
-LDC 83
+LDC 74
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L2
 FRAME SAME
@@ -173,27 +173,27 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "exception"
-LDC 84
+LDC 75
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME SAME1 java/lang/Throwable
 L4
-LINENUMBER 85 L4
+LINENUMBER 76 L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "exception"
-LDC 85
+LDC 76
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L5
 FRAME APPEND [java/lang/Throwable]
 L6
-LINENUMBER 87 L6
+LINENUMBER 78 L6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L7
 ALOAD 0
 LDC "exception"
-LDC 87
+LDC 78
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L7
 FRAME SAME
@@ -205,7 +205,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "uncaught"
-LDC 90
+LDC 81
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -215,37 +215,37 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "array"
-LDC 94
+LDC 85
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 L2
-LINENUMBER 96 L2
+LINENUMBER 87 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "array"
-LDC 96
+LDC 87
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME APPEND [[I]
 L4
-LINENUMBER 97 L4
+LINENUMBER 88 L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "array"
-LDC 97
+LDC 88
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L5
 FRAME APPEND [I]
 L6
-LINENUMBER 98 L6
+LINENUMBER 89 L6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L7
 ALOAD 0
 LDC "array"
-LDC 98
+LDC 89
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L7
 FRAME SAME
@@ -257,18 +257,18 @@ LOCALVARIABLE b I L4 L8 3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 LDC "field"
-LDC 101
+LDC 92
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 ALOAD 0
 L2
-LINENUMBER 102 L2
+LINENUMBER 93 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "field"
-LDC 102
+LDC 93
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME SAME
@@ -278,17 +278,17 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "newObject"
-LDC 105
+LDC 96
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 L2
-LINENUMBER 106 L2
+LINENUMBER 97 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "newObject"
-LDC 106
+LDC 97
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME APPEND [java/util/HashMap]
@@ -300,47 +300,47 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "newArray"
-LDC 109
+LDC 100
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 L2
-LINENUMBER 110 L2
+LINENUMBER 101 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "newArray"
-LDC 110
+LDC 101
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME APPEND [[I]
 L4
-LINENUMBER 111 L4
+LINENUMBER 102 L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "newArray"
-LDC 111
+LDC 102
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L5
 FRAME APPEND [[[I]
 L6
-LINENUMBER 112 L6
+LINENUMBER 103 L6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L7
 ALOAD 0
 LDC "newArray"
-LDC 112
+LDC 103
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L7
 FRAME APPEND [[Ljava/lang/String;]
 L8
-LINENUMBER 113 L8
+LINENUMBER 104 L8
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L9
 ALOAD 0
 LDC "newArray"
-LDC 113
+LDC 104
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L9
 FRAME APPEND [[[Ljava/lang/String;]
@@ -355,48 +355,48 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "casts"
-LDC 116
+LDC 107
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 L2
-LINENUMBER 117 L2
+LINENUMBER 108 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "casts"
-LDC 117
+LDC 108
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME APPEND [java/util/HashMap]
 L4
-LINENUMBER 119 L4
+LINENUMBER 110 L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "casts"
-LDC 119
+LDC 110
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L5
 FRAME APPEND [java/util/HashMap]
 IFEQ L6
 L7
-LINENUMBER 120 L7
+LINENUMBER 111 L7
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L8
 ALOAD 0
 LDC "casts"
-LDC 120
+LDC 111
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L8
 FRAME SAME
 L6
-LINENUMBER 122 L6
+LINENUMBER 113 L6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L9
 ALOAD 0
 LDC "casts"
-LDC 122
+LDC 113
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L9
 FRAME SAME
@@ -408,7 +408,7 @@ MAXSTACK = 3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 LDC "sync"
-LDC 125
+LDC 116
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L5
 FRAME SAME
@@ -417,28 +417,28 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L6
 ALOAD 0
 LDC "sync"
-LDC 126
+LDC 117
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L6
 FRAME APPEND [resources/OnMethodTest]
 L7
-LINENUMBER 127 L7
+LINENUMBER 118 L7
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L8
 ALOAD 0
 LDC "sync"
-LDC 127
+LDC 118
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L8
 FRAME SAME
 GOTO L9
 L9
-LINENUMBER 128 L9
+LINENUMBER 119 L9
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L10
 ALOAD 0
 LDC "sync"
-LDC 128
+LDC 119
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L10
 FRAME FULL [resources/OnMethodTest resources/OnMethodTest] []
@@ -448,18 +448,18 @@ MAXSTACK = 3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 LDC "callTopLevel1"
-LDC 131
+LDC 122
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 ALOAD 0
 L2
-LINENUMBER 132 L2
+LINENUMBER 123 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "callTopLevel1"
-LDC 132
+LDC 123
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME APPEND [J]
@@ -472,7 +472,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "calLTargetX"
-LDC 136
+LDC 127
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -485,57 +485,57 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "argsMultiReturn"
-LDC 140
+LDC 131
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 IFLE L2
 L3
-LINENUMBER 141 L3
+LINENUMBER 132 L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L4
 ALOAD 0
 LDC "argsMultiReturn"
-LDC 141
+LDC 132
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L4
 FRAME SAME
 L2
-LINENUMBER 144 L2
+LINENUMBER 135 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "argsMultiReturn"
-LDC 144
+LDC 135
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L5
 IFLE L6
 L7
-LINENUMBER 145 L7
+LINENUMBER 136 L7
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L8
 ALOAD 0
 LDC "argsMultiReturn"
-LDC 145
+LDC 136
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L8
 FRAME SAME
 L6
-LINENUMBER 149 L6
+LINENUMBER 140 L6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L9
 ALOAD 0
 LDC "argsMultiReturn"
-LDC 149
+LDC 140
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L9
 L10
-LINENUMBER 150 L10
+LINENUMBER 141 L10
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L11
 ALOAD 0
 LDC "argsMultiReturn"
-LDC 150
+LDC 141
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L11
 FRAME SAME
@@ -549,17 +549,17 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "staticField"
-LDC 161
+LDC 152
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
 L2
-LINENUMBER 162 L2
+LINENUMBER 153 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "staticField"
-LDC 162
+LDC 153
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME SAME
@@ -568,7 +568,7 @@ LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 LDC "syncM"
-LDC 165
+LDC 156
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L5
 FRAME SAME
@@ -577,29 +577,29 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L6
 ALOAD 0
 LDC "syncM"
-LDC 166
+LDC 157
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L6
 FRAME APPEND [java/lang/Object]
 L7
-LINENUMBER 167 L7
+LINENUMBER 158 L7
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L8
 ALOAD 0
 LDC "syncM"
-LDC 167
+LDC 158
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L8
 FRAME SAME
 GOTO L9
 FRAME SAME1 java/lang/Throwable
 L9
-LINENUMBER 168 L9
+LINENUMBER 159 L9
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L10
 ALOAD 0
 LDC "syncM"
-LDC 168
+LDC 159
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L10
 FRAME SAME
@@ -610,7 +610,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 LDC "argsTypeMatch"
-LDC 173
+LDC 164
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L1
 FRAME SAME
@@ -622,7 +622,7 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
 ALOAD 0
 LDC "caught"
-LDC 178
+LDC 169
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L2
 FRAME SAME
@@ -630,27 +630,27 @@ INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "caught"
-LDC 179
+LDC 170
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L3
 FRAME SAME1 java/lang/Throwable
 L4
-LINENUMBER 180 L4
+LINENUMBER 171 L4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
 LDC "caught"
-LDC 180
+LDC 171
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L5
 FRAME APPEND [java/lang/Throwable]
 L6
-LINENUMBER 182 L6
+LINENUMBER 173 L6
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L7
 ALOAD 0
 LDC "caught"
-LDC 182
+LDC 173
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$AllLines$args (Ljava/lang/Object;Ljava/lang/String;I)V
 L7
 FRAME SAME

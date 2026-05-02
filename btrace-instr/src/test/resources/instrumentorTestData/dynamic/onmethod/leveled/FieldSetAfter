@@ -25,7 +25,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 "org/openjdk/btrace/runtime/auxiliary/FieldSetAfter"
 ]
 L2
-LINENUMBER 102 L2
+LINENUMBER 93 L2
 FRAME SAME
 L3
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0

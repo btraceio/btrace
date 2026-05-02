@@ -22,7 +22,7 @@ INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary
 L2
 FRAME FULL [resources/OnMethodTest resources/OnMethodTest I I] [resources/OnMethodTest I]
 L3
-LINENUMBER 102 L3
+LINENUMBER 93 L3
 L4
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
 MAXSTACK = 6

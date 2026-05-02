@@ -25,7 +25,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 L2
 FRAME FULL [resources/OnMethodTest I J] [J]
 L3
-LINENUMBER 162 L3
+LINENUMBER 153 L3
 L4
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L4 0
 MAXSTACK = 7

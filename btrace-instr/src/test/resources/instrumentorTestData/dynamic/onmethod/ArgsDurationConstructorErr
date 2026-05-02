@@ -1,14 +1,14 @@
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
 L2
-LINENUMBER 41 L2
+LINENUMBER 32 L2
 LCONST_0
 LSTORE 1
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 3
 L0
-LINENUMBER 42 L0
+LINENUMBER 33 L0
 L3
-LINENUMBER 43 L3
+LINENUMBER 34 L3
 L1
 FRAME FULL [resources/OnMethodTest J J] [java/lang/Throwable]
 INVOKESTATIC java/lang/System.nanoTime ()J
@@ -36,15 +36,15 @@ MAXSTACK = 5
 MAXLOCALS = 6
 TRYCATCHBLOCK L0 L1 L1 java/lang/Throwable
 L2
-LINENUMBER 45 L2
+LINENUMBER 36 L2
 LCONST_0
 LSTORE 2
 INVOKESTATIC java/lang/System.nanoTime ()J
 LSTORE 4
 L0
-LINENUMBER 46 L0
+LINENUMBER 37 L0
 L3
-LINENUMBER 47 L3
+LINENUMBER 38 L3
 L1
 FRAME FULL [resources/OnMethodTest java/lang/String J J] [java/lang/Throwable]
 INVOKESTATIC java/lang/System.nanoTime ()J

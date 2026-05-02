@@ -17,10 +17,10 @@ FRAME FULL [resources/OnMethodTest java/io/IOException] [java/io/IOException]
 FRAME FULL [resources/OnMethodTest] [java/io/IOException]
 ASTORE 2
 L3
-LINENUMBER 85 L3
+LINENUMBER 76 L3
 ALOAD 2
 L4
-LINENUMBER 87 L4
+LINENUMBER 78 L4
 L5
 LOCALVARIABLE e Ljava/io/IOException; L3 L4 2
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0

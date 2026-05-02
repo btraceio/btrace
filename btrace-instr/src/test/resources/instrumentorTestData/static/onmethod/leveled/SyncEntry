@@ -13,12 +13,12 @@ INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary
 L6
 FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest]
 L7
-LINENUMBER 127 L7
+LINENUMBER 118 L7
 GOTO L8
 ASTORE 3
 ALOAD 3
 L8
-LINENUMBER 128 L8
+LINENUMBER 119 L8
 L5
 FRAME SAME1 java/lang/Throwable
 ATHROW

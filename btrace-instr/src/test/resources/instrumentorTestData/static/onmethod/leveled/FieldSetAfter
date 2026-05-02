@@ -20,7 +20,7 @@ LDC "field"
 ILOAD 1
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldSetAfter$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V
 L2
-LINENUMBER 102 L2
+LINENUMBER 93 L2
 FRAME SAME
 L3
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0

@@ -18,12 +18,12 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 L6
 FRAME FULL [resources/OnMethodTest java/lang/Object java/lang/Object] [java/lang/Object]
 L7
-LINENUMBER 167 L7
+LINENUMBER 158 L7
 GOTO L8
 ASTORE 3
 ALOAD 3
 L8
-LINENUMBER 168 L8
+LINENUMBER 159 L8
 L5
 FRAME SAME1 java/lang/Throwable
 ATHROW

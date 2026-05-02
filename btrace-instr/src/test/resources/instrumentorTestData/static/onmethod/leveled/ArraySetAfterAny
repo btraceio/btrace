@@ -22,7 +22,7 @@ ILOAD 4
 INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArraySetAfterAny$args (Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)V
 L4
-LINENUMBER 98 L4
+LINENUMBER 89 L4
 FRAME SAME
 L5
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0

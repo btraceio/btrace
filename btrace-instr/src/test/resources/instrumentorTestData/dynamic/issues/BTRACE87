@@ -15,7 +15,7 @@ L2
 FRAME APPEND [java/util/ArrayList java/util/ArrayList]
 ALOAD 2
 L3
-LINENUMBER 17 L3
+LINENUMBER 29 L3
 ASTORE 3
 ASTORE 4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -39,7 +39,7 @@ FRAME APPEND [java/lang/String java/util/ArrayList]
 ALOAD 4
 ALOAD 3
 L5
-LINENUMBER 18 L5
+LINENUMBER 30 L5
 L6
 LOCALVARIABLE this Lresources/issues/BTRACE87; L0 L6 0
 LOCALVARIABLE a Ljava/util/List; L1 L6 1

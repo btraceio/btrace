@@ -18,7 +18,7 @@ LDC "sField"
 LLOAD 1
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$FieldSetAfterStatic$args (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;J)V
 L2
-LINENUMBER 162 L2
+LINENUMBER 153 L2
 FRAME SAME
 L3
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0

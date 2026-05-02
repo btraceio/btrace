@@ -88,7 +88,7 @@ L6
 FRAME FULL [resources/OnMethodTest java/lang/String J J J I I J java/lang/String resources/OnMethodTest T T J J I I J java/lang/String] [J J]
 LSTORE 27
 L7
-LINENUMBER 132 L7
+LINENUMBER 123 L7
 LLOAD 27
 L8
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L8 0

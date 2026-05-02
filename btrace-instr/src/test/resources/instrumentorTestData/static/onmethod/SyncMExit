@@ -1,6 +1,6 @@
 TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
 L6
-LINENUMBER 167 L6
+LINENUMBER 158 L6
 DUP
 ASTORE 2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -25,7 +25,7 @@ L9
 FRAME FULL [resources/OnMethodTest java/lang/Object T java/lang/Throwable java/lang/Object] [java/lang/Object]
 ALOAD 3
 L8
-LINENUMBER 168 L8
+LINENUMBER 159 L8
 FRAME FULL [resources/OnMethodTest T java/lang/Object] []
 L5
 FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]

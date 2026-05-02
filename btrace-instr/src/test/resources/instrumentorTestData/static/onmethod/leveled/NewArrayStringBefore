@@ -10,7 +10,7 @@ INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary
 L3
 FRAME FULL [resources/OnMethodTest [I [[I] [I]
 L4
-LINENUMBER 112 L4
+LINENUMBER 103 L4
 ICONST_1
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.$btrace$$level : I
 IF_ICMPLT L5
@@ -23,7 +23,7 @@ INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary
 L5
 FRAME FULL [resources/OnMethodTest [I [[I [Ljava/lang/String;] [I I]
 L6
-LINENUMBER 113 L6
+LINENUMBER 104 L6
 L7
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L7 0
 LOCALVARIABLE a [I L1 L7 1

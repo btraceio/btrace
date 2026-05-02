@@ -8,7 +8,7 @@ INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary
 FRAME FULL [resources/OnMethodTest java/util/HashMap] [java/util/HashMap]
 ASTORE 2
 L2
-LINENUMBER 106 L2
+LINENUMBER 97 L2
 L3
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
 LOCALVARIABLE m Ljava/util/Map; L2 L3 2

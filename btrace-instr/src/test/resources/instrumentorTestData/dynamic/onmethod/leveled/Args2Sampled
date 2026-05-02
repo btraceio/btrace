@@ -61,7 +61,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 "org/openjdk/btrace/runtime/auxiliary/Args2Sampled"
 ]
 L7
-LINENUMBER 57 L7
+LINENUMBER 48 L7
 FRAME SAME
 L8
 LOCALVARIABLE this Lresources/OnMethodTest; L7 L8 0

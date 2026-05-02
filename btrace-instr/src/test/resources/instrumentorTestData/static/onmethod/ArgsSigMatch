@@ -10,7 +10,7 @@ ALOAD 0
 ALOAD 1
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSigMatch$m1 (Ljava/lang/Object;Ljava/util/List;)V
 L1
-LINENUMBER 173 L1
+LINENUMBER 164 L1
 FRAME SAME
 L2
 LOCALVARIABLE this Lresources/OnMethodTest; L1 L2 0

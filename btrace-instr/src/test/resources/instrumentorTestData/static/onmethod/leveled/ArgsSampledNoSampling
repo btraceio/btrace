@@ -43,7 +43,7 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSampledNoSampling$argsNoSampling (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
 L5
-LINENUMBER 57 L5
+LINENUMBER 48 L5
 FRAME SAME
 L6
 LOCALVARIABLE this Lresources/OnMethodTest; L5 L6 0

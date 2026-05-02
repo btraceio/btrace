@@ -18,7 +18,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 L3
 FRAME FULL [resources/OnMethodTest I [I I I I [I] [[I I I]
 L4
-LINENUMBER 98 L4
+LINENUMBER 89 L4
 L5
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0
 LOCALVARIABLE a I L0 L5 1

@@ -35,7 +35,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 "org/openjdk/btrace/runtime/auxiliary/ArgsSampledAdaptive"
 ]
 L4
-LINENUMBER 57 L4
+LINENUMBER 48 L4
 FRAME SAME
 ILOAD 6
 IFEQ L5

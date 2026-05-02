@@ -27,7 +27,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 "org/openjdk/btrace/runtime/auxiliary/ArraySetAfterAny"
 ]
 L4
-LINENUMBER 98 L4
+LINENUMBER 89 L4
 FRAME SAME
 L5
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0

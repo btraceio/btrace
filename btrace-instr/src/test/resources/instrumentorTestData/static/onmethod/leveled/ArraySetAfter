@@ -21,7 +21,7 @@ ILOAD 5
 ILOAD 4
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArraySetAfter$args (Ljava/lang/Object;[III)V
 L4
-LINENUMBER 98 L4
+LINENUMBER 89 L4
 FRAME SAME
 L5
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L5 0

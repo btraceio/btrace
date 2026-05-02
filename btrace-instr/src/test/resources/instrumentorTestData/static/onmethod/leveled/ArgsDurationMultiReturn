@@ -13,7 +13,7 @@ LSTORE 8
 FRAME SAME
 IFLE L2
 L3
-LINENUMBER 141 L3
+LINENUMBER 132 L3
 ILOAD 10
 IFLE L4
 L5
@@ -42,10 +42,10 @@ INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary
 L6
 FRAME SAME1 J
 L2
-LINENUMBER 144 L2
+LINENUMBER 135 L2
 IFLE L7
 L8
-LINENUMBER 145 L8
+LINENUMBER 136 L8
 L9
 FRAME SAME1 J
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationMultiReturn.$btrace$$level : I
@@ -66,9 +66,9 @@ INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary
 L10
 FRAME SAME1 J
 L7
-LINENUMBER 149 L7
+LINENUMBER 140 L7
 L11
-LINENUMBER 150 L11
+LINENUMBER 141 L11
 L12
 FRAME SAME1 J
 GETSTATIC org/openjdk/btrace/runtime/auxiliary/ArgsDurationMultiReturn.$btrace$$level : I

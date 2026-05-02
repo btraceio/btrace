@@ -20,7 +20,7 @@ org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup
 "org/openjdk/btrace/runtime/auxiliary/ArgsSigMatch"
 ]
 L1
-LINENUMBER 173 L1
+LINENUMBER 164 L1
 FRAME SAME
 L2
 LOCALVARIABLE this Lresources/OnMethodTest; L1 L2 0

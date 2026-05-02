@@ -30,7 +30,7 @@ ALOAD 4
 ALOAD 5
 INVOKESTATIC resources/OnMethodTest.$btrace$org$openjdk$btrace$runtime$auxiliary$ArgsSampledAdaptive$args (Ljava/lang/Object;Ljava/lang/String;J[Ljava/lang/String;[I)V
 L4
-LINENUMBER 57 L4
+LINENUMBER 48 L4
 FRAME SAME
 ILOAD 6
 IFEQ L5
