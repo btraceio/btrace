@@ -35,6 +35,6 @@ spotless {
 
         formatAnnotations()  // fixes formatting of type annotations, see below
 
-        licenseHeader '/* (C) $YEAR */' // or licenseHeaderFile
+        licenseHeaderFile rootProject.file('license.header')
     }
 }
