@@ -1,34 +1,20 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.runtime;
-
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.annotations.InjectionMode;
-import org.openjdk.btrace.extension.ExtensionBridge;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.CallSite;
 import java.lang.invoke.ConstantCallSite;
@@ -38,16 +24,22 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.annotations.InjectionMode;
+import org.openjdk.btrace.extension.ExtensionBridge;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Invokedynamic bootstrap methods for BTrace extension access.
- * Provides classloader bridging between BTrace scripts and extensions.
+ * Invokedynamic bootstrap methods for BTrace extension access. Provides classloader bridging
+ * between BTrace scripts and extensions.
  */
 public final class ExtensionIndy {
   private static final Logger logger = LoggerFactory.getLogger(ExtensionIndy.class);
+
   /**
-   * Bridge to extension system. Set by ExtensionBridgeImpl during agent initialization.
-   * Must be volatile for visibility across threads.
+   * Bridge to extension system. Set by ExtensionBridgeImpl during agent initialization. Must be
+   * volatile for visibility across threads.
    */
   public static volatile ExtensionBridge bridge = null;
 
@@ -56,8 +48,8 @@ public final class ExtensionIndy {
   }
 
   /**
-   * Bootstrap method for extension service field access.
-   * Called when a script accesses an @Injected field for the first time.
+   * Bootstrap method for extension service field access. Called when a script accesses an @Injected
+   * field for the first time.
    *
    * @param caller caller's lookup context
    * @param fieldName field name (for debugging)
@@ -87,7 +79,8 @@ public final class ExtensionIndy {
     try {
       Class<?> serviceClass = requireServiceClass(serviceClassName);
       mh = findInstantiationHandle(serviceClass, factoryMethod);
-      if (linkLog) logger.info("Linked service '{}' to '{}'", serviceClassName, serviceClass.getName());
+      if (linkLog)
+        logger.info("Linked service '{}' to '{}'", serviceClassName, serviceClass.getName());
 
     } catch (Throwable t) {
       logger.debug("Bootstrap failed for '{}': {}", serviceClassName, t.toString());
@@ -100,8 +93,11 @@ public final class ExtensionIndy {
         if (fallback == null) {
           fallback = createFallbackInstance(effectiveMode, type, caller, t);
         }
-        if (linkLog) logger.warn("Service '{}' unavailable; using {} fallback",
-            serviceClassName, (effectiveMode == InjectionMode.SHIM ? "SHIM" : "THROW"));
+        if (linkLog)
+          logger.warn(
+              "Service '{}' unavailable; using {} fallback",
+              serviceClassName,
+              (effectiveMode == InjectionMode.SHIM ? "SHIM" : "THROW"));
         mh = MethodHandles.constant(type.returnType(), fallback);
       } else {
         throw t instanceof Exception ? (Exception) t : new Exception(t);
@@ -115,7 +111,8 @@ public final class ExtensionIndy {
     return new ConstantCallSite(mh);
   }
 
-  private static Object resolvePreGeneratedShim(MethodType type, MethodHandles.Lookup caller, InjectionMode mode) {
+  private static Object resolvePreGeneratedShim(
+      MethodType type, MethodHandles.Lookup caller, InjectionMode mode) {
     try {
       Class<?> iface = type.returnType();
       ClassLoader cl = iface.getClassLoader();
@@ -162,13 +159,15 @@ public final class ExtensionIndy {
       throw new ClassNotFoundException("Extension service not found: " + serviceClassName);
     }
     if (serviceClass.isInterface()) {
-      throw new IllegalStateException("No implementation available for service (interface returned): " + serviceClassName);
+      throw new IllegalStateException(
+          "No implementation available for service (interface returned): " + serviceClassName);
     }
     logger.debug("Resolved service '{}' to '{}'", serviceClassName, serviceClass.getName());
     return serviceClass;
   }
 
-  private static MethodHandle findInstantiationHandle(Class<?> serviceClass, String factoryMethod) throws Exception {
+  private static MethodHandle findInstantiationHandle(Class<?> serviceClass, String factoryMethod)
+      throws Exception {
     MethodHandles.Lookup lookup = MethodHandles.publicLookup();
     boolean useFactory = factoryMethod != null && !factoryMethod.isEmpty();
     try {
@@ -177,13 +176,18 @@ public final class ExtensionIndy {
       }
       return lookup.findConstructor(serviceClass, MethodType.methodType(void.class));
     } catch (Throwable t) {
-      logger.debug("Instantiation handle resolution failed for '{}': {}", serviceClass.getName(), t.toString());
-      throw new IllegalStateException("Unable to create service instance for " + serviceClass.getName(), t);
+      logger.debug(
+          "Instantiation handle resolution failed for '{}': {}",
+          serviceClass.getName(),
+          t.toString());
+      throw new IllegalStateException(
+          "Unable to create service instance for " + serviceClass.getName(), t);
     }
   }
 
   private static Object createFallbackInstance(
-      InjectionMode mode, MethodType type, MethodHandles.Lookup caller, Throwable cause) throws Exception {
+      InjectionMode mode, MethodType type, MethodHandles.Lookup caller, Throwable cause)
+      throws Exception {
     Class<?> iface = type.returnType();
     if (!iface.isInterface()) {
       return null;
@@ -207,7 +211,8 @@ public final class ExtensionIndy {
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
       String name = method.getName();
       int paramCount = method.getParameterCount();
-      if (name.equals("toString") && paramCount == 0) return "NoOp" + proxy.getClass().getInterfaces()[0].getSimpleName();
+      if (name.equals("toString") && paramCount == 0)
+        return "NoOp" + proxy.getClass().getInterfaces()[0].getSimpleName();
       if (name.equals("hashCode") && paramCount == 0) return System.identityHashCode(proxy);
       if (name.equals("equals") && paramCount == 1) return proxy == args[0];
       Class<?> rt = method.getReturnType();
@@ -239,11 +244,12 @@ public final class ExtensionIndy {
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
       String name = method.getName();
       int paramCount = method.getParameterCount();
-      if (name.equals("toString") && paramCount == 0) return "Throwing" + proxy.getClass().getInterfaces()[0].getSimpleName();
+      if (name.equals("toString") && paramCount == 0)
+        return "Throwing" + proxy.getClass().getInterfaces()[0].getSimpleName();
       if (name.equals("hashCode") && paramCount == 0) return System.identityHashCode(proxy);
       if (name.equals("equals") && paramCount == 1) return proxy == args[0];
-      IllegalStateException ex = new IllegalStateException(
-          "BTrace optional service unavailable: " + iface, cause);
+      IllegalStateException ex =
+          new IllegalStateException("BTrace optional service unavailable: " + iface, cause);
       throw ex;
     }
   }
@@ -281,10 +287,13 @@ public final class ExtensionIndy {
 
     private static java.util.Map<String, ShimTarget> load(ClassLoader cl) {
       java.util.Map<String, ShimTarget> map = new java.util.HashMap<>();
-      java.io.InputStream is = (cl != null ? cl : ClassLoader.getSystemClassLoader())
-          .getResourceAsStream("META-INF/btrace/shims.index");
+      java.io.InputStream is =
+          (cl != null ? cl : ClassLoader.getSystemClassLoader())
+              .getResourceAsStream("META-INF/btrace/shims.index");
       if (is == null) return map;
-      try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
+      try (java.io.BufferedReader br =
+          new java.io.BufferedReader(
+              new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
         String line;
         while ((line = br.readLine()) != null) {
           line = line.trim();

@@ -1,31 +1,22 @@
 /*
- * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.maven;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,7 +35,6 @@ import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -66,9 +56,8 @@ import org.eclipse.aether.resolution.ArtifactResult;
 /**
  * Builds a BTrace fat agent JAR with embedded extensions.
  *
- * <p>This goal resolves BTrace extension artifacts from Maven repositories,
- * stages their API and implementation classes appropriately, and packages
- * everything into a single deployable agent JAR.
+ * <p>This goal resolves BTrace extension artifacts from Maven repositories, stages their API and
+ * implementation classes appropriately, and packages everything into a single deployable agent JAR.
  */
 @Mojo(
     name = "fat-agent",
@@ -88,13 +77,15 @@ public class FatAgentMojo extends AbstractMojo {
   @Parameter(defaultValue = "${session}", readonly = true, required = true)
   private MavenSession session;
 
-  @Component
-  private RepositorySystem repoSystem;
+  @Component private RepositorySystem repoSystem;
 
   @Parameter(defaultValue = "${repositorySystemSession}", readonly = true, required = true)
   private RepositorySystemSession repoSession;
 
-  @Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true, required = true)
+  @Parameter(
+      defaultValue = "${project.remoteProjectRepositories}",
+      readonly = true,
+      required = true)
   private List<RemoteRepository> remoteRepositories;
 
   /** BTrace version to use. Defaults to the plugin version. */
@@ -163,7 +154,9 @@ public class FatAgentMojo extends AbstractMojo {
       createJar(stagingDir, outputJar);
 
       getLog().info("Created fat agent JAR: " + outputJar);
-      getLog().info("Embedded " + embeddedExtensionIds.size() + " extension(s): " + embeddedExtensionIds);
+      getLog()
+          .info(
+              "Embedded " + embeddedExtensionIds.size() + " extension(s): " + embeddedExtensionIds);
 
       // Attach artifact to project
       project.getArtifact().setFile(outputJar);
@@ -231,10 +224,9 @@ public class FatAgentMojo extends AbstractMojo {
   /**
    * Process an extension artifact.
    *
-   * <p>Extensions are expected to have:
-   * - API JAR: contains classes for bootstrap classloader
-   * - Impl JAR: contains implementation classes (renamed to .classdata)
-   * - Metadata: extension.properties with id, services, etc.
+   * <p>Extensions are expected to have: - API JAR: contains classes for bootstrap classloader -
+   * Impl JAR: contains implementation classes (renamed to .classdata) - Metadata:
+   * extension.properties with id, services, etc.
    *
    * @param coordinates Maven coordinates (groupId:artifactId:version)
    * @param stagingDir staging directory
@@ -244,7 +236,11 @@ public class FatAgentMojo extends AbstractMojo {
       throws MojoExecutionException, IOException {
     String[] parts = coordinates.split(":");
     if (parts.length < 3) {
-      getLog().warn("Invalid extension coordinates: " + coordinates + " (expected groupId:artifactId:version)");
+      getLog()
+          .warn(
+              "Invalid extension coordinates: "
+                  + coordinates
+                  + " (expected groupId:artifactId:version)");
       return null;
     }
 
@@ -298,7 +294,8 @@ public class FatAgentMojo extends AbstractMojo {
     return extensionId;
   }
 
-  private File resolveArtifactWithClassifier(String groupId, String artifactId, String version, String classifier)
+  private File resolveArtifactWithClassifier(
+      String groupId, String artifactId, String version, String classifier)
       throws MojoExecutionException {
     DefaultArtifact artifact = new DefaultArtifact(groupId, artifactId, classifier, "jar", version);
     ArtifactRequest request = new ArtifactRequest();
@@ -343,7 +340,8 @@ public class FatAgentMojo extends AbstractMojo {
     }
   }
 
-  private void stageImplClasses(File implJar, Path stagingDir, String extensionId) throws IOException {
+  private void stageImplClasses(File implJar, Path stagingDir, String extensionId)
+      throws IOException {
     Path implDir = stagingDir.resolve(EXTENSION_METADATA_PATH).resolve(extensionId).resolve("impl");
     Files.createDirectories(implDir);
     Path normalizedImplDir = implDir.toAbsolutePath().normalize();
@@ -367,7 +365,8 @@ public class FatAgentMojo extends AbstractMojo {
     }
   }
 
-  private void stageExtensionMetadata(File apiJar, Path stagingDir, String extensionId) throws IOException {
+  private void stageExtensionMetadata(File apiJar, Path stagingDir, String extensionId)
+      throws IOException {
     Path metadataDir = stagingDir.resolve(EXTENSION_METADATA_PATH).resolve(extensionId);
     Files.createDirectories(metadataDir);
 
@@ -399,7 +398,8 @@ public class FatAgentMojo extends AbstractMojo {
     }
   }
 
-  private void updateManifest(Path stagingDir, List<String> embeddedExtensionIds) throws IOException {
+  private void updateManifest(Path stagingDir, List<String> embeddedExtensionIds)
+      throws IOException {
     Path manifestPath = stagingDir.resolve("META-INF/MANIFEST.MF");
     Manifest manifest;
 
@@ -414,9 +414,9 @@ public class FatAgentMojo extends AbstractMojo {
 
     // Add embedded extensions attribute
     if (!embeddedExtensionIds.isEmpty()) {
-      manifest.getMainAttributes().putValue(
-          "BTrace-Embedded-Extensions",
-          String.join(",", embeddedExtensionIds));
+      manifest
+          .getMainAttributes()
+          .putValue("BTrace-Embedded-Extensions", String.join(",", embeddedExtensionIds));
     }
 
     Files.createDirectories(manifestPath.getParent());
@@ -444,21 +444,23 @@ public class FatAgentMojo extends AbstractMojo {
       Set<String> addedEntries = new HashSet<>();
       addedEntries.add("META-INF/MANIFEST.MF"); // Already added via constructor
 
-      Files.walk(sourceDir).forEach(path -> {
-        if (Files.isRegularFile(path)) {
-          String entryName = sourceDir.relativize(path).toString().replace('\\', '/');
-          if (!addedEntries.contains(entryName)) {
-            try {
-              jos.putNextEntry(new ZipEntry(entryName));
-              Files.copy(path, jos);
-              jos.closeEntry();
-              addedEntries.add(entryName);
-            } catch (IOException e) {
-              throw new RuntimeException("Failed to add entry: " + entryName, e);
-            }
-          }
-        }
-      });
+      Files.walk(sourceDir)
+          .forEach(
+              path -> {
+                if (Files.isRegularFile(path)) {
+                  String entryName = sourceDir.relativize(path).toString().replace('\\', '/');
+                  if (!addedEntries.contains(entryName)) {
+                    try {
+                      jos.putNextEntry(new ZipEntry(entryName));
+                      Files.copy(path, jos);
+                      jos.closeEntry();
+                      addedEntries.add(entryName);
+                    } catch (IOException e) {
+                      throw new RuntimeException("Failed to add entry: " + entryName, e);
+                    }
+                  }
+                }
+              });
     }
   }
 
@@ -480,11 +482,12 @@ public class FatAgentMojo extends AbstractMojo {
    * Validates that an extension ID is safe and cannot be used for path traversal.
    *
    * <p>Valid extension IDs must:
+   *
    * <ul>
-   *   <li>Not be null or empty</li>
-   *   <li>Not contain path separators (/ or \)</li>
-   *   <li>Not contain parent directory references (..)</li>
-   *   <li>Only contain safe characters: alphanumeric, hyphen, underscore, dot</li>
+   *   <li>Not be null or empty
+   *   <li>Not contain path separators (/ or \)
+   *   <li>Not contain parent directory references (..)
+   *   <li>Only contain safe characters: alphanumeric, hyphen, underscore, dot
    * </ul>
    *
    * @param extensionId the extension ID to validate

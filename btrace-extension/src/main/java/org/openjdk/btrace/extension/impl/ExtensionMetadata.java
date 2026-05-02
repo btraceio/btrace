@@ -1,33 +1,20 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.extension.impl;
-
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.PermissionSet;
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionRepository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -45,10 +32,14 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import org.openjdk.btrace.core.extensions.Permission;
+import org.openjdk.btrace.core.extensions.PermissionSet;
+import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
+import org.openjdk.btrace.extension.ExtensionRepository;
 
 /**
- * Parser for extension metadata from MANIFEST.MF attributes,
- * btrace-extension.properties (legacy), and META-INF/services files.
+ * Parser for extension metadata from MANIFEST.MF attributes, btrace-extension.properties (legacy),
+ * and META-INF/services files.
  */
 final class ExtensionMetadata {
   private static final String METADATA_FILE = "META-INF/btrace-extension.properties";
@@ -68,8 +59,8 @@ final class ExtensionMetadata {
   private ExtensionMetadata() {}
 
   /**
-   * Parse extension metadata from a JAR file.
-   * Priority: MANIFEST.MF attributes > btrace-extension.properties > inference
+   * Parse extension metadata from a JAR file. Priority: MANIFEST.MF attributes >
+   * btrace-extension.properties > inference
    *
    * @param jarPath path to extension JAR
    * @param repository repository this extension was discovered in
@@ -80,15 +71,16 @@ final class ExtensionMetadata {
   }
 
   /**
-   * Parse extension metadata from an API JAR in an extension directory.
-   * Priority: MANIFEST.MF attributes > btrace-extension.properties > inference
+   * Parse extension metadata from an API JAR in an extension directory. Priority: MANIFEST.MF
+   * attributes > btrace-extension.properties > inference
    *
    * @param apiJarPath path to extension API JAR
    * @param extensionDirPath path to extension directory (used as jarPath in descriptor)
    * @param repository repository this extension was discovered in
    * @return extension descriptor, or null if not a valid extension
    */
-  static ExtensionDescriptorDTO parse(Path apiJarPath, Path extensionDirPath, ExtensionRepository repository) {
+  static ExtensionDescriptorDTO parse(
+      Path apiJarPath, Path extensionDirPath, ExtensionRepository repository) {
     try (JarFile jar = new JarFile(apiJarPath.toFile())) {
       // Try MANIFEST.MF first
       ExtensionDescriptorDTO fromManifest = parseFromManifest(extensionDirPath, jar, repository);
@@ -97,7 +89,8 @@ final class ExtensionMetadata {
       }
 
       // Fall back to btrace-extension.properties
-      ExtensionDescriptorDTO fromProperties = parseFromProperties(extensionDirPath, jar, repository);
+      ExtensionDescriptorDTO fromProperties =
+          parseFromProperties(extensionDirPath, jar, repository);
       if (fromProperties != null) {
         return fromProperties;
       }
@@ -110,9 +103,7 @@ final class ExtensionMetadata {
     }
   }
 
-  /**
-   * Parse extension metadata from MANIFEST.MF attributes.
-   */
+  /** Parse extension metadata from MANIFEST.MF attributes. */
   private static ExtensionDescriptorDTO parseFromManifest(
       Path jarPath, JarFile jar, ExtensionRepository repository) throws IOException {
     Manifest manifest = jar.getManifest();
@@ -141,15 +132,15 @@ final class ExtensionMetadata {
     return new ExtensionDescriptorDTO.Builder()
         .id(id)
         .version(version)
-        .name(attrs.getValue(ATTR_EXTENSION_NAME) != null ?
-              attrs.getValue(ATTR_EXTENSION_NAME) : id)
-        .description(attrs.getValue(ATTR_EXTENSION_DESC) != null ?
-                     attrs.getValue(ATTR_EXTENSION_DESC) : "")
+        .name(
+            attrs.getValue(ATTR_EXTENSION_NAME) != null ? attrs.getValue(ATTR_EXTENSION_NAME) : id)
+        .description(
+            attrs.getValue(ATTR_EXTENSION_DESC) != null ? attrs.getValue(ATTR_EXTENSION_DESC) : "")
         .jarPath(jarPath)
-        .btraceApiVersion(attrs.getValue(ATTR_API_VERSION) != null ?
-                          attrs.getValue(ATTR_API_VERSION) : "2.0+")
-        .javaVersion(attrs.getValue(ATTR_JAVA_VERSION) != null ?
-                     attrs.getValue(ATTR_JAVA_VERSION) : "8+")
+        .btraceApiVersion(
+            attrs.getValue(ATTR_API_VERSION) != null ? attrs.getValue(ATTR_API_VERSION) : "2.0+")
+        .javaVersion(
+            attrs.getValue(ATTR_JAVA_VERSION) != null ? attrs.getValue(ATTR_JAVA_VERSION) : "8+")
         .services(services)
         .requiredExtensions(parseList(attrs.getValue(ATTR_REQUIRES)))
         .requiredPermissions(parsePermissions(attrs.getValue(ATTR_PERMISSIONS)))
@@ -157,9 +148,7 @@ final class ExtensionMetadata {
         .build();
   }
 
-  /**
-   * Parse extension metadata from btrace-extension.properties file (legacy).
-   */
+  /** Parse extension metadata from btrace-extension.properties file (legacy). */
   private static ExtensionDescriptorDTO parseFromProperties(
       Path jarPath, JarFile jar, ExtensionRepository repository) throws IOException {
     Properties props = loadMetadata(jar);
@@ -205,9 +194,7 @@ final class ExtensionMetadata {
     return props;
   }
 
-  /**
-   * Scan META-INF/services directory for service implementations.
-   */
+  /** Scan META-INF/services directory for service implementations. */
   private static List<String> scanServicesDirectory(JarFile jar) throws IOException {
     List<String> services = new ArrayList<>();
     Enumeration<JarEntry> entries = jar.entries();

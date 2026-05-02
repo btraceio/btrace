@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.core.comm;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,15 +38,17 @@ public class WireProtocolTest {
     WireProtocol writer = WireProtocol.create(ProtocolVersion.V1, pis, pos);
 
     // Write command in separate thread to avoid deadlock
-    Thread writerThread = new Thread(() -> {
-      try {
-        Command cmd = new MessageCommand("test message");
-        writer.write(cmd);
-        writer.flush();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    Thread writerThread =
+        new Thread(
+            () -> {
+              try {
+                Command cmd = new MessageCommand("test message");
+                writer.write(cmd);
+                writer.flush();
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            });
     writerThread.start();
 
     // Read command
@@ -166,16 +184,18 @@ public class WireProtocolTest {
     WireProtocol protocol = new JavaSerializationProtocol(pis, pos);
 
     // Write multiple commands in separate thread
-    Thread writerThread = new Thread(() -> {
-      try {
-        protocol.write(new MessageCommand("msg1"));
-        protocol.write(new MessageCommand("msg2"));
-        protocol.write(new ExitCommand(0));
-        protocol.flush();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    Thread writerThread =
+        new Thread(
+            () -> {
+              try {
+                protocol.write(new MessageCommand("msg1"));
+                protocol.write(new MessageCommand("msg2"));
+                protocol.write(new ExitCommand(0));
+                protocol.flush();
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            });
     writerThread.start();
 
     // Read multiple commands
@@ -251,14 +271,16 @@ public class WireProtocolTest {
     protocol.reset();
 
     // Should still be able to write after reset (in separate thread to avoid deadlock)
-    Thread writerThread = new Thread(() -> {
-      try {
-        protocol.write(new MessageCommand("test"));
-        protocol.flush();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    Thread writerThread =
+        new Thread(
+            () -> {
+              try {
+                protocol.write(new MessageCommand("test"));
+                protocol.flush();
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            });
     writerThread.start();
     writerThread.join();
 
@@ -308,14 +330,16 @@ public class WireProtocolTest {
     WireProtocol v1Protocol = new JavaSerializationProtocol(pis, pos);
 
     // Write in separate thread
-    Thread writerThread = new Thread(() -> {
-      try {
-        v1Protocol.write(new MessageCommand("v1 message"));
-        v1Protocol.flush();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    Thread writerThread =
+        new Thread(
+            () -> {
+              try {
+                v1Protocol.write(new MessageCommand("v1 message"));
+                v1Protocol.flush();
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            });
     writerThread.start();
 
     // Read

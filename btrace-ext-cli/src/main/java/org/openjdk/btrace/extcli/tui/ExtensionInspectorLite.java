@@ -1,19 +1,29 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.extcli.tui;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.*;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.extensions.ExtensionMeta;
-import org.openjdk.btrace.core.extensions.Permission;
 
 final class ExtensionInspectorLite {
   static class Report {
@@ -23,8 +33,18 @@ final class ExtensionInspectorLite {
     final Set<String> services;
     final java.util.List<String> requiredPermNames;
 
-    Report(String id, String version, boolean privileged, Set<String> services, java.util.List<String> requiredPermNames) {
-      this.id = id; this.version = version; this.privileged = privileged; this.services = services; this.requiredPermNames = requiredPermNames != null ? requiredPermNames : java.util.Collections.emptyList();
+    Report(
+        String id,
+        String version,
+        boolean privileged,
+        Set<String> services,
+        java.util.List<String> requiredPermNames) {
+      this.id = id;
+      this.version = version;
+      this.privileged = privileged;
+      this.services = services;
+      this.requiredPermNames =
+          requiredPermNames != null ? requiredPermNames : java.util.Collections.emptyList();
     }
   }
 
@@ -47,7 +67,10 @@ final class ExtensionInspectorLite {
     perms.addAll(readPermissionsFromManifestOrProps(api));
     perms.addAll(readPermissionsFromManifestOrProps(impl));
     LinkedHashSet<String> ded = new LinkedHashSet<>();
-    for (String n : perms) { String t = n.trim(); if (!t.isEmpty()) ded.add(t); }
+    for (String n : perms) {
+      String t = n.trim();
+      if (!t.isEmpty()) ded.add(t);
+    }
     boolean privileged = computePrivileged(api, impl);
     Set<String> services = readServices(impl);
     return new Report(id, version, privileged, services, new ArrayList<>(ded));
@@ -64,7 +87,10 @@ final class ExtensionInspectorLite {
 
   private static Path findFirstDeep(Path root, String suffix) throws IOException {
     try (Stream<Path> s = Files.walk(root)) {
-      Optional<Path> p = s.filter(pth -> pth.getFileName() != null && pth.getFileName().toString().endsWith(suffix)).findFirst();
+      Optional<Path> p =
+          s.filter(
+                  pth -> pth.getFileName() != null && pth.getFileName().toString().endsWith(suffix))
+              .findFirst();
       return p.orElse(null);
     }
   }
@@ -78,7 +104,8 @@ final class ExtensionInspectorLite {
         v = mf.getMainAttributes().getValue("BTrace-Extension-Version");
         if (v != null) return v;
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     return "";
   }
 
@@ -92,11 +119,14 @@ final class ExtensionInspectorLite {
       JarEntry props = jf.getJarEntry("META-INF/btrace-extension.properties");
       if (props != null) {
         Properties p = new Properties();
-        try (InputStream is = jf.getInputStream(props)) { p.load(is); }
+        try (InputStream is = jf.getInputStream(props)) {
+          p.load(is);
+        }
         String id = p.getProperty("extension.id", "");
         if (!id.isEmpty()) return id;
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     return "";
   }
 
@@ -110,7 +140,8 @@ final class ExtensionInspectorLite {
           services.add(e.getName().substring("META-INF/services/".length()));
         }
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     return services;
   }
 
@@ -120,7 +151,14 @@ final class ExtensionInspectorLite {
     names.addAll(readPermissionsFromManifestOrProps(implJar));
     for (String n : names) {
       String u = n.trim().toUpperCase();
-      if (u.equals("FILE_WRITE") || u.equals("NETWORK") || u.equals("THREADS") || u.equals("NATIVE") || u.equals("EXEC") || u.equals("REFLECTION") || u.equals("CLASSLOADER") || u.equals("UNLIMITED_MEMORY")) {
+      if (u.equals("FILE_WRITE")
+          || u.equals("NETWORK")
+          || u.equals("THREADS")
+          || u.equals("NATIVE")
+          || u.equals("EXEC")
+          || u.equals("REFLECTION")
+          || u.equals("CLASSLOADER")
+          || u.equals("UNLIMITED_MEMORY")) {
         return true;
       }
     }
@@ -134,18 +172,29 @@ final class ExtensionInspectorLite {
       if (mf != null) {
         String v = mf.getMainAttributes().getValue("BTrace-Extension-Permissions");
         if (v != null && !v.trim().isEmpty()) {
-          for (String part : v.split(",")) { String s = part.trim(); if (!s.isEmpty()) perms.add(s); }
+          for (String part : v.split(",")) {
+            String s = part.trim();
+            if (!s.isEmpty()) perms.add(s);
+          }
           return perms;
         }
       }
       JarEntry e = jf.getJarEntry("META-INF/btrace-extension.properties");
       if (e != null) {
         Properties p = new Properties();
-        try (InputStream is = jf.getInputStream(e)) { p.load(is); }
+        try (InputStream is = jf.getInputStream(e)) {
+          p.load(is);
+        }
         String v = p.getProperty("requires.permissions", "");
-        if (!v.isEmpty()) { for (String part : v.split(",")) { String s = part.trim(); if (!s.isEmpty()) perms.add(s); } }
+        if (!v.isEmpty()) {
+          for (String part : v.split(",")) {
+            String s = part.trim();
+            if (!s.isEmpty()) perms.add(s);
+          }
+        }
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     return perms;
   }
 }

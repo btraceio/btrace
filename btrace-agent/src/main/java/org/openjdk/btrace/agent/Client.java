@@ -1,30 +1,44 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.agent;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.annotation.Annotation;
+import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
+import java.lang.management.ManagementFactory;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.openjdk.btrace.core.ArgsMap;
@@ -59,30 +73,6 @@ import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.lang.annotation.Annotation;
-import java.lang.instrument.Instrumentation;
-import java.lang.instrument.UnmodifiableClassException;
-import java.lang.management.ManagementFactory;
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Abstract class that represents a BTrace client at the BTrace agent.
@@ -387,12 +377,18 @@ abstract class Client implements CommandListener {
     Map<String, String> failed = ExtensionRegistry.getFailedExtensions();
     if (!failed.isEmpty()) {
       StringBuilder warning = new StringBuilder();
-      warning.append("[BTRACE WARN] ").append(failed.size())
-             .append(" extension(s) failed to load:\n");
+      warning
+          .append("[BTRACE WARN] ")
+          .append(failed.size())
+          .append(" extension(s) failed to load:\n");
       for (Map.Entry<String, String> entry : failed.entrySet()) {
         String simpleName = entry.getKey().substring(entry.getKey().lastIndexOf('.') + 1);
-        warning.append("  - ").append(simpleName)
-               .append(": ").append(entry.getValue()).append("\n");
+        warning
+            .append("  - ")
+            .append(simpleName)
+            .append(": ")
+            .append(entry.getValue())
+            .append("\n");
       }
       warning.append("Use 'btrace -le <PID>' for details.\n");
       sendCommand(new MessageCommand(warning.toString()));
@@ -434,29 +430,26 @@ abstract class Client implements CommandListener {
   }
 
   /**
-   * Validates that all {@code @Injected} service field types used by the given probe are
-   * declared by some available extension. This runs in the agent's runtime where the actual
-   * classloader and JPMS module layer apply.
+   * Validates that all {@code @Injected} service field types used by the given probe are declared
+   * by some available extension. This runs in the agent's runtime where the actual classloader and
+   * JPMS module layer apply.
    *
-   * Why reflection here (vs. pure ASM):
-   * - Classloader identity: Ensures types are checked against the agent's classes loaded by the
-   *   correct loader. Name-only checks in ASM cannot detect split-brain issues (same FQN, different
-   *   loader/JAR) that would later cause ClassCastException.
+   * <p>Why reflection here (vs. pure ASM): - Classloader identity: Ensures types are checked
+   * against the agent's classes loaded by the correct loader. Name-only checks in ASM cannot detect
+   * split-brain issues (same FQN, different loader/JAR) that would later cause ClassCastException.
    * - JPMS access rules: Surfaces missing exports/opens and other module access constraints that
-   *   cannot be proven by static bytecode analysis.
-   * - Linkage/loadability: Fails fast if a referenced type is not actually resolvable on the
-   *   agent's runtime path (NoClassDefFoundError/missing transitive dependencies).
-   * - Assignability truth: Verifies that the service type corresponds to something an extension
-   *   actually declares in its manifest, avoiding false positives from shaded or version-skewed
-   *   classes.
+   * cannot be proven by static bytecode analysis. - Linkage/loadability: Fails fast if a referenced
+   * type is not actually resolvable on the agent's runtime path (NoClassDefFoundError/missing
+   * transitive dependencies). - Assignability truth: Verifies that the service type corresponds to
+   * something an extension actually declares in its manifest, avoiding false positives from shaded
+   * or version-skewed classes.
    *
-   * Implementation notes:
-   * - We use reflection only to access the probe's internal service field map (to avoid a direct
-   *   compile-time dependency on the probe's delegate type) and to keep the agent/probe boundary
-   *   clean. We do not instantiate user classes or trigger class initializers.
-   * - This check complements compile-time and bytecode-time validation (ASM-based) which enforce
-   *   structural rules without loading classes. Reflection here provides the necessary runtime
-   *   assurance in the actual environment where the agent will operate.
+   * <p>Implementation notes: - We use reflection only to access the probe's internal service field
+   * map (to avoid a direct compile-time dependency on the probe's delegate type) and to keep the
+   * agent/probe boundary clean. We do not instantiate user classes or trigger class initializers. -
+   * This check complements compile-time and bytecode-time validation (ASM-based) which enforce
+   * structural rules without loading classes. Reflection here provides the necessary runtime
+   * assurance in the actual environment where the agent will operate.
    */
   private void validateDeclaredServices(BTraceProbe probe) throws IOException {
     if (!(probe instanceof BTraceProbePersisted)) {
@@ -479,8 +472,7 @@ abstract class Client implements CommandListener {
         for (String internalName : svcMap.values()) {
           String fqcn = internalName.replace('/', '.');
           if (loader.findExtensionForService(fqcn) == null) {
-            throw new IOException(
-                "Injected service type not declared by any extension: " + fqcn);
+            throw new IOException("Injected service type not declared by any extension: " + fqcn);
           }
         }
       }

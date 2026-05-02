@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.core.extensions;
 
 import java.lang.annotation.ElementType;
@@ -14,10 +30,10 @@ import java.lang.annotation.Target;
  * <p>The BTrace Gradle extension plugin scans for this annotation in the API output and generates
  * the appropriate manifest entries (BTrace-Extension-Services). The compiler/verifier framework can
  * rely on the agent-provided service declaration registry (populated from these manifests) to
- * enforce that only declared service APIs are injected.</p>
+ * enforce that only declared service APIs are injected.
  *
  * <p>You may also declare service-level permissions here. These combine with extension-level
- * permissions from {@link ExtensionDescriptor#permissions()} to form the effective permission set.</p>
+ * permissions from {@link ExtensionDescriptor#permissions()} to form the effective permission set.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

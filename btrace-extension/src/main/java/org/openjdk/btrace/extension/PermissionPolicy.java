@@ -1,7 +1,20 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.extension;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,12 +22,14 @@ import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Minimal process-wide policy: per-extension allow/deny plus a global allowPrivileged flag.
  *
- * <p>Used to decide whether an extension implementation may be linked. API classes remain
- * available for SHIMs when implementation is blocked.</p>
+ * <p>Used to decide whether an extension implementation may be linked. API classes remain available
+ * for SHIMs when implementation is blocked.
  */
 public final class PermissionPolicy {
   private static final Logger log = LoggerFactory.getLogger(PermissionPolicy.class);
@@ -88,7 +103,8 @@ public final class PermissionPolicy {
 
       // 3) classpath resource
       if (source == null) {
-        InputStream is = ClassLoader.getSystemResourceAsStream("META-INF/btrace/permissions.properties");
+        InputStream is =
+            ClassLoader.getSystemResourceAsStream("META-INF/btrace/permissions.properties");
         if (is != null) {
           try (InputStream ris = is) {
             props.load(ris);

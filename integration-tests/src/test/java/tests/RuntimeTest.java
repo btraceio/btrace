@@ -1,37 +1,26 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package tests;
-
-import org.junit.jupiter.api.Assertions;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.util.Properties;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -42,11 +31,13 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * @author Jaroslav Bachorik
@@ -61,18 +52,25 @@ public abstract class RuntimeTest {
   private static boolean forceDebug = false;
   private static String permissionsFile = null;
   private static long defaultTimeoutMs = 10000L;
+
   /** Try starting JFR recording if available */
   private boolean startJfr = false;
+
   /** Display the otput from the test application */
   protected boolean debugTestApp = false;
+
   /** Run BTrace in debug mode */
   protected boolean debugBTrace = false;
+
   /** Run BTrace in unsafe mode */
   protected boolean isUnsafe = false;
+
   /** Timeout in ms to wait for the expected BTrace output */
   protected long timeout = 10000L;
+
   /** Track retransforming progress */
   protected boolean trackRetransforms = false;
+
   /** Provide extra JVM args */
   private static final List<String> extraJvmArgs = new ArrayList<>();
 
@@ -131,9 +129,7 @@ public abstract class RuntimeTest {
     // Forward any btrace.* system properties to the traced app via JVM args
     // so the agent/client can pick them up (e.g., btrace.verify.transformed, debug flags).
     try {
-      System.getProperties()
-          .stringPropertyNames()
-          .stream()
+      System.getProperties().stringPropertyNames().stream()
           .filter(n -> n.startsWith("btrace."))
           .forEach(n -> extraJvmArgs.add("-D" + n + "=" + System.getProperty(n)));
     } catch (Throwable ignore) {
@@ -157,8 +153,8 @@ public abstract class RuntimeTest {
       Path permsDir = projectRoot.resolve("build");
       Files.createDirectories(permsDir);
       Path perms = permsDir.resolve("permissions.properties");
-      String content = "allowPrivileged=true\n" +
-                       "allowExtensions=btrace-metrics,btrace-utils,btrace-statsd\n";
+      String content =
+          "allowPrivileged=true\n" + "allowExtensions=btrace-metrics,btrace-utils,btrace-statsd\n";
       Files.write(perms, content.getBytes(StandardCharsets.UTF_8));
       permissionsFile = perms.toAbsolutePath().toString();
     } catch (IOException ioe) {
@@ -256,7 +252,7 @@ public abstract class RuntimeTest {
     args.add("-XX:+EnableDynamicAgentLoading");
     args.add("-XX:+UnlockDiagnosticVMOptions");
     args.add("-XX:-OmitStackTraceInFastThrow");
-//    args.add("-Xlog");
+    //    args.add("-Xlog");
 
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
@@ -382,7 +378,8 @@ public abstract class RuntimeTest {
       }
       try {
         ProcessBuilder jcmdPb;
-        String jcmdExe = testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
+        String jcmdExe =
+            testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
         if (jfrFile != null) {
           jcmdPb =
               new ProcessBuilder(
@@ -431,7 +428,7 @@ public abstract class RuntimeTest {
     args.add("-XX:+AllowRedefinitionToAddDeleteMethods");
     args.add("-XX:+IgnoreUnrecognizedVMOptions");
     args.add("-XX:+UnlockDiagnosticVMOptions");
-//    args.add("-Xlog:exceptions");
+    //    args.add("-Xlog:exceptions");
     // uncomment the following line to get extra JFR logs
     //    args.add("-Xlog:jfr*=trace");
     args.addAll(extraJvmArgs);
@@ -554,9 +551,12 @@ public abstract class RuntimeTest {
       }
       // Dump the current recording into the configured file to ensure events are flushed
       ProcessBuilder jcmdPb;
-      String jcmdExe = testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
+      String jcmdExe =
+          testJavaHome != null ? Paths.get(testJavaHome, "bin", "jcmd").toString() : "jcmd";
       if (jfrFile != null) {
-        jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
+        jcmdPb =
+            new ProcessBuilder(
+                jcmdExe, pidStringRef.get(), "JFR.dump", "name=1", "filename=" + jfrFile);
       } else {
         jcmdPb = new ProcessBuilder(jcmdExe, pidStringRef.get(), "JFR.dump", "name=1");
       }
@@ -823,13 +823,22 @@ public abstract class RuntimeTest {
 
     // Wait adaptively: if callbacks indicate completion (done=true), shorten wait and terminate
     long deadline = System.currentTimeMillis() + 30000; // 30s max
-    while ((stderrThread.isAlive() || stdoutThread.isAlive()) && System.currentTimeMillis() < deadline) {
+    while ((stderrThread.isAlive() || stdoutThread.isAlive())
+        && System.currentTimeMillis() < deadline) {
       if (done.get()) {
         // Give the client a brief grace period to exit on its own
-        try { Thread.sleep(200); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
         if (p.isAlive()) {
           p.destroy();
-          try { Thread.sleep(200); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+          try {
+            Thread.sleep(200);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+          }
           if (p.isAlive()) {
             p.destroyForcibly();
           }
@@ -837,12 +846,17 @@ public abstract class RuntimeTest {
         // After short-circuiting, only wait up to 1s more for threads to drain
         deadline = System.currentTimeMillis() + 1000;
       }
-      try { Thread.sleep(100); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+      }
     }
 
     // If threads are still alive, process likely hung - destroy it
     if (stderrThread.isAlive() || stdoutThread.isAlive()) {
-      System.err.println("WARNING: BTrace process output threads still alive after timeout, destroying process");
+      System.err.println(
+          "WARNING: BTrace process output threads still alive after timeout, destroying process");
       p.destroyForcibly();
       // Give threads a moment to notice process died
       stderrThread.join(1000);
@@ -948,7 +962,7 @@ public abstract class RuntimeTest {
   }
 
   public File locateTrace(String trace) {
-//    Path start = projectRoot.resolve("src");
+    //    Path start = projectRoot.resolve("src");
     List<Path> roots = new ArrayList<>();
     if (trace.toLowerCase().endsWith(".java")) {
       roots.add(projectRoot.resolve("src"));
@@ -960,36 +974,37 @@ public abstract class RuntimeTest {
     for (Path start : roots) {
       try {
         Files.walkFileTree(
-                start,
-                new FileVisitor<Path>() {
-                  @Override
-                  public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                          throws IOException {
-                    return FileVisitResult.CONTINUE;
-                  }
+            start,
+            new FileVisitor<Path>() {
+              @Override
+              public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                  throws IOException {
+                return FileVisitResult.CONTINUE;
+              }
 
-                  @Override
-                  public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                          throws IOException {
-                    if (file.toString().endsWith(trace)) {
-                      tracePath[0] = file;
-                      return FileVisitResult.TERMINATE;
-                    }
-                    return FileVisitResult.CONTINUE;
-                  }
+              @Override
+              public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                  throws IOException {
+                if (file.toString().endsWith(trace)) {
+                  tracePath[0] = file;
+                  return FileVisitResult.TERMINATE;
+                }
+                return FileVisitResult.CONTINUE;
+              }
 
-                  @Override
-                  public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                    return FileVisitResult.TERMINATE;
-                  }
+              @Override
+              public FileVisitResult visitFileFailed(Path file, IOException exc)
+                  throws IOException {
+                return FileVisitResult.TERMINATE;
+              }
 
-                  @Override
-                  public FileVisitResult postVisitDirectory(Path dir, IOException exc)
-                          throws IOException {
-                    return FileVisitResult.CONTINUE;
-                  }
-                });
-      } catch(IOException e){
+              @Override
+              public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                  throws IOException {
+                return FileVisitResult.CONTINUE;
+              }
+            });
+      } catch (IOException e) {
         e.printStackTrace();
       }
       if (tracePath[0] != null) {

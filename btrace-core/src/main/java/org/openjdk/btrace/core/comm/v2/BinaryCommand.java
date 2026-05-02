@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.core.comm.v2;
 
 import java.io.IOException;
@@ -8,101 +24,87 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Base class for all commands in the binary protocol.
- * This replaces the original Command class that relied on Java serialization.
+ * Base class for all commands in the binary protocol. This replaces the original Command class that
+ * relied on Java serialization.
  */
 public abstract class BinaryCommand {
-    // Command types - must match the original Command class for compatibility
-    public static final byte ERROR = 0;
-    public static final byte EVENT = 1;
-    public static final byte EXIT = 2;
-    public static final byte INSTRUMENT = 3;
-    public static final byte MESSAGE = 4;
-    public static final byte RENAME = 5;
-    public static final byte STATUS = 6;
-    public static final byte NUMBER_MAP = 7;
-    public static final byte STRING_MAP = 8;
-    public static final byte NUMBER = 9;
-    public static final byte GRID_DATA = 10;
-    public static final byte RETRANSFORMATION_START = 11;
-    public static final byte RETRANSFORM_CLASS = 12;
-    public static final byte SET_PARAMS = 13;
-    public static final byte LIST_PROBES = 14;
-    public static final byte DISCONNECT = 15;
-    public static final byte RECONNECT = 16;
+  // Command types - must match the original Command class for compatibility
+  public static final byte ERROR = 0;
+  public static final byte EVENT = 1;
+  public static final byte EXIT = 2;
+  public static final byte INSTRUMENT = 3;
+  public static final byte MESSAGE = 4;
+  public static final byte RENAME = 5;
+  public static final byte STATUS = 6;
+  public static final byte NUMBER_MAP = 7;
+  public static final byte STRING_MAP = 8;
+  public static final byte NUMBER = 9;
+  public static final byte GRID_DATA = 10;
+  public static final byte RETRANSFORMATION_START = 11;
+  public static final byte RETRANSFORM_CLASS = 12;
+  public static final byte SET_PARAMS = 13;
+  public static final byte LIST_PROBES = 14;
+  public static final byte DISCONNECT = 15;
+  public static final byte RECONNECT = 16;
 
-    public static final byte FIRST_COMMAND = ERROR;
-    public static final byte LAST_COMMAND = RECONNECT;
+  public static final byte FIRST_COMMAND = ERROR;
+  public static final byte LAST_COMMAND = RECONNECT;
 
-    // Used for command registration and creation
-    private static final Map<Byte, Supplier<BinaryCommand>> COMMAND_FACTORIES = new HashMap<>();
+  // Used for command registration and creation
+  private static final Map<Byte, Supplier<BinaryCommand>> COMMAND_FACTORIES = new HashMap<>();
 
-    // Register command factories
-    static {
-        // Commands will register themselves here
+  // Register command factories
+  static {
+    // Commands will register themselves here
+  }
+
+  /** Register a command factory for a specific command type */
+  public static void registerCommand(byte type, Supplier<BinaryCommand> factory) {
+    COMMAND_FACTORIES.put(type, factory);
+  }
+
+  /** Create a command instance for the given type */
+  public static BinaryCommand createCommand(byte type) {
+    Supplier<BinaryCommand> factory = COMMAND_FACTORIES.get(type);
+    if (factory == null) {
+      throw new IllegalArgumentException("Unknown command type: " + type);
     }
+    return factory.get();
+  }
 
-    /**
-     * Register a command factory for a specific command type
-     */
-    public static void registerCommand(byte type, Supplier<BinaryCommand> factory) {
-        COMMAND_FACTORIES.put(type, factory);
+  protected byte type;
+  private boolean urgent;
+
+  protected BinaryCommand(byte type) {
+    this(type, true);
+  }
+
+  protected BinaryCommand(byte type, boolean urgent) {
+    if (type < FIRST_COMMAND || type > LAST_COMMAND) {
+      throw new IllegalArgumentException("Invalid command type: " + type);
     }
+    this.type = type;
+    this.urgent = urgent;
+  }
 
-    /**
-     * Create a command instance for the given type
-     */
-    public static BinaryCommand createCommand(byte type) {
-        Supplier<BinaryCommand> factory = COMMAND_FACTORIES.get(type);
-        if (factory == null) {
-            throw new IllegalArgumentException("Unknown command type: " + type);
-        }
-        return factory.get();
-    }
+  /** Write this command to the output stream */
+  protected abstract void write(OutputStream out) throws IOException;
 
-    protected byte type;
-    private boolean urgent;
+  /** Read this command from the input stream */
+  protected abstract void read(InputStream in) throws IOException;
 
-    protected BinaryCommand(byte type) {
-        this(type, true);
-    }
+  /** Get the type of this command */
+  public final byte getType() {
+    return type;
+  }
 
-    protected BinaryCommand(byte type, boolean urgent) {
-        if (type < FIRST_COMMAND || type > LAST_COMMAND) {
-            throw new IllegalArgumentException("Invalid command type: " + type);
-        }
-        this.type = type;
-        this.urgent = urgent;
-    }
+  /** Check if this command needs urgent processing */
+  public final boolean isUrgent() {
+    return urgent;
+  }
 
-    /**
-     * Write this command to the output stream
-     */
-    protected abstract void write(OutputStream out) throws IOException;
-
-    /**
-     * Read this command from the input stream
-     */
-    protected abstract void read(InputStream in) throws IOException;
-
-    /**
-     * Get the type of this command
-     */
-    public final byte getType() {
-        return type;
-    }
-
-    /**
-     * Check if this command needs urgent processing
-     */
-    public final boolean isUrgent() {
-        return urgent;
-    }
-
-    /**
-     * Set this command as urgent
-     */
-    final void setUrgent() {
-        urgent = true;
-    }
-} 
+  /** Set this command as urgent */
+  final void setUrgent() {
+    urgent = true;
+  }
+}

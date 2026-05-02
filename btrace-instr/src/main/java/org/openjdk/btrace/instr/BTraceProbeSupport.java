@@ -1,25 +1,22 @@
 /*
- * Copyright (c) 2017,2018, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
  * All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Copyright owner designates
- * this particular file as subject to the "Classpath" exception as provided
- * by the owner in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.instr;
+
+import static org.openjdk.btrace.instr.ClassFilter.isSubTypeOf;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,13 +35,13 @@ import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.openjdk.btrace.instr.ClassFilter.isSubTypeOf;
-
 public final class BTraceProbeSupport {
   private static final Logger log = LoggerFactory.getLogger(BTraceProbeSupport.class);
 
   private volatile String actionPrefix = null;
-  private static final AtomicReferenceFieldUpdater<BTraceProbeSupport, String> actionPrefixUpdate = AtomicReferenceFieldUpdater.newUpdater(BTraceProbeSupport.class, String.class, "actionPrefix");
+  private static final AtomicReferenceFieldUpdater<BTraceProbeSupport, String> actionPrefixUpdate =
+      AtomicReferenceFieldUpdater.newUpdater(
+          BTraceProbeSupport.class, String.class, "actionPrefix");
   private final List<OnMethod> onMethods;
   private final List<OnProbe> onProbes;
   private final Map<String, String> serviceFields;
@@ -263,13 +260,14 @@ public final class BTraceProbeSupport {
   }
 
   String getActionPrefix() {
-    return actionPrefixUpdate.updateAndGet(this, prefix -> {
-      if (prefix == null) {
-        prefix = Constants.BTRACE_METHOD_PREFIX +
-                getClassName(true).replace('/', '$') + "$";
-      }
-      return prefix;
-    });
+    return actionPrefixUpdate.updateAndGet(
+        this,
+        prefix -> {
+          if (prefix == null) {
+            prefix = Constants.BTRACE_METHOD_PREFIX + getClassName(true).replace('/', '$') + "$";
+          }
+          return prefix;
+        });
   }
 
   @Override

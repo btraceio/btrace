@@ -1,46 +1,23 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.instr;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.util.CheckClassAdapter;
-import org.objectweb.asm.util.TraceClassVisitor;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.MethodID;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
-import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
-import sun.misc.Unsafe;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -60,9 +37,22 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.util.TraceClassVisitor;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.MethodID;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
+import sun.misc.Unsafe;
 
 /**
  * @author Jaroslav Bachorik
@@ -137,8 +127,7 @@ public abstract class InstrumentorTestBase {
   }
 
   protected static final void resetClassLoader() {
-    cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {
-    };
+    cl = new ClassLoader(InstrumentorTestBase.class.getClassLoader()) {};
   }
 
   protected void cleanup() {
@@ -191,23 +180,23 @@ public abstract class InstrumentorTestBase {
       } catch (NoSuchMethodError e) {
         ClassWriter cw = new ClassWriter(0);
         ClassVisitor cv =
-                new ClassVisitor(Opcodes.ASM9, cw) {
-                  @Override
-                  public void visit(
-                          int version,
-                          int access,
-                          String name,
-                          String signature,
-                          String superName,
-                          String[] interfaces) {
-                    int idx = name.lastIndexOf('/');
-                    name =
-                            Auxiliary.class.getPackage().getName().replace('.', '/')
-                                    + '/'
-                                    + name.substring(idx + 1);
-                    super.visit(version, access, name, signature, superName, interfaces);
-                  }
-                };
+            new ClassVisitor(Opcodes.ASM9, cw) {
+              @Override
+              public void visit(
+                  int version,
+                  int access,
+                  String name,
+                  String signature,
+                  String superName,
+                  String[] interfaces) {
+                int idx = name.lastIndexOf('/');
+                name =
+                    Auxiliary.class.getPackage().getName().replace('.', '/')
+                        + '/'
+                        + name.substring(idx + 1);
+                super.visit(version, access, name, signature, superName, interfaces);
+              }
+            };
         cr.accept(cv, ClassReader.SKIP_DEBUG);
         code = cw.toByteArray();
         Class<?> rtClz = Class.forName("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9");
@@ -239,13 +228,18 @@ public abstract class InstrumentorTestBase {
     if (DEBUG) {
       System.err.println(diff);
     }
-//    if (name.isEmpty()) {
-//      assertTrue(diff.isEmpty());
-//    }
+    //    if (name.isEmpty()) {
+    //      assertTrue(diff.isEmpty());
+    //    }
     Path target = Paths.get(System.getProperty("test.resources"), "instrumentorTestData", name);
     if (Boolean.getBoolean("update.test.data")) {
       Files.createDirectories(target.getParent());
-      Files.write(target, diff.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+      Files.write(
+          target,
+          diff.getBytes(StandardCharsets.UTF_8),
+          StandardOpenOption.CREATE,
+          StandardOpenOption.WRITE,
+          StandardOpenOption.TRUNCATE_EXISTING);
     } else {
       String expected = new String(Files.readAllBytes(target), StandardCharsets.UTF_8);
       assertEquals(expected, diff);
@@ -279,7 +273,8 @@ public abstract class InstrumentorTestBase {
     transformedBC = cw.instrument();
 
     if (transformedBC != null) {
-      try (OutputStream os = new FileOutputStream(new File(System.getProperty("java.io.tmpdir"), "dummy.class"))) {
+      try (OutputStream os =
+          new FileOutputStream(new File(System.getProperty("java.io.tmpdir"), "dummy.class"))) {
         os.write(transformedBC);
       }
     } else {
@@ -373,7 +368,9 @@ public abstract class InstrumentorTestBase {
     if (DEBUG) {
       System.err.println("=== Loaded Trace: " + bcn + "\n");
       System.err.println(asmify(this.traceCode));
-      Files.write(FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir"), "jingle.class"), traceCode);
+      Files.write(
+          FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir"), "jingle.class"),
+          traceCode);
     }
 
     bcn.checkVerified();
@@ -414,9 +411,9 @@ public abstract class InstrumentorTestBase {
     int read;
 
     while ((read = is.read(buffer)) != -1) {
-      baos.write(buffer, 0, read);  // Appends to internal buffer
+      baos.write(buffer, 0, read); // Appends to internal buffer
     }
 
-    return baos.toByteArray();  // Single final copy
+    return baos.toByteArray(); // Single final copy
   }
 }

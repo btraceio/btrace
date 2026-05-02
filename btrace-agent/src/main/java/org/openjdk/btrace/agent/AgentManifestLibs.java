@@ -1,6 +1,18 @@
 /*
- * Utility to read agent manifest attributes and resolve library paths
- * to be appended to the bootstrap and system classpaths.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.agent;
 
@@ -50,7 +62,8 @@ final class AgentManifestLibs {
   static ResolvedLibs resolveFromManifest(Class<?> anchor) {
     boolean ignore = Boolean.getBoolean("btrace.ignoreManifestLibs");
     if (ignore) {
-      if (log.isDebugEnabled()) log.debug("Ignoring manifest libs (btrace.ignoreManifestLibs=true)");
+      if (log.isDebugEnabled())
+        log.debug("Ignoring manifest libs (btrace.ignoreManifestLibs=true)");
       return new ResolvedLibs(Collections.emptyList(), Collections.emptyList());
     }
 
@@ -99,7 +112,8 @@ final class AgentManifestLibs {
     try {
       Path agentPath = locateAgentPath(anchor);
       if (agentPath == null) return null;
-      if (Files.isRegularFile(agentPath) && agentPath.toString().toLowerCase(Locale.ROOT).endsWith(".jar")) {
+      if (Files.isRegularFile(agentPath)
+          && agentPath.toString().toLowerCase(Locale.ROOT).endsWith(".jar")) {
         try (JarFile jf = new JarFile(agentPath.toFile())) {
           return jf.getManifest();
         }
@@ -231,7 +245,8 @@ final class AgentManifestLibs {
               continue;
             }
           } catch (IOException e) {
-            // toRealPath failed (file may not exist or path issue); fall back to non-canonical check
+            // toRealPath failed (file may not exist or path issue); fall back to non-canonical
+            // check
             if (log.isDebugEnabled()) log.debug("toRealPath failed for {}: {}", np, e.getMessage());
             if (!np.startsWith(home)) {
               log.warn("Rejecting manifest lib outside BTRACE_HOME: {}", np);
@@ -241,10 +256,10 @@ final class AgentManifestLibs {
         }
         out.add(np);
       } catch (Exception e) {
-        if (log.isDebugEnabled()) log.debug("Failed resolving manifest entry {}: {}", p, e.toString());
+        if (log.isDebugEnabled())
+          log.debug("Failed resolving manifest entry {}: {}", p, e.toString());
       }
     }
     return out;
   }
 }
-

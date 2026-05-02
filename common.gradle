@@ -4,6 +4,7 @@
 
 apply plugin: 'java'
 apply plugin: 'idea'
+apply from: rootProject.file('gradle/spotless.gradle')
 
 project.group = 'org.openjdk.btrace'
 project.version = '2.3.0-SNAPSHOT'

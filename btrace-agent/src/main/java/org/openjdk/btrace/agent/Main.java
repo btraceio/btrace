@@ -1,45 +1,52 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.agent;
 
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.WireIO;
-import org.openjdk.btrace.extension.ExtensionLoader;
-import org.openjdk.btrace.extension.impl.ExtensionBridgeImpl;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
-import org.openjdk.btrace.instr.BTraceTransformer;
-import org.openjdk.btrace.instr.Constants;
-import org.openjdk.btrace.runtime.BTraceRuntimes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.openjdk.btrace.core.Args.ALLOW_EXTENSIONS;
+import static org.openjdk.btrace.core.Args.ALLOW_PRIVILEGED;
+import static org.openjdk.btrace.core.Args.BOOT_CLASS_PATH;
+import static org.openjdk.btrace.core.Args.CMD_QUEUE_LIMIT;
+import static org.openjdk.btrace.core.Args.CONFIG;
+import static org.openjdk.btrace.core.Args.DEBUG;
+import static org.openjdk.btrace.core.Args.DENY;
+import static org.openjdk.btrace.core.Args.DENY_EXTENSIONS;
+import static org.openjdk.btrace.core.Args.DUMP_CLASSES;
+import static org.openjdk.btrace.core.Args.DUMP_DIR;
+import static org.openjdk.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
+import static org.openjdk.btrace.core.Args.FILE_ROLL_MILLISECONDS;
+import static org.openjdk.btrace.core.Args.GRANT;
+import static org.openjdk.btrace.core.Args.GRANT_ALL;
+import static org.openjdk.btrace.core.Args.HELP;
+import static org.openjdk.btrace.core.Args.LIBS;
+import static org.openjdk.btrace.core.Args.NO_SERVER;
+import static org.openjdk.btrace.core.Args.OUTPUT;
+import static org.openjdk.btrace.core.Args.PORT;
+import static org.openjdk.btrace.core.Args.PROBES;
+import static org.openjdk.btrace.core.Args.PROBE_DESC_PATH;
+import static org.openjdk.btrace.core.Args.SCRIPT;
+import static org.openjdk.btrace.core.Args.SCRIPT_DIR;
+import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_DIR;
+import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_FILE;
+import static org.openjdk.btrace.core.Args.STARTUP_RETRANSFORM;
+import static org.openjdk.btrace.core.Args.STATSD;
+import static org.openjdk.btrace.core.Args.STDOUT;
+import static org.openjdk.btrace.core.Args.SYSTEM_CLASS_PATH;
+import static org.openjdk.btrace.core.Args.TRACK_RETRANSFORMS;
+import static org.openjdk.btrace.core.Args.TRUSTED;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,12 +66,12 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.LinkedHashSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -73,38 +80,22 @@ import java.util.concurrent.ThreadFactory;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
-
-import static org.openjdk.btrace.core.Args.ALLOW_EXTENSIONS;
-import static org.openjdk.btrace.core.Args.ALLOW_PRIVILEGED;
-import static org.openjdk.btrace.core.Args.BOOT_CLASS_PATH;
-import static org.openjdk.btrace.core.Args.CMD_QUEUE_LIMIT;
-import static org.openjdk.btrace.core.Args.CONFIG;
-import static org.openjdk.btrace.core.Args.DEBUG;
-import static org.openjdk.btrace.core.Args.DENY;
-import static org.openjdk.btrace.core.Args.DENY_EXTENSIONS;
-import static org.openjdk.btrace.core.Args.DUMP_CLASSES;
-import static org.openjdk.btrace.core.Args.DUMP_DIR;
-import static org.openjdk.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
-import static org.openjdk.btrace.core.Args.FILE_ROLL_MILLISECONDS;
-import static org.openjdk.btrace.core.Args.GRANT;
-import static org.openjdk.btrace.core.Args.GRANT_ALL;
-import static org.openjdk.btrace.core.Args.HELP;
-import static org.openjdk.btrace.core.Args.LIBS;
-import static org.openjdk.btrace.core.Args.NO_SERVER;
-import static org.openjdk.btrace.core.Args.PORT;
-import static org.openjdk.btrace.core.Args.PROBE_DESC_PATH;
-import static org.openjdk.btrace.core.Args.SCRIPT;
-import static org.openjdk.btrace.core.Args.SCRIPT_DIR;
-import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_DIR;
-import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_FILE;
-import static org.openjdk.btrace.core.Args.STARTUP_RETRANSFORM;
-import static org.openjdk.btrace.core.Args.STATSD;
-import static org.openjdk.btrace.core.Args.STDOUT;
-import static org.openjdk.btrace.core.Args.SYSTEM_CLASS_PATH;
-import static org.openjdk.btrace.core.Args.TRACK_RETRANSFORMS;
-import static org.openjdk.btrace.core.Args.TRUSTED;
-import static org.openjdk.btrace.core.Args.PROBES;
-import static org.openjdk.btrace.core.Args.OUTPUT;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.DebugSupport;
+import org.openjdk.btrace.core.Messages;
+import org.openjdk.btrace.core.SharedSettings;
+import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.StatusCommand;
+import org.openjdk.btrace.core.comm.WireIO;
+import org.openjdk.btrace.extension.ExtensionLoader;
+import org.openjdk.btrace.extension.impl.ExtensionBridgeImpl;
+import org.openjdk.btrace.instr.BTraceProbeFactory;
+import org.openjdk.btrace.instr.BTraceTransformer;
+import org.openjdk.btrace.instr.Constants;
+import org.openjdk.btrace.runtime.BTraceRuntimes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -135,10 +126,8 @@ public final class Main {
   private static volatile boolean serverRunning = true;
   private static ServerSocket serverSocket;
   // Track appended jars to avoid duplicate classpath entries
-  private static final Set<Path> BOOT_ADDED =
-      Collections.synchronizedSet(new LinkedHashSet<>());
-  private static final Set<Path> SYSTEM_ADDED =
-      Collections.synchronizedSet(new LinkedHashSet<>());
+  private static final Set<Path> BOOT_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
+  private static final Set<Path> SYSTEM_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
@@ -210,8 +199,10 @@ public final class Main {
       log.debug("Adding class transformer");
       inst.addTransformer(transformer, true);
       try {
-        // the MethodHandleNatives must be instrumented to track start-end of indy linking to avoid deadlocking
-        Class<?> clz = ClassLoader.getSystemClassLoader().loadClass("java.lang.invoke.MethodHandleNatives");
+        // the MethodHandleNatives must be instrumented to track start-end of indy linking to avoid
+        // deadlocking
+        Class<?> clz =
+            ClassLoader.getSystemClassLoader().loadClass("java.lang.invoke.MethodHandleNatives");
         inst.retransformClasses(clz);
       } catch (Throwable t) {
         log.debug("Failed to instrument MethodHandleNatives", t);
@@ -346,8 +337,8 @@ public final class Main {
   }
 
   /**
-   * Initialize the extension system by discovering and loading extensions
-   * from configured extension directories or embedded resources.
+   * Initialize the extension system by discovering and loading extensions from configured extension
+   * directories or embedded resources.
    */
   private static void initExtensions() {
     try {
@@ -359,7 +350,8 @@ public final class Main {
         log.debug("BTRACE_HOME={}", btraceHome != null ? btraceHome : "(embedded-only mode)");
       }
 
-      // Initialize extension loader with boot classloader as parent, configuration, and instrumentation
+      // Initialize extension loader with boot classloader as parent, configuration, and
+      // instrumentation
       // Passing null btraceHome enables embedded-only mode (extensions from JAR resources)
       ClassLoader bootClassLoader = Main.class.getClassLoader();
       extensionLoader = ExtensionLoader.initialize(btraceHome, bootClassLoader, inst);
@@ -375,9 +367,7 @@ public final class Main {
     }
   }
 
-  /**
-   * Load bundled probes from embedded extensions based on agent args or configurator.
-   */
+  /** Load bundled probes from embedded extensions based on agent args or configurator. */
   private static void loadBundledProbes() {
     if (extensionLoader == null) {
       return;
@@ -414,7 +404,8 @@ public final class Main {
     }
 
     // Search for probe classes in embedded extensions
-    for (org.openjdk.btrace.extension.ExtensionDescriptorDTO ext : extensionLoader.getAvailableExtensions()) {
+    for (org.openjdk.btrace.extension.ExtensionDescriptorDTO ext :
+        extensionLoader.getAvailableExtensions()) {
       if (!ext.isEmbedded()) {
         continue;
       }
@@ -440,10 +431,9 @@ public final class Main {
     }
   }
 
-  /**
-   * Load an embedded probe from classpath resources.
-   */
-  private static boolean loadEmbeddedProbe(String resourcePath, String probeName, boolean traceToStdOut) {
+  /** Load an embedded probe from classpath resources. */
+  private static boolean loadEmbeddedProbe(
+      String resourcePath, String probeName, boolean traceToStdOut) {
     try {
       InputStream is = Main.class.getClassLoader().getResourceAsStream(resourcePath);
       if (is == null) {
@@ -477,9 +467,7 @@ public final class Main {
     }
   }
 
-  /**
-   * Read all bytes from an input stream.
-   */
+  /** Read all bytes from an input stream. */
   private static byte[] readAllBytes(InputStream is) throws IOException {
     java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
     byte[] data = new byte[4096];
@@ -498,8 +486,7 @@ public final class Main {
   private static String getBTraceHome() {
     try {
       // Get the agent JAR location
-      String agentPath =
-          Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+      String agentPath = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 
       // Agent is typically at BTRACE_HOME/libs/btrace-agent.jar
       File agentJar = new File(agentPath);
@@ -813,7 +800,8 @@ public final class Main {
         case ALLOW_PRIVILEGED:
           {
             if (!p.isEmpty()) {
-              org.openjdk.btrace.extension.PermissionPolicy.get().setAllowPrivileged(Boolean.parseBoolean(p));
+              org.openjdk.btrace.extension.PermissionPolicy.get()
+                  .setAllowPrivileged(Boolean.parseBoolean(p));
               log.debug("allowPrivileged: {}", p);
             }
             break;
@@ -898,12 +886,14 @@ public final class Main {
       }
     }
 
-    // Skip preconfigured libs only when both the test knob is set and manifest-libs feature is enabled
+    // Skip preconfigured libs only when both the test knob is set and manifest-libs feature is
+    // enabled
     boolean skipPreconfLibs = Boolean.getBoolean("btrace.test.skipLibs");
     if (!(skipPreconfLibs && useManifestLibs)) {
       addPreconfLibs(libs);
     } else if (log.isDebugEnabled()) {
-      log.debug("Skipping addPreconfLibs due to btrace.test.skipLibs=true and manifestLibs enabled");
+      log.debug(
+          "Skipping addPreconfLibs due to btrace.test.skipLibs=true and manifestLibs enabled");
     }
 
     // Explicit, last-resort escape hatch: append a single jar to system CL
@@ -949,7 +939,8 @@ public final class Main {
             } else {
               if (!allowExternal) {
                 log.warn(
-                    "Cannot determine BTRACE_HOME; proceeding to append system jar (btrace.system.appendJar): {}", p);
+                    "Cannot determine BTRACE_HOME; proceeding to append system jar (btrace.system.appendJar): {}",
+                    p);
               }
               appendSystemJar(p);
             }
@@ -1032,7 +1023,8 @@ public final class Main {
     ClassLoader cl = Main.class.getClassLoader();
     String resourceName = Main.class.getName().replace('.', '/') + ".class";
     // Handle bootstrap classloader case (returns null) by using system classloader
-    URL u = (cl != null) ? cl.getResource(resourceName) : ClassLoader.getSystemResource(resourceName);
+    URL u =
+        (cl != null) ? cl.getResource(resourceName) : ClassLoader.getSystemResource(resourceName);
     if (u != null) {
       String path = u.toString();
       int delimiterPos = path.lastIndexOf('!');

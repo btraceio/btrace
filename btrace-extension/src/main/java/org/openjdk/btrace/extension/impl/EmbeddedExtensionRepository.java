@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.extension.impl;
 
@@ -49,6 +41,7 @@ import org.slf4j.LoggerFactory;
  * and discovered via manifest attribute or resource scanning.
  *
  * <p>Structure:
+ *
  * <pre>
  * META-INF/
  *   MANIFEST.MF
@@ -63,7 +56,8 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * <p>API classes are flattened as {@code .class} files in the JAR root (loaded via bootstrap).
- * Implementation classes are stored as {@code .classdata} files and loaded by {@link ClassDataLoader}.
+ * Implementation classes are stored as {@code .classdata} files and loaded by {@link
+ * ClassDataLoader}.
  */
 public final class EmbeddedExtensionRepository implements ExtensionRepository {
   private static final Logger log = LoggerFactory.getLogger(EmbeddedExtensionRepository.class);
@@ -80,12 +74,13 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
   /**
    * Creates an embedded extension repository.
    *
-   * @param resourceLoader classloader to read resources from (typically agent classloader).
-   *     If null (bootstrap classloader), falls back to system classloader.
+   * @param resourceLoader classloader to read resources from (typically agent classloader). If null
+   *     (bootstrap classloader), falls back to system classloader.
    */
   public EmbeddedExtensionRepository(ClassLoader resourceLoader) {
     // Handle bootstrap classloader case (null) by using system classloader
-    this.resourceLoader = resourceLoader != null ? resourceLoader : ClassLoader.getSystemClassLoader();
+    this.resourceLoader =
+        resourceLoader != null ? resourceLoader : ClassLoader.getSystemClassLoader();
   }
 
   @Override
@@ -112,8 +107,10 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
         ExtensionDescriptorDTO descriptor = parseEmbeddedExtension(extId);
         if (descriptor != null) {
           extensions.add(descriptor);
-          log.debug("Discovered embedded extension: {} version {}",
-              descriptor.getId(), descriptor.getVersion());
+          log.debug(
+              "Discovered embedded extension: {} version {}",
+              descriptor.getId(),
+              descriptor.getVersion());
         }
       } catch (Exception e) {
         log.warn("Failed to parse embedded extension {}: {}", extId, e.getMessage());
@@ -124,9 +121,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     return extensions;
   }
 
-  /**
-   * Reads the list of embedded extension IDs from the agent JAR manifest.
-   */
+  /** Reads the list of embedded extension IDs from the agent JAR manifest. */
   private List<String> readManifestIndex() {
     try {
       Enumeration<URL> manifests = resourceLoader.getResources("META-INF/MANIFEST.MF");
@@ -147,9 +142,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     return Collections.emptyList();
   }
 
-  /**
-   * Parses an embedded extension from its properties file.
-   */
+  /** Parses an embedded extension from its properties file. */
   private ExtensionDescriptorDTO parseEmbeddedExtension(String extensionId) {
     String propsPath = EXTENSIONS_BASE + extensionId + "/" + EXTENSION_PROPERTIES;
 
@@ -176,9 +169,10 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
       String servicesStr = props.getProperty("services", "");
       String configurator = props.getProperty("configurator");
 
-      List<String> services = servicesStr.isEmpty()
-          ? Collections.emptyList()
-          : validateClassNames(Arrays.asList(servicesStr.split(",")), "service");
+      List<String> services =
+          servicesStr.isEmpty()
+              ? Collections.emptyList()
+              : validateClassNames(Arrays.asList(servicesStr.split(",")), "service");
 
       // Validate configurator class name if present
       if (configurator != null && !isValidClassName(configurator)) {
@@ -213,9 +207,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     }
   }
 
-  /**
-   * Discovers bundled probe class files in the extension's probes/ directory.
-   */
+  /** Discovers bundled probe class files in the extension's probes/ directory. */
   private List<String> discoverBundledProbes(String extensionId) {
     // Note: Discovering resources without filesystem access is tricky.
     // The probes list should be declared in extension.properties instead.
@@ -242,11 +234,12 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
    * Validates that an extension ID is safe and cannot be used for path traversal.
    *
    * <p>Valid extension IDs must:
+   *
    * <ul>
-   *   <li>Not be null or empty</li>
-   *   <li>Not contain path separators (/ or \)</li>
-   *   <li>Not contain parent directory references (..)</li>
-   *   <li>Only contain safe characters: alphanumeric, hyphen, underscore, dot</li>
+   *   <li>Not be null or empty
+   *   <li>Not contain path separators (/ or \)
+   *   <li>Not contain parent directory references (..)
+   *   <li>Only contain safe characters: alphanumeric, hyphen, underscore, dot
    * </ul>
    *
    * @param extensionId the extension ID to validate
@@ -281,7 +274,8 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     }
     // Basic validation: must be a valid Java identifier pattern
     // Allows: package.Class, package.Class$Inner
-    return className.matches("^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_$]*)*(\\$[a-zA-Z_][a-zA-Z0-9_$]*)*$");
+    return className.matches(
+        "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_$]*)*(\\$[a-zA-Z_][a-zA-Z0-9_$]*)*$");
   }
 
   /**

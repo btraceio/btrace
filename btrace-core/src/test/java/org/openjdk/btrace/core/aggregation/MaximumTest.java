@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.core.aggregation;
 
@@ -40,8 +32,7 @@ class MaximumTest {
 
   @Test
   void testInitialValue() {
-    assertEquals(Long.MIN_VALUE, maximum.getValue(),
-        "Initial maximum should be Long.MIN_VALUE");
+    assertEquals(Long.MIN_VALUE, maximum.getValue(), "Initial maximum should be Long.MIN_VALUE");
   }
 
   @Test
@@ -75,20 +66,21 @@ class MaximumTest {
     maximum.add(largeValue1);
     maximum.add(largeValue2);
 
-    assertEquals(largeValue2, maximum.getValue(),
-        "Maximum should handle large values correctly");
+    assertEquals(largeValue2, maximum.getValue(), "Maximum should handle large values correctly");
   }
 
   @Test
   void testValuesExceedingIntegerRange() {
     // Test values > Integer.MAX_VALUE
-    long value1 = 3_000_000_000L;  // > Integer.MAX_VALUE
+    long value1 = 3_000_000_000L; // > Integer.MAX_VALUE
     long value2 = 4_000_000_000L;
 
     maximum.add(value1);
     maximum.add(value2);
 
-    assertEquals(value2, maximum.getValue(),
+    assertEquals(
+        value2,
+        maximum.getValue(),
         "Maximum should work correctly with values > Integer.MAX_VALUE");
   }
 
@@ -99,7 +91,9 @@ class MaximumTest {
     assertEquals(200L, maximum.getValue());
 
     maximum.clear();
-    assertEquals(Long.MIN_VALUE, maximum.getValue(),
+    assertEquals(
+        Long.MIN_VALUE,
+        maximum.getValue(),
         "After clear(), maximum should reset to Long.MIN_VALUE");
   }
 
@@ -112,7 +106,9 @@ class MaximumTest {
     long largeValue = 3_000_000_000L;
     maximum.add(largeValue);
 
-    assertEquals(largeValue, maximum.getValue(),
+    assertEquals(
+        largeValue,
+        maximum.getValue(),
         "After clear(), should correctly track values > Integer.MAX_VALUE");
   }
 
@@ -130,7 +126,9 @@ class MaximumTest {
 
     // If clear() incorrectly used Integer.MIN_VALUE, this comparison would fail
     // because Integer.MIN_VALUE > valueInLongRange
-    assertEquals(valueInLongRange, maximum.getValue(),
+    assertEquals(
+        valueInLongRange,
+        maximum.getValue(),
         "After clear(), maximum should use Long.MIN_VALUE not Integer.MIN_VALUE");
   }
 
@@ -164,7 +162,7 @@ class MaximumTest {
     maximum.add(0);
     maximum.add(Long.MAX_VALUE);
 
-    assertEquals(Long.MAX_VALUE, maximum.getValue(),
-        "Maximum should correctly handle Long.MAX_VALUE");
+    assertEquals(
+        Long.MAX_VALUE, maximum.getValue(), "Maximum should correctly handle Long.MAX_VALUE");
   }
 }

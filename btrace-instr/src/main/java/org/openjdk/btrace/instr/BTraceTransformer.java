@@ -1,38 +1,20 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.instr;
-
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -45,6 +27,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.DebugSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The single entry point for class transformation.
@@ -187,7 +178,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
             log.debug("transformed class {}", cr.getJavaClassName());
           }
           // Optional: verify transformed class via ASM in tests.
-          if (Boolean.getBoolean("btrace.verify.transformed") && !Boolean.TRUE.equals(VerifyGuard.IN_PROGRESS.get())) {
+          if (Boolean.getBoolean("btrace.verify.transformed")
+              && !Boolean.TRUE.equals(VerifyGuard.IN_PROGRESS.get())) {
             boolean allow;
             String filter = System.getProperty("btrace.verify.filter");
             if (filter != null && !filter.isEmpty()) {
@@ -242,16 +234,16 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
   private static boolean isAppClass(String internalName) {
     if (internalName == null) return false;
-    return !(internalName.startsWith("java/") ||
-        internalName.startsWith("javax/") ||
-        internalName.startsWith("jdk/") ||
-        internalName.startsWith("sun/") ||
-        internalName.startsWith("com/sun/") ||
-        internalName.startsWith("org/ietf/") ||
-        internalName.startsWith("org/omg/") ||
-        internalName.startsWith("org/w3c/") ||
-        internalName.startsWith("org/xml/") ||
-        internalName.startsWith("org/openjdk/btrace/"));
+    return !(internalName.startsWith("java/")
+        || internalName.startsWith("javax/")
+        || internalName.startsWith("jdk/")
+        || internalName.startsWith("sun/")
+        || internalName.startsWith("com/sun/")
+        || internalName.startsWith("org/ietf/")
+        || internalName.startsWith("org/omg/")
+        || internalName.startsWith("org/w3c/")
+        || internalName.startsWith("org/xml/")
+        || internalName.startsWith("org/openjdk/btrace/"));
   }
 
   static class Filter {
