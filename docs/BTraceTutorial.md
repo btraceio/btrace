@@ -931,6 +931,88 @@ Configuration (optional):
   - `btrace-metrics.histogram.default-precision=3`
   - `btrace-metrics.histogram.max-value=3600000000`
 
+##### Building App Integration Extensions with @ExternalType
+
+When an extension needs to interact with application-specific types (Spark events, Hadoop objects, custom framework classes), use the `@ExternalType` annotation to eliminate manual reflective boilerplate. The BTrace extension plugin auto-registers the annotation processor.
+
+Declare an interface in `src/main/java` annotated with `@ExternalType("fully.qualified.AppType")`:
+
+```java
+// src/main/java/org/example/spark/api/JobStartEvent.java
+@ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
+public interface JobStartEvent {
+    int jobId();
+    long time();
+}
+```
+
+The processor generates `JobStartEvent$Ext` with lazy, cached `MethodHandle` dispatchers. Use them directly in the impl — no `try/catch` or cache setup required:
+
+```java
+// src/main/java/org/example/spark/impl/SparkApiImpl.java
+public final class SparkApiImpl extends Extension implements SparkApi {
+    @Override
+    public void onJobStart(Object event) {
+        int  id = JobStartEvent$Ext.jobId(event);
+        long ts = JobStartEvent$Ext.time(event);
+        // emit metrics / logs...
+    }
+}
+```
+
+Resolution happens lazily on the first call via the event object's own class loader; the handle is cached for subsequent calls. If the external class isn't loaded yet, the resolver retries next call — no `ExceptionInInitializerError` at extension startup.
+
+For fields, constructors, non-public methods, or chained external types, use `ClassLoadingUtil` / `MethodHandleCache` directly (see [Provided-Style Extensions](architecture/provided-style-extensions.md)).
+
+For the full `@ExternalType` reference, see [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md).
+
+##### Zero-Config Probe Auto-Selection (ExtensionConfigurator)
+
+For fat agent deployments (Spark executors, Hadoop nodes, Kubernetes pods), extensions can automatically select the right bundled probes without operator input.
+
+**1. List probe names and declare the configurator in `extension.properties`:**
+
+```properties
+probes=DriverTracer,ExecutorTracer
+configurator=org.example.spark.SparkConfigurator
+```
+
+**2. Stage the compiled probe `.class` files in the fat agent plugin:**
+
+```groovy
+btraceFatAgent {
+    embedExtensions { project(':my-spark-extension') }
+    bundledProbes { from 'src/probes/compiled' }
+}
+```
+
+**3. Implement `ExtensionConfigurator`:**
+
+```java
+public final class SparkConfigurator implements ExtensionConfigurator {
+    @Override
+    public ProbeConfiguration configure(RuntimeEnvironment env, Map<String, String> args) {
+        ProbeConfiguration config = new ProbeConfiguration();
+        if (env.hasClass("org.apache.spark.SparkContext")) {
+            config.enable("DriverTracer");
+        } else if (env.hasClass("org.apache.spark.executor.Executor")) {
+            config.enable("ExecutorTracer");
+        }
+        return config;
+    }
+}
+```
+
+`RuntimeEnvironment` provides `hasClass(String)`, `getSystemProperty(String)`, `getEnv(String)`, and `getMainClassName()` for environment detection.
+
+**4. Operator attaches — no `probes=` argument needed:**
+
+```bash
+java -javaagent:my-btrace-agent-fat.jar spark-submit ...
+```
+
+If the operator supplies `probes=`, it takes priority and the configurator is skipped. See [Extension Development Guide — Bundled Probes](BTraceExtensionDevelopmentGuide.md#bundled-probes-and-zero-config-auto-selection) for the full API.
+
 ##### Troubleshooting Failed Extensions
 
 If extensions fail to load during agent initialization (for example, due to missing dependencies or configuration issues), BTrace will display a warning when you submit a probe:

@@ -773,6 +773,25 @@ btraceFatAgent {
 }
 ```
 
+#### Writing Extensions That Integrate With App Types (@ExternalType)
+
+When your extension needs to interact with application-specific classes (Spark events, Hadoop objects, etc.), use `@ExternalType` to generate lazy reflective dispatchers at build time — no manual `MethodHandle` boilerplate:
+
+```java
+// src/main/java/org/example/ext/api/JobEvent.java
+@ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
+public interface JobEvent {
+    int jobId();
+    long time();
+}
+```
+
+The plugin auto-registers the annotation processor, which generates `JobEvent$Ext` with cached, lazy-resolving static methods. See [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for details.
+
+#### Zero-Config Probe Auto-Selection
+
+Extensions embedded in a fat agent can automatically activate the right bundled probes by implementing `ExtensionConfigurator`. The agent calls the configurator at startup to detect the environment (driver vs executor, namenode vs datanode, etc.) and enables the matching probes — no `probes=` argument needed. See [Extension Development Guide — Bundled Probes](BTraceExtensionDevelopmentGuide.md#bundled-probes-and-zero-config-auto-selection).
+
 ### Maven Plugin
 
 For Maven users, a Maven plugin is also available:
