@@ -25,9 +25,10 @@ dependencies {
     implementation 'org.ow2.asm:asm:9.9.1'
     implementation 'org.ow2.asm:asm-tree:9.9.1'
 
-    // Testing — version kept in sync with the root project's version catalog (see gradle.properties).
+    // Testing — version pinned here to match the root project's version catalog (settings.gradle).
+    // Note: this is an included build and cannot access the root project's 'libs' version catalog.
     testImplementation gradleTestKit()
-    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
