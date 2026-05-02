@@ -681,11 +681,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   }
 
   private boolean isErrorHandler(MethodTree node) {
-    ModifiersTree mt = node.getModifiers();
-    List<? extends AnnotationTree> annos = mt.getAnnotations();
-    for (AnnotationTree at : annos) {
-      String annFqn = verifier.resolveAnnotationTypeName(at);
-      if (ON_ERROR_TYPE.equals(annFqn)) {
+    for (AnnotationTree at : node.getModifiers().getAnnotations()) {
+      if (ON_ERROR_TYPE.equals(verifier.resolveAnnotationTypeName(at))) {
         return true;
       }
     }
@@ -693,11 +690,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   }
 
   private boolean isExitHandler(MethodTree node) {
-    ModifiersTree mt = node.getModifiers();
-    List<? extends AnnotationTree> annos = mt.getAnnotations();
-    for (AnnotationTree at : annos) {
-      String annFqn = verifier.resolveAnnotationTypeName(at);
-      if (ON_EXIT_TYPE.equals(annFqn)) {
+    for (AnnotationTree at : node.getModifiers().getAnnotations()) {
+      if (ON_EXIT_TYPE.equals(verifier.resolveAnnotationTypeName(at))) {
         return true;
       }
     }
@@ -705,11 +699,9 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   }
 
   private boolean isAnnotated(MethodTree node) {
-    ModifiersTree mt = node.getModifiers();
-    List<? extends AnnotationTree> annos = mt.getAnnotations();
-    for (AnnotationTree at : annos) {
-      String annFqn = verifier.resolveAnnotationTypeName(at);
-      if (annFqn != null && annFqn.startsWith("org.openjdk.btrace.core.annotations")) {
+    for (AnnotationTree at : node.getModifiers().getAnnotations()) {
+      String resolvedName = verifier.resolveAnnotationTypeName(at);
+      if (resolvedName != null && resolvedName.startsWith("org.openjdk.btrace.core.annotations")) {
         return true;
       }
     }
@@ -779,14 +771,19 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     TreePath tp = verifier.getTreeUtils().getPath(verifier.getCompilationUnit(), t);
     Element e = verifier.getTreeUtils().getElement(tp);
     if (e == null) {
-      if (t.getKind() == Tree.Kind.NEW_CLASS) {
-        e =
-            verifier
-                .getTreeUtils()
-                .getElement(new TreePath(tp, ((NewClassTree) t).getIdentifier()));
-      }
-      if (t.getKind() == Tree.Kind.THROW) {
-        e = verifier.getTreeUtils().getElement(new TreePath(tp, ((ThrowTree) t).getExpression()));
+      switch (t.getKind()) {
+        case NEW_CLASS:
+          e =
+              verifier
+                  .getTreeUtils()
+                  .getElement(new TreePath(tp, ((NewClassTree) t).getIdentifier()));
+          break;
+        case THROW:
+          e =
+              verifier
+                  .getTreeUtils()
+                  .getElement(new TreePath(tp, ((ThrowTree) t).getExpression()));
+          break;
       }
       if (e == null) {
         verifier.getMessager().printMessage(Diagnostic.Kind.ERROR, t.toString());
