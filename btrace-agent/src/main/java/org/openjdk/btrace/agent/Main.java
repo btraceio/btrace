@@ -413,9 +413,6 @@ public final class Main {
    * Load bundled probes from embedded extensions based on agent args or configurator.
    */
   private static void loadBundledProbes() {
-    // FIXME(pr791): loadBundledProbes() is an unimplemented placeholder.
-    //   Must be implemented before bundled-probes feature is released, otherwise
-    //   embedded probes in the fat agent will silently fail to load.
     if (extensionLoader == null) {
       return;
     }
