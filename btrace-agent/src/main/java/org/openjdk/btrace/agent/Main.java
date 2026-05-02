@@ -110,7 +110,6 @@ import static org.openjdk.btrace.core.Args.OUTPUT;
  * This is the main class for BTrace java.lang.instrument agent.
  *
  * @author A. Sundararajan
- * @author Joachim Skeie (rolling output)
  */
 @SuppressWarnings("RedundantThrows")
 public final class Main {
@@ -637,7 +636,6 @@ public final class Main {
     DebugSupport.initLoggers(settings.isDebug(), log);
 
     log.debug("debugMode is {}", settings.isDebug());
-
     for (Map.Entry<String, String> e : argMap) {
       String key = e.getKey();
       p = e.getValue();
@@ -1139,10 +1137,7 @@ public final class Main {
   }
 
   private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
-    if (!BTraceProbeFactory.canLoad(filePath)) {
-      return false;
-    }
-
+    if (!BTraceProbeFactory.canLoad(filePath)) return false;
     try {
       String scriptName = "";
       String scriptParent = "";

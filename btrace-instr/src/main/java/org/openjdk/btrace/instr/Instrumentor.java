@@ -1024,11 +1024,7 @@ public class Instrumentor extends ClassVisitor {
                       constArg(
                           om.getTargetMethodOrFieldParameter(),
                           getMethodOrFieldName(
-                              om.isTargetMethodOrFieldFqn(),
-                              opcode,
-                              owner,
-                              name,
-                              desc)),
+                              om.isTargetMethodOrFieldFqn(), opcode, owner, name, desc)),
                       constArg(om.getClassNameParameter(), className.replace('/', '.')),
                       constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
@@ -1075,11 +1071,7 @@ public class Instrumentor extends ClassVisitor {
                     constArg(
                         om.getTargetMethodOrFieldParameter(),
                         getMethodOrFieldName(
-                            om.isTargetMethodOrFieldFqn(),
-                            opcode,
-                            owner,
-                            name,
-                            desc)),
+                            om.isTargetMethodOrFieldFqn(), opcode, owner, name, desc)),
                     localVarArg(om.getReturnParameter(), fldType, returnValIndex),
                     constArg(om.getClassNameParameter(), className.replace('/', '.')),
                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
@@ -1147,11 +1139,7 @@ public class Instrumentor extends ClassVisitor {
                       constArg(
                           om.getTargetMethodOrFieldParameter(),
                           getMethodOrFieldName(
-                              om.isTargetMethodOrFieldFqn(),
-                              opcode,
-                              owner,
-                              name,
-                              desc)),
+                              om.isTargetMethodOrFieldFqn(), opcode, owner, name, desc)),
                       constArg(om.getClassNameParameter(), className.replace('/', '.')),
                       constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
@@ -1193,11 +1181,7 @@ public class Instrumentor extends ClassVisitor {
                     constArg(
                         om.getTargetMethodOrFieldParameter(),
                         getMethodOrFieldName(
-                            om.isTargetMethodOrFieldFqn(),
-                            opcode,
-                            owner,
-                            name,
-                            desc)),
+                            om.isTargetMethodOrFieldFqn(), opcode, owner, name, desc)),
                     constArg(om.getClassNameParameter(), className.replace('/', '.')),
                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
