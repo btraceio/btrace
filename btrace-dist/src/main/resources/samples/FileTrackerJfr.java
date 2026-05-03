@@ -16,21 +16,21 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Event;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.TLS;
-import org.openjdk.btrace.core.jfr.JfrEvent;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Event;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.Self;
+import io.btrace.core.annotations.TLS;
+import io.btrace.core.jfr.JfrEvent;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import static org.openjdk.btrace.core.BTraceUtils.Jfr.*;
+import static io.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.Jfr.*;
 
 /**
  * This sample prints all files opened for read/write

@@ -131,7 +131,7 @@ delegate.clearProbeClass();
 
 - [ ] **Step 6: Run the test — verify pass**
 
-Run: `./gradlew :btrace-instr:test --tests org.openjdk.btrace.instr.HandlerRepositoryImplTest.probeExposesDefinedClass`
+Run: `./gradlew :btrace-instr:test --tests io.btrace.instr.HandlerRepositoryImplTest.probeExposesDefinedClass`
 Expected: PASS.
 
 - [ ] **Step 7: Commit**
@@ -277,7 +277,7 @@ git commit -m "refactor(instr): resolve probe handler via probe.getProbeClass(),
 Create `btrace-instr/src/test/java/org/openjdk/btrace/instr/ProbeClassUnloadingTest.java`:
 
 ```java
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.lang.ref.WeakReference;
 import org.junit.jupiter.api.Test;
@@ -331,7 +331,7 @@ class ProbeClassUnloadingTest {
 
 - [ ] **Step 2: Run the test — verify it fails (bootstrap CL → no unload)**
 
-Run: `./gradlew :btrace-instr:test --tests org.openjdk.btrace.instr.ProbeClassUnloadingTest`
+Run: `./gradlew :btrace-instr:test --tests io.btrace.instr.ProbeClassUnloadingTest`
 Expected: FAIL — `loaderRef.get()` is `null` because probe is in bootstrap CL, but `weakRef.get()` is not `null`.
 
 - [ ] **Step 3: Change `BTraceRuntimeImpl_8.defineClass` to always use a fresh isolated CL**
@@ -346,7 +346,7 @@ public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
 
     StackTraceElement[] stack = Thread.currentThread().getStackTrace();
     String callerClassName = stack.length > 2 ? stack[2].getClassName() : null;
-    if (callerClassName == null || !callerClassName.startsWith("org.openjdk.btrace.")) {
+    if (callerClassName == null || !callerClassName.startsWith("io.btrace.")) {
         throw new SecurityException("unsafe defineClass");
     }
 
@@ -366,7 +366,7 @@ public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
 
 - [ ] **Step 4: Run the unload test on JDK 8**
 
-Run: `./gradlew :btrace-instr:test --tests org.openjdk.btrace.instr.ProbeClassUnloadingTest -PtestJdk=8`
+Run: `./gradlew :btrace-instr:test --tests io.btrace.instr.ProbeClassUnloadingTest -PtestJdk=8`
 Expected: PASS (the loader is unreachable, class unloads after GC).
 
 - [ ] **Step 5: Run the existing instrumentor test suite to catch regressions**
@@ -397,12 +397,12 @@ git commit -m "feat(runtime): define probes in per-probe ClassLoader on JDK 8"
 
 - [ ] **Step 1: Run the unload test on JDK 9+ (before change)**
 
-Run: `./gradlew :btrace-instr:test --tests org.openjdk.btrace.instr.ProbeClassUnloadingTest -PtestJdk=11`
+Run: `./gradlew :btrace-instr:test --tests io.btrace.instr.ProbeClassUnloadingTest -PtestJdk=11`
 Expected: FAIL on JDK 9+ with current code (probe in `Auxiliary`'s bootstrap loader).
 
 - [ ] **Step 2: Write a helper in `BTraceRuntimeImpl_9.java` to generate a per-probe anchor class**
 
-Add a private helper that generates a minimal ASM classfile for `org.openjdk.btrace.runtime.auxiliary.Anchor$<unique>` and defines it in a fresh `ClassLoader`:
+Add a private helper that generates a minimal ASM classfile for `io.btrace.runtime.auxiliary.Anchor$<unique>` and defines it in a fresh `ClassLoader`:
 
 ```java
 private static final java.util.concurrent.atomic.AtomicLong ANCHOR_SEQ =
@@ -451,7 +451,7 @@ public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
                 .walk(s -> s.skip(1).findFirst().orElse(null));
         Class<?> caller = frame != null ? frame.getDeclaringClass() : null;
-        if (caller == null || !caller.getName().startsWith("org.openjdk.btrace.")) {
+        if (caller == null || !caller.getName().startsWith("io.btrace.")) {
             throw new SecurityException("unsafe defineClass");
         }
 
@@ -470,7 +470,7 @@ public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
 
 - [ ] **Step 4: Run unload test on JDK 11**
 
-Run: `./gradlew :btrace-instr:test --tests org.openjdk.btrace.instr.ProbeClassUnloadingTest -PtestJdk=11`
+Run: `./gradlew :btrace-instr:test --tests io.btrace.instr.ProbeClassUnloadingTest -PtestJdk=11`
 Expected: PASS.
 
 - [ ] **Step 5: Run full test suite on JDK 11**
@@ -515,7 +515,7 @@ void probeClassIsHiddenOnJdk15Plus() throws Exception {
 
 - [ ] **Step 2: Run the test — verify it fails (probe is a named class)**
 
-Run: `./gradlew :btrace-instr:test --tests org.openjdk.btrace.instr.ProbeClassUnloadingTest.probeClassIsHiddenOnJdk15Plus -PtestJdk=17`
+Run: `./gradlew :btrace-instr:test --tests io.btrace.instr.ProbeClassUnloadingTest.probeClassIsHiddenOnJdk15Plus -PtestJdk=17`
 Expected: FAIL.
 
 - [ ] **Step 3: Add a hidden-class path in `BTraceRuntimeImpl_11.defineClass`, gated on `Runtime.Version`**
@@ -527,7 +527,7 @@ public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
         // Caller validation (unchanged)
         StackWalker.StackFrame frame = /* ... */;
         Class<?> caller = frame != null ? frame.getDeclaringClass() : null;
-        if (caller == null || !caller.getName().startsWith("org.openjdk.btrace.")) {
+        if (caller == null || !caller.getName().startsWith("io.btrace.")) {
             throw new SecurityException("unsafe defineClass");
         }
 
@@ -559,12 +559,12 @@ Note 2: `publicLookup().findStatic(probeClass, name, type)` on a hidden class re
 
 - [ ] **Step 4: Run hidden-class test**
 
-Run: `./gradlew :btrace-instr:test --tests org.openjdk.btrace.instr.ProbeClassUnloadingTest.probeClassIsHiddenOnJdk15Plus -PtestJdk=17`
+Run: `./gradlew :btrace-instr:test --tests io.btrace.instr.ProbeClassUnloadingTest.probeClassIsHiddenOnJdk15Plus -PtestJdk=17`
 Expected: PASS.
 
 - [ ] **Step 5: Run the full unload test on JDK 17**
 
-Run: `./gradlew :btrace-instr:test --tests org.openjdk.btrace.instr.ProbeClassUnloadingTest -PtestJdk=17`
+Run: `./gradlew :btrace-instr:test --tests io.btrace.instr.ProbeClassUnloadingTest -PtestJdk=17`
 Expected: both tests PASS.
 
 - [ ] **Step 6: If `publicLookup().findStatic` fails for hidden classes, add `getProbeLookup()`**

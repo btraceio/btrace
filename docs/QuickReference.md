@@ -205,12 +205,12 @@ Injects an extension/service instance into your script.
 - Use plain `@Injected` (no parameters). The invokedynamic injector auto-detects
   whether the service needs a runtime context or a no-arg construction and wires it
   accordingly.
-- Annotation type: `org.openjdk.btrace.core.annotations.Injected`
+- Annotation type: `io.btrace.core.annotations.Injected`
 - Example:
 
 ```java
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.metrics.MetricsService;
+import io.btrace.core.annotations.*;
+import io.btrace.metrics.MetricsService;
 
 @BTrace
 public class LatencyProbe {
@@ -367,7 +367,7 @@ public static void printDistribution() {
 
 ### Pattern 9: JFR Event Recording
 ```java
-import org.openjdk.btrace.core.jfr.JfrEvent;
+import io.btrace.core.jfr.JfrEvent;
 
 @BTrace
 public class JfrMethodTrace {
@@ -517,7 +517,7 @@ java -javaagent:btrace.jar=script=MyTrace.class,port=2020 MyApp
 
 ## Built-in Functions
 
-All functions from `org.openjdk.btrace.core.BTraceUtils`.
+All functions from `io.btrace.core.BTraceUtils`.
 
 ### Output Functions
 ```java

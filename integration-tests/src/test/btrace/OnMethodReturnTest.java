@@ -25,11 +25,11 @@
 
 package btrace;
 
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.types.AnyType;
+import io.btrace.core.annotations.*;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.types.AnyType;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
 /**
  * @author Jaroslav Bachorik

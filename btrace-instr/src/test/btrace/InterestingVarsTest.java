@@ -1,7 +1,7 @@
 package traces.issues;
 
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.*;
+import io.btrace.core.BTraceUtils;
 
 @BTrace
 class InterestingVarsTest {

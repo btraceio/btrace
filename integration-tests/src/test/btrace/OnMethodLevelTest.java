@@ -22,10 +22,10 @@
 
 package btrace;
 
-import org.openjdk.btrace.core.annotations.*;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import static org.openjdk.btrace.core.BTraceUtils.Reflective.*;
-import org.openjdk.btrace.core.annotations.Export;
+import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.Reflective.*;
+import io.btrace.core.annotations.Export;
 
 /**
  *

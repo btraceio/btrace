@@ -16,10 +16,10 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnTimer;
 
-import static org.openjdk.btrace.core.BTraceUtils.Threads.deadlocks;
+import static io.btrace.core.BTraceUtils.Threads.deadlocks;
 
 /**
  * This BTrace program demonstrates deadlocks

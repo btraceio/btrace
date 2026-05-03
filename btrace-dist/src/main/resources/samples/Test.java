@@ -16,8 +16,8 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.DTraceRef;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.DTraceRef;
 
 @DTraceRef("syscalls.d")
 @BTrace

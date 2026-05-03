@@ -16,6 +16,15 @@
  */
 package tests;
 
+import io.btrace.client.Client;
+import io.btrace.core.comm.BinaryWireProtocol;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.JavaSerializationProtocol;
+import io.btrace.core.comm.ListProbesCommand;
+import io.btrace.core.comm.ProtocolConfig;
+import io.btrace.core.comm.ProtocolNegotiator;
+import io.btrace.core.comm.ProtocolVersion;
+import io.btrace.core.comm.WireProtocol;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -42,15 +51,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
-import org.openjdk.btrace.client.Client;
-import org.openjdk.btrace.core.comm.BinaryWireProtocol;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.JavaSerializationProtocol;
-import org.openjdk.btrace.core.comm.ListProbesCommand;
-import org.openjdk.btrace.core.comm.ProtocolConfig;
-import org.openjdk.btrace.core.comm.ProtocolNegotiator;
-import org.openjdk.btrace.core.comm.ProtocolVersion;
-import org.openjdk.btrace.core.comm.WireProtocol;
 
 /**
  * @author Jaroslav Bachorik
@@ -1001,13 +1001,13 @@ public abstract class RuntimeTest {
                 javaHome + "/bin/java",
                 "-cp",
                 cp,
-                "org.openjdk.btrace.boot.Loader",
+                "io.btrace.boot.Loader",
                 "-cp",
                 eventsClassPath,
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
     if (debugBTrace) {
-      int mainClassIdx = argVals.indexOf("org.openjdk.btrace.boot.Loader");
+      int mainClassIdx = argVals.indexOf("io.btrace.boot.Loader");
       argVals.add(mainClassIdx + 1, "-v");
     }
     argVals.addAll(Arrays.asList(args));
@@ -1152,13 +1152,13 @@ public abstract class RuntimeTest {
                 javaHome + "/bin/java",
                 "-cp",
                 cp,
-                "org.openjdk.btrace.boot.Loader",
+                "io.btrace.boot.Loader",
                 "-cp",
                 eventsClassPath,
                 "-d",
                 Paths.get(System.getProperty("java.io.tmpdir"), "btrace-test").toString()));
     if (debugBTrace) {
-      int mainClassIdx = argVals.indexOf("org.openjdk.btrace.boot.Loader");
+      int mainClassIdx = argVals.indexOf("io.btrace.boot.Loader");
       argVals.add(mainClassIdx + 1, "-v");
     }
     argVals.addAll(Arrays.asList(args));
@@ -1318,7 +1318,7 @@ public abstract class RuntimeTest {
                 "-Dbtrace.libs=" + System.getProperty("btrace.libs"),
                 "-cp",
                 cp,
-                "org.openjdk.btrace.boot.Loader",
+                "io.btrace.boot.Loader",
                 "-p",
                 String.valueOf(getBTracePort()),
                 "-cp",
@@ -1443,7 +1443,7 @@ public abstract class RuntimeTest {
                 "-Dbtrace.comm.forceVersion=true",
                 "-cp",
                 cp,
-                "org.openjdk.btrace.boot.Loader",
+                "io.btrace.boot.Loader",
                 "-cp",
                 eventsClassPath,
                 "-d",

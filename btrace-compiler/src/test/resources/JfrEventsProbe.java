@@ -1,10 +1,10 @@
 package test;
 
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.jfr.JfrEvent;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import static org.openjdk.btrace.core.BTraceUtils.Jfr.*;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.*;
+import io.btrace.core.jfr.JfrEvent;
+import static io.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.Jfr.*;
 
 @BTrace public class JfrEventsProbe {
     @Event(

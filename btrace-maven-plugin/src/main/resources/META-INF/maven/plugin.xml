@@ -2,7 +2,7 @@
 <plugin>
   <name>BTrace Maven Plugin</name>
   <description>Maven plugin for building BTrace fat agent JARs with embedded extensions</description>
-  <groupId>org.openjdk.btrace</groupId>
+  <groupId>io.btrace</groupId>
   <artifactId>btrace-maven-plugin</artifactId>
   <version>@VERSION@</version>
   <goalPrefix>btrace</goalPrefix>
@@ -11,7 +11,7 @@
     <mojo>
       <goal>fat-agent</goal>
       <description>Builds a BTrace fat agent JAR with embedded extensions</description>
-      <implementation>org.openjdk.btrace.maven.FatAgentMojo</implementation>
+      <implementation>io.btrace.maven.FatAgentMojo</implementation>
       <language>java</language>
       <phase>package</phase>
       <requiresDependencyResolution>runtime</requiresDependencyResolution>

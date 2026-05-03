@@ -1,16 +1,16 @@
 TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
 DUP
 ASTORE 2
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L6
 ALOAD 0
 LDC "syncM"
 ALOAD 2
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$SyncMEntry$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$SyncMEntry$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/SyncMEntry"
+"io/btrace/runtime/auxiliary/SyncMEntry"
 ]
 L6
 FRAME FULL [resources/OnMethodTest java/lang/Object java/lang/Object] [java/lang/Object]

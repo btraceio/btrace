@@ -856,15 +856,15 @@ Example:
 ```java
 package myprobes;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.metrics.MetricsService;
-import org.openjdk.btrace.metrics.histogram.HistogramConfig;
-import org.openjdk.btrace.metrics.histogram.HistogramMetric;
-import org.openjdk.btrace.metrics.histogram.HistogramSnapshot;
-import org.openjdk.btrace.metrics.stats.StatsMetric;
-import org.openjdk.btrace.metrics.stats.StatsSnapshot;
+import io.btrace.core.annotations.*;
+import io.btrace.metrics.MetricsService;
+import io.btrace.metrics.histogram.HistogramConfig;
+import io.btrace.metrics.histogram.HistogramMetric;
+import io.btrace.metrics.histogram.HistogramSnapshot;
+import io.btrace.metrics.stats.StatsMetric;
+import io.btrace.metrics.stats.StatsSnapshot;
 
 @BTrace
 public class HistogramExample {
@@ -1035,8 +1035,8 @@ This will display all extensions that failed to load and the reasons for their f
 
 ```
 Failed Extensions:
-  1. org.openjdk.btrace.statsd.StatsdExtension: Connection refused to localhost:8125
-  2. org.openjdk.btrace.dtrace.DTraceExtension: DTrace not available on this platform
+  1. io.btrace.statsd.StatsdExtension: Connection refused to localhost:8125
+  2. io.btrace.dtrace.DTraceExtension: DTrace not available on this platform
 ```
 
 ###### Interactive Menu

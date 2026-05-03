@@ -25,23 +25,23 @@
 
 package traces;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnProbe;
-import org.openjdk.btrace.core.annotations.Self;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnProbe;
+import io.btrace.core.annotations.Self;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
 /**
  * @author Jaroslav Bachorik
  */
 @BTrace
 public class OnProbeTest {
-    @OnProbe(name = "noargs", namespace = "org.openjdk.btrace")
+    @OnProbe(name = "noargs", namespace = "io.btrace")
     public static void noargs(@Self Object self) {
         println("[this, noargs]");
     }
 
-    @OnProbe(name = "withargs", namespace = "org.openjdk.btrace")
+    @OnProbe(name = "withargs", namespace = "io.btrace")
     public static void args(@Self Object self, int i, String s) {
         dump("[this, args]");
     }

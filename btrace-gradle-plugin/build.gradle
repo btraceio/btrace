@@ -10,7 +10,7 @@ java {
     }
 }
 
-group = project.findProperty('GROUP') ?: (rootProject.group ?: 'org.openjdk.btrace')
+group = project.findProperty('GROUP') ?: (rootProject.group ?: 'io.btrace')
 version = rootProject.version
 
 repositories {
@@ -39,14 +39,14 @@ test {
 gradlePlugin {
     plugins {
         btraceExtension {
-            id = 'org.openjdk.btrace.extension'
-            implementationClass = 'org.openjdk.btrace.gradle.BTraceExtensionPlugin'
+            id = 'io.btrace.extension'
+            implementationClass = 'io.btrace.gradle.BTraceExtensionPlugin'
             displayName = 'BTrace Extension Plugin'
             description = 'Builds and packages BTrace extensions, scanning permissions and wiring manifests.'
         }
         btraceFatAgent {
-            id = 'org.openjdk.btrace.fat-agent'
-            implementationClass = 'org.openjdk.btrace.gradle.BTraceFatAgentPlugin'
+            id = 'io.btrace.fat-agent'
+            implementationClass = 'io.btrace.gradle.BTraceFatAgentPlugin'
             displayName = 'BTrace Fat Agent Plugin'
             description = 'Builds fat agent JARs with embedded extensions for single-JAR deployment.'
         }

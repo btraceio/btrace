@@ -25,10 +25,10 @@
 
 package traces;
 
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Export;
-import org.openjdk.btrace.core.annotations.OnMethod;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Export;
+import io.btrace.core.annotations.OnMethod;
 
 import java.util.Deque;
 

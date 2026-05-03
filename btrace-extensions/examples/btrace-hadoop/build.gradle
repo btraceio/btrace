@@ -1,5 +1,5 @@
 plugins {
-    id 'org.openjdk.btrace.extension'
+    id 'io.btrace.extension'
     alias(libs.plugins.shadow)
 }
 

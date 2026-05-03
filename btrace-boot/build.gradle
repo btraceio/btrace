@@ -11,9 +11,9 @@ java {
 jar {
     manifest {
         attributes(
-            'Premain-Class': 'org.openjdk.btrace.boot.Loader',
-            'Agent-Class': 'org.openjdk.btrace.boot.Loader',
-            'Main-Class': 'org.openjdk.btrace.boot.Loader',
+            'Premain-Class': 'io.btrace.boot.Loader',
+            'Agent-Class': 'io.btrace.boot.Loader',
+            'Main-Class': 'io.btrace.boot.Loader',
             'Can-Redefine-Classes': true,
             'Can-Retransform-Classes': true
         )

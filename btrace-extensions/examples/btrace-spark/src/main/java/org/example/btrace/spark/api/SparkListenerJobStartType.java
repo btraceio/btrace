@@ -16,7 +16,7 @@
  */
 package org.example.btrace.spark.api;
 
-import org.openjdk.btrace.core.extensions.ExternalType;
+import io.btrace.core.extensions.ExternalType;
 
 /**
  * Build-time contract for {@code org.apache.spark.scheduler.SparkListenerJobStart}.

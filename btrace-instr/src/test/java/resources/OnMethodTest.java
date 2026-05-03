@@ -25,7 +25,7 @@ import java.util.Map;
  *
  * @author Jaroslav Bachorik
  */
-@org.openjdk.btrace.core.annotations.BTrace
+@io.btrace.core.annotations.BTrace
 public class OnMethodTest {
   private int field;
 
@@ -37,7 +37,7 @@ public class OnMethodTest {
     syncLock = new Object();
   }
 
-  @org.openjdk.btrace.core.annotations.Level
+  @io.btrace.core.annotations.Level
   public void noargs() {}
   ;
 

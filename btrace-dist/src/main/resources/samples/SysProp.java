@@ -16,11 +16,11 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnMethod;
 
-import static org.openjdk.btrace.core.BTraceUtils.Sys;
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.Sys;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * This BTrace script demonstrates that it is okay

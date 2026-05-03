@@ -29,5 +29,5 @@ jar {
     archiveBaseName.set('btrace-ext-cli')
     archiveVersion.set('')
     archiveClassifier.set('')
-    manifest { attributes('Main-Class': 'org.openjdk.btrace.extcli.Main') }
+    manifest { attributes('Main-Class': 'io.btrace.extcli.Main') }
 }

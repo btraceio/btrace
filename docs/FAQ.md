@@ -123,7 +123,7 @@ For runtime behavior modification, consider:
 ### How do I pass arguments to BTrace scripts?
 ```java
 // Script with property
-import org.openjdk.btrace.core.annotations.*;
+import io.btrace.core.annotations.*;
 
 @BTrace
 public class MyTrace {
@@ -333,8 +333,8 @@ btrace-scripts/
  * Date: [Creation date]
  */
 
-import org.openjdk.btrace.core.annotations.*;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class ScriptName {
@@ -485,7 +485,7 @@ BTrace has first-class support for Java Flight Recorder (JFR), allowing you to c
 
 **Example:**
 ```java
-import org.openjdk.btrace.core.jfr.JfrEvent;
+import io.btrace.core.jfr.JfrEvent;
 
 @BTrace
 public class JfrIntegration {

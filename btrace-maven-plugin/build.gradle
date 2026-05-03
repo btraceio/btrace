@@ -3,7 +3,7 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'org.openjdk.btrace'
+group = 'io.btrace'
 version = rootProject.version
 
 java {

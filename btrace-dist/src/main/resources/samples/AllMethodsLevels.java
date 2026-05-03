@@ -16,14 +16,14 @@
  */
 
 
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Level;
-import org.openjdk.btrace.core.annotations.OnEvent;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.ProbeMethodName;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Level;
+import io.btrace.core.annotations.OnEvent;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.ProbeMethodName;
 
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * This script traces method entry into every method of

@@ -1,8 +1,8 @@
 package traces.issues;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.core.annotations.*;
+import io.btrace.core.annotations.*;
 
 @BTrace(unsafe = true)
 public class BTRACE_333 {

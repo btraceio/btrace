@@ -62,7 +62,7 @@ Apply the BTrace Gradle Extension Plugin and configure your extension via `btrac
 
 ```gradle
 plugins {
-  id("org.openjdk.btrace.extension") version "<btraceVersion>"
+  id("io.btrace.extension") version "<btraceVersion>"
 }
 
 repositories { mavenCentral() }
@@ -129,8 +129,8 @@ Define injectable service interfaces. Use the descriptors to help discovery and 
 ```java
 package org.example.myext.api;
 
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.ServiceDescriptor;
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.ServiceDescriptor;
 
 @ServiceDescriptor(permissions = { Permission.THREADS })
 public interface MyService {
@@ -147,7 +147,7 @@ Provide concrete implementations and extend `Extension` to access the runtime co
 ```java
 package org.example.myext.impl;
 
-import org.openjdk.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.Extension;
 import org.example.myext.api.MyService;
 
 public final class MyServiceImpl extends Extension implements MyService {
@@ -163,9 +163,9 @@ The plugin shades external libraries present in Impl according to `shadedPackage
 ```java
 package btrace;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Injected;
-import org.openjdk.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.OnMethod;
 import org.example.myext.api.MyService;
 
 @BTrace
@@ -191,7 +191,7 @@ Declare an interface in `src/main/java` annotated with `@ExternalType("fully.qua
 ```java
 package org.example.ext.api;
 
-import org.openjdk.btrace.core.extensions.ExternalType;
+import io.btrace.core.extensions.ExternalType;
 
 @ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
 public interface JobStartEvent {
@@ -299,7 +299,7 @@ Use the BTrace Fat Agent Plugin to create a self-contained agent JAR:
 
 ```groovy
 plugins {
-    id 'org.openjdk.btrace.fat-agent' version '<btraceVersion>'
+    id 'io.btrace.fat-agent' version '<btraceVersion>'
 }
 
 btraceFatAgent {
@@ -355,7 +355,7 @@ For Maven users, the `btrace-maven-plugin` provides equivalent functionality:
 
 ```xml
 <plugin>
-    <groupId>org.openjdk.btrace</groupId>
+    <groupId>io.btrace</groupId>
     <artifactId>btrace-maven-plugin</artifactId>
     <version>${btrace.version}</version>
     <configuration>
@@ -407,9 +407,9 @@ Implement `ExtensionConfigurator` and provide a public no-arg constructor:
 ```java
 package org.example.spark;
 
-import org.openjdk.btrace.core.extensions.ExtensionConfigurator;
-import org.openjdk.btrace.core.extensions.ProbeConfiguration;
-import org.openjdk.btrace.core.extensions.RuntimeEnvironment;
+import io.btrace.core.extensions.ExtensionConfigurator;
+import io.btrace.core.extensions.ProbeConfiguration;
+import io.btrace.core.extensions.RuntimeEnvironment;
 import java.util.Map;
 
 public final class SparkConfigurator implements ExtensionConfigurator {
@@ -501,7 +501,7 @@ java -javaagent:my-btrace-agent-fat.jar=probes=SparkJobTracer org.apache.spark.d
 ## Checklist
 
 - [ ] Single module using `src/main`
-- [ ] Apply `org.openjdk.btrace.extension` plugin
+- [ ] Apply `io.btrace.extension` plugin
 - [ ] Set `btraceExtension.id`, declare/annotate `services`
 - [ ] Configure `shadedPackages`; optionally tune `requiredPermissions`
 - [ ] Keep API clean (JDK-only) and small

@@ -25,9 +25,9 @@
 
 package traces.onmethod.leveled;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.core.annotations.*;
+import io.btrace.core.annotations.*;
 
 /** @author Jaroslav Bachorik */
 @BTrace

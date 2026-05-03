@@ -23,9 +23,9 @@ extension.name=BTrace Metrics
 extension.description=High-performance metrics...
 btrace.api.version=2.3+
 java.version=8+
-services=org.openjdk.btrace.metrics.MetricsService
+services=io.btrace.metrics.MetricsService
 requires.extensions=btrace-core
-shaded.packages=org.HdrHistogram->org.openjdk.btrace.metrics.shaded.hdrhistogram
+shaded.packages=org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram
 ```
 
 ### To MANIFEST.MF Format
@@ -38,10 +38,10 @@ BTrace-Extension-Description: High-performance metrics with HdrHistogram
  for percentiles and lock-free statistics
 BTrace-API-Version: 2.3+
 BTrace-Java-Version: 8+
-BTrace-Extension-Services: org.openjdk.btrace.metrics.MetricsService
+BTrace-Extension-Services: io.btrace.metrics.MetricsService
 BTrace-Extension-Requires: btrace-core
-BTrace-Shaded-Packages: org.HdrHistogram->org.openjdk.btrace.metrics.sh
- aded.hdrhistogram,com.clearspring.analytics->org.openjdk.btrace.metrics
+BTrace-Shaded-Packages: org.HdrHistogram->io.btrace.metrics.sh
+ aded.hdrhistogram,com.clearspring.analytics->io.btrace.metrics
  .shaded.clearspring
 BTrace-Extension-Permissions: NETWORK,THREADS
 ```
@@ -84,7 +84,7 @@ BTrace-Extension-Permissions: NETWORK,THREADS
 
 **BTrace-Extension-Services**
 - Format: comma-separated fully qualified class names
-- Example: `org.openjdk.btrace.metrics.MetricsService,org.openjdk.btrace.metrics.StatsService`
+- Example: `io.btrace.metrics.MetricsService,io.btrace.metrics.StatsService`
 - Description: Service classes provided by this extension
 
 **BTrace-Extension-Requires**
@@ -94,7 +94,7 @@ BTrace-Extension-Permissions: NETWORK,THREADS
 
 **BTrace-Shaded-Packages**
 - Format: comma-separated package mappings (original->shaded)
-- Example: `org.HdrHistogram->org.openjdk.btrace.metrics.shaded.hdrhistogram`
+- Example: `org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram`
 - Description: Package relocation mappings for shaded dependencies
 
 ## MANIFEST.MF Line Continuation
@@ -133,7 +133,7 @@ This allows the extension to enable the right probes automatically (e.g. Spark
 driver probes vs. executor probes) without the operator having to pass a
 `probes=` agent argument.
 
-The class must implement `org.openjdk.btrace.core.extensions.ExtensionConfigurator`
+The class must implement `io.btrace.core.extensions.ExtensionConfigurator`
 and have a public no-arg constructor. It is loaded via the extension's own
 classloader. See [BTraceExtensionDevelopmentGuide.md](../BTraceExtensionDevelopmentGuide.md)
 for a full example.
@@ -160,8 +160,8 @@ jar {
       'BTrace-Extension-Description': 'High-performance metrics...',
       'BTrace-API-Version': '2.3+',
       'BTrace-Java-Version': '8+',
-      'BTrace-Extension-Services': 'org.openjdk.btrace.metrics.MetricsService',
-      'BTrace-Shaded-Packages': 'org.HdrHistogram->org.openjdk.btrace.metrics.shaded.hdrhistogram'
+      'BTrace-Extension-Services': 'io.btrace.metrics.MetricsService',
+      'BTrace-Shaded-Packages': 'org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram'
     )
   }
 }

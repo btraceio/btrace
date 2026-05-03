@@ -65,7 +65,7 @@ btrace-metrics-2.3.0.jar
 │   ├── MANIFEST.MF
 │   ├── btrace-extension.properties      # Extension metadata
 │   └── services/
-│       └── org.openjdk.btrace.core.extensions.Extension
+│       └── io.btrace.core.extensions.Extension
 ├── org/openjdk/btrace/metrics/
 │   ├── MetricsService.class
 │   ├── histogram/
@@ -87,14 +87,14 @@ btrace.api.version=2.3+
 java.version=8+
 
 # Service providers (optional, can also use META-INF/services)
-services=org.openjdk.btrace.metrics.MetricsService
+services=io.btrace.metrics.MetricsService
 
 # Dependencies on other extensions (optional)
 requires.extensions=
 
 # Shadowed packages (for conflict detection)
-shaded.packages=org.HdrHistogram->org.openjdk.btrace.metrics.shaded.hdrhistogram,\
-                com.clearspring.analytics->org.openjdk.btrace.metrics.shaded.clearspring
+shaded.packages=org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram,\
+                com.clearspring.analytics->io.btrace.metrics.shaded.clearspring
 ```
 
 ## Extension Loading Mechanism
@@ -207,7 +207,7 @@ btrace --ext btrace-metrics,btrace-statsd PID script.java
 ```java
 package com.example.myext;
 
-import org.openjdk.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.Extension;
 
 public class MyExtensionService extends Extension {
     @Override

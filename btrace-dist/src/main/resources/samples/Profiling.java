@@ -16,16 +16,16 @@
  */
 
 
-import org.openjdk.btrace.core.Profiler;
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Duration;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.OnTimer;
-import org.openjdk.btrace.core.annotations.ProbeMethodName;
-import org.openjdk.btrace.core.annotations.Property;
+import io.btrace.core.Profiler;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Duration;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.ProbeMethodName;
+import io.btrace.core.annotations.Property;
 
 /**
  * This script demonstrates new capabilities built into BTrace 1.2

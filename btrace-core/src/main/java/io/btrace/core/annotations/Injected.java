@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.btrace.core.annotations;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Annotates a field as an injected service.
+ *
+ * @author Jaroslav Bachorik
+ */
+@Target(ElementType.FIELD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Injected {
+  // No parameters by default. Construction is auto-detected by the extension bridge.
+
+  /**
+   * Whether the injected service is optional. Optional services may fall back to a shim or throwing
+   * stub based on {@link #mode()} or the global property {@code btrace.extension.shimMode}
+   * (shim|throw).
+   */
+  boolean optional() default false;
+
+  /**
+   * Per-field override for fallback behavior when {@link #optional()} is true. If unspecified, the
+   * global property {@code btrace.extension.shimMode} determines whether to inject a shim or a
+   * throwing stub.
+   */
+  InjectionMode mode() default InjectionMode.UNSPECIFIED;
+}

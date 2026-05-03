@@ -11,7 +11,7 @@ This guide shows how to migrate profile-based integrations (e.g., Spark/Hadoop) 
 
 ## Helper Utilities
 
-- `org.openjdk.btrace.extension.util.ClassLoadingUtil`
+- `io.btrace.extension.util.ClassLoadingUtil`
   - Loaders: `tccl()`, `definingLoader(Object)`
   - Class loading: `load(String, ClassLoader)`, `load(String, Object)`, `tryLoad(String, ClassLoader)`
   - Context: `withTCCL(ClassLoader, Supplier<T>)`, `withTCCL(ClassLoader, Runnable)`, `withDefiningLoader(Object, Supplier<T>)`
@@ -19,7 +19,7 @@ This guide shows how to migrate profile-based integrations (e.g., Spark/Hadoop) 
   - Resources: `getResource(String, ClassLoader)`, `openResource(String, ClassLoader)`
   - Optional child loader: `newChildURLClassLoader(List<Path>, ClassLoader)`, `safeClose(ClassLoader)`
 
-- `org.openjdk.btrace.extension.util.MethodHandleCache`
+- `io.btrace.extension.util.MethodHandleCache`
   - Caches public `MethodHandle`s for reflective adapters.
 
 ## API Sketch (Spark example)
@@ -39,8 +39,8 @@ public interface SparkApi {
 // implementation (extension CL)
 package org.example.btrace.spark.impl;
 import org.example.btrace.spark.api.SparkApi;
-import org.openjdk.btrace.extension.util.ClassLoadingUtil;
-import org.openjdk.btrace.extension.util.MethodHandleCache;
+import io.btrace.extension.util.ClassLoadingUtil;
+import io.btrace.extension.util.MethodHandleCache;
 import java.lang.invoke.MethodHandle;
 
 public final class SparkApiImpl implements SparkApi {
@@ -79,7 +79,7 @@ Declare an interface in your extension's exported API set marked with `@External
 ```java
 package com.example.spark.api;
 
-import org.openjdk.btrace.core.extensions.ExternalType;
+import io.btrace.core.extensions.ExternalType;
 
 @ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
 public interface JobStart {

@@ -10,7 +10,7 @@ LSUB
 LSTORE 6
 L3
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J] [J]
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L4
 DUP2
 LSTORE 10
@@ -21,11 +21,11 @@ ALOAD 1
 LLOAD 2
 ALOAD 4
 ALOAD 5
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/ArgsDurationMultiReturn"
+"io/btrace/runtime/auxiliary/ArgsDurationMultiReturn"
 ]
 L4
 FRAME SAME1 J
@@ -34,7 +34,7 @@ L6
 LINENUMBER 136 L6
 L7
 FRAME SAME1 J
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L8
 DUP2
 LSTORE 12
@@ -45,11 +45,11 @@ ALOAD 1
 LLOAD 2
 ALOAD 4
 ALOAD 5
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/ArgsDurationMultiReturn"
+"io/btrace/runtime/auxiliary/ArgsDurationMultiReturn"
 ]
 L8
 FRAME SAME1 J
@@ -59,7 +59,7 @@ L9
 LINENUMBER 141 L9
 L10
 FRAME SAME1 J
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L11
 DUP2
 LSTORE 14
@@ -70,11 +70,11 @@ ALOAD 1
 LLOAD 2
 ALOAD 4
 ALOAD 5
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$ArgsDurationMultiReturn$args(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/ArgsDurationMultiReturn"
+"io/btrace/runtime/auxiliary/ArgsDurationMultiReturn"
 ]
 L11
 FRAME SAME1 J

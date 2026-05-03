@@ -27,10 +27,10 @@ package traces.verifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Self;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.Self;
 
 @BTrace
 public class VerifierScript implements Runnable {

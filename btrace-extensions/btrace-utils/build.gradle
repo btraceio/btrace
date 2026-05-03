@@ -1,5 +1,5 @@
 plugins {
-    id 'org.openjdk.btrace.extension'
+    id 'io.btrace.extension'
     alias(libs.plugins.shadow)
 }
 
@@ -18,7 +18,7 @@ btraceExtension {
     id = 'btrace-utils'
     name = 'BTrace Utilities'
     description = 'Utility services for BTrace scripts (eg. printer)'
-    services = ['org.openjdk.btrace.utils.PrinterService']
+    services = ['io.btrace.utils.PrinterService']
 }
 
 dependencies {

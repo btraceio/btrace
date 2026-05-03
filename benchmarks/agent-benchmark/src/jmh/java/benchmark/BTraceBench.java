@@ -16,6 +16,7 @@
  */
 package benchmark;
 
+import io.btrace.instr.MethodTracker;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -28,7 +29,6 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import org.openjdk.btrace.instr.MethodTracker;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

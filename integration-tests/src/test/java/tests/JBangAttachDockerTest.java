@@ -81,8 +81,8 @@ public class JBangAttachDockerTest {
                   + targetSource
                   + "EOF\n"
                   + "cat > /tmp/TestTrace.java <<'EOF'\n"
-                  + "import static org.openjdk.btrace.core.BTraceUtils.*;\n"
-                  + "import org.openjdk.btrace.core.annotations.*;\n"
+                  + "import static io.btrace.core.BTraceUtils.*;\n"
+                  + "import io.btrace.core.annotations.*;\n"
                   + "\n"
                   + "@BTrace\n"
                   + "public class TestTrace {\n"

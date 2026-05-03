@@ -57,7 +57,7 @@ If you absolutely must expose a jar on the system classpath temporarily:
 
 ```java
 import org.example.btrace.spark.api.SparkApi;
-import org.openjdk.btrace.core.annotations.*;
+import io.btrace.core.annotations.*;
 
 @BTrace
 class SparkProbe {

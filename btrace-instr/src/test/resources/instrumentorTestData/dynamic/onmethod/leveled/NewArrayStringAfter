@@ -1,13 +1,13 @@
 DUP
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 ALOAD 3
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayStringAfter$args(Ljava/lang/Object;[Ljava/lang/String;)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$NewArrayStringAfter$args(Ljava/lang/Object;[Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/NewArrayStringAfter"
+"io/btrace/runtime/auxiliary/NewArrayStringAfter"
 ]
 FRAME FULL [resources/OnMethodTest [I [[I [Ljava/lang/String;] [[Ljava/lang/String;]
 ASTORE 4

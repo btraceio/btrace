@@ -16,11 +16,11 @@
  */
 package org.example.btrace.spark.impl;
 
+import io.btrace.core.extensions.Extension;
+import io.btrace.extension.util.ClassLoadingUtil;
+import io.btrace.extension.util.MethodHandleCache;
 import java.lang.invoke.MethodHandle;
 import org.example.btrace.spark.api.SparkApi;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.extension.util.ClassLoadingUtil;
-import org.openjdk.btrace.extension.util.MethodHandleCache;
 
 /** Example implementation demonstrating provided-style linking via TCCL/defining loader. */
 public final class SparkApiImpl extends Extension implements SparkApi {

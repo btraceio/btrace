@@ -16,12 +16,12 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnLowMemory;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnLowMemory;
 
 import java.lang.management.MemoryUsage;
 
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * This sample traces memory threshold exceeds.

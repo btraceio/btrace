@@ -2,8 +2,8 @@
 
 This module provides two Gradle plugins for the BTrace extension ecosystem:
 
-1. **BTrace Extension Plugin** (`org.openjdk.btrace.extension`) - Build and package BTrace extensions
-2. **BTrace Fat Agent Plugin** (`org.openjdk.btrace.fat-agent`) - Build self-contained fat agent JARs with embedded extensions
+1. **BTrace Extension Plugin** (`io.btrace.extension`) - Build and package BTrace extensions
+2. **BTrace Fat Agent Plugin** (`io.btrace.fat-agent`) - Build self-contained fat agent JARs with embedded extensions
 
 ---
 
@@ -22,7 +22,7 @@ Build and package BTrace extensions with sane defaults.
 
 ```groovy
 plugins {
-    id 'org.openjdk.btrace.extension' version "${btraceVersion}"
+    id 'io.btrace.extension' version "${btraceVersion}"
 }
 
 repositories {
@@ -107,7 +107,7 @@ Build self-contained fat agent JARs with embedded extensions for single-JAR depl
 
 ```groovy
 plugins {
-    id 'org.openjdk.btrace.fat-agent' version "${btraceVersion}"
+    id 'io.btrace.fat-agent' version "${btraceVersion}"
 }
 ```
 
@@ -147,8 +147,8 @@ btraceFatAgent {
     }
 
     // Package relocations (requires ShadowJar on classpath)
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.agent.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
+    relocate 'org.jctools', 'io.btrace.libs.agent.org.jctools'
+    relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
 
     // Auto-discovery options
     autoDiscover = true              // find extensions with btrace.extension plugin
@@ -202,7 +202,7 @@ for the full configurator API reference.
 
 ### Auto-Discovery Mode
 
-When `autoDiscover = true`, the plugin automatically finds all subprojects with the `org.openjdk.btrace.extension` plugin applied:
+When `autoDiscover = true`, the plugin automatically finds all subprojects with the `io.btrace.extension` plugin applied:
 
 ```groovy
 btraceFatAgent {
@@ -226,7 +226,7 @@ For projects outside the BTrace monorepo:
 
 ```groovy
 plugins {
-    id 'org.openjdk.btrace.fat-agent' version '2.3.0'
+    id 'io.btrace.fat-agent' version '2.3.0'
 }
 
 btraceFatAgent {
@@ -256,8 +256,8 @@ The fat agent JAR contains:
 btrace-agent-fat.jar
 ├── META-INF/
 │   ├── MANIFEST.MF
-│   │   ├── Premain-Class: org.openjdk.btrace.agent.Main
-│   │   ├── Agent-Class: org.openjdk.btrace.agent.Main
+│   │   ├── Premain-Class: io.btrace.agent.Main
+│   │   ├── Agent-Class: io.btrace.agent.Main
 │   │   ├── Boot-Class-Path: btrace-agent-fat.jar
 │   │   └── BTrace-Embedded-Extensions: ext1,ext2,ext3
 │   └── btrace-extensions/
@@ -336,7 +336,7 @@ For Maven users, a Maven plugin is also available to build fat agent JARs.
 <build>
     <plugins>
         <plugin>
-            <groupId>org.openjdk.btrace</groupId>
+            <groupId>io.btrace</groupId>
             <artifactId>btrace-maven-plugin</artifactId>
             <version>${btrace.version}</version>
             <executions>

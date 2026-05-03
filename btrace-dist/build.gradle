@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.shadow)
     alias(libs.plugins.ospackage)
     alias(libs.plugins.sdkman.vendors)
-    id 'org.openjdk.btrace.fat-agent'
+    id 'io.btrace.fat-agent'
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -142,9 +142,9 @@ task allClassesShadow(type: ShadowJar) {
     configurations = [project.configurations.artifact]
 
     // Relocate dependencies
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+    relocate 'org.jctools', 'io.btrace.libs.org.jctools'
+    relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'
 
     // Don't create a manifest for this intermediate jar
     manifest {
@@ -328,15 +328,15 @@ task btraceJar(type: Jar) {
 
     manifest {
         attributes(
-            'Premain-Class': 'org.openjdk.btrace.boot.Loader',
-            'Agent-Class': 'org.openjdk.btrace.boot.Loader',
-            'Main-Class': 'org.openjdk.btrace.boot.Loader',
+            'Premain-Class': 'io.btrace.boot.Loader',
+            'Agent-Class': 'io.btrace.boot.Loader',
+            'Main-Class': 'io.btrace.boot.Loader',
             'Can-Redefine-Classes': true,
             'Can-Retransform-Classes': true,
             'Boot-Class-Path': 'btrace.jar',
             'BTrace-Version': version,
-            'BTrace-Agent-Main': 'org.openjdk.btrace.agent.Main',
-            'BTrace-Client-Main': 'org.openjdk.btrace.client.Main'
+            'BTrace-Agent-Main': 'io.btrace.agent.Main',
+            'BTrace-Client-Main': 'io.btrace.client.Main'
         )
     }
 
@@ -373,9 +373,9 @@ btraceFatAgent {
     filterProperty = 'embedExtensions'
 
     // Package relocations
-    relocate 'org.jctools', 'org.openjdk.btrace.libs.agent.org.jctools'
-    relocate 'org.objectweb.asm', 'org.openjdk.btrace.libs.org.objectweb.asm'
-    relocate 'org.slf4j', 'org.openjdk.btrace.libs.org.slf4j'
+    relocate 'org.jctools', 'io.btrace.libs.agent.org.jctools'
+    relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'
 }
 
 task fixPermissions(type: Exec) {
@@ -405,7 +405,7 @@ task copyExtensions(type: Copy) {
 
 // Discover all extension subprojects and wire copyExtensions dynamically to avoid hard-coded paths
 gradle.projectsEvaluated {
-    def extProjects = rootProject.subprojects.findAll { it.plugins.hasPlugin('org.openjdk.btrace.extension') }
+    def extProjects = rootProject.subprojects.findAll { it.plugins.hasPlugin('io.btrace.extension') }
     if (extProjects.isEmpty()) {
         logger.lifecycle("[btrace-dist] No BTrace extension projects found. Skipping extension packaging.")
     } else {

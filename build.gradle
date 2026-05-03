@@ -8,7 +8,7 @@ plugins {
 // so the nexus-publish plugin can resolve its packageGroup (defaults to rootProject.group)
 // and so the SNAPSHOT-skip guard below evaluates against a real version.
 allprojects {
-    group = 'org.openjdk.btrace'
+    group = 'io.btrace'
     version = '3.0.0-SNAPSHOT'
 }
 
@@ -37,7 +37,7 @@ spotless {
     java {
         target 'src/*/java/**/*.java'
         // note: you can use an empty string for all the imports you didn't specify explicitly, and '\\#` prefix for static imports
-        importOrder('java', 'javax', 'org.openjdk.btrace', '', '\\#org.openjdk.btrace', '\\#')
+        importOrder('java', 'javax', 'io.btrace', '', '\\#io.btrace', '\\#')
         removeUnusedImports()
 
         googleJavaFormat()   // has its own section below
