@@ -48,9 +48,12 @@ tasks.named('javadoc').configure {
 }
 
 task compileTestProbes {
-    // Wire explicit task dependencies so the API JARs are guaranteed to exist before the classpath
-    // is evaluated (mirrors the pattern used in integration-tests/build.gradle).
+    // Mirror the integration-tests compiler invocation so dependent project outputs and extension
+    // API JARs are available before the compiler classpath is resolved.
     dependsOn compileTestJava, processTestResources,
+            ':btrace-agent:jar',
+            ':btrace-boot:jar',
+            ':btrace-compiler:jar',
             ':btrace-extensions:btrace-utils:buildApiJar',
             ':btrace-extensions:btrace-statsd:buildApiJar'
     doLast {
@@ -83,13 +86,16 @@ task compileTestProbes {
 
         args.addAll(files)
 
-        // Help verifier discover extension services by exposing classpath to System property scanning
+        // Keep compiler resource lookups aligned with the loader that resolved the compiler classes.
+        def prev = Thread.currentThread().contextClassLoader
         def oldCp = System.getProperty('java.class.path')
         try {
+            Thread.currentThread().contextClassLoader = loader
             System.setProperty('btrace.allow.undeclared.services', 'true')
             System.setProperty('java.class.path', cpPath)
             compiler.main(args as String[])
         } finally {
+            Thread.currentThread().contextClassLoader = prev
             if (oldCp != null) System.setProperty('java.class.path', oldCp)
             System.clearProperty('btrace.allow.undeclared.services')
         }
