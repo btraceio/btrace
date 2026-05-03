@@ -16,9 +16,9 @@
  */
 package io.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.ATHROW;
 import static io.btrace.instr.Constants.THROWABLE_INTERNAL;
 import static io.btrace.instr.Constants.THROWABLE_TYPE;
+import static org.objectweb.asm.Opcodes.ATHROW;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;

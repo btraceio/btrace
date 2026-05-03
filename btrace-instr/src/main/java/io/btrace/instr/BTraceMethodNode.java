@@ -16,14 +16,14 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.annotations.Where;
 import java.util.Comparator;
 import java.util.Set;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodNode;
-import io.btrace.core.annotations.Kind;
-import io.btrace.core.annotations.Sampled;
-import io.btrace.core.annotations.Where;
 
 /**
  * @author Jaroslav Bachorik

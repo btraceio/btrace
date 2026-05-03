@@ -16,13 +16,6 @@
  */
 package io.btrace.runtime;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.BTraceRuntimeBridge;
 import io.btrace.core.SharedSettings;
@@ -34,6 +27,13 @@ import io.btrace.core.handlers.ExitHandler;
 import io.btrace.core.handlers.LowMemoryHandler;
 import io.btrace.core.handlers.TimerHandler;
 import io.btrace.runtime.auxiliary.Auxiliary;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delegate {
   private static final BTraceRuntimeAccessImpl INSTANCE = new BTraceRuntimeAccessImpl();

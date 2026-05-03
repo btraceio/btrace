@@ -16,12 +16,12 @@
  */
 package io.btrace.runtime.profiling;
 
+import io.btrace.core.Profiler;
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import io.btrace.core.Profiler;
 
 /**
  * Implementation of {@linkplain Profiler}

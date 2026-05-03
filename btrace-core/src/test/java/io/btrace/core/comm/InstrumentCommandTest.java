@@ -18,10 +18,10 @@ package io.btrace.core.comm;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.btrace.core.ArgsMap;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import io.btrace.core.ArgsMap;
 
 /**
  * Tests for InstrumentCommand defensive copying to prevent external modification of bytecode and

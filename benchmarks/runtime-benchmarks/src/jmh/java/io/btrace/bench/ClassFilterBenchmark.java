@@ -16,11 +16,11 @@
  */
 package io.btrace.bench;
 
+import io.btrace.instr.ClassFilter;
+import io.btrace.instr.OnMethod;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-import io.btrace.instr.ClassFilter;
-import io.btrace.instr.OnMethod;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;

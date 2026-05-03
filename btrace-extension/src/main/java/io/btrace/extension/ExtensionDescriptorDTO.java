@@ -16,11 +16,11 @@
  */
 package io.btrace.extension;
 
+import io.btrace.core.extensions.PermissionSet;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import io.btrace.core.extensions.PermissionSet;
 
 /**
  * Descriptor for a BTrace extension loaded from an extension JAR. Contains metadata about the

@@ -16,6 +16,10 @@
  */
 package io.btrace.runtime;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.core.jfr.JfrEvent;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,10 +27,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.util.Set;
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.comm.CommandListener;
-import io.btrace.core.jfr.JfrEvent;
 import sun.misc.Perf;
 import sun.misc.Unsafe;
 import sun.reflect.CallerSensitive;

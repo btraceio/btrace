@@ -21,11 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import io.btrace.runtime.auxiliary.Auxiliary;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
-import io.btrace.runtime.auxiliary.Auxiliary;
 
 /** Regression tests for the hidden-class probe defineClass path on JDK 15+. */
 class HiddenClassDefineRegressionTest {

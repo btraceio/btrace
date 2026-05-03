@@ -16,8 +16,8 @@
  */
 package io.btrace.instr.random;
 
-import java.util.concurrent.ThreadLocalRandom;
 import io.btrace.instr.RandomIntProvider;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author Jaroslav Bachorik

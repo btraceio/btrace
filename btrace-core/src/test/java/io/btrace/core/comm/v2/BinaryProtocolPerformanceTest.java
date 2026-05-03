@@ -16,6 +16,10 @@
  */
 package io.btrace.core.comm.v2;
 
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.InstrumentCommand;
+import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.comm.WireIO;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -24,10 +28,6 @@ import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import io.btrace.core.comm.Command;
-import io.btrace.core.comm.InstrumentCommand;
-import io.btrace.core.comm.MessageCommand;
-import io.btrace.core.comm.WireIO;
 
 /**
  * Performance tests comparing the binary protocol to Java serialization. This is not included in

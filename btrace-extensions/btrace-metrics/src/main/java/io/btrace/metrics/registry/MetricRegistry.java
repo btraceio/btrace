@@ -16,9 +16,9 @@
  */
 package io.btrace.metrics.registry;
 
+import io.btrace.metrics.Metric;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-import io.btrace.metrics.Metric;
 
 /**
  * Thread-safe registry for storing metrics.

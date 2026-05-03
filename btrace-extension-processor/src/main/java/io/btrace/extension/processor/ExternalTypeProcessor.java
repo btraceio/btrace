@@ -16,6 +16,7 @@
  */
 package io.btrace.extension.processor;
 
+import io.btrace.core.extensions.ExternalType;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -34,7 +35,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
-import io.btrace.core.extensions.ExternalType;
 
 @SupportedAnnotationTypes("io.btrace.core.extensions.ExternalType")
 public final class ExternalTypeProcessor extends AbstractProcessor {

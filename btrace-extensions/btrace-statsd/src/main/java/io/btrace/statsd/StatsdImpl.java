@@ -16,12 +16,12 @@
  */
 package io.btrace.statsd;
 
+import io.btrace.core.SharedSettings;
+import io.btrace.core.extensions.Extension;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
-import io.btrace.core.SharedSettings;
-import io.btrace.core.extensions.Extension;
 
 public final class StatsdImpl extends Extension implements Statsd {
   @Override

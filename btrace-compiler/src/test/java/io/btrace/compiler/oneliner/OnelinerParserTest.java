@@ -18,8 +18,8 @@ package io.btrace.compiler.oneliner;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.Test;
 import io.btrace.compiler.oneliner.OnelinerAST.*;
+import org.junit.jupiter.api.Test;
 
 class OnelinerParserTest {
 

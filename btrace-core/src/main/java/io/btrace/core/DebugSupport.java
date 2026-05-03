@@ -33,8 +33,7 @@ public final class DebugSupport {
   public static void initLoggers(boolean debug, Logger logger) {
     String logFile = System.getProperty("org.slf4j.simpleLogger.logFile");
     System.setProperty("org.slf4j.simpleLogger.logFile", logFile != null ? logFile : "System.out");
-    String defaultLevel =
-        System.getProperty("org.slf4j.simpleLogger.log.io.btrace", "info");
+    String defaultLevel = System.getProperty("org.slf4j.simpleLogger.log.io.btrace", "info");
     System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : defaultLevel);
     try {
       Method mthd = SimpleLogger.class.getDeclaredMethod("init");

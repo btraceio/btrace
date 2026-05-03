@@ -16,9 +16,9 @@
  */
 package io.btrace.instr;
 
-import static org.objectweb.asm.Opcodes.*;
 import static io.btrace.instr.TypeUtils.isAnyType;
 import static io.btrace.instr.TypeUtils.isPrimitive;
+import static org.objectweb.asm.Opcodes.*;
 
 import java.io.IOException;
 import java.io.InputStream;

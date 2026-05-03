@@ -16,12 +16,12 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.SharedSettings;
 import java.io.FileInputStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import io.btrace.core.SharedSettings;
 
 public class ProbeDump {
   public static void main(String[] args) throws Exception {

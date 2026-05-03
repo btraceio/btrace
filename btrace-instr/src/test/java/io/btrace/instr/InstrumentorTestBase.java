@@ -19,6 +19,11 @@ package io.btrace.instr;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.MethodID;
+import io.btrace.core.SharedSettings;
+import io.btrace.runtime.BTraceRuntimeAccess;
+import io.btrace.runtime.auxiliary.Auxiliary;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -47,11 +52,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.MethodID;
-import io.btrace.core.SharedSettings;
-import io.btrace.runtime.BTraceRuntimeAccess;
-import io.btrace.runtime.auxiliary.Auxiliary;
 import sun.misc.Unsafe;
 
 /**

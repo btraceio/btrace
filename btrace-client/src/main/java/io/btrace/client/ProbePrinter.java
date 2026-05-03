@@ -16,6 +16,12 @@
  */
 package io.btrace.client;
 
+import io.btrace.core.SharedSettings;
+import io.btrace.core.extensions.Permission;
+import io.btrace.instr.BTraceProbe;
+import io.btrace.instr.BTraceProbeFactory;
+import io.btrace.instr.OnMethod;
+import io.btrace.instr.OnProbe;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -25,12 +31,6 @@ import java.nio.file.Paths;
 import java.util.Set;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.TraceClassVisitor;
-import io.btrace.core.SharedSettings;
-import io.btrace.core.extensions.Permission;
-import io.btrace.instr.BTraceProbe;
-import io.btrace.instr.BTraceProbeFactory;
-import io.btrace.instr.OnMethod;
-import io.btrace.instr.OnProbe;
 
 public final class ProbePrinter {
   public static void main(String[] args) throws Exception {

@@ -16,6 +16,9 @@
  */
 package io.btrace.extension.impl;
 
+import io.btrace.core.extensions.PermissionSet;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -31,9 +34,6 @@ import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
-import io.btrace.core.extensions.PermissionSet;
-import io.btrace.extension.ExtensionDescriptorDTO;
-import io.btrace.extension.ExtensionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

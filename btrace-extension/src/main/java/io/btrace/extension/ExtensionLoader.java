@@ -16,6 +16,10 @@
  */
 package io.btrace.extension;
 
+import io.btrace.extension.impl.EmbeddedExtensionRepository;
+import io.btrace.extension.impl.ExtensionConfig;
+import io.btrace.extension.impl.ExtensionLoaderImpl;
+import io.btrace.extension.impl.FileSystemExtensionRepository;
 import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Path;
@@ -23,10 +27,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import io.btrace.extension.impl.EmbeddedExtensionRepository;
-import io.btrace.extension.impl.ExtensionConfig;
-import io.btrace.extension.impl.ExtensionLoaderImpl;
-import io.btrace.extension.impl.FileSystemExtensionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

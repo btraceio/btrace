@@ -16,11 +16,11 @@
  */
 package io.btrace.bench;
 
-import java.io.*;
-import java.util.concurrent.TimeUnit;
 import io.btrace.core.SharedSettings;
 import io.btrace.instr.BTraceProbe;
 import io.btrace.instr.BTraceProbeFactory;
+import java.io.*;
+import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;

@@ -18,6 +18,11 @@ package io.btrace.instr;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.HandlerRepository;
+import io.btrace.core.extensions.Permission;
+import io.btrace.runtime.IndyDispatcher;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -29,11 +34,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.HandlerRepository;
-import io.btrace.core.extensions.Permission;
-import io.btrace.runtime.IndyDispatcher;
 
 /**
  * Lifecycle and dispatch tests for HandlerRepositoryImpl + IndyDispatcher.

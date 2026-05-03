@@ -16,6 +16,11 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.runtime.BTraceRuntimes;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import org.junit.jupiter.api.Assertions;
@@ -23,11 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.comm.Command;
-import io.btrace.core.comm.CommandListener;
-import io.btrace.runtime.BTraceRuntimes;
 
 /**
  * Verifies that a probe {@code Class<?>} defined through {@link

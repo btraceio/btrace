@@ -16,11 +16,11 @@
  */
 package io.btrace.core;
 
+import io.btrace.core.annotations.Property;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import io.btrace.core.annotations.Property;
 
 /**
  * Profiler is a highly specialized aggregation-like data collector optimized for high-speed

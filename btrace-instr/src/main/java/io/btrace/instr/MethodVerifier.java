@@ -18,6 +18,8 @@ package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.extensions.Extension;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,8 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
-import io.btrace.core.annotations.Sampled;
-import io.btrace.core.extensions.Extension;
 
 /**
  * This class verifies that the BTrace "action" method is safe - boundedness and read-only rules are

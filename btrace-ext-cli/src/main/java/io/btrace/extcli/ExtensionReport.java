@@ -16,6 +16,8 @@
  */
 package io.btrace.extcli;
 
+import io.btrace.core.extensions.ExtensionMeta;
+import io.btrace.core.extensions.Permission;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -24,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import io.btrace.core.extensions.ExtensionMeta;
-import io.btrace.core.extensions.Permission;
 
 final class ExtensionReport {
   final boolean ok;

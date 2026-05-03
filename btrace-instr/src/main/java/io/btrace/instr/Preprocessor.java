@@ -16,6 +16,12 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeBridge;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.annotations.Event;
+import io.btrace.core.annotations.Return;
+import io.btrace.core.extensions.Extension;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -51,12 +57,6 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.BTraceRuntimeBridge;
-import io.btrace.core.DebugSupport;
-import io.btrace.core.annotations.Event;
-import io.btrace.core.annotations.Return;
-import io.btrace.core.extensions.Extension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

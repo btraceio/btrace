@@ -20,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.btrace.core.extensions.PermissionSet;
+import io.btrace.extension.impl.ExtensionConfig;
+import io.btrace.extension.impl.ExtensionLoaderImpl;
 import java.io.IOException;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
@@ -41,9 +44,6 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import io.btrace.core.extensions.PermissionSet;
-import io.btrace.extension.impl.ExtensionConfig;
-import io.btrace.extension.impl.ExtensionLoaderImpl;
 
 class ExtensionLoaderImplConcurrencyTest {
   @TempDir Path tempDir;

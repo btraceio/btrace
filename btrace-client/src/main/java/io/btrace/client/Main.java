@@ -16,6 +16,18 @@
  */
 package io.btrace.client;
 
+import io.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
+import io.btrace.compiler.oneliner.OnelinerCodeGenerator;
+import io.btrace.compiler.oneliner.OnelinerException;
+import io.btrace.compiler.oneliner.OnelinerParser;
+import io.btrace.compiler.oneliner.OnelinerValidator;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.Messages;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.PrintableCommand;
+import io.btrace.core.comm.StatusCommand;
 import java.io.Console;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,18 +41,6 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import io.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
-import io.btrace.compiler.oneliner.OnelinerCodeGenerator;
-import io.btrace.compiler.oneliner.OnelinerException;
-import io.btrace.compiler.oneliner.OnelinerParser;
-import io.btrace.compiler.oneliner.OnelinerValidator;
-import io.btrace.core.DebugSupport;
-import io.btrace.core.Messages;
-import io.btrace.core.comm.Command;
-import io.btrace.core.comm.CommandListener;
-import io.btrace.core.comm.ExitCommand;
-import io.btrace.core.comm.PrintableCommand;
-import io.btrace.core.comm.StatusCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;

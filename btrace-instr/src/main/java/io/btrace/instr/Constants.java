@@ -16,8 +16,6 @@
  */
 package io.btrace.instr;
 
-import java.util.regex.Pattern;
-import org.objectweb.asm.Type;
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceUtils;
 import io.btrace.core.annotations.BTrace;
@@ -45,6 +43,8 @@ import io.btrace.core.annotations.Where;
 import io.btrace.core.extensions.Extension;
 import io.btrace.core.jfr.JfrEvent;
 import io.btrace.runtime.LinkingFlag;
+import java.util.regex.Pattern;
+import org.objectweb.asm.Type;
 
 /**
  * Constants shared by few classes.

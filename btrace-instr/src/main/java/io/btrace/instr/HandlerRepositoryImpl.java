@@ -16,16 +16,16 @@
  */
 package io.btrace.instr;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import io.btrace.core.HandlerRepository;
 import io.btrace.core.SharedSettings;
 import io.btrace.runtime.BTraceRuntimes;
 import io.btrace.runtime.IndyDispatcher;
 import io.btrace.runtime.Interval;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +62,8 @@ public final class HandlerRepositoryImpl {
   /**
    * Register a probe after its class has been defined in the JVM. Must be called before any
    * instrumented call site targeting this probe is invoked. If invocation arrives first, {@link
-   * io.btrace.runtime.IndyDispatcher} installs a self-relinking trampoline that will pick
-   * up the probe on its next invocation.
+   * io.btrace.runtime.IndyDispatcher} installs a self-relinking trampoline that will pick up the
+   * probe on its next invocation.
    */
   public static void registerProbe(BTraceProbe probe) {
     String probeName = probe.getClassName(true);

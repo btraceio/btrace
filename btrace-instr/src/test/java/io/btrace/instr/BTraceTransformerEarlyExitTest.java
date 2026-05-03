@@ -18,9 +18,9 @@ package io.btrace.instr;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import org.junit.jupiter.api.Test;
 import io.btrace.core.DebugSupport;
 import io.btrace.core.SharedSettings;
+import org.junit.jupiter.api.Test;
 
 /**
  * Pins the load-bearing structural early-exit in {@link BTraceTransformer#transform} for

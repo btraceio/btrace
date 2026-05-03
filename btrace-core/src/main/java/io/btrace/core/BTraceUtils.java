@@ -16,6 +16,12 @@
  */
 package io.btrace.core;
 
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.ProbeClassName;
+import io.btrace.core.annotations.ProbeMethodName;
+import io.btrace.core.annotations.Self;
+import io.btrace.core.jfr.JfrEvent;
+import io.btrace.core.types.AnyType;
 import java.io.Serializable;
 import java.lang.management.MemoryUsage;
 import java.lang.ref.Reference;
@@ -37,12 +43,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import jdk.jfr.Event;
-import io.btrace.core.annotations.OnMethod;
-import io.btrace.core.annotations.ProbeClassName;
-import io.btrace.core.annotations.ProbeMethodName;
-import io.btrace.core.annotations.Self;
-import io.btrace.core.jfr.JfrEvent;
-import io.btrace.core.types.AnyType;
 
 /**
  * This class is an all-in-one wrapper for BTrace DSL methods

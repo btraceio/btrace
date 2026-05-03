@@ -16,14 +16,14 @@
  */
 package io.btrace.extension.impl;
 
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionRepository;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import io.btrace.extension.ExtensionDescriptorDTO;
-import io.btrace.extension.ExtensionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

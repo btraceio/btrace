@@ -16,6 +16,7 @@
  */
 package io.btrace.runtime;
 
+import io.btrace.core.HandlerRepository;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-import io.btrace.core.HandlerRepository;
 
 /**
  * INVOKEDYNAMIC bootstrap class for BTrace probe handler dispatch.

@@ -16,12 +16,12 @@
  */
 package io.btrace.core.comm;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import io.btrace.core.comm.v2.BinaryCommand;
 import io.btrace.core.comm.v2.BinaryWireIO;
 import io.btrace.core.comm.v2.CommandAdapter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * Wire protocol implementation using custom binary format (V2 protocol).

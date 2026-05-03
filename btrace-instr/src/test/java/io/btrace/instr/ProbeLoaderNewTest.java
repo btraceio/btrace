@@ -16,12 +16,12 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.SharedSettings;
 import java.io.InputStream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import io.btrace.core.SharedSettings;
 
 public class ProbeLoaderNewTest {
   private static BTraceProbeFactory BPF;

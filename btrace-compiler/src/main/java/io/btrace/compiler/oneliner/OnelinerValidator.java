@@ -16,11 +16,11 @@
  */
 package io.btrace.compiler.oneliner;
 
+import io.btrace.compiler.oneliner.OnelinerAST.*;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import io.btrace.compiler.oneliner.OnelinerAST.*;
 
 /** Semantic validator for BTrace oneliner AST */
 public class OnelinerValidator {

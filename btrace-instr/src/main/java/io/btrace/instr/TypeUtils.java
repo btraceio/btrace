@@ -18,11 +18,11 @@ package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
+import io.btrace.core.types.AnyType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 import org.objectweb.asm.Type;
-import io.btrace.core.types.AnyType;
 
 public final class TypeUtils {
   public static final Type objectArrayType = Type.getType(Object[].class);

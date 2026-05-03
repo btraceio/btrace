@@ -23,6 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
+import io.btrace.client.Client;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.DisconnectCommand;
+import io.btrace.core.comm.StatusCommand;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,10 +47,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import io.btrace.client.Client;
-import io.btrace.core.comm.Command;
-import io.btrace.core.comm.DisconnectCommand;
-import io.btrace.core.comm.StatusCommand;
 
 /**
  * A set of end-to-end functional tests.

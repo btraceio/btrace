@@ -31,8 +31,7 @@ public final class Auxiliary {
    * is distinct from this class's — e.g. a masked-jar deployment where the agent sits on {@code
    * MaskedClassLoader} and {@code Auxiliary} sits on the bootstrap loader.
    *
-   * <p>Public because the primary caller lives in the sibling package {@code
-   * io.btrace.runtime}.
+   * <p>Public because the primary caller lives in the sibling package {@code io.btrace.runtime}.
    */
   public static MethodHandles.Lookup lookup() {
     return MethodHandles.lookup();

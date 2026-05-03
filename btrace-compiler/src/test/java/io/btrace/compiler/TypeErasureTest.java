@@ -18,6 +18,9 @@ package io.btrace.compiler;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
+import io.btrace.core.SharedSettings;
+import io.btrace.instr.BTraceProbe;
+import io.btrace.instr.BTraceProbeFactory;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -26,9 +29,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.CheckClassAdapter;
-import io.btrace.core.SharedSettings;
-import io.btrace.instr.BTraceProbe;
-import io.btrace.instr.BTraceProbeFactory;
 
 public class TypeErasureTest {
   @Test

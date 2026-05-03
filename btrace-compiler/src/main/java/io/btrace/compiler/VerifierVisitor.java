@@ -43,6 +43,15 @@ import com.sun.source.tree.WhileLoopTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreeScanner;
+import io.btrace.core.Messages;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.OnError;
+import io.btrace.core.annotations.OnExit;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.extensions.Permission;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -63,15 +72,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
-import io.btrace.core.Messages;
-import io.btrace.core.annotations.BTrace;
-import io.btrace.core.annotations.Injected;
-import io.btrace.core.annotations.Kind;
-import io.btrace.core.annotations.OnError;
-import io.btrace.core.annotations.OnExit;
-import io.btrace.core.annotations.OnMethod;
-import io.btrace.core.annotations.Sampled;
-import io.btrace.core.extensions.Permission;
 
 /**
  * This class tree visitor validates a BTrace program's ClassTree.

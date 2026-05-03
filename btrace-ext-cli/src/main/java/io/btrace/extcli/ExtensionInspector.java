@@ -16,6 +16,9 @@
  */
 package io.btrace.extcli;
 
+import io.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.ExtensionMeta;
+import io.btrace.core.extensions.Permission;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -26,9 +29,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
-import io.btrace.core.extensions.Extension;
-import io.btrace.core.extensions.ExtensionMeta;
-import io.btrace.core.extensions.Permission;
 
 final class ExtensionInspector {
   static ExtensionReport inspect(Path input) throws IOException {

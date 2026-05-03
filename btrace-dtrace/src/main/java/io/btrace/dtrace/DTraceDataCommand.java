@@ -16,11 +16,11 @@
  */
 package io.btrace.dtrace;
 
+import io.btrace.core.comm.MessageCommand;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.List;
-import io.btrace.core.comm.MessageCommand;
 import org.opensolaris.os.dtrace.DataEvent;
 import org.opensolaris.os.dtrace.ProbeData;
 import org.opensolaris.os.dtrace.Record;

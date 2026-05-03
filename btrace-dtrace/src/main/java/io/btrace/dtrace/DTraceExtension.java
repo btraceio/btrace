@@ -16,13 +16,13 @@
  */
 package io.btrace.dtrace;
 
-import java.io.File;
-import java.io.IOException;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.ErrorCommand;
 import io.btrace.core.comm.MessageCommand;
 import io.btrace.core.extensions.Extension;
 import io.btrace.core.extensions.ExtensionContext;
+import java.io.File;
+import java.io.IOException;
 import org.opensolaris.os.dtrace.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

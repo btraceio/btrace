@@ -16,11 +16,11 @@
  */
 package io.btrace.core.comm.v2;
 
+import io.btrace.core.ArgsMap;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
-import io.btrace.core.ArgsMap;
 
 /**
  * Binary implementation of the InstrumentCommand. This command is used to send BTrace code to the

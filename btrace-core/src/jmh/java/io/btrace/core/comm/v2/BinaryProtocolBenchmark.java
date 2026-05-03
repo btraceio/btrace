@@ -16,16 +16,6 @@
  */
 package io.btrace.core.comm.v2;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.ErrorCommand;
 import io.btrace.core.comm.EventCommand;
@@ -38,6 +28,16 @@ import io.btrace.core.comm.NumberMapDataCommand;
 import io.btrace.core.comm.StatusCommand;
 import io.btrace.core.comm.StringMapDataCommand;
 import io.btrace.core.comm.WireIO;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

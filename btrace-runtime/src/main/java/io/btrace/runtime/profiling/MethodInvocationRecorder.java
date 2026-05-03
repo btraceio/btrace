@@ -16,6 +16,7 @@
  */
 package io.btrace.runtime.profiling;
 
+import io.btrace.core.Profiler;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
@@ -23,7 +24,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
-import io.btrace.core.Profiler;
 
 /**
  * An invocation recorder class. All the invocations must be coming from the same thread (eg. by

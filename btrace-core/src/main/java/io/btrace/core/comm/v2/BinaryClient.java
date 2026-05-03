@@ -16,13 +16,13 @@
  */
 package io.btrace.core.comm.v2;
 
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.CommandListener;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
-import io.btrace.core.comm.Command;
-import io.btrace.core.comm.CommandListener;
 
 /**
  * A client wrapper that uses the binary protocol for communication. This provides a

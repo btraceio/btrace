@@ -18,9 +18,9 @@ package io.btrace.metrics;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.Test;
 import io.btrace.metrics.stats.StatsMetric;
 import io.btrace.metrics.stats.StatsSnapshot;
+import org.junit.jupiter.api.Test;
 
 class StatsMetricTest {
   @Test

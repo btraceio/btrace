@@ -16,10 +16,10 @@
  */
 package io.btrace.runtime;
 
-import java.lang.instrument.Instrumentation;
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.comm.CommandListener;
+import java.lang.instrument.Instrumentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

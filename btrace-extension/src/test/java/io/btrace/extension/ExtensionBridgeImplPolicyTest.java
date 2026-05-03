@@ -18,13 +18,13 @@ package io.btrace.extension;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.PermissionSet;
+import io.btrace.extension.impl.ExtensionBridgeImpl;
 import java.nio.file.Paths;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import io.btrace.core.extensions.Permission;
-import io.btrace.core.extensions.PermissionSet;
-import io.btrace.extension.impl.ExtensionBridgeImpl;
 
 class ExtensionBridgeImplPolicyTest {
 

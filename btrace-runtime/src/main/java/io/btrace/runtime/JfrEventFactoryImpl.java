@@ -34,6 +34,7 @@ import static io.btrace.core.annotations.Event.FieldType.LONG;
 import static io.btrace.core.annotations.Event.FieldType.SHORT;
 import static io.btrace.core.annotations.Event.FieldType.STRING;
 
+import io.btrace.core.jfr.JfrEvent;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -62,7 +63,6 @@ import jdk.jfr.Timespan;
 import jdk.jfr.Timestamp;
 import jdk.jfr.Unsigned;
 import jdk.jfr.ValueDescriptor;
-import io.btrace.core.jfr.JfrEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

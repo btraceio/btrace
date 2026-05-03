@@ -16,6 +16,11 @@
  */
 package io.btrace.runtime;
 
+import io.btrace.core.SharedSettings;
+import io.btrace.core.annotations.InjectionMode;
+import io.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.ExtensionContext;
+import io.btrace.extension.ExtensionBridge;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandle;
@@ -24,11 +29,6 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import io.btrace.core.SharedSettings;
-import io.btrace.core.annotations.InjectionMode;
-import io.btrace.core.extensions.Extension;
-import io.btrace.core.extensions.ExtensionContext;
-import io.btrace.extension.ExtensionBridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

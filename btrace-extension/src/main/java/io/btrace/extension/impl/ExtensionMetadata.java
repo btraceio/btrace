@@ -16,6 +16,10 @@
  */
 package io.btrace.extension.impl;
 
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.PermissionSet;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionRepository;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,10 +36,6 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import io.btrace.core.extensions.Permission;
-import io.btrace.core.extensions.PermissionSet;
-import io.btrace.extension.ExtensionDescriptorDTO;
-import io.btrace.extension.ExtensionRepository;
 
 /**
  * Parser for extension metadata from MANIFEST.MF attributes, btrace-extension.properties (legacy),

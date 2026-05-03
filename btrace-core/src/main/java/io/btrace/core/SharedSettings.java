@@ -16,9 +16,9 @@
  */
 package io.btrace.core;
 
-import java.util.Map;
 import io.btrace.core.extensions.Permission;
 import io.btrace.core.extensions.PermissionSet;
+import java.util.Map;
 
 /**
  * @author Jaroslav Bachorik

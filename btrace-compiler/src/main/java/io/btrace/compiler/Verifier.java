@@ -29,6 +29,8 @@ import com.sun.source.util.TaskEvent;
 import com.sun.source.util.TaskListener;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
+import io.btrace.core.Messages;
+import io.btrace.core.annotations.BTrace;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -46,8 +48,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
-import io.btrace.core.Messages;
-import io.btrace.core.annotations.BTrace;
 
 /**
  * An annotation processor that validates a BTrace program. Safety rules (such as no loops, no

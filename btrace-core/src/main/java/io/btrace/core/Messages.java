@@ -26,9 +26,7 @@ public final class Messages {
   static {
     messages =
         ResourceBundle.getBundle(
-            "io.btrace.core.messages",
-            Locale.getDefault(),
-            Messages.class.getClassLoader());
+            "io.btrace.core.messages", Locale.getDefault(), Messages.class.getClassLoader());
   }
 
   private Messages() {}

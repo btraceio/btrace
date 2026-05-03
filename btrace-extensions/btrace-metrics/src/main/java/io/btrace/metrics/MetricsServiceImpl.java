@@ -16,8 +16,6 @@
  */
 package io.btrace.metrics;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import io.btrace.core.extensions.Extension;
 import io.btrace.metrics.histogram.HistogramConfig;
 import io.btrace.metrics.histogram.HistogramConfigBuilder;
@@ -28,6 +26,8 @@ import io.btrace.metrics.histogram.HistogramMetricImpl;
 import io.btrace.metrics.registry.MetricRegistry;
 import io.btrace.metrics.stats.StatsMetric;
 import io.btrace.metrics.stats.StatsMetricImpl;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * High-performance metrics service built on HdrHistogram.
@@ -86,8 +86,7 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
         () ->
             new HistogramMetricImpl(
                 name,
-                new io.btrace.metrics.histogram.HistogramConfigImpl(
-                    1L, 3_600_000_000_000L, 3)));
+                new io.btrace.metrics.histogram.HistogramConfigImpl(1L, 3_600_000_000_000L, 3)));
   }
 
   // Convenience creators for micros/millis ranges (match prior constants)
@@ -148,8 +147,7 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
    * @return statistics metric
    */
   @Nullable public StatsMetric stats(@NotNull String name, @NotNull String key) {
-    return registry.getOrCreate(
-        name, key, () -> new io.btrace.metrics.stats.StatsMetricImpl(name));
+    return registry.getOrCreate(name, key, () -> new io.btrace.metrics.stats.StatsMetricImpl(name));
   }
 
   // ========== Query Operations ==========

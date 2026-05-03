@@ -18,6 +18,8 @@ package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
+import io.btrace.core.annotations.Where;
+import io.btrace.runtime.Interval;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,8 +30,6 @@ import java.util.Map;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import io.btrace.core.annotations.Where;
-import io.btrace.runtime.Interval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

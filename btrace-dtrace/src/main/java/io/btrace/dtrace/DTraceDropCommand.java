@@ -16,10 +16,10 @@
  */
 package io.btrace.dtrace;
 
+import io.btrace.core.comm.MessageCommand;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import io.btrace.core.comm.MessageCommand;
 import org.opensolaris.os.dtrace.DropEvent;
 
 /**

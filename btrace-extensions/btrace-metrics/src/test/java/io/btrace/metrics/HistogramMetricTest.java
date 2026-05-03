@@ -19,11 +19,11 @@ package io.btrace.metrics;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.Test;
 import io.btrace.metrics.histogram.HistogramConfigImpl;
 import io.btrace.metrics.histogram.HistogramMetric;
 import io.btrace.metrics.histogram.HistogramMetricImpl;
 import io.btrace.metrics.histogram.HistogramSnapshot;
+import org.junit.jupiter.api.Test;
 
 class HistogramMetricTest {
   @Test

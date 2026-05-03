@@ -16,6 +16,15 @@
  */
 package tests;
 
+import io.btrace.client.Client;
+import io.btrace.core.comm.BinaryWireProtocol;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.JavaSerializationProtocol;
+import io.btrace.core.comm.ListProbesCommand;
+import io.btrace.core.comm.ProtocolConfig;
+import io.btrace.core.comm.ProtocolNegotiator;
+import io.btrace.core.comm.ProtocolVersion;
+import io.btrace.core.comm.WireProtocol;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -42,15 +51,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
-import io.btrace.client.Client;
-import io.btrace.core.comm.BinaryWireProtocol;
-import io.btrace.core.comm.Command;
-import io.btrace.core.comm.JavaSerializationProtocol;
-import io.btrace.core.comm.ListProbesCommand;
-import io.btrace.core.comm.ProtocolConfig;
-import io.btrace.core.comm.ProtocolNegotiator;
-import io.btrace.core.comm.ProtocolVersion;
-import io.btrace.core.comm.WireProtocol;
 
 /**
  * @author Jaroslav Bachorik

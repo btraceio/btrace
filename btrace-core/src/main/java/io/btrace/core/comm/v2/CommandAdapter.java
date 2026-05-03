@@ -16,10 +16,6 @@
  */
 package io.btrace.core.comm.v2;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.DisconnectCommand;
 import io.btrace.core.comm.ErrorCommand;
@@ -39,6 +35,10 @@ import io.btrace.core.comm.RetransformationStartNotification;
 import io.btrace.core.comm.SetSettingsCommand;
 import io.btrace.core.comm.StatusCommand;
 import io.btrace.core.comm.StringMapDataCommand;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Adapter for converting between binary commands and original commands. This helps with incremental

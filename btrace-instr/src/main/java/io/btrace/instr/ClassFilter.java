@@ -16,6 +16,8 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.PrefixMap;
+import io.btrace.core.annotations.BTrace;
 import java.lang.annotation.Annotation;
 import java.lang.ref.Reference;
 import java.util.ArrayList;
@@ -33,8 +35,6 @@ import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
-import io.btrace.core.PrefixMap;
-import io.btrace.core.annotations.BTrace;
 
 /**
  * This class checks whether a given target class matches at least one probe specified in a BTrace

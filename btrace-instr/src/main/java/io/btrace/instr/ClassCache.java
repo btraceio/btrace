@@ -16,6 +16,7 @@
  */
 package io.btrace.instr;
 
+import io.btrace.instr.ClassInfo.ClassName;
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
 import java.util.Map;
@@ -25,7 +26,6 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentMap;
 import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingIdentityHashMap;
-import io.btrace.instr.ClassInfo.ClassName;
 
 /**
  * A simple class cache holding {@linkplain ClassInfo} instances and being searchable either by

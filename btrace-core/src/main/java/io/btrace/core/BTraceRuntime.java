@@ -17,6 +17,11 @@
 package io.btrace.core;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
+import io.btrace.core.jfr.JfrEvent;
+import io.btrace.core.types.AnyType;
+import io.btrace.core.types.BTraceCollection;
+import io.btrace.core.types.BTraceDeque;
+import io.btrace.core.types.BTraceMap;
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -45,11 +50,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import io.btrace.core.jfr.JfrEvent;
-import io.btrace.core.types.AnyType;
-import io.btrace.core.types.BTraceCollection;
-import io.btrace.core.types.BTraceDeque;
-import io.btrace.core.types.BTraceMap;
 import sun.misc.Unsafe;
 
 @SuppressWarnings("deprecation")

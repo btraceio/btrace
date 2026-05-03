@@ -16,9 +16,9 @@
  */
 package io.btrace.runtime;
 
+import io.btrace.core.jfr.JfrEvent;
 import java.util.Map;
 import jdk.jfr.Event;
-import io.btrace.core.jfr.JfrEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

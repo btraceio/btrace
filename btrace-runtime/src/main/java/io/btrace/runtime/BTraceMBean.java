@@ -22,6 +22,9 @@ package io.btrace.runtime;
 
  @author A. Sundararajan
 */
+import io.btrace.core.Profiler;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Property;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -57,9 +60,6 @@ import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.OpenDataException;
 import javax.management.openmbean.OpenType;
 import javax.management.openmbean.SimpleType;
-import io.btrace.core.Profiler;
-import io.btrace.core.annotations.BTrace;
-import io.btrace.core.annotations.Property;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

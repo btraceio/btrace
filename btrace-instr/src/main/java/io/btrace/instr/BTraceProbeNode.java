@@ -16,6 +16,14 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.Messages;
+import io.btrace.core.VerifierException;
+import io.btrace.core.comm.RetransformClassNotification;
+import io.btrace.core.extensions.Permission;
+import io.btrace.extension.ServiceDeclarationRegistry;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -35,14 +43,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.DebugSupport;
-import io.btrace.core.Messages;
-import io.btrace.core.VerifierException;
-import io.btrace.core.comm.RetransformClassNotification;
-import io.btrace.core.extensions.Permission;
-import io.btrace.extension.ServiceDeclarationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

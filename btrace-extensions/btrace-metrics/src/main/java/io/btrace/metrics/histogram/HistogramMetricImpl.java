@@ -16,11 +16,11 @@
  */
 package io.btrace.metrics.histogram;
 
+import io.btrace.metrics.Metric;
 import org.HdrHistogram.Histogram;
 import org.HdrHistogram.Recorder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import io.btrace.metrics.Metric;
 
 /**
  * Histogram metric using HdrHistogram for accurate percentiles.

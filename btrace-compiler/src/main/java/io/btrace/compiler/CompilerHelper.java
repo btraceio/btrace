@@ -17,6 +17,9 @@
 package io.btrace.compiler;
 
 import com.sun.source.util.JavacTask;
+import io.btrace.boot.MaskedClassLoader;
+import io.btrace.boot.MaskedJarUtils;
+import io.btrace.core.SharedSettings;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -43,9 +46,6 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
-import io.btrace.boot.MaskedClassLoader;
-import io.btrace.boot.MaskedJarUtils;
-import io.btrace.core.SharedSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

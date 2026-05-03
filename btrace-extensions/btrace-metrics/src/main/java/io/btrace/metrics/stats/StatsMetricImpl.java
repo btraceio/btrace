@@ -16,11 +16,11 @@
  */
 package io.btrace.metrics.stats;
 
+import io.btrace.metrics.Metric;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import io.btrace.metrics.Metric;
 
 /**
  * Statistics metric using lock-free atomics.

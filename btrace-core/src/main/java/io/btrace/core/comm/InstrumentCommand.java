@@ -16,11 +16,11 @@
  */
 package io.btrace.core.comm;
 
+import io.btrace.core.ArgsMap;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Map;
-import io.btrace.core.ArgsMap;
 
 public class InstrumentCommand extends Command {
 

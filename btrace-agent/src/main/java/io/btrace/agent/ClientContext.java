@@ -16,10 +16,10 @@
  */
 package io.btrace.agent;
 
-import java.lang.instrument.Instrumentation;
 import io.btrace.core.ArgsMap;
 import io.btrace.core.SharedSettings;
 import io.btrace.instr.BTraceTransformer;
+import java.lang.instrument.Instrumentation;
 
 /**
  * Client-context data class
