@@ -5,6 +5,12 @@ buildscript { scriptHandler ->
     apply from: rootProject.file('buildSrc/shared.gradle'), to: scriptHandler
 }
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}
+
 dependencies {
     implementation libs.slf4j
     implementation libs.asm
@@ -20,6 +26,15 @@ dependencies {
     implementation project(':btrace-compiler')
     implementation project(':btrace-agent')
     implementation project(':btrace-boot')
+
+    implementation 'com.googlecode.lanterna:lanterna:3.1.5'
+
+    testImplementation platform(libs.junit)
+    testImplementation libs.junit.jupiter
+}
+
+test {
+    useJUnitPlatform()
 }
 
 jar {

@@ -109,8 +109,6 @@ dependencies {
     implementation project(':btrace-agent')
     implementation project(':btrace-client')
     implementation project(':btrace-compiler')
-    // Metrics extension excluded unless present; extensions copied dynamically
-    implementation project(':btrace-ext-cli')
 }
 
 jar {
