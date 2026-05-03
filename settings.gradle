@@ -40,7 +40,6 @@ include "benchmarks:agent-benchmark"
 include "benchmarks:runtime-benchmarks"
 
 // Explicitly include nested extension modules
-include 'btrace-extensions'
 include 'btrace-extensions:btrace-metrics'
 include 'btrace-extensions:btrace-utils'
 include 'btrace-extensions:btrace-statsd'

@@ -18,8 +18,10 @@ dependencies {
 
     implementation project(':btrace-core')
     implementation project(':btrace-compiler')
-    implementation project(':btrace-instr')
+    implementation project(':btrace-agent')
     implementation project(':btrace-boot')
+
+    implementation 'com.googlecode.lanterna:lanterna:3.1.5'
 }
 
 jar {

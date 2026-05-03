@@ -19,6 +19,7 @@ package io.btrace.compiler;
 import com.sun.source.util.JavacTask;
 import io.btrace.boot.MaskedClassLoader;
 import io.btrace.boot.MaskedJarUtils;
+import io.btrace.core.PackGenerator;
 import io.btrace.core.SharedSettings;
 import java.io.File;
 import java.io.FileOutputStream;

@@ -103,14 +103,17 @@ includes['client'] = {
 
 configurations {
     artifact.extendsFrom implementation
+    bootstrapInputs {
+        canBeConsumed = false
+        canBeResolved = true
+    }
 }
 
 dependencies {
     implementation project(':btrace-agent')
     implementation project(':btrace-client')
     implementation project(':btrace-compiler')
-    // Metrics extension excluded unless present; extensions copied dynamically
-    implementation project(':btrace-ext-cli')
+    bootstrapInputs project(':btrace-agent')
 }
 
 jar {
@@ -150,17 +153,6 @@ task allClassesShadow(type: ShadowJar) {
     manifest {
         attributes([:])
     }
-}
-
-task apiJar(type: Jar) {
-    group 'Build'
-    description 'Creates API JAR for compile-time dependencies'
-    archiveBaseName.set('btrace-api')
-    archiveVersion.set('')
-    archiveClassifier.set('')
-    destinationDirectory = libsDir
-
-    from(project(':btrace-api').sourceSets.main.output)
 }
 
 // uberJar removed - btrace.jar (masked jar) is the single source of truth
@@ -265,6 +257,81 @@ task prepareSharedClassdata(type: Copy) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+def bootIncludes = {
+    if (it.directory) {
+        return true
+    }
+    if (it.path.endsWith('.jar')) {
+        return true
+    }
+    if (it.path.startsWith('io/btrace/core/')) {
+        if (it.path == 'io/btrace/core/Messages.class'
+                || it.path == 'io/btrace/core/messages.properties') {
+            return false
+        }
+        if (it.path.startsWith('io/btrace/core/extensions/')) {
+            return false
+        }
+        // Include handlers - probe classes need them in their static initializers
+        if (it.path.startsWith('io/btrace/core/handlers/')) {
+            return true
+        }
+        if (it.path.startsWith('io/btrace/core/comm/')) {
+            return false
+        }
+        // Include annotations - needed by compiler at compile-time
+        if (it.path.startsWith('io/btrace/core/annotations/')) {
+            return true
+        }
+        return true
+    }
+    if (it.path.startsWith('META-INF/services')) {
+        return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
+    }
+    // Include BTraceRuntimeAccess and LinkingFlag from btrace-core (bootstrap classes)
+    if (it.path.startsWith('io/btrace/runtime/')) {
+        // Match BTraceRuntimeAccess but NOT BTraceRuntimeAccessImpl
+        if (it.path.startsWith('io/btrace/runtime/BTraceRuntimeAccess.class')
+                || it.path.startsWith('io/btrace/runtime/BTraceRuntimeAccess$')
+                || it.path.startsWith('io/btrace/runtime/LinkingFlag')) {
+            return true
+        }
+        // Include invokedynamic bootstrap classes (they use volatile fields to reach agent implementations)
+        if (it.path.startsWith('io/btrace/runtime/Indy')
+                || it.path.startsWith('io/btrace/runtime/ExtensionIndy')) {
+            return true
+        }
+        // Include Auxiliary class - probe classes are defined via MethodHandles.privateLookupIn(Auxiliary.class)
+        // and must be bootstrap-visible so they're accessible from application classloaders
+        if (it.path.startsWith('io/btrace/runtime/auxiliary/Auxiliary')) {
+            return true
+        }
+        return false
+    }
+    // Include ExtensionBridge interface (referenced by ExtensionIndy)
+    if (it.path == 'io/btrace/extension/ExtensionBridge.class') {
+        return true
+    }
+    // Include slf4j for bootstrap classes (DebugSupport needs it)
+    if (it.path.startsWith('org/slf4j/')) {
+        return true
+    }
+    return false
+}
+
+task bootstrapJar(type: ShadowJar) {
+    archiveBaseName.set('btrace-bootstrap')
+    archiveVersion.set('')
+    archiveClassifier.set('')
+
+    include bootIncludes
+
+    configurations = [project.configurations.bootstrapInputs]
+    relocate 'org.jctools', 'io.btrace.libs.boot.org.jctools'
+    relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'
+}
+
 // Single JAR with .classdata masking for bootstrap isolation
 task btraceJar(type: Jar) {
     group 'Build'
@@ -276,15 +343,15 @@ task btraceJar(type: Jar) {
 
     dependsOn prepareAgentClassdata, prepareClientClassdata, prepareSharedClassdata
     dependsOn project(':btrace-boot').tasks.jar
-    dependsOn project(':btrace-bootstrap').tasks.shadowJar
+    dependsOn bootstrapJar
 
     // 1. Include boot loader class (must be in bootstrap as .class)
     from(project(':btrace-boot').sourceSets.main.output) {
         include 'org/openjdk/btrace/boot/**/*.class'
     }
 
-    // 2. Include bootstrap classes from btrace-bootstrap shadowJar (as .class)
-    from(zipTree(project(':btrace-bootstrap').tasks.shadowJar.archiveFile)) {
+    // 2. Include bootstrap classes from bootstrapJar (as .class)
+    from(zipTree(bootstrapJar.archiveFile)) {
         include '**/*.class'
         include 'META-INF/services/**'
         include '**/jaxb.index'  // Required for JAXB probe descriptor loading
@@ -521,16 +588,16 @@ buildDeb {
 }
 
 copyDtraceLib.dependsOn project(':btrace-dtrace').build
-shadowJar.dependsOn btraceJar, apiJar, copyDtraceLib, copyExtensions
-buildTgz.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildZip.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildSdkmanZip.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildDeb.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildRpm.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+shadowJar.dependsOn btraceJar, copyDtraceLib, copyExtensions
+buildTgz.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildSdkmanZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildDeb.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildRpm.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
 
 // Docker build tasks
-task buildDockerContext(type: Copy, dependsOn: [btraceJar, apiJar, copyDtraceLib, processResources, fixPermissions]) {
+task buildDockerContext(type: Copy, dependsOn: [btraceJar, copyDtraceLib, processResources, fixPermissions]) {
     group 'Docker'
     description 'Prepare Docker build context with BTrace distribution'
 
@@ -650,7 +717,7 @@ task buildDockerImages {
 
 test {
     doLast {
-        project(':btrace-instr').tasks.test.execute()
+        project(':btrace-agent').tasks.test.execute()
     }
 }
 

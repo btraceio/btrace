@@ -66,7 +66,7 @@ jobs:
           retention-days: 1
           path: |
             btrace-dist/build
-            btrace-instr/build/classes/traces
+            btrace-agent/build/classes/traces
       - name: Upload test trace data
         if: always()
         uses: actions/upload-artifact@v7
@@ -74,7 +74,7 @@ jobs:
           name: test-trace
           retention-days: 1
           path: |
-            btrace-instr/build/classes/traces
+            btrace-agent/build/classes/traces
       - name: Archive test reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -131,10 +131,10 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: test-trace
-          path: btrace-instr/build/classes/traces
-      - name: Build btrace-instr jar
+          path: btrace-agent/build/classes/traces
+      - name: Build btrace-agent jar
         run: |
-          ./gradlew --no-daemon --parallel --build-cache :btrace-instr:jar
+          ./gradlew --no-daemon --parallel --build-cache :btrace-agent:jar
       - name: Run tests
         run: |
           set +x
