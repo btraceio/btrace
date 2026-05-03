@@ -18,6 +18,9 @@ dependencies {
 
     jmh libs.jmh
     jmh libs.jmh.annprocess
+
+    testImplementation platform(libs.junit)
+    testImplementation libs.junit.jupiter
 }
 
 jmh {
@@ -61,5 +64,6 @@ jacocoTestReport {
 }
 
 test {
+    useJUnitPlatform()
     finalizedBy jacocoTestReport
 }
