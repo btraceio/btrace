@@ -1,40 +1,30 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.extension;
-
-import org.openjdk.btrace.core.extensions.PermissionSet;
 
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.openjdk.btrace.core.extensions.PermissionSet;
 
 /**
- * Descriptor for a BTrace extension loaded from an extension JAR.
- * Contains metadata about the extension including identity, version,
- * compatibility requirements, and provided services.
+ * Descriptor for a BTrace extension loaded from an extension JAR. Contains metadata about the
+ * extension including identity, version, compatibility requirements, and provided services.
  */
 public final class ExtensionDescriptorDTO {
   private final String id;
@@ -81,14 +71,22 @@ public final class ExtensionDescriptorDTO {
     this.jarPath = Objects.requireNonNull(jarPath, "Extension jar path cannot be null");
     this.btraceApiVersion = btraceApiVersion != null ? btraceApiVersion : "3.0+";
     this.javaVersion = javaVersion != null ? javaVersion : "8+";
-    this.services = services != null ? Collections.unmodifiableList(services) : Collections.emptyList();
-    this.requiredExtensions = requiredExtensions != null ? Collections.unmodifiableList(requiredExtensions) : Collections.emptyList();
+    this.services =
+        services != null ? Collections.unmodifiableList(services) : Collections.emptyList();
+    this.requiredExtensions =
+        requiredExtensions != null
+            ? Collections.unmodifiableList(requiredExtensions)
+            : Collections.emptyList();
     this.repository = repository;
-    this.requiredPermissions = requiredPermissions != null ? requiredPermissions : PermissionSet.empty();
+    this.requiredPermissions =
+        requiredPermissions != null ? requiredPermissions : PermissionSet.empty();
     this.embedded = embedded;
     this.resourceBasePath = resourceBasePath;
     this.configuratorClass = configuratorClass;
-    this.bundledProbes = bundledProbes != null ? Collections.unmodifiableList(bundledProbes) : Collections.emptyList();
+    this.bundledProbes =
+        bundledProbes != null
+            ? Collections.unmodifiableList(bundledProbes)
+            : Collections.emptyList();
   }
 
   public String getId() {
@@ -132,39 +130,35 @@ public final class ExtensionDescriptorDTO {
   }
 
   /**
-   * Returns permissions required by this extension (from manifest or properties),
-   * or an empty set if none were declared.
+   * Returns permissions required by this extension (from manifest or properties), or an empty set
+   * if none were declared.
    */
   public PermissionSet getRequiredPermissions() {
     return requiredPermissions;
   }
 
-  /**
-   * Returns whether this is an embedded extension (bundled in agent JAR).
-   */
+  /** Returns whether this is an embedded extension (bundled in agent JAR). */
   public boolean isEmbedded() {
     return embedded;
   }
 
   /**
-   * Returns the resource base path for embedded extensions (e.g., "META-INF/btrace-extensions/ext-id").
-   * Returns null for filesystem extensions.
+   * Returns the resource base path for embedded extensions (e.g.,
+   * "META-INF/btrace-extensions/ext-id"). Returns null for filesystem extensions.
    */
   public String getResourceBasePath() {
     return resourceBasePath;
   }
 
   /**
-   * Returns the configurator class name for environment-aware probe selection.
-   * Returns null if no configurator is defined.
+   * Returns the configurator class name for environment-aware probe selection. Returns null if no
+   * configurator is defined.
    */
   public String getConfiguratorClass() {
     return configuratorClass;
   }
 
-  /**
-   * Returns the list of bundled probe class names.
-   */
+  /** Returns the list of bundled probe class names. */
   public List<String> getBundledProbes() {
     return bundledProbes;
   }

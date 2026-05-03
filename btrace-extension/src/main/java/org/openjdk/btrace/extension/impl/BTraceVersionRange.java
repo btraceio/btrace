@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.extension.impl;
 
@@ -28,10 +20,11 @@ package org.openjdk.btrace.extension.impl;
  * Parses and evaluates BTrace API version requirements declared by extensions.
  *
  * <p>Supported requirement formats:
+ *
  * <ul>
- *   <li>{@code "3.0+"} — requires BTrace >= 3.0 (any patch)</li>
- *   <li>{@code "3.0.1+"} — requires BTrace >= 3.0.1</li>
- *   <li>{@code "3.0.0"} — treated as a minimum (>= 3.0.0)</li>
+ *   <li>{@code "3.0+"} — requires BTrace >= 3.0 (any patch)
+ *   <li>{@code "3.0.1+"} — requires BTrace >= 3.0.1
+ *   <li>{@code "3.0.0"} — treated as a minimum (>= 3.0.0)
  * </ul>
  *
  * <p>The actual running BTrace version may carry a qualifier (e.g. {@code "3.0.0-SNAPSHOT"});
@@ -51,8 +44,8 @@ final class BTraceVersionRange {
   }
 
   /**
-   * Parse a version requirement string.
-   * A trailing {@code +} is stripped; missing minor/patch components default to 0.
+   * Parse a version requirement string. A trailing {@code +} is stripped; missing minor/patch
+   * components default to 0.
    */
   static BTraceVersionRange parse(String requirement) {
     if (requirement == null || requirement.trim().isEmpty()) {
@@ -68,13 +61,13 @@ final class BTraceVersionRange {
   /**
    * Returns true if {@code actualVersion} satisfies this minimum requirement.
    *
-   * <p>Returns true unconditionally when {@code actualVersion} is null, empty, or
-   * {@code "unknown"} — the check is skipped rather than failing safe, because an unknown
-   * version typically means a development/test environment where the JAR manifest has not
-   * been written yet.
+   * <p>Returns true unconditionally when {@code actualVersion} is null, empty, or {@code "unknown"}
+   * — the check is skipped rather than failing safe, because an unknown version typically means a
+   * development/test environment where the JAR manifest has not been written yet.
    */
   boolean satisfiedBy(String actualVersion) {
-    if (actualVersion == null || actualVersion.trim().isEmpty()
+    if (actualVersion == null
+        || actualVersion.trim().isEmpty()
         || "unknown".equalsIgnoreCase(actualVersion.trim())) {
       return true;
     }

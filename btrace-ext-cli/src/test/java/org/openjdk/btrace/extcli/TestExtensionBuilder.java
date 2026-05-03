@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.extcli;
 
@@ -38,9 +30,7 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/**
- * Helper class to build test extension JARs programmatically.
- */
+/** Helper class to build test extension JARs programmatically. */
 class TestExtensionBuilder {
 
   /**
@@ -59,7 +49,8 @@ class TestExtensionBuilder {
     manifest.getMainAttributes().putValue("BTrace-Extension-Id", id);
     manifest.getMainAttributes().putValue("BTrace-Extension-Version", version);
 
-    try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(output.toFile()), manifest)) {
+    try (JarOutputStream jos =
+        new JarOutputStream(new FileOutputStream(output.toFile()), manifest)) {
       // Add META-INF/btrace/exports.index
       jos.putNextEntry(new JarEntry("META-INF/btrace/"));
       jos.closeEntry();
@@ -88,7 +79,8 @@ class TestExtensionBuilder {
     Manifest manifest = new Manifest();
     manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
 
-    try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(output.toFile()), manifest)) {
+    try (JarOutputStream jos =
+        new JarOutputStream(new FileOutputStream(output.toFile()), manifest)) {
       // Add META-INF/services entry
       jos.putNextEntry(new JarEntry("META-INF/services/"));
       jos.closeEntry();
@@ -152,8 +144,8 @@ class TestExtensionBuilder {
    * @param privileged Whether extension requires privileged permissions
    * @throws IOException if creation fails
    */
-  static void createExtensionDirectory(String id, String version, Path outputDir, boolean privileged)
-      throws IOException {
+  static void createExtensionDirectory(
+      String id, String version, Path outputDir, boolean privileged) throws IOException {
     Files.createDirectories(outputDir);
     Path apiJar = outputDir.resolve(id + "-" + version + "-api.jar");
     Path implJar = outputDir.resolve(id + "-" + version + "-impl.jar");
@@ -162,8 +154,7 @@ class TestExtensionBuilder {
     createImplJar(id, implJar);
   }
 
-  private static void addFileToZip(ZipOutputStream zos, Path file, String name)
-      throws IOException {
+  private static void addFileToZip(ZipOutputStream zos, Path file, String name) throws IOException {
     zos.putNextEntry(new ZipEntry(name));
     Files.copy(file, zos);
     zos.closeEntry();

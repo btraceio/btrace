@@ -14,7 +14,7 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 L1
 FRAME FULL [resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest resources/OnMethodTest]
 L2
-LINENUMBER 102 L2
+LINENUMBER 93 L2
 L3
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L3 0
 MAXSTACK = 5

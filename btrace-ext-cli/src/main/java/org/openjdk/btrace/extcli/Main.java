@@ -1,11 +1,27 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.extcli;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.openjdk.btrace.extcli.tui.ExtRepoBrowser;
 
@@ -37,7 +53,8 @@ public final class Main {
           }
           report = ExtensionInspector.inspect(resolved);
         }
-        if (json) System.out.println(report.toJson()); else System.out.println(report);
+        if (json) System.out.println(report.toJson());
+        else System.out.println(report);
         break;
       case "list":
         boolean jsonList = hasFlag(args, "--json");
@@ -48,7 +65,8 @@ public final class Main {
         break;
       case "install":
         if (args.length < 2) {
-          err("Missing coordinate or path. Usage: btracex install <group:artifact:version|zip|url> [--repo <url> ...] [--id <extId>] [--dry-run]");
+          err(
+              "Missing coordinate or path. Usage: btracex install <group:artifact:version|zip|url> [--repo <url> ...] [--id <extId>] [--dry-run]");
           System.exit(2);
         }
         runInstall(Arrays.copyOfRange(args, 1, args.length));
@@ -113,7 +131,8 @@ public final class Main {
         System.out.println("Policy saved to " + target.getTarget());
         break;
       case "edit":
-        System.err.println("Interactive editor not yet implemented; use 'btracex policy set' for now.");
+        System.err.println(
+            "Interactive editor not yet implemented; use 'btracex policy set' for now.");
         System.exit(2);
         break;
       default:
@@ -128,14 +147,17 @@ public final class Main {
   }
 
   private static void usage() {
-    System.out.println("btracex - BTrace extensions CLI\n" +
-        "Usage:\n" +
-        "  btracex inspect [<path|dir|zip|id>] [--json]  # no args opens repo browser\n" +
-        "  btracex list [--json]\n" +
-        "  btracex policy print [--policy-file <path>|--home|--classpath <outDir>] [--json]\n" +
-        "  btracex policy set [--allowExtensions <ids>] [--denyExtensions <ids>] [--allowPrivileged <bool>] [--policy-file <path>|--home|--classpath <outDir>]\n" +
-        "  btracex install <groupId:artifactId:version> [--repo <url> ...] [--id <extId>] [--dry-run]\n");
+    System.out.println(
+        "btracex - BTrace extensions CLI\n"
+            + "Usage:\n"
+            + "  btracex inspect [<path|dir|zip|id>] [--json]  # no args opens repo browser\n"
+            + "  btracex list [--json]\n"
+            + "  btracex policy print [--policy-file <path>|--home|--classpath <outDir>] [--json]\n"
+            + "  btracex policy set [--allowExtensions <ids>] [--denyExtensions <ids>] [--allowPrivileged <bool>] [--policy-file <path>|--home|--classpath <outDir>]\n"
+            + "  btracex install <groupId:artifactId:version> [--repo <url> ...] [--id <extId>] [--dry-run]\n");
   }
 
-  private static void err(String s) { System.err.println(s); }
+  private static void err(String s) {
+    System.err.println(s);
+  }
 }

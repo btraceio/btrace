@@ -1,14 +1,19 @@
 /*
- * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.runtime;
 
 import java.io.ByteArrayOutputStream;
@@ -19,23 +24,22 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Shared helper for probe-class isolation on the JDK 9-14 code paths.
  *
- * <p>On those paths we cannot define a probe into a hidden class yet
- * ({@code Lookup.defineHiddenClass} is JDK 15+), so to keep probes unloadable
- * we instead define each probe in a <em>fresh, throwaway {@link ClassLoader}</em>:
+ * <p>On those paths we cannot define a probe into a hidden class yet ({@code
+ * Lookup.defineHiddenClass} is JDK 15+), so to keep probes unloadable we instead define each probe
+ * in a <em>fresh, throwaway {@link ClassLoader}</em>:
  *
  * <ol>
- *   <li>{@link #defineAnchor(ClassLoader)} emits a tiny, unique public "anchor" class into
- *       a brand-new unnamed {@code ClassLoader} (parented to the given {@code ClassLoader}).</li>
- *   <li>The caller then invokes
- *       {@code MethodHandles.privateLookupIn(anchor, lookup()).defineClass(probeBytes)}
- *       which lands the probe into the anchor's loader — i.e. the same fresh loader.</li>
- *   <li>When the probe is dropped and all {@code MethodHandle}s / {@code Class<?>}
- *       references are cleared, the loader becomes unreachable and the probe class
- *       is eligible for unload.</li>
+ *   <li>{@link #defineAnchor(ClassLoader)} emits a tiny, unique public "anchor" class into a
+ *       brand-new unnamed {@code ClassLoader} (parented to the given {@code ClassLoader}).
+ *   <li>The caller then invokes {@code MethodHandles.privateLookupIn(anchor,
+ *       lookup()).defineClass(probeBytes)} which lands the probe into the anchor's loader — i.e.
+ *       the same fresh loader.
+ *   <li>When the probe is dropped and all {@code MethodHandle}s / {@code Class<?>} references are
+ *       cleared, the loader becomes unreachable and the probe class is eligible for unload.
  * </ol>
  *
- * <p>Kept in the JDK 8 source set so it is visible to both the {@code java9}
- * and {@code java11} source sets through the main compile output.
+ * <p>Kept in the JDK 8 source set so it is visible to both the {@code java9} and {@code java11}
+ * source sets through the main compile output.
  */
 final class ProbeAnchor {
   private static final AtomicLong ANCHOR_SEQ = new AtomicLong();
@@ -43,27 +47,27 @@ final class ProbeAnchor {
   private ProbeAnchor() {}
 
   /**
-   * Emit a tiny, unique, public anchor class into a brand-new unnamed
-   * {@link ClassLoader} so that a subsequent
-   * {@code privateLookupIn(anchor, ...).defineClass(probeBytes)} places the probe
-   * into that isolated loader.
+   * Emit a tiny, unique, public anchor class into a brand-new unnamed {@link ClassLoader} so that a
+   * subsequent {@code privateLookupIn(anchor, ...).defineClass(probeBytes)} places the probe into
+   * that isolated loader.
    *
-   * @param parent the parent ClassLoader. Allows probe to resolve classes (e.g., BTraceUtils)
-   *     from the agent's ClassLoader.
+   * @param parent the parent ClassLoader. Allows probe to resolve classes (e.g., BTraceUtils) from
+   *     the agent's ClassLoader.
    */
   static Class<?> defineAnchor(ClassLoader parent) {
     long seq = ANCHOR_SEQ.incrementAndGet();
     final String binaryName = "org.openjdk.btrace.runtime.auxiliary.Anchor$" + seq;
     final byte[] bytes = generateAnchorBytes(binaryName.replace('.', '/'));
-    ClassLoader cl = new ClassLoader(parent) {
-      @Override
-      protected Class<?> findClass(String name) throws ClassNotFoundException {
-        if (name.equals(binaryName)) {
-          return defineClass(name, bytes, 0, bytes.length);
-        }
-        throw new ClassNotFoundException(name);
-      }
-    };
+    ClassLoader cl =
+        new ClassLoader(parent) {
+          @Override
+          protected Class<?> findClass(String name) throws ClassNotFoundException {
+            if (name.equals(binaryName)) {
+              return defineClass(name, bytes, 0, bytes.length);
+            }
+            throw new ClassNotFoundException(name);
+          }
+        };
     try {
       return Class.forName(binaryName, true, cl);
     } catch (ClassNotFoundException e) {
@@ -73,7 +77,9 @@ final class ProbeAnchor {
 
   /**
    * Hand-assembled class file for:
+   *
    * <pre>public final class &lt;internalName&gt; { public &lt;init&gt;() { super(); } }</pre>
+   *
    * No ASM dependency on the runtime module's classpath.
    */
   static byte[] generateAnchorBytes(String internalName) {
@@ -140,21 +146,24 @@ final class ProbeAnchor {
       dos.writeShort(1); // attributes_count = 1 (Code)
 
       // Code attribute bytes: aload_0; invokespecial #1; return
-      byte[] codeBytes = new byte[] {
-          0x2A,                    // aload_0
-          (byte) 0xB7, 0x00, 0x01, // invokespecial #1
-          (byte) 0xB1              // return
-      };
+      byte[] codeBytes =
+          new byte[] {
+            0x2A, // aload_0
+            (byte) 0xB7,
+            0x00,
+            0x01, // invokespecial #1
+            (byte) 0xB1 // return
+          };
       // attribute_length = 2(max_stack)+2(max_locals)+4(code_length)+code.length+2(exc)+2(attrs)
       int attrLen = 2 + 2 + 4 + codeBytes.length + 2 + 2;
-      dos.writeShort(9);        // attribute_name_index = "Code"
+      dos.writeShort(9); // attribute_name_index = "Code"
       dos.writeInt(attrLen);
-      dos.writeShort(1);        // max_stack
-      dos.writeShort(1);        // max_locals
+      dos.writeShort(1); // max_stack
+      dos.writeShort(1); // max_locals
       dos.writeInt(codeBytes.length);
       dos.write(codeBytes);
-      dos.writeShort(0);        // exception_table_length
-      dos.writeShort(0);        // attributes_count (inside Code)
+      dos.writeShort(0); // exception_table_length
+      dos.writeShort(0); // attributes_count (inside Code)
 
       dos.writeShort(0); // class attributes_count
       dos.flush();

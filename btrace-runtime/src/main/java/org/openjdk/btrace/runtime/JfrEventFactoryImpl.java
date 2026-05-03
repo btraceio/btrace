@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.runtime;
 
 import static org.openjdk.btrace.core.annotations.Event.FieldKind.BOOLEANFLAG;
@@ -205,11 +221,10 @@ final class JfrEventFactoryImpl implements JfrEvent.Factory {
   /**
    * Resolve the probe handler class via the runtime registry.
    *
-   * <p>{@link Class#forName} doesn't see probes defined in isolated or hidden
-   * class loaders, so go through the registry the agent populated at
-   * defineClass time. Returns {@code null} if no runtime is registered — the
-   * caller falls back to {@code Class.forName} for deployments (notably the
-   * JDK 8 path) that define probes directly into the agent's loader.
+   * <p>{@link Class#forName} doesn't see probes defined in isolated or hidden class loaders, so go
+   * through the registry the agent populated at defineClass time. Returns {@code null} if no
+   * runtime is registered — the caller falls back to {@code Class.forName} for deployments (notably
+   * the JDK 8 path) that define probes directly into the agent's loader.
    */
   private static Class<?> resolveHandlerClass(String probeName) {
     BTraceRuntimeImplBase rt = BTraceRuntimeAccessImpl.getRuntime(probeName);

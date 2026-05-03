@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.extension.impl;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -117,7 +133,8 @@ class SecurityValidationTest {
     @Test
     @DisplayName("rejects class names with special characters")
     void rejectsSpecialCharacters() {
-      assertFalse(EmbeddedExtensionRepository.isValidClassName("com/example/Class")); // path separator
+      assertFalse(
+          EmbeddedExtensionRepository.isValidClassName("com/example/Class")); // path separator
       assertFalse(EmbeddedExtensionRepository.isValidClassName("com\\example\\Class")); // backslash
       assertFalse(EmbeddedExtensionRepository.isValidClassName("com.example@Class")); // at sign
       assertFalse(EmbeddedExtensionRepository.isValidClassName("com.example#Class")); // hash
@@ -144,9 +161,16 @@ class SecurityValidationTest {
       // Valid class file starts with CAFEBABE
       byte[] validMagic =
           new byte[] {
-            (byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE,
-            0x00, 0x00, 0x00, 0x34, // version
-            0x00, 0x01 // constant_pool_count
+            (byte) 0xCA,
+            (byte) 0xFE,
+            (byte) 0xBA,
+            (byte) 0xBE,
+            0x00,
+            0x00,
+            0x00,
+            0x34, // version
+            0x00,
+            0x01 // constant_pool_count
           };
       assertTrue(validMagic.length >= 10);
       assertTrue(validMagic[0] == (byte) 0xCA);
@@ -157,9 +181,7 @@ class SecurityValidationTest {
       // Invalid: wrong magic
       byte[] invalidMagic =
           new byte[] {
-            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-            0x00, 0x00, 0x00, 0x34,
-            0x00, 0x01
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, 0x00, 0x00, 0x00, 0x34, 0x00, 0x01
           };
       assertFalse(invalidMagic[0] == (byte) 0xCA);
     }

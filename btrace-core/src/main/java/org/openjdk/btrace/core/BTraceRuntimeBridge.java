@@ -1,53 +1,51 @@
 /*
- * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+package org.openjdk.btrace.core.aggregation;
 
-package org.openjdk.btrace.core;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Minimal bootstrap-visible bridge used by injected code to reach the runtime implementation.
+ * Aggregation function for computing the sum of values.
+ *
+ * <p>
+ *
+ * @author Christian Glencross
  */
-public interface BTraceRuntimeBridge {
-  void start();
+class Sum implements AggregationValue {
 
-  void leave();
+  final AtomicLong value = new AtomicLong();
 
-  void handleException(Throwable th);
+  @Override
+  public void clear() {
+    value.set(0);
+  }
 
-  boolean isDisabled();
+  @Override
+  public void add(long delta) {
+    value.addAndGet(delta);
+  }
 
-  void newPerfCounter(Object value, String name, String desc);
+  @Override
+  public long getValue() {
+    return value.get();
+  }
 
-  int getPerfInt(String name);
-
-  void putPerfInt(int value, String name);
-
-  float getPerfFloat(String name);
-
-  void putPerfFloat(float value, String name);
-
-  long getPerfLong(String name);
-
-  void putPerfLong(long value, String name);
-
-  String getPerfString(String name);
-
-  void putPerfString(String value, String name);
+  @Override
+  public Object getData() {
+    return getValue();
+  }
 }

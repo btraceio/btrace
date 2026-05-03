@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.extcli;
 
 import java.io.IOException;
@@ -6,11 +22,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.*;
 import java.util.*;
-import java.util.stream.Stream;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.openjdk.btrace.core.extensions.Extension;
 import org.openjdk.btrace.core.extensions.ExtensionMeta;
 import org.openjdk.btrace.core.extensions.Permission;
@@ -32,7 +47,8 @@ final class ExtensionInspector {
       return inspectJars(id, api, impl);
     } else if (input.toString().endsWith(".zip")) {
       // Derive id from zip file name first; will prefer manifest id if available later
-      String fileName = input.getFileName() != null ? input.getFileName().toString() : input.toString();
+      String fileName =
+          input.getFileName() != null ? input.getFileName().toString() : input.toString();
       String id = stripVersionFromName(fileName.replaceFirst("-extension\\.zip$", ""));
       try (FileSystem fs = FileSystems.newFileSystem(input, (ClassLoader) null)) {
         Path root = fs.getPath("/");
@@ -58,7 +74,10 @@ final class ExtensionInspector {
 
   private static Path findFirstDeep(Path root, String suffix) throws IOException {
     try (Stream<Path> s = Files.walk(root)) {
-      Optional<Path> p = s.filter(pth -> pth.getFileName() != null && pth.getFileName().toString().endsWith(suffix)).findFirst();
+      Optional<Path> p =
+          s.filter(
+                  pth -> pth.getFileName() != null && pth.getFileName().toString().endsWith(suffix))
+              .findFirst();
       return p.orElse(null);
     }
   }
@@ -68,7 +87,10 @@ final class ExtensionInspector {
     boolean privileged = false;
     for (ExtensionMeta m : metas) {
       for (Permission pperm : m.getRequiredPermissions()) {
-        if (pperm.isPrivileged()) { privileged = true; break; }
+        if (pperm.isPrivileged()) {
+          privileged = true;
+          break;
+        }
       }
       if (privileged) break;
     }
@@ -97,29 +119,41 @@ final class ExtensionInspector {
     }
     // Also merge any service-level permissions from @ServiceDescriptor on service interfaces
     if (services != null && !services.isEmpty()) {
-      try (URLClassLoader cl = new URLClassLoader(new URL[] { api.toUri().toURL(), impl.toUri().toURL() }, ExtensionInspector.class.getClassLoader())) {
+      try (URLClassLoader cl =
+          new URLClassLoader(
+              new URL[] {api.toUri().toURL(), impl.toUri().toURL()},
+              ExtensionInspector.class.getClassLoader())) {
         LinkedHashSet<String> merged = new LinkedHashSet<>(requiredPerms);
         for (String svc : services) {
           try {
             Class<?> sc = Class.forName(svc, false, cl);
-            java.lang.annotation.Annotation sd = sc.getAnnotation(org.openjdk.btrace.core.extensions.ServiceDescriptor.class);
+            java.lang.annotation.Annotation sd =
+                sc.getAnnotation(org.openjdk.btrace.core.extensions.ServiceDescriptor.class);
             if (sd instanceof org.openjdk.btrace.core.extensions.ServiceDescriptor) {
-              for (org.openjdk.btrace.core.extensions.Permission p : ((org.openjdk.btrace.core.extensions.ServiceDescriptor) sd).permissions()) {
+              for (org.openjdk.btrace.core.extensions.Permission p :
+                  ((org.openjdk.btrace.core.extensions.ServiceDescriptor) sd).permissions()) {
                 if (p != null) merged.add(p.name());
               }
             }
-          } catch (Throwable ignore) { }
+          } catch (Throwable ignore) {
+          }
         }
         requiredPerms = new ArrayList<>(merged);
-      } catch (Throwable ignore) { }
+      } catch (Throwable ignore) {
+      }
     }
     // Recompute privileged based on the merged permission names
     if (!privileged) {
       for (String n : requiredPerms) {
         try {
           Permission p = Permission.valueOf(n.trim().toUpperCase());
-          if (p.isPrivileged()) { privileged = true; break; }
-        } catch (IllegalArgumentException ignored) { /* skip unknown names */ }
+          if (p.isPrivileged()) {
+            privileged = true;
+            break;
+          }
+        } catch (IllegalArgumentException ignored) {
+          /* skip unknown names */
+        }
       }
     }
     return ExtensionReport.ok(id, version, privileged, services, metas, requiredPerms);
@@ -133,7 +167,10 @@ final class ExtensionInspector {
       JarEntry svc = jf.getJarEntry("META-INF/services/" + Extension.class.getName());
       if (svc == null) return result;
       List<String> providers = new ArrayList<>();
-      try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(jf.getInputStream(svc), java.nio.charset.StandardCharsets.UTF_8))) {
+      try (java.io.BufferedReader br =
+          new java.io.BufferedReader(
+              new java.io.InputStreamReader(
+                  jf.getInputStream(svc), java.nio.charset.StandardCharsets.UTF_8))) {
         String line;
         while ((line = br.readLine()) != null) {
           line = line.trim();
@@ -141,8 +178,9 @@ final class ExtensionInspector {
           providers.add(line);
         }
       }
-      URL[] urls = new URL[] { apiJar.toUri().toURL(), implJar.toUri().toURL() };
-      try (URLClassLoader cl = new URLClassLoader(urls, ExtensionInspector.class.getClassLoader())) {
+      URL[] urls = new URL[] {apiJar.toUri().toURL(), implJar.toUri().toURL()};
+      try (URLClassLoader cl =
+          new URLClassLoader(urls, ExtensionInspector.class.getClassLoader())) {
         for (String cn : providers) {
           try {
             Class<?> c = Class.forName(cn, false, cl);
@@ -156,7 +194,8 @@ final class ExtensionInspector {
           }
         }
       }
-    } catch (Throwable ignored) {}
+    } catch (Throwable ignored) {
+    }
     return result;
   }
 
@@ -170,7 +209,8 @@ final class ExtensionInspector {
           services.add(e.getName().substring("META-INF/services/".length()));
         }
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     return services;
   }
 
@@ -182,7 +222,8 @@ final class ExtensionInspector {
         v = jf.getManifest().getMainAttributes().getValue("BTrace-Extension-Version");
         if (v != null) return v;
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     return "";
   }
 
@@ -196,11 +237,14 @@ final class ExtensionInspector {
       JarEntry props = jf.getJarEntry("META-INF/btrace-extension.properties");
       if (props != null) {
         Properties p = new Properties();
-        try (InputStream is = jf.getInputStream(props)) { p.load(is); }
+        try (InputStream is = jf.getInputStream(props)) {
+          p.load(is);
+        }
         String id = p.getProperty("extension.id", "");
         if (!id.isEmpty()) return id;
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     return "";
   }
 
@@ -223,18 +267,29 @@ final class ExtensionInspector {
       if (mf != null) {
         String v = mf.getMainAttributes().getValue("BTrace-Extension-Permissions");
         if (v != null && !v.trim().isEmpty()) {
-          for (String part : v.split(",")) { String s = part.trim(); if (!s.isEmpty()) perms.add(s); }
+          for (String part : v.split(",")) {
+            String s = part.trim();
+            if (!s.isEmpty()) perms.add(s);
+          }
           return perms;
         }
       }
       JarEntry e = jf.getJarEntry("META-INF/btrace-extension.properties");
       if (e != null) {
         Properties p = new Properties();
-        try (InputStream is = jf.getInputStream(e)) { p.load(is); }
+        try (InputStream is = jf.getInputStream(e)) {
+          p.load(is);
+        }
         String v = p.getProperty("requires.permissions", "");
-        if (!v.isEmpty()) { for (String part : v.split(",")) { String s = part.trim(); if (!s.isEmpty()) perms.add(s); } }
+        if (!v.isEmpty()) {
+          for (String part : v.split(",")) {
+            String s = part.trim();
+            if (!s.isEmpty()) perms.add(s);
+          }
+        }
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     return perms;
   }
 }

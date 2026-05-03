@@ -1,10 +1,18 @@
 /*
- * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.instr;
 
@@ -22,31 +30,30 @@ import org.openjdk.btrace.core.comm.CommandListener;
 import org.openjdk.btrace.runtime.BTraceRuntimes;
 
 /**
- * Verifies that a probe {@code Class<?>} defined through
- * {@link BTraceRuntime.Impl#defineClass(byte[])} becomes weakly reachable once
- * all caller-held strong references are dropped.
+ * Verifies that a probe {@code Class<?>} defined through {@link
+ * BTraceRuntime.Impl#defineClass(byte[])} becomes weakly reachable once all caller-held strong
+ * references are dropped.
  *
- * <p>This test asserts <strong>weak reachability</strong> only — it does NOT assert that
- * Metaspace has actually unloaded the class, as JVM-level unloading under
- * {@link System#gc()} is not deterministic and is flaky on CI. Weak reachability is the
- * reliable precondition for unloading and is what this test guards.
+ * <p>This test asserts <strong>weak reachability</strong> only — it does NOT assert that Metaspace
+ * has actually unloaded the class, as JVM-level unloading under {@link System#gc()} is not
+ * deterministic and is flaky on CI. Weak reachability is the reliable precondition for unloading
+ * and is what this test guards.
  *
  * <p>The test exercises whichever {@code BTraceRuntimeImpl_*} the host JDK selects:
+ *
  * <ul>
- *   <li>JDK 8  → {@code Unsafe.defineClass} into a fresh {@code new ClassLoader(null){}}.</li>
- *   <li>JDK 9-10 → {@code privateLookupIn(anchor, ...).defineClass} where {@code anchor}
- *       is a per-probe class in a fresh unnamed loader.</li>
- *   <li>JDK 11-14 → same anchor-based path as 9-10.</li>
- *   <li>JDK 15+ path uses {@code defineHiddenClass(code, true)} with no
- *       {@code ClassOption}, so the hidden class is unloadable when its
- *       {@code Class<?>} mirror becomes unreachable.</li>
+ *   <li>JDK 8 → {@code Unsafe.defineClass} into a fresh {@code new ClassLoader(null){}}.
+ *   <li>JDK 9-10 → {@code privateLookupIn(anchor, ...).defineClass} where {@code anchor} is a
+ *       per-probe class in a fresh unnamed loader.
+ *   <li>JDK 11-14 → same anchor-based path as 9-10.
+ *   <li>JDK 15+ path uses {@code defineHiddenClass(code, true)} with no {@code ClassOption}, so the
+ *       hidden class is unloadable when its {@code Class<?>} mirror becomes unreachable.
  * </ul>
  *
- * <p>On JDK 15+ the probe's reported {@code ClassLoader} is the loader of
- * {@code Auxiliary} — shared with the agent — so the loader assertion is conditional:
- * we only require the loader to be collected when it is non-null, distinct from the
- * test's own loader, and distinct from the loader that already owns the BTrace runtime
- * classes themselves.
+ * <p>On JDK 15+ the probe's reported {@code ClassLoader} is the loader of {@code Auxiliary} —
+ * shared with the agent — so the loader assertion is conditional: we only require the loader to be
+ * collected when it is non-null, distinct from the test's own loader, and distinct from the loader
+ * that already owns the BTrace runtime classes themselves.
  */
 public class ProbeClassUnloadingTest {
 
@@ -61,17 +68,14 @@ public class ProbeClassUnloadingTest {
     // With bootstrap-CL residency this threw LinkageError on the second defineClass.
     // With per-probe ClassLoader / hidden class, each attach gets its own class
     // mirror, so the same internal name is legal.
-    String probeName =
-        "org.openjdk.btrace.runtime.auxiliary.SameNameProbe$" + System.nanoTime();
+    String probeName = "org.openjdk.btrace.runtime.auxiliary.SameNameProbe$" + System.nanoTime();
     byte[] bytes = generateMinimalClass(probeName);
     Class<?> first = defineProbe(probeName, bytes);
     Class<?> second = defineProbe(probeName, bytes);
     Assertions.assertNotNull(first);
     Assertions.assertNotNull(second);
     Assertions.assertNotSame(
-        first,
-        second,
-        "Re-define of same-named probe must yield a distinct Class mirror");
+        first, second, "Re-define of same-named probe must yield a distinct Class mirror");
     // Clean up both runtimes (removeRuntime is idempotent; second call is a no-op).
     BTraceRuntimes.removeRuntime(probeName);
   }
@@ -110,19 +114,18 @@ public class ProbeClassUnloadingTest {
     if (weakLoader != null) {
       Assertions.assertNull(
           weakLoader.get(),
-          "per-probe ClassLoader is still strongly reachable after caller drops"
-              + " references");
+          "per-probe ClassLoader is still strongly reachable after caller drops" + " references");
     }
   }
 
   /**
-   * All strong references to the probe {@code Class<?>}, its {@code ClassLoader}, and
-   * the {@link BTraceRuntime.Impl} live only in this helper method's frame. When it
-   * returns, those locals go out of scope, enabling GC to collect the class.
+   * All strong references to the probe {@code Class<?>}, its {@code ClassLoader}, and the {@link
+   * BTraceRuntime.Impl} live only in this helper method's frame. When it returns, those locals go
+   * out of scope, enabling GC to collect the class.
    *
-   * <p>Correctness depends on this helper not being inlined into the {@code @Test}
-   * method: inlining would keep the Impl and probe-{@code Class<?>} locals alive in the
-   * test frame across the GC loop, masking any retention regression.
+   * <p>Correctness depends on this helper not being inlined into the {@code @Test} method: inlining
+   * would keep the Impl and probe-{@code Class<?>} locals alive in the test frame across the GC
+   * loop, masking any retention regression.
    */
   // WARNING: do not inline — test depends on helper-frame locals going out of scope before GC
   private static WeakReference<?>[] defineAndDropProbe() {
@@ -154,15 +157,16 @@ public class ProbeClassUnloadingTest {
     WeakReference<ClassLoader> weakLoader =
         loaderIsIsolated ? new WeakReference<>(probeLoader) : null;
 
-    // Release the runtime GC root in BTraceRuntimeAccessImpl.runtimes so the class can be collected.
+    // Release the runtime GC root in BTraceRuntimeAccessImpl.runtimes so the class can be
+    // collected.
     BTraceRuntimes.removeRuntime(probeName);
 
     return new WeakReference<?>[] {weakClass, weakLoader};
   }
 
   /**
-   * Generate a minimal valid {@code .class}: a {@code public} class with a public
-   * no-arg constructor and a public static {@code handler()} that does nothing.
+   * Generate a minimal valid {@code .class}: a {@code public} class with a public no-arg
+   * constructor and a public static {@code handler()} that does nothing.
    */
   private static byte[] generateMinimalClass(String binaryName) {
     String internalName = binaryName.replace('.', '/');
@@ -178,15 +182,13 @@ public class ProbeClassUnloadingTest {
     MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
     mv.visitCode();
     mv.visitVarInsn(Opcodes.ALOAD, 0);
-    mv.visitMethodInsn(
-        Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+    mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
     mv.visitInsn(Opcodes.RETURN);
     mv.visitMaxs(1, 1);
     mv.visitEnd();
 
     MethodVisitor h =
-        cw.visitMethod(
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handler", "()V", null, null);
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handler", "()V", null, null);
     h.visitCode();
     h.visitInsn(Opcodes.RETURN);
     h.visitMaxs(0, 0);

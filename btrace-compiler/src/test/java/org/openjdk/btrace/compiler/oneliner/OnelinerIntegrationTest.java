@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.compiler.oneliner;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -9,9 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.openjdk.btrace.compiler.Compiler;
 import org.openjdk.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
 
-/**
- * Integration tests that verify oneliner-generated code compiles with the real BTrace compiler.
- */
+/** Integration tests that verify oneliner-generated code compiles with the real BTrace compiler. */
 class OnelinerIntegrationTest {
 
   @Test
@@ -25,7 +39,8 @@ class OnelinerIntegrationTest {
 
   @Test
   void testCompileReturnWithFilter() {
-    String oneliner = "java.sql.Statement::execute @return if duration>100ms { print method, duration }";
+    String oneliner =
+        "java.sql.Statement::execute @return if duration>100ms { print method, duration }";
     byte[] bytecode = compileOneliner(oneliner);
 
     assertNotNull(bytecode);
@@ -104,9 +119,7 @@ class OnelinerIntegrationTest {
     assertTrue(bytecode.length > 0);
   }
 
-  /**
-   * Helper method to compile a oneliner end-to-end: parse -> validate -> generate -> compile
-   */
+  /** Helper method to compile a oneliner end-to-end: parse -> validate -> generate -> compile */
   private byte[] compileOneliner(String oneliner) {
     try {
       // Parse

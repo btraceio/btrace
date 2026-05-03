@@ -31,7 +31,7 @@ L4
 FRAME SAME1 J
 IFLE L5
 L6
-LINENUMBER 145 L6
+LINENUMBER 136 L6
 L7
 FRAME SAME1 J
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -54,9 +54,9 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 L8
 FRAME SAME1 J
 L5
-LINENUMBER 149 L5
+LINENUMBER 140 L5
 L9
-LINENUMBER 150 L9
+LINENUMBER 141 L9
 L10
 FRAME SAME1 J
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I

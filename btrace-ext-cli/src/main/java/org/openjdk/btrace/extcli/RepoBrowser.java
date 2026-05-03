@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.extcli;
 
 import java.io.BufferedReader;
@@ -10,7 +26,9 @@ import java.util.List;
 import java.util.stream.Stream;
 
 final class RepoBrowser {
-  static void browse() throws IOException { browse(new String[0]); }
+  static void browse() throws IOException {
+    browse(new String[0]);
+  }
 
   static void browse(String[] args) throws IOException {
     List<Path> items = new ArrayList<>();
@@ -41,7 +59,8 @@ final class RepoBrowser {
     while (true) {
       clearScreen();
       System.out.println(policy.headerSummary());
-      System.out.println("Use Up/Down (or j/k) to move, 'e' to enable/disable, 'i' for details, 'q' to quit.");
+      System.out.println(
+          "Use Up/Down (or j/k) to move, 'e' to enable/disable, 'i' for details, 'q' to quit.");
       System.out.println();
       for (int i = 0; i < items.size(); i++) {
         Path dir = items.get(i);
@@ -53,7 +72,8 @@ final class RepoBrowser {
             if (r.id != null && !r.id.isEmpty()) id = r.id;
             if (r.version != null) ver = r.version;
           }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
         String verTag = (ver != null && !ver.isEmpty()) ? ("[" + ver + "]") : "";
         String state = policy.isAllowed(id) ? "[A]" : (policy.isDenied(id) ? "[D]" : "[ ]");
         String cursor = (i == sel) ? "->" : "  ";
@@ -62,8 +82,14 @@ final class RepoBrowser {
       System.out.print("> ");
       String line = br.readLine();
       if (line == null) return;
-      if (isUp(line)) { sel = (sel + items.size() - 1) % items.size(); continue; }
-      if (isDown(line)) { sel = (sel + 1) % items.size(); continue; }
+      if (isUp(line)) {
+        sel = (sel + items.size() - 1) % items.size();
+        continue;
+      }
+      if (isDown(line)) {
+        sel = (sel + 1) % items.size();
+        continue;
+      }
       line = line.trim();
       if (line.equalsIgnoreCase("q")) return;
       if (line.equalsIgnoreCase("i")) {
@@ -84,10 +110,16 @@ final class RepoBrowser {
             policy.save();
           } else if (currentlyDenied) {
             // enable => move to allow
-            if (confirmEnable(br, r)) { policy.allow(id); policy.save(); }
+            if (confirmEnable(br, r)) {
+              policy.allow(id);
+              policy.save();
+            }
           } else {
             // default => ask to enable
-            if (confirmEnable(br, r)) { policy.allow(id); policy.save(); }
+            if (confirmEnable(br, r)) {
+              policy.allow(id);
+              policy.save();
+            }
           }
         } catch (Exception e) {
           // ignore
@@ -98,13 +130,15 @@ final class RepoBrowser {
       try {
         int idx = Integer.parseInt(line);
         if (idx >= 0 && idx < items.size()) sel = idx;
-      } catch (NumberFormatException ignored) { }
+      } catch (NumberFormatException ignored) {
+      }
     }
   }
 
   private static boolean isUp(String line) {
     return line.contains("\u001B[A") || line.equalsIgnoreCase("k");
   }
+
   private static boolean isDown(String line) {
     return line.contains("\u001B[B") || line.equalsIgnoreCase("j");
   }

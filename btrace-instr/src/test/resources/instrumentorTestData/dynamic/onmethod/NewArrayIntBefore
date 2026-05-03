@@ -12,7 +12,7 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 L1
 FRAME SAME1 I
 L2
-LINENUMBER 110 L2
+LINENUMBER 101 L2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
@@ -27,11 +27,11 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 L3
 FRAME FULL [resources/OnMethodTest [I] [I I]
 L4
-LINENUMBER 111 L4
+LINENUMBER 102 L4
 L5
-LINENUMBER 112 L5
+LINENUMBER 103 L5
 L6
-LINENUMBER 113 L6
+LINENUMBER 104 L6
 L7
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L7 0
 LOCALVARIABLE a [I L2 L7 1

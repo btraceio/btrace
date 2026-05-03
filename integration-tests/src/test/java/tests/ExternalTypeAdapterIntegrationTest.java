@@ -1,24 +1,37 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package tests;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.net.ServerSocket;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.net.ServerSocket;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 /**
  * End-to-end integration test for the @ExternalType annotation processor.
  *
- * Verifies that:
- * 1. btracec accepts a probe that uses a service backed by @ExternalType adapters
- * 2. The agent loads the extension without errors
- * 3. The generated ExternalDataType$Ext adapter resolves resources.ExternalData at
- *    runtime via the target application's classloader (TCCL) and successfully
- *    dispatches both a virtual instance call (value()) and a static call (tag())
+ * <p>Verifies that: 1. btracec accepts a probe that uses a service backed by @ExternalType adapters
+ * 2. The agent loads the extension without errors 3. The generated ExternalDataType$Ext adapter
+ * resolves resources.ExternalData at runtime via the target application's classloader (TCCL) and
+ * successfully dispatches both a virtual instance call (value()) and a static call (tag())
  */
 public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
 
@@ -49,7 +62,8 @@ public class ExternalTypeAdapterIntegrationTest extends RuntimeTest {
         new ResultValidator() {
           @Override
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
-            assertFalse(stdout.contains("FAILED"), "Probe should not have failed. stderr: " + stderr);
+            assertFalse(
+                stdout.contains("FAILED"), "Probe should not have failed. stderr: " + stderr);
 
             // Static dispatch via TCCL: ExternalDataType$Ext.tag() -> ExternalData.tag()
             assertTrue(

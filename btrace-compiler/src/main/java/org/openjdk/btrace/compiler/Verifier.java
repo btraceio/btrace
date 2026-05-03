@@ -1,28 +1,19 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.compiler;
 
 import com.sun.source.tree.AnnotationTree;
@@ -77,8 +68,8 @@ public class Verifier extends AbstractProcessor implements TaskListener {
   public synchronized void init(ProcessingEnvironment pe) {
     super.init(pe);
     treeUtils = Trees.instance(pe);
-    JavacTask task = JavacTask.instance(processingEnv);
-    task.addTaskListener(listener);
+    JavacTask javacTask = JavacTask.instance(processingEnv);
+    javacTask.addTaskListener(listener);
   }
 
   @Override
@@ -103,10 +94,10 @@ public class Verifier extends AbstractProcessor implements TaskListener {
       return;
     }
     TypeElement elem = e.getTypeElement();
+    TreePath compilationRoot = new TreePath(e.getCompilationUnit());
     for (Tree t : e.getCompilationUnit().getTypeDecls()) {
-      TreePath topLevel = new TreePath(e.getCompilationUnit());
       if (t.getKind() == Tree.Kind.CLASS) {
-        if (elem.equals(getTreeUtils().getElement(new TreePath(topLevel, t)))) {
+        if (elem.equals(getTreeUtils().getElement(new TreePath(compilationRoot, t)))) {
           currentClass = (ClassTree) t;
           break;
         }
@@ -160,13 +151,19 @@ public class Verifier extends AbstractProcessor implements TaskListener {
     return processingEnv.getLocale();
   }
 
-  String annotationName(AnnotationTree at) {
-    TreePath tp = getTreeUtils().getPath(getCompilationUnit(), at.getAnnotationType());
-    Element el = getTreeUtils().getElement(tp);
-    if (el == null || el.getKind() != ElementKind.ANNOTATION_TYPE) {
-      return null;
+  /**
+   * Resolves the fully-qualified type name of an annotation in the current compilation unit.
+   * Returns {@code null} if the type cannot be resolved or is not an annotation type.
+   */
+  String resolveAnnotationTypeName(AnnotationTree annotation) {
+    Trees treeApi = getTreeUtils();
+    Tree annotationTypeTree = annotation.getAnnotationType();
+    TreePath typePath = treeApi.getPath(getCompilationUnit(), annotationTypeTree);
+    Element resolved = treeApi.getElement(typePath);
+    if (resolved != null && resolved.getKind() == ElementKind.ANNOTATION_TYPE) {
+      return ((TypeElement) resolved).getQualifiedName().toString();
     }
-    return ((TypeElement) el).getQualifiedName().toString();
+    return null;
   }
 
   // verify each BTrace class
@@ -187,27 +184,27 @@ public class Verifier extends AbstractProcessor implements TaskListener {
 
   /** Detects if the class is annotated as @BTrace(trusted=true). */
   private boolean hasTrustedAnnotation(ClassTree ct, Element topElement) {
-    for (AnnotationTree at : ct.getModifiers().getAnnotations()) {
-      String annFqn = annotationName(at);
-      if (!BTrace.class.getName().equals(annFqn)) {
+    for (AnnotationTree annotation : ct.getModifiers().getAnnotations()) {
+      String qualifiedName = resolveAnnotationTypeName(annotation);
+      if (!BTrace.class.getName().equals(qualifiedName)) {
         continue;
       }
       // now we have @BTrace, look for unsafe = xxx or trusted = xxx
-      for (ExpressionTree ext : at.getArguments()) {
-        if (ext.getKind() != Tree.Kind.ASSIGNMENT) {
+      for (ExpressionTree attr : annotation.getArguments()) {
+        if (attr.getKind() != Tree.Kind.ASSIGNMENT) {
           continue;
         }
-        AssignmentTree assign = (AssignmentTree) ext;
-        String name = ((IdentifierTree) assign.getVariable()).getName().toString();
-        if (!"unsafe".equals(name) && !"trusted".equals(name)) {
+        AssignmentTree assignment = (AssignmentTree) attr;
+        String attrName = ((IdentifierTree) assignment.getVariable()).getName().toString();
+        if (!"unsafe".equals(attrName) && !"trusted".equals(attrName)) {
           continue;
         }
         // now rhs is the value of @BTrace.unsafe.
         // The value can be complex (!!true, 1 == 2, etc.) - we support only booleans
-        String val = assign.getExpression().toString();
-        if ("true".equals(val)) {
+        String attrValue = assignment.getExpression().toString();
+        if ("true".equals(attrValue)) {
           return true; // bingo!
-        } else if (!"false".equals(val)) {
+        } else if (!"false".equals(attrValue)) {
           processingEnv
               .getMessager()
               .printMessage(Kind.WARNING, Messages.get("no.complex.unsafe.value"), topElement);
@@ -224,10 +221,10 @@ public class Verifier extends AbstractProcessor implements TaskListener {
     public void finished(TaskEvent e) {
       if (e.getKind() != TaskEvent.Kind.ANALYZE) return;
       TypeElement elem = e.getTypeElement();
-      TreePath topLevel = new TreePath(e.getCompilationUnit());
+      TreePath compilationRoot = new TreePath(e.getCompilationUnit());
       for (Tree t : e.getCompilationUnit().getTypeDecls()) {
         if (t.getKind() == Tree.Kind.CLASS) {
-          if (elem.equals(getTreeUtils().getElement(new TreePath(topLevel, t)))) {
+          if (elem.equals(getTreeUtils().getElement(new TreePath(compilationRoot, t)))) {
             currentClass = (ClassTree) t;
             break;
           }

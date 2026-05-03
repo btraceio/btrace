@@ -1,28 +1,19 @@
 /*
- * Copyright (c) 2008-2015, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.client;
 
 import java.io.Console;
@@ -32,19 +23,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import org.openjdk.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
-import org.openjdk.btrace.compiler.oneliner.OnelinerCodeGenerator;
-import org.openjdk.btrace.compiler.oneliner.OnelinerException;
-import org.openjdk.btrace.compiler.oneliner.OnelinerParser;
-import org.openjdk.btrace.compiler.oneliner.OnelinerValidator;
 import org.openjdk.btrace.core.DebugSupport;
 import org.openjdk.btrace.core.Messages;
 import org.openjdk.btrace.core.comm.Command;
@@ -168,7 +152,7 @@ public final class Main {
           }
           break;
         case "--extract-agent":
-          if (i < args.length - 1 && !args[i + 1].startsWith("-")) {
+          if (i < args.length - 1) {
             EXTRACT_AGENT_DIR = args[i + 1];
           } else {
             EXTRACT_AGENT_DIR = ".";
@@ -336,10 +320,12 @@ public final class Main {
         if (ONELINER_MODE) {
           // Oneliner mode: parse and generate Java source from oneliner
           try {
-            OnelinerNode ast = OnelinerParser.parse(ONELINER_SCRIPT);
-            OnelinerValidator.validate(ast, ONELINER_SCRIPT);
+            org.openjdk.btrace.compiler.oneliner.OnelinerAST.OnelinerNode ast =
+                org.openjdk.btrace.compiler.oneliner.OnelinerParser.parse(ONELINER_SCRIPT);
+            org.openjdk.btrace.compiler.oneliner.OnelinerValidator.validate(ast, ONELINER_SCRIPT);
+            String javaSource =
+                org.openjdk.btrace.compiler.oneliner.OnelinerCodeGenerator.generate(ast);
             String className = "BTraceOneliner_" + System.currentTimeMillis();
-            String javaSource = OnelinerCodeGenerator.generate(ast, className);
             fileName = className + ".java";
 
             // Extract script args
@@ -348,19 +334,30 @@ public final class Main {
               System.arraycopy(args, count + 1, btraceArgs, 0, btraceArgs.length);
             }
 
+            // Write generated source to temp file
             if (log.isDebugEnabled()) {
               log.debug("Generated BTrace source:\n{}", javaSource);
             }
-            if (Boolean.getBoolean("btrace.oneliner.dump")) {
-              System.err.println("=== Generated oneliner source (" + fileName + ") ===");
-              System.err.println(javaSource);
+            java.io.File tempFile = java.io.File.createTempFile(className, ".java");
+            try {
+              java.nio.file.Files.write(
+                  tempFile.toPath(), javaSource.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+              // Compile from temp file
+              code =
+                  client.compile(
+                      tempFile.getAbsolutePath(), classPath, new PrintWriter(System.err), ".");
+              if (code == null) {
+                errorExit("Oneliner compilation failed", 1);
+              }
+            } finally {
+              tempFile.delete();
             }
-            code = client.compileSource(fileName, javaSource, classPath, new PrintWriter(System.err), includePath);
-            if (code == null) {
-              errorExit("Oneliner compilation failed", 1);
-            }
-          } catch (OnelinerException e) {
+          } catch (org.openjdk.btrace.compiler.oneliner.OnelinerException e) {
             errorExit(e.getMessage(), 1);
+            return;
+          } catch (java.io.IOException e) {
+            errorExit("Failed to create temp file for oneliner: " + e.getMessage(), 1);
             return;
           }
         } else {
@@ -389,7 +386,7 @@ public final class Main {
         log.debug("submitting the BTrace program");
         CommandListener listener = createCommandListener(client);
 
-        final boolean isUnattended = unattended;
+        boolean isUnattended = unattended;
         client.submit(
             host,
             fileName,
@@ -412,7 +409,7 @@ public final class Main {
                     log.debug("error initiating unattended disconnect: {}", ioe.toString());
                   }
                 }
-                // Continue processing commands so DISCONNECT is handled.
+                // Do not exit here; wait for DISCONNECT to arrive and be printed
               } else {
                 listener.onCommand(cmd);
               }
@@ -531,40 +528,19 @@ public final class Main {
     System.exit(code);
   }
 
-  /**
-   * Extracts embedded agent JARs from the uber JAR to the specified directory.
-   */
+  /** Extracts embedded agent JARs from the uber JAR to the specified directory. */
   private static void handleExtractAgent() {
     if (EXTRACT_AGENT_DIR == null) {
       return;
     }
 
     File outputDir = new File(EXTRACT_AGENT_DIR);
-    if (outputDir.exists() && !outputDir.isDirectory()) {
-      errorExit("Output path is not a directory: " + outputDir.getAbsolutePath(), 1);
-    }
     if (!outputDir.exists() && !outputDir.mkdirs()) {
       errorExit("Failed to create output directory: " + outputDir.getAbsolutePath(), 1);
     }
 
     URL btraceLoc = Main.class.getProtectionDomain().getCodeSource().getLocation();
-    if (btraceLoc == null) {
-      errorExit("Unable to locate BTrace JAR for extraction.", 1);
-    }
-
-    File btraceFile;
-    try {
-      btraceFile = new File(btraceLoc.toURI());
-    } catch (Exception e) {
-      errorExit("Invalid BTrace location: " + btraceLoc, 1);
-      return;
-    }
-
-    if (!btraceFile.isFile()) {
-      errorExit("BTrace location is not a JAR file: " + btraceFile.getAbsolutePath(), 1);
-    }
-
-    try (JarFile btrace = new JarFile(btraceFile)) {
+    try (JarFile btrace = new JarFile(new File(btraceLoc.toURI()))) {
       File agentFile = new File(outputDir, "btrace-agent.jar");
       File bootFile = new File(outputDir, "btrace-boot.jar");
 
@@ -580,19 +556,11 @@ public final class Main {
     }
   }
 
-  /**
-   * Extracts a single JAR entry from the source JAR to the target file.
-   */
-  private static void extractJar(JarFile source, String entryPath, File target)
-      throws IOException {
+  /** Extracts a single JAR entry from the source JAR to the target file. */
+  private static void extractJar(JarFile source, String entryPath, File target) throws IOException {
     JarEntry entry = source.getJarEntry(entryPath);
     if (entry == null) {
       throw new IOException("Embedded JAR not found: " + entryPath);
-    }
-    // Validate that the entry name does not contain path traversal sequences
-    String normalizedEntry = entry.getName();
-    if (normalizedEntry.contains("..")) {
-      throw new IOException("Zip Slip: entry contains path traversal: " + normalizedEntry);
     }
 
     try (InputStream in = source.getInputStream(entry);

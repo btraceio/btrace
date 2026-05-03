@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.client;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,9 +35,7 @@ class MainTest {
 
   @TempDir Path tempDir;
 
-  /**
-   * Creates a mock uber JAR with embedded agent and boot JARs for testing extraction.
-   */
+  /** Creates a mock uber JAR with embedded agent and boot JARs for testing extraction. */
   private File createTestUberJar() throws IOException {
     File uberJar = tempDir.resolve("btrace-test.jar").toFile();
 
@@ -49,8 +63,7 @@ class MainTest {
 
     // Use reflection to access private extractJar method
     Method extractJarMethod =
-        Main.class.getDeclaredMethod(
-            "extractJar", JarFile.class, String.class, File.class);
+        Main.class.getDeclaredMethod("extractJar", JarFile.class, String.class, File.class);
     extractJarMethod.setAccessible(true);
 
     try (JarFile jarFile = new JarFile(sourceJar)) {
@@ -72,8 +85,7 @@ class MainTest {
     File targetFile = tempDir.resolve("extracted.jar").toFile();
 
     Method extractJarMethod =
-        Main.class.getDeclaredMethod(
-            "extractJar", JarFile.class, String.class, File.class);
+        Main.class.getDeclaredMethod("extractJar", JarFile.class, String.class, File.class);
     extractJarMethod.setAccessible(true);
 
     try (JarFile jarFile = new JarFile(sourceJar)) {
@@ -103,8 +115,7 @@ class MainTest {
     File bootFile = new File(outputDir, "btrace-boot.jar");
 
     Method extractJarMethod =
-        Main.class.getDeclaredMethod(
-            "extractJar", JarFile.class, String.class, File.class);
+        Main.class.getDeclaredMethod("extractJar", JarFile.class, String.class, File.class);
     extractJarMethod.setAccessible(true);
 
     try (JarFile jarFile = new JarFile(sourceJar)) {
@@ -168,8 +179,7 @@ class MainTest {
     File targetFile = tempDir.resolve("extracted-large.jar").toFile();
 
     Method extractJarMethod =
-        Main.class.getDeclaredMethod(
-            "extractJar", JarFile.class, String.class, File.class);
+        Main.class.getDeclaredMethod("extractJar", JarFile.class, String.class, File.class);
     extractJarMethod.setAccessible(true);
 
     try (JarFile jarFile = new JarFile(sourceJar)) {

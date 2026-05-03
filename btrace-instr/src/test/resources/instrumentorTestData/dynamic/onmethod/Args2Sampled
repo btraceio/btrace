@@ -39,7 +39,7 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 "org/openjdk/btrace/runtime/auxiliary/Args2Sampled"
 ]
 L2
-LINENUMBER 57 L2
+LINENUMBER 48 L2
 FRAME SAME
 L4
 LOCALVARIABLE this Lresources/OnMethodTest; L2 L4 0

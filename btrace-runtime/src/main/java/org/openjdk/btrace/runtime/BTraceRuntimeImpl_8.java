@@ -1,28 +1,19 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
@@ -103,7 +94,8 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException | RuntimeException ignored) {}
+    } catch (NoSuchMethodException ignored) {
+    }
     findBootstrapOrNullMtd = m;
   }
 
@@ -123,31 +115,24 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
     try {
       m = ClassLoader.class.getDeclaredMethod("findBootstrapClassOrNull", String.class);
       m.setAccessible(true);
-    } catch (NoSuchMethodException | RuntimeException ignored) {}
+    } catch (NoSuchMethodException ignored) {
+    }
     findBootstrapOrNullMtd = m;
   }
 
   @Override
-  public Class<?> defineClass(byte[] code) {
+  @CallerSensitive
+  public Class<?> defineClass(byte[] code, boolean mustBeBootstrap) {
     Unsafe unsafe = BTraceRuntime.initUnsafe();
     if (unsafe != null) {
-      // Use stack trace instead of Reflection.getCallerClass() to avoid
-      // CallerSensitive annotation requirement (only works from bootstrap CL)
-      StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-      // stack[0] = getStackTrace, stack[1] = defineClass (this method), stack[2] = caller
-      String callerClassName = stack.length > 2 ? stack[2].getClassName() : null;
-      if (callerClassName == null || !callerClassName.startsWith("org.openjdk.btrace.")) {
+      Class<?> caller = Reflection.getCallerClass(2);
+      if (!caller.getName().startsWith("org.openjdk.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
-      // Always define the probe in a fresh, isolated ClassLoader parented to the app CL.
-      // This makes the probe class unloadable once the probe's MethodHandles and its
-      // BTraceProbe.probeClass reference are cleared on unregister, while allowing the
-      // probe to access BTraceUtils and other agent classes.
-      ClassLoader parent = BTraceRuntimeImpl_8.class.getClassLoader();
-      if (parent == null) {
-        parent = Thread.currentThread().getContextClassLoader();
+      ClassLoader loader = null;
+      if (!mustBeBootstrap) {
+        loader = new ClassLoader(null) {};
       }
-      ClassLoader loader = new ClassLoader(parent) {};
       Class<?> cl = unsafe.defineClass(getClassName(), code, 0, code.length, loader, null);
       unsafe.ensureClassInitialized(cl);
       return cl;
@@ -200,25 +185,12 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @CallerSensitive
   @Override
   public ClassLoader getCallerClassLoader(int stackDec) {
-    Class<?> c = Reflection.getCallerClass(stackDec + 1);
-    // Probe handlers run in the bootstrap CL as
-    // org.openjdk.btrace.runtime.auxiliary.* classes (INDY dispatch).
-    // Skip that frame to find the real application caller, mirroring
-    // BTraceRuntimeImpl_9's StackWalker skip of auxiliary.* frames.
-    if (c != null && c.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
-      c = Reflection.getCallerClass(stackDec + 2);
-    }
-    return c != null ? c.getClassLoader() : null;
+    return Reflection.getCallerClass(stackDec + 1).getClassLoader();
   }
 
-  @CallerSensitive
   @Override
   public Class<?> getCallerClass(int stackDec) {
-    Class<?> c = Reflection.getCallerClass(stackDec + 1);
-    if (c != null && c.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
-      c = Reflection.getCallerClass(stackDec + 2);
-    }
-    return c;
+    return Reflection.getCallerClass(stackDec + 1);
   }
 
   @Override
@@ -234,8 +206,10 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @Override
   public boolean isBootstrapClass(String className) {
     try {
-      return findBootstrapOrNullMtd != null && findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
-    } catch (IllegalAccessException | InvocationTargetException ignored) {}
+      return findBootstrapOrNullMtd != null
+          && findBootstrapOrNullMtd.invoke(ClassLoader.getSystemClassLoader(), className) != null;
+    } catch (IllegalAccessException | InvocationTargetException ignored) {
+    }
     return false;
   }
 

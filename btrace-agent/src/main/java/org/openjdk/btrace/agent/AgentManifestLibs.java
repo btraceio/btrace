@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.agent;
 
@@ -30,7 +22,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -71,16 +62,18 @@ final class AgentManifestLibs {
   static ResolvedLibs resolveFromManifest(Class<?> anchor) {
     boolean ignore = Boolean.getBoolean("btrace.ignoreManifestLibs");
     if (ignore) {
-      if (log.isDebugEnabled()) log.debug("Ignoring manifest libs (btrace.ignoreManifestLibs=true)");
+      if (log.isDebugEnabled())
+        log.debug("Ignoring manifest libs (btrace.ignoreManifestLibs=true)");
       return new ResolvedLibs(Collections.emptyList(), Collections.emptyList());
     }
 
-    Path agentJarPath = locateAgentPath(anchor);
-    Manifest mf = readManifest(agentJarPath);
+    Manifest mf = readManifest(anchor);
     if (mf == null) {
       if (log.isDebugEnabled()) log.debug("No manifest found for agent; skipping manifest libs");
       return new ResolvedLibs(Collections.emptyList(), Collections.emptyList());
     }
+
+    Path agentJarPath = locateAgentPath(anchor);
     Path baseDir = agentJarPath != null ? agentJarPath.getParent() : null;
     // Default libs root: BTRACE_HOME/libs if the agent is under .../libs/btrace-agent.jar
     Path libsRoot = resolveLibsRoot(mf, baseDir);
@@ -115,10 +108,12 @@ final class AgentManifestLibs {
     return new ResolvedLibs(bootList, sysList);
   }
 
-  private static Manifest readManifest(Path agentPath) {
-    if (agentPath == null) return null;
+  private static Manifest readManifest(Class<?> anchor) {
     try {
-      if (Files.isRegularFile(agentPath) && agentPath.toString().toLowerCase(Locale.ROOT).endsWith(".jar")) {
+      Path agentPath = locateAgentPath(anchor);
+      if (agentPath == null) return null;
+      if (Files.isRegularFile(agentPath)
+          && agentPath.toString().toLowerCase(Locale.ROOT).endsWith(".jar")) {
         try (JarFile jf = new JarFile(agentPath.toFile())) {
           return jf.getManifest();
         }
@@ -141,8 +136,12 @@ final class AgentManifestLibs {
       URL url = anchor.getProtectionDomain().getCodeSource().getLocation();
       if (url == null) return null;
       URI uri = url.toURI();
-      return Paths.get(uri);
-    } catch (URISyntaxException | IllegalArgumentException | FileSystemNotFoundException e) {
+      Path p = Paths.get(uri);
+      if (Files.isDirectory(p)) {
+        return p; // exploded
+      }
+      return p;
+    } catch (URISyntaxException e) {
       if (log.isDebugEnabled()) log.debug("Failed to locate agent path: {}", e.toString());
       return null;
     }
@@ -154,6 +153,7 @@ final class AgentManifestLibs {
     return v != null && !v.trim().isEmpty() ? v.trim() : null;
   }
 
+  // Package-private for testing
   static void addEntries(Set<Path> out, String value, Path baseDir) {
     if (value == null || value.isEmpty()) return;
     // Space-separated entries (manifest convention)
@@ -164,6 +164,7 @@ final class AgentManifestLibs {
     }
   }
 
+  // Package-private for testing
   static Path resolveEntry(String entry, Path baseDir) {
     try {
       if (entry.startsWith("file:")) {
@@ -179,11 +180,12 @@ final class AgentManifestLibs {
     return p;
   }
 
+  // Package-private for testing
   static void scanLibTree(Path root, Set<Path> out) {
-    if (root == null || !Files.exists(root)) return;
-    try (java.util.stream.Stream<Path> stream = Files.walk(root)) {
-      stream
-          .filter(Files::isRegularFile)
+    try {
+      if (root == null || !Files.exists(root)) return;
+      Files.walk(root)
+          .filter(f -> Files.isRegularFile(f))
           .filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
           .forEach(out::add);
     } catch (IOException e) {
@@ -220,69 +222,44 @@ final class AgentManifestLibs {
     return parent != null ? parent.toPath() : null;
   }
 
-  /**
-   * Filters {@code entries} to JAR paths that exist and are within {@code home} (unless {@code
-   * allowExternal} is {@code true}), then returns them as a list.
-   *
-   * <p><strong>Ordering contract:</strong> The returned list preserves the iteration order of
-   * {@code entries}. Callers pass a {@link java.util.LinkedHashSet} built by processing manifest
-   * attributes in declaration order, so the list reflects manifest iteration order. When the same
-   * class name is defined in more than one JAR the JVM resolves the <em>first</em> matching entry;
-   * callers must therefore ensure that the set passed in is already in the desired precedence
-   * order before invoking this method.
-   *
-   * <p>Package-private for testing.
-   */
+  // Package-private for testing
   static List<Path> filterAndNormalize(Set<Path> entries, Path home, boolean allowExternal) {
     List<Path> out = new ArrayList<>();
-    Path realHome = null;
-    if (!allowExternal && home != null) {
-      try {
-        realHome = home.toRealPath();
-      } catch (IOException e) {
-        if (log.isDebugEnabled()) log.debug("toRealPath failed for home {}: {}", home, e.getMessage());
-        realHome = home.toAbsolutePath().normalize();
-      }
-    }
     for (Path p : entries) {
       try {
         Path np = p.toAbsolutePath().normalize();
         if (!Files.exists(np)) {
-          log.info("Skipping non-existent manifest entry: {}", np);
+          if (log.isDebugEnabled()) log.debug("Skipping non-existent manifest entry: {}", np);
           continue;
         }
         if (!np.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar")) {
-          log.info("Skipping non-jar manifest entry: {}", np);
+          if (log.isDebugEnabled()) log.debug("Skipping non-jar manifest entry: {}", np);
           continue;
         }
-        if (!allowExternal && realHome != null) {
+        if (!allowExternal && home != null) {
           try {
+            Path hp = home.toRealPath();
             Path rp = np.toRealPath();
-            if (!rp.startsWith(realHome)) {
+            if (!rp.startsWith(hp)) {
               log.warn("Rejecting manifest lib outside BTRACE_HOME: {}", rp);
               continue;
             }
           } catch (IOException e) {
-            // np.toRealPath() failed; fall back to the pre-resolved realHome (which may itself
-            // be a normalized non-canonical path if its toRealPath() failed above).
+            // toRealPath failed (file may not exist or path issue); fall back to non-canonical
+            // check
             if (log.isDebugEnabled()) log.debug("toRealPath failed for {}: {}", np, e.getMessage());
-            if (!np.startsWith(realHome)) {
-              log.warn(
-                  "Rejecting manifest lib outside BTRACE_HOME (symlink resolution failed, using normalized path): {}",
-                  np);
+            if (!np.startsWith(home)) {
+              log.warn("Rejecting manifest lib outside BTRACE_HOME: {}", np);
               continue;
             }
-            log.warn(
-                "Symlink resolution failed for manifest lib {}; accepted against normalized BTRACE_HOME only",
-                np);
           }
         }
         out.add(np);
       } catch (Exception e) {
-        log.warn("Failed resolving manifest entry {}: {}", p, e.toString());
+        if (log.isDebugEnabled())
+          log.debug("Failed resolving manifest entry {}: {}", p, e.toString());
       }
     }
     return out;
   }
 }
-

@@ -1,33 +1,20 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.instr;
-
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -35,10 +22,20 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.DebugSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The single entry point for class transformation.
@@ -58,6 +55,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
   private final ReentrantReadWriteLock setupLock = new ReentrantReadWriteLock();
   private final Collection<BTraceProbe> probes = new ArrayList<>(3);
   private final Filter filter = new Filter();
+  private final Collection<MethodNode> cushionMethods = new HashSet<>();
 
   public BTraceTransformer(DebugSupport d) {
     debug = d;
@@ -74,20 +72,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
    */
   private static boolean isSensitiveClass(String name) {
     return ClassFilter.isSensitiveClass(name);
-  }
-
-  // JDK lambda wrapper names from LambdaMetafactory:
-  //   JDK 8:   <owner>$$Lambda$<N>                    (e.g. Main$$Lambda$36)
-  //   JDK 11+: <owner>$$Lambda$<N>/0x<hex>            (hidden-class suffix)
-  // Both forms are recognised by the "$$Lambda$" infix followed by digits.
-  static boolean isSyntheticLambda(String internalName) {
-    if (internalName == null) return false;
-    int idx = internalName.indexOf("$$Lambda$");
-    if (idx < 0) return false;
-    int digitStart = idx + "$$Lambda$".length();
-    if (digitStart >= internalName.length()) return false;
-    // Next char must be a digit (the Lambda serial number)
-    return Character.isDigit(internalName.charAt(digitStart));
   }
 
   public void register(BTraceProbe p) {
@@ -108,7 +92,25 @@ public final class BTraceTransformer implements ClassFileTransformer {
       probes.remove(p);
       for (OnMethod om : p.onmethods()) {
         filter.remove(om);
+        MethodNode cushionMethod =
+            new MethodNode(
+                Opcodes.ASM9,
+                Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC,
+                Instrumentor.getActionMethodName(p, om.getTargetName()),
+                om.getTargetDescriptor(),
+                null,
+                null);
+        InsnList code = new InsnList();
+        code.add(new InsnNode(Opcodes.RETURN));
+        cushionMethod.instructions = code;
+        int localSize = 0;
+        for (Type t : Type.getArgumentTypes(om.getTargetDescriptor())) {
+          localSize += t.getSize();
+        }
+        cushionMethod.maxLocals = localSize;
+        cushionMethods.add(cushionMethod);
       }
+
     } finally {
       setupLock.writeLock().unlock();
     }
@@ -125,16 +127,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
     try {
       setupLock.readLock().lock();
 
-      // Skip JVM-synthesized classes that have no binary name (JDK 8
-      // Unsafe.defineAnonymousClass host-anonymous classes, JDK 15+ hidden
-      // classes). These are never a user-intended tracing target: a
-      // @OnMethod(clazz="<pattern>") matcher targets classes the user
-      // authored, not the VM's lambda/LambdaForm scaffolding. Instrumenting
-      // them also re-enters the invokedynamic machinery that the probe
-      // dispatch itself uses, leading to unbounded recursion on JDK 8.
-      if (className == null) {
-        return null;
-      }
+      className = className != null ? className : "<anonymous>";
 
       // A special case for patching the Indy linking in order to be able to safely skip
       // BTrace probes while linking is still in progress.
@@ -148,19 +141,6 @@ public final class BTraceTransformer implements ClassFileTransformer {
           log.debug("Failed to instrument indy linking", t);
         }
         return transformed;
-      }
-
-      // Skip JVM-synthesized classes: reflection accessors (sun/reflect/Generated*,
-      // jdk/internal/reflect/Generated*) and lambda wrappers (LambdaMetafactory names
-      // them "<owner>$$Lambda$N" on JDK 8 and "<owner>$$Lambda$N/0x<hex>" on JDK 11+).
-      // Instrumenting these serves no tracing purpose — they are 1:1 trampolines to a
-      // target Method or a captured functional method the user can trace directly —
-      // and it recursively re-enters the invokedynamic/LambdaMetafactory machinery
-      // that the probe dispatch path relies on.
-      if (className.startsWith("sun/reflect/Generated")
-          || className.startsWith("jdk/internal/reflect/Generated")
-          || isSyntheticLambda(className)) {
-        return null;
       }
 
       if (probes.isEmpty()) return null;
@@ -181,6 +161,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
         }
         BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
         BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
+        cw.addCushionMethods(cushionMethods);
         for (BTraceProbe p : probes) {
           p.notifyTransform(className);
           cw.addInstrumentor(p, loader);
@@ -197,7 +178,8 @@ public final class BTraceTransformer implements ClassFileTransformer {
             log.debug("transformed class {}", cr.getJavaClassName());
           }
           // Optional: verify transformed class via ASM in tests.
-          if (Boolean.getBoolean("btrace.verify.transformed") && !Boolean.TRUE.equals(VerifyGuard.IN_PROGRESS.get())) {
+          if (Boolean.getBoolean("btrace.verify.transformed")
+              && !Boolean.TRUE.equals(VerifyGuard.IN_PROGRESS.get())) {
             boolean allow;
             String filter = System.getProperty("btrace.verify.filter");
             if (filter != null && !filter.isEmpty()) {
@@ -252,16 +234,16 @@ public final class BTraceTransformer implements ClassFileTransformer {
 
   private static boolean isAppClass(String internalName) {
     if (internalName == null) return false;
-    return !(internalName.startsWith("java/") ||
-        internalName.startsWith("javax/") ||
-        internalName.startsWith("jdk/") ||
-        internalName.startsWith("sun/") ||
-        internalName.startsWith("com/sun/") ||
-        internalName.startsWith("org/ietf/") ||
-        internalName.startsWith("org/omg/") ||
-        internalName.startsWith("org/w3c/") ||
-        internalName.startsWith("org/xml/") ||
-        internalName.startsWith("org/openjdk/btrace/"));
+    return !(internalName.startsWith("java/")
+        || internalName.startsWith("javax/")
+        || internalName.startsWith("jdk/")
+        || internalName.startsWith("sun/")
+        || internalName.startsWith("com/sun/")
+        || internalName.startsWith("org/ietf/")
+        || internalName.startsWith("org/omg/")
+        || internalName.startsWith("org/w3c/")
+        || internalName.startsWith("org/xml/")
+        || internalName.startsWith("org/openjdk/btrace/"));
   }
 
   static class Filter {

@@ -1,34 +1,24 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.agent;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PushbackInputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.concurrent.ExecutionException;
@@ -41,18 +31,13 @@ import org.openjdk.btrace.core.comm.DisconnectCommand;
 import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.BinaryWireProtocol;
-import org.openjdk.btrace.core.comm.JavaSerializationProtocol;
 import org.openjdk.btrace.core.comm.ListFailedExtensionsCommand;
 import org.openjdk.btrace.core.comm.ListProbesCommand;
 import org.openjdk.btrace.core.comm.PrintableCommand;
-import org.openjdk.btrace.core.comm.ProtocolConfig;
-import org.openjdk.btrace.core.comm.ProtocolNegotiator;
-import org.openjdk.btrace.core.comm.ProtocolVersion;
 import org.openjdk.btrace.core.comm.ReconnectCommand;
 import org.openjdk.btrace.core.comm.SetSettingsCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.WireProtocol;
+import org.openjdk.btrace.core.comm.WireIO;
 import org.openjdk.btrace.extension.ExtensionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,47 +65,27 @@ class RemoteClient extends Client {
   }
 
   private volatile Socket sock;
-  private volatile WireProtocol protocol;
-  private volatile boolean disconnected = false;
+  private volatile ObjectInputStream ois;
+  private volatile ObjectOutputStream oos;
+  private volatile boolean disconnecting;
+
   private final AtomicReferenceFieldUpdater<RemoteClient, Socket> sockUpdater =
       AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, Socket.class, "sock");
-  private final AtomicReferenceFieldUpdater<RemoteClient, WireProtocol> protocolUpdater =
-      AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, WireProtocol.class, "protocol");
+  private final AtomicReferenceFieldUpdater<RemoteClient, ObjectInputStream> oisUpdater =
+      AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, ObjectInputStream.class, "ois");
+  private final AtomicReferenceFieldUpdater<RemoteClient, ObjectOutputStream> oosUpdater =
+      AtomicReferenceFieldUpdater.newUpdater(RemoteClient.class, ObjectOutputStream.class, "oos");
 
   private final CircularBuffer<Command> delayedCommands = new CircularBuffer<>(5000);
 
   static Client getClient(ClientContext ctx, Socket sock, Function<Client, Future<?>> initCallback)
       throws IOException {
     SharedSettings settings = ctx.getSettings();
-    ProtocolConfig config = ProtocolConfig.fromSystemProperties();
-    InputStream rawInput = sock.getInputStream();
-    OutputStream output = sock.getOutputStream();
-    ProtocolNegotiator negotiator = new ProtocolNegotiator(config.getVersion());
-    PushbackInputStream input = ProtocolNegotiator.createNegotiationStream(rawInput);
-    ProtocolVersion negotiated;
-    if (config.isAutoNegotiate()) {
-      negotiated = negotiator.negotiateAgent(input, output);
-    } else if (config.getVersion() == ProtocolVersion.V2) {
-      negotiated = negotiator.negotiateAgent(input, output);
-      if (negotiated != ProtocolVersion.V2) {
-        throw new IOException("Protocol negotiation failed: expected V2");
-      }
-    } else {
-      negotiated = ProtocolVersion.V1;
-    }
-
-    WireProtocol wireProtocol =
-        negotiated == ProtocolVersion.V2
-            ? new BinaryWireProtocol(input, output)
-            : new JavaSerializationProtocol(input, output);
+    ObjectInputStream ois = new ObjectInputStream(sock.getInputStream());
+    ObjectOutputStream oos = new ObjectOutputStream(sock.getOutputStream());
 
     while (true) {
-      Command cmd;
-      try {
-        cmd = wireProtocol.read();
-      } catch (ClassNotFoundException e) {
-        throw new IOException(e);
-      }
+      Command cmd = WireIO.read(ois);
       switch (cmd.getType()) {
         case Command.SET_PARAMS:
           {
@@ -131,12 +96,12 @@ class RemoteClient extends Client {
           {
             log.debug("got instrument command");
             try {
-              Client client = new RemoteClient(ctx, wireProtocol, sock, (InstrumentCommand) cmd);
+              Client client = new RemoteClient(ctx, ois, oos, sock, (InstrumentCommand) cmd);
               initCallback.apply(client).get();
               client.sendCommand(new StatusCommand(StatusCommand.STATUS_FLAG));
               return client;
             } catch (ExecutionException | InterruptedException e) {
-              wireProtocol.write(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
+              WireIO.write(oos, new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
               throw new IOException(e);
             }
           }
@@ -147,25 +112,25 @@ class RemoteClient extends Client {
             Client client = Client.findClient(probeId);
             log.debug("Found client {}", client);
             if (client instanceof RemoteClient) {
-              ((RemoteClient) client).reconnect(wireProtocol, sock);
+              ((RemoteClient) client).reconnect(ois, oos, sock);
               client.sendCommand(new StatusCommand(ReconnectCommand.STATUS_FLAG));
               return client;
             }
-            wireProtocol.write(new StatusCommand(-1 * ReconnectCommand.STATUS_FLAG));
+            WireIO.write(oos, new StatusCommand(-1 * ReconnectCommand.STATUS_FLAG));
             throw new IOException("Can not reconnect to non-remote session");
           }
         case Command.LIST_PROBES:
           {
             ListProbesCommand listProbesCommand = (ListProbesCommand) cmd;
             listProbesCommand.setProbes(Client.listProbes());
-            wireProtocol.write(listProbesCommand);
+            WireIO.write(oos, listProbesCommand);
             break;
           }
         case Command.LIST_FAILED_EXTENSIONS:
           {
             ListFailedExtensionsCommand listFailedCmd = (ListFailedExtensionsCommand) cmd;
             listFailedCmd.setFailedExtensions(ExtensionRegistry.getFailedExtensions());
-            wireProtocol.write(listFailedCmd);
+            WireIO.write(oos, listFailedCmd);
             break;
           }
         case Command.EXIT:
@@ -183,13 +148,15 @@ class RemoteClient extends Client {
 
   private RemoteClient(
       ClientContext ctx,
-      WireProtocol protocol,
+      ObjectInputStream ois,
+      ObjectOutputStream oos,
       Socket sock,
       InstrumentCommand cmd)
       throws IOException {
     super(ctx);
     this.sock = sock;
-    this.protocol = protocol;
+    this.ois = ois;
+    this.oos = oos;
     this.settings.from(ctx.getSettings());
     Class<?> btraceClazz = loadClass(cmd);
     if (btraceClazz == null) {
@@ -208,11 +175,11 @@ class RemoteClient extends Client {
                 BTraceRuntime.enter();
                 while (true) {
                   try {
-                    if (protocol == null) {
+                    if (ois == null) {
                       LockSupport.parkNanos(500_000_000L); // sleep 500ms
                       continue;
                     }
-                    Command cmd = protocol.read();
+                    Command cmd = WireIO.read(ois);
                     switch (cmd.getType()) {
                       case Command.EXIT:
                         {
@@ -239,10 +206,7 @@ class RemoteClient extends Client {
                         }
                       case Command.EVENT:
                         {
-                          BTraceRuntime.Impl rt = getRuntime();
-                          if (rt != null) {
-                            rt.handleEvent((EventCommand) cmd);
-                          }
+                          getRuntime().handleEvent((EventCommand) cmd);
                           break;
                         }
                       default:
@@ -283,7 +247,7 @@ class RemoteClient extends Client {
   @SuppressWarnings("RedundantThrows")
   @Override
   public void onCommand(Command cmd) throws IOException {
-    WireProtocol output = protocol;
+    ObjectOutputStream output = oos;
     if (output == null) {
       if (!cmd.isUrgent()) {
         delayedCommands.add(cmd);
@@ -293,21 +257,26 @@ class RemoteClient extends Client {
     if (log.isDebugEnabled()) {
       log.debug("client {}: got {}", getClassName(), cmd);
     }
-    boolean isConnected = true;
     try {
-      synchronized (output) {
-        output.flush();
+      boolean isConnected = true;
+      try {
+        synchronized (output) {
+          output.reset();
+        }
+      } catch (SocketException e) {
+        isConnected = false;
       }
-    } catch (IOException e) {
-      isConnected = false;
-    }
 
-    delayedCommands.forEach(new DelayedCommandExecutor(isConnected));
+      delayedCommands.forEach(new DelayedCommandExecutor(isConnected));
 
-    if (!dispatchCommand(cmd, isConnected)) {
-      if (!cmd.isUrgent()) {
-        delayedCommands.add(cmd);
+      if (!dispatchCommand(cmd, isConnected)) {
+        if (!cmd.isUrgent()) {
+          delayedCommands.add(cmd);
+        }
       }
+
+    } catch (IOException ignored) {
+      // client can be in detached state
     }
   }
 
@@ -315,7 +284,8 @@ class RemoteClient extends Client {
     if (cmd == Command.NULL) {
       return true; // do not dispatch the NULL command
     }
-    WireProtocol output = protocol;
+    ObjectOutputStream output = oos;
+    ObjectInputStream input = ois;
     Socket socket = sock;
     if (output == null) {
       return false;
@@ -324,7 +294,7 @@ class RemoteClient extends Client {
       switch (cmd.getType()) {
         case Command.EXIT:
           if (isConnected) {
-            output.write(cmd);
+            WireIO.write(output, cmd);
           }
           onExit(((ExitCommand) cmd).getExitCode());
           break;
@@ -332,24 +302,26 @@ class RemoteClient extends Client {
           {
             if (isConnected) {
               ((ListProbesCommand) cmd).setProbes(listProbes());
-              output.write(cmd);
+              WireIO.write(output, cmd);
             }
             break;
           }
         case Command.LIST_FAILED_EXTENSIONS:
           {
             if (isConnected) {
-              ((ListFailedExtensionsCommand) cmd).setFailedExtensions(
-                  ExtensionRegistry.getFailedExtensions());
-              output.write(cmd);
+              ((ListFailedExtensionsCommand) cmd)
+                  .setFailedExtensions(ExtensionRegistry.getFailedExtensions());
+              WireIO.write(output, cmd);
             }
             break;
           }
         case Command.DISCONNECT:
           {
+            // Mark as disconnecting so listProbes() can find this probe
+            disconnecting = true;
             ((DisconnectCommand) cmd).setProbeId(id.toString());
             synchronized (output) {
-              output.write(cmd);
+              WireIO.write(output, cmd);
               output.flush();
               try {
                 // Half-close the output to allow the client to read DISCONNECT reliably
@@ -363,7 +335,6 @@ class RemoteClient extends Client {
             if (log.isDebugEnabled()) {
               log.debug("sent DISCONNECT to client and shutdown socket output");
             }
-            disconnected = true;
             break;
           }
         default:
@@ -374,7 +345,7 @@ class RemoteClient extends Client {
             }
           }
           if (isConnected) {
-            output.write(cmd);
+            WireIO.write(oos, cmd);
           }
       }
       return true;
@@ -384,41 +355,24 @@ class RemoteClient extends Client {
   }
 
   public boolean isDisconnected() {
-    return disconnected;
-  }
-
-  @Override
-  protected void sendCommand(Command command) {
-    if (getRuntime() != null) {
-      super.sendCommand(command);
-      return;
-    }
-    // Runtime not yet initialized - send directly via protocol
-    WireProtocol output = protocol;
-    if (output != null) {
-      try {
-        synchronized (output) {
-          output.write(command);
-          output.flush();
-        }
-      } catch (IOException e) {
-        log.warn("Failed to send command {} via protocol", command.getClass().getSimpleName(), e);
-      }
-    } else {
-      log.warn("Cannot send command {}, neither runtime nor protocol available",
-          command.getClass().getSimpleName());
-    }
+    return disconnecting || sock == null;
   }
 
   @Override
   protected void closeAll() throws IOException {
     super.closeAll();
-    disconnected = true;
 
-    WireProtocol output = protocol;
+    ObjectOutputStream output = oos;
     if (output != null) {
-      output.close();
-      protocolUpdater.compareAndSet(this, output, null);
+      synchronized (output) {
+        output.close();
+      }
+      oosUpdater.compareAndSet(this, output, null);
+    }
+    ObjectInputStream input = ois;
+    if (input != null) {
+      input.close();
+      oisUpdater.compareAndSet(this, input, null);
     }
     Socket socket = sock;
     if (socket != null) {
@@ -427,10 +381,11 @@ class RemoteClient extends Client {
     }
   }
 
-  void reconnect(WireProtocol protocol, Socket socket) throws IOException {
+  void reconnect(ObjectInputStream ois, ObjectOutputStream oos, Socket socket) throws IOException {
+    this.disconnecting = false;
     this.sock = socket;
-    this.protocol = protocol;
-    this.disconnected = false;
+    this.ois = ois;
+    this.oos = oos;
     onCommand(Command.NULL);
   }
 }

@@ -1,24 +1,19 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.runtime;
 
 import org.openjdk.btrace.core.BTraceRuntimeBridge;
@@ -29,9 +24,7 @@ import org.openjdk.btrace.core.handlers.ExitHandler;
 import org.openjdk.btrace.core.handlers.LowMemoryHandler;
 import org.openjdk.btrace.core.handlers.TimerHandler;
 
-/**
- * Bootstrap-visible runtime access shim.
- */
+/** Bootstrap-visible runtime access shim. */
 public final class BTraceRuntimeAccess {
   private static volatile Delegate delegate;
 
@@ -75,7 +68,9 @@ public final class BTraceRuntimeAccess {
 
   public static ThreadLocal newThreadLocal(Object initValue) {
     Delegate current = delegate;
-    return current != null ? current.newThreadLocal(initValue) : ThreadLocal.withInitial(() -> initValue);
+    return current != null
+        ? current.newThreadLocal(initValue)
+        : ThreadLocal.withInitial(() -> initValue);
   }
 
   public static String getClientName(String forClassName) {

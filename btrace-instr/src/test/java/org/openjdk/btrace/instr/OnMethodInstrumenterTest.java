@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.instr;
 
@@ -32,7 +24,6 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,6 +36,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class OnMethodInstrumenterTest extends InstrumentorTestBase {
   private static final Map<String, String> targetClassMap = new HashMap<>();
   private static final Map<String, Boolean> verifyFlagMap = new HashMap<>();
+
+  private static Field instrHiddenClassesFlagFld = null;
 
   static {
     targetClassMap.put("onmethod/MatchDerived", "DerivedClass");
@@ -75,28 +68,42 @@ public class OnMethodInstrumenterTest extends InstrumentorTestBase {
     Field f = RandomIntProvider.class.getDeclaredField("useBtraceEnter");
     f.setAccessible(true);
     f.setBoolean(null, false);
+
+    instrHiddenClassesFlagFld = Instrumentor.class.getDeclaredField("useHiddenClassesInTest");
+    instrHiddenClassesFlagFld.setAccessible(true);
   }
 
   @ParameterizedTest
   @MethodSource("listTransformations")
-  void testTransformation(String trace, String targetClass, boolean verify) throws Exception {
+  void testTransformation(
+      String trace, String targetClass, boolean verify, boolean useHiddenClasses) throws Exception {
+    instrHiddenClassesFlagFld.set(null, useHiddenClasses);
     loadTargetClass(targetClass);
     transform(trace);
 
-    checkTransformation("dynamic/" + trace, verify);
+    checkTransformation((useHiddenClasses ? "dynamic" : "static") + "/" + trace, verify);
   }
 
   @SuppressWarnings("resource")
   private static Stream<Arguments> listTransformations() throws Exception {
     Path root = Paths.get("./build/classes/traces");
     return Files.walk(root, FileVisitOption.FOLLOW_LINKS)
-              .filter(Files::isRegularFile)
-              .map(root::relativize)
-              .map(Path::toString)
-              .map(p -> p.replace(".class", ""))
-              .map(p ->
-                Arguments.of(Named.of("Trace: " + p, p), Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)), Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)))
-              );
+        .filter(Files::isRegularFile)
+        .map(root::relativize)
+        .map(Path::toString)
+        .map(p -> p.replace(".class", ""))
+        .flatMap(
+            p ->
+                Stream.of(
+                    Arguments.of(
+                        Named.of("Trace: " + p, p),
+                        Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)),
+                        Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)),
+                        Named.of("Dispatcher: INVOKESTATIC", false)),
+                    Arguments.of(
+                        Named.of("Trace: " + p, p),
+                        Named.of("Target Class: " + getTargetClass(p), getTargetClass(p)),
+                        Named.of("Verify: " + getVerifyFlag(p), getVerifyFlag(p)),
+                        Named.of("Dispatcher: INVOKEDYNAMIC", true))));
   }
-
 }

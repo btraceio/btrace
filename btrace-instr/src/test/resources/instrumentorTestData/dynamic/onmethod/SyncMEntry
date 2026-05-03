@@ -15,13 +15,13 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 L6
 FRAME FULL [resources/OnMethodTest java/lang/Object java/lang/Object] [java/lang/Object]
 L7
-LINENUMBER 167 L7
+LINENUMBER 158 L7
 GOTO L8
 FRAME SAME1 java/lang/Throwable
 ASTORE 3
 ALOAD 3
 L8
-LINENUMBER 168 L8
+LINENUMBER 159 L8
 FRAME FULL [resources/OnMethodTest T java/lang/Object] []
 L5
 FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]

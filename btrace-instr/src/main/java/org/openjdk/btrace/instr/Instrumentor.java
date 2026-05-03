@@ -1,28 +1,19 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
@@ -576,8 +567,8 @@ public class Instrumentor extends ClassVisitor {
               try {
                 generatingCode = true;
                 if (matches(localClassName, cOwner.replace('/', '.'))
-                        && matches(localMethodName, cName)
-                        && typeMatches(loc.getType(), cDesc, om.isExactTypeMatch())) {
+                    && matches(localMethodName, cName)
+                    && typeMatches(loc.getType(), cDesc, om.isExactTypeMatch())) {
 
                   /*
                    * Generate a synthetic method id for the method call.
@@ -588,7 +579,8 @@ public class Instrumentor extends ClassVisitor {
                   int mid = MethodID.getMethodId("c$" + parentMid + "$" + cOwner, cName, cDesc);
 
                   String method =
-                          getMethodOrFieldName(om.isTargetMethodOrFieldFqn(), opcode, cOwner, cName, cDesc);
+                      getMethodOrFieldName(
+                          om.isTargetMethodOrFieldFqn(), opcode, cOwner, cName, cDesc);
                   Type[] calledMethodArgs = Type.getArgumentTypes(cDesc);
                   addExtraTypeInfo(om.getSelfParameter(), Type.getObjectType(className));
                   addExtraTypeInfo(om.getTargetInstanceParameter(), Type.getObjectType(cOwner));
@@ -604,18 +596,26 @@ public class Instrumentor extends ClassVisitor {
                       }
                     }
 
-                    trackingCtx = new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid);
+                    trackingCtx =
+                        new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid);
                     if (om.getDurationParameter() != -1) {
-                      trackingCtx.emitEntry(true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
+                      trackingCtx.emitEntry(
+                          true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                     } else {
-                      trackingCtx.emitEntry(false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
+                      trackingCtx.emitEntry(
+                          false,
+                          om.getSamplerKind(),
+                          om.getSamplerMean(),
+                          mid,
+                          getLevelStrSafe(om));
                     }
 
                     Type[] argTypes = Type.getArgumentTypes(cDesc);
                     boolean shouldBackup = !vr.isAny() || om.getTargetInstanceParameter() != -1;
 
                     // will store the call args into local variables
-                    backupArgsIndices = shouldBackup ? backupStack(argTypes, isStaticCall) : new int[0];
+                    backupArgsIndices =
+                        shouldBackup ? backupStack(argTypes, isStaticCall) : new int[0];
 
                     if (where == Where.BEFORE) {
                       trackingCtx.emitTestSample(false, mid);
@@ -661,7 +661,8 @@ public class Instrumentor extends ClassVisitor {
               addExtraTypeInfo(om.getReturnParameter(), returnType);
               ValidationResult vr = validateArguments(om, actionArgTypes, calledMethodArgs);
               if (vr.isValid()) {
-                MethodTrackingContext trackingCtx = new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid);
+                MethodTrackingContext trackingCtx =
+                    new MethodTrackingContext(mv, asm, mHelper, bcn.getClassName(true), mid);
                 if (om.getDurationParameter() == -1) {
                   trackingCtx.emitExit(mid);
                 }
@@ -827,12 +828,12 @@ public class Instrumentor extends ClassVisitor {
 
             if (numActionArgs > 0) {
               loadArguments(
-                      vr,
-                      actionArgTypes,
-                      isStatic(),
-                      constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
-                      constArg(om.getClassNameParameter(), className.replace('/', '.')),
-                      selfArg(om.getSelfParameter(), Type.getObjectType(className)));
+                  vr,
+                  actionArgTypes,
+                  isStatic(),
+                  constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
+                  constArg(om.getClassNameParameter(), className.replace('/', '.')),
+                  selfArg(om.getSelfParameter(), Type.getObjectType(className)));
             }
             invokeBTraceAction(asm, om);
             asm.closeLinkerCheck(l1);
@@ -843,7 +844,8 @@ public class Instrumentor extends ClassVisitor {
             if (vr.isValid() || vr.isAny()) {
               if (om.getSamplerKind() != Sampled.Sampler.None) {
                 int mid = MethodID.getMethodId(className, name, desc);
-                trackingCtx.emitEntry(false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
+                trackingCtx.emitEntry(
+                    false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
               }
             }
             super.visitMethodPrologue();
@@ -899,7 +901,8 @@ public class Instrumentor extends ClassVisitor {
               int throwableIndex = -1;
               int mid = MethodID.getMethodId(className, name, desc);
 
-              // For error handlers with duration, compute duration directly without sampling/level checks
+              // For error handlers with duration, compute duration directly without sampling/level
+              // checks
               if (om.getDurationParameter() != -1) {
                 trackingCtx.resetDuration();
                 trackingCtx.computeDurationForErrorHandler();
@@ -946,9 +949,11 @@ public class Instrumentor extends ClassVisitor {
                   generatingCode = true;
                   int mid = MethodID.getMethodId(className, name, desc);
                   if (om.getDurationParameter() != -1) {
-                    trackingCtx.emitEntry(true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
+                    trackingCtx.emitEntry(
+                        true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                   } else {
-                    trackingCtx.emitEntry(false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
+                    trackingCtx.emitEntry(
+                        false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                   }
                 } finally {
                   generatingCode = false;
@@ -958,7 +963,7 @@ public class Instrumentor extends ClassVisitor {
             super.visitMethodPrologue();
           }
         };
-        // </editor-fold>
+      // </editor-fold>
 
       case FIELD_GET:
         // <editor-fold defaultstate="collapsed" desc="Field Get Instrumentor">
@@ -1002,11 +1007,7 @@ public class Instrumentor extends ClassVisitor {
                       constArg(
                           om.getTargetMethodOrFieldParameter(),
                           getMethodOrFieldName(
-                              om.isTargetMethodOrFieldFqn(),
-                              opcode,
-                              owner,
-                              name,
-                              desc)),
+                              om.isTargetMethodOrFieldFqn(), opcode, owner, name, desc)),
                       constArg(om.getClassNameParameter(), className.replace('/', '.')),
                       constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
@@ -1053,11 +1054,7 @@ public class Instrumentor extends ClassVisitor {
                     constArg(
                         om.getTargetMethodOrFieldParameter(),
                         getMethodOrFieldName(
-                            om.isTargetMethodOrFieldFqn(),
-                            opcode,
-                            owner,
-                            name,
-                            desc)),
+                            om.isTargetMethodOrFieldFqn(), opcode, owner, name, desc)),
                     localVarArg(om.getReturnParameter(), fldType, returnValIndex),
                     constArg(om.getClassNameParameter(), className.replace('/', '.')),
                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
@@ -1125,11 +1122,7 @@ public class Instrumentor extends ClassVisitor {
                       constArg(
                           om.getTargetMethodOrFieldParameter(),
                           getMethodOrFieldName(
-                              om.isTargetMethodOrFieldFqn(),
-                              opcode,
-                              owner,
-                              name,
-                              desc)),
+                              om.isTargetMethodOrFieldFqn(), opcode, owner, name, desc)),
                       constArg(om.getClassNameParameter(), className.replace('/', '.')),
                       constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                       selfArg(om.getSelfParameter(), Type.getObjectType(className)));
@@ -1171,11 +1164,7 @@ public class Instrumentor extends ClassVisitor {
                     constArg(
                         om.getTargetMethodOrFieldParameter(),
                         getMethodOrFieldName(
-                            om.isTargetMethodOrFieldFqn(),
-                            opcode,
-                            owner,
-                            name,
-                            desc)),
+                            om.isTargetMethodOrFieldFqn(), opcode, owner, name, desc)),
                     constArg(om.getClassNameParameter(), className.replace('/', '.')),
                     constArg(om.getMethodParameter(), getName(om.isMethodFqn())),
                     selfArg(om.getSelfParameter(), Type.getObjectType(className)));
@@ -1577,9 +1566,11 @@ public class Instrumentor extends ClassVisitor {
                   int mid = MethodID.getMethodId(className, name, desc);
 
                   if (om.getDurationParameter() != -1) {
-                    trackingCtx.emitEntry(true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
+                    trackingCtx.emitEntry(
+                        true, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                   } else {
-                    trackingCtx.emitEntry(false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
+                    trackingCtx.emitEntry(
+                        false, om.getSamplerKind(), om.getSamplerMean(), mid, getLevelStrSafe(om));
                   }
                 }
               } finally {
@@ -1588,7 +1579,7 @@ public class Instrumentor extends ClassVisitor {
             }
           }
         };
-        // </editor-fold>
+      // </editor-fold>
 
       case SYNC_ENTRY:
         // <editor-fold defaultstate="collapsed" desc="SyncEntry Instrumentor">
@@ -1891,5 +1882,4 @@ public class Instrumentor extends ClassVisitor {
           && InstrumentUtils.isAssignable(argTypesLeft, argTypesRight, cl, exactTypeMatch);
     }
   }
-
 }

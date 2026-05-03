@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.extension.impl;
 
@@ -32,13 +24,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
-import java.util.regex.Pattern;
 import org.openjdk.btrace.core.extensions.PermissionSet;
 import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
 import org.openjdk.btrace.extension.ExtensionRepository;
@@ -52,6 +41,7 @@ import org.slf4j.LoggerFactory;
  * and discovered via manifest attribute or resource scanning.
  *
  * <p>Structure:
+ *
  * <pre>
  * META-INF/
  *   MANIFEST.MF
@@ -66,7 +56,8 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * <p>API classes are flattened as {@code .class} files in the JAR root (loaded via bootstrap).
- * Implementation classes are stored as {@code .classdata} files and loaded by {@link ClassDataLoader}.
+ * Implementation classes are stored as {@code .classdata} files and loaded by {@link
+ * ClassDataLoader}.
  */
 public final class EmbeddedExtensionRepository implements ExtensionRepository {
   private static final Logger log = LoggerFactory.getLogger(EmbeddedExtensionRepository.class);
@@ -74,44 +65,22 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
   /** Priority for embedded extensions (lowest - can be overridden by filesystem extensions). */
   public static final int EMBEDDED_PRIORITY = -100;
 
-  /**
-   * Sentinel classloader used when the caller passes {@code null} (i.e. the bootstrap
-   * classloader). Using a sentinel — rather than silently substituting the system classloader —
-   * makes bootstrap-loading explicit: callers that need real resource look-up should pass a
-   * concrete loader; callers that genuinely want bootstrap semantics get a loader that delegates
-   * to the system classloader only as a last-resort fallback via the standard parent-delegation
-   * chain.
-   */
-  private static final ClassLoader BOOTSTRAP_SENTINEL = new ClassLoader(null) {};
-
-  private static final Pattern VALID_CLASS_NAME_PATTERN =
-      Pattern.compile(
-          "^[a-zA-Z_][a-zA-Z0-9_]*+(\\.[a-zA-Z_][a-zA-Z0-9_$]*+)*+(\\$[a-zA-Z_][a-zA-Z0-9_$]*+)*+$");
-
   private static final String EXTENSIONS_BASE = "META-INF/btrace-extensions/";
   private static final String MANIFEST_ATTR = "BTrace-Embedded-Extensions";
   private static final String EXTENSION_PROPERTIES = "extension.properties";
 
   private final ClassLoader resourceLoader;
-  /** True when the caller supplied {@code null}, indicating the bootstrap classloader. */
-  private final boolean isBootstrap;
 
   /**
    * Creates an embedded extension repository.
    *
-   * @param resourceLoader classloader to read resources from (typically agent classloader). Pass
-   *     {@code null} to indicate the bootstrap classloader; in that case the repository uses
-   *     {@link #BOOTSTRAP_SENTINEL} so that bootstrap-loading semantics are tracked explicitly
-   *     rather than silently replaced by the system classloader.
+   * @param resourceLoader classloader to read resources from (typically agent classloader). If null
+   *     (bootstrap classloader), falls back to system classloader.
    */
   public EmbeddedExtensionRepository(ClassLoader resourceLoader) {
-    this.isBootstrap = resourceLoader == null;
-    this.resourceLoader = isBootstrap ? BOOTSTRAP_SENTINEL : resourceLoader;
-    if (isBootstrap) {
-      log.debug(
-          "EmbeddedExtensionRepository created with bootstrap classloader sentinel;"
-              + " resource look-up will use the bootstrap delegation chain");
-    }
+    // Handle bootstrap classloader case (null) by using system classloader
+    this.resourceLoader =
+        resourceLoader != null ? resourceLoader : ClassLoader.getSystemClassLoader();
   }
 
   @Override
@@ -138,8 +107,10 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
         ExtensionDescriptorDTO descriptor = parseEmbeddedExtension(extId);
         if (descriptor != null) {
           extensions.add(descriptor);
-          log.debug("Discovered embedded extension: {} version {}",
-              descriptor.getId(), descriptor.getVersion());
+          log.debug(
+              "Discovered embedded extension: {} version {}",
+              descriptor.getId(),
+              descriptor.getVersion());
         }
       } catch (Exception e) {
         log.warn("Failed to parse embedded extension {}: {}", extId, e.getMessage());
@@ -150,17 +121,8 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     return extensions;
   }
 
-  /**
-   * Reads the list of embedded extension IDs from all JAR manifests visible to the classloader.
-   *
-   * <p>All manifests that carry a {@code BTrace-Embedded-Extensions} attribute are iterated;
-   * extension IDs are accumulated in encounter order. Duplicate IDs (e.g. produced by a
-   * shadow/shade merge of two JARs that each declared the same extension) are deduplicated and
-   * a warning is logged so operators can investigate collisions.
-   */
+  /** Reads the list of embedded extension IDs from the agent JAR manifest. */
   private List<String> readManifestIndex() {
-    // Use a LinkedHashSet to deduplicate while preserving encounter order.
-    Set<String> seen = new LinkedHashSet<>();
     try {
       Enumeration<URL> manifests = resourceLoader.getResources("META-INF/MANIFEST.MF");
       while (manifests.hasMoreElements()) {
@@ -170,30 +132,17 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
           Attributes attrs = manifest.getMainAttributes();
           String embeddedExtensions = attrs.getValue(MANIFEST_ATTR);
           if (embeddedExtensions != null && !embeddedExtensions.trim().isEmpty()) {
-            for (String entry : embeddedExtensions.split(",")) {
-              String trimmed = entry.trim();
-              if (!trimmed.isEmpty()) {
-                if (!seen.add(trimmed)) {
-                  log.warn(
-                      "Duplicate embedded extension ID '{}' encountered in manifest {};"
-                          + " keeping first occurrence — check for conflicting classpath JARs",
-                      trimmed,
-                      url);
-                }
-              }
-            }
+            return Arrays.asList(embeddedExtensions.split(","));
           }
         }
       }
     } catch (IOException e) {
       log.debug("Failed to read manifest: {}", e.getMessage());
     }
-    return seen.isEmpty() ? Collections.emptyList() : new ArrayList<>(seen);
+    return Collections.emptyList();
   }
 
-  /**
-   * Parses an embedded extension from its properties file.
-   */
+  /** Parses an embedded extension from its properties file. */
   private ExtensionDescriptorDTO parseEmbeddedExtension(String extensionId) {
     String propsPath = EXTENSIONS_BASE + extensionId + "/" + EXTENSION_PROPERTIES;
 
@@ -215,14 +164,15 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
       String version = props.getProperty("version", "0.0.0");
       String name = props.getProperty("name", id);
       String description = props.getProperty("description", "");
-      String btraceApiVersion = props.getProperty("btrace.api.version", "3.0+");
+      String btraceApiVersion = props.getProperty("btrace.api.version", "2.0+");
       String javaVersion = props.getProperty("java.version", "8+");
       String servicesStr = props.getProperty("services", "");
       String configurator = props.getProperty("configurator");
 
-      List<String> services = servicesStr.isEmpty()
-          ? Collections.emptyList()
-          : validateClassNames(Arrays.asList(servicesStr.split(",")), "service");
+      List<String> services =
+          servicesStr.isEmpty()
+              ? Collections.emptyList()
+              : validateClassNames(Arrays.asList(servicesStr.split(",")), "service");
 
       // Validate configurator class name if present
       if (configurator != null && !isValidClassName(configurator)) {
@@ -230,8 +180,8 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
         configurator = null;
       }
 
-      // Discover bundled probes (declared via the 'probes' property)
-      List<String> bundledProbes = discoverBundledProbes(extensionId, props);
+      // Discover bundled probes
+      List<String> bundledProbes = discoverBundledProbes(extensionId);
 
       // For embedded extensions, jarPath points to a virtual path
       // The actual loading happens via ClassDataLoader
@@ -257,24 +207,12 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     }
   }
 
-  /**
-   * Discovers bundled probe class names for an extension by reading the {@code probes}
-   * property from its {@code extension.properties}. The value is a comma-separated list
-   * of fully-qualified probe class names; entries are trimmed and validated.
-   */
-  private List<String> discoverBundledProbes(String extensionId, Properties props) {
-    String probesStr = props.getProperty("probes", "");
-    if (probesStr.isEmpty()) {
-      return Collections.emptyList();
-    }
-    List<String> raw = new ArrayList<>();
-    for (String entry : probesStr.split(",")) {
-      String trimmed = entry.trim();
-      if (!trimmed.isEmpty()) {
-        raw.add(trimmed);
-      }
-    }
-    return validateClassNames(raw, "probe");
+  /** Discovers bundled probe class files in the extension's probes/ directory. */
+  private List<String> discoverBundledProbes(String extensionId) {
+    // Note: Discovering resources without filesystem access is tricky.
+    // The probes list should be declared in extension.properties instead.
+    // For now, return empty and rely on extension.properties "probes" property.
+    return Collections.emptyList();
   }
 
   @Override
@@ -296,11 +234,12 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
    * Validates that an extension ID is safe and cannot be used for path traversal.
    *
    * <p>Valid extension IDs must:
+   *
    * <ul>
-   *   <li>Not be null or empty</li>
-   *   <li>Not contain path separators (/ or \)</li>
-   *   <li>Not contain parent directory references (..)</li>
-   *   <li>Only contain safe characters: alphanumeric, hyphen, underscore, dot</li>
+   *   <li>Not be null or empty
+   *   <li>Not contain path separators (/ or \)
+   *   <li>Not contain parent directory references (..)
+   *   <li>Only contain safe characters: alphanumeric, hyphen, underscore, dot
    * </ul>
    *
    * @param extensionId the extension ID to validate
@@ -335,7 +274,8 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     }
     // Basic validation: must be a valid Java identifier pattern
     // Allows: package.Class, package.Class$Inner
-    return VALID_CLASS_NAME_PATTERN.matcher(className).matches();
+    return className.matches(
+        "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_$]*)*(\\$[a-zA-Z_][a-zA-Z0-9_$]*)*$");
   }
 
   /**

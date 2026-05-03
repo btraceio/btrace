@@ -13,7 +13,7 @@ org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHand
 ]
 FRAME APPEND [resources/OnMethodTest resources/OnMethodTest]
 L7
-LINENUMBER 127 L7
+LINENUMBER 118 L7
 DUP
 ASTORE 3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -46,7 +46,7 @@ FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest T jav
 ALOAD 4
 ATHROW
 L9
-LINENUMBER 128 L9
+LINENUMBER 119 L9
 FRAME FULL [resources/OnMethodTest T resources/OnMethodTest resources/OnMethodTest] []
 RETURN
 L5

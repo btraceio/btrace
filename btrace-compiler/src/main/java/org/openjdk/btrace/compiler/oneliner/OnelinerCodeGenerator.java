@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.compiler.oneliner;
 
 import java.util.ArrayList;
@@ -10,30 +26,17 @@ import org.openjdk.btrace.compiler.oneliner.OnelinerAST.*;
 public class OnelinerCodeGenerator {
 
   private static final String INDENT = "  ";
-  private static final String DEFAULT_CLASS_NAME = "BTraceOneliner";
 
   /**
-   * Generate Java source code from a oneliner AST using the default class name.
+   * Generate Java source code from a oneliner AST
    *
    * @param node The parsed oneliner AST
    * @return Generated BTrace Java source code
    */
   public static String generate(OnelinerNode node) {
-    return generate(node, DEFAULT_CLASS_NAME);
-  }
-
-  /**
-   * Generate Java source code from a oneliner AST with a custom class name.
-   *
-   * @param node The parsed oneliner AST
-   * @param className The class name to use for the generated BTrace script
-   * @return Generated BTrace Java source code
-   */
-  public static String generate(OnelinerNode node, String className) {
-    if (className == null || className.isEmpty()) {
-      className = DEFAULT_CLASS_NAME;
-    }
     StringBuilder sb = new StringBuilder();
+
+    String className = "BTraceOneliner";
 
     // Package and imports
     sb.append("package org.openjdk.btrace.generated;\n\n");
@@ -43,7 +46,7 @@ public class OnelinerCodeGenerator {
     sb.append("import org.openjdk.btrace.core.types.AnyType;\n\n");
 
     // Class declaration
-    sb.append("@BTrace\n");
+    sb.append("@BTrace(trusted = true)\n");
     sb.append("public class ").append(className).append(" {\n\n");
 
     ProbeClause probe = node.probe;
@@ -52,7 +55,7 @@ public class OnelinerCodeGenerator {
     boolean hasCountAction = hasCountAction(probe.actionBlock);
     if (hasCountAction) {
       sb.append(INDENT)
-          .append("private static final AtomicInteger counter = BTraceUtils.newAtomicInteger(0);\n\n");
+          .append("private static final AtomicInteger counter = new AtomicInteger();\n\n");
     }
 
     // Generate probe method
@@ -64,7 +67,7 @@ public class OnelinerCodeGenerator {
       sb.append(INDENT).append("@OnEvent\n");
       sb.append(INDENT).append("public static void onEvent() {\n");
       sb.append(INDENT).append(INDENT);
-      sb.append("BTraceUtils.println(\"count: \" + BTraceUtils.get(counter));\n");
+      sb.append("BTraceUtils.println(\"count: \" + counter.get());\n");
       sb.append(INDENT).append("}\n");
     }
 
@@ -190,7 +193,7 @@ public class OnelinerCodeGenerator {
       if (action instanceof PrintAction) {
         generatePrintAction(sb, indent, (PrintAction) action);
       } else if (action instanceof CountAction) {
-        sb.append(indent).append("BTraceUtils.incrementAndGet(counter);\n");
+        sb.append(indent).append("counter.incrementAndGet();\n");
       } else if (action instanceof TimeAction) {
         generateTimeAction(sb, indent);
       } else if (action instanceof StackAction) {
@@ -223,14 +226,10 @@ public class OnelinerCodeGenerator {
         sb.append(" null");
       } else if (argFilter.value instanceof String) {
         if (argFilter.comparator == Comparator.EQ) {
-          sb.append("BTraceUtils.compare(\"")
-              .append(escapeJavaString((String) argFilter.value))
-              .append("\", ");
+          sb.append("\"").append(escapeJavaString((String) argFilter.value)).append("\".equals(");
           sb.append("BTraceUtils.str(args[").append(argFilter.argIndex).append("]))");
         } else if (argFilter.comparator == Comparator.NEQ) {
-          sb.append("!BTraceUtils.compare(\"")
-              .append(escapeJavaString((String) argFilter.value))
-              .append("\", ");
+          sb.append("!\"").append(escapeJavaString((String) argFilter.value)).append("\".equals(");
           sb.append("BTraceUtils.str(args[").append(argFilter.argIndex).append("]))");
         } else {
           throw new IllegalArgumentException(
@@ -324,6 +323,9 @@ public class OnelinerCodeGenerator {
   }
 
   private static String escapeJavaString(String str) {
-    return str.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\t", "\\t");
+    return str.replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\t", "\\t");
   }
 }

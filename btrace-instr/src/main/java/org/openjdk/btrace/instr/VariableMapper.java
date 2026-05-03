@@ -1,16 +1,32 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.instr;
-
-import org.objectweb.asm.Label;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.objectweb.asm.Label;
 
 public class VariableMapper {
   private static class CopyOnWriteArray {
     private final int[] src;
     private int[] copy = null;
     private final int upperLimit;
+
     CopyOnWriteArray(int[] src, int upperLimit) {
       this.src = src;
       this.upperLimit = upperLimit;
@@ -37,7 +53,8 @@ public class VariableMapper {
       int[] target = copy != null ? copy : src;
       if (pos >= target.length) {
         throw new InstrumentationException(
-            String.format("Invalid variable index: %d (valid range: 0-%d)", pos, target.length - 1));
+            String.format(
+                "Invalid variable index: %d (valid range: 0-%d)", pos, target.length - 1));
       }
       return target[pos];
     }
@@ -82,8 +99,9 @@ public class VariableMapper {
 
   /**
    * Creates a new scope for all the subsequent mappings.<br>
-   * Label snapshots capture the full mapping array capacity to handle variables
-   * that are declared but not yet remapped when the label is visited.
+   * Label snapshots capture the full mapping array capacity to handle variables that are declared
+   * but not yet remapped when the label is visited.
+   *
    * @param label the scope label
    */
   public void noteLabel(Label label) {
@@ -92,7 +110,7 @@ public class VariableMapper {
   }
 
   void setMapping(int from, int to, int size) {
-    assert((to & REMAP_FLAG) != 0);
+    assert ((to & REMAP_FLAG) != 0);
 
     int padding = size == 1 ? 0 : 1;
     if (mapping.length <= from + padding) {
@@ -100,7 +118,7 @@ public class VariableMapper {
     }
     mapping[from] = to;
     if (padding > 0) {
-      assert(((to & DOUBLE_SLOT_FLAG) != 0));
+      assert (((to & DOUBLE_SLOT_FLAG) != 0));
       mapping[from + padding] = unmask(to) | REMAP_FLAG | DOUBLE_SLOT_FLAG_2; // padding
     }
   }
@@ -157,7 +175,8 @@ public class VariableMapper {
   }
 
   public int map(int var, Label label) {
-    return map(var, labelMappings.getOrDefault(label, new CopyOnWriteArray(mapping, mapping.length)));
+    return map(
+        var, labelMappings.getOrDefault(label, new CopyOnWriteArray(mapping, mapping.length)));
   }
 
   private int map(int var, CopyOnWriteArray currentMapping) {

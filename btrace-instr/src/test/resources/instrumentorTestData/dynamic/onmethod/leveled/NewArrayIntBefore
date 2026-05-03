@@ -1,3 +1,6 @@
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayIntBefore.$btrace$$level : I
+ICONST_1
+IF_ICMPLT L1
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
@@ -5,14 +8,17 @@ LDC "int"
 ICONST_1
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayIntBefore$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/NewArrayIntBefore"
 ]
 L1
 FRAME SAME1 I
 L2
-LINENUMBER 110 L2
+LINENUMBER 101 L2
+ICONST_1
+GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayIntBefore.$btrace$$level : I
+IF_ICMPLT L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
@@ -20,18 +26,18 @@ LDC "int"
 ICONST_2
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayIntBefore$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/NewArrayIntBefore"
 ]
 L3
 FRAME FULL [resources/OnMethodTest [I] [I I]
 L4
-LINENUMBER 111 L4
+LINENUMBER 102 L4
 L5
-LINENUMBER 112 L5
+LINENUMBER 103 L5
 L6
-LINENUMBER 113 L6
+LINENUMBER 104 L6
 L7
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L7 0
 LOCALVARIABLE a [I L2 L7 1

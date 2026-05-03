@@ -1,9 +1,25 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.instr;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -203,8 +219,11 @@ public class InstrumentingMethodVisitorTest {
     String expected2 = "[[Ljava/lang/String;";
     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     cw.visit(Opcodes.ASM9, Opcodes.ACC_PUBLIC, "test.Test", null, null, null);
-    MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
-    InstrumentingMethodVisitor instance = new InstrumentingMethodVisitor(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
+    InstrumentingMethodVisitor instance =
+        new InstrumentingMethodVisitor(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
     mv = instance;
 
     mv.visitLdcInsn(1);
@@ -219,7 +238,6 @@ public class InstrumentingMethodVisitorTest {
 
     mv.visitMaxs(3, 0);
     mv.visitEnd();
-
   }
 
   @Test
@@ -270,13 +288,12 @@ public class InstrumentingMethodVisitorTest {
         if (val == Opcodes.LONG || val == Opcodes.DOUBLE) {
           assertTrue(p + 1 < result.length, "LONG/DOUBLE without TOP_EXT");
           assertEquals(
-              InstrumentingMethodVisitor.TOP_EXT,
-              result[p + 1],
-              "LONG/DOUBLE missing TOP_EXT");
+              InstrumentingMethodVisitor.TOP_EXT, result[p + 1], "LONG/DOUBLE missing TOP_EXT");
         }
       }
     }
-    // Deterministic reference case: verify args region (indices 0..argsSize-1) round-trips correctly.
+    // Deterministic reference case: verify args region (indices 0..argsSize-1) round-trips
+    // correctly.
     // A mapper with no remaps should leave args-region locals unchanged.
     {
       int argCount = 2;
@@ -285,7 +302,8 @@ public class InstrumentingMethodVisitorTest {
       refLocals.add(Opcodes.FLOAT);
       VariableMapper refMapper = new VariableMapper(argCount);
       // No remaps — args region should be identity-mapped.
-      Object[] result = InstrumentingMethodVisitor.computeFrameLocals(argCount, refLocals, null, refMapper);
+      Object[] result =
+          InstrumentingMethodVisitor.computeFrameLocals(argCount, refLocals, null, refMapper);
       assertNotNull(result);
       // args region must appear at indices 0 and 1 in the output
       assertTrue(result.length >= argCount);
@@ -341,13 +359,10 @@ public class InstrumentingMethodVisitorTest {
     int argsSize = 4; // this(1) + long(2) + ref(1)
     List<Object> locals =
         Arrays.asList(
-            "java/util/concurrent/FutureTask",
-            Opcodes.LONG,
-            "java/util/concurrent/TimeUnit");
+            "java/util/concurrent/FutureTask", Opcodes.LONG, "java/util/concurrent/TimeUnit");
     VariableMapper mapper = new VariableMapper(argsSize);
 
-    Object[] result =
-        InstrumentingMethodVisitor.computeFrameLocals(argsSize, locals, null, mapper);
+    Object[] result = InstrumentingMethodVisitor.computeFrameLocals(argsSize, locals, null, mapper);
 
     Object[] expected = {
       "java/util/concurrent/FutureTask",
@@ -363,8 +378,11 @@ public class InstrumentingMethodVisitorTest {
   void storeAsNew(Object value, Type type) {
     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     cw.visit(Opcodes.ASM9, Opcodes.ACC_PUBLIC, "test.Test", null, null, null);
-    MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
-    InstrumentingMethodVisitor instance = new InstrumentingMethodVisitor(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
+    MethodVisitor mv =
+        cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test", "()V", null, null);
+    InstrumentingMethodVisitor instance =
+        new InstrumentingMethodVisitor(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test.Test", "test", "()V", mv);
     mv = instance;
 
     mv.visitLdcInsn(value);
@@ -379,15 +397,14 @@ public class InstrumentingMethodVisitorTest {
 
   private static Stream<Arguments> typeValues() {
     return Stream.of(
-            Arguments.of((byte)1, Type.BYTE_TYPE),
-            Arguments.of((short)1, Type.SHORT_TYPE),
-            Arguments.of((char)1, Type.CHAR_TYPE),
-            Arguments.of((int)1, Type.INT_TYPE),
-            Arguments.of(true, Type.BOOLEAN_TYPE),
-            Arguments.of((long)1, Type.LONG_TYPE),
-            Arguments.of((float)1, Type.FLOAT_TYPE),
-            Arguments.of((double)1, Type.DOUBLE_TYPE)
-    );
+        Arguments.of((byte) 1, Type.BYTE_TYPE),
+        Arguments.of((short) 1, Type.SHORT_TYPE),
+        Arguments.of((char) 1, Type.CHAR_TYPE),
+        Arguments.of((int) 1, Type.INT_TYPE),
+        Arguments.of(true, Type.BOOLEAN_TYPE),
+        Arguments.of((long) 1, Type.LONG_TYPE),
+        Arguments.of((float) 1, Type.FLOAT_TYPE),
+        Arguments.of((double) 1, Type.DOUBLE_TYPE));
   }
 
   @Test

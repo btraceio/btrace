@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.metrics;
 
 import org.jetbrains.annotations.NotNull;
@@ -40,8 +56,7 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
    * @param name metric name
    * @return histogram metric
    */
-  @Nullable
-  public HistogramMetric histogram(@NotNull String name) {
+  @Nullable public HistogramMetric histogram(@NotNull String name) {
     // Default: 1ns .. 1h, 3 significant digits
     return histogram(name, new HistogramConfigImpl(1L, 3_600_000_000_000L, 3));
   }
@@ -53,8 +68,7 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
    * @param config histogram configuration
    * @return histogram metric
    */
-  @Nullable
-  public HistogramMetric histogram(@NotNull String name, @NotNull HistogramConfig config) {
+  @Nullable public HistogramMetric histogram(@NotNull String name, @NotNull HistogramConfig config) {
     return registry.getOrCreate(name, null, () -> new HistogramMetricImpl(name, config));
   }
 
@@ -65,34 +79,40 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
    * @param key grouping key
    * @return histogram metric
    */
-  @Nullable
-  public HistogramMetric histogram(@NotNull String name, @NotNull String key) {
-    return registry.getOrCreate(name, key, () -> new HistogramMetricImpl(name, new org.openjdk.btrace.metrics.histogram.HistogramConfigImpl(1L, 3_600_000_000_000L, 3)));
+  @Nullable public HistogramMetric histogram(@NotNull String name, @NotNull String key) {
+    return registry.getOrCreate(
+        name,
+        key,
+        () ->
+            new HistogramMetricImpl(
+                name,
+                new org.openjdk.btrace.metrics.histogram.HistogramConfigImpl(
+                    1L, 3_600_000_000_000L, 3)));
   }
 
   // Convenience creators for micros/millis ranges (match prior constants)
   @Override
-  @Nullable
-  public HistogramMetric histogramMicros(@NotNull String name) {
+  @Nullable public HistogramMetric histogramMicros(@NotNull String name) {
     return histogram(name, new HistogramConfigImpl(1L, 60_000_000L, 3));
   }
 
   @Override
-  @Nullable
-  public HistogramMetric histogramMicros(@NotNull String name, @NotNull String key) {
-    return registry.getOrCreate(name, key, () -> new HistogramMetricImpl(name, new HistogramConfigImpl(1L, 60_000_000L, 3)));
+  @Nullable public HistogramMetric histogramMicros(@NotNull String name, @NotNull String key) {
+    return registry.getOrCreate(
+        name,
+        key,
+        () -> new HistogramMetricImpl(name, new HistogramConfigImpl(1L, 60_000_000L, 3)));
   }
 
   @Override
-  @Nullable
-  public HistogramMetric histogramMillis(@NotNull String name) {
+  @Nullable public HistogramMetric histogramMillis(@NotNull String name) {
     return histogram(name, new HistogramConfigImpl(1L, 600_000L, 3));
   }
 
   @Override
-  @Nullable
-  public HistogramMetric histogramMillis(@NotNull String name, @NotNull String key) {
-    return registry.getOrCreate(name, key, () -> new HistogramMetricImpl(name, new HistogramConfigImpl(1L, 600_000L, 3)));
+  @Nullable public HistogramMetric histogramMillis(@NotNull String name, @NotNull String key) {
+    return registry.getOrCreate(
+        name, key, () -> new HistogramMetricImpl(name, new HistogramConfigImpl(1L, 600_000L, 3)));
   }
 
   /**
@@ -103,8 +123,8 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
    * @param config histogram configuration
    * @return histogram metric
    */
-  @Nullable
-  public HistogramMetric histogram(@NotNull String name, @NotNull String key, @NotNull HistogramConfig config) {
+  @Nullable public HistogramMetric histogram(
+      @NotNull String name, @NotNull String key, @NotNull HistogramConfig config) {
     return registry.getOrCreate(name, key, () -> new HistogramMetricImpl(name, config));
   }
 
@@ -116,8 +136,7 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
    * @param name metric name
    * @return statistics metric
    */
-  @Nullable
-  public StatsMetric stats(@NotNull String name) {
+  @Nullable public StatsMetric stats(@NotNull String name) {
     return registry.getOrCreate(name, null, () -> new StatsMetricImpl(name));
   }
 
@@ -128,23 +147,19 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
    * @param key grouping key
    * @return statistics metric
    */
-  @Nullable
-  public StatsMetric stats(@NotNull String name, @NotNull String key) {
-    return registry.getOrCreate(name, key, () -> new org.openjdk.btrace.metrics.stats.StatsMetricImpl(name));
+  @Nullable public StatsMetric stats(@NotNull String name, @NotNull String key) {
+    return registry.getOrCreate(
+        name, key, () -> new org.openjdk.btrace.metrics.stats.StatsMetricImpl(name));
   }
 
   // ========== Query Operations ==========
 
-  /**
-   * Reset all metrics.
-   */
+  /** Reset all metrics. */
   public void reset() {
     registry.reset();
   }
 
-  /**
-   * Clear all metrics.
-   */
+  /** Clear all metrics. */
   public void clear() {
     registry.clear();
   }

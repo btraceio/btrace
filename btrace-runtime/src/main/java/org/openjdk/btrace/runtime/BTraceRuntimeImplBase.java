@@ -1,65 +1,22 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.openjdk.btrace.runtime;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
-import org.jctools.queues.MessagePassingQueue;
-import org.jctools.queues.MpmcArrayQueue;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.BTraceRuntimeBridge;
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.Profiler;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.EventCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.GridDataCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.comm.NumberDataCommand;
-import org.openjdk.btrace.core.comm.NumberMapDataCommand;
-import org.openjdk.btrace.core.comm.StringMapDataCommand;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.handlers.ErrorHandler;
-import org.openjdk.btrace.core.handlers.EventHandler;
-import org.openjdk.btrace.core.handlers.ExitHandler;
-import org.openjdk.btrace.core.handlers.LowMemoryHandler;
-import org.openjdk.btrace.core.handlers.TimerHandler;
-import org.openjdk.btrace.runtime.profiling.MethodInvocationProfiler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.management.ListenerNotFoundException;
-import javax.management.MBeanServer;
-import javax.management.NotificationEmitter;
-import javax.management.NotificationListener;
-import javax.management.ObjectName;
-import javax.management.openmbean.CompositeData;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -99,11 +56,34 @@ import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.management.ListenerNotFoundException;
+import javax.management.MBeanServer;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
+import javax.management.ObjectName;
+import javax.management.openmbean.CompositeData;
+import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpmcArrayQueue;
+import org.openjdk.btrace.core.ArgsMap;
+import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.BTraceUtils;
+import org.openjdk.btrace.core.Profiler;
+import org.openjdk.btrace.core.comm.Command;
+import org.openjdk.btrace.core.comm.CommandListener;
+import org.openjdk.btrace.core.comm.ErrorCommand;
+import org.openjdk.btrace.core.comm.EventCommand;
+import org.openjdk.btrace.core.comm.ExitCommand;
+import org.openjdk.btrace.core.comm.MessageCommand;
+import org.openjdk.btrace.core.handlers.ErrorHandler;
+import org.openjdk.btrace.core.handlers.EventHandler;
+import org.openjdk.btrace.core.handlers.ExitHandler;
+import org.openjdk.btrace.core.handlers.LowMemoryHandler;
+import org.openjdk.btrace.core.handlers.TimerHandler;
+import org.openjdk.btrace.runtime.profiling.MethodInvocationProfiler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class form multiple Java version specific implementation.
@@ -117,7 +97,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author KLynch
  */
 @SuppressWarnings("unchecked")
-public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTraceRuntimeBridge {
+public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl {
   private static final Logger log = LoggerFactory.getLogger(BTraceRuntimeImplBase.class);
 
   private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
@@ -255,26 +235,8 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   // BTrace Class object corresponding to this client
   private Class clazz;
 
-  /**
-   * The probe class (after {@link #init}) or {@code null}. Callers that need
-   * reflective access bypass {@link Class#forName}, which can't see probes
-   * defined in isolated or hidden class loaders.
-   */
-  Class<?> getProbeClass() {
-    return clazz;
-  }
-
-  // instrumentation level field for each runtime (legacy, may not exist).
-  // Only used for backward compatibility with old bytecode-based level checks.
-  // Primary storage is now in levelValue (see below).
+  // instrumentation level field for each runtime
   private Field level;
-
-  // instrumentation level value (PRIMARY source of truth for level checking).
-  // This is the canonical level storage for MethodHandle-based guards.
-  // The legacy $btrace$$level field in the probe class is only updated for
-  // backward compatibility; level checking now happens at the MethodHandle layer.
-  // See HandlerRepositoryImpl.applyLevelGuard() for how this value is used.
-  private volatile int levelValue = 0;
 
   // array of timer callback methods
   private TimerHandler[] timerHandlers;
@@ -297,8 +259,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
   // Extension registry for this runtime
   // Extension instances are now resolved via the manifest-based bridge when injected.
-  private final Set<Extension> extensions = Collections.newSetFromMap(new IdentityHashMap<>());
-  private volatile boolean extensionsClosed = false;
 
   // Command queue for the client
   private final CommandQueue queue;
@@ -392,6 +352,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
       }
     }
   }
+
   // per client speculative buffer manager
   private final SpeculativeQueueManager specQueueManager;
   // background thread that sends Commands to the handler
@@ -446,7 +407,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     this.className = className;
     instrumentation = inst;
 
-    BTraceRuntimeAccessImpl.addRuntime(className, this);
+    BTraceRuntimeAccess.addRuntime(className, this);
 
     cmdThread =
         new Thread(
@@ -518,23 +479,15 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     exitHandlers = eHandlers;
     lowMemoryHandlers = lmHandlers;
 
-    // Level is now stored on the runtime instance instead of the probe class field.
-    // This allows level checking to happen at MethodHandle linking time without relying
-    // on a bytecode-level field that was never properly initialized.
-    int levelVal = BTraceRuntime.parseInt(args.get("level"), Integer.MIN_VALUE);
-    if (levelVal > Integer.MIN_VALUE) {
-      setLevel(levelVal);
-    }
-
-    // Attempt to set the legacy $btrace$$level field if it exists (for backward compatibility)
     try {
       level = cl.getDeclaredField("$btrace$$level");
       level.setAccessible(true);
+      int levelVal = BTraceRuntime.parseInt(args.get("level"), Integer.MIN_VALUE);
       if (levelVal > Integer.MIN_VALUE) {
         level.set(null, levelVal);
       }
     } catch (Throwable e) {
-      log.debug("Instrumentation level field not available (this is OK with MethodHandle-based guards)", e);
+      log.debug("Instrumentation level setting not available", e);
     }
 
     BTraceMBean.registerMBean(clazz);
@@ -588,11 +541,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   @Override
-  public final void handleEvent(Object cmd) {
-    if (!(cmd instanceof EventCommand)) {
-      return;
-    }
-    EventCommand ecmd = (EventCommand) cmd;
+  public final void handleEvent(EventCommand ecmd) {
     if (eventHandlers != null) {
       Map<String, Method> localMap = eventHandlerMap;
       if (localMap == null) {
@@ -618,7 +567,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
       Method eventHandler = localMap.get(event);
       if (eventHandler != null) {
-        BTraceRuntimeAccessImpl.doWithCurrent(
+        BTraceRuntimeAccess.doWithCurrent(
             (Callable<Void>)
                 () -> {
                   eventHandler.invoke(null, (Object[]) null);
@@ -659,7 +608,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
    */
   @Override
   public final void leave() {
-    BTraceRuntimeAccessImpl.leaveInternal();
+    BTraceRuntimeAccess.leave();
   }
 
   /** Handles exception from BTrace probe actions. */
@@ -668,7 +617,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     if (currentException.get() != null) {
       return;
     }
-    boolean entered = BTraceRuntimeAccessImpl.enterInternal(this);
+    boolean entered = BTraceRuntimeAccess.enter(this);
     try {
       currentException.set(th);
 
@@ -695,6 +644,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
       }
     }
   }
+
   // package-private interface to BTraceUtils class.
 
   @Override
@@ -887,17 +837,14 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
 
   @Override
   public final boolean enter() {
-    return BTraceRuntimeAccessImpl.enterInternal(this);
+    return BTraceRuntimeAccess.enter(this);
   }
 
   @Override
   public final void handleExit(int exitCode) {
-    cleanupExtensions();
     exitImpl(exitCode);
     try {
-      // Use timeout to prevent indefinite blocking during shutdown
-      // Don't interrupt - let cmdThread finish processing remaining commands
-      cmdThread.join(2000);
+      cmdThread.join();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -905,64 +852,25 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   public final int getLevel() {
-    // First try to read from the probe class field (legacy, for backward compatibility)
-    if (level != null) {
-      try {
-        return (int) level.get(null);
-      } catch (IllegalAccessException e) {
-        // Field exists but cannot be accessed; use fallback
-        log.debug("Cannot access legacy level field, using runtime value", e);
-      }
+    try {
+      return (int) level.get(null);
+    } catch (IllegalAccessException ignored) {
     }
-    // Fall back to runtime-stored level value (primary source)
-    return levelValue;
+
+    return 0;
   }
 
   public final void setLevel(int level) {
-    // Always store in runtime value field (primary source)
-    this.levelValue = level;
-    // Also try to set on probe class field if it exists (legacy, for backward compatibility)
-    if (this.level != null) {
-      try {
-        this.level.set(null, level);
-      } catch (IllegalAccessException e) {
-        // Field exists but cannot be accessed; that's okay, levelValue is primary
-        log.debug("Cannot update legacy level field (will use runtime value)", e);
-      }
+    try {
+      this.level.set(null, level);
+    } catch (IllegalAccessException ignored) {
     }
   }
 
   protected void cleanupRuntime() {
+    // Release all extension instances for this script
+    // Extension instances (if any) are managed by the manifest-based loader/bridge.
     // to be overridden by concrete implementations
-  }
-
-  final void registerExtension(Extension ext) {
-    if (ext == null) {
-      return;
-    }
-    synchronized (extensions) {
-      extensions.add(ext);
-    }
-  }
-
-  private void cleanupExtensions() {
-    if (extensionsClosed) {
-      return;
-    }
-    synchronized (extensions) {
-      if (extensionsClosed) {
-        return;
-      }
-      extensionsClosed = true;
-      for (Extension ext : extensions) {
-        try {
-          ext.close();
-        } catch (Throwable ignore) {
-          // best effort cleanup
-        }
-      }
-      extensions.clear();
-    }
   }
 
   protected static void loadLibrary(ClassLoader cl) {
@@ -1025,7 +933,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   private BTraceRuntimeImplBase getCurrent() {
-    return BTraceRuntimeAccessImpl.getCurrent();
+    return BTraceRuntimeAccess.getCurrent();
   }
 
   private void initThreadPool() {
@@ -1102,37 +1010,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
   }
 
   @Override
-  public final void sendCommand(Object cmd) {
-    if (cmd instanceof Command) {
-      send((Command) cmd);
-    }
-  }
-
-  @Override
-  public final void sendNumberData(String name, Number value) {
-    send(new NumberDataCommand(name, value));
-  }
-
-  @Override
-  public final void sendNumberMapData(String name, Map<String, ? extends Number> data) {
-    send(new NumberMapDataCommand(name, data));
-  }
-
-  @Override
-  public final void sendStringMapData(String name, Map<String, String> data) {
-    send(new StringMapDataCommand(name, data));
-  }
-
-  @Override
-  public final void sendGridData(String name, List<Object[]> data) {
-    send(new GridDataCommand(name, data));
-  }
-
-  @Override
-  public final void sendGridData(String name, List<Object[]> data, String format) {
-    send(new GridDataCommand(name, data, format));
-  }
-
   public final void send(Command cmd) {
     boolean speculated = specQueueManager.send(cmd);
     if (!speculated) {
@@ -1211,7 +1088,6 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
         exitHandlers = null;
       }
 
-      cleanupExtensions();
       send(new ExitCommand(exitCode));
     } finally {
       disabled = true;

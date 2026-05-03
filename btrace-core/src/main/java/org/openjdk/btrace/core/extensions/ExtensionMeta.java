@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.core.extensions;
 
 import java.util.Collections;
@@ -7,8 +23,8 @@ import java.util.Set;
 /**
  * Metadata extracted from an extension class.
  *
- * <p>This class holds immutable metadata parsed from package-level {@link ExtensionDescriptor}
- * (if available).
+ * <p>This class holds immutable metadata parsed from package-level {@link ExtensionDescriptor} (if
+ * available).
  */
 public final class ExtensionMeta {
   private final Class<? extends Extension> extensionClass;
@@ -40,15 +56,18 @@ public final class ExtensionMeta {
    * Extracts metadata from an extension class.
    *
    * @param extensionClass the extension class
-   * @return extracted metadata
-   * Builds metadata from package-level {@link ExtensionDescriptor} when present.
-  */
+   * @return extracted metadata Builds metadata from package-level {@link ExtensionDescriptor} when
+   *     present.
+   */
   public static ExtensionMeta from(Class<? extends Extension> extensionClass) {
     // Prefer package-level descriptor for identity and extension-level permissions
     Package pkg = extensionClass.getPackage();
     ExtensionDescriptor pkgDesc = pkg != null ? pkg.getAnnotation(ExtensionDescriptor.class) : null;
 
-    String name = (pkgDesc != null && !pkgDesc.name().isEmpty()) ? pkgDesc.name() : extensionClass.getSimpleName();
+    String name =
+        (pkgDesc != null && !pkgDesc.name().isEmpty())
+            ? pkgDesc.name()
+            : extensionClass.getSimpleName();
     String version = (pkgDesc != null) ? pkgDesc.version() : "";
     String description = (pkgDesc != null) ? pkgDesc.description() : "";
     String minBTraceVersion = (pkgDesc != null) ? pkgDesc.minBTraceVersion() : "";

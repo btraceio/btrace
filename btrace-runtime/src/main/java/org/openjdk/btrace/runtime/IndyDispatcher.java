@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.runtime;
 
@@ -36,54 +28,51 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-
 import org.openjdk.btrace.core.HandlerRepository;
 
 /**
  * INVOKEDYNAMIC bootstrap class for BTrace probe handler dispatch.
  *
- * <p>Works with Java 8+. Replaces the Java 15-specific {@code Indy} class that used
- * {@code defineHiddenClass}. Probe handler methods live in the probe class — defined in a
- * per-probe {@link ClassLoader} on JDK 8/9-14, or as a hidden class on JDK 15+ — and are
- * resolved via {@link MethodHandles#publicLookup()}.findStatic() — no bytecode copying
- * required.
+ * <p>Works with Java 8+. Replaces the Java 15-specific {@code Indy} class that used {@code
+ * defineHiddenClass}. Probe handler methods live in the probe class — defined in a per-probe {@link
+ * ClassLoader} on JDK 8/9-14, or as a hidden class on JDK 15+ — and are resolved via {@link
+ * MethodHandles#publicLookup()}.findStatic() — no bytecode copying required.
  *
- * <p><b>Dispatch strategy:</b> every call site is a {@link MutableCallSite}. On bootstrap
- * we attempt immediate resolution; on success the MCS target is set to the resolved
- * {@link MethodHandle}; on failure the target is a self-relinking trampoline that retries
- * on every invocation until resolution succeeds.
+ * <p><b>Dispatch strategy:</b> every call site is a {@link MutableCallSite}. On bootstrap we
+ * attempt immediate resolution; on success the MCS target is set to the resolved {@link
+ * MethodHandle}; on failure the target is a self-relinking trampoline that retries on every
+ * invocation until resolution succeeds.
  *
  * <p><b>Why always MutableCallSite</b> (and not {@code ConstantCallSite} even for the
- * immediate-success path): BTrace does not retransform target classes on probe detach, so
- * the INVOKEDYNAMIC call sites woven into instrumented methods persist after the probe is
- * gone. A {@code ConstantCallSite} cannot be relinked, so once it is pinned to a resolved
- * handler handle, unregistering the probe is <i>impossible</i> — the handler keeps firing
- * even after {@code BTraceRuntime} state is torn down, leading to NPEs inside the
- * instrumented application. By making every dispatch site mutable we can re-point the
- * target to a noop when {@link #invalidateProbe(String)} is called from the agent at
- * detach time. (Note: probe classes themselves are unloadable — they live in per-probe
- * ClassLoaders / hidden classes — but the residual call sites in target classes are what
- * force the mutable choice.)
+ * immediate-success path): BTrace does not retransform target classes on probe detach, so the
+ * INVOKEDYNAMIC call sites woven into instrumented methods persist after the probe is gone. A
+ * {@code ConstantCallSite} cannot be relinked, so once it is pinned to a resolved handler handle,
+ * unregistering the probe is <i>impossible</i> — the handler keeps firing even after {@code
+ * BTraceRuntime} state is torn down, leading to NPEs inside the instrumented application. By making
+ * every dispatch site mutable we can re-point the target to a noop when {@link
+ * #invalidateProbe(String)} is called from the agent at detach time. (Note: probe classes
+ * themselves are unloadable — they live in per-probe ClassLoaders / hidden classes — but the
+ * residual call sites in target classes are what force the mutable choice.)
  *
- * <p><b>Important:</b> This class lives in the bootstrap classloader and must not reference
- * SLF4J or any other logging framework. SLF4J initialization in the bootstrap classloader
- * context can fail, causing this class's static initializer to throw, which prevents the
- * repository from being wired up. Handler resolution failures are logged by
- * {@code HandlerRepositoryImpl.resolveHandler()} on the agent-classloader side.
+ * <p><b>Important:</b> This class lives in the bootstrap classloader and must not reference SLF4J
+ * or any other logging framework. SLF4J initialization in the bootstrap classloader context can
+ * fail, causing this class's static initializer to throw, which prevents the repository from being
+ * wired up. Handler resolution failures are logged by {@code
+ * HandlerRepositoryImpl.resolveHandler()} on the agent-classloader side.
  */
 public final class IndyDispatcher {
 
   /**
-   * Bridge to the HandlerRepository implementation (HandlerRepositoryImpl in agent CL).
-   * Set via reflection from HandlerRepositoryImpl's static initializer. May be null if
-   * bootstrap runs before the agent wiring completes — the trampoline handles that case.
+   * Bridge to the HandlerRepository implementation (HandlerRepositoryImpl in agent CL). Set via
+   * reflection from HandlerRepositoryImpl's static initializer. May be null if bootstrap runs
+   * before the agent wiring completes — the trampoline handles that case.
    */
   public static volatile HandlerRepository repository = null;
 
   /**
-   * Live call sites per probe class name (internal form). Used to invalidate all sites
-   * targeting a given probe on unregister. Entries are weak references so call sites that
-   * have become unreachable (e.g. instrumented class unloaded) don't leak.
+   * Live call sites per probe class name (internal form). Used to invalidate all sites targeting a
+   * given probe on unregister. Entries are weak references so call sites that have become
+   * unreachable (e.g. instrumented class unloaded) don't leak.
    */
   private static final ConcurrentMap<String, ConcurrentLinkedQueue<WeakReference<MutableCallSite>>>
       LIVE_SITES = new ConcurrentHashMap<>();
@@ -105,23 +94,22 @@ public final class IndyDispatcher {
                   String.class,
                   MethodType.class));
       NOOP_IMPL_MH =
-          lookup.findStatic(
-              IndyDispatcher.class, "noopImpl", MethodType.methodType(void.class));
+          lookup.findStatic(IndyDispatcher.class, "noopImpl", MethodType.methodType(void.class));
     } catch (ReflectiveOperationException e) {
       throw new ExceptionInInitializerError(e);
     }
   }
 
   /**
-   * INVOKEDYNAMIC bootstrap method. Called by the JVM on first execution of each
-   * instrumented call site.
+   * INVOKEDYNAMIC bootstrap method. Called by the JVM on first execution of each instrumented call
+   * site.
    *
-   * <p>Always returns a {@link MutableCallSite}. If resolution succeeds immediately the
-   * target is the resolved handler; otherwise it is a self-relinking trampoline.
+   * <p>Always returns a {@link MutableCallSite}. If resolution succeeds immediately the target is
+   * the resolved handler; otherwise it is a self-relinking trampoline.
    *
-   * @param caller         the lookup context of the instrumented class
-   * @param name           the handler method name (probe-prefixed, e.g. {@code "probeName$handlerMethod"})
-   * @param type           the method type of the call site
+   * @param caller the lookup context of the instrumented class
+   * @param name the handler method name (probe-prefixed, e.g. {@code "probeName$handlerMethod"})
+   * @param type the method type of the call site
    * @param probeClassName the internal name of the probe class (passed as BSM constant)
    */
   public static CallSite bootstrap(
@@ -138,16 +126,15 @@ public final class IndyDispatcher {
   }
 
   /**
-   * Invalidate all live dispatch sites for a given probe. Called by
-   * {@code HandlerRepositoryImpl.unregisterProbe()} on detach. Each site's target is reset
-   * to a noop, so probe handler bodies are not invoked after teardown (prevents crashes
-   * when {@code BTraceRuntime} state has been disposed).
+   * Invalidate all live dispatch sites for a given probe. Called by {@code
+   * HandlerRepositoryImpl.unregisterProbe()} on detach. Each site's target is reset to a noop, so
+   * probe handler bodies are not invoked after teardown (prevents crashes when {@code
+   * BTraceRuntime} state has been disposed).
    *
-   * <p>Sites remain registered. Note: the current implementation installs a direct noop
-   * handle (not a trampoline), so sites do not auto-rebind on re-registration — a
-   * subsequent {@code registerProbe} for the same name creates new call sites on next
-   * bootstrap, which is the common case. See TODO in {@link #invalidateProbe} body for the
-   * tradeoffs.
+   * <p>Sites remain registered. Note: the current implementation installs a direct noop handle (not
+   * a trampoline), so sites do not auto-rebind on re-registration — a subsequent {@code
+   * registerProbe} for the same name creates new call sites on next bootstrap, which is the common
+   * case. See TODO in {@link #invalidateProbe} body for the tradeoffs.
    *
    * @param probeClassName internal name of the probe class to invalidate
    */
@@ -182,8 +169,8 @@ public final class IndyDispatcher {
   }
 
   /**
-   * Attempts a single resolution pass. Returns null when the repository is not yet wired
-   * or when the repository itself returns null / throws.
+   * Attempts a single resolution pass. Returns null when the repository is not yet wired or when
+   * the repository itself returns null / throws.
    */
   private static MethodHandle tryResolve(String probeClassName, String name, MethodType type) {
     HandlerRepository repo = repository;
@@ -200,10 +187,10 @@ public final class IndyDispatcher {
   }
 
   /**
-   * Build a trampoline handle of the call site's type that, on invocation, calls
-   * {@link #relink} to obtain a real target. The result of relink is then invoked with the
-   * original call-site arguments. Once relink returns the resolved MethodHandle, it also
-   * updates {@code mcs.setTarget(...)} so subsequent invocations bypass this trampoline.
+   * Build a trampoline handle of the call site's type that, on invocation, calls {@link #relink} to
+   * obtain a real target. The result of relink is then invoked with the original call-site
+   * arguments. Once relink returns the resolved MethodHandle, it also updates {@code
+   * mcs.setTarget(...)} so subsequent invocations bypass this trampoline.
    */
   private static MethodHandle makeTrampoline(
       MutableCallSite mcs, String probeClassName, String name, MethodType type) {
@@ -214,9 +201,9 @@ public final class IndyDispatcher {
 
   /**
    * Relink hook invoked by the trampoline. Tries to resolve; on success, updates the
-   * MutableCallSite's target so future invocations go directly to the resolved handle.
-   * On failure, returns a noop handle (this single invocation is a no-op, but the
-   * trampoline remains installed — next invocation will retry again).
+   * MutableCallSite's target so future invocations go directly to the resolved handle. On failure,
+   * returns a noop handle (this single invocation is a no-op, but the trampoline remains installed
+   * — next invocation will retry again).
    */
   @SuppressWarnings("unused") // referenced via MethodHandle
   private static MethodHandle relink(
@@ -237,10 +224,9 @@ public final class IndyDispatcher {
   }
 
   /**
-   * Noop handle of the given call-site type. Accepts the call site's argument list and
-   * produces the default value for its return type (void / null / 0) without invoking any
-   * probe code. Used by {@link #invalidateProbe(String)} and by the trampoline when
-   * resolution is still failing.
+   * Noop handle of the given call-site type. Accepts the call site's argument list and produces the
+   * default value for its return type (void / null / 0) without invoking any probe code. Used by
+   * {@link #invalidateProbe(String)} and by the trampoline when resolution is still failing.
    */
   private static MethodHandle noop(MethodType type) {
     Class<?> rt = type.returnType();

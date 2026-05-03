@@ -1,10 +1,24 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.extension;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.openjdk.btrace.core.extensions.PermissionSet;
-import org.openjdk.btrace.extension.impl.ExtensionConfig;
-import org.openjdk.btrace.extension.impl.ExtensionLoaderImpl;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.instrument.ClassDefinition;
@@ -25,14 +39,14 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.openjdk.btrace.core.extensions.PermissionSet;
+import org.openjdk.btrace.extension.impl.ExtensionConfig;
+import org.openjdk.btrace.extension.impl.ExtensionLoaderImpl;
 
 class ExtensionLoaderImplConcurrencyTest {
-  @TempDir
-  Path tempDir;
+  @TempDir Path tempDir;
 
   @Test
   void loadIsIdempotentUnderConcurrency() throws Exception {
@@ -117,12 +131,10 @@ class ExtensionLoaderImplConcurrencyTest {
     private final AtomicInteger appendCount = new AtomicInteger();
 
     @Override
-    public void addTransformer(ClassFileTransformer transformer, boolean canRetransform) {
-    }
+    public void addTransformer(ClassFileTransformer transformer, boolean canRetransform) {}
 
     @Override
-    public void addTransformer(ClassFileTransformer transformer) {
-    }
+    public void addTransformer(ClassFileTransformer transformer) {}
 
     @Override
     public boolean removeTransformer(ClassFileTransformer transformer) {
@@ -135,8 +147,7 @@ class ExtensionLoaderImplConcurrencyTest {
     }
 
     @Override
-    public void retransformClasses(Class<?>... classes) {
-    }
+    public void retransformClasses(Class<?>... classes) {}
 
     @Override
     public boolean isRedefineClassesSupported() {
@@ -144,8 +155,7 @@ class ExtensionLoaderImplConcurrencyTest {
     }
 
     @Override
-    public void redefineClasses(ClassDefinition... definitions) {
-    }
+    public void redefineClasses(ClassDefinition... definitions) {}
 
     @Override
     public boolean isModifiableClass(Class<?> theClass) {
@@ -173,8 +183,7 @@ class ExtensionLoaderImplConcurrencyTest {
     }
 
     @Override
-    public void appendToSystemClassLoaderSearch(JarFile jarfile) {
-    }
+    public void appendToSystemClassLoaderSearch(JarFile jarfile) {}
 
     @Override
     public boolean isNativeMethodPrefixSupported() {
@@ -182,8 +191,7 @@ class ExtensionLoaderImplConcurrencyTest {
     }
 
     @Override
-    public void setNativeMethodPrefix(ClassFileTransformer transformer, String prefix) {
-    }
+    public void setNativeMethodPrefix(ClassFileTransformer transformer, String prefix) {}
 
     @Override
     public void redefineModule(
@@ -192,8 +200,7 @@ class ExtensionLoaderImplConcurrencyTest {
         Map<String, Set<Module>> extraExports,
         Map<String, Set<Module>> extraOpens,
         Set<Class<?>> extraUses,
-        Map<Class<?>, List<Class<?>>> extraProvides) {
-    }
+        Map<Class<?>, List<Class<?>>> extraProvides) {}
 
     @Override
     public boolean isModifiableModule(Module module) {

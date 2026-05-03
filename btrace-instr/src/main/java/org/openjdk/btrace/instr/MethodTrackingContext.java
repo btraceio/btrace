@@ -1,26 +1,18 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the Classpath exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.instr;
 
@@ -32,12 +24,11 @@ import java.util.List;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 import org.openjdk.btrace.core.annotations.Sampled;
-import org.openjdk.btrace.instr.Constants;
 import org.openjdk.btrace.runtime.Interval;
 
 /**
- * Context for emitting method tracking bytecode (sampling and timing). Replaces the template
- * system with direct bytecode generation.
+ * Context for emitting method tracking bytecode (sampling and timing). Replaces the template system
+ * with direct bytecode generation.
  */
 public class MethodTrackingContext {
   private static final String METHOD_COUNTER_CLASS = "org/openjdk/btrace/instr/MethodTracker";
@@ -53,11 +44,13 @@ public class MethodTrackingContext {
   private boolean sampled = false;
   private Sampled.Sampler samplerKind = Sampled.Sampler.None;
   private int samplerMean = -1;
+  private final Collection<Interval> levelIntervals = new ArrayList<>();
 
   // State (per entry point)
   private int entryTsVar = Integer.MIN_VALUE;
   private int sHitVar = Integer.MIN_VALUE;
   private int durationVar = Integer.MIN_VALUE;
+  private int globalLevelVar = Integer.MIN_VALUE;
   private boolean durationComputed = false;
   private boolean prologueEmitted = false;
   private Label elseLabel = null;
@@ -96,6 +89,11 @@ public class MethodTrackingContext {
     this.samplerKind = samplerKind;
     this.samplerMean = samplerMean;
     this.sampled = samplerKind != Sampled.Sampler.None && samplerMean > 0;
+
+    if (levelStr != null && !levelStr.isEmpty()) {
+      Interval itv = Interval.fromString(levelStr);
+      levelIntervals.add(itv);
+    }
 
     if (sampled) {
       MethodTracker.registerCounter(methodId, samplerMean);
@@ -188,6 +186,7 @@ public class MethodTrackingContext {
   public void reset() {
     entryTsVar = Integer.MIN_VALUE;
     sHitVar = Integer.MIN_VALUE;
+    globalLevelVar = Integer.MIN_VALUE;
     durationComputed = false;
   }
 
@@ -197,8 +196,8 @@ public class MethodTrackingContext {
   }
 
   /**
-   * Compute duration for error handlers - no level checks or sampling logic.
-   * Just computes nanoTime() - entryTs and stores to durationVar.
+   * Compute duration for error handlers - no level checks or sampling logic. Just computes
+   * nanoTime() - entryTs and stores to durationVar.
    */
   public void computeDurationForErrorHandler() {
     if (!durationComputed) {
@@ -216,6 +215,68 @@ public class MethodTrackingContext {
       }
       durationComputed = true;
     }
+  }
+
+  /**
+   * Emit level check for a handler. Uses cached level variable to avoid multiple loads. Can be
+   * called multiple times for different handlers - first call loads and caches the level,
+   * subsequent calls reuse the cached value.
+   *
+   * @param levelStr level match condition (e.g., {@code ">=1"})
+   * @return Label to jump to if level check fails, or null if no check needed
+   */
+  public Label emitHandlerLevelCheck(String levelStr) {
+    if (levelStr == null || levelStr.isEmpty()) {
+      return null;
+    }
+
+    Interval itv = Interval.fromString(levelStr);
+
+    // Check if level check is actually needed
+    if (itv.getA() <= 0 && itv.getB() >= Integer.MAX_VALUE) {
+      return null; // Always passes
+    }
+
+    Label skipLabel = new Label();
+
+    // Load level variable (cached if multiple handlers need it)
+    if (helper.shouldCacheLevelVar()) {
+      if (globalLevelVar == Integer.MIN_VALUE) {
+        asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
+        globalLevelVar = helper.storeAsNew();
+      } else {
+        asm.loadLocal(Type.INT_TYPE, globalLevelVar);
+      }
+    } else {
+      // Single handler case: just load without caching
+      asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC);
+    }
+
+    // Perform comparison based on interval
+    if (itv.getA() > 0 && itv.getB() >= Integer.MAX_VALUE) {
+      // Check level >= A (or level < A, skip)
+      asm.ldc(itv.getA()).jump(IF_ICMPLT, skipLabel);
+    } else if (itv.getA() <= 0 && itv.getB() < Integer.MAX_VALUE) {
+      // Check level <= B (or level > B, skip)
+      asm.ldc(itv.getB()).jump(IF_ICMPGT, skipLabel);
+    } else {
+      // Range check: A <= level <= B
+      // Check both lower and upper bounds
+      if (itv.getA() > 0) {
+        asm.ldc(itv.getA()).jump(IF_ICMPLT, skipLabel); // Skip if level < A
+        // Reload for second check (from cache if available, otherwise from static field)
+        if (helper.shouldCacheLevelVar()) {
+          asm.loadLocal(Type.INT_TYPE, globalLevelVar);
+        } else {
+          asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC);
+        }
+      }
+      if (itv.getB() < Integer.MAX_VALUE) {
+        asm.ldc(itv.getB()).jump(IF_ICMPGT, skipLabel); // Skip if level > B
+      }
+    }
+
+    return skipLabel;
   }
 
   // Private helper methods for bytecode generation
@@ -383,12 +444,65 @@ public class MethodTrackingContext {
   }
 
   private Label addLevelChecks(Label skip, Runnable initializer) {
-    // Level checks moved to MethodHandle layer (HandlerRepositoryImpl.applyLevelGuard)
-    // No bytecode-level guards needed; INVOKEDYNAMIC always executes, and the linked
-    // MethodHandle performs the level check before invoking the real handler.
-    if (initializer != null) {
-      initializer.run();
+    Label skipTarget = null;
+    if (!levelIntervals.isEmpty()) {
+      List<Interval> optimized = Interval.invert(levelIntervals);
+      boolean generateBranch = true;
+
+      if (optimized.size() == 1) {
+        Interval i = optimized.get(0);
+        if (i.isNone() || (i.getA() == Integer.MIN_VALUE && i.getB() == -1)) {
+          generateBranch = false;
+        }
+      }
+
+      if (generateBranch) {
+        if (initializer != null) {
+          initializer.run();
+        }
+
+        skipTarget = skip != null ? skip : new Label();
+
+        for (Interval i : optimized) {
+          Label nextCheck = new Label();
+          if (globalLevelVar == Integer.MIN_VALUE) {
+            asm.getStatic(probeClassName, Constants.BTRACE_LEVEL_FLD, Constants.INT_DESC).dup();
+            globalLevelVar = helper.storeAsNew();
+          } else {
+            asm.loadLocal(Type.INT_TYPE, globalLevelVar);
+          }
+
+          boolean stackConsumed = false;
+          if (i.getA() > Integer.MIN_VALUE) {
+            stackConsumed = true;
+            if (i.getA() == 0) {
+              asm.jump(IFLT, nextCheck);
+            } else {
+              asm.ldc(i.getA()).jump(IF_ICMPLT, nextCheck);
+            }
+          }
+
+          if (i.getB() < Integer.MAX_VALUE) {
+            if (stackConsumed) {
+              asm.loadLocal(Type.INT_TYPE, globalLevelVar);
+            }
+            if (i.getB() == 0) {
+              asm.jump(IFLE, skipTarget);
+            } else {
+              asm.ldc(i.getB()).jump(IF_ICMPLE, skipTarget);
+            }
+          } else {
+            Label l = new Label();
+            asm.label(l);
+            helper.insertFrameSameStack(l);
+            asm.jump(GOTO, skipTarget);
+          }
+
+          asm.label(nextCheck);
+          helper.insertFrameSameStack(nextCheck);
+        }
+      }
     }
-    return skip;
+    return skipTarget;
   }
 }

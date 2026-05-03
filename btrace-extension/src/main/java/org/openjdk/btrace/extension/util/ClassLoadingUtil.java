@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.openjdk.btrace.extension.util;
 
 import java.io.IOException;
@@ -14,8 +30,8 @@ import java.util.ServiceLoader;
 import java.util.function.Supplier;
 
 /**
- * Helper utilities for extension implementations to resolve classes/services using
- * the application class loader context without polluting bootstrap or system classpaths.
+ * Helper utilities for extension implementations to resolve classes/services using the application
+ * class loader context without polluting bootstrap or system classpaths.
  */
 public final class ClassLoadingUtil {
   private ClassLoadingUtil() {}
@@ -31,7 +47,8 @@ public final class ClassLoadingUtil {
   }
 
   /** Attempts to load a class by name using the given preferred loader, then TCCL, then system. */
-  public static Class<?> load(String className, ClassLoader preferred) throws ClassNotFoundException {
+  public static Class<?> load(String className, ClassLoader preferred)
+      throws ClassNotFoundException {
     ClassNotFoundException last = null;
     if (preferred != null) {
       try {
@@ -52,7 +69,8 @@ public final class ClassLoadingUtil {
   }
 
   /** Convenience: attempt to load using the defining loader of a context object. */
-  public static Class<?> loadFromContext(String className, Object context) throws ClassNotFoundException {
+  public static Class<?> loadFromContext(String className, Object context)
+      throws ClassNotFoundException {
     return load(className, definingLoader(context));
   }
 
@@ -95,7 +113,8 @@ public final class ClassLoadingUtil {
   /** Loads the first available service implementation using the given loader (or TCCL if null). */
   public static <S> S loadService(Class<S> service, ClassLoader loader) {
     ClassLoader cl = (loader != null ? loader : tccl());
-    ServiceLoader<S> sl = (cl != null ? ServiceLoader.load(service, cl) : ServiceLoader.load(service));
+    ServiceLoader<S> sl =
+        (cl != null ? ServiceLoader.load(service, cl) : ServiceLoader.load(service));
     Iterator<S> it = sl.iterator();
     return it.hasNext() ? it.next() : null;
   }
@@ -104,7 +123,8 @@ public final class ClassLoadingUtil {
   public static <S> List<S> loadServices(Class<S> service, ClassLoader loader) {
     List<S> out = new ArrayList<>();
     ClassLoader cl = (loader != null ? loader : tccl());
-    ServiceLoader<S> sl = (cl != null ? ServiceLoader.load(service, cl) : ServiceLoader.load(service));
+    ServiceLoader<S> sl =
+        (cl != null ? ServiceLoader.load(service, cl) : ServiceLoader.load(service));
     for (S s : sl) {
       out.add(s);
     }

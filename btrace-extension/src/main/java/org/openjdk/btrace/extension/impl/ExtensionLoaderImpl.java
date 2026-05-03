@@ -1,34 +1,20 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.openjdk.btrace.extension.impl;
-
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionLoader;
-import org.openjdk.btrace.extension.ExtensionRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
@@ -42,22 +28,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
+import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
+import org.openjdk.btrace.extension.ExtensionLoader;
+import org.openjdk.btrace.extension.ExtensionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * Manages discovery, loading, and lifecycle of BTrace extensions.
- */
-public final class ExtensionLoaderImpl extends ExtensionLoader implements java.io.Closeable {
+/** Manages discovery, loading, and lifecycle of BTrace extensions. */
+public final class ExtensionLoaderImpl extends ExtensionLoader {
   private static final Logger log = LoggerFactory.getLogger(ExtensionLoaderImpl.class);
 
   private final List<ExtensionRepository> repositories;
   private final ClassLoader parentClassLoader;
   private final ExtensionConfig config;
   private final Instrumentation instrumentation;
-  private final String btraceVersion;
   private final Map<String, ExtensionDescriptorDTO> loadedExtensions;
-  // Populated once by discoverExtensions() at startup; read-only after that.
   private final Map<String, ExtensionDescriptorDTO> availableExtensions;
-  private final List<JarFile> openApiJars = new ArrayList<>();
 
   /**
    * Create an extension loader.
@@ -71,27 +57,25 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
       List<ExtensionRepository> repositories,
       ClassLoader parentClassLoader,
       ExtensionConfig config,
-      Instrumentation instrumentation,
-      String btraceVersion) {
+      Instrumentation instrumentation) {
     this.repositories = new ArrayList<>(repositories);
     this.parentClassLoader = parentClassLoader;
     this.config = config != null ? config : ExtensionConfig.createDefault();
     this.instrumentation = instrumentation;
-    this.btraceVersion = btraceVersion != null ? btraceVersion : "unknown";
     this.loadedExtensions = new HashMap<>();
     this.availableExtensions = new HashMap<>();
   }
 
   /**
-   * Discover all available extensions from configured repositories.
-   * This should be called once during agent startup.
+   * Discover all available extensions from configured repositories. This should be called once
+   * during agent startup.
    *
    * @return list of discovered extensions
    */
   @Override
   public List<ExtensionDescriptorDTO> discoverExtensions() {
-    log.info("Discovering extensions from {} repositories (config: {})",
-        repositories.size(), config);
+    log.info(
+        "Discovering extensions from {} repositories (config: {})", repositories.size(), config);
 
     List<ExtensionDescriptorDTO> discovered = new ArrayList<>();
 
@@ -124,8 +108,12 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
       availableExtensions.put(ext.getId(), ext);
     }
 
-    log.info("Discovered {} extension(s): {}", filtered.size(),
-        filtered.stream().map(e -> e.getId() + ":" + e.getVersion()).collect(Collectors.joining(", ")));
+    log.info(
+        "Discovered {} extension(s): {}",
+        filtered.size(),
+        filtered.stream()
+            .map(e -> e.getId() + ":" + e.getVersion())
+            .collect(Collectors.joining(", ")));
 
     // Load all extensions immediately to add them to bootstrap classpath
     // This is required so BTrace scripts can reference extension classes
@@ -150,52 +138,35 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
   }
 
   /**
-   * Load an extension and make its classes available.
-   * This is idempotent - loading an already-loaded extension is a no-op.
+   * Load an extension and make its classes available. This is idempotent - loading an
+   * already-loaded extension is a no-op.
    *
    * @param descriptor extension to load
    * @return true if loaded successfully, false otherwise
    */
   @Override
   public boolean load(ExtensionDescriptorDTO descriptor) {
-    // Synchronize on descriptor to prevent concurrent loading of the same extension
-    synchronized (descriptor) {
-      if (descriptor.isLoaded()) {
-        log.debug("Extension {} is already loaded", descriptor.getId());
-        return true;
-      }
-      return doLoad(descriptor);
+    if (descriptor.isLoaded()) {
+      log.debug("Extension {} is already loaded", descriptor.getId());
+      return true;
     }
-  }
 
-  private boolean doLoad(ExtensionDescriptorDTO descriptor) {
-    log.info("Loading extension: {} version {} from {}",
-        descriptor.getId(), descriptor.getVersion(), descriptor.getJarPath());
-
-    // Reject extensions that require a newer BTrace than what is running.
-    String requiredApi = descriptor.getBtraceApiVersion();
-    if (requiredApi != null && !requiredApi.isEmpty()) {
-      BTraceVersionRange requirement = BTraceVersionRange.parse(requiredApi);
-      if (!requirement.satisfiedBy(btraceVersion)) {
-        log.error(
-            "Extension {} {} requires BTrace API {} but running version is {} — skipping",
-            descriptor.getId(), descriptor.getVersion(), requiredApi, btraceVersion);
-        return false;
-      }
-    }
+    log.info(
+        "Loading extension: {} version {} from {}",
+        descriptor.getId(),
+        descriptor.getVersion(),
+        descriptor.getJarPath());
 
     try {
       // Load any required extensions first
       for (String requiredId : descriptor.getRequiredExtensions()) {
         ExtensionDescriptorDTO required = availableExtensions.get(requiredId);
         if (required == null) {
-          log.error("Required extension {} not found for {}",
-              requiredId, descriptor.getId());
+          log.error("Required extension {} not found for {}", requiredId, descriptor.getId());
           return false;
         }
         if (!load(required)) {
-          log.error("Failed to load required extension {} for {}",
-              requiredId, descriptor.getId());
+          log.error("Failed to load required extension {} for {}", requiredId, descriptor.getId());
           return false;
         }
       }
@@ -222,11 +193,8 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
       }
 
       // Add API JAR to bootstrap classpath
-      // Keep the JarFile open for the lifetime of the loader; HotSpot may need
-      // the file descriptor to read class bytes after appendToBootstrapClassLoaderSearch.
       JarFile apiJarFile = new JarFile(apiJar.toFile());
       instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
-      openApiJars.add(apiJarFile);
       log.debug("Added {} to bootstrap classpath", apiJar.getFileName());
 
       // Create classloader for implementation JAR
@@ -236,15 +204,17 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
       descriptor.setClassLoader(classLoader);
       loadedExtensions.put(descriptor.getId(), descriptor);
 
-      log.info("Successfully loaded extension: {} version {} (api: {}, impl: {})",
-          descriptor.getId(), descriptor.getVersion(),
-          apiJar.getFileName(), implJar.getFileName());
+      log.info(
+          "Successfully loaded extension: {} version {} (api: {}, impl: {})",
+          descriptor.getId(),
+          descriptor.getVersion(),
+          apiJar.getFileName(),
+          implJar.getFileName());
 
       return true;
 
     } catch (Exception e) {
-      log.error(
-          "Failed to load extension {}: {}", descriptor.getId(), e.getMessage(), e);
+      log.error("Failed to load extension {}: {}", descriptor.getId(), e.getMessage(), e);
       return false;
     }
   }
@@ -252,44 +222,40 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
   /**
    * Load an embedded extension using ClassDataLoader.
    *
-   * <p>For embedded extensions:
-   * - API classes are already on bootstrap (flattened into agent JAR as .class files)
-   * - Impl classes are stored as .classdata files and loaded via ClassDataLoader
+   * <p>For embedded extensions: - API classes are already on bootstrap (flattened into agent JAR as
+   * .class files) - Impl classes are stored as .classdata files and loaded via ClassDataLoader
    *
    * @param descriptor embedded extension descriptor
    * @return true if loaded successfully
    */
   private boolean loadEmbedded(ExtensionDescriptorDTO descriptor) {
-    log.info("Loading embedded extension: {} version {}", descriptor.getId(), descriptor.getVersion());
+    log.info(
+        "Loading embedded extension: {} version {}", descriptor.getId(), descriptor.getVersion());
 
     // API classes are already on bootstrap via Boot-Class-Path manifest attribute
     // (they were flattened into the agent JAR at build time as .class files)
     log.debug("API classes for {} already on bootstrap classpath", descriptor.getId());
 
-    // Create ClassDataLoader for implementation classes (.classdata resources).
-    // parentClassLoader may be null when the caller wants the JVM bootstrap classloader
-    // as the parent (e.g. the BTrace agent itself runs on the bootstrap classpath).
-    // ClassDataLoader passes it directly to ClassLoader(ClassLoader), which accepts null
-    // as a well-defined signal meaning "use the bootstrap classloader as parent" — no
-    // NullPointerException is thrown. API classes are already on bootstrap via
-    // Boot-Class-Path, so bootstrap delegation is the correct behaviour in that case.
+    // Create ClassDataLoader for implementation classes (.classdata resources)
     ClassLoader resourceLoader = ExtensionLoaderImpl.class.getClassLoader();
-    ClassDataLoader classLoader = new ClassDataLoader(
-        descriptor.getId(), resourceLoader, parentClassLoader);
+    ClassDataLoader classLoader =
+        new ClassDataLoader(descriptor.getId(), resourceLoader, parentClassLoader);
 
     descriptor.setClassLoader(classLoader);
     loadedExtensions.put(descriptor.getId(), descriptor);
 
-    log.info("Successfully loaded embedded extension: {} version {}",
-        descriptor.getId(), descriptor.getVersion());
+    log.info(
+        "Successfully loaded embedded extension: {} version {}",
+        descriptor.getId(),
+        descriptor.getVersion());
 
     return true;
   }
 
   /**
-   * Ensure the extension API JAR is appended to the bootstrap classpath without
-   * attempting to load the implementation JAR. This enables BTrace to generate
-   * shims against the API when implementation use is blocked (e.g., permissions).
+   * Ensure the extension API JAR is appended to the bootstrap classpath without attempting to load
+   * the implementation JAR. This enables BTrace to generate shims against the API when
+   * implementation use is blocked (e.g., permissions).
    *
    * @param descriptor the extension descriptor
    * @return true if the API JAR was found and appended; false otherwise
@@ -309,23 +275,23 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
         log.warn("No API JAR found for extension {} in {}", descriptor.getId(), extensionDir);
         return false;
       }
-      // Keep the JarFile open for the lifetime of the loader; HotSpot may need
-      // the file descriptor to read class bytes after appendToBootstrapClassLoaderSearch.
       JarFile apiJarFile = new JarFile(apiJar.toFile());
       instrumentation.appendToBootstrapClassLoaderSearch(apiJarFile);
-      openApiJars.add(apiJarFile);
-      log.debug("Ensured API on bootstrap for extension {} via {}", descriptor.getId(), apiJar.getFileName());
+      log.debug(
+          "Ensured API on bootstrap for extension {} via {}",
+          descriptor.getId(),
+          apiJar.getFileName());
       return true;
     } catch (Exception e) {
-      log.warn("Failed to ensure API on bootstrap for {}: {}", descriptor.getId(), e.getMessage(), e);
+      log.warn(
+          "Failed to ensure API on bootstrap for {}: {}", descriptor.getId(), e.getMessage(), e);
       return false;
     }
   }
 
-  /**
-   * Find the API JAR in the extension directory.
-   */
-  private java.nio.file.Path findApiJar(java.nio.file.Path extensionDir) throws java.io.IOException {
+  /** Find the API JAR in the extension directory. */
+  private java.nio.file.Path findApiJar(java.nio.file.Path extensionDir)
+      throws java.io.IOException {
     try (java.nio.file.DirectoryStream<java.nio.file.Path> stream =
         java.nio.file.Files.newDirectoryStream(extensionDir, "*-api.jar")) {
       for (java.nio.file.Path path : stream) {
@@ -336,8 +302,8 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
   }
 
   /**
-   * Find the implementation JAR. First try reading from API JAR manifest,
-   * then fall back to scanning directory.
+   * Find the implementation JAR. First try reading from API JAR manifest, then fall back to
+   * scanning directory.
    */
   private java.nio.file.Path findImplJar(java.nio.file.Path extensionDir, java.nio.file.Path apiJar)
       throws java.io.IOException {
@@ -395,20 +361,9 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
     return availableExtensions.get(extensionId);
   }
 
-  @Override
-  public void close() {
-    // openApiJars were registered with the bootstrap classloader via
-    // appendToBootstrapClassLoaderSearch and must not be closed; the JVM may
-    // continue reading class bytes from them after registration. The OS reclaims
-    // file descriptors at JVM exit.
-    openApiJars.clear();
-  }
-
   /**
-   * Resolve conflicts when multiple versions of the same extension are discovered.
-   * Resolution strategy:
-   * 1. Higher priority repository wins
-   * 2. Within same priority, latest version wins
+   * Resolve conflicts when multiple versions of the same extension are discovered. Resolution
+   * strategy: 1. Higher priority repository wins 2. Within same priority, latest version wins
    *
    * @param discovered list of all discovered extensions
    * @return list of extensions with conflicts resolved
@@ -431,18 +386,20 @@ public final class ExtensionLoaderImpl extends ExtensionLoader implements java.i
       }
 
       // Multiple versions - resolve conflict
-      log.debug("Resolving conflict for extension {}: {} candidates",
-          entry.getKey(), candidates.size());
+      log.debug(
+          "Resolving conflict for extension {}: {} candidates", entry.getKey(), candidates.size());
 
       ExtensionDescriptorDTO winner =
           candidates.stream()
               .max(
-                  Comparator.comparingInt((ExtensionDescriptorDTO e) -> e.getRepository().getPriority())
+                  Comparator.comparingInt(
+                          (ExtensionDescriptorDTO e) -> e.getRepository().getPriority())
                       .thenComparing(ExtensionDescriptorDTO::getVersion))
               .orElse(null);
 
       if (winner != null) {
-        log.info("Selected extension {} version {} from {} (priority {})",
+        log.info(
+            "Selected extension {} version {} from {} (priority {})",
             winner.getId(),
             winner.getVersion(),
             winner.getRepository().getLocation(),
