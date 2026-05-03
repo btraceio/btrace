@@ -46,11 +46,7 @@ public final class LinkerInstrumentor {
       mv.visitTryCatchBlock(tryStart, tryEnd, finallyStart, null);
       mv.visitLabel(tryStart);
       mv.visitMethodInsn(
-          Opcodes.INVOKESTATIC,
-          "org/openjdk/btrace/runtime/LinkingFlag",
-          "guardLinking",
-          "()I",
-          false);
+          Opcodes.INVOKESTATIC, "io/btrace/runtime/LinkingFlag", "guardLinking", "()I", false);
       mv.visitInsn(Opcodes.POP); // discard the result
       super.visitCode();
     }
@@ -65,7 +61,7 @@ public final class LinkerInstrumentor {
     public void visitInsn(int opcode) {
       if (opcode == Opcodes.ARETURN) {
         mv.visitMethodInsn(
-            Opcodes.INVOKESTATIC, "org/openjdk/btrace/runtime/LinkingFlag", "reset", "()V", false);
+            Opcodes.INVOKESTATIC, "io/btrace/runtime/LinkingFlag", "reset", "()V", false);
       }
       super.visitInsn(opcode);
     }
@@ -76,7 +72,7 @@ public final class LinkerInstrumentor {
       mv.visitLabel(finallyStart);
       mv.visitVarInsn(Opcodes.ASTORE, maxVarIndex);
       mv.visitMethodInsn(
-          Opcodes.INVOKESTATIC, "org/openjdk/btrace/runtime/LinkingFlag", "reset", "()V", false);
+          Opcodes.INVOKESTATIC, "io/btrace/runtime/LinkingFlag", "reset", "()V", false);
       mv.visitVarInsn(Opcodes.ALOAD, maxVarIndex);
       mv.visitInsn(Opcodes.ATHROW);
       super.visitMaxs(0, maxVarIndex);

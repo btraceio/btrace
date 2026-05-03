@@ -140,7 +140,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
           }
           delegate.addServiceField(name, internal);
         }
-        if (type.equals("Lorg/openjdk/btrace/core/annotations/Event;")) {
+        if (type.equals("Lio/btrace/core/annotations/Event;")) {
           av =
               new AnnotationVisitor(Opcodes.ASM8, av) {
                 @Override

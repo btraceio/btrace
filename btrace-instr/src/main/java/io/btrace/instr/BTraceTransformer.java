@@ -253,7 +253,7 @@ public final class BTraceTransformer implements ClassFileTransformer {
         || internalName.startsWith("org/omg/")
         || internalName.startsWith("org/w3c/")
         || internalName.startsWith("org/xml/")
-        || internalName.startsWith("org/openjdk/btrace/"));
+        || internalName.startsWith("io/btrace/"));
   }
 
   static class Filter {

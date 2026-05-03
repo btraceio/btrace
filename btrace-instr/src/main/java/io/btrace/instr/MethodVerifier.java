@@ -328,6 +328,6 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   }
 
   private boolean isJfrEventType(String typeName) {
-    return "org/openjdk/btrace/core/jfr/JfrEvent".equals(typeName);
+    return "io/btrace/core/jfr/JfrEvent".equals(typeName);
   }
 }

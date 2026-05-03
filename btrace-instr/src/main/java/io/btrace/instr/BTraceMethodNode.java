@@ -77,7 +77,7 @@ public class BTraceMethodNode extends MethodNode {
   public AnnotationVisitor visitAnnotation(String type, boolean visible) {
     AnnotationVisitor av = super.visitAnnotation(type, visible);
 
-    if (type.startsWith("Lorg/openjdk/btrace/core/annotations/")) {
+    if (type.startsWith("Lio/btrace/core/annotations/")) {
       isBTraceHandler = true;
     }
     if (type.equals(Constants.ONMETHOD_DESC)) {

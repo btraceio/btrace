@@ -82,24 +82,21 @@ import org.slf4j.LoggerFactory;
 final class Preprocessor {
   private static final Logger log = LoggerFactory.getLogger(Preprocessor.class);
 
-  private static final String ANNOTATIONS_PREFIX = "org/openjdk/btrace/core/annotations/";
+  private static final String ANNOTATIONS_PREFIX = "io/btrace/core/annotations/";
   private static final Type TLS_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "TLS;");
   private static final Type EXPORT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Export;");
   private static final Type INJECTED_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Injected;");
   private static final Type EVENT_TYPE = Type.getType("L" + ANNOTATIONS_PREFIX + "Event;");
-  private static final String TIMERHANDLER_INTERNAL =
-      "org/openjdk/btrace/core/handlers/TimerHandler";
+  private static final String TIMERHANDLER_INTERNAL = "io/btrace/core/handlers/TimerHandler";
   private static final String TIMERHANDLER_DESC = "L" + TIMERHANDLER_INTERNAL + ";";
-  private static final String EVENTHANDLER_INTERNAL =
-      "org/openjdk/btrace/core/handlers/EventHandler";
+  private static final String EVENTHANDLER_INTERNAL = "io/btrace/core/handlers/EventHandler";
   private static final String EVENTHANDLER_DESC = "L" + EVENTHANDLER_INTERNAL + ";";
-  private static final String ERRORHANDLER_INTERNAL =
-      "org/openjdk/btrace/core/handlers/ErrorHandler";
+  private static final String ERRORHANDLER_INTERNAL = "io/btrace/core/handlers/ErrorHandler";
   private static final String ERRORHANDLER_DESC = "L" + ERRORHANDLER_INTERNAL + ";";
-  private static final String EXITHANDLER_INTERNAL = "org/openjdk/btrace/core/handlers/ExitHandler";
+  private static final String EXITHANDLER_INTERNAL = "io/btrace/core/handlers/ExitHandler";
   private static final String EXITHANDLER_DESC = "L" + EXITHANDLER_INTERNAL + ";";
   private static final String LOWMEMORYHANDLER_INTERNAL =
-      "org/openjdk/btrace/core/handlers/LowMemoryHandler";
+      "io/btrace/core/handlers/LowMemoryHandler";
   private static final String LOWMEMORYHANDLER_DESC = "L" + LOWMEMORYHANDLER_INTERNAL + ";";
   private static final String NEW_TLS_DESC =
       "(" + Constants.OBJECT_DESC + ")" + Constants.THREAD_LOCAL_DESC;
@@ -132,8 +129,7 @@ final class Preprocessor {
       "(" + Constants.BTRACERTBRIDGE_DESC + ")" + Constants.BOOLEAN_DESC;
   private static final String BTRACERT_HANDLE_EXCEPTION_DESC =
       "(" + Constants.THROWABLE_DESC + ")" + Constants.VOID_DESC;
-  private static final String RT_CTX_INTERNAL =
-      "org/openjdk/btrace/core/extensions/ExtensionContext";
+  private static final String RT_CTX_INTERNAL = "io/btrace/core/extensions/ExtensionContext";
   private static final String RT_CTX_DESC = "L" + RT_CTX_INTERNAL + ";";
   private static final Type RT_CTX_TYPE = Type.getType(RT_CTX_DESC);
   private static final String RT_SERVICE_CTR_DESC = "(" + RT_CTX_DESC + ")V";
@@ -144,15 +140,13 @@ final class Preprocessor {
   private static final String GET_EXTENSION_DESC =
       "(" + Constants.CLASS_DESC + ")" + Constants.EXTENSION_DESC;
 
-  private static final String JFR_EVENT_TEMPLATE_INTERNAL =
-      "org/openjdk/btrace/core/jfr/JfrEvent$Template";
+  private static final String JFR_EVENT_TEMPLATE_INTERNAL = "io/btrace/core/jfr/JfrEvent$Template";
   private static final String JFR_EVENT_TEMPLATE_DESC = "L" + JFR_EVENT_TEMPLATE_INTERNAL + ";";
   private static final String JFR_EVENT_TEMPLATE_FIELD_INTERNAL =
-      "org/openjdk/btrace/core/jfr/JfrEvent$Template$Field";
+      "io/btrace/core/jfr/JfrEvent$Template$Field";
   private static final String JFR_EVENT_TEMPLATE_FIELD_DESC =
       "L" + JFR_EVENT_TEMPLATE_FIELD_INTERNAL + ";";
-  private static final String JFR_EVENT_FACTORY_INTERNAL =
-      "org/openjdk/btrace/core/jfr/JfrEvent$Factory";
+  private static final String JFR_EVENT_FACTORY_INTERNAL = "io/btrace/core/jfr/JfrEvent$Factory";
   private static final String JFR_EVENT_FACTORY_DESC = "L" + JFR_EVENT_FACTORY_INTERNAL + ";";
 
   private static final Map<String, String> BOX_TYPE_MAP = new HashMap<>();
@@ -369,7 +363,7 @@ final class Preprocessor {
       eventsInit.add(
           new MethodInsnNode(
               Opcodes.INVOKESTATIC,
-              "org/openjdk/btrace/core/BTraceRuntime",
+              "io/btrace/core/BTraceRuntime",
               "createEventFactory",
               "(" + JFR_EVENT_TEMPLATE_DESC + ")" + JFR_EVENT_FACTORY_DESC,
               false));
@@ -378,7 +372,7 @@ final class Preprocessor {
               Opcodes.PUTSTATIC,
               cn.name,
               eventEntry.getKey(),
-              "Lorg/openjdk/btrace/core/jfr/JfrEvent$Factory;"));
+              "Lio/btrace/core/jfr/JfrEvent$Factory;"));
     }
     return eventsInit;
   }
@@ -1611,7 +1605,7 @@ final class Preprocessor {
     Handle bsm =
         new Handle(
             Opcodes.H_INVOKESTATIC,
-            "org/openjdk/btrace/runtime/ExtensionIndy",
+            "io/btrace/runtime/ExtensionIndy",
             "bootstrapFieldGet",
             mt.toMethodDescriptorString(),
             false);
@@ -1738,10 +1732,7 @@ final class Preprocessor {
     list.add(msg != null ? new LdcInsnNode(msg) : new InsnNode(Opcodes.ACONST_NULL));
     list.add(
         new MethodInsnNode(
-            Opcodes.INVOKESTATIC,
-            "org/openjdk/btrace/core/DebugSupport",
-            "info",
-            "(Ljava/lang/String;)V"));
+            Opcodes.INVOKESTATIC, "io/btrace/core/DebugSupport", "info", "(Ljava/lang/String;)V"));
     return list;
   }
 

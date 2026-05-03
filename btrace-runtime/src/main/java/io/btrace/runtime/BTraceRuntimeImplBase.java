@@ -975,7 +975,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
       } catch (LinkageError le) {
         URL btracePkg = null;
         if (loader != null) {
-          btracePkg = loader.getResource("org/openjdk/btrace");
+          btracePkg = loader.getResource("io/btrace");
         }
 
         if (btracePkg == null) {

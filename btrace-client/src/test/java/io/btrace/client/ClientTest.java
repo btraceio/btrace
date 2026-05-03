@@ -50,7 +50,7 @@ class ClientTest {
       jos.closeEntry();
 
       // Add a marker class to make it a valid JAR
-      JarEntry classEntry = new JarEntry("org/openjdk/btrace/client/Client.class");
+      JarEntry classEntry = new JarEntry("io/btrace/client/Client.class");
       jos.putNextEntry(classEntry);
       jos.write(new byte[0]);
       jos.closeEntry();

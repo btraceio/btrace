@@ -103,7 +103,7 @@ class BTraceTransformerEarlyExitTest {
     byte[] result =
         transformer.transform(
             nonBootstrapNonSystemLoader(),
-            "org/openjdk/btrace/agent/Main$$Lambda$36",
+            "io/btrace/agent/Main$$Lambda$36",
             null,
             null,
             new byte[] {0, 0});
@@ -116,7 +116,7 @@ class BTraceTransformerEarlyExitTest {
     byte[] result =
         transformer.transform(
             nonBootstrapNonSystemLoader(),
-            "org/openjdk/btrace/agent/Main$$Lambda$12/0x00000008000ab040",
+            "io/btrace/agent/Main$$Lambda$12/0x00000008000ab040",
             null,
             null,
             new byte[] {0, 0});

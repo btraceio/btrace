@@ -70,7 +70,7 @@ class FatAgentMojoTest {
     @Test
     @DisplayName("resolves nested path")
     void resolvesNestedPath() throws IOException {
-      Path result = mojo.resolveSecurely(baseDir, "org/openjdk/btrace/core/BTrace.class");
+      Path result = mojo.resolveSecurely(baseDir, "io/btrace/core/BTrace.class");
 
       assertTrue(result.startsWith(baseDir));
       assertTrue(result.toString().endsWith("BTrace.class"));

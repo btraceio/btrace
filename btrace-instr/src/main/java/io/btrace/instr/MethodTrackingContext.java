@@ -27,7 +27,7 @@ import org.objectweb.asm.Type;
  * with direct bytecode generation.
  */
 public class MethodTrackingContext {
-  private static final String METHOD_COUNTER_CLASS = "org/openjdk/btrace/instr/MethodTracker";
+  private static final String METHOD_COUNTER_CLASS = "io/btrace/instr/MethodTracker";
 
   private final Assembler asm;
   private final MethodInstrumentorHelper helper;

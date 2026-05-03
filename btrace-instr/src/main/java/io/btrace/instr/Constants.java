@@ -66,7 +66,7 @@ public abstract class Constants {
   public static final String OBJECT_DESC = "L" + OBJECT_INTERNAL + ";";
   public static final Type OBJECT_TYPE = Type.getType(OBJECT_DESC);
 
-  public static final String ANYTYPE_INTERNAL = "org/openjdk/btrace/core/types/AnyType";
+  public static final String ANYTYPE_INTERNAL = "io/btrace/core/types/AnyType";
   public static final String ANYTYPE_DESC = "L" + ANYTYPE_INTERNAL + ";";
   public static final Type ANYTYPE_TYPE = Type.getType(ANYTYPE_DESC);
 
@@ -89,15 +89,13 @@ public abstract class Constants {
   public static final String THROWABLE_DESC = "L" + THROWABLE_INTERNAL + ";";
   public static final Type THROWABLE_TYPE = Type.getType(THROWABLE_DESC);
 
-  public static final String BTRACERTACCESS_INTERNAL =
-      "org/openjdk/btrace/runtime/BTraceRuntimeAccess";
+  public static final String BTRACERTACCESS_INTERNAL = "io/btrace/runtime/BTraceRuntimeAccess";
   public static final String BTRACERTACCESS_DESC = "L" + BTRACERTACCESS_INTERNAL + ";";
-  public static final String BTRACERT_INTERNAL = "org/openjdk/btrace/core/BTraceRuntime";
+  public static final String BTRACERT_INTERNAL = "io/btrace/core/BTraceRuntime";
   public static final String BTRACERT_DESC = "L" + BTRACERT_INTERNAL + ";";
-  public static final String BTRACERTIMPL_INTERNAL = "org/openjdk/btrace/core/BTraceRuntime$Impl";
+  public static final String BTRACERTIMPL_INTERNAL = "io/btrace/core/BTraceRuntime$Impl";
   public static final String BTRACERTIMPL_DESC = "L" + BTRACERTIMPL_INTERNAL + ";";
-  public static final String BTRACERTBRIDGE_INTERNAL =
-      "org/openjdk/btrace/core/BTraceRuntimeBridge";
+  public static final String BTRACERTBRIDGE_INTERNAL = "io/btrace/core/BTraceRuntimeBridge";
   public static final String BTRACERTBRIDGE_DESC = "L" + BTRACERTBRIDGE_INTERNAL + ";";
   public static final Type BTRACERT_TYPE = Type.getType(BTRACERT_DESC);
 

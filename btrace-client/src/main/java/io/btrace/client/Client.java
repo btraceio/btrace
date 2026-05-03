@@ -1199,7 +1199,7 @@ public class Client {
   private boolean computeIsMaskedJar(File jarFile) {
     try (JarFile jar = new JarFile(jarFile)) {
       // Check for Loader class (unmasked entry point)
-      if (jar.getJarEntry("org/openjdk/btrace/boot/Loader.class") == null) {
+      if (jar.getJarEntry("io/btrace/boot/Loader.class") == null) {
         return false;
       }
       // Check for masked agent classes
