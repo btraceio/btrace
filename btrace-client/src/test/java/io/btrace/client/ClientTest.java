@@ -62,20 +62,14 @@ class ClientTest {
   @Test
   void testConstructorWithOverrides() {
     String agentJar = "/path/to/agent.jar";
-    String bootJar = "/path/to/boot.jar";
 
-    Client client =
-        new Client(2020, null, ".", false, false, false, false, null, null, agentJar, bootJar);
+    Client client = new Client(2020, null, ".", false, false, false, false, null, null, agentJar);
 
     // Use reflection to verify private fields (since they're not exposed)
     try {
       Field agentField = Client.class.getDeclaredField("agentJarOverride");
       agentField.setAccessible(true);
       assertEquals(agentJar, agentField.get(client));
-
-      Field bootField = Client.class.getDeclaredField("bootJarOverride");
-      bootField.setAccessible(true);
-      assertEquals(bootJar, bootField.get(client));
     } catch (Exception e) {
       fail("Failed to access private fields: " + e.getMessage());
     }
@@ -83,16 +77,12 @@ class ClientTest {
 
   @Test
   void testConstructorWithNullOverrides() {
-    Client client = new Client(2020, null, ".", false, false, false, false, null, null, null, null);
+    Client client = new Client(2020, null, ".", false, false, false, false, null, null, null);
 
     try {
       Field agentField = Client.class.getDeclaredField("agentJarOverride");
       agentField.setAccessible(true);
       assertNull(agentField.get(client));
-
-      Field bootField = Client.class.getDeclaredField("bootJarOverride");
-      bootField.setAccessible(true);
-      assertNull(bootField.get(client));
     } catch (Exception e) {
       fail("Failed to access private fields: " + e.getMessage());
     }
@@ -132,7 +122,7 @@ class ClientTest {
     String overridePath = "/custom/path/btrace-agent.jar";
 
     Client client =
-        new Client(2020, null, ".", false, false, false, false, null, null, overridePath, null);
+        new Client(2020, null, ".", false, false, false, false, null, null, overridePath);
 
     try {
       Field agentField = Client.class.getDeclaredField("agentJarOverride");
@@ -140,23 +130,6 @@ class ClientTest {
       assertEquals(overridePath, agentField.get(client));
     } catch (Exception e) {
       fail("Failed to verify agentJarOverride: " + e.getMessage());
-    }
-  }
-
-  @Test
-  void testBootJarOverridePrependsToBootCp() {
-    // Boot JAR override should be prepended to boot classpath
-    String bootOverride = "/custom/boot.jar";
-
-    Client client =
-        new Client(2020, null, ".", false, false, false, false, null, null, null, bootOverride);
-
-    try {
-      Field bootField = Client.class.getDeclaredField("bootJarOverride");
-      bootField.setAccessible(true);
-      assertEquals(bootOverride, bootField.get(client));
-    } catch (Exception e) {
-      fail("Failed to verify bootJarOverride: " + e.getMessage());
     }
   }
 
@@ -169,10 +142,6 @@ class ClientTest {
       Field agentField = Client.class.getDeclaredField("agentJarOverride");
       agentField.setAccessible(true);
       assertNull(agentField.get(client));
-
-      Field bootField = Client.class.getDeclaredField("bootJarOverride");
-      bootField.setAccessible(true);
-      assertNull(bootField.get(client));
     } catch (Exception e) {
       fail("Failed to verify backward compatibility: " + e.getMessage());
     }

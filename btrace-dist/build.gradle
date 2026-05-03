@@ -415,6 +415,7 @@ task btraceJar(type: Jar) {
 
 tasks.named('compileTestJava') {
     dependsOn btraceJar
+    dependsOn 'copyDtraceLib', 'copyExtensions'
 }
 
 test {

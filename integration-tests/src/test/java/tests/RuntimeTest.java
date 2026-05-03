@@ -1560,19 +1560,11 @@ public abstract class RuntimeTest {
   protected Client createClientForTests(String probeDescPath) {
     String libs = System.getProperty("btrace.libs");
     String agentJar = null;
-    String bootJar = null;
 
     if (libs != null) {
-      // First check for new masked btrace.jar structure
       Path maskedJar = Paths.get(libs, "btrace.jar");
       if (Files.exists(maskedJar)) {
-        // Use masked JAR - pass it as agent, boot is embedded
         agentJar = maskedJar.toString();
-        bootJar = null; // boot classes are in the masked JAR
-      } else {
-        // Fall back to old separate JAR structure
-        agentJar = Paths.get(libs, "btrace-agent.jar").toString();
-        bootJar = Paths.get(libs, "btrace-boot.jar").toString();
       }
     }
 
@@ -1586,8 +1578,7 @@ public abstract class RuntimeTest {
         false,
         null,
         null,
-        agentJar,
-        bootJar);
+        agentJar);
   }
 
   protected List<String> listProbesWithProtocol(String host) throws IOException {

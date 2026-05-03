@@ -135,9 +135,8 @@ public class Client {
   private final String dumpDir;
   private final String probeDescPath;
   private final String statsdDef;
-  // override paths for agent and boot JARs (for jbang support)
+  // Override path for the masked btrace.jar when classpath discovery is not available.
   private final String agentJarOverride;
-  private final String bootJarOverride;
 
   // connection state to the traced JVM
   private volatile Socket sock;
@@ -146,11 +145,11 @@ public class Client {
   private boolean disconnected = false;
 
   public Client(int port) {
-    this(port, null, ".", false, false, false, false, null, null, null, null);
+    this(port, null, ".", false, false, false, false, null, null, null);
   }
 
   public Client(int port, String probeDescPath) {
-    this(port, null, probeDescPath, false, false, false, false, null, null, null, null);
+    this(port, null, probeDescPath, false, false, false, false, null, null, null);
   }
 
   public Client(
@@ -173,7 +172,6 @@ public class Client {
         dumpClasses,
         dumpDir,
         statsdDef,
-        null,
         null);
   }
 
@@ -187,8 +185,7 @@ public class Client {
       boolean dumpClasses,
       String dumpDir,
       String statsdDef,
-      String agentJarOverride,
-      String bootJarOverride) {
+      String agentJarOverride) {
     this.port = port;
     this.outputFile = outputFile;
     this.probeDescPath = probeDescPath;
@@ -199,7 +196,6 @@ public class Client {
     this.trackRetransforms = trackRetransforms;
     this.statsdDef = statsdDef;
     this.agentJarOverride = agentJarOverride;
-    this.bootJarOverride = bootJarOverride;
   }
 
   private static boolean isPortAvailable(int port) {
