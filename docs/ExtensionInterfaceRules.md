@@ -34,7 +34,7 @@ This page defines the rules for authoring BTrace extension APIs (interfaces), th
   - The plugin scans the implementation JAR and classpath by default and writes merged permissions to the API JAR manifest.
 
 ## Build‑Time Enforcement
-The `org.openjdk.btrace.extension` Gradle plugin runs validation on the API services you declare in `btraceExtension.services`. It fails the build with clear error IDs.
+The `io.btrace.extension` Gradle plugin runs validation on the API services you declare in `btraceExtension.services`. It fails the build with clear error IDs.
 
 Enforced checks (subset shown):
 - `BTRACE-EXT-001`: Service must be a public, top‑level interface.
@@ -53,7 +53,7 @@ Apply the plugin in your extension project and declare services:
 
 ```
 plugins {
-  id 'org.openjdk.btrace.extension'
+  id 'io.btrace.extension'
   id 'com.github.johnrengelman.shadow'
 }
 
@@ -61,8 +61,8 @@ btraceExtension {
   id = 'btrace-metrics'
   name = 'BTrace Metrics (HDR)'
   description = 'HDR Histogram based metrics'
-  services = ['org.openjdk.btrace.metrics.MetricsService']
-  // additionalExports = ['org.openjdk.btrace.metrics.histogram.HistogramMetric']
+  services = ['io.btrace.metrics.MetricsService']
+  // additionalExports = ['io.btrace.metrics.histogram.HistogramMetric']
   // Optional: configure nullability annotations if you use different ones
   nullableAnnotations = ['com.acme.NonRequired']
   nonnullAnnotations = ['com.acme.Required']
@@ -91,9 +91,9 @@ During the API JAR build, the plugin logs the permissions written to the manifes
 Compliant interface:
 
 ```
-package org.openjdk.btrace.metrics;
+package io.btrace.metrics;
 
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.Permission;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 

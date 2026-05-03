@@ -52,7 +52,7 @@ Note: Pull requests can only be accepted from signers of the Oracle Contributor 
 - Enable Gradle debug output for flakiness: add `--info` or `--debug`.
 - Run a single test class/method:
   ```sh
-  ./gradlew :btrace-extension:test --tests org.openjdk.btrace.extension.ExtensionBridgeImplPolicyTest
+  ./gradlew :btrace-extension:test --tests io.btrace.extension.ExtensionBridgeImplPolicyTest
   ./gradlew :btrace-runtime:test --tests "*ExtensionIndyShimIndexTest.resolvesNoopShimFromIndex"
   ```
 

@@ -67,15 +67,15 @@ Operational facts for `btraceio/btrace`. No reviewer opinions — only repo-spec
 - Unit tests: under each module's `src/test/java`, naming convention `*Test`.
 - Integration tests: `integration-tests/src/test/java` (scripts under `integration-tests/src/test/btrace`) — spawn real JVMs, exercise agent + extensions, require Docker (`DOCKER_HOST=unix:///var/run/docker.sock`) and `btrace-dist/build/resources/main/v<version>/libs/btrace.jar` on disk.
 - Golden instrumentor fixtures: `btrace-instr/src/test/resources/instrumentorTestData/dynamic/` — regenerate with `-PupdateTestData` after any intentional bytecode change; commit the updated goldens.
-- V2 protocol tests: `btrace-core` test class globs `org.openjdk.btrace.core.comm.v2.*`, `Protocol*`, `WireProtocol*`. Dedicated workflow runs on label `test:v2-protocol`, weekly schedule, or manual dispatch.
-- Running a single test: `./gradlew :btrace-instr:test --tests "org.openjdk.btrace.runtime.ExtensionIndyShimIndexTest.resolvesNoopShimFromIndex"`.
+- V2 protocol tests: `btrace-core` test class globs `io.btrace.core.comm.v2.*`, `Protocol*`, `WireProtocol*`. Dedicated workflow runs on label `test:v2-protocol`, weekly schedule, or manual dispatch.
+- Running a single test: `./gradlew :btrace-instr:test --tests "io.btrace.runtime.ExtensionIndyShimIndexTest.resolvesNoopShimFromIndex"`.
 - Per-module aliases from `CONTRIBUTING.md`: `:btrace-runtime:test`, `:btrace-extension:test`, `:btrace-compiler:test`, `:btrace-instr:test`.
 - CI JDK matrix (build: JDK 11): tests run on `8.0.482-tem, 11.0.30-tem, 17.0.18-tem, 21.0.10-tem, 25.0.2-tem, 26.ea.35-open` — changes must compile and pass across all of these.
 
 ## Distribution — Masked JAR
 
 - Single artifact: `btrace.jar` with bootstrap classes as `.class` and mode-scoped classes as `.classdata` under `META-INF/btrace/{agent,client,shared}/`.
-- Loader: `org.openjdk.btrace.boot.Loader` is `Main-Class`, `Premain-Class`, and `Agent-Class`. `MaskedClassLoader` resolves `.classdata`.
+- Loader: `io.btrace.boot.Loader` is `Main-Class`, `Premain-Class`, and `Agent-Class`. `MaskedClassLoader` resolves `.classdata`.
 - Every new class **must** be categorized: agent-only, client-only, or shared. Categorization is wired into `btrace-dist/build.gradle`'s `prepareAgentClassdata` / `prepareClientClassdata` / `prepareSharedClassdata` include patterns.
 - Rebuild masked jar after any restructuring: `./gradlew clean :btrace-dist:btraceJar`.
 - Inspect: `unzip -l btrace.jar | grep -E '(\.class|\.classdata)'`; `unzip -p btrace.jar META-INF/MANIFEST.MF`.
@@ -90,7 +90,7 @@ Operational facts for `btraceio/btrace`. No reviewer opinions — only repo-spec
 - **FQN rule**: never inline fully qualified names in source. Always import and use simple type names (AGENTS.md hard rule).
 - **Masked-JAR class invisibility**: `ClassNotFoundException` on `.classdata` means the class is either missing from the correct mode section or was relocated but not registered. `shared/` is required whenever agent ↔ client serialize the same type (comm protocol, annotations, ASM core).
 - **`BTraceRuntimeImpl_8` diverges** from 9/11 impls on the `defineClass` path — Java 8 CI row is not redundant; always verify against it via `TEST_JAVA_HOME=$JAVA_8_HOME` locally before merging runtime changes.
-- **Spotless import order**: `java`, `javax`, `org.openjdk.btrace`, everything else, static `org.openjdk.btrace`, remaining static. Reformat with `./gradlew spotlessApply` if `spotlessCheck` fails.
+- **Spotless import order**: `java`, `javax`, `io.btrace`, everything else, static `io.btrace`, remaining static. Reformat with `./gradlew spotlessApply` if `spotlessCheck` fails.
 - **License header**: Spotless injects `/* (C) $YEAR */` on every Java file; do not hand-write headers.
 
 ## Known Recurring CI Failure Modes

@@ -53,7 +53,7 @@ If you absolutely must expose a jar on the system classpath temporarily:
 
 ```java
 import org.example.btrace.hadoop.api.HadoopApi;
-import org.openjdk.btrace.core.annotations.*;
+import io.btrace.core.annotations.*;
 
 @BTrace
 class HadoopProbe {

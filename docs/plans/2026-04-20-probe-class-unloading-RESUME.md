@@ -51,10 +51,10 @@ The probe's command-listener thread (Thread-1) is **started from inside the prob
 Captured on `JAVA_TEST_HOME=$(sdk home java 11.0.23-tem) ./gradlew :integration-tests:test --tests tests.BTraceFunctionalTests.testOnMethodLevel -Pintegration`:
 
 ```
-[traced app] [DEBUG-addRuntime] key=org.openjdk.btrace.runtime.auxiliary.OnMethodLevelTest runtimes@... accessClass@... via=org.openjdk.btrace.boot.MaskedClassLoader@...
-[traced app] [DEBUG-addRuntime] after put, size=1 keys=[org.openjdk.btrace.runtime.auxiliary.OnMethodLevelTest]
-[traced app] [Thread-0] DEBUG org.openjdk.btrace.instr.BTraceProbeSupport - about to defineClass org.openjdk.btrace.runtime.auxiliary.OnMethodLevelTest
-[traced app] [Thread-1] DEBUG org.openjdk.btrace.agent.Client - onExit:
+[traced app] [DEBUG-addRuntime] key=io.btrace.runtime.auxiliary.OnMethodLevelTest runtimes@... accessClass@... via=io.btrace.boot.MaskedClassLoader@...
+[traced app] [DEBUG-addRuntime] after put, size=1 keys=[io.btrace.runtime.auxiliary.OnMethodLevelTest]
+[traced app] [Thread-0] DEBUG io.btrace.instr.BTraceProbeSupport - about to defineClass io.btrace.runtime.auxiliary.OnMethodLevelTest
+[traced app] [Thread-1] DEBUG io.btrace.agent.Client - onExit:
 [traced app] [DEBUG-forClass] cl.getName()=... keys=[]   ← map cleared by Thread-1 before <clinit> read it
 [traced app] [DEBUG-removeRuntime] caller: Client.cleanupTransformers(Client.java:520)
 [traced app] java.lang.ExceptionInInitializerError

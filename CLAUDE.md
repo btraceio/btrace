@@ -33,7 +33,7 @@ BTrace is a safe, dynamic tracing tool for the Java platform that instruments ru
 ./gradlew :btrace-instr:test --tests "*CompilerTest"
 
 # Run specific test method
-./gradlew :btrace-instr:test --tests "org.openjdk.btrace.compiler.CompilerTest.testSimple"
+./gradlew :btrace-instr:test --tests "io.btrace.compiler.CompilerTest.testSimple"
 
 # Integration tests (requires dist built first)
 ./gradlew :btrace-dist:build
@@ -161,7 +161,7 @@ Compiled Script (.class)
 - Uses Java 11 compiler for better optimization while maintaining Java 8 compatibility
 
 **Formatting**: Google Java Format via Spotless
-- Import order: `java`, `javax`, `org.openjdk.btrace`, `*`, then static imports
+- Import order: `java`, `javax`, `io.btrace`, `*`, then static imports
 - Always run `./gradlew spotlessApply` before committing
 
 **Testing**:

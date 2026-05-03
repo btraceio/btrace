@@ -42,14 +42,14 @@ btrace.jar (~2.9 MB)
 ### Manifest
 
 ```
-Premain-Class: org.openjdk.btrace.boot.Loader
-Agent-Class: org.openjdk.btrace.boot.Loader
-Main-Class: org.openjdk.btrace.boot.Loader
+Premain-Class: io.btrace.boot.Loader
+Agent-Class: io.btrace.boot.Loader
+Main-Class: io.btrace.boot.Loader
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
 Boot-Class-Path: .
-BTrace-Agent-Main: org.openjdk.btrace.agent.Main
-BTrace-Client-Main: org.openjdk.btrace.client.Main
+BTrace-Agent-Main: io.btrace.agent.Main
+BTrace-Client-Main: io.btrace.client.Main
 ```
 
 `Loader` is the single entry point for all three modes. The actual agent/client main classes are specified as manifest attributes and loaded reflectively via `MaskedClassLoader`.
@@ -62,7 +62,7 @@ BTrace-Client-Main: org.openjdk.btrace.client.Main
 
 Contains three classes, all loaded by the bootstrap classloader:
 
-#### Loader (`org.openjdk.btrace.boot.Loader`)
+#### Loader (`io.btrace.boot.Loader`)
 
 Entry point for all three modes:
 
@@ -93,7 +93,7 @@ Bootstrap CL (core API, runtime, Loader)
                 Fallback:   META-INF/btrace/shared/*.classdata
 ```
 
-#### MaskedClassLoader (`org.openjdk.btrace.boot.MaskedClassLoader`)
+#### MaskedClassLoader (`io.btrace.boot.MaskedClassLoader`)
 
 A `URLClassLoader` subclass that loads classes from `.classdata` files. The lookup order for `findClass(name)`:
 
@@ -103,7 +103,7 @@ A `URLClassLoader` subclass that loads classes from `.classdata` files. The look
 
 Resource loading (`findResource`, `getResourceAsStream`) follows the same pattern: section-specific first, then shared, then the JAR root.
 
-#### MaskedJarUtils (`org.openjdk.btrace.boot.MaskedJarUtils`)
+#### MaskedJarUtils (`io.btrace.boot.MaskedJarUtils`)
 
 Utility class for detecting masked JARs. A JAR is identified as masked by the presence of a `META-INF/btrace/shared/` entry. Used by `Client.java` and integration tests to detect whether they are running from a masked JAR or the legacy multi-JAR layout.
 

@@ -1,10 +1,10 @@
-# Repackaging org.openjdk.btrace → io.btrace Implementation Plan
+# Repackaging io.btrace → io.btrace Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rename every occurrence of the `org.openjdk.btrace` Java package namespace to `io.btrace` across all source files, build scripts, resources, and documentation, while keeping a transparent backwards-compatibility shim so pre-compiled probes (`.class` files referencing `org/openjdk/btrace/` classes) still load and run correctly.
+**Goal:** Rename every occurrence of the `io.btrace` Java package namespace to `io.btrace` across all source files, build scripts, resources, and documentation, while keeping a transparent backwards-compatibility shim so pre-compiled probes (`.class` files referencing `org/openjdk/btrace/` classes) still load and run correctly.
 
-**Architecture:** Pure mechanical text-and-directory transformation for the rename, plus a new `ProbePackageMigrator` class in `btrace-instr` that uses ASM `ClassRemapper` to silently remap any probe bytecode still referencing `org/openjdk/btrace/` to `io/btrace/` at load time. The shim is inserted into `BTraceProbePersisted.upgradeBytecode()`, which is already the probe-upgrade pipeline. The Gradle `group` is changed from `org.openjdk.btrace` to `io.btrace`.
+**Architecture:** Pure mechanical text-and-directory transformation for the rename, plus a new `ProbePackageMigrator` class in `btrace-instr` that uses ASM `ClassRemapper` to silently remap any probe bytecode still referencing `org/openjdk/btrace/` to `io/btrace/` at load time. The shim is inserted into `BTraceProbePersisted.upgradeBytecode()`, which is already the probe-upgrade pipeline. The Gradle `group` is changed from `io.btrace` to `io.btrace`.
 
 **Tech Stack:** Java 8+/11 toolchain, Gradle 8, ASM 9 (ClassRemapper / SimpleRemapper), Google Java Format (Spotless), ServiceLoader SPI, Maven plugin descriptor.
 
@@ -38,7 +38,7 @@
 
 ---
 
-## Task 2: Replace org.openjdk.btrace in Main Java Source Content
+## Task 2: Replace io.btrace in Main Java Source Content
 
 Replace `package` declarations, `import` statements, and string literals in all main source sets. Do **not** move directories yet.
 
@@ -88,7 +88,7 @@ git add $(find . -not -path "*/build/*" \
   -o -path "*/src/main/java15/*" \
   -o -path "*/src/jmh/java/*" \) \
   -name "*.java")
-git commit -m "refactor: replace org.openjdk.btrace with io.btrace in main source content"
+git commit -m "refactor: replace io.btrace with io.btrace in main source content"
 ```
 
 ---
@@ -253,7 +253,7 @@ Expected: no output.
 
 ```bash
 git add -A
-git commit -m "refactor: replace org.openjdk.btrace with io.btrace in probe scripts and test resource Java files"
+git commit -m "refactor: replace io.btrace with io.btrace in probe scripts and test resource Java files"
 ```
 
 ---
@@ -261,14 +261,14 @@ git commit -m "refactor: replace org.openjdk.btrace with io.btrace in probe scri
 ## Task 6: Rename and Update SPI Service Files
 
 **Files:**
-- `btrace-dtrace/src/main/resources/META-INF/services/org.openjdk.btrace.core.extensions.Extension`
-- `btrace-instr/src/main/resources/META-INF/services/org.openjdk.btrace.compiler.PackGenerator`
+- `btrace-dtrace/src/main/resources/META-INF/services/io.btrace.core.extensions.Extension`
+- `btrace-instr/src/main/resources/META-INF/services/io.btrace.compiler.PackGenerator`
 
 - [ ] **Step 1: Rename and update the DTrace extension SPI file**
 
 ```bash
 cd /Users/jbachorik/src/btrace/.worktrees/jb/repackaging
-OLD=btrace-dtrace/src/main/resources/META-INF/services/org.openjdk.btrace.core.extensions.Extension
+OLD=btrace-dtrace/src/main/resources/META-INF/services/io.btrace.core.extensions.Extension
 NEW=btrace-dtrace/src/main/resources/META-INF/services/io.btrace.core.extensions.Extension
 git mv "$OLD" "$NEW"
 sed -i '' 's/org\.openjdk\.btrace/io.btrace/g' "$NEW"
@@ -283,7 +283,7 @@ Expected: `io.btrace.dtrace.DTraceExtension`
 - [ ] **Step 2: Rename and update the PackGenerator SPI file**
 
 ```bash
-OLD=btrace-instr/src/main/resources/META-INF/services/org.openjdk.btrace.compiler.PackGenerator
+OLD=btrace-instr/src/main/resources/META-INF/services/io.btrace.compiler.PackGenerator
 NEW=btrace-instr/src/main/resources/META-INF/services/io.btrace.compiler.PackGenerator
 git mv "$OLD" "$NEW"
 sed -i '' 's/org\.openjdk\.btrace/io.btrace/g' "$NEW"
@@ -299,7 +299,7 @@ Expected: `io.btrace.instr.InstrPackGenerator`
 
 ```bash
 git add -A
-git commit -m "refactor: rename and update SPI service files from org.openjdk.btrace to io.btrace"
+git commit -m "refactor: rename and update SPI service files from io.btrace to io.btrace"
 ```
 
 ---
@@ -345,13 +345,13 @@ git commit -m "refactor: update MANIFEST.MF and Maven plugin.xml for io.btrace n
 ## Task 8: Rename and Update Probe XML Files
 
 **Files:**
-- `btrace-instr/src/test/btrace/org.openjdk.btrace.xml`
-- `integration-tests/src/test/btrace/org.openjdk.btrace.xml`
+- `btrace-instr/src/test/btrace/io.btrace.xml`
+- `integration-tests/src/test/btrace/io.btrace.xml`
 
 - [ ] **Step 1: Rename and update btrace-instr probe XML**
 
 ```bash
-git mv btrace-instr/src/test/btrace/org.openjdk.btrace.xml \
+git mv btrace-instr/src/test/btrace/io.btrace.xml \
        btrace-instr/src/test/btrace/io.btrace.xml
 sed -i '' 's/org\.openjdk\.btrace/io.btrace/g' btrace-instr/src/test/btrace/io.btrace.xml
 ```
@@ -359,7 +359,7 @@ sed -i '' 's/org\.openjdk\.btrace/io.btrace/g' btrace-instr/src/test/btrace/io.b
 - [ ] **Step 2: Rename and update integration-tests probe XML**
 
 ```bash
-git mv integration-tests/src/test/btrace/org.openjdk.btrace.xml \
+git mv integration-tests/src/test/btrace/io.btrace.xml \
        integration-tests/src/test/btrace/io.btrace.xml
 sed -i '' 's/org\.openjdk\.btrace/io.btrace/g' integration-tests/src/test/btrace/io.btrace.xml
 ```
@@ -376,7 +376,7 @@ For each file found, apply: `sed -i '' 's/org\.openjdk\.btrace\.xml/io.btrace.xm
 
 ```bash
 git add -A
-git commit -m "refactor: rename and update probe XML files from org.openjdk.btrace to io.btrace"
+git commit -m "refactor: rename and update probe XML files from io.btrace to io.btrace"
 ```
 
 ---
@@ -405,7 +405,7 @@ Expected: no output.
 
 ```bash
 git add -A -- '*.md' '*.adoc'
-git commit -m "docs: replace org.openjdk.btrace with io.btrace in all documentation"
+git commit -m "docs: replace io.btrace with io.btrace in all documentation"
 ```
 
 ---
@@ -434,7 +434,7 @@ sed -i '' 's/org\.openjdk\.btrace/io.btrace/g' <file>
 
 ```bash
 git add -A
-git commit -m "refactor: fix remaining org.openjdk.btrace references"
+git commit -m "refactor: fix remaining io.btrace references"
 ```
 
 ---
@@ -572,7 +572,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 
-/** Transparently migrates probe bytecode compiled against the old org.openjdk.btrace namespace. */
+/** Transparently migrates probe bytecode compiled against the old io.btrace namespace. */
 final class ProbePackageMigrator {
 
   private static final String OLD_PREFIX = "org/openjdk/btrace/";
@@ -648,7 +648,7 @@ Expected: `BUILD SUCCESSFUL`, 2 tests passing.
 git add btrace-instr/src/main/java/io/btrace/instr/ProbePackageMigrator.java \
         btrace-instr/src/main/java/io/btrace/instr/BTraceProbePersisted.java \
         btrace-instr/src/test/java/io/btrace/instr/ProbePackageMigratorTest.java
-git commit -m "feat(instr): add ProbePackageMigrator shim for transparent org.openjdk.btrace → io.btrace probe migration"
+git commit -m "feat(instr): add ProbePackageMigrator shim for transparent io.btrace → io.btrace probe migration"
 ```
 
 ---
@@ -704,13 +704,13 @@ git commit -m "fix: address compilation errors after repackaging"
 ```
 Expected: `BUILD SUCCESSFUL` with all tests passing.
 
-If tests fail: check the error, fix residual `org.openjdk.btrace` references, re-run.
+If tests fail: check the error, fix residual `io.btrace` references, re-run.
 
 - [ ] **Step 3: Commit regenerated golden files**
 
 ```bash
 git add btrace-instr/src/test/resources/instrumentorTestData/
-git commit -m "test: regenerate golden files after org.openjdk.btrace → io.btrace repackaging"
+git commit -m "test: regenerate golden files after io.btrace → io.btrace repackaging"
 ```
 
 - [ ] **Step 4: Run integration tests**

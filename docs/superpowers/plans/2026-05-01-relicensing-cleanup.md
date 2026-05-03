@@ -74,7 +74,7 @@ The new per-file header block that Spotless will enforce (substitute the placeho
 - [ ] **Step 1.1 — Write the test**
 
 ```java
-package org.openjdk.btrace.compiler;
+package io.btrace.compiler;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.io.BufferedReader;
@@ -143,7 +143,7 @@ class ConcatenatingReaderTest {
 - [ ] **Step 1.2 — Run the test against the current (to-be-replaced) implementation**
 
 ```bash
-./gradlew :btrace-compiler:test --tests "org.openjdk.btrace.compiler.ConcatenatingReaderTest"
+./gradlew :btrace-compiler:test --tests "io.btrace.compiler.ConcatenatingReaderTest"
 ```
 
 Expected: all tests pass (confirms the contract before we touch the implementation).
@@ -185,7 +185,7 @@ Replace the full content of `ConcatenatingReader.java` with the following. Subst
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler;
+package io.btrace.compiler;
 
 import java.io.BufferedReader;
 import java.io.FilterReader;
@@ -286,7 +286,7 @@ final class ConcatenatingReader extends FilterReader {
 - [ ] **Step 2.2 — Run the tests**
 
 ```bash
-./gradlew :btrace-compiler:test --tests "org.openjdk.btrace.compiler.ConcatenatingReaderTest"
+./gradlew :btrace-compiler:test --tests "io.btrace.compiler.ConcatenatingReaderTest"
 ```
 
 Expected: all tests pass.

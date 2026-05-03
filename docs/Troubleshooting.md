@@ -120,8 +120,8 @@ error: cannot find symbol
    }
 
    // Correct
-   import org.openjdk.btrace.core.annotations.*;
-   import static org.openjdk.btrace.core.BTraceUtils.*;
+   import io.btrace.core.annotations.*;
+   import static io.btrace.core.BTraceUtils.*;
 
    @BTrace
    public class MyTrace {
@@ -138,7 +138,7 @@ error: cannot find symbol
    import com.sun.btrace.annotations.*;
 
    // New (2.0+)
-   import org.openjdk.btrace.core.annotations.*;
+   import io.btrace.core.annotations.*;
    ```
 
 3. **Classpath issues**
@@ -197,7 +197,7 @@ public static void handler() {
 
 **Right:**
 ```java
-import static org.openjdk.btrace.core.BTraceUtils.Atomic.*;
+import static io.btrace.core.BTraceUtils.Atomic.*;
 
 private static AtomicInteger counter = newAtomicInteger(0);
 
@@ -611,8 +611,8 @@ import com.sun.btrace.annotations.*;
 import static com.sun.btrace.BTraceUtils.*;
 
 // New (2.x)
-import org.openjdk.btrace.core.annotations.*;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
 ```
 
 ## Debugging BTrace Scripts
@@ -846,8 +846,8 @@ metadata:
   name: btrace-scripts
 data:
   TraceMethod.java: |
-    import org.openjdk.btrace.core.annotations.*;
-    import static org.openjdk.btrace.core.BTraceUtils.*;
+    import io.btrace.core.annotations.*;
+    import static io.btrace.core.BTraceUtils.*;
 
     @BTrace
     // Classname 'TraceMethod' must correspond to the file name 'TraceMethod.java'
@@ -972,7 +972,7 @@ For more K8s deployment patterns, see [Getting Started: K8s](GettingStarted.md#b
 - Package prefixes: `java.lang.instrument.*`, `java.lang.invoke.*`, `java.lang.ref.*`
 - Lock classes: `java.util.concurrent.locks.LockSupport`, `AbstractQueuedSynchronizer`, etc.
 - JDK internals: `jdk.internal.*`, `sun.invoke.*`
-- BTrace itself: `org.openjdk.btrace.*`
+- BTrace itself: `io.btrace.*`
 
 **Classes annotated with @BTrace** (BTrace scripts themselves)
 

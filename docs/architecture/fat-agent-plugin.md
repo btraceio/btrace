@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Fat Agent Plugin (`org.openjdk.btrace.fat-agent`) creates self-contained agent JARs with embedded extensions for single-JAR deployment scenarios. This eliminates the need for separate extension installation in environments like Spark, Hadoop, or Kubernetes where managing multiple JARs is impractical.
+The Fat Agent Plugin (`io.btrace.fat-agent`) creates self-contained agent JARs with embedded extensions for single-JAR deployment scenarios. This eliminates the need for separate extension installation in environments like Spark, Hadoop, or Kubernetes where managing multiple JARs is impractical.
 
 ## Problem Statement
 
@@ -154,7 +154,7 @@ When `autoDiscover = true`, the plugin scans subprojects:
 ```groovy
 project.gradle.projectsEvaluated {
     rootProject.subprojects.each { sp ->
-        if (sp.plugins.hasPlugin('org.openjdk.btrace.extension')) {
+        if (sp.plugins.hasPlugin('io.btrace.extension')) {
             extension.addExtensionSource(new ProjectExtensionSource(project, sp.path))
         }
     }
@@ -187,8 +187,8 @@ The fat agent JAR manifest includes:
 
 | Attribute | Description |
 |-----------|-------------|
-| `Premain-Class` | `org.openjdk.btrace.agent.Main` |
-| `Agent-Class` | `org.openjdk.btrace.agent.Main` |
+| `Premain-Class` | `io.btrace.agent.Main` |
+| `Agent-Class` | `io.btrace.agent.Main` |
 | `Can-Redefine-Classes` | `true` |
 | `Can-Retransform-Classes` | `true` |
 | `Boot-Class-Path` | `btrace-agent-fat.jar` (self-reference) |
@@ -275,7 +275,7 @@ For Maven users, the `btrace-maven-plugin` provides equivalent functionality:
 
 ```xml
 <plugin>
-    <groupId>org.openjdk.btrace</groupId>
+    <groupId>io.btrace</groupId>
     <artifactId>btrace-maven-plugin</artifactId>
     <version>${btrace.version}</version>
     <executions>

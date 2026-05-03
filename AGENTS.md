@@ -46,7 +46,7 @@ BTrace uses a **single masked JAR** (`btrace.jar`) as its distribution artifact.
 ```
 btrace.jar
 ├── META-INF/
-│   ├── MANIFEST.MF (Main-Class, Premain-Class, Agent-Class → org.openjdk.btrace.boot.Loader)
+│   ├── MANIFEST.MF (Main-Class, Premain-Class, Agent-Class → io.btrace.boot.Loader)
 │   ├── btrace/
 │   │   ├── agent/*.classdata    (agent classes - loaded in agent mode)
 │   │   ├── client/*.classdata   (client classes - loaded in client mode)
@@ -134,9 +134,9 @@ Standalone (client mode):
 ## Example Script
 ```java
 package helloworld;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.types.AnyType;
+import static io.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import io.btrace.core.types.AnyType;
 
 @BTrace
 public class MyTrace {
@@ -151,9 +151,9 @@ Run with: `btrace <PID> MyTrace.java` (see docs/BTraceTutorial.md for steps).
 ```java
 // Args capture
 package helloworld;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.types.AnyType;
+import static io.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import io.btrace.core.types.AnyType;
 
 @BTrace
 public class ArgsTrace {
@@ -168,9 +168,9 @@ public class ArgsTrace {
 ```java
 // Return value and duration
 package helloworld;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.types.AnyType;
+import static io.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import io.btrace.core.types.AnyType;
 
 @BTrace
 public class ReturnTrace {
@@ -196,7 +196,7 @@ public class ReturnTrace {
 ## Coding Style & Naming
 - Language: Java. Source/target set to 8; toolchains compile with JDK 11.
 - Format: Google Java Format via Spotless. Import order enforced; unused imports removed.
-- Packages under `org.openjdk.btrace.*`.
+- Packages under `io.btrace.*`.
 - Module names follow `btrace-<component>` (e.g., `btrace-extensions:btrace-utils`).
 
 ## Testing Guidelines
@@ -235,7 +235,7 @@ public class ReturnTrace {
 3. **Rebuild and test**: `./gradlew clean :btrace-dist:btraceJar && ./gradlew -Pintegration test`
 
 ### Dependency Relocation
-- All third-party dependencies are relocated to `org.openjdk.btrace.libs.*`
+- All third-party dependencies are relocated to `io.btrace.libs.*`
 - Relocations happen in `allClassesShadow` task using Shadow plugin
 - Common relocations: ASM, SLF4J, JCTools
 - After relocation, classes are extracted and masked in prepare*Classdata tasks

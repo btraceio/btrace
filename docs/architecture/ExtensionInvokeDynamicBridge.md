@@ -146,7 +146,7 @@ public interface ExtensionBridge {
 ```java
 static {
   try {
-    Class<?> indyClz = Class.forName("org.openjdk.btrace.runtime.ExtensionIndy");
+    Class<?> indyClz = Class.forName("io.btrace.runtime.ExtensionIndy");
     ExtensionBridge bridge = new ExtensionBridgeImpl(Main.getExtensionLoader());
     indyClz.getField("bridge").set(null, bridge);
   } catch (ClassNotFoundException e) {
@@ -177,7 +177,7 @@ INVOKEDYNAMIC bootstrapFieldGet(
   "metrics",                           // field name (debug)
   "()Lorg/openjdk/btrace/metrics/MetricsService;",  // method descriptor
   ExtensionIndy.bootstrapFieldGet,     // bootstrap method
-  "org.openjdk.btrace.metrics.MetricsService",  // service class name
+  "io.btrace.metrics.MetricsService",  // service class name
   "RUNTIME",                           // optional type hint (deprecated)
   ""                                   // factory method (empty = constructor)
 ) : MetricsService
@@ -240,7 +240,7 @@ private AbstractInsnNode updateInjectedUsage(
    (first time for this callsite)
    ↓
 3. ExtensionIndy.bootstrapFieldGet():
-   a. Call bridge.getExtensionClass("org.openjdk.btrace.metrics.MetricsService")
+   a. Call bridge.getExtensionClass("io.btrace.metrics.MetricsService")
    ↓
 4. ExtensionBridgeImpl.getExtensionClass():
    a. Call loader.findExtensionForService(serviceClassName)
@@ -367,7 +367,7 @@ public class MyExtension extends Extension {
 **MethodHandle Creation:**
 ```java
 Class<?> runtimeImplClass =
-  Class.forName("org.openjdk.btrace.runtime.BTraceRuntime$Impl");
+  Class.forName("io.btrace.runtime.BTraceRuntime$Impl");
 
 MethodHandle constructor =
   MethodHandles.publicLookup().findConstructor(
@@ -498,8 +498,8 @@ return new ConstantCallSite(mh);
 
 **Enable logging:**
 ```
--Dorg.slf4j.simpleLogger.log.org.openjdk.btrace.agent.extension=DEBUG
--Dorg.slf4j.simpleLogger.log.org.openjdk.btrace.runtime.ExtensionIndy=DEBUG
+-Dorg.slf4j.simpleLogger.log.io.btrace.agent.extension=DEBUG
+-Dorg.slf4j.simpleLogger.log.io.btrace.runtime.ExtensionIndy=DEBUG
 ```
 
 **Logs show:**

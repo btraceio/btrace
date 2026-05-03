@@ -59,7 +59,7 @@ For Spark/Hadoop/Kubernetes environments where managing separate extension JARs 
 
 ```groovy
 plugins {
-    id 'org.openjdk.btrace.fat-agent'
+    id 'io.btrace.fat-agent'
 }
 
 btraceFatAgent {
@@ -77,7 +77,7 @@ Build: `./gradlew fatAgentJar`
 
 ```xml
 <plugin>
-    <groupId>org.openjdk.btrace</groupId>
+    <groupId>io.btrace</groupId>
     <artifactId>btrace-maven-plugin</artifactId>
     <version>${btrace.version}</version>
     <configuration>

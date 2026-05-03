@@ -140,7 +140,7 @@ Use [JBang](https://www.jbang.dev/) to run BTrace without manual installation:
 curl -Ls https://sh.jbang.dev | bash -s - app setup
 
 # Use BTrace immediately (replace <version> with desired version, e.g., 2.3.0)
-jbang org.openjdk.btrace:btrace-client:<version> <PID> <script.java>
+jbang io.btrace:btrace-client:<version> <PID> <script.java>
 
 # After first run, use shorter alias
 jbang btrace <PID> <script.java>
@@ -269,7 +269,7 @@ The fat agent JAR includes:
 For custom fat agent builds, use the Gradle plugin:
 ```groovy
 plugins {
-    id 'org.openjdk.btrace.fat-agent'
+    id 'io.btrace.fat-agent'
 }
 
 btraceFatAgent {
@@ -381,7 +381,7 @@ Keys
 **Fat Agent Plugin** (in this repo): Build fat agent JARs with embedded extensions:
 ```xml
 <plugin>
-    <groupId>org.openjdk.btrace</groupId>
+    <groupId>io.btrace</groupId>
     <artifactId>btrace-maven-plugin</artifactId>
     <version>${btrace.version}</version>
     <configuration>

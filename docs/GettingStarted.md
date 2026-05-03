@@ -201,10 +201,10 @@ java TestApp
 Create a BTrace script (`TraceMethods.java`) to trace method calls:
 
 ```java
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import static org.openjdk.btrace.core.BTraceUtils.println;
-import static org.openjdk.btrace.core.BTraceUtils.str;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnMethod;
+import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.str;
 
 @BTrace
 public class TraceMethods {
@@ -253,12 +253,12 @@ Capture latency distributions and simple stats without external systems using th
 2. Create a probe that injects `MetricsService` (no special flags needed):
 
 ```java
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.metrics.MetricsService;
-import org.openjdk.btrace.metrics.histogram.*;
-import org.openjdk.btrace.metrics.stats.*;
+import io.btrace.core.annotations.*;
+import io.btrace.metrics.MetricsService;
+import io.btrace.metrics.histogram.*;
+import io.btrace.metrics.stats.*;
 
 @BTrace
 public class LatencyProbe {
@@ -425,8 +425,8 @@ btracer MyTrace.class java -cp myapp.jar com.example.Main
 ### Example 1: Trace Method Entry
 
 ```java
-import org.openjdk.btrace.core.annotations.*;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MethodEntry {
@@ -440,8 +440,8 @@ public class MethodEntry {
 ### Example 2: Trace Method Arguments
 
 ```java
-import org.openjdk.btrace.core.annotations.*;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MethodArgs {
@@ -455,8 +455,8 @@ public class MethodArgs {
 ### Example 3: Trace Method Return Value
 
 ```java
-import org.openjdk.btrace.core.annotations.*;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MethodReturn {
@@ -470,8 +470,8 @@ public class MethodReturn {
 ### Example 4: Measure Method Duration
 
 ```java
-import org.openjdk.btrace.core.annotations.*;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MethodDuration {
@@ -493,9 +493,9 @@ BTrace integrates with Java Flight Recorder (JFR) to create high-performance eve
 ### Example: Create JFR Event
 
 ```java
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.jfr.JfrEvent;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import io.btrace.core.jfr.JfrEvent;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MyJfrTrace {
@@ -756,7 +756,7 @@ For custom extension combinations, use the Gradle plugin:
 
 ```groovy
 plugins {
-    id 'org.openjdk.btrace.fat-agent'
+    id 'io.btrace.fat-agent'
 }
 
 btraceFatAgent {
@@ -798,7 +798,7 @@ For Maven users, a Maven plugin is also available:
 
 ```xml
 <plugin>
-    <groupId>org.openjdk.btrace</groupId>
+    <groupId>io.btrace</groupId>
     <artifactId>btrace-maven-plugin</artifactId>
     <version>${btrace.version}</version>
     <executions>
