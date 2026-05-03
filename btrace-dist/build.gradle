@@ -113,8 +113,6 @@ dependencies {
     implementation project(':btrace-agent')
     implementation project(':btrace-client')
     implementation project(':btrace-compiler')
-    bootstrapInputs project(':btrace-core')
-    bootstrapInputs project(':btrace-runtime')
     bootstrapInputs project(':btrace-agent')
 }
 
@@ -321,7 +319,7 @@ def bootIncludes = {
     return false
 }
 
-tasks.register('bootstrapJar', ShadowJar) {
+task bootstrapJar(type: ShadowJar) {
     archiveBaseName.set('btrace-bootstrap')
     archiveVersion.set('')
     archiveClassifier.set('')
