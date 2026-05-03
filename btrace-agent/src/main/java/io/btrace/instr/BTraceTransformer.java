@@ -127,6 +127,11 @@ public final class BTraceTransformer implements ClassFileTransformer {
         return null;
       }
 
+      if (className.startsWith("io/btrace/")) {
+        // do not instrument BTrace classes!
+        return null;
+      }
+
       // A special case for patching the Indy linking in order to be able to safely skip
       // BTrace probes while linking is still in progress.
       if (className.equals("java/lang/invoke/MethodHandleNatives")) {
@@ -170,22 +175,21 @@ public final class BTraceTransformer implements ClassFileTransformer {
         if (debug.isDumpClasses()) {
           debug.dumpClass(className.replace('.', '/') + "_orig", classfileBuffer);
         }
-        BTraceClassReader cr = InstrumentUtils.newClassReader(loader, classfileBuffer);
-        BTraceClassWriter cw = InstrumentUtils.newClassWriter(cr);
         for (BTraceProbe p : probes) {
           p.notifyTransform(className);
-          cw.addInstrumentor(p, loader);
         }
-        byte[] transformed = cw.instrument();
+        int major = InstrumentUtils.getMajor(classfileBuffer);
+        InstrumentationBackend backend = BackendSelector.select(major);
+        byte[] transformed = backend.instrument(loader, classfileBuffer, probes);
         if (transformed == null) {
           // no instrumentation necessary
           if (log.isDebugEnabled()) {
-            log.debug("skipping class {}", cr.getJavaClassName());
+            log.debug("skipping class {}", className.replace('/', '.'));
           }
           return classfileBuffer;
         } else {
           if (log.isDebugEnabled()) {
-            log.debug("transformed class {}", cr.getJavaClassName());
+            log.debug("transformed class {}", className.replace('/', '.'));
           }
           // Optional: verify transformed class via ASM in tests.
           if (Boolean.getBoolean("btrace.verify.transformed")
