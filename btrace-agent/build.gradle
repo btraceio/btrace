@@ -56,6 +56,8 @@ dependencies {
     }
     java24Implementation project(':btrace-core')
     java24Implementation project(':btrace-runtime')
+    java24Implementation libs.asm
+    java24Implementation libs.slf4j
 
     testImplementation libs.asm.util
     testImplementation libs.slf4j.simple
