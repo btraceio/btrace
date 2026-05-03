@@ -35,16 +35,16 @@ includes['agent'] = {
         return true
     }
     return it.path.startsWith('org/jctools/') ||
-            it.path.startsWith('org/openjdk/btrace/agent/') ||
-            it.path.startsWith('org/openjdk/btrace/instr/') ||
-            it.path.startsWith('org/openjdk/btrace/runtime/') ||
-            it.path.startsWith('org/openjdk/btrace/extension/') ||
-            it.path.startsWith('org/openjdk/btrace/core/comm/') ||
-            it.path.startsWith('org/openjdk/btrace/core/handlers/') ||
+            it.path.startsWith('io/btrace/agent/') ||
+            it.path.startsWith('io/btrace/instr/') ||
+            it.path.startsWith('io/btrace/runtime/') ||
+            it.path.startsWith('io/btrace/extension/') ||
+            it.path.startsWith('io/btrace/core/comm/') ||
+            it.path.startsWith('io/btrace/core/handlers/') ||
             // core/extensions moved to shared section
             // include the messages resource bundle and class in the agent jar (bootstrap can't load resources)
-            it.path == 'org/openjdk/btrace/core/Messages.class' ||
-            it.path == 'org/openjdk/btrace/core/messages.properties'
+            it.path == 'io/btrace/core/Messages.class' ||
+            it.path == 'io/btrace/core/messages.properties'
 }
 
 includes['boot'] = {
@@ -54,8 +54,8 @@ includes['boot'] = {
     if (it.path.endsWith('.jar')) {
         return true
     }
-    if (it.path.startsWith('org/openjdk/btrace/core/')) {
-        if (it.path == 'org/openjdk/btrace/core/Messages.class' || it.path == 'org/openjdk/btrace/core/messages.properties') {
+    if (it.path.startsWith('io/btrace/core/')) {
+        if (it.path == 'io/btrace/core/Messages.class' || it.path == 'io/btrace/core/messages.properties') {
             // messages resource bundle&class are hoisted to agent and client jars
             return false
         }
@@ -74,7 +74,7 @@ includes['boot'] = {
     }
     // btrace-runtime classes should ONLY be in .classdata form (agent section), not as regular .class files
     return it.path.startsWith("org/slf4j/") ||
-            it.path.startsWith('org/openjdk/btrace/extension/') ||
+            it.path.startsWith('io/btrace/extension/') ||
             it.path.startsWith('org/jctools/')
             // Extensions are loaded from extensions/ directory
 }
@@ -86,8 +86,8 @@ includes['client'] = {
     if (it.path.endsWith('.jar')) {
         return true
     }
-    if (it.path.startsWith('org/openjdk/btrace')) {
-        return !it.path.startsWith('org/openjdk/btrace/agent')
+    if (it.path.startsWith('io/btrace')) {
+        return !it.path.startsWith('io/btrace/agent')
     }
     if (it.path.startsWith('com/googlecode/lanterna/')) {
         return true
@@ -114,6 +114,9 @@ dependencies {
     implementation project(':btrace-client')
     implementation project(':btrace-compiler')
     bootstrapInputs project(':btrace-agent')
+
+    testImplementation platform(libs.junit)
+    testImplementation libs.junit.jupiter
 }
 
 jar {
@@ -173,23 +176,23 @@ task prepareAgentClassdata(type: Copy) {
     into "${maskedJarTmpDir}/agent"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        include 'org/openjdk/btrace/libs/org/jctools/**/*.class'
-        include 'org/openjdk/btrace/agent/**/*.class'
-        include 'org/openjdk/btrace/instr/**/*.class'
-        include 'org/openjdk/btrace/instr/jaxb.index'  // Required for JAXB probe descriptor loading
-        include 'org/openjdk/btrace/runtime/**/*.class'
-        include 'org/openjdk/btrace/extension/**/*.class'
-        include 'org/openjdk/btrace/core/comm/**/*.class'
-        include 'org/openjdk/btrace/core/handlers/**/*.class'
-        include 'org/openjdk/btrace/core/Messages.class'
-        include 'org/openjdk/btrace/core/messages.properties'
+        include 'io/btrace/libs/org/jctools/**/*.class'
+        include 'io/btrace/agent/**/*.class'
+        include 'io/btrace/instr/**/*.class'
+        include 'io/btrace/instr/jaxb.index'  // Required for JAXB probe descriptor loading
+        include 'io/btrace/runtime/**/*.class'
+        include 'io/btrace/extension/**/*.class'
+        include 'io/btrace/core/comm/**/*.class'
+        include 'io/btrace/core/handlers/**/*.class'
+        include 'io/btrace/core/Messages.class'
+        include 'io/btrace/core/messages.properties'
         // Exclude classes that go in shared section
-        exclude 'org/openjdk/btrace/core/extensions/**'
-        exclude 'org/openjdk/btrace/core/annotations/**'
+        exclude 'io/btrace/core/extensions/**'
+        exclude 'io/btrace/core/annotations/**'
         // Exclude bootstrap runtime classes (now in btrace-core)
-        exclude 'org/openjdk/btrace/runtime/BTraceRuntimeAccess.class'
-        exclude 'org/openjdk/btrace/runtime/BTraceRuntimeAccess$*.class'
-        exclude 'org/openjdk/btrace/runtime/LinkingFlag.class'
+        exclude 'io/btrace/runtime/BTraceRuntimeAccess.class'
+        exclude 'io/btrace/runtime/BTraceRuntimeAccess$*.class'
+        exclude 'io/btrace/runtime/LinkingFlag.class'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
@@ -206,16 +209,16 @@ task prepareClientClassdata(type: Copy) {
     into "${maskedJarTmpDir}/client"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        include 'org/openjdk/btrace/client/**/*.class'
-        include 'org/openjdk/btrace/compiler/**/*.class'
-        include 'org/openjdk/btrace/libs/org/jctools/**/*.class'
+        include 'io/btrace/client/**/*.class'
+        include 'io/btrace/compiler/**/*.class'
+        include 'io/btrace/libs/org/jctools/**/*.class'
         include 'com/googlecode/lanterna/**/*.class'
         // Exclude classes that are in bootstrap or shared
-        exclude 'org/openjdk/btrace/core/**'
-        exclude 'org/openjdk/btrace/runtime/**'
-        exclude 'org/openjdk/btrace/extension/**'
-        exclude 'org/openjdk/btrace/libs/org/objectweb/asm/**'
-        exclude 'org/openjdk/btrace/libs/org/slf4j/**'
+        exclude 'io/btrace/core/**'
+        exclude 'io/btrace/runtime/**'
+        exclude 'io/btrace/extension/**'
+        exclude 'io/btrace/libs/org/objectweb/asm/**'
+        exclude 'io/btrace/libs/org/slf4j/**'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
@@ -224,8 +227,8 @@ task prepareClientClassdata(type: Copy) {
     // It cannot be in bootstrap (Messages.class.getClassLoader() would return null there,
     // breaking ResourceBundle.getBundle()), so it must be in the client masked section.
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
-        include 'org/openjdk/btrace/core/Messages.class'
-        include 'org/openjdk/btrace/core/messages.properties'
+        include 'io/btrace/core/Messages.class'
+        include 'io/btrace/core/messages.properties'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
 
@@ -242,14 +245,14 @@ task prepareSharedClassdata(type: Copy) {
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
         // Only include classes used by both client and agent
-        include 'org/openjdk/btrace/core/comm/**/*.class'
-        include 'org/openjdk/btrace/core/extensions/**/*.class'
-        include 'org/openjdk/btrace/core/annotations/**/*.class'
-        include 'org/openjdk/btrace/libs/org/objectweb/asm/**/*.class'
+        include 'io/btrace/core/comm/**/*.class'
+        include 'io/btrace/core/extensions/**/*.class'
+        include 'io/btrace/core/annotations/**/*.class'
+        include 'io/btrace/libs/org/objectweb/asm/**/*.class'
         // Exclude ASM packages not needed
-        exclude 'org/openjdk/btrace/libs/org/objectweb/asm/commons/**'
-        exclude 'org/openjdk/btrace/libs/org/objectweb/asm/util/**'
-        exclude 'org/openjdk/btrace/libs/org/objectweb/asm/xml/**'
+        exclude 'io/btrace/libs/org/objectweb/asm/commons/**'
+        exclude 'io/btrace/libs/org/objectweb/asm/util/**'
+        exclude 'io/btrace/libs/org/objectweb/asm/xml/**'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
@@ -347,7 +350,7 @@ task btraceJar(type: Jar) {
 
     // 1. Include boot loader class (must be in bootstrap as .class)
     from(project(':btrace-boot').sourceSets.main.output) {
-        include 'org/openjdk/btrace/boot/**/*.class'
+        include 'io/btrace/boot/**/*.class'
     }
 
     // 2. Include bootstrap classes from bootstrapJar (as .class)
@@ -355,7 +358,7 @@ task btraceJar(type: Jar) {
         include '**/*.class'
         include 'META-INF/services/**'
         include '**/jaxb.index'  // Required for JAXB probe descriptor loading
-        exclude 'org/openjdk/btrace/core/comm/**'
+        exclude 'io/btrace/core/comm/**'
         // Include annotations in bootstrap (needed by ExtensionIndy at runtime)
         // Exclude manifest from bootstrap jar
         exclude 'META-INF/MANIFEST.MF'
@@ -390,7 +393,7 @@ task btraceJar(type: Jar) {
     // with Messages.class.getClassLoader() which returns null for bootstrap classes,
     // causing NPE. Messages is only in agent/client sections where classloader is non-null.
     from(project(':btrace-core').sourceSets.main.output) {
-        include 'org/openjdk/btrace/core/extensions/**/*.class'
+        include 'io/btrace/core/extensions/**/*.class'
     }
 
     manifest {
@@ -408,6 +411,15 @@ task btraceJar(type: Jar) {
     }
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('compileTestJava') {
+    dependsOn btraceJar
+}
+
+test {
+    dependsOn btraceJar
+    useJUnitPlatform()
 }
 
 /**
