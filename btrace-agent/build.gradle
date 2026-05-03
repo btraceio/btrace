@@ -24,7 +24,7 @@ compileJava24Java {
     sourceCompatibility = 24
     targetCompatibility = 24
     javaCompiler = javaToolchains.compilerFor {
-        languageVersion.set(JavaLanguageVersion.of(24))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
