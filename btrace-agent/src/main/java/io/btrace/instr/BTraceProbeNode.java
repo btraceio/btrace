@@ -163,6 +163,11 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
   }
 
   @Override
+  public Collection<OnMethod> getApplicableHandlers(ClassMeta meta) {
+    return delegate.getApplicableHandlers(meta);
+  }
+
+  @Override
   public Iterable<OnMethod> onmethods() {
     return delegate.onmethods();
   }

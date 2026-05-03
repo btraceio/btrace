@@ -483,6 +483,11 @@ public class BTraceProbePersisted implements BTraceProbe {
   }
 
   @Override
+  public Collection<OnMethod> getApplicableHandlers(ClassMeta meta) {
+    return delegate.getApplicableHandlers(meta);
+  }
+
+  @Override
   public byte[] getFullBytecode() {
     return fullData;
   }
