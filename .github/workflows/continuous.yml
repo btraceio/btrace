@@ -55,9 +55,9 @@ jobs:
         run: ./gradlew --no-daemon --parallel --build-cache build
       - name: Run V2 Protocol Tests
         run: |
-          ./gradlew :btrace-core:test --tests "org.openjdk.btrace.core.comm.v2.*" \
-                                       --tests "org.openjdk.btrace.core.comm.Protocol*" \
-                                       --tests "org.openjdk.btrace.core.comm.WireProtocol*"
+          ./gradlew :btrace-core:test --tests "io.btrace.core.comm.v2.*" \
+                                       --tests "io.btrace.core.comm.Protocol*" \
+                                       --tests "io.btrace.core.comm.WireProtocol*"
       - name: Upload dist build data
         if: always()
         uses: actions/upload-artifact@v7
