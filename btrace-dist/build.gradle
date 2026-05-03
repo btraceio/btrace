@@ -727,12 +727,6 @@ task buildDockerImages {
     dependsOn buildDockerImage, buildDockerImageAlpine, buildDockerImageDistroless
 }
 
-test {
-    doLast {
-        project(':btrace-agent').tasks.test.execute()
-    }
-}
-
 ['agent', 'boot', 'client'].each { name ->
     // Define a temporary directory for the sources
     def tempDir = new File(buildDir, "tmp/${name}Sources")
