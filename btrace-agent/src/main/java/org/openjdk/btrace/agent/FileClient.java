@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.agent;
+package io.btrace.agent;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,11 +28,11 @@ import java.util.Enumeration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.PrintableCommand;
-import org.openjdk.btrace.instr.Constants;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.InstrumentCommand;
+import io.btrace.core.comm.PrintableCommand;
+import io.btrace.instr.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

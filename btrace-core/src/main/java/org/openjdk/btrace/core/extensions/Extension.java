@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.extensions;
+package io.btrace.core.extensions;
 
 /**
  * Base class for all BTrace extensions.

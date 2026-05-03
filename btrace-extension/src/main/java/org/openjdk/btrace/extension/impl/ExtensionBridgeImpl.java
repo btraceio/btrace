@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extension.impl;
+package io.btrace.extension.impl;
 
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.PermissionSet;
-import org.openjdk.btrace.extension.ExtensionBridge;
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionLoader;
-import org.openjdk.btrace.extension.PermissionPolicy;
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.PermissionSet;
+import io.btrace.extension.ExtensionBridge;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionLoader;
+import io.btrace.extension.PermissionPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +41,7 @@ public final class ExtensionBridgeImpl implements ExtensionBridge {
   /** Initialize the invokedynamic bridge with a live ExtensionLoader. */
   public static void initialize(ExtensionLoader loader) {
     try {
-      Class<?> indyClz = Class.forName("org.openjdk.btrace.runtime.ExtensionIndy", false, null);
+      Class<?> indyClz = Class.forName("io.btrace.runtime.ExtensionIndy", false, null);
       ExtensionBridge bridge = new ExtensionBridgeImpl(loader);
       indyClz.getField("bridge").set(null, bridge);
       log.debug("ExtensionIndy.bridge initialized");
@@ -58,7 +58,7 @@ public final class ExtensionBridgeImpl implements ExtensionBridge {
     ExtensionDescriptorDTO ext = loader.findExtensionForService(serviceClassName);
     if (ext == null) {
       log.error("No extension found providing service: {}", serviceClassName);
-      org.openjdk.btrace.extension.ExtensionRegistry.registerFailedExtension(
+      io.btrace.extension.ExtensionRegistry.registerFailedExtension(
           serviceClassName, "No providing extension found");
       return null;
     }
@@ -91,7 +91,7 @@ public final class ExtensionBridgeImpl implements ExtensionBridge {
     if (!ext.isLoaded()) {
       if (!loader.load(ext)) {
         log.error("Failed to load extension {} for service {}", ext.getId(), serviceClassName);
-        org.openjdk.btrace.extension.ExtensionRegistry.registerFailedExtension(
+        io.btrace.extension.ExtensionRegistry.registerFailedExtension(
             ext.getId(), "Failed to load extension");
         return null;
       }
@@ -143,12 +143,12 @@ public final class ExtensionBridgeImpl implements ExtensionBridge {
     try {
       loader.ensureApiOnBootstrap(ext);
       Class<?> intf = Class.forName(serviceClassName, false, null);
-      org.openjdk.btrace.extension.ExtensionRegistry.registerFailedExtension(ext.getId(), reason);
+      io.btrace.extension.ExtensionRegistry.registerFailedExtension(ext.getId(), reason);
       return intf;
     } catch (ClassNotFoundException cnfe) {
       // Even if API interface is not on bootstrap in this environment, keep the original reason
       // to accurately reflect why the implementation was not linked.
-      org.openjdk.btrace.extension.ExtensionRegistry.registerFailedExtension(ext.getId(), reason);
+      io.btrace.extension.ExtensionRegistry.registerFailedExtension(ext.getId(), reason);
       return null;
     }
   }

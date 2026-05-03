@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -24,8 +24,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.SharedSettings;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.SharedSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

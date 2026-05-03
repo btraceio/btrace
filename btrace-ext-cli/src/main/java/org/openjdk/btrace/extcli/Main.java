@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extcli;
+package io.btrace.extcli;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,7 +23,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.openjdk.btrace.extcli.tui.ExtRepoBrowser;
+import io.btrace.extcli.tui.ExtRepoBrowser;
 
 public final class Main {
   public static void main(String[] args) throws Exception {

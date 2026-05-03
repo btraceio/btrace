@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime.profiling;
+package io.btrace.runtime.profiling;
 
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import org.openjdk.btrace.core.Profiler;
+import io.btrace.core.Profiler;
 
 /**
  * Implementation of {@linkplain Profiler}

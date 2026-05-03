@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.agent;
+package io.btrace.agent;
 
 import java.net.URISyntaxException;
-import org.openjdk.btrace.runtime.PerfReader;
+import io.btrace.runtime.PerfReader;
 import sun.jvmstat.monitor.IntegerMonitor;
 import sun.jvmstat.monitor.LongMonitor;
 import sun.jvmstat.monitor.Monitor;

@@ -14,20 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.metrics;
+package io.btrace.metrics;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.metrics.histogram.HistogramConfig;
-import org.openjdk.btrace.metrics.histogram.HistogramConfigBuilder;
-import org.openjdk.btrace.metrics.histogram.HistogramConfigBuilderImpl;
-import org.openjdk.btrace.metrics.histogram.HistogramConfigImpl;
-import org.openjdk.btrace.metrics.histogram.HistogramMetric;
-import org.openjdk.btrace.metrics.histogram.HistogramMetricImpl;
-import org.openjdk.btrace.metrics.registry.MetricRegistry;
-import org.openjdk.btrace.metrics.stats.StatsMetric;
-import org.openjdk.btrace.metrics.stats.StatsMetricImpl;
+import io.btrace.core.extensions.Extension;
+import io.btrace.metrics.histogram.HistogramConfig;
+import io.btrace.metrics.histogram.HistogramConfigBuilder;
+import io.btrace.metrics.histogram.HistogramConfigBuilderImpl;
+import io.btrace.metrics.histogram.HistogramConfigImpl;
+import io.btrace.metrics.histogram.HistogramMetric;
+import io.btrace.metrics.histogram.HistogramMetricImpl;
+import io.btrace.metrics.registry.MetricRegistry;
+import io.btrace.metrics.stats.StatsMetric;
+import io.btrace.metrics.stats.StatsMetricImpl;
 
 /**
  * High-performance metrics service built on HdrHistogram.
@@ -86,7 +86,7 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
         () ->
             new HistogramMetricImpl(
                 name,
-                new org.openjdk.btrace.metrics.histogram.HistogramConfigImpl(
+                new io.btrace.metrics.histogram.HistogramConfigImpl(
                     1L, 3_600_000_000_000L, 3)));
   }
 
@@ -149,7 +149,7 @@ public final class MetricsServiceImpl extends Extension implements MetricsServic
    */
   @Nullable public StatsMetric stats(@NotNull String name, @NotNull String key) {
     return registry.getOrCreate(
-        name, key, () -> new org.openjdk.btrace.metrics.stats.StatsMetricImpl(name));
+        name, key, () -> new io.btrace.metrics.stats.StatsMetricImpl(name));
   }
 
   // ========== Query Operations ==========

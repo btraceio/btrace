@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler;
+package io.btrace.compiler;
 
 import com.sun.source.util.JavacTask;
 import java.io.File;
@@ -43,9 +43,9 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
-import org.openjdk.btrace.boot.MaskedClassLoader;
-import org.openjdk.btrace.boot.MaskedJarUtils;
-import org.openjdk.btrace.core.SharedSettings;
+import io.btrace.boot.MaskedClassLoader;
+import io.btrace.boot.MaskedJarUtils;
+import io.btrace.core.SharedSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

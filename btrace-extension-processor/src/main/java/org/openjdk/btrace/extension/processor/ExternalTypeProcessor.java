@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extension.processor;
+package io.btrace.extension.processor;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -34,9 +34,9 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
-import org.openjdk.btrace.core.extensions.ExternalType;
+import io.btrace.core.extensions.ExternalType;
 
-@SupportedAnnotationTypes("org.openjdk.btrace.core.extensions.ExternalType")
+@SupportedAnnotationTypes("io.btrace.core.extensions.ExternalType")
 public final class ExternalTypeProcessor extends AbstractProcessor {
 
   @Override

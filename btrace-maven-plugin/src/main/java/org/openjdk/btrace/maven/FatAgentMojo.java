@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.maven;
+package io.btrace.maven;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -65,7 +65,7 @@ import org.eclipse.aether.resolution.ArtifactResult;
     requiresDependencyResolution = ResolutionScope.RUNTIME)
 public class FatAgentMojo extends AbstractMojo {
 
-  private static final String BTRACE_GROUP_ID = "org.openjdk.btrace";
+  private static final String BTRACE_GROUP_ID = "io.btrace";
   private static final String BTRACE_AGENT_ARTIFACT_ID = "btrace-agent";
   private static final String BTRACE_BOOT_ARTIFACT_ID = "btrace-boot";
   private static final String EXTENSION_METADATA_PATH = "META-INF/btrace-extensions/";

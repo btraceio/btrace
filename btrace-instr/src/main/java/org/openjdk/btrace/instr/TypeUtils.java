@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.core.types.AnyType;
+import io.btrace.core.types.AnyType;
 
 public final class TypeUtils {
   public static final Type objectArrayType = Type.getType(Object[].class);

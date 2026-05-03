@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.bench;
+package io.btrace.bench;
 
 import java.util.concurrent.TimeUnit;
-import org.openjdk.btrace.statsd.Statsd;
+import io.btrace.statsd.Statsd;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

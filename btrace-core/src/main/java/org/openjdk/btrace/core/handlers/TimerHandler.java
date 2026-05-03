@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.handlers;
+package io.btrace.core.handlers;
 
 import java.lang.reflect.Method;
 

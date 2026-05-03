@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.instr.random.SharedRandomIntProvider;
-import org.openjdk.btrace.instr.random.ThreadLocalRandomIntProvider;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.instr.random.SharedRandomIntProvider;
+import io.btrace.instr.random.ThreadLocalRandomIntProvider;
 
 /**
  * @author Jaroslav Bachorik

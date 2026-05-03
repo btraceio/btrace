@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.utils;
+package io.btrace.utils;
 
-import org.openjdk.btrace.core.extensions.ServiceDescriptor;
+import io.btrace.core.extensions.ServiceDescriptor;
 
 /** Simple printer service API for BTrace scripts. */
 @ServiceDescriptor

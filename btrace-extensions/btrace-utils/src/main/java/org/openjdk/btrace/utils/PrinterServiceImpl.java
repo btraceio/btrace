@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.utils;
+package io.btrace.utils;
 
-import org.openjdk.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.Extension;
 
 public final class PrinterServiceImpl extends Extension implements PrinterService {
   private static final String NL = System.getProperty("line.separator");

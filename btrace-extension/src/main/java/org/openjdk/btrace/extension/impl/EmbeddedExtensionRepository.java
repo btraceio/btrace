@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extension.impl;
+package io.btrace.extension.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,9 +31,9 @@ import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
-import org.openjdk.btrace.core.extensions.PermissionSet;
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionRepository;
+import io.btrace.core.extensions.PermissionSet;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

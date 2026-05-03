@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import java.lang.invoke.CallSite;
 import java.lang.invoke.ConstantCallSite;
@@ -24,11 +24,11 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.annotations.InjectionMode;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.extensions.ExtensionContext;
-import org.openjdk.btrace.extension.ExtensionBridge;
+import io.btrace.core.SharedSettings;
+import io.btrace.core.annotations.InjectionMode;
+import io.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.ExtensionContext;
+import io.btrace.extension.ExtensionBridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

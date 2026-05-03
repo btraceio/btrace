@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.types;
+package io.btrace.core.types;
 
 /**
  * This interface type is used in BTrace programs to tell that any reference type [object or array]

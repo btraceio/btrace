@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.AASTORE;
 import static org.objectweb.asm.Opcodes.ACC_ENUM;
@@ -60,15 +60,15 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.VerifierException;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.Sampled;
-import org.openjdk.btrace.core.annotations.Where;
-import org.openjdk.btrace.core.comm.RetransformClassNotification;
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.VerifierException;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.annotations.Where;
+import io.btrace.core.comm.RetransformClassNotification;
+import io.btrace.core.extensions.Permission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
@@ -51,12 +51,12 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.BTraceRuntimeBridge;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.annotations.Event;
-import org.openjdk.btrace.core.annotations.Return;
-import org.openjdk.btrace.core.extensions.Extension;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeBridge;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.annotations.Event;
+import io.btrace.core.annotations.Return;
+import io.btrace.core.extensions.Extension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1500,7 +1500,7 @@ final class Preprocessor {
   private void ensureExtensionLoaded(String serviceClassName) {
     try {
       // Use reflection to obtain the agent's ExtensionLoader instance
-      Class<?> mainClass = Class.forName("org.openjdk.btrace.agent.Main");
+      Class<?> mainClass = Class.forName("io.btrace.agent.Main");
       Method getLoaderMethod = mainClass.getMethod("getExtensionLoader");
       Object extensionLoader = getLoaderMethod.invoke(null);
 

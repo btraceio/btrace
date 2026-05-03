@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.metrics.histogram;
+package io.btrace.metrics.histogram;
 
 import org.HdrHistogram.Histogram;
 import org.HdrHistogram.Recorder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.openjdk.btrace.metrics.Metric;
+import io.btrace.metrics.Metric;
 
 /**
  * Histogram metric using HdrHistogram for accurate percentiles.

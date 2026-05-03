@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
-import org.openjdk.btrace.core.MethodID;
+import io.btrace.core.MethodID;
 
 /**
  * Provides a centralized place to track the fundamental metrics for method execution. It is mostly

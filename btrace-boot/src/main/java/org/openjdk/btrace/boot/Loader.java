@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.boot;
+package io.btrace.boot;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,8 +58,8 @@ public final class Loader {
   private static final String CLIENT_SECTION = "client";
   private static final String AGENT_MAIN_ATTR = "BTrace-Agent-Main";
   private static final String CLIENT_MAIN_ATTR = "BTrace-Client-Main";
-  private static final String DEFAULT_AGENT_MAIN = "org.openjdk.btrace.agent.Main";
-  private static final String DEFAULT_CLIENT_MAIN = "org.openjdk.btrace.client.Main";
+  private static final String DEFAULT_AGENT_MAIN = "io.btrace.agent.Main";
+  private static final String DEFAULT_CLIENT_MAIN = "io.btrace.client.Main";
   private static final boolean DEBUG = Boolean.getBoolean("btrace.boot.debug");
 
   private Loader() {

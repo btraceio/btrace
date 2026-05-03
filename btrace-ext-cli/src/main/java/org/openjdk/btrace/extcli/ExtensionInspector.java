@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extcli;
+package io.btrace.extcli;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,9 +26,9 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.extensions.ExtensionMeta;
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.ExtensionMeta;
+import io.btrace.core.extensions.Permission;
 
 final class ExtensionInspector {
   static ExtensionReport inspect(Path input) throws IOException {
@@ -128,10 +128,10 @@ final class ExtensionInspector {
           try {
             Class<?> sc = Class.forName(svc, false, cl);
             java.lang.annotation.Annotation sd =
-                sc.getAnnotation(org.openjdk.btrace.core.extensions.ServiceDescriptor.class);
-            if (sd instanceof org.openjdk.btrace.core.extensions.ServiceDescriptor) {
-              for (org.openjdk.btrace.core.extensions.Permission p :
-                  ((org.openjdk.btrace.core.extensions.ServiceDescriptor) sd).permissions()) {
+                sc.getAnnotation(io.btrace.core.extensions.ServiceDescriptor.class);
+            if (sd instanceof io.btrace.core.extensions.ServiceDescriptor) {
+              for (io.btrace.core.extensions.Permission p :
+                  ((io.btrace.core.extensions.ServiceDescriptor) sd).permissions()) {
                 if (p != null) merged.add(p.name());
               }
             }
@@ -159,7 +159,7 @@ final class ExtensionInspector {
     return ExtensionReport.ok(id, version, privileged, services, metas, requiredPerms);
   }
 
-  // Read provider class names from META-INF/services/org.openjdk.btrace.core.extensions.Extension
+  // Read provider class names from META-INF/services/io.btrace.core.extensions.Extension
   // and load their Class objects without instantiating, then extract metadata.
   private static List<ExtensionMeta> loadMetasWithoutInstantiating(Path apiJar, Path implJar) {
     List<ExtensionMeta> result = new ArrayList<>();

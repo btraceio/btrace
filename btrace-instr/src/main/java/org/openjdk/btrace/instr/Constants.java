@@ -14,37 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.util.regex.Pattern;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Duration;
-import org.openjdk.btrace.core.annotations.Injected;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.Level;
-import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.OnError;
-import org.openjdk.btrace.core.annotations.OnEvent;
-import org.openjdk.btrace.core.annotations.OnExit;
-import org.openjdk.btrace.core.annotations.OnLowMemory;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.OnProbe;
-import org.openjdk.btrace.core.annotations.OnTimer;
-import org.openjdk.btrace.core.annotations.PeriodicEvent;
-import org.openjdk.btrace.core.annotations.ProbeClassName;
-import org.openjdk.btrace.core.annotations.ProbeMethodName;
-import org.openjdk.btrace.core.annotations.Return;
-import org.openjdk.btrace.core.annotations.Sampled;
-import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.TargetInstance;
-import org.openjdk.btrace.core.annotations.TargetMethodOrField;
-import org.openjdk.btrace.core.annotations.Where;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.jfr.JfrEvent;
-import org.openjdk.btrace.runtime.LinkingFlag;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Duration;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Level;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnError;
+import io.btrace.core.annotations.OnEvent;
+import io.btrace.core.annotations.OnExit;
+import io.btrace.core.annotations.OnLowMemory;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnProbe;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.PeriodicEvent;
+import io.btrace.core.annotations.ProbeClassName;
+import io.btrace.core.annotations.ProbeMethodName;
+import io.btrace.core.annotations.Return;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.annotations.Self;
+import io.btrace.core.annotations.TargetInstance;
+import io.btrace.core.annotations.TargetMethodOrField;
+import io.btrace.core.annotations.Where;
+import io.btrace.core.extensions.Extension;
+import io.btrace.core.jfr.JfrEvent;
+import io.btrace.runtime.LinkingFlag;
 
 /**
  * Constants shared by few classes.

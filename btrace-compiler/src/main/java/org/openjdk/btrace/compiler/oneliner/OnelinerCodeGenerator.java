@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler.oneliner;
+package io.btrace.compiler.oneliner;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.openjdk.btrace.compiler.oneliner.OnelinerAST.*;
+import io.btrace.compiler.oneliner.OnelinerAST.*;
 
 /** Generates BTrace Java source code from oneliner AST */
 public class OnelinerCodeGenerator {
@@ -52,11 +52,11 @@ public class OnelinerCodeGenerator {
     StringBuilder sb = new StringBuilder();
 
     // Package and imports
-    sb.append("package org.openjdk.btrace.generated;\n\n");
+    sb.append("package io.btrace.generated;\n\n");
     sb.append("import java.util.concurrent.atomic.AtomicInteger;\n");
-    sb.append("import org.openjdk.btrace.core.BTraceUtils;\n");
-    sb.append("import org.openjdk.btrace.core.annotations.*;\n");
-    sb.append("import org.openjdk.btrace.core.types.AnyType;\n\n");
+    sb.append("import io.btrace.core.BTraceUtils;\n");
+    sb.append("import io.btrace.core.annotations.*;\n");
+    sb.append("import io.btrace.core.types.AnyType;\n\n");
 
     // Class declaration
     sb.append("@BTrace\n");

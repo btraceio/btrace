@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.metrics.histogram;
+package io.btrace.metrics.histogram;
 
 /** Builder for {@link HistogramConfig}. Obtain from the injected service. */
 public interface HistogramConfigBuilder {

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -56,7 +56,7 @@ final class ProbeAnchor {
    */
   static Class<?> defineAnchor(ClassLoader parent) {
     long seq = ANCHOR_SEQ.incrementAndGet();
-    final String binaryName = "org.openjdk.btrace.runtime.auxiliary.Anchor$" + seq;
+    final String binaryName = "io.btrace.runtime.auxiliary.Anchor$" + seq;
     final byte[] bytes = generateAnchorBytes(binaryName.replace('.', '/'));
     ClassLoader cl =
         new ClassLoader(parent) {

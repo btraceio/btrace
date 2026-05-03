@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
-import org.openjdk.btrace.core.BTraceRuntimeBridge;
-import org.openjdk.btrace.core.extensions.ExtensionContext;
-import org.openjdk.btrace.core.handlers.ErrorHandler;
-import org.openjdk.btrace.core.handlers.EventHandler;
-import org.openjdk.btrace.core.handlers.ExitHandler;
-import org.openjdk.btrace.core.handlers.LowMemoryHandler;
-import org.openjdk.btrace.core.handlers.TimerHandler;
+import io.btrace.core.BTraceRuntimeBridge;
+import io.btrace.core.extensions.ExtensionContext;
+import io.btrace.core.handlers.ErrorHandler;
+import io.btrace.core.handlers.EventHandler;
+import io.btrace.core.handlers.ExitHandler;
+import io.btrace.core.handlers.LowMemoryHandler;
+import io.btrace.core.handlers.TimerHandler;
 
 /** Bootstrap-visible runtime access shim. */
 public final class BTraceRuntimeAccess {

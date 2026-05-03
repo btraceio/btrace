@@ -14,18 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.openjdk.btrace.core.HandlerRepository;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.runtime.BTraceRuntimes;
-import org.openjdk.btrace.runtime.IndyDispatcher;
-import org.openjdk.btrace.runtime.Interval;
+import io.btrace.core.HandlerRepository;
+import io.btrace.core.SharedSettings;
+import io.btrace.runtime.BTraceRuntimes;
+import io.btrace.runtime.IndyDispatcher;
+import io.btrace.runtime.Interval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +48,7 @@ public final class HandlerRepositoryImpl {
     // Wire up to IndyDispatcher (bootstrap CL) via reflection.
     // IndyDispatcher.repository is set to a method-reference calling our resolveHandler().
     try {
-      Class<?> dispatcherClz = Class.forName("org.openjdk.btrace.runtime.IndyDispatcher");
+      Class<?> dispatcherClz = Class.forName("io.btrace.runtime.IndyDispatcher");
       HandlerRepository hook = HandlerRepositoryImpl::resolveHandler;
       dispatcherClz.getField("repository").set(null, hook);
     } catch (Throwable t) {
@@ -62,7 +62,7 @@ public final class HandlerRepositoryImpl {
   /**
    * Register a probe after its class has been defined in the JVM. Must be called before any
    * instrumented call site targeting this probe is invoked. If invocation arrives first, {@link
-   * org.openjdk.btrace.runtime.IndyDispatcher} installs a self-relinking trampoline that will pick
+   * io.btrace.runtime.IndyDispatcher} installs a self-relinking trampoline that will pick
    * up the probe on its next invocation.
    */
   public static void registerProbe(BTraceProbe probe) {

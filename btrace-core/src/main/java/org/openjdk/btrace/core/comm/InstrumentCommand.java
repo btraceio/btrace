@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.comm;
+package io.btrace.core.comm;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Map;
-import org.openjdk.btrace.core.ArgsMap;
+import io.btrace.core.ArgsMap;
 
 public class InstrumentCommand extends Command {
 

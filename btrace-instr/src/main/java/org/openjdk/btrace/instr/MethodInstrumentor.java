@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -28,8 +28,8 @@ import java.util.Map;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.core.annotations.Where;
-import org.openjdk.btrace.runtime.Interval;
+import io.btrace.core.annotations.Where;
+import io.btrace.runtime.Interval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

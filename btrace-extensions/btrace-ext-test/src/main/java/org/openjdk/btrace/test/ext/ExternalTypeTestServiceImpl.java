@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.test.ext;
+package io.btrace.test.ext;
 
-import org.openjdk.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.Extension;
 
 public final class ExternalTypeTestServiceImpl extends Extension
     implements ExternalTypeTestService {

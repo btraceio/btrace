@@ -19,9 +19,9 @@ package org.example.btrace.hadoop.impl;
 import java.lang.invoke.MethodHandle;
 import java.net.URI;
 import org.example.btrace.hadoop.api.HadoopApi;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.extension.util.ClassLoadingUtil;
-import org.openjdk.btrace.extension.util.MethodHandleCache;
+import io.btrace.core.extensions.Extension;
+import io.btrace.extension.util.ClassLoadingUtil;
+import io.btrace.extension.util.MethodHandleCache;
 
 /** Example implementation demonstrating provided-style integration with Hadoop. */
 public final class HadoopApiImpl extends Extension implements HadoopApi {

@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extension;
+package io.btrace.extension;
 
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import org.openjdk.btrace.core.extensions.PermissionSet;
+import io.btrace.core.extensions.PermissionSet;
 
 /**
  * Descriptor for a BTrace extension loaded from an extension JAR. Contains metadata about the

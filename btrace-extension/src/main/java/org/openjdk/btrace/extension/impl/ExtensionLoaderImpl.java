@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extension.impl;
+package io.btrace.extension.impl;
 
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
@@ -28,9 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionLoader;
-import org.openjdk.btrace.extension.ExtensionRepository;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionLoader;
+import io.btrace.extension.ExtensionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

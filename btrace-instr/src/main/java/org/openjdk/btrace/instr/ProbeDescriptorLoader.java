@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -87,7 +87,7 @@ final class ProbeDescriptorLoader {
       // Use this class's classloader to ensure JAXB finds jaxb.index from masked sections
       JAXBContext jc =
           JAXBContext.newInstance(
-              "org.openjdk.btrace.core.annotations:org.openjdk.btrace.instr",
+              "io.btrace.core.annotations:io.btrace.instr",
               ProbeDescriptorLoader.class.getClassLoader());
       Unmarshaller u = jc.createUnmarshaller();
       u.setEventHandler(new DefaultValidationEventHandler());

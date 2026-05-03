@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.comm;
+package io.btrace.core.comm;
 
 /**
  * Configuration for BTrace wire protocol.

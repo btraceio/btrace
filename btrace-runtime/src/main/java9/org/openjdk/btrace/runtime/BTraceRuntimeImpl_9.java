@@ -23,7 +23,7 @@
  * questions.
  */
 
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
@@ -39,11 +39,11 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import jdk.internal.perf.Perf;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.jfr.JfrEvent;
-import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.core.jfr.JfrEvent;
+import io.btrace.runtime.auxiliary.Auxiliary;
 
 /**
  * Helper class used by BTrace built-in functions and also acts runtime "manager" for a specific
@@ -133,7 +133,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
               .walk(frames -> frames.skip(1).findFirst())
               .map(StackWalker.StackFrame::getDeclaringClass)
               .orElse(null);
-      if (caller == null || !caller.getName().startsWith("org.openjdk.btrace.")) {
+      if (caller == null || !caller.getName().startsWith("io.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
 
@@ -234,7 +234,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
     StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
         .forEach(
             f -> {
-              if (f.getClassName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+              if (f.getClassName().startsWith("io.btrace.runtime.auxiliary.")) {
                 return;
               }
               if (cont.getAndDecrement() == 0) {
@@ -251,7 +251,7 @@ public final class BTraceRuntimeImpl_9 extends BTraceRuntimeImplBase {
     StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
         .forEach(
             f -> {
-              if (f.getClassName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+              if (f.getClassName().startsWith("io.btrace.runtime.auxiliary.")) {
                 return;
               }
               if (cont.getAndDecrement() == 0) {

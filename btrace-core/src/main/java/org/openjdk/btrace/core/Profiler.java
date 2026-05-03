@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core;
+package io.btrace.core;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import org.openjdk.btrace.core.annotations.Property;
+import io.btrace.core.annotations.Property;
 
 /**
  * Profiler is a highly specialized aggregation-like data collector optimized for high-speed

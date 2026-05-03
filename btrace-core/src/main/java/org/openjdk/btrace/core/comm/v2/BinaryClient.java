@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.comm.v2;
+package io.btrace.core.comm.v2;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.CommandListener;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.CommandListener;
 
 /**
  * A client wrapper that uses the binary protocol for communication. This provides a

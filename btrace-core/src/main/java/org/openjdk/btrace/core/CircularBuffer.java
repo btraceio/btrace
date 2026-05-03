@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core;
+package io.btrace.core;
 
 public final class CircularBuffer<T> {
   private final T[] elements;

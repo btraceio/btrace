@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime.profiling;
+package io.btrace.runtime.profiling;
 
 import java.util.Arrays;
 import java.util.Deque;
@@ -23,7 +23,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
-import org.openjdk.btrace.core.Profiler;
+import io.btrace.core.Profiler;
 
 /**
  * An invocation recorder class. All the invocations must be coming from the same thread (eg. by

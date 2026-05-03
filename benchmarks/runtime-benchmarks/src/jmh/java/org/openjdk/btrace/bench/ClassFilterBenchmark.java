@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.bench;
+package io.btrace.bench;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-import org.openjdk.btrace.instr.ClassFilter;
-import org.openjdk.btrace.instr.OnMethod;
+import io.btrace.instr.ClassFilter;
+import io.btrace.instr.OnMethod;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
@@ -32,7 +32,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Fork(1)
 @BenchmarkMode(Mode.AverageTime)
 public class ClassFilterBenchmark {
-  private static final String CLASS_A_PKG = "org.openjdk.btrace.benchmark";
+  private static final String CLASS_A_PKG = "io.btrace.benchmark";
   private static final String CLASS_A_NAME = "ClassA";
   private static final String CLASS_A = CLASS_A_PKG + "." + CLASS_A_NAME;
 

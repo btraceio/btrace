@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 /**
  * Dummy perf reader that throws UnsupportedOperationException always. We use this when we don't

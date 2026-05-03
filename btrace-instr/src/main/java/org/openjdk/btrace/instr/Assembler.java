@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.AALOAD;
 import static org.objectweb.asm.Opcodes.AASTORE;
@@ -80,48 +80,48 @@ import static org.objectweb.asm.Opcodes.SALOAD;
 import static org.objectweb.asm.Opcodes.SASTORE;
 import static org.objectweb.asm.Opcodes.SIPUSH;
 import static org.objectweb.asm.Opcodes.SWAP;
-import static org.openjdk.btrace.instr.Constants.BOOLEAN_BOXED_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.BOOLEAN_VALUE;
-import static org.openjdk.btrace.instr.Constants.BOOLEAN_VALUE_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_BOOLEAN_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_BYTE_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_CHARACTER_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_DOUBLE_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_FLOAT_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_INTEGER_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_LONG_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_SHORT_DESC;
-import static org.openjdk.btrace.instr.Constants.BOX_VALUEOF;
-import static org.openjdk.btrace.instr.Constants.BTRACE_LEVEL_FLD;
-import static org.openjdk.btrace.instr.Constants.BYTE_BOXED_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.BYTE_VALUE;
-import static org.openjdk.btrace.instr.Constants.BYTE_VALUE_DESC;
-import static org.openjdk.btrace.instr.Constants.CHARACTER_BOXED_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.CHAR_VALUE;
-import static org.openjdk.btrace.instr.Constants.CHAR_VALUE_DESC;
-import static org.openjdk.btrace.instr.Constants.DOUBLE_BOXED_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.DOUBLE_VALUE;
-import static org.openjdk.btrace.instr.Constants.DOUBLE_VALUE_DESC;
-import static org.openjdk.btrace.instr.Constants.FLOAT_BOXED_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.FLOAT_VALUE;
-import static org.openjdk.btrace.instr.Constants.FLOAT_VALUE_DESC;
-import static org.openjdk.btrace.instr.Constants.INTEGER_BOXED_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.INT_DESC;
-import static org.openjdk.btrace.instr.Constants.INT_VALUE;
-import static org.openjdk.btrace.instr.Constants.INT_VALUE_DESC;
-import static org.openjdk.btrace.instr.Constants.LONG_BOXED_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.LONG_VALUE;
-import static org.openjdk.btrace.instr.Constants.LONG_VALUE_DESC;
-import static org.openjdk.btrace.instr.Constants.NUMBER_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.SHORT_BOXED_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.SHORT_VALUE;
-import static org.openjdk.btrace.instr.Constants.SHORT_VALUE_DESC;
+import static io.btrace.instr.Constants.BOOLEAN_BOXED_INTERNAL;
+import static io.btrace.instr.Constants.BOOLEAN_VALUE;
+import static io.btrace.instr.Constants.BOOLEAN_VALUE_DESC;
+import static io.btrace.instr.Constants.BOX_BOOLEAN_DESC;
+import static io.btrace.instr.Constants.BOX_BYTE_DESC;
+import static io.btrace.instr.Constants.BOX_CHARACTER_DESC;
+import static io.btrace.instr.Constants.BOX_DOUBLE_DESC;
+import static io.btrace.instr.Constants.BOX_FLOAT_DESC;
+import static io.btrace.instr.Constants.BOX_INTEGER_DESC;
+import static io.btrace.instr.Constants.BOX_LONG_DESC;
+import static io.btrace.instr.Constants.BOX_SHORT_DESC;
+import static io.btrace.instr.Constants.BOX_VALUEOF;
+import static io.btrace.instr.Constants.BTRACE_LEVEL_FLD;
+import static io.btrace.instr.Constants.BYTE_BOXED_INTERNAL;
+import static io.btrace.instr.Constants.BYTE_VALUE;
+import static io.btrace.instr.Constants.BYTE_VALUE_DESC;
+import static io.btrace.instr.Constants.CHARACTER_BOXED_INTERNAL;
+import static io.btrace.instr.Constants.CHAR_VALUE;
+import static io.btrace.instr.Constants.CHAR_VALUE_DESC;
+import static io.btrace.instr.Constants.DOUBLE_BOXED_INTERNAL;
+import static io.btrace.instr.Constants.DOUBLE_VALUE;
+import static io.btrace.instr.Constants.DOUBLE_VALUE_DESC;
+import static io.btrace.instr.Constants.FLOAT_BOXED_INTERNAL;
+import static io.btrace.instr.Constants.FLOAT_VALUE;
+import static io.btrace.instr.Constants.FLOAT_VALUE_DESC;
+import static io.btrace.instr.Constants.INTEGER_BOXED_INTERNAL;
+import static io.btrace.instr.Constants.INT_DESC;
+import static io.btrace.instr.Constants.INT_VALUE;
+import static io.btrace.instr.Constants.INT_VALUE_DESC;
+import static io.btrace.instr.Constants.LONG_BOXED_INTERNAL;
+import static io.btrace.instr.Constants.LONG_VALUE;
+import static io.btrace.instr.Constants.LONG_VALUE_DESC;
+import static io.btrace.instr.Constants.NUMBER_INTERNAL;
+import static io.btrace.instr.Constants.SHORT_BOXED_INTERNAL;
+import static io.btrace.instr.Constants.SHORT_VALUE;
+import static io.btrace.instr.Constants.SHORT_VALUE_DESC;
 
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.runtime.Interval;
+import io.btrace.runtime.Interval;
 
 /**
  * Convenient fluent wrapper over the ASM method visitor

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,14 +35,14 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.VerifierException;
-import org.openjdk.btrace.core.comm.RetransformClassNotification;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.extension.ServiceDeclarationRegistry;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.Messages;
+import io.btrace.core.VerifierException;
+import io.btrace.core.comm.RetransformClassNotification;
+import io.btrace.core.extensions.Permission;
+import io.btrace.extension.ServiceDeclarationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,7 +130,7 @@ public final class BTraceProbeNode extends ClassNode implements BTraceProbe {
           // some available extension (as exposed via ServiceDeclarationRegistry). It does
           // not load classes; instead, the agent registers a resolver that knows about
           // extension manifests. This complements the runtime validation in
-          // org.openjdk.btrace.agent.Client#validateDeclaredServices, which uses reflection
+          // io.btrace.agent.Client#validateDeclaredServices, which uses reflection
           // to account for classloader identity, JPMS access, and linkage in the actual
           // target JVM.
           String internal = Type.getType(desc).getInternalName();

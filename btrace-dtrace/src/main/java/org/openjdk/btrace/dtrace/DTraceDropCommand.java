@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.dtrace;
+package io.btrace.dtrace;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import org.openjdk.btrace.core.comm.MessageCommand;
+import io.btrace.core.comm.MessageCommand;
 import org.opensolaris.os.dtrace.DropEvent;
 
 /**

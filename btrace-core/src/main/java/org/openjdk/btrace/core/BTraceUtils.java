@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core;
+package io.btrace.core;
 
 import java.io.Serializable;
 import java.lang.management.MemoryUsage;
@@ -37,12 +37,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import jdk.jfr.Event;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.ProbeClassName;
-import org.openjdk.btrace.core.annotations.ProbeMethodName;
-import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.jfr.JfrEvent;
-import org.openjdk.btrace.core.types.AnyType;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.ProbeClassName;
+import io.btrace.core.annotations.ProbeMethodName;
+import io.btrace.core.annotations.Self;
+import io.btrace.core.jfr.JfrEvent;
+import io.btrace.core.types.AnyType;
 
 /**
  * This class is an all-in-one wrapper for BTrace DSL methods
@@ -6163,7 +6163,7 @@ public class BTraceUtils {
   public static final class Jfr {
     /**
      * Create a new event instance using the factory field annotated by {@linkplain
-     * org.openjdk.btrace.core.annotations.Event}
+     * io.btrace.core.annotations.Event}
      *
      * @param eventFactory the event factory
      * @return new event instance

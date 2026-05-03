@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core;
+package io.btrace.core;
 
 import java.text.MessageFormat;
 import java.util.Locale;
@@ -26,7 +26,7 @@ public final class Messages {
   static {
     messages =
         ResourceBundle.getBundle(
-            "org.openjdk.btrace.core.messages",
+            "io.btrace.core.messages",
             Locale.getDefault(),
             Messages.class.getClassLoader());
   }

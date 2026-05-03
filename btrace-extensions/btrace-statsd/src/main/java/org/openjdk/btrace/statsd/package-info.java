@@ -3,7 +3,7 @@
     version = "1.0",
     description = "StatsD metrics APIs",
     permissions = {Permission.NETWORK})
-package org.openjdk.btrace.statsd;
+package io.btrace.statsd;
 
-import org.openjdk.btrace.core.extensions.ExtensionDescriptor;
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.ExtensionDescriptor;
+import io.btrace.core.extensions.Permission;

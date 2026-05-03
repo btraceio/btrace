@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import java.util.Map;
 import jdk.jfr.Event;
-import org.openjdk.btrace.core.jfr.JfrEvent;
+import io.btrace.core.jfr.JfrEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

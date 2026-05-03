@@ -14,31 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.comm.v2;
+package io.btrace.core.comm.v2;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.DisconnectCommand;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.EventCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.GridDataCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.ListFailedExtensionsCommand;
-import org.openjdk.btrace.core.comm.ListProbesCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.comm.NumberDataCommand;
-import org.openjdk.btrace.core.comm.NumberMapDataCommand;
-import org.openjdk.btrace.core.comm.ReconnectCommand;
-import org.openjdk.btrace.core.comm.RenameCommand;
-import org.openjdk.btrace.core.comm.RetransformClassNotification;
-import org.openjdk.btrace.core.comm.RetransformationStartNotification;
-import org.openjdk.btrace.core.comm.SetSettingsCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.StringMapDataCommand;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.DisconnectCommand;
+import io.btrace.core.comm.ErrorCommand;
+import io.btrace.core.comm.EventCommand;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.GridDataCommand;
+import io.btrace.core.comm.InstrumentCommand;
+import io.btrace.core.comm.ListFailedExtensionsCommand;
+import io.btrace.core.comm.ListProbesCommand;
+import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.comm.NumberDataCommand;
+import io.btrace.core.comm.NumberMapDataCommand;
+import io.btrace.core.comm.ReconnectCommand;
+import io.btrace.core.comm.RenameCommand;
+import io.btrace.core.comm.RetransformClassNotification;
+import io.btrace.core.comm.RetransformationStartNotification;
+import io.btrace.core.comm.SetSettingsCommand;
+import io.btrace.core.comm.StatusCommand;
+import io.btrace.core.comm.StringMapDataCommand;
 
 /**
  * Adapter for converting between binary commands and original commands. This helps with incremental

@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.bench;
+package io.btrace.bench;
 
 import java.util.concurrent.TimeUnit;
-import org.openjdk.btrace.core.ArgsMap;
+import io.btrace.core.ArgsMap;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;

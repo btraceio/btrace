@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extension;
+package io.btrace.extension;
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
@@ -23,10 +23,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import org.openjdk.btrace.extension.impl.EmbeddedExtensionRepository;
-import org.openjdk.btrace.extension.impl.ExtensionConfig;
-import org.openjdk.btrace.extension.impl.ExtensionLoaderImpl;
-import org.openjdk.btrace.extension.impl.FileSystemExtensionRepository;
+import io.btrace.extension.impl.EmbeddedExtensionRepository;
+import io.btrace.extension.impl.ExtensionConfig;
+import io.btrace.extension.impl.ExtensionLoaderImpl;
+import io.btrace.extension.impl.FileSystemExtensionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

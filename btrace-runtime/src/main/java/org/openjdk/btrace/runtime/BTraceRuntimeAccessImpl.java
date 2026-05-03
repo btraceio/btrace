@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -23,17 +23,17 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.BTraceRuntimeBridge;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.extensions.ExtensionContext;
-import org.openjdk.btrace.core.handlers.ErrorHandler;
-import org.openjdk.btrace.core.handlers.EventHandler;
-import org.openjdk.btrace.core.handlers.ExitHandler;
-import org.openjdk.btrace.core.handlers.LowMemoryHandler;
-import org.openjdk.btrace.core.handlers.TimerHandler;
-import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeBridge;
+import io.btrace.core.SharedSettings;
+import io.btrace.core.comm.Command;
+import io.btrace.core.extensions.ExtensionContext;
+import io.btrace.core.handlers.ErrorHandler;
+import io.btrace.core.handlers.EventHandler;
+import io.btrace.core.handlers.ExitHandler;
+import io.btrace.core.handlers.LowMemoryHandler;
+import io.btrace.core.handlers.TimerHandler;
+import io.btrace.runtime.auxiliary.Auxiliary;
 
 public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delegate {
   private static final BTraceRuntimeAccessImpl INSTANCE = new BTraceRuntimeAccessImpl();

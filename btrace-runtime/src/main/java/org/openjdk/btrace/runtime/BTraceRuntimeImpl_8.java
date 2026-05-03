@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.InvocationTargetException;
@@ -23,10 +23,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.util.Set;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.jfr.JfrEvent;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.core.jfr.JfrEvent;
 import sun.misc.Perf;
 import sun.misc.Unsafe;
 import sun.reflect.CallerSensitive;
@@ -129,7 +129,7 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
       StackTraceElement[] stack = Thread.currentThread().getStackTrace();
       // stack[0] = getStackTrace, stack[1] = defineClass (this method), stack[2] = caller
       String callerClassName = stack.length > 2 ? stack[2].getClassName() : null;
-      if (callerClassName == null || !callerClassName.startsWith("org.openjdk.btrace.")) {
+      if (callerClassName == null || !callerClassName.startsWith("io.btrace.")) {
         throw new SecurityException("unsafe defineClass");
       }
       // Always define the probe in a fresh, isolated ClassLoader parented to the app CL.
@@ -195,10 +195,10 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   public ClassLoader getCallerClassLoader(int stackDec) {
     Class<?> c = Reflection.getCallerClass(stackDec + 1);
     // Probe handlers run in the bootstrap CL as
-    // org.openjdk.btrace.runtime.auxiliary.* classes (INDY dispatch).
+    // io.btrace.runtime.auxiliary.* classes (INDY dispatch).
     // Skip that frame to find the real application caller, mirroring
     // BTraceRuntimeImpl_9's StackWalker skip of auxiliary.* frames.
-    if (c != null && c.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+    if (c != null && c.getName().startsWith("io.btrace.runtime.auxiliary.")) {
       c = Reflection.getCallerClass(stackDec + 2);
     }
     return c != null ? c.getClassLoader() : null;
@@ -208,7 +208,7 @@ public final class BTraceRuntimeImpl_8 extends BTraceRuntimeImplBase {
   @Override
   public Class<?> getCallerClass(int stackDec) {
     Class<?> c = Reflection.getCallerClass(stackDec + 1);
-    if (c != null && c.getName().startsWith("org.openjdk.btrace.runtime.auxiliary.")) {
+    if (c != null && c.getName().startsWith("io.btrace.runtime.auxiliary.")) {
       c = Reflection.getCallerClass(stackDec + 2);
     }
     return c;

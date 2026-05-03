@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler;
+package io.btrace.compiler;
 
 import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.AssignmentTree;
@@ -46,8 +46,8 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.annotations.BTrace;
+import io.btrace.core.Messages;
+import io.btrace.core.annotations.BTrace;
 
 /**
  * An annotation processor that validates a BTrace program. Safety rules (such as no loops, no

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
@@ -22,16 +22,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.MessageCommand;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.MessageCommand;
 
 final class CommandQueue {
   private static final long DROP_TIMEOUT_MS =
-      Long.getLong("org.openjdk.btrace.runtime.cmd.dropTimeoutMillis", 1L);
+      Long.getLong("io.btrace.runtime.cmd.dropTimeoutMillis", 1L);
   private static final int BACKOFF_YIELD_ITERS =
-      Integer.getInteger("org.openjdk.btrace.runtime.cmd.backoffYieldIters", 3000);
+      Integer.getInteger("io.btrace.runtime.cmd.backoffYieldIters", 3000);
   private static final int BACKOFF_SLEEP_ITERS =
-      Integer.getInteger("org.openjdk.btrace.runtime.cmd.backoffSleepIters", 100);
+      Integer.getInteger("io.btrace.runtime.cmd.backoffSleepIters", 100);
   private final MpscChunkedArrayQueue<Command> queue;
   private final AtomicLong droppedCommands = new AtomicLong();
 

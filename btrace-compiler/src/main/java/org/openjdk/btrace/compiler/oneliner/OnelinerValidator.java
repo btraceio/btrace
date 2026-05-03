@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler.oneliner;
+package io.btrace.compiler.oneliner;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import org.openjdk.btrace.compiler.oneliner.OnelinerAST.*;
+import io.btrace.compiler.oneliner.OnelinerAST.*;
 
 /** Semantic validator for BTrace oneliner AST */
 public class OnelinerValidator {

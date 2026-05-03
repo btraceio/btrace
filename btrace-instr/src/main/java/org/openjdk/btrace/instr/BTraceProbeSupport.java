@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
-import static org.openjdk.btrace.instr.ClassFilter.isSubTypeOf;
+import static io.btrace.instr.ClassFilter.isSubTypeOf;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
@@ -31,10 +31,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.extensions.Permission;
+import io.btrace.runtime.BTraceRuntimeAccess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

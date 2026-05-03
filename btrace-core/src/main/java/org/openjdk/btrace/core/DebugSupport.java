@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core;
+package io.btrace.core;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -34,7 +34,7 @@ public final class DebugSupport {
     String logFile = System.getProperty("org.slf4j.simpleLogger.logFile");
     System.setProperty("org.slf4j.simpleLogger.logFile", logFile != null ? logFile : "System.out");
     String defaultLevel =
-        System.getProperty("org.slf4j.simpleLogger.log.org.openjdk.btrace", "info");
+        System.getProperty("org.slf4j.simpleLogger.log.io.btrace", "info");
     System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", debug ? "debug" : defaultLevel);
     try {
       Method mthd = SimpleLogger.class.getDeclaredMethod("init");

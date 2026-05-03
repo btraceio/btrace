@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -34,11 +34,11 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.core.MethodID;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.Sampled;
-import org.openjdk.btrace.core.annotations.Where;
-import org.openjdk.btrace.core.types.AnyType;
+import io.btrace.core.MethodID;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.annotations.Where;
+import io.btrace.core.types.AnyType;
 
 /**
  * This instruments a probed class with BTrace probe action class.

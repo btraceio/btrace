@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core;
+package io.btrace.core;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
 import java.io.BufferedOutputStream;
@@ -45,17 +45,17 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.openjdk.btrace.core.jfr.JfrEvent;
-import org.openjdk.btrace.core.types.AnyType;
-import org.openjdk.btrace.core.types.BTraceCollection;
-import org.openjdk.btrace.core.types.BTraceDeque;
-import org.openjdk.btrace.core.types.BTraceMap;
+import io.btrace.core.jfr.JfrEvent;
+import io.btrace.core.types.AnyType;
+import io.btrace.core.types.BTraceCollection;
+import io.btrace.core.types.BTraceDeque;
+import io.btrace.core.types.BTraceMap;
 import sun.misc.Unsafe;
 
 @SuppressWarnings("deprecation")
 public final class BTraceRuntime {
 
-  public static final String CMD_QUEUE_LIMIT_KEY = "org.openjdk.btrace.core.cmdQueueLimit";
+  public static final String CMD_QUEUE_LIMIT_KEY = "io.btrace.core.cmdQueueLimit";
   private static final boolean messageTimestamp = false;
   private static final String LINE_SEPARATOR;
   // perf counter variability - we always variable variability

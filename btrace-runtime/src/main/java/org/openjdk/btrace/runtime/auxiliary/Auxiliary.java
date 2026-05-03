@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime.auxiliary;
+package io.btrace.runtime.auxiliary;
 
 import java.lang.invoke.MethodHandles;
 
@@ -32,7 +32,7 @@ public final class Auxiliary {
    * MaskedClassLoader} and {@code Auxiliary} sits on the bootstrap loader.
    *
    * <p>Public because the primary caller lives in the sibling package {@code
-   * org.openjdk.btrace.runtime}.
+   * io.btrace.runtime}.
    */
   public static MethodHandles.Lookup lookup() {
     return MethodHandles.lookup();

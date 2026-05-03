@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.annotations;
+package io.btrace.core.annotations;
 
 /** Fallback behavior for optional injected services. */
 public enum InjectionMode {

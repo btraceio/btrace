@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.lang.annotation.Annotation;
 import java.lang.ref.Reference;
@@ -33,8 +33,8 @@ import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
-import org.openjdk.btrace.core.PrefixMap;
-import org.openjdk.btrace.core.annotations.BTrace;
+import io.btrace.core.PrefixMap;
+import io.btrace.core.annotations.BTrace;
 
 /**
  * This class checks whether a given target class matches at least one probe specified in a BTrace

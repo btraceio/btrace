@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.agent;
+package io.btrace.agent;
 
-import org.openjdk.btrace.core.extensions.RuntimeEnvironment;
+import io.btrace.core.extensions.RuntimeEnvironment;
 
 /**
  * Agent-side implementation of {@link RuntimeEnvironment} passed to {@link
- * org.openjdk.btrace.core.extensions.ExtensionConfigurator} instances during probe auto-selection.
+ * io.btrace.core.extensions.ExtensionConfigurator} instances during probe auto-selection.
  */
 final class AgentRuntimeEnvironment implements RuntimeEnvironment {
 

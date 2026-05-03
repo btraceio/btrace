@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.metrics;
+package io.btrace.metrics;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.ServiceDescriptor;
-import org.openjdk.btrace.metrics.histogram.HistogramConfig;
-import org.openjdk.btrace.metrics.histogram.HistogramConfigBuilder;
-import org.openjdk.btrace.metrics.histogram.HistogramMetric;
-import org.openjdk.btrace.metrics.stats.StatsMetric;
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.ServiceDescriptor;
+import io.btrace.metrics.histogram.HistogramConfig;
+import io.btrace.metrics.histogram.HistogramConfigBuilder;
+import io.btrace.metrics.histogram.HistogramMetric;
+import io.btrace.metrics.stats.StatsMetric;
 
 /** High-performance metrics service API. */
 @ServiceDescriptor(permissions = {Permission.THREADS})

@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.dtrace;
+package io.btrace.dtrace;
 
 import java.io.File;
 import java.io.IOException;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.extensions.ExtensionContext;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.ErrorCommand;
+import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.ExtensionContext;
 import org.opensolaris.os.dtrace.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

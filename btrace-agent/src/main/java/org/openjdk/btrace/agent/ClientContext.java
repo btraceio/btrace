@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.agent;
+package io.btrace.agent;
 
 import java.lang.instrument.Instrumentation;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.instr.BTraceTransformer;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.SharedSettings;
+import io.btrace.instr.BTraceTransformer;
 
 /**
  * Client-context data class

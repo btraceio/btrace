@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.core.annotations.Sampled;
+import io.btrace.core.annotations.Sampled;
 
 /**
  * Context for emitting method tracking bytecode (sampling and timing). Replaces the template system

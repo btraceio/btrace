@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler;
+package io.btrace.compiler;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -157,7 +157,7 @@ class ClassDataJavaFileObject implements JavaFileObject {
   /**
    * Infers the binary name (fully qualified class name) from this file object.
    *
-   * @return the binary name (e.g., "org.openjdk.btrace.core.annotations.BTrace")
+   * @return the binary name (e.g., "io.btrace.core.annotations.BTrace")
    */
   String inferBinaryName() {
     return className;

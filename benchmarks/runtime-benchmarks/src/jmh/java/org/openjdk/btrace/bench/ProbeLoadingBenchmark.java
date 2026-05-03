@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.bench;
+package io.btrace.bench;
 
 import java.io.*;
 import java.util.concurrent.TimeUnit;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.instr.BTraceProbe;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
+import io.btrace.core.SharedSettings;
+import io.btrace.instr.BTraceProbe;
+import io.btrace.instr.BTraceProbeFactory;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;

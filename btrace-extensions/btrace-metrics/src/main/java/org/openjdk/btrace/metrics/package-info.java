@@ -3,7 +3,7 @@
     version = "1.0",
     description = "High-performance metrics APIs",
     permissions = {Permission.THREADS})
-package org.openjdk.btrace.metrics;
+package io.btrace.metrics;
 
-import org.openjdk.btrace.core.extensions.ExtensionDescriptor;
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.ExtensionDescriptor;
+import io.btrace.core.extensions.Permission;

@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.metrics.stats;
+package io.btrace.metrics.stats;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.openjdk.btrace.metrics.Metric;
+import io.btrace.metrics.Metric;
 
 /**
  * Statistics metric using lock-free atomics.

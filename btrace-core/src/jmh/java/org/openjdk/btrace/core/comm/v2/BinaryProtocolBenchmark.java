@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.comm.v2;
+package io.btrace.core.comm.v2;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,18 +26,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.EventCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.GridDataCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.comm.NumberDataCommand;
-import org.openjdk.btrace.core.comm.NumberMapDataCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.StringMapDataCommand;
-import org.openjdk.btrace.core.comm.WireIO;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.ErrorCommand;
+import io.btrace.core.comm.EventCommand;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.GridDataCommand;
+import io.btrace.core.comm.InstrumentCommand;
+import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.comm.NumberDataCommand;
+import io.btrace.core.comm.NumberMapDataCommand;
+import io.btrace.core.comm.StatusCommand;
+import io.btrace.core.comm.StringMapDataCommand;
+import io.btrace.core.comm.WireIO;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

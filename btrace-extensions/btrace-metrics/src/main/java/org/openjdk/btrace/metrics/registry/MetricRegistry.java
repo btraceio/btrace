@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.metrics.registry;
+package io.btrace.metrics.registry;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-import org.openjdk.btrace.metrics.Metric;
+import io.btrace.metrics.Metric;
 
 /**
  * Thread-safe registry for storing metrics.

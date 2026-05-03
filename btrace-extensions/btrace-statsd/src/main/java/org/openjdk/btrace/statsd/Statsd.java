@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.statsd;
+package io.btrace.statsd;
 
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.ServiceDescriptor;
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.ServiceDescriptor;
 
 /** API for StatsD metrics client. */
 @ServiceDescriptor(permissions = {Permission.NETWORK})

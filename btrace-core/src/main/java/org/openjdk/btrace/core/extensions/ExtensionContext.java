@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.extensions;
+package io.btrace.core.extensions;
 
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.comm.Command;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.comm.Command;
 
 /**
  * Context provided to extensions at initialization.

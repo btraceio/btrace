@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr.random;
+package io.btrace.instr.random;
 
 import java.util.Random;
-import org.openjdk.btrace.instr.RandomIntProvider;
+import io.btrace.instr.RandomIntProvider;
 
 /**
  * @author Jaroslav Bachorik

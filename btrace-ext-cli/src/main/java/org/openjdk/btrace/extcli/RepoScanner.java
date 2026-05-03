@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extcli;
+package io.btrace.extcli;
 
 import java.io.File;
 import java.nio.file.Path;

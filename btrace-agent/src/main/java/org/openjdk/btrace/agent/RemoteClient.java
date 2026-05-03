@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.agent;
+package io.btrace.agent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,25 +26,25 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.LockSupport;
-import org.openjdk.btrace.core.*;
-import org.openjdk.btrace.core.comm.BinaryWireProtocol;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.DisconnectCommand;
-import org.openjdk.btrace.core.comm.EventCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.JavaSerializationProtocol;
-import org.openjdk.btrace.core.comm.ListFailedExtensionsCommand;
-import org.openjdk.btrace.core.comm.ListProbesCommand;
-import org.openjdk.btrace.core.comm.PrintableCommand;
-import org.openjdk.btrace.core.comm.ProtocolConfig;
-import org.openjdk.btrace.core.comm.ProtocolNegotiator;
-import org.openjdk.btrace.core.comm.ProtocolVersion;
-import org.openjdk.btrace.core.comm.ReconnectCommand;
-import org.openjdk.btrace.core.comm.SetSettingsCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.WireProtocol;
-import org.openjdk.btrace.extension.ExtensionRegistry;
+import io.btrace.core.*;
+import io.btrace.core.comm.BinaryWireProtocol;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.DisconnectCommand;
+import io.btrace.core.comm.EventCommand;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.InstrumentCommand;
+import io.btrace.core.comm.JavaSerializationProtocol;
+import io.btrace.core.comm.ListFailedExtensionsCommand;
+import io.btrace.core.comm.ListProbesCommand;
+import io.btrace.core.comm.PrintableCommand;
+import io.btrace.core.comm.ProtocolConfig;
+import io.btrace.core.comm.ProtocolNegotiator;
+import io.btrace.core.comm.ProtocolVersion;
+import io.btrace.core.comm.ReconnectCommand;
+import io.btrace.core.comm.SetSettingsCommand;
+import io.btrace.core.comm.StatusCommand;
+import io.btrace.core.comm.WireProtocol;
+import io.btrace.extension.ExtensionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 /*
  This class is a simple implementation of DynamicMBean that exposes a BTrace class as a MBean. The
@@ -57,9 +57,9 @@ import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.OpenDataException;
 import javax.management.openmbean.OpenType;
 import javax.management.openmbean.SimpleType;
-import org.openjdk.btrace.core.Profiler;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Property;
+import io.btrace.core.Profiler;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Property;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

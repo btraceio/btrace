@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.comm.v2;
+package io.btrace.core.comm.v2;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;

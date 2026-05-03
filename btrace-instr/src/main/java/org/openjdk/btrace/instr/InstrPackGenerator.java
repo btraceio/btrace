@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import org.openjdk.btrace.compiler.PackGenerator;
-import org.openjdk.btrace.core.SharedSettings;
+import io.btrace.compiler.PackGenerator;
+import io.btrace.core.SharedSettings;
 
 public final class InstrPackGenerator implements PackGenerator {
   @Override

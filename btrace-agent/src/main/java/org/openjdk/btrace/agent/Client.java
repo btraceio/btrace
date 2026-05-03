@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.agent;
+package io.btrace.agent;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -41,36 +41,36 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.BTraceRuntimeBridge;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.InstrumentCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.comm.RenameCommand;
-import org.openjdk.btrace.core.comm.RetransformationStartNotification;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.PermissionSet;
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionLoader;
-import org.openjdk.btrace.extension.ExtensionRegistry;
-import org.openjdk.btrace.instr.BTraceProbe;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
-import org.openjdk.btrace.instr.BTraceProbePersisted;
-import org.openjdk.btrace.instr.BTraceTransformer;
-import org.openjdk.btrace.instr.ClassCache;
-import org.openjdk.btrace.instr.ClassFilter;
-import org.openjdk.btrace.instr.ClassInfo;
-import org.openjdk.btrace.instr.InstrumentUtils;
-import org.openjdk.btrace.instr.Instrumentor;
-import org.openjdk.btrace.instr.MethodTrackingContext;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
-import org.openjdk.btrace.runtime.BTraceRuntimes;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeBridge;
+import io.btrace.core.SharedSettings;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.core.comm.ErrorCommand;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.InstrumentCommand;
+import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.comm.RenameCommand;
+import io.btrace.core.comm.RetransformationStartNotification;
+import io.btrace.core.comm.StatusCommand;
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.PermissionSet;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionLoader;
+import io.btrace.extension.ExtensionRegistry;
+import io.btrace.instr.BTraceProbe;
+import io.btrace.instr.BTraceProbeFactory;
+import io.btrace.instr.BTraceProbePersisted;
+import io.btrace.instr.BTraceTransformer;
+import io.btrace.instr.ClassCache;
+import io.btrace.instr.ClassFilter;
+import io.btrace.instr.ClassInfo;
+import io.btrace.instr.InstrumentUtils;
+import io.btrace.instr.Instrumentor;
+import io.btrace.instr.MethodTrackingContext;
+import io.btrace.runtime.BTraceRuntimeAccess;
+import io.btrace.runtime.BTraceRuntimes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -180,7 +180,7 @@ abstract class Client implements CommandListener {
 
   private void startFlusher() {
     int flushInterval;
-    String flushIntervalStr = System.getProperty("org.openjdk.btrace.FileClient.flush");
+    String flushIntervalStr = System.getProperty("io.btrace.FileClient.flush");
     if (flushIntervalStr == null) {
       flushIntervalStr = System.getProperty("com.sun.btrace.FileClient.flush", "5");
     }

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
 import java.io.BufferedInputStream;
@@ -68,28 +68,28 @@ import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 import org.jctools.queues.MessagePassingQueue;
 import org.jctools.queues.MpmcArrayQueue;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.BTraceRuntimeBridge;
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.Profiler;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.EventCommand;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.GridDataCommand;
-import org.openjdk.btrace.core.comm.MessageCommand;
-import org.openjdk.btrace.core.comm.NumberDataCommand;
-import org.openjdk.btrace.core.comm.NumberMapDataCommand;
-import org.openjdk.btrace.core.comm.StringMapDataCommand;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.handlers.ErrorHandler;
-import org.openjdk.btrace.core.handlers.EventHandler;
-import org.openjdk.btrace.core.handlers.ExitHandler;
-import org.openjdk.btrace.core.handlers.LowMemoryHandler;
-import org.openjdk.btrace.core.handlers.TimerHandler;
-import org.openjdk.btrace.runtime.profiling.MethodInvocationProfiler;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeBridge;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.Profiler;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.core.comm.ErrorCommand;
+import io.btrace.core.comm.EventCommand;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.GridDataCommand;
+import io.btrace.core.comm.MessageCommand;
+import io.btrace.core.comm.NumberDataCommand;
+import io.btrace.core.comm.NumberMapDataCommand;
+import io.btrace.core.comm.StringMapDataCommand;
+import io.btrace.core.extensions.Extension;
+import io.btrace.core.handlers.ErrorHandler;
+import io.btrace.core.handlers.EventHandler;
+import io.btrace.core.handlers.ExitHandler;
+import io.btrace.core.handlers.LowMemoryHandler;
+import io.btrace.core.handlers.TimerHandler;
+import io.btrace.runtime.profiling.MethodInvocationProfiler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1369,7 +1369,7 @@ public abstract class BTraceRuntimeImplBase implements BTraceRuntime.Impl, BTrac
     try {
       if (String.class.getResource("sun/jvmstat/monitor/MonitoredHost.class") != null) {
         return (PerfReader)
-            Class.forName("org.openjdk.btrace.agent.PerfReaderImpl")
+            Class.forName("io.btrace.agent.PerfReaderImpl")
                 .getDeclaredConstructor()
                 .newInstance();
       }

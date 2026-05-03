@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.ATHROW;
-import static org.openjdk.btrace.instr.Constants.THROWABLE_INTERNAL;
-import static org.openjdk.btrace.instr.Constants.THROWABLE_TYPE;
+import static io.btrace.instr.Constants.THROWABLE_INTERNAL;
+import static io.btrace.instr.Constants.THROWABLE_TYPE;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;

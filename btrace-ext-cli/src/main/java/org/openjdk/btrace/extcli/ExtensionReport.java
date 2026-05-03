@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extcli;
+package io.btrace.extcli;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.openjdk.btrace.core.extensions.ExtensionMeta;
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.ExtensionMeta;
+import io.btrace.core.extensions.Permission;
 
 final class ExtensionReport {
   final boolean ok;

@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
 import java.lang.instrument.Instrumentation;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.comm.CommandListener;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.comm.CommandListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,9 +30,9 @@ public final class BTraceRuntimes {
 
   static {
     boolean loaded =
-        loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_11$Factory")
-            || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_9$Factory")
-            || loadFactory("org.openjdk.btrace.runtime.BTraceRuntimeImpl_8$Factory");
+        loadFactory("io.btrace.runtime.BTraceRuntimeImpl_11$Factory")
+            || loadFactory("io.btrace.runtime.BTraceRuntimeImpl_9$Factory")
+            || loadFactory("io.btrace.runtime.BTraceRuntimeImpl_8$Factory");
     log.debug("BTraceRuntime loaded: {}", loaded);
     BTraceRuntimeAccessImpl.install();
   }

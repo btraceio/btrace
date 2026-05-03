@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core;
+package io.btrace.core;
 
 import java.util.Map;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.PermissionSet;
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.PermissionSet;
 
 /**
  * @author Jaroslav Bachorik

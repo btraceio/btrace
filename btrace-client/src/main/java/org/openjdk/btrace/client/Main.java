@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.client;
+package io.btrace.client;
 
 import java.io.Console;
 import java.io.File;
@@ -29,18 +29,18 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import org.openjdk.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
-import org.openjdk.btrace.compiler.oneliner.OnelinerCodeGenerator;
-import org.openjdk.btrace.compiler.oneliner.OnelinerException;
-import org.openjdk.btrace.compiler.oneliner.OnelinerParser;
-import org.openjdk.btrace.compiler.oneliner.OnelinerValidator;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.CommandListener;
-import org.openjdk.btrace.core.comm.ExitCommand;
-import org.openjdk.btrace.core.comm.PrintableCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
+import io.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
+import io.btrace.compiler.oneliner.OnelinerCodeGenerator;
+import io.btrace.compiler.oneliner.OnelinerException;
+import io.btrace.compiler.oneliner.OnelinerParser;
+import io.btrace.compiler.oneliner.OnelinerValidator;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.Messages;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.CommandListener;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.PrintableCommand;
+import io.btrace.core.comm.StatusCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;

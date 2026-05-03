@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.dtrace;
+package io.btrace.dtrace;
 
 import org.opensolaris.os.dtrace.ConsumerEvent;
 

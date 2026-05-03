@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.io.FileInputStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import org.openjdk.btrace.core.SharedSettings;
+import io.btrace.core.SharedSettings;
 
 public class ProbeDump {
   public static void main(String[] args) throws Exception {

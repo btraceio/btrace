@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.client;
+package io.btrace.client;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -25,12 +25,12 @@ import java.nio.file.Paths;
 import java.util.Set;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.TraceClassVisitor;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.instr.BTraceProbe;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
-import org.openjdk.btrace.instr.OnMethod;
-import org.openjdk.btrace.instr.OnProbe;
+import io.btrace.core.SharedSettings;
+import io.btrace.core.extensions.Permission;
+import io.btrace.instr.BTraceProbe;
+import io.btrace.instr.BTraceProbeFactory;
+import io.btrace.instr.OnMethod;
+import io.btrace.instr.OnProbe;
 
 public final class ProbePrinter {
   public static void main(String[] args) throws Exception {

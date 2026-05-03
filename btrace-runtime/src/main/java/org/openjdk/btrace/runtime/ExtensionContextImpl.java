@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.extensions.Extension;
-import org.openjdk.btrace.core.extensions.ExtensionContext;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.PermissionSet;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.comm.Command;
+import io.btrace.core.extensions.Extension;
+import io.btrace.core.extensions.ExtensionContext;
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.PermissionSet;
 
 /**
  * Implementation of {@link ExtensionContext} backed by a {@link BTraceRuntimeImplBase}.

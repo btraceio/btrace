@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extension.impl;
+package io.btrace.extension.impl;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -22,8 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionRepository;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

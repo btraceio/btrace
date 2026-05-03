@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.test.ext;
+package io.btrace.test.ext;
 
 /**
  * Integration-test service: exercises @ExternalType adapters against a class

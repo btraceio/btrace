@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extcli.tui;
+package io.btrace.extcli.tui;
 
 // Copied from client.tui and adapted to ext-cli package
 
@@ -48,7 +48,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.Permission;
 
 public final class ExtRepoBrowser {
   private ExtRepoBrowser() {}

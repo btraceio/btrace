@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
-import static org.openjdk.btrace.instr.TypeUtils.isAnyType;
-import static org.openjdk.btrace.instr.TypeUtils.isPrimitive;
+import static io.btrace.instr.TypeUtils.isAnyType;
+import static io.btrace.instr.TypeUtils.isPrimitive;
 
 import java.io.IOException;
 import java.io.InputStream;

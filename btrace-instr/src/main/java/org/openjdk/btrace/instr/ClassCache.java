@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
@@ -25,7 +25,7 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentMap;
 import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingIdentityHashMap;
-import org.openjdk.btrace.instr.ClassInfo.ClassName;
+import io.btrace.instr.ClassInfo.ClassName;
 
 /**
  * A simple class cache holding {@linkplain ClassInfo} instances and being searchable either by

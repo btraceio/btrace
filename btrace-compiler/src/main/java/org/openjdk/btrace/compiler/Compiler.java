@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler;
+package io.btrace.compiler;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,8 +30,8 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.runtime.BTraceRuntimeAccess;
+import io.btrace.core.Messages;
+import io.btrace.runtime.BTraceRuntimeAccess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

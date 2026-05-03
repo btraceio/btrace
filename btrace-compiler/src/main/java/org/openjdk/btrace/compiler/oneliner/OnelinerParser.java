@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler.oneliner;
+package io.btrace.compiler.oneliner;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.openjdk.btrace.compiler.oneliner.OnelinerAST.*;
-import org.openjdk.btrace.compiler.oneliner.OnelinerLexer.Token;
-import org.openjdk.btrace.compiler.oneliner.OnelinerLexer.TokenType;
+import io.btrace.compiler.oneliner.OnelinerAST.*;
+import io.btrace.compiler.oneliner.OnelinerLexer.Token;
+import io.btrace.compiler.oneliner.OnelinerLexer.TokenType;
 
 /** Parser for BTrace oneliner language */
 public class OnelinerParser {

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.extension.impl;
+package io.btrace.extension.impl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -32,10 +32,10 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.core.extensions.PermissionSet;
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionRepository;
+import io.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.PermissionSet;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionRepository;
 
 /**
  * Parser for extension metadata from MANIFEST.MF attributes, btrace-extension.properties (legacy),

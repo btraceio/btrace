@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +24,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
-import org.openjdk.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

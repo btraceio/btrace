@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.compiler;
+package io.btrace.compiler;
 
 import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.AssertTree;
@@ -63,15 +63,15 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Injected;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.OnError;
-import org.openjdk.btrace.core.annotations.OnExit;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Sampled;
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.Messages;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.OnError;
+import io.btrace.core.annotations.OnExit;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.extensions.Permission;
 
 /**
  * This class tree visitor validates a BTrace program's ClassTree.
@@ -125,7 +125,7 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
     this.verifier = verifier;
     // Legacy service types are no longer referenced at compile time.
     TypeElement extensionElement =
-        verifier.getElementUtils().getTypeElement("org.openjdk.btrace.core.extensions.Extension");
+        verifier.getElementUtils().getTypeElement("io.btrace.core.extensions.Extension");
     if (extensionElement != null) {
       extensionTm = extensionElement.asType();
     }
@@ -199,8 +199,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   }
 
   private boolean isBTraceClass(String typeName) {
-    return typeName.equals("org.openjdk.btrace.core.BTraceUtils")
-        || typeName.startsWith("org.openjdk.btrace.core.BTraceUtils.");
+    return typeName.equals("io.btrace.core.BTraceUtils")
+        || typeName.startsWith("io.btrace.core.BTraceUtils.");
   }
 
   @Override
@@ -689,7 +689,7 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   private boolean isAnnotated(MethodTree node) {
     for (AnnotationTree at : node.getModifiers().getAnnotations()) {
       String resolvedName = verifier.resolveAnnotationTypeName(at);
-      if (resolvedName != null && resolvedName.startsWith("org.openjdk.btrace.core.annotations")) {
+      if (resolvedName != null && resolvedName.startsWith("io.btrace.core.annotations")) {
         return true;
       }
     }

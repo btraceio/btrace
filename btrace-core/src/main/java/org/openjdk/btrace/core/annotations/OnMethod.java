@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.annotations;
+package io.btrace.core.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -77,7 +77,7 @@ public @interface OnMethod {
    *
    * @return The instrumentation level (default {@code @Level("0")})
    * @see Level
-   * @see org.openjdk.btrace.core.BTraceUtils#getInstrumentationLevel()
+   * @see io.btrace.core.BTraceUtils#getInstrumentationLevel()
    * @since 1.3.4
    */
   Level enableAt() default @Level;

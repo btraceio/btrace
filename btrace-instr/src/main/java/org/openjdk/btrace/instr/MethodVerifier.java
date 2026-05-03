@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.Set;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
-import org.openjdk.btrace.core.annotations.Sampled;
-import org.openjdk.btrace.core.extensions.Extension;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.extensions.Extension;
 
 /**
  * This class verifies that the BTrace "action" method is safe - boundedness and read-only rules are

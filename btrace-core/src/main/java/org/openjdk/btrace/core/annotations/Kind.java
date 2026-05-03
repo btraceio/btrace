@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.annotations;
+package io.btrace.core.annotations;
 
-import org.openjdk.btrace.core.types.AnyType;
+import io.btrace.core.types.AnyType;
 
 /**
  * This enum is specified in the Location annotation to specify probe point kind. This enum

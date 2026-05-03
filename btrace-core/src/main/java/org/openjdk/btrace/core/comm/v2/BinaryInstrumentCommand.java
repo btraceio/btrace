@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.comm.v2;
+package io.btrace.core.comm.v2;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
-import org.openjdk.btrace.core.ArgsMap;
+import io.btrace.core.ArgsMap;
 
 /**
  * Binary implementation of the InstrumentCommand. This command is used to send BTrace code to the

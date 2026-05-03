@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -22,8 +22,8 @@ import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.VerifierException;
+import io.btrace.core.Messages;
+import io.btrace.core.VerifierException;
 
 /**
  * This class verifies that a BTrace program is safe and well-formed. Also it fills the onMethods

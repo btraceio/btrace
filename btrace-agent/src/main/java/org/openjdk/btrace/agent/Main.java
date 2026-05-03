@@ -14,39 +14,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.agent;
+package io.btrace.agent;
 
-import static org.openjdk.btrace.core.Args.ALLOW_EXTENSIONS;
-import static org.openjdk.btrace.core.Args.ALLOW_PRIVILEGED;
-import static org.openjdk.btrace.core.Args.BOOT_CLASS_PATH;
-import static org.openjdk.btrace.core.Args.CMD_QUEUE_LIMIT;
-import static org.openjdk.btrace.core.Args.CONFIG;
-import static org.openjdk.btrace.core.Args.DEBUG;
-import static org.openjdk.btrace.core.Args.DENY;
-import static org.openjdk.btrace.core.Args.DENY_EXTENSIONS;
-import static org.openjdk.btrace.core.Args.DUMP_CLASSES;
-import static org.openjdk.btrace.core.Args.DUMP_DIR;
-import static org.openjdk.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
-import static org.openjdk.btrace.core.Args.FILE_ROLL_MILLISECONDS;
-import static org.openjdk.btrace.core.Args.GRANT;
-import static org.openjdk.btrace.core.Args.GRANT_ALL;
-import static org.openjdk.btrace.core.Args.HELP;
-import static org.openjdk.btrace.core.Args.LIBS;
-import static org.openjdk.btrace.core.Args.NO_SERVER;
-import static org.openjdk.btrace.core.Args.OUTPUT;
-import static org.openjdk.btrace.core.Args.PORT;
-import static org.openjdk.btrace.core.Args.PROBES;
-import static org.openjdk.btrace.core.Args.PROBE_DESC_PATH;
-import static org.openjdk.btrace.core.Args.SCRIPT;
-import static org.openjdk.btrace.core.Args.SCRIPT_DIR;
-import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_DIR;
-import static org.openjdk.btrace.core.Args.SCRIPT_OUTPUT_FILE;
-import static org.openjdk.btrace.core.Args.STARTUP_RETRANSFORM;
-import static org.openjdk.btrace.core.Args.STATSD;
-import static org.openjdk.btrace.core.Args.STDOUT;
-import static org.openjdk.btrace.core.Args.SYSTEM_CLASS_PATH;
-import static org.openjdk.btrace.core.Args.TRACK_RETRANSFORMS;
-import static org.openjdk.btrace.core.Args.TRUSTED;
+import static io.btrace.core.Args.ALLOW_EXTENSIONS;
+import static io.btrace.core.Args.ALLOW_PRIVILEGED;
+import static io.btrace.core.Args.BOOT_CLASS_PATH;
+import static io.btrace.core.Args.CMD_QUEUE_LIMIT;
+import static io.btrace.core.Args.CONFIG;
+import static io.btrace.core.Args.DEBUG;
+import static io.btrace.core.Args.DENY;
+import static io.btrace.core.Args.DENY_EXTENSIONS;
+import static io.btrace.core.Args.DUMP_CLASSES;
+import static io.btrace.core.Args.DUMP_DIR;
+import static io.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
+import static io.btrace.core.Args.FILE_ROLL_MILLISECONDS;
+import static io.btrace.core.Args.GRANT;
+import static io.btrace.core.Args.GRANT_ALL;
+import static io.btrace.core.Args.HELP;
+import static io.btrace.core.Args.LIBS;
+import static io.btrace.core.Args.NO_SERVER;
+import static io.btrace.core.Args.OUTPUT;
+import static io.btrace.core.Args.PORT;
+import static io.btrace.core.Args.PROBES;
+import static io.btrace.core.Args.PROBE_DESC_PATH;
+import static io.btrace.core.Args.SCRIPT;
+import static io.btrace.core.Args.SCRIPT_DIR;
+import static io.btrace.core.Args.SCRIPT_OUTPUT_DIR;
+import static io.btrace.core.Args.SCRIPT_OUTPUT_FILE;
+import static io.btrace.core.Args.STARTUP_RETRANSFORM;
+import static io.btrace.core.Args.STATSD;
+import static io.btrace.core.Args.STDOUT;
+import static io.btrace.core.Args.SYSTEM_CLASS_PATH;
+import static io.btrace.core.Args.TRACK_RETRANSFORMS;
+import static io.btrace.core.Args.TRUSTED;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -82,23 +82,23 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
-import org.openjdk.btrace.core.ArgsMap;
-import org.openjdk.btrace.core.BTraceRuntime;
-import org.openjdk.btrace.core.DebugSupport;
-import org.openjdk.btrace.core.Messages;
-import org.openjdk.btrace.core.SharedSettings;
-import org.openjdk.btrace.core.comm.ErrorCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
-import org.openjdk.btrace.core.comm.WireIO;
-import org.openjdk.btrace.core.extensions.ExtensionConfigurator;
-import org.openjdk.btrace.core.extensions.ProbeConfiguration;
-import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
-import org.openjdk.btrace.extension.ExtensionLoader;
-import org.openjdk.btrace.extension.impl.ExtensionBridgeImpl;
-import org.openjdk.btrace.instr.BTraceProbeFactory;
-import org.openjdk.btrace.instr.BTraceTransformer;
-import org.openjdk.btrace.instr.Constants;
-import org.openjdk.btrace.runtime.BTraceRuntimes;
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.Messages;
+import io.btrace.core.SharedSettings;
+import io.btrace.core.comm.ErrorCommand;
+import io.btrace.core.comm.StatusCommand;
+import io.btrace.core.comm.WireIO;
+import io.btrace.core.extensions.ExtensionConfigurator;
+import io.btrace.core.extensions.ProbeConfiguration;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionLoader;
+import io.btrace.extension.impl.ExtensionBridgeImpl;
+import io.btrace.instr.BTraceProbeFactory;
+import io.btrace.instr.BTraceTransformer;
+import io.btrace.instr.Constants;
+import io.btrace.runtime.BTraceRuntimes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -169,7 +169,7 @@ public final class Main {
 
       // Load defaults from file-based permission policy first
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading permission policy");
-      org.openjdk.btrace.extension.PermissionPolicy.get().loadFromDefaults();
+      io.btrace.extension.PermissionPolicy.get().loadFromDefaults();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Permission policy loaded");
       // Then parse and apply agent args (which override file policy)
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Parsing arguments");
@@ -895,7 +895,7 @@ public final class Main {
         case ALLOW_EXTENSIONS:
           {
             if (!p.isEmpty()) {
-              org.openjdk.btrace.extension.PermissionPolicy.get().setAllowExtensionsCsv(p);
+              io.btrace.extension.PermissionPolicy.get().setAllowExtensionsCsv(p);
               log.debug("allowExtensions: {}", p);
             }
             break;
@@ -903,7 +903,7 @@ public final class Main {
         case DENY_EXTENSIONS:
           {
             if (!p.isEmpty()) {
-              org.openjdk.btrace.extension.PermissionPolicy.get().setDenyExtensionsCsv(p);
+              io.btrace.extension.PermissionPolicy.get().setDenyExtensionsCsv(p);
               log.debug("denyExtensions: {}", p);
             }
             break;
@@ -911,7 +911,7 @@ public final class Main {
         case ALLOW_PRIVILEGED:
           {
             if (!p.isEmpty()) {
-              org.openjdk.btrace.extension.PermissionPolicy.get()
+              io.btrace.extension.PermissionPolicy.get()
                   .setAllowPrivileged(Boolean.parseBoolean(p));
               log.debug("allowPrivileged: {}", p);
             }
@@ -955,7 +955,7 @@ public final class Main {
     // Main.class won't work because it's loaded from .classdata
     String bootPath = null;
     try {
-      Class<?> loaderClass = Class.forName("org.openjdk.btrace.boot.Loader");
+      Class<?> loaderClass = Class.forName("io.btrace.boot.Loader");
       URL loaderResource = loaderClass.getResource("Loader.class");
       if (loaderResource != null) {
         bootPath = loaderResource.toString();

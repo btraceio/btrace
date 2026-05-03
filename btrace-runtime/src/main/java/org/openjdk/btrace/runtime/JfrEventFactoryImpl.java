@@ -14,25 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.runtime;
+package io.btrace.runtime;
 
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.BOOLEANFLAG;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.DATAAMOUNT;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.FREQUENCY;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.MEMORYADDRESS;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.PERCENTAGE;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.TIMESPAN;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.TIMESTAMP;
-import static org.openjdk.btrace.core.annotations.Event.FieldKind.UNSIGNED;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.BOOLEAN;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.BYTE;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.CHAR;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.DOUBLE;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.FLOAT;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.INT;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.LONG;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.SHORT;
-import static org.openjdk.btrace.core.annotations.Event.FieldType.STRING;
+import static io.btrace.core.annotations.Event.FieldKind.BOOLEANFLAG;
+import static io.btrace.core.annotations.Event.FieldKind.DATAAMOUNT;
+import static io.btrace.core.annotations.Event.FieldKind.FREQUENCY;
+import static io.btrace.core.annotations.Event.FieldKind.MEMORYADDRESS;
+import static io.btrace.core.annotations.Event.FieldKind.PERCENTAGE;
+import static io.btrace.core.annotations.Event.FieldKind.TIMESPAN;
+import static io.btrace.core.annotations.Event.FieldKind.TIMESTAMP;
+import static io.btrace.core.annotations.Event.FieldKind.UNSIGNED;
+import static io.btrace.core.annotations.Event.FieldType.BOOLEAN;
+import static io.btrace.core.annotations.Event.FieldType.BYTE;
+import static io.btrace.core.annotations.Event.FieldType.CHAR;
+import static io.btrace.core.annotations.Event.FieldType.DOUBLE;
+import static io.btrace.core.annotations.Event.FieldType.FLOAT;
+import static io.btrace.core.annotations.Event.FieldType.INT;
+import static io.btrace.core.annotations.Event.FieldType.LONG;
+import static io.btrace.core.annotations.Event.FieldType.SHORT;
+import static io.btrace.core.annotations.Event.FieldType.STRING;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
@@ -62,7 +62,7 @@ import jdk.jfr.Timespan;
 import jdk.jfr.Timestamp;
 import jdk.jfr.Unsigned;
 import jdk.jfr.ValueDescriptor;
-import org.openjdk.btrace.core.jfr.JfrEvent;
+import io.btrace.core.jfr.JfrEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

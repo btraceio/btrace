@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.comm;
+package io.btrace.core.comm;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import org.openjdk.btrace.core.comm.v2.BinaryCommand;
-import org.openjdk.btrace.core.comm.v2.BinaryWireIO;
-import org.openjdk.btrace.core.comm.v2.CommandAdapter;
+import io.btrace.core.comm.v2.BinaryCommand;
+import io.btrace.core.comm.v2.BinaryWireIO;
+import io.btrace.core.comm.v2.CommandAdapter;
 
 /**
  * Wire protocol implementation using custom binary format (V2 protocol).

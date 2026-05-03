@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.instr;
+package io.btrace.instr;
 
 /**
  * Thrown when bytecode instrumentation fails due to invalid variable mapping, corrupted state, or

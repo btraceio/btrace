@@ -2,6 +2,6 @@
     name = "btrace-utils",
     version = "1.0",
     description = "Utility helper APIs for BTrace scripts")
-package org.openjdk.btrace.utils;
+package io.btrace.utils;
 
-import org.openjdk.btrace.core.extensions.ExtensionDescriptor;
+import io.btrace.core.extensions.ExtensionDescriptor;
