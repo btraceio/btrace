@@ -26,7 +26,18 @@ task buildEventsJar(type: Jar) {
 }
 
 task compileTestProbes {
-    dependsOn compileTestJava, ':btrace-extensions:buildExtensionsApi', ':btrace-instr:jar', ':btrace-compiler:jar'
+    dependsOn compileTestJava, ':btrace-instr:jar', ':btrace-compiler:jar'
+    // Wire all extension buildApiJar tasks dynamically (parent aggregator dissolved)
+    gradle.projectsEvaluated {
+        rootProject.subprojects.each { sp ->
+            if (sp.plugins.hasPlugin('io.btrace.extension')) {
+                def apiTask = sp.tasks.findByName('buildApiJar')
+                if (apiTask != null) {
+                    compileTestProbes.dependsOn(apiTask)
+                }
+            }
+        }
+    }
     doLast {
         def path = project(':integration-tests').sourceSets.main.runtimeClasspath
 
@@ -81,7 +92,7 @@ test {
     }
     dependsOn cleanTest, buildEventsJar, compileTestProbes,
              ':btrace-dist:btraceJar',
-             ':btrace-dist:explodeExtensions', ':btrace-extensions:buildExtensionsApi'
+             ':btrace-dist:explodeExtensions'
 
     testLogging.showStandardStreams = true
 
