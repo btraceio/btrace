@@ -14,38 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.openjdk.btrace.core.aggregation;
+package org.openjdk.btrace.core;
 
-import java.util.concurrent.atomic.AtomicLong;
+/** Minimal bootstrap-visible bridge used by injected code to reach the runtime implementation. */
+public interface BTraceRuntimeBridge {
+  void start();
 
-/**
- * Aggregation function for computing the sum of values.
- *
- * <p>
- *
- * @author Christian Glencross
- */
-class Sum implements AggregationValue {
+  void leave();
 
-  final AtomicLong value = new AtomicLong();
+  void handleException(Throwable th);
 
-  @Override
-  public void clear() {
-    value.set(0);
-  }
+  boolean isDisabled();
 
-  @Override
-  public void add(long delta) {
-    value.addAndGet(delta);
-  }
+  void newPerfCounter(Object value, String name, String desc);
 
-  @Override
-  public long getValue() {
-    return value.get();
-  }
+  int getPerfInt(String name);
 
-  @Override
-  public Object getData() {
-    return getValue();
-  }
+  void putPerfInt(int value, String name);
+
+  float getPerfFloat(String name);
+
+  void putPerfFloat(float value, String name);
+
+  long getPerfLong(String name);
+
+  void putPerfLong(long value, String name);
+
+  String getPerfString(String name);
+
+  void putPerfString(String value, String name);
 }

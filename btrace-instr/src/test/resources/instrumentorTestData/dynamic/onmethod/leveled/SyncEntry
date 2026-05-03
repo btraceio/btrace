@@ -1,7 +1,4 @@
 TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncEntry.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L6
 DUP
 ASTORE 2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -11,7 +8,7 @@ LDC "sync"
 ALOAD 2
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$SyncEntry$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/SyncEntry"
 ]
@@ -20,12 +17,14 @@ FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest
 L7
 LINENUMBER 118 L7
 GOTO L8
+FRAME FULL [resources/OnMethodTest java/lang/Object resources/OnMethodTest] [java/lang/Throwable]
 ASTORE 3
 ALOAD 3
 L8
 LINENUMBER 119 L8
+FRAME FULL [resources/OnMethodTest T resources/OnMethodTest] []
 L5
-FRAME SAME1 java/lang/Throwable
+FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]
 ATHROW
 LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0
 MAXSTACK = 4

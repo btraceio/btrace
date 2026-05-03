@@ -40,7 +40,10 @@ public abstract class ExtensionLoader {
   }
 
   public static ExtensionLoader initialize(
-      String btraceHome, ClassLoader parentClassLoader, Instrumentation instrumentation) {
+      String btraceHome,
+      ClassLoader parentClassLoader,
+      Instrumentation instrumentation,
+      String btraceVersion) {
     // Create extension repositories in priority order
     List<ExtensionRepository> repositories = new ArrayList<>();
 
@@ -83,7 +86,8 @@ public abstract class ExtensionLoader {
     ExtensionConfig config = ExtensionConfig.load(btraceHome);
 
     ExtensionLoader instance =
-        new ExtensionLoaderImpl(repositories, parentClassLoader, config, instrumentation);
+        new ExtensionLoaderImpl(
+            repositories, parentClassLoader, config, instrumentation, btraceVersion);
     // Register service declaration resolver for bytecode-level validation.
     // Bytecode verifier (instr) uses this to check @Injected fields without loading classes.
     // Runtime reflection in Client#validateDeclaredServices complements this by checking
@@ -104,6 +108,7 @@ public abstract class ExtensionLoader {
     log.info(
         "Extension system initialized with {} available extension(s)",
         instance.getAvailableExtensions().size());
+    implRef.set((ExtensionLoaderImpl) instance);
     return instance;
   }
 

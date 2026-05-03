@@ -1,6 +1,3 @@
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L3
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
@@ -8,7 +5,7 @@ LDC "java.lang.String"
 ICONST_1
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayStringBefore$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore"
 ]
@@ -16,9 +13,6 @@ L3
 FRAME FULL [resources/OnMethodTest [I [[I] [I]
 L4
 LINENUMBER 103 L4
-ICONST_1
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore.$btrace$$level : I
-IF_ICMPLT L5
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L5
 ALOAD 0
@@ -26,7 +20,7 @@ LDC "java.lang.String"
 ICONST_2
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewArrayStringBefore$args(Ljava/lang/Object;Ljava/lang/String;I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/NewArrayStringBefore"
 ]

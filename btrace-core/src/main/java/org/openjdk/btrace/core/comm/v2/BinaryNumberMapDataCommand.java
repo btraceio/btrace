@@ -29,7 +29,7 @@ import java.util.Map;
 public class BinaryNumberMapDataCommand extends BinaryDataCommand {
   private Map<String, Number> data = new LinkedHashMap<>();
   private static final NumberEncoding ENCODING =
-      new NumberEncoding((byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4);
+      new NumberEncoding((byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5, (byte) 6);
 
   static {
     // Register this command type

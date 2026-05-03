@@ -45,6 +45,13 @@ public class Main extends TestApp {
     field = "AAA";
     sField = "BBB";
     print("i=" + callB(1, "Hello World"));
+    probeExternal(new ExternalData(42));
+  }
+
+  // Entry point for @ExternalType integration tests: provides an ExternalData
+  // instance to the probe via @Self without the extension needing to compile against ExternalData.
+  ExternalData probeExternal(ExternalData data) {
+    return data;
   }
 
   private int callB(int i, String s) {

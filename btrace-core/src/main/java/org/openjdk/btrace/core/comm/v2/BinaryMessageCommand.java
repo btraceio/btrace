@@ -45,15 +45,19 @@ public class BinaryMessageCommand extends BinaryCommand {
     BinaryCommand.registerCommand(MESSAGE, BinaryMessageCommand::new);
   }
 
-  public BinaryMessageCommand(String message, boolean urgent) {
+  public BinaryMessageCommand(long timestamp, String message, boolean urgent) {
     super(MESSAGE, urgent);
     this.message = message;
     this.urgent = urgent;
-    this.timestamp = System.currentTimeMillis();
+    this.timestamp = timestamp;
+  }
+
+  public BinaryMessageCommand(String message, boolean urgent) {
+    this(System.currentTimeMillis(), message, urgent);
   }
 
   public BinaryMessageCommand(String message) {
-    this(message, false);
+    this(System.currentTimeMillis(), message, false);
   }
 
   public BinaryMessageCommand() {

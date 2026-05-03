@@ -48,13 +48,13 @@ import static org.openjdk.btrace.core.Args.SYSTEM_CLASS_PATH;
 import static org.openjdk.btrace.core.Args.TRACK_RETRANSFORMS;
 import static org.openjdk.btrace.core.Args.TRUSTED;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
@@ -66,6 +66,7 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +79,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
 import org.openjdk.btrace.core.ArgsMap;
@@ -88,6 +90,9 @@ import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.ErrorCommand;
 import org.openjdk.btrace.core.comm.StatusCommand;
 import org.openjdk.btrace.core.comm.WireIO;
+import org.openjdk.btrace.core.extensions.ExtensionConfigurator;
+import org.openjdk.btrace.core.extensions.ProbeConfiguration;
+import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
 import org.openjdk.btrace.extension.ExtensionLoader;
 import org.openjdk.btrace.extension.impl.ExtensionBridgeImpl;
 import org.openjdk.btrace.instr.BTraceProbeFactory;
@@ -105,6 +110,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("RedundantThrows")
 public final class Main {
   public static final int BTRACE_DEFAULT_PORT = 2020;
+  private static final boolean AGENT_DEBUG = Boolean.getBoolean("btrace.agent.debug");
   private static final Pattern KV_PATTERN = Pattern.compile(",");
   private static final SharedSettings settings = SharedSettings.GLOBAL;
   private static final BTraceTransformer transformer =
@@ -128,6 +134,10 @@ public final class Main {
   // Track appended jars to avoid duplicate classpath entries
   private static final Set<Path> BOOT_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
   private static final Set<Path> SYSTEM_ADDED = Collections.synchronizedSet(new LinkedHashSet<>());
+  // Hold strong references to JarFiles passed to appendToBootstrap/SystemClassLoaderSearch so
+  // that GC cannot close their file descriptors before the JVM is done reading class bytes.
+  private static final List<JarFile> BOOT_JARS = new ArrayList<>();
+  private static final List<JarFile> SYSTEM_JARS = new ArrayList<>();
 
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
@@ -140,23 +150,31 @@ public final class Main {
   }
 
   private static synchronized void main(String args, Instrumentation inst) {
+    if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initialization started");
     if (Main.inst != null) {
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Agent already initialized, skipping");
       return;
     } else {
       Main.inst = inst;
     }
 
     try {
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading arguments");
       loadArgs(args);
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments loaded");
       boolean isDebug = Boolean.parseBoolean(argMap.get(DEBUG));
       // set the debug level based on cmdline config
       settings.setDebug(isDebug);
       DebugSupport.initLoggers(isDebug, log);
 
       // Load defaults from file-based permission policy first
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Loading permission policy");
       org.openjdk.btrace.extension.PermissionPolicy.get().loadFromDefaults();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Permission policy loaded");
       // Then parse and apply agent args (which override file policy)
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Parsing arguments");
       parseArgs();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Arguments parsed");
       // settings are all built-up; set the logging system properties accordingly
       DebugSupport.initLoggers(settings.isDebug(), log);
 
@@ -179,11 +197,20 @@ public final class Main {
                 });
       }
       // set the fall-back instrumentation object to BTraceRuntime
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Setting up runtime");
       BTraceRuntime.instrumentation = inst;
       // force back-registration of BTraceRuntimeImpl in BTraceRuntime
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing BTraceRuntimes");
       BTraceRuntimes.getDefault();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] BTraceRuntimes initialized");
+      // ensure runtime accessor is registered
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Registering runtime accessor");
+      BTraceRuntimes.ensureAccessorRegistered();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Runtime accessor registered");
       // init BTraceRuntime
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing unsafe");
       BTraceRuntime.initUnsafe();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Unsafe initialized");
       if (agentThread != null) {
         BTraceRuntime.enter();
         try {
@@ -196,18 +223,29 @@ public final class Main {
         }
       }
 
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Adding class transformer");
       log.debug("Adding class transformer");
       inst.addTransformer(transformer, true);
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Transformer added");
       try {
         // the MethodHandleNatives must be instrumented to track start-end of indy linking to avoid
         // deadlocking
+        if (AGENT_DEBUG) System.err.println("[BTrace Agent] Instrumenting MethodHandleNatives");
         Class<?> clz =
             ClassLoader.getSystemClassLoader().loadClass("java.lang.invoke.MethodHandleNatives");
         inst.retransformClasses(clz);
+        if (AGENT_DEBUG) System.err.println("[BTrace Agent] MethodHandleNatives instrumented");
       } catch (Throwable t) {
+        if (AGENT_DEBUG)
+          System.err.println(
+              "[BTrace Agent] Failed to instrument MethodHandleNatives: " + t.getMessage());
         log.debug("Failed to instrument MethodHandleNatives", t);
       }
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Starting scripts");
       int startedScripts = startScripts();
+      // Thread.class retransform fires after startScripts() but before initExtensions()
+      // deliberately: retransformation only rewrites bytecode; extension service calls
+      // happen at invocation time (Thread.start events). No race with extension init.
       // Ensure early hooks (e.g., Thread.start) are applied even if Thread was already loaded
       if (startedScripts > 0) {
         try {
@@ -216,15 +254,26 @@ public final class Main {
             log.debug("Proactively retransformed java.lang.Thread after startup scripts");
           }
         } catch (Throwable t) {
-          if (log.isDebugEnabled()) {
-            log.debug("Unable to proactively retransform java.lang.Thread: {}", t.toString());
-          }
+          log.warn(
+              "Thread.class retransform failed; early Thread hooks may be inactive: {}",
+              t.toString());
         }
       }
 
       // initialize extension system after transformer is installed so early app code is not delayed
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing extensions");
       initExtensions();
+      if (AGENT_DEBUG)
+        System.err.println(
+            "[BTrace Agent] Initialization complete, " + startedScripts + " scripts started");
     } catch (Throwable t) {
+      // FATAL errors should always be printed
+      System.err.println(
+          "[BTrace Agent] FATAL: Initialization failed: "
+              + t.getClass().getName()
+              + ": "
+              + t.getMessage());
+      t.printStackTrace(System.err);
       log.error("Failed to initialize BTrace agent", t);
       throw new RuntimeException("BTrace agent initialization failed", t);
     } finally {
@@ -354,7 +403,11 @@ public final class Main {
       // instrumentation
       // Passing null btraceHome enables embedded-only mode (extensions from JAR resources)
       ClassLoader bootClassLoader = Main.class.getClassLoader();
-      extensionLoader = ExtensionLoader.initialize(btraceHome, bootClassLoader, inst);
+      if (bootClassLoader == null) {
+        bootClassLoader = ClassLoader.getSystemClassLoader();
+      }
+      extensionLoader =
+          ExtensionLoader.initialize(btraceHome, bootClassLoader, inst, readBTraceVersion());
 
       // Initialize invokedynamic bridge for extensions after loader is ready
       ExtensionBridgeImpl.initialize(extensionLoader);
@@ -373,57 +426,103 @@ public final class Main {
       return;
     }
 
-    // Check for probes= agent argument
     String probesArg = argMap.get(PROBES);
     String outputArg = argMap.get(OUTPUT);
 
-    if (probesArg == null || probesArg.isEmpty()) {
-      // No explicit probes requested; configurators could auto-select but not implemented yet
-      return;
-    }
-
-    // Parse requested probes
-    String[] requestedProbes = probesArg.split(",");
-    if (requestedProbes.length == 0) {
-      return;
-    }
-
-    log.info("Loading bundled probes: {}", probesArg);
-
-    // Configure output settings based on output= argument
-    boolean traceToStdOut = "stdout".equalsIgnoreCase(outputArg);
-    if (outputArg != null && !outputArg.isEmpty()) {
-      if ("jfr".equalsIgnoreCase(outputArg)) {
-        // JFR output - probes should emit JFR events
-        log.info("Bundled probes will output to JFR");
-      } else if ("file".equalsIgnoreCase(outputArg)) {
-        log.info("Bundled probes will output to file");
-      } else if (traceToStdOut) {
-        log.info("Bundled probes will output to stdout");
+    if (probesArg != null && !probesArg.isEmpty()) {
+      // Explicit probes= argument: honour it directly.
+      log.info("Loading bundled probes: {}", probesArg);
+      boolean toStdOut = "stdout".equalsIgnoreCase(outputArg);
+      if (outputArg != null && !outputArg.isEmpty()) {
+        if ("jfr".equalsIgnoreCase(outputArg)) {
+          log.info("Bundled probes will output to JFR");
+        } else if ("file".equalsIgnoreCase(outputArg)) {
+          log.info("Bundled probes will output to file");
+        } else if (toStdOut) {
+          log.info("Bundled probes will output to stdout");
+        }
+      }
+      List<String> requested = new ArrayList<>();
+      for (String p : probesArg.split(",")) {
+        requested.add(p.trim());
+      }
+      loadProbesFromNames(requested, toStdOut);
+    } else {
+      // No explicit probes= — ask each extension's configurator.
+      AgentRuntimeEnvironment env = new AgentRuntimeEnvironment();
+      Map<String, String> agentArgs = new LinkedHashMap<>();
+      for (Map.Entry<String, String> e : argMap) {
+        agentArgs.put(e.getKey(), e.getValue());
+      }
+      for (ExtensionDescriptorDTO ext : extensionLoader.getAvailableExtensions()) {
+        if (!ext.isEmbedded()) {
+          continue;
+        }
+        String configuratorClass = ext.getConfiguratorClass();
+        if (configuratorClass == null) {
+          continue;
+        }
+        ProbeConfiguration config = runConfigurator(ext, configuratorClass, env, agentArgs);
+        if (config == null || !config.hasEnabledProbes()) {
+          continue;
+        }
+        boolean toStdOut = config.getOutput() == ProbeConfiguration.Output.STDOUT;
+        log.info(
+            "Extension {} configurator enabled probes: {}", ext.getId(), config.getEnabledProbes());
+        loadProbesFromNames(config.getEnabledProbes(), toStdOut);
       }
     }
+  }
 
-    // Search for probe classes in embedded extensions
-    for (org.openjdk.btrace.extension.ExtensionDescriptorDTO ext :
-        extensionLoader.getAvailableExtensions()) {
+  /**
+   * Instantiate and run the named {@link ExtensionConfigurator} class from the given extension,
+   * returning its {@link ProbeConfiguration} or null on failure.
+   */
+  private static ProbeConfiguration runConfigurator(
+      ExtensionDescriptorDTO ext,
+      String configuratorClass,
+      AgentRuntimeEnvironment env,
+      Map<String, String> agentArgs) {
+    try {
+      ClassLoader cl = ext.getClassLoader();
+      if (cl == null) {
+        cl = Main.class.getClassLoader();
+      }
+      Class<?> cls = Class.forName(configuratorClass, true, cl);
+      ExtensionConfigurator configurator =
+          (ExtensionConfigurator) cls.getDeclaredConstructor().newInstance();
+      return configurator.configure(env, agentArgs);
+    } catch (Exception e) {
+      log.warn(
+          "Configurator {} for extension {} failed: {}",
+          configuratorClass,
+          ext.getId(),
+          e.toString());
+      return null;
+    }
+  }
+
+  /** Load the named probes from embedded extensions. */
+  private static void loadProbesFromNames(List<String> probeNames, boolean traceToStdOut) {
+    for (ExtensionDescriptorDTO ext : extensionLoader.getAvailableExtensions()) {
       if (!ext.isEmbedded()) {
         continue;
       }
-
       List<String> bundledProbes = ext.getBundledProbes();
       if (bundledProbes.isEmpty()) {
         continue;
       }
-
-      for (String probeName : requestedProbes) {
-        String trimmed = probeName.trim();
-        // Check if this extension has the requested probe
+      for (String probeName : probeNames) {
+        if (!probeName.matches("[A-Za-z0-9_.]+")) {
+          log.warn("Ignoring probe with invalid name: '{}'", probeName);
+          continue;
+        }
         for (String bundledProbe : bundledProbes) {
-          if (bundledProbe.endsWith("." + trimmed) || bundledProbe.equals(trimmed)) {
-            // Found the probe - try to load it
-            String probeResourcePath = ext.getResourceBasePath() + "/probes/" + trimmed + ".class";
-            if (loadEmbeddedProbe(probeResourcePath, trimmed, traceToStdOut)) {
-              log.info("Loaded bundled probe: {} from extension {}", trimmed, ext.getId());
+          if (bundledProbe.endsWith("." + probeName) || bundledProbe.equals(probeName)) {
+            String path = ext.getResourceBasePath() + "/probes/" + probeName + ".class";
+            if (loadEmbeddedProbe(path, probeName, traceToStdOut)) {
+              log.info("Loaded bundled probe: {} from extension {}", probeName, ext.getId());
+              break;
             }
           }
         }
@@ -434,42 +533,35 @@ public final class Main {
   /** Load an embedded probe from classpath resources. */
   private static boolean loadEmbeddedProbe(
       String resourcePath, String probeName, boolean traceToStdOut) {
-    try {
-      InputStream is = Main.class.getClassLoader().getResourceAsStream(resourcePath);
+    ClassLoader loader = Main.class.getClassLoader();
+    try (InputStream is =
+        loader != null
+            ? loader.getResourceAsStream(resourcePath)
+            : ClassLoader.getSystemResourceAsStream(resourcePath)) {
       if (is == null) {
         log.debug("Probe resource not found: {}", resourcePath);
         return false;
       }
-
       byte[] probeBytes = readAllBytes(is);
-      is.close();
-
-      // Create settings for this probe
-      SharedSettings probeSettings = new SharedSettings();
-      probeSettings.from(settings);
-      probeSettings.setClientName(probeName);
-      if (traceToStdOut) {
-        probeSettings.setOutputFile("::stdout");
+      File tmp = File.createTempFile("btrace-probe-", ".class");
+      try {
+        try (FileOutputStream fos = new FileOutputStream(tmp)) {
+          fos.write(probeBytes);
+        }
+        return loadBTraceScript(tmp.getAbsolutePath(), traceToStdOut);
+      } finally {
+        if (!tmp.delete()) {
+          tmp.deleteOnExit();
+        }
       }
-
-      ClientContext ctx = new ClientContext(inst, transformer, argMap, probeSettings);
-      // Load as bytes - similar to how Client handles compiled probes
-      // This is a simplified version; full implementation would use BTraceProbeFactory
-      log.debug("Loaded probe bytes for: {} ({} bytes)", probeName, probeBytes.length);
-
-      // For now, log that probe loading from embedded resources is available
-      // Full implementation would instantiate and activate the probe
-      return true;
-
-    } catch (Exception e) {
+    } catch (IOException e) {
       log.warn("Failed to load embedded probe {}: {}", probeName, e.getMessage());
       return false;
     }
   }
 
-  /** Read all bytes from an input stream. */
   private static byte[] readAllBytes(InputStream is) throws IOException {
-    java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     byte[] data = new byte[4096];
     int nRead;
     while ((nRead = is.read(data, 0, data.length)) != -1) {
@@ -488,9 +580,11 @@ public final class Main {
       // Get the agent JAR location
       String agentPath = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 
-      // Agent is typically at BTRACE_HOME/libs/btrace-agent.jar
+      // Agent is typically at BTRACE_HOME/libs/btrace-agent.jar or BTRACE_HOME/libs/btrace.jar
       File agentJar = new File(agentPath);
-      if (agentJar.exists() && agentJar.getName().equals("btrace-agent.jar")) {
+      String jarName = agentJar.getName();
+      if (agentJar.exists()
+          && (jarName.equals("btrace-agent.jar") || jarName.equals("btrace.jar"))) {
         File libsDir = agentJar.getParentFile();
         if (libsDir != null && libsDir.getName().equals("libs")) {
           File btraceHome = libsDir.getParentFile();
@@ -511,6 +605,24 @@ public final class Main {
     }
 
     return null;
+  }
+
+  private static String readBTraceVersion() {
+    try {
+      String agentPath = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+      try (JarFile jar = new JarFile(new File(agentPath))) {
+        Manifest mf = jar.getManifest();
+        if (mf != null) {
+          String v = mf.getMainAttributes().getValue("BTrace-Version");
+          if (v != null && !v.isEmpty()) {
+            return v;
+          }
+        }
+      }
+    } catch (Exception e) {
+      log.debug("Could not read BTrace-Version from agent JAR manifest: {}", e.getMessage());
+    }
+    return "unknown";
   }
 
   /**
@@ -607,12 +719,10 @@ public final class Main {
 
     String libs = argMap.get(LIBS);
     if (libs != null && !libs.isEmpty()) {
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "The 'libs' profile feature is deprecated and will be removed in a future release. "
-                + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
-                + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
-      }
+      log.warn(
+          "The 'libs' profile feature is deprecated and will be removed in a future release. "
+              + "Prefer packaging integrations as BTrace extensions (API on bootstrap, impl isolated). "
+              + "See docs/architecture/agent-manifest-libs.md for migration guidance.");
     }
     String config = argMap.get(CONFIG);
     processClasspaths(libs);
@@ -623,6 +733,7 @@ public final class Main {
     DebugSupport.initLoggers(settings.isDebug(), log);
 
     log.debug("debugMode is {}", settings.isDebug());
+
     for (Map.Entry<String, String> e : argMap) {
       String key = e.getKey();
       p = e.getValue();
@@ -822,6 +933,12 @@ public final class Main {
   private static void processClasspaths(String libs) {
     // Experimental: prefer manifest-driven libs when enabled
     boolean useManifestLibs = Boolean.getBoolean("btrace.feature.manifestLibs");
+    boolean hasLegacyLibs = libs != null && !libs.isEmpty();
+    boolean hasManifestLibs = useManifestLibs;
+    if (hasManifestLibs && hasLegacyLibs) {
+      log.warn(
+          "Both libs= and manifest-attributes are present; libs= is deprecated and will be removed in N+2. Prefer manifest-based declaration.");
+    }
     if (useManifestLibs) {
       if (log.isDebugEnabled()) log.debug("Using manifest-driven libs resolution");
       AgentManifestLibs.ResolvedLibs libsFromMf = AgentManifestLibs.resolveFromManifest(Main.class);
@@ -834,16 +951,40 @@ public final class Main {
         appendSystemJar(p);
       }
     }
-    URL agentJar = Main.class.getResource("Main.class");
-    String bootPath = agentJar.toString().replace("jar:file:", "");
-    int idx = bootPath.indexOf("btrace-agent.jar");
-    if (idx > -1) {
-      bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
+    // Try to find JAR via Loader.class (unmasked bootstrap class)
+    // Main.class won't work because it's loaded from .classdata
+    String bootPath = null;
+    try {
+      Class<?> loaderClass = Class.forName("org.openjdk.btrace.boot.Loader");
+      URL loaderResource = loaderClass.getResource("Loader.class");
+      if (loaderResource != null) {
+        bootPath = loaderResource.toString();
+        if (bootPath.startsWith("jar:file:")) {
+          // Extract JAR path from
+          // jar:file:/path/to/btrace.jar!/org/openjdk/btrace/boot/Loader.class
+          bootPath = bootPath.substring("jar:file:".length());
+          int idx = bootPath.indexOf("!");
+          if (idx > -1) {
+            bootPath = bootPath.substring(0, idx);
+          }
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      // Fall back to Main.class if Loader not found (shouldn't happen)
+      URL agentJar = Main.class.getResource("Main.class");
+      if (agentJar != null) {
+        bootPath = agentJar.toString().replace("jar:file:", "");
+        int idx = bootPath.indexOf("btrace-agent.jar");
+        if (idx > -1) {
+          bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
+        }
+      }
     }
+
     String bootClassPath = argMap.get(BOOT_CLASS_PATH);
-    if (bootClassPath == null) {
+    if (bootClassPath == null && bootPath != null) {
       bootClassPath = bootPath;
-    } else {
+    } else if (bootClassPath != null && bootPath != null) {
       if (".".equals(bootClassPath)) {
         bootClassPath = bootPath;
       } else {
@@ -852,17 +993,21 @@ public final class Main {
     }
     log.debug("Bootstrap ClassPath: {}", bootClassPath);
 
-    StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
-    while (tokenizer.hasMoreTokens()) {
-      String path = tokenizer.nextToken();
-      File f = new File(path);
-      if (!f.exists()) {
-        log.debug("BTrace bootstrap classpath resource [{}] does not exist", path);
-      } else {
-        if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-          appendBootJar(f.toPath());
+    if (bootClassPath == null || bootClassPath.isEmpty()) {
+      log.debug("No boot classpath configured; skipping bootstrap jar setup");
+    } else {
+      StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
+      while (tokenizer.hasMoreTokens()) {
+        String path = tokenizer.nextToken();
+        File f = new File(path);
+        if (!f.exists()) {
+          log.debug("BTrace bootstrap classpath resource [{}] does not exist", path);
         } else {
-          log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
+          if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
+            appendBootJar(f.toPath());
+          } else {
+            log.debug("ignoring boot classpath element '{}' - only jar files allowed", path);
+          }
         }
       }
     }
@@ -870,7 +1015,7 @@ public final class Main {
     String systemClassPath = argMap.get(SYSTEM_CLASS_PATH);
     if (systemClassPath != null) {
       log.debug("System ClassPath: {}", systemClassPath);
-      tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
+      StringTokenizer tokenizer = new StringTokenizer(systemClassPath, File.pathSeparator);
       while (tokenizer.hasMoreTokens()) {
         String path = tokenizer.nextToken();
         File f = new File(path);
@@ -957,26 +1102,32 @@ public final class Main {
     }
   }
 
+  // Resolved once; null means pre-JPMS JarFile constructor should be used.
+  private static final java.lang.reflect.Constructor<?> JPMS_JAR_CTOR = resolveJpmsJarCtor();
+
+  @SuppressWarnings("JavaReflectionMemberAccess")
+  private static java.lang.reflect.Constructor<?> resolveJpmsJarCtor() {
+    try {
+      Class.forName("java.lang.Module");
+      Class<Runtime> rtClass = Runtime.class;
+      java.lang.reflect.Method m = rtClass.getMethod("version");
+      Object version = m.invoke(null);
+      return JarFile.class.getConstructor(File.class, boolean.class, int.class, version.getClass());
+    } catch (Exception ignore) {
+      return null;
+    }
+  }
+
   @SuppressWarnings("JavaReflectionMemberAccess")
   private static JarFile asJarFile(File path) throws IOException {
-    try {
-      Class.forName("java.lang.Module"); // bail out early if on pre Java 9 version
-      Class<Runtime> rtClass = Runtime.class;
-      Method m = rtClass.getMethod("version");
-      Object version = m.invoke(null);
-      // JPMS enabled version of JarFile has different constructor signature
-      return JarFile.class
-          .getConstructor(File.class, boolean.class, int.class, version.getClass())
-          .newInstance(path, true, ZipFile.OPEN_READ, version);
-    } catch (ClassNotFoundException
-        | NoSuchMethodException
-        | InstantiationException
-        | IllegalAccessException
-        | IllegalArgumentException
-        | InvocationTargetException
-        | SecurityException ignore) {
+    if (JPMS_JAR_CTOR != null) {
+      try {
+        Class<Runtime> rtClass = Runtime.class;
+        Object version = rtClass.getMethod("version").invoke(null);
+        return (JarFile) JPMS_JAR_CTOR.newInstance(path, true, ZipFile.OPEN_READ, version);
+      } catch (Exception ignore) {
+      }
     }
-
     return new JarFile(path);
   }
 
@@ -984,38 +1135,48 @@ public final class Main {
   private static void appendBootJar(Path jarPath) {
     try {
       Path rp = jarPath.toAbsolutePath().normalize();
-      if (BOOT_ADDED.contains(rp)) {
-        if (log.isDebugEnabled()) log.debug("Skipping duplicate bootstrap jar: {}", rp);
-        return;
-      }
       if (!Files.exists(rp)) {
         if (log.isDebugEnabled()) log.debug("Bootstrap jar does not exist: {}", rp);
         return;
       }
-      inst.appendToBootstrapClassLoaderSearch(asJarFile(rp.toFile()));
-      BOOT_ADDED.add(rp);
+      // Synchronize the check-then-act so two threads cannot both pass the "not yet added"
+      // check and both call appendToBootstrapClassLoaderSearch for the same jar.
+      synchronized (BOOT_ADDED) {
+        if (BOOT_ADDED.contains(rp)) {
+          if (log.isDebugEnabled()) log.debug("Skipping duplicate bootstrap jar: {}", rp);
+          return;
+        }
+        JarFile jf = asJarFile(rp.toFile());
+        inst.appendToBootstrapClassLoaderSearch(jf);
+        BOOT_ADDED.add(rp);
+        BOOT_JARS.add(jf);
+      }
       if (log.isDebugEnabled()) log.debug("Added to bootstrap: {}", rp);
     } catch (IOException e) {
-      log.debug("Failed to append bootstrap jar {}: {}", jarPath, e.toString());
+      log.warn("Failed to append bootstrap jar {}: {}", jarPath, e.toString());
     }
   }
 
   private static void appendSystemJar(Path jarPath) {
     try {
       Path rp = jarPath.toAbsolutePath().normalize();
-      if (SYSTEM_ADDED.contains(rp)) {
-        if (log.isDebugEnabled()) log.debug("Skipping duplicate system jar: {}", rp);
-        return;
-      }
       if (!Files.exists(rp)) {
         if (log.isDebugEnabled()) log.debug("System jar does not exist: {}", rp);
         return;
       }
-      inst.appendToSystemClassLoaderSearch(asJarFile(rp.toFile()));
-      SYSTEM_ADDED.add(rp);
+      synchronized (SYSTEM_ADDED) {
+        if (SYSTEM_ADDED.contains(rp)) {
+          if (log.isDebugEnabled()) log.debug("Skipping duplicate system jar: {}", rp);
+          return;
+        }
+        JarFile jf = asJarFile(rp.toFile());
+        inst.appendToSystemClassLoaderSearch(jf);
+        SYSTEM_ADDED.add(rp);
+        SYSTEM_JARS.add(jf);
+      }
       if (log.isDebugEnabled()) log.debug("Added to system: {}", rp);
     } catch (IOException e) {
-      log.debug("Failed to append system jar {}: {}", jarPath, e.toString());
+      log.warn("Failed to append system jar {}: {}", jarPath, e.toString());
     }
   }
 
@@ -1130,6 +1291,7 @@ public final class Main {
 
   private static boolean loadBTraceScript(String filePath, boolean traceToStdOut) {
     if (!BTraceProbeFactory.canLoad(filePath)) return false;
+
     try {
       String scriptName = "";
       String scriptParent = "";
@@ -1174,9 +1336,7 @@ public final class Main {
         log.debug("script {} does not exist!", filePath, e);
       }
     } catch (RuntimeException | IOException | ExecutionException re) {
-      if (log.isDebugEnabled()) {
-        log.debug("Failed to load BTrace script {}", filePath, re);
-      }
+      log.warn("Failed to load BTrace script {}", filePath, re);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -1241,9 +1401,7 @@ public final class Main {
         Client client = RemoteClient.getClient(ctx, sock, Main::handleNewClient);
       } catch (RuntimeException | IOException re) {
         if (serverRunning) {
-          if (log.isDebugEnabled()) {
-            log.debug("BTrace server failed", re);
-          }
+          log.warn("BTrace server accept failed", re);
         }
       }
     }
@@ -1259,12 +1417,12 @@ public final class Main {
                 log.debug("new Client created {}", client);
               }
               if (client.retransformLoaded()) {
-                client.getRuntime().send(new StatusCommand((byte) 1));
+                client.getRuntime().sendCommand(new StatusCommand((byte) 1));
               }
             } catch (UnmodifiableClassException uce) {
               log.debug("BTrace class retransformation failed", uce);
-              client.getRuntime().send(new ErrorCommand(uce));
-              client.getRuntime().send(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
+              client.getRuntime().sendCommand(new ErrorCommand(uce));
+              client.getRuntime().sendCommand(new StatusCommand(-1 * StatusCommand.STATUS_FLAG));
             } finally {
               if (entered) {
                 BTraceRuntime.leave();

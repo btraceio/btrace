@@ -1,6 +1,3 @@
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/CheckcastBefore.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L2
 DUP
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
 IFNE L2
@@ -10,7 +7,7 @@ LDC "java.util.HashMap"
 ALOAD 2
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$CheckcastBefore$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/CheckcastBefore"
 ]
@@ -24,7 +21,7 @@ L5
 LINENUMBER 111 L5
 L4
 LINENUMBER 113 L4
-FRAME FULL [resources/OnMethodTest java/util/Map T java/util/HashMap] []
+FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap java/util/HashMap] []
 L6
 LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
 LOCALVARIABLE c Ljava/util/Map; L1 L6 1

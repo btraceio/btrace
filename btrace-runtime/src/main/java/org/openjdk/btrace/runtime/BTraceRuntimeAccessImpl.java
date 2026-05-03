@@ -24,6 +24,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.openjdk.btrace.core.BTraceRuntime;
+import org.openjdk.btrace.core.BTraceRuntimeBridge;
 import org.openjdk.btrace.core.SharedSettings;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.extensions.ExtensionContext;
@@ -33,11 +34,9 @@ import org.openjdk.btrace.core.handlers.ExitHandler;
 import org.openjdk.btrace.core.handlers.LowMemoryHandler;
 import org.openjdk.btrace.core.handlers.TimerHandler;
 import org.openjdk.btrace.runtime.auxiliary.Auxiliary;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public abstract class BTraceRuntimeAccess {
-  private static final Logger log = LoggerFactory.getLogger(BTraceRuntimeAccess.class);
+public final class BTraceRuntimeAccessImpl implements BTraceRuntimeAccess.Delegate {
+  private static final BTraceRuntimeAccessImpl INSTANCE = new BTraceRuntimeAccessImpl();
 
   static final class RTWrapper {
     private BTraceRuntime.Impl rt = null;
@@ -81,12 +80,7 @@ public abstract class BTraceRuntimeAccess {
 
   static {
     rt = ThreadLocal.withInitial(RTWrapper::new);
-    registerRuntimeAccessor();
-    // ignore
   }
-
-  // for testing purposes; needs to be non-final
-  private static volatile boolean uniqueClientClassNames = true;
 
   // BTraceRuntime against BTrace class name
   protected static final Map<String, BTraceRuntimeImplBase> runtimes = new ConcurrentHashMap<>();
@@ -102,34 +96,66 @@ public abstract class BTraceRuntimeAccess {
 
   private final AtomicBoolean exitting = new AtomicBoolean(false);
 
+  private BTraceRuntimeAccessImpl() {}
+
+  public static void install() {
+    BTraceRuntimeAccess.install(INSTANCE);
+    // Register the runtime accessor immediately
+    // This triggers BTraceRuntimes class load if not already loaded, which sets up FACTORY
+    BTraceRuntimes.ensureAccessorRegistered();
+  }
+
+  /**
+   * Ensures the runtime accessor is registered. Must be called after BTraceRuntimes static init
+   * completes.
+   */
+  public static void ensureRegistered(BTraceRuntimeImplFactory<?> factory) {
+    if (dummy == null) {
+      registerRuntimeAccessor(factory);
+    }
+  }
+
+  private static boolean isRuntimeAccessorRegistered() {
+    return dummy != null;
+  }
+
   static void addRuntime(String className, BTraceRuntimeImplBase rt) {
     runtimes.put(className, rt);
   }
 
+  /**
+   * Look up a registered runtime by probe class name. The name is normalized via {@link
+   * #normalizeProbeName}, so hidden-class names with a {@code "/0x..."} suffix resolve to the plain
+   * name used at registration.
+   */
+  static BTraceRuntimeImplBase getRuntime(String probeName) {
+    return probeName == null ? null : runtimes.get(normalizeProbeName(probeName));
+  }
+
+  /**
+   * Drop the {@link BTraceRuntime.Impl} previously registered for {@code className}.
+   *
+   * <p>Releases the strong GC root the registry map holds on a runtime (and anything it
+   * transitively reaches — notably {@code Class<?>}, {@code MethodHandle}s, and its defining {@code
+   * ClassLoader}). Callers that create a runtime via {@code BTraceRuntimes.getRuntime(...)} and
+   * then abort <strong>must</strong> call this to avoid a permanent Metaspace / object leak.
+   */
+  static void removeRuntime(String className) {
+    runtimes.remove(className);
+  }
+
   /** Enter method is called by every probed method just before the probe actions start. */
-  public static boolean enter(BTraceRuntime.Impl currentRt) {
+  static boolean enterInternal(BTraceRuntime.Impl currentRt) {
     BTraceRuntimeImplBase current = (BTraceRuntimeImplBase) currentRt;
     if (current.isDisabled()) return false;
     return rt.get().set(current);
   }
 
-  public static void leave() {
+  static void leaveInternal() {
     rt.get().set(null);
   }
 
-  /**
-   * Returns the current ExtensionContext for the executing BTrace script, or null if none. Used by
-   * the invokedynamic bootstrap to construct runtime-aware services.
-   */
-  public static ExtensionContext currentContext() {
-    RTWrapper wrapper = rt.get();
-    BTraceRuntimeImplBase current = wrapper != null ? (BTraceRuntimeImplBase) wrapper.rt : null;
-    if (current == null) return null;
-    return new ExtensionContextImpl(
-        current, current.getClassName(), SharedSettings.GLOBAL.getEffectivePermissions());
-  }
-
-  public static String getClientName(String forClassName) {
+  static String getClientNameInternal(String forClassName) {
     int idx = forClassName.lastIndexOf('/');
     if (idx > -1) {
       forClassName =
@@ -140,7 +166,7 @@ public abstract class BTraceRuntimeAccess {
       forClassName = Auxiliary.class.getPackage().getName().replace('.', '/') + "/" + forClassName;
     }
 
-    if (!uniqueClientClassNames) {
+    if (!BTraceRuntimeAccess.isUniqueClientClassNames()) {
       return forClassName;
     }
 
@@ -153,7 +179,7 @@ public abstract class BTraceRuntimeAccess {
     return name;
   }
 
-  public void shutdownCmdLine() {
+  void shutdownCmdLine() {
     exitting.set(true);
   }
 
@@ -161,16 +187,31 @@ public abstract class BTraceRuntimeAccess {
    * One instance of BTraceRuntime is created per-client. This forClass method creates it. Class
    * passed is the preprocessed BTrace program of the client.
    */
-  public static BTraceRuntimeImplBase forClass(
+  static BTraceRuntimeImplBase forClassInternal(
       Class cl,
       TimerHandler[] tHandlers,
       EventHandler[] evHandlers,
       ErrorHandler[] errHandlers,
       ExitHandler[] eHandlers,
       LowMemoryHandler[] lmHandlers) {
-    BTraceRuntimeImplBase runtime = runtimes.get(cl.getName());
+    BTraceRuntimeImplBase runtime = runtimes.get(normalizeProbeName(cl.getName()));
     runtime.init(cl, tHandlers, evHandlers, errHandlers, eHandlers, lmHandlers);
     return runtime;
+  }
+
+  /**
+   * Strip the hidden-class suffix from a probe class name so it maps to the registry key used by
+   * {@link #addRuntime(String, BTraceRuntimeImplBase)}.
+   *
+   * <p>On JDK 15+, probes are defined via {@code Lookup.defineHiddenClass}. Hidden classes report
+   * their {@link Class#getName()} as {@code "pkg.Name/0xNNNN..."}, where the suffix after the slash
+   * is assigned by the VM. The registry is keyed by the plain {@code "pkg.Name"} because that's the
+   * name the runtime is registered under, before defineClass runs. Plain class names never contain
+   * a {@code '/'}, so stripping from the first slash is safe on all paths.
+   */
+  static String normalizeProbeName(String rawName) {
+    int slash = rawName.indexOf('/');
+    return slash > 0 ? rawName.substring(0, slash) : rawName;
   }
 
   /**
@@ -181,7 +222,7 @@ public abstract class BTraceRuntimeAccess {
    *     Cloneable}. In case a {@linkplain Cloneable} value is provided the value is never used
    *     directly - instead, a new clone of the value is created per thread.
    */
-  public static ThreadLocal newThreadLocal(Object initValue) {
+  static ThreadLocal newThreadLocalInternal(Object initValue) {
     return ThreadLocal.withInitial(
         () -> {
           if (initValue == null) return initValue;
@@ -193,7 +234,7 @@ public abstract class BTraceRuntimeAccess {
               m.setAccessible(true);
               return m.invoke(initValue);
             } catch (Exception e) {
-              log.warn("Failed to clone TLS initial value", e);
+              System.err.println("BTrace: Failed to clone TLS initial value: " + e.getMessage());
               return null;
             }
           }
@@ -203,6 +244,10 @@ public abstract class BTraceRuntimeAccess {
 
   /** Get the current thread BTraceRuntime instance if there is one. */
   static BTraceRuntimeImplBase getCurrent() {
+    // During initialization, dummy may not be set yet - return null gracefully
+    if (!isRuntimeAccessorRegistered()) {
+      return null;
+    }
     RTWrapper rtw = rt.get();
     BTraceRuntime.Impl current = rtw != null ? rtw.rt : null;
     current = current != null ? current : dummy;
@@ -216,23 +261,24 @@ public abstract class BTraceRuntimeAccess {
     return rtw.escape(callable);
   }
 
-  public void send(String msg) {
+  void send(String msg) {
     BTraceRuntimeImplBase rt = getCurrent();
     if (rt != null) {
       rt.send(msg);
     }
   }
 
-  public void send(Command cmd) {
+  void send(Command cmd) {
     BTraceRuntimeImplBase rt = getCurrent();
     if (rt != null) {
       rt.send(cmd);
     }
   }
 
-  static void registerRuntimeAccessor() {
+  static void registerRuntimeAccessor(BTraceRuntimeImplFactory<?> factory) {
     try {
-      dummy = BTraceRuntimes.getDefault();
+      // Get the default runtime from the factory (passed to avoid circular dependency)
+      dummy = factory != null ? factory.getDefault() : null;
       Field fld = BTraceRuntime.class.getDeclaredField("rtAccessor");
       fld.setAccessible(true);
       fld.set(null, new Accessor());
@@ -240,7 +286,51 @@ public abstract class BTraceRuntimeAccess {
         | IllegalArgumentException
         | NoSuchFieldException
         | SecurityException e) {
-      log.warn("Failed to register runtime accessor", e);
+      System.err.println("BTrace: Failed to register runtime accessor: " + e.getMessage());
     }
+  }
+
+  @Override
+  public boolean enter(BTraceRuntimeBridge currentRt) {
+    if (!(currentRt instanceof BTraceRuntime.Impl)) {
+      return false;
+    }
+    return enterInternal((BTraceRuntime.Impl) currentRt);
+  }
+
+  @Override
+  public void leave() {
+    BTraceRuntimeAccessImpl.leaveInternal();
+  }
+
+  @Override
+  public BTraceRuntimeBridge forClass(
+      Class cl,
+      TimerHandler[] tHandlers,
+      EventHandler[] evHandlers,
+      ErrorHandler[] errHandlers,
+      ExitHandler[] eHandlers,
+      LowMemoryHandler[] lmHandlers) {
+    return BTraceRuntimeAccessImpl.forClassInternal(
+        cl, tHandlers, evHandlers, errHandlers, eHandlers, lmHandlers);
+  }
+
+  @Override
+  public ThreadLocal newThreadLocal(Object initValue) {
+    return BTraceRuntimeAccessImpl.newThreadLocalInternal(initValue);
+  }
+
+  @Override
+  public String getClientName(String forClassName) {
+    return BTraceRuntimeAccessImpl.getClientNameInternal(forClassName);
+  }
+
+  @Override
+  public ExtensionContext currentContext() {
+    RTWrapper wrapper = rt.get();
+    BTraceRuntimeImplBase current = wrapper != null ? (BTraceRuntimeImplBase) wrapper.rt : null;
+    if (current == null) return null;
+    return new ExtensionContextImpl(
+        current, current.getClassName(), SharedSettings.GLOBAL.getEffectivePermissions());
   }
 }

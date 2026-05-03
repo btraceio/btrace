@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
  * serialization with a more efficient binary protocol.
  */
 public class BinaryProtocol {
-  public static final byte VERSION = 1;
+  public static final byte VERSION = 3;
 
   // Maximum size for strings and byte arrays to prevent OOM attacks (100MB)
   private static final int MAX_ALLOCATION_SIZE = 100 * 1024 * 1024;

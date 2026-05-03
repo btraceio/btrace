@@ -1,9 +1,6 @@
 TRYCATCHBLOCK L4 L5 L5 java/lang/Throwable
 L6
 LINENUMBER 118 L6
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncExit.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L7
 DUP
 ASTORE 2
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -13,7 +10,7 @@ LDC "resources.OnMethodTest"
 ALOAD 2
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$SyncExit$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/SyncExit"
 ]
@@ -21,9 +18,6 @@ L7
 FRAME FULL [resources/OnMethodTest resources/OnMethodTest resources/OnMethodTest] [resources/OnMethodTest]
 GOTO L8
 ASTORE 3
-GETSTATIC org/openjdk/btrace/runtime/auxiliary/SyncExit.$btrace$$level : I
-ICONST_1
-IF_ICMPLT L9
 DUP
 ASTORE 4
 INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
@@ -33,7 +27,7 @@ LDC "resources.OnMethodTest"
 ALOAD 4
 INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$SyncExit$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/Indy.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
 "org/openjdk/btrace/runtime/auxiliary/SyncExit"
 ]
@@ -42,9 +36,9 @@ FRAME FULL [resources/OnMethodTest java/lang/Object T java/lang/Throwable java/l
 ALOAD 3
 L8
 LINENUMBER 119 L8
-FRAME FULL [resources/OnMethodTest] []
+FRAME FULL [resources/OnMethodTest T resources/OnMethodTest] []
 L5
-FRAME SAME1 java/lang/Throwable
+FRAME FULL [resources/OnMethodTest] [java/lang/Throwable]
 ATHROW
 LOCALVARIABLE this Lresources/OnMethodTest; L4 L5 0
 MAXSTACK = 4

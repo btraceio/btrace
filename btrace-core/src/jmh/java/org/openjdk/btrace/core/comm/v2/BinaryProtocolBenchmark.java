@@ -100,7 +100,8 @@ public class BinaryProtocolBenchmark {
 
       case "ErrorCommand":
         Throwable cause = new RuntimeException(createString(dataSize));
-        binaryCommand = new BinaryErrorCommand(1, cause.getMessage());
+        binaryCommand =
+            new BinaryErrorCommand(cause.getClass().getName(), cause.getMessage(), null);
         javaCommand = new ErrorCommand(cause);
         break;
 

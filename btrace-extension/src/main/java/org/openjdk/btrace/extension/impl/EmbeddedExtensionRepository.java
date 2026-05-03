@@ -24,10 +24,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
+import java.util.regex.Pattern;
 import org.openjdk.btrace.core.extensions.PermissionSet;
 import org.openjdk.btrace.extension.ExtensionDescriptorDTO;
 import org.openjdk.btrace.extension.ExtensionRepository;
@@ -65,22 +68,44 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
   /** Priority for embedded extensions (lowest - can be overridden by filesystem extensions). */
   public static final int EMBEDDED_PRIORITY = -100;
 
+  /**
+   * Sentinel classloader used when the caller passes {@code null} (i.e. the bootstrap classloader).
+   * Using a sentinel — rather than silently substituting the system classloader — makes
+   * bootstrap-loading explicit: callers that need real resource look-up should pass a concrete
+   * loader; callers that genuinely want bootstrap semantics get a loader that delegates to the
+   * system classloader only as a last-resort fallback via the standard parent-delegation chain.
+   */
+  private static final ClassLoader BOOTSTRAP_SENTINEL = new ClassLoader(null) {};
+
+  private static final Pattern VALID_CLASS_NAME_PATTERN =
+      Pattern.compile(
+          "^[a-zA-Z_][a-zA-Z0-9_]*+(\\.[a-zA-Z_][a-zA-Z0-9_$]*+)*+(\\$[a-zA-Z_][a-zA-Z0-9_$]*+)*+$");
+
   private static final String EXTENSIONS_BASE = "META-INF/btrace-extensions/";
   private static final String MANIFEST_ATTR = "BTrace-Embedded-Extensions";
   private static final String EXTENSION_PROPERTIES = "extension.properties";
 
   private final ClassLoader resourceLoader;
 
+  /** True when the caller supplied {@code null}, indicating the bootstrap classloader. */
+  private final boolean isBootstrap;
+
   /**
    * Creates an embedded extension repository.
    *
-   * @param resourceLoader classloader to read resources from (typically agent classloader). If null
-   *     (bootstrap classloader), falls back to system classloader.
+   * @param resourceLoader classloader to read resources from (typically agent classloader). Pass
+   *     {@code null} to indicate the bootstrap classloader; in that case the repository uses {@link
+   *     #BOOTSTRAP_SENTINEL} so that bootstrap-loading semantics are tracked explicitly rather than
+   *     silently replaced by the system classloader.
    */
   public EmbeddedExtensionRepository(ClassLoader resourceLoader) {
-    // Handle bootstrap classloader case (null) by using system classloader
-    this.resourceLoader =
-        resourceLoader != null ? resourceLoader : ClassLoader.getSystemClassLoader();
+    this.isBootstrap = resourceLoader == null;
+    this.resourceLoader = isBootstrap ? BOOTSTRAP_SENTINEL : resourceLoader;
+    if (isBootstrap) {
+      log.debug(
+          "EmbeddedExtensionRepository created with bootstrap classloader sentinel;"
+              + " resource look-up will use the bootstrap delegation chain");
+    }
   }
 
   @Override
@@ -121,8 +146,17 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     return extensions;
   }
 
-  /** Reads the list of embedded extension IDs from the agent JAR manifest. */
+  /**
+   * Reads the list of embedded extension IDs from all JAR manifests visible to the classloader.
+   *
+   * <p>All manifests that carry a {@code BTrace-Embedded-Extensions} attribute are iterated;
+   * extension IDs are accumulated in encounter order. Duplicate IDs (e.g. produced by a
+   * shadow/shade merge of two JARs that each declared the same extension) are deduplicated and a
+   * warning is logged so operators can investigate collisions.
+   */
   private List<String> readManifestIndex() {
+    // Use a LinkedHashSet to deduplicate while preserving encounter order.
+    Set<String> seen = new LinkedHashSet<>();
     try {
       Enumeration<URL> manifests = resourceLoader.getResources("META-INF/MANIFEST.MF");
       while (manifests.hasMoreElements()) {
@@ -132,14 +166,25 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
           Attributes attrs = manifest.getMainAttributes();
           String embeddedExtensions = attrs.getValue(MANIFEST_ATTR);
           if (embeddedExtensions != null && !embeddedExtensions.trim().isEmpty()) {
-            return Arrays.asList(embeddedExtensions.split(","));
+            for (String entry : embeddedExtensions.split(",")) {
+              String trimmed = entry.trim();
+              if (!trimmed.isEmpty()) {
+                if (!seen.add(trimmed)) {
+                  log.warn(
+                      "Duplicate embedded extension ID '{}' encountered in manifest {};"
+                          + " keeping first occurrence — check for conflicting classpath JARs",
+                      trimmed,
+                      url);
+                }
+              }
+            }
           }
         }
       }
     } catch (IOException e) {
       log.debug("Failed to read manifest: {}", e.getMessage());
     }
-    return Collections.emptyList();
+    return seen.isEmpty() ? Collections.emptyList() : new ArrayList<>(seen);
   }
 
   /** Parses an embedded extension from its properties file. */
@@ -164,7 +209,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
       String version = props.getProperty("version", "0.0.0");
       String name = props.getProperty("name", id);
       String description = props.getProperty("description", "");
-      String btraceApiVersion = props.getProperty("btrace.api.version", "2.0+");
+      String btraceApiVersion = props.getProperty("btrace.api.version", "3.0+");
       String javaVersion = props.getProperty("java.version", "8+");
       String servicesStr = props.getProperty("services", "");
       String configurator = props.getProperty("configurator");
@@ -180,8 +225,8 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
         configurator = null;
       }
 
-      // Discover bundled probes
-      List<String> bundledProbes = discoverBundledProbes(extensionId);
+      // Discover bundled probes (declared via the 'probes' property)
+      List<String> bundledProbes = discoverBundledProbes(extensionId, props);
 
       // For embedded extensions, jarPath points to a virtual path
       // The actual loading happens via ClassDataLoader
@@ -207,12 +252,24 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     }
   }
 
-  /** Discovers bundled probe class files in the extension's probes/ directory. */
-  private List<String> discoverBundledProbes(String extensionId) {
-    // Note: Discovering resources without filesystem access is tricky.
-    // The probes list should be declared in extension.properties instead.
-    // For now, return empty and rely on extension.properties "probes" property.
-    return Collections.emptyList();
+  /**
+   * Discovers bundled probe class names for an extension by reading the {@code probes} property
+   * from its {@code extension.properties}. The value is a comma-separated list of fully-qualified
+   * probe class names; entries are trimmed and validated.
+   */
+  private List<String> discoverBundledProbes(String extensionId, Properties props) {
+    String probesStr = props.getProperty("probes", "");
+    if (probesStr.isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<String> raw = new ArrayList<>();
+    for (String entry : probesStr.split(",")) {
+      String trimmed = entry.trim();
+      if (!trimmed.isEmpty()) {
+        raw.add(trimmed);
+      }
+    }
+    return validateClassNames(raw, "probe");
   }
 
   @Override
@@ -274,8 +331,7 @@ public final class EmbeddedExtensionRepository implements ExtensionRepository {
     }
     // Basic validation: must be a valid Java identifier pattern
     // Allows: package.Class, package.Class$Inner
-    return className.matches(
-        "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_$]*)*(\\$[a-zA-Z_][a-zA-Z0-9_$]*)*$");
+    return VALID_CLASS_NAME_PATTERN.matcher(className).matches();
   }
 
   /**

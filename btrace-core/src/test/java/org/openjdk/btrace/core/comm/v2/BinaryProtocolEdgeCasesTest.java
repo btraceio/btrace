@@ -104,7 +104,7 @@ public class BinaryProtocolEdgeCasesTest {
   public void testErrorCommandNullMessage() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-    BinaryErrorCommand original = new BinaryErrorCommand(404, null);
+    BinaryErrorCommand original = new BinaryErrorCommand("java.lang.RuntimeException", null, null);
     BinaryWireIO.write(baos, original);
 
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
@@ -112,7 +112,9 @@ public class BinaryProtocolEdgeCasesTest {
 
     assertTrue(readCommand instanceof BinaryErrorCommand);
     BinaryErrorCommand errorCommand = (BinaryErrorCommand) readCommand;
+    assertEquals("java.lang.RuntimeException", errorCommand.getExceptionClass());
     assertNull(errorCommand.getMessage());
+    assertNull(errorCommand.getStackTrace());
   }
 
   @Test

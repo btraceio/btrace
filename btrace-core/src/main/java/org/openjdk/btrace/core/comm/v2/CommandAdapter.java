@@ -16,9 +16,9 @@
  */
 package org.openjdk.btrace.core.comm.v2;
 
-import java.util.ArrayList;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import org.openjdk.btrace.core.comm.Command;
 import org.openjdk.btrace.core.comm.DisconnectCommand;
@@ -27,6 +27,7 @@ import org.openjdk.btrace.core.comm.EventCommand;
 import org.openjdk.btrace.core.comm.ExitCommand;
 import org.openjdk.btrace.core.comm.GridDataCommand;
 import org.openjdk.btrace.core.comm.InstrumentCommand;
+import org.openjdk.btrace.core.comm.ListFailedExtensionsCommand;
 import org.openjdk.btrace.core.comm.ListProbesCommand;
 import org.openjdk.btrace.core.comm.MessageCommand;
 import org.openjdk.btrace.core.comm.NumberDataCommand;
@@ -63,7 +64,7 @@ public class CommandAdapter {
 
       case BinaryCommand.MESSAGE:
         BinaryMessageCommand msgCmd = (BinaryMessageCommand) binaryCmd;
-        return new MessageCommand(msgCmd.getMessage());
+        return new MessageCommand(msgCmd.getTimestamp(), msgCmd.getMessage(), msgCmd.isUrgent());
 
       case BinaryCommand.INSTRUMENT:
         BinaryInstrumentCommand instrCmd = (BinaryInstrumentCommand) binaryCmd;
@@ -71,7 +72,15 @@ public class CommandAdapter {
 
       case BinaryCommand.ERROR:
         BinaryErrorCommand errCmd = (BinaryErrorCommand) binaryCmd;
-        return new ErrorCommand(new RuntimeException(errCmd.getMessage()));
+        Throwable errorCause = null;
+        if (errCmd.getExceptionClass() != null
+            || errCmd.getMessage() != null
+            || errCmd.getStackTrace() != null) {
+          errorCause =
+              new RemoteException(
+                  errCmd.getExceptionClass(), errCmd.getMessage(), errCmd.getStackTrace());
+        }
+        return new ErrorCommand(errorCause);
 
       case BinaryCommand.RENAME:
         BinaryRenameCommand renameCmd = (BinaryRenameCommand) binaryCmd;
@@ -96,7 +105,8 @@ public class CommandAdapter {
 
       case BinaryCommand.GRID_DATA:
         BinaryGridDataCommand gridCmd = (BinaryGridDataCommand) binaryCmd;
-        GridDataCommand cmd = new GridDataCommand(gridCmd.getName(), gridCmd.getData());
+        GridDataCommand cmd =
+            new GridDataCommand(gridCmd.getName(), gridCmd.getColumnNames(), gridCmd.getData());
         return cmd;
 
       case BinaryCommand.RETRANSFORMATION_START:
@@ -118,6 +128,13 @@ public class CommandAdapter {
         ListProbesCommand listCmd = new ListProbesCommand();
         listCmd.setProbes(listProbesCmd.getProbes());
         return listCmd;
+
+      case BinaryCommand.LIST_FAILED_EXTENSIONS:
+        BinaryListFailedExtensionsCommand listFailedCmd =
+            (BinaryListFailedExtensionsCommand) binaryCmd;
+        ListFailedExtensionsCommand failedCmd = new ListFailedExtensionsCommand();
+        failedCmd.setFailedExtensionsList(listFailedCmd.getFailures());
+        return failedCmd;
 
       case BinaryCommand.DISCONNECT:
         BinaryDisconnectCommand disconnectCmd = (BinaryDisconnectCommand) binaryCmd;
@@ -150,7 +167,8 @@ public class CommandAdapter {
 
       case Command.MESSAGE:
         MessageCommand msgCmd = (MessageCommand) originalCmd;
-        return new BinaryMessageCommand(msgCmd.getMessage(), originalCmd.isUrgent());
+        return new BinaryMessageCommand(
+            msgCmd.getTime(), msgCmd.getMessage(), originalCmd.isUrgent());
 
       case Command.INSTRUMENT:
         InstrumentCommand instrCmd = (InstrumentCommand) originalCmd;
@@ -158,8 +176,20 @@ public class CommandAdapter {
 
       case Command.ERROR:
         ErrorCommand errCmd = (ErrorCommand) originalCmd;
-        return new BinaryErrorCommand(
-            0, errCmd.getCause() != null ? errCmd.getCause().getMessage() : null);
+        Throwable cause = errCmd.getCause();
+        String exceptionClass = null;
+        String message = null;
+        String stackTrace = null;
+        if (cause != null) {
+          exceptionClass = cause.getClass().getName();
+          message = cause.getMessage();
+          StringWriter writer = new StringWriter();
+          PrintWriter printWriter = new PrintWriter(writer);
+          cause.printStackTrace(printWriter);
+          printWriter.flush();
+          stackTrace = writer.toString();
+        }
+        return new BinaryErrorCommand(exceptionClass, message, stackTrace);
 
       case Command.RENAME:
         RenameCommand renameCmd = (RenameCommand) originalCmd;
@@ -193,8 +223,8 @@ public class CommandAdapter {
 
       case Command.GRID_DATA:
         GridDataCommand gridCmd = (GridDataCommand) originalCmd;
-        List<String> columnNames = new ArrayList<>();
-        return new BinaryGridDataCommand(gridCmd.getName(), columnNames, gridCmd.getData());
+        return new BinaryGridDataCommand(
+            gridCmd.getName(), gridCmd.getColumnNames(), gridCmd.getData());
 
       case Command.RETRANSFORMATION_START:
         RetransformationStartNotification retransStartCmd =
@@ -212,16 +242,22 @@ public class CommandAdapter {
       case Command.LIST_PROBES:
         ListProbesCommand listProbesCmd = (ListProbesCommand) originalCmd;
         BinaryListProbesCommand listCmd = new BinaryListProbesCommand();
-        listCmd.setProbes(new ArrayList<>());
+        listCmd.setProbes(listProbesCmd.getProbes());
         return listCmd;
 
       case Command.DISCONNECT:
         DisconnectCommand disconnectCmd = (DisconnectCommand) originalCmd;
-        return new BinaryDisconnectCommand("");
+        return new BinaryDisconnectCommand(disconnectCmd.getProbeId());
 
       case Command.RECONNECT:
         ReconnectCommand reconnectCmd = (ReconnectCommand) originalCmd;
-        return new BinaryReconnectCommand("");
+        return new BinaryReconnectCommand(reconnectCmd.getProbeId());
+
+      case Command.LIST_FAILED_EXTENSIONS:
+        ListFailedExtensionsCommand listFailedCmd = (ListFailedExtensionsCommand) originalCmd;
+        BinaryListFailedExtensionsCommand binaryFailedCmd = new BinaryListFailedExtensionsCommand();
+        binaryFailedCmd.setFailures(listFailedCmd.getFailedExtensions());
+        return binaryFailedCmd;
 
       default:
         throw new IllegalArgumentException(

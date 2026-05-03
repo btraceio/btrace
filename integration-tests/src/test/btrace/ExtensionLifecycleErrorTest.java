@@ -1,51 +1,50 @@
 /*
- * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
- * All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
- *     https://www.apache.org/licenses/LICENSE-2.0
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
-package org.openjdk.btrace.core.aggregation;
+package btrace;
 
-/**
- * Aggregation function for computing the minimum value.
- *
- * <p>
- *
- * @author Christian Glencross
- */
-class Minimum implements AggregationValue {
+import org.openjdk.btrace.core.annotations.BTrace;
+import org.openjdk.btrace.core.annotations.Injected;
+import org.openjdk.btrace.core.annotations.OnMethod;
+import org.openjdk.btrace.utils.PrinterService;
 
-  long min = Long.MAX_VALUE;
+import static org.openjdk.btrace.core.BTraceUtils.exit;
 
-  @Override
-  public synchronized void clear() {
-    min = Long.MAX_VALUE;
-  }
+@BTrace
+public class ExtensionLifecycleErrorTest {
+  private static boolean exited = false;
 
-  @Override
-  public synchronized void add(long value) {
-    if (value < min) {
-      min = value;
+  @Injected private static PrinterService printer;
+
+  @OnMethod(clazz = "resources.Main", method = "callB")
+  public static void onCallB() {
+    printer.println("LIFECYCLE: extension method called");
+    if (!exited) {
+      exited = true;
+      printer.println("Triggering error exit");
+      // Exit with error code to simulate abnormal termination
+      exit(1);
     }
-  }
-
-  @Override
-  public synchronized long getValue() {
-    return min;
-  }
-
-  @Override
-  public Object getData() {
-    return getValue();
   }
 }
