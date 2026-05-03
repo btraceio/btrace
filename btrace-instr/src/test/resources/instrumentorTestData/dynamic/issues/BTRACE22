@@ -13,15 +13,15 @@ LSUB
 LSTORE 1
 L3
 FRAME FULL [resources/issues/BTRACE22 J J D] [D]
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L4
 ALOAD 0
 LLOAD 1
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE22$tracker(Ljava/lang/Object;J)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE22$tracker(Ljava/lang/Object;J)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/BTRACE22"
+"io/btrace/runtime/auxiliary/BTRACE22"
 ]
 L4
 FRAME SAME1 D

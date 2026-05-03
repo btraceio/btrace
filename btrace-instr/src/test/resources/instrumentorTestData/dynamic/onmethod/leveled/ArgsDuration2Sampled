@@ -5,7 +5,7 @@ LSTORE 8
 ICONST_0
 ISTORE 10
 ICONST_1
-INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.hitTimed (I)J
+INVOKESTATIC io/btrace/instr/MethodTracker.hitTimed (I)J
 DUP2
 LSTORE 8
 L2I
@@ -13,13 +13,13 @@ ISTORE 10
 ILOAD 10
 IFEQ L1
 ICONST_1
-INVOKESTATIC org/openjdk/btrace/instr/MethodTracker.getEndTs (I)J
+INVOKESTATIC io/btrace/instr/MethodTracker.getEndTs (I)J
 LLOAD 8
 LSUB
 LSTORE 6
 L2
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I] [J]
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 DUP2
 LSTORE 11
@@ -30,11 +30,11 @@ ALOAD 1
 LLOAD 2
 ALOAD 4
 ALOAD 5
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2Sampled$args2(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$ArgsDuration2Sampled$args2(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Sampled"
+"io/btrace/runtime/auxiliary/ArgsDuration2Sampled"
 ]
 L1
 FRAME SAME1 J
@@ -42,7 +42,7 @@ ILOAD 10
 IFEQ L3
 L4
 FRAME FULL [resources/OnMethodTest java/lang/String J [Ljava/lang/String; [I J J I T T] [J]
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 DUP2
 LSTORE 13
@@ -53,11 +53,11 @@ ALOAD 1
 LLOAD 2
 ALOAD 4
 ALOAD 5
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$ArgsDuration2Sampled$args(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$ArgsDuration2Sampled$args(Ljava/lang/Object;JJLjava/lang/String;J[Ljava/lang/String;[I)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/ArgsDuration2Sampled"
+"io/btrace/runtime/auxiliary/ArgsDuration2Sampled"
 ]
 L3
 FRAME SAME1 J

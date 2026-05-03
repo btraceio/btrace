@@ -10,7 +10,7 @@ ASTORE 11
 ALOAD 11
 ALOAD 10
 LLOAD 8
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 DUP2
 LSTORE 12
@@ -18,11 +18,11 @@ LLOAD 12
 LCONST_0
 ALOAD 10
 LLOAD 8
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$MethodCallDuration$args(JJLjava/lang/String;J)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$MethodCallDuration$args(JJLjava/lang/String;J)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/MethodCallDuration"
+"io/btrace/runtime/auxiliary/MethodCallDuration"
 ]
 L1
 FRAME FULL [resources/OnMethodTest java/lang/String J J J J java/lang/String resources/OnMethodTest] [J]

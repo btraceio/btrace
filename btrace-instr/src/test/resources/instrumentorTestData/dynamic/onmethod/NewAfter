@@ -1,14 +1,14 @@
 DUP
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L1
 ALOAD 0
 ALOAD 1
 LDC "java.util.HashMap"
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$NewAfter$args(Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$NewAfter$args(Ljava/lang/Object;Ljava/util/Map;Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/NewAfter"
+"io/btrace/runtime/auxiliary/NewAfter"
 ]
 FRAME FULL [resources/OnMethodTest java/util/HashMap] [java/util/HashMap]
 ASTORE 2

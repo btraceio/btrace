@@ -1,12 +1,12 @@
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L0
 ALOAD 0
 LDC "aMethod"
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o1(Ljava/lang/Object;Ljava/lang/String;)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE106$o1(Ljava/lang/Object;Ljava/lang/String;)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/BTRACE106"
+"io/btrace/runtime/auxiliary/BTRACE106"
 ]
 FRAME SAME
 LCONST_0
@@ -21,29 +21,29 @@ LSUB
 LSTORE 1
 L2
 FRAME APPEND [J J]
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L3
 ALOAD 0
 LDC "bMethod"
 LLOAD 1
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o3(Ljava/lang/Object;Ljava/lang/String;J)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE106$o3(Ljava/lang/Object;Ljava/lang/String;J)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/BTRACE106"
+"io/btrace/runtime/auxiliary/BTRACE106"
 ]
 L3
 FRAME SAME
-INVOKESTATIC org/openjdk/btrace/runtime/LinkingFlag.get ()I
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
 IFNE L4
 ALOAD 0
 LDC "bMethod"
 LLOAD 1
-INVOKEDYNAMIC $btrace$org$openjdk$btrace$runtime$auxiliary$BTRACE106$o2(Ljava/lang/Object;Ljava/lang/String;J)V [
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE106$o2(Ljava/lang/Object;Ljava/lang/String;J)V [
 // handle kind 0x6 : INVOKESTATIC
-org/openjdk/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
 // arguments:
-"org/openjdk/btrace/runtime/auxiliary/BTRACE106"
+"io/btrace/runtime/auxiliary/BTRACE106"
 ]
 L4
 FRAME SAME
