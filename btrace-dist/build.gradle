@@ -152,17 +152,6 @@ task allClassesShadow(type: ShadowJar) {
     }
 }
 
-task apiJar(type: Jar) {
-    group 'Build'
-    description 'Creates API JAR for compile-time dependencies'
-    archiveBaseName.set('btrace-api')
-    archiveVersion.set('')
-    archiveClassifier.set('')
-    destinationDirectory = libsDir
-
-    from(project(':btrace-api').sourceSets.main.output)
-}
-
 // uberJar removed - btrace.jar (masked jar) is the single source of truth
 
 // ==================== Masked JAR ====================
@@ -521,16 +510,16 @@ buildDeb {
 }
 
 copyDtraceLib.dependsOn project(':btrace-dtrace').build
-shadowJar.dependsOn btraceJar, apiJar, copyDtraceLib, copyExtensions
-buildTgz.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildZip.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildSdkmanZip.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildDeb.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
-buildRpm.dependsOn btraceJar, apiJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+shadowJar.dependsOn btraceJar, copyDtraceLib, copyExtensions
+buildTgz.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildSdkmanZip.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildDeb.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
+buildRpm.dependsOn btraceJar, fixPermissions, copyDtraceLib, processResources, explodeExtensions
 build.dependsOn buildSdkmanZip, buildZip, buildTgz, buildDeb, buildRpm
 
 // Docker build tasks
-task buildDockerContext(type: Copy, dependsOn: [btraceJar, apiJar, copyDtraceLib, processResources, fixPermissions]) {
+task buildDockerContext(type: Copy, dependsOn: [btraceJar, copyDtraceLib, processResources, fixPermissions]) {
     group 'Docker'
     description 'Prepare Docker build context with BTrace distribution'
 
