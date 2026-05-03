@@ -16,12 +16,12 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnExit;
-import org.openjdk.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnExit;
+import io.btrace.core.annotations.OnTimer;
 
-import static org.openjdk.btrace.core.BTraceUtils.Sys;
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.Sys;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * This program demonstrates OnExit probe.

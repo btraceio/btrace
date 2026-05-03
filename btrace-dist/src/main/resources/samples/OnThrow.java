@@ -16,15 +16,15 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.TLS;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.Self;
+import io.btrace.core.annotations.TLS;
 
-import static org.openjdk.btrace.core.BTraceUtils.Threads;
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.Threads;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * This example demonstrates printing stack trace

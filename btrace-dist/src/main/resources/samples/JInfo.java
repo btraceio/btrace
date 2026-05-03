@@ -16,9 +16,9 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.BTrace;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
 /*
  * A simple sample that prints system properties, flags and exits.

@@ -16,14 +16,14 @@
  */
 
 
-import org.openjdk.btrace.core.types.AnyType;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.ProbeClassName;
-import org.openjdk.btrace.core.annotations.ProbeMethodName;
+import io.btrace.core.types.AnyType;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.ProbeClassName;
+import io.btrace.core.annotations.ProbeMethodName;
 
-import static org.openjdk.btrace.core.BTraceUtils.printArray;
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.printArray;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * This sample demonstrates regular expression

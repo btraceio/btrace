@@ -16,14 +16,14 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Export;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.OnTimer;
-import org.openjdk.btrace.core.annotations.Self;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Export;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.Self;
 
-import static org.openjdk.btrace.core.BTraceUtils.Counters;
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.Counters;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * This sample creates a jvmstat counter and
@@ -56,6 +56,6 @@ public class ThreadCounter {
         // as from jvmstat counter directly.
         println(count);
         // or equivalently ...
-        println(Counters.perfLong("btrace.org.openjdk.btrace.samples.ThreadCounter.count"));
+        println(Counters.perfLong("btrace.io.btrace.samples.ThreadCounter.count"));
     }
 }

@@ -16,11 +16,11 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.BTrace;
 
-import static org.openjdk.btrace.core.BTraceUtils.Sys.exit;
-import static org.openjdk.btrace.core.BTraceUtils.Threads.deadlocks;
-import static org.openjdk.btrace.core.BTraceUtils.Threads.jstackAll;
+import static io.btrace.core.BTraceUtils.Sys.exit;
+import static io.btrace.core.BTraceUtils.Threads.deadlocks;
+import static io.btrace.core.BTraceUtils.Threads.jstackAll;
 
 /*
  * A simple sample prints stack traces and exits. This

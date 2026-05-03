@@ -16,16 +16,16 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Self;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.Self;
 
 import java.lang.reflect.Field;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-import static org.openjdk.btrace.core.BTraceUtils.Reflective;
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.Reflective;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * Simple log message tracer class. This class

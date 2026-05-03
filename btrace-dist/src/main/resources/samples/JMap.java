@@ -16,10 +16,10 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.BTrace;
 
-import static org.openjdk.btrace.core.BTraceUtils.Sys;
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.Sys;
+import static io.btrace.core.BTraceUtils.println;
 
 /*
  * A simple sample that dumps heap of the target at start and exits.

@@ -16,14 +16,14 @@
  */
 
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.OnTimer;
-import org.openjdk.btrace.core.annotations.Self;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.Self;
 
 import java.lang.reflect.Field;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class FinalizeTracker {
