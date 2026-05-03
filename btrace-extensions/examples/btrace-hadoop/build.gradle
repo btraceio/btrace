@@ -23,6 +23,5 @@ btraceExtension {
 
 dependencies {
     apiCompileOnly project(':btrace-core')
-    implCompileOnly project(':btrace-extension')
     implCompileOnly project(':btrace-core')
 }

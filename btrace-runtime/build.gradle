@@ -55,15 +55,12 @@ dependencies {
     implementation(group: 'org.jctools', name: 'jctools-core', version: '4.0.6')
 
     java9Implementation project(':btrace-core')
-    java9Implementation project(':btrace-extension')
 
     java11Implementation project(':btrace-core')
-    java11Implementation project(':btrace-extension')
 
     implementation project(':btrace-core')
-    implementation project(':btrace-extension')
 
-    testImplementation project(':btrace-extension')
+    testImplementation project(':btrace-core')
 }
 
 jar {

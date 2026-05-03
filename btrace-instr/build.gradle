@@ -13,7 +13,6 @@ dependencies {
     implementation libs.autoService
     implementation libs.jctools
     implementation project(':btrace-core')
-    implementation project(':btrace-extension')
     implementation project(':btrace-runtime')
     implementation project(':btrace-compiler')
 
