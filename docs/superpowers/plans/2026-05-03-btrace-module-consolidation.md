@@ -322,7 +322,7 @@ if (processorProject != null) {
     project.dependencies.add('annotationProcessor', processorProject)
 } else {
     project.dependencies.add('annotationProcessor',
-        "org.openjdk.btrace:btrace-extension-processor:${project.version}")
+        "io.btrace:btrace-extension-processor:${project.version}")
 }
 ```
 

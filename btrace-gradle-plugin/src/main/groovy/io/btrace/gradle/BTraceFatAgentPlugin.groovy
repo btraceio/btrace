@@ -17,7 +17,7 @@ import org.gradle.api.file.DuplicatesStrategy
  * <p>Usage:
  * <pre>
  * plugins {
- *     id 'org.openjdk.btrace.fat-agent'
+ *     id 'io.btrace.fat-agent'
  * }
  *
  * btraceFatAgent {
@@ -156,8 +156,8 @@ class BTraceFatAgentPlugin implements Plugin<Project> {
             // Configure manifest
             manifest {
                 attributes(
-                    'Premain-Class': 'org.openjdk.btrace.agent.Main',
-                    'Agent-Class': 'org.openjdk.btrace.agent.Main',
+                    'Premain-Class': 'io.btrace.agent.Main',
+                    'Agent-Class': 'io.btrace.agent.Main',
                     'Can-Redefine-Classes': 'true',
                     'Can-Retransform-Classes': 'true',
                     'Boot-Class-Path': "${extension.baseName}.jar"
@@ -301,7 +301,7 @@ description=${ext.metadata?.getProperty('description') ?: ''}
             // Use Gradle's JavaExec to run btracec
             project.javaexec {
                 classpath = project.files(compilerJar)
-                mainClass = 'org.openjdk.btrace.compiler.Compiler'
+                mainClass = 'io.btrace.compiler.Compiler'
                 args = ['-d', outputDir.absolutePath]
 
                 // Add all .java files
@@ -352,7 +352,7 @@ description=${ext.metadata?.getProperty('description') ?: ''}
             : null
 
         project.rootProject.subprojects.each { sp ->
-            if (sp.plugins.hasPlugin('org.openjdk.btrace.extension')) {
+            if (sp.plugins.hasPlugin('io.btrace.extension')) {
                 if (filterList == null || filterList.contains(sp.name)) {
                     // Add as project source if not already present
                     def alreadyAdded = extension.extensionSources.any { source ->

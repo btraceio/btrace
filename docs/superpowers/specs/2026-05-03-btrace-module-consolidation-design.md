@@ -28,10 +28,10 @@ Reduce BTrace's 18-module Gradle project to 10 modules by merging small or logic
 ## The One Source Change: `PackGenerator` Move
 
 `btrace-instr` (merging into `btrace-agent`) currently depends on `btrace-compiler` solely for
-the `PackGenerator` interface (`org.openjdk.btrace.compiler.PackGenerator`, 5 lines). After the
+the `PackGenerator` interface (`io.btrace.compiler.PackGenerator`, 5 lines). After the
 merge, `btrace-agent` depending on `btrace-compiler` would be a wrong-direction dependency.
 
-**Fix:** Move `PackGenerator` to `org.openjdk.btrace.core` in `btrace-core`. Both `btrace-compiler`
+**Fix:** Move `PackGenerator` to `io.btrace.core` in `btrace-core`. Both `btrace-compiler`
 and `btrace-agent` already depend on `btrace-core`, so no new dependency edges are introduced.
 Update the single import in `InstrPackGenerator.java` and the class declaration in `PackGenerator.java`.
 
@@ -96,10 +96,10 @@ Each step leaves the build green before the next step begins.
 - Run: `./gradlew test` — must pass
 
 **Step 4 — Move `PackGenerator` to `btrace-core`**
-- Move `btrace-compiler/src/main/java/org/openjdk/btrace/compiler/PackGenerator.java` to `btrace-core/src/main/java/org/openjdk/btrace/core/PackGenerator.java`
-- Update package declaration to `org.openjdk.btrace.core`
-- Update import in `btrace-instr/src/main/java/org/openjdk/btrace/instr/InstrPackGenerator.java`
-- Update import in any other files referencing `org.openjdk.btrace.compiler.PackGenerator`
+- Move `btrace-compiler/src/main/java/io/btrace/compiler/PackGenerator.java` to `btrace-core/src/main/java/io/btrace/core/PackGenerator.java`
+- Update package declaration to `io.btrace.core`
+- Update import in `btrace-instr/src/main/java/io/btrace/instr/InstrPackGenerator.java`
+- Update import in any other files referencing `io.btrace.compiler.PackGenerator`
 - Remove `implementation project(':btrace-compiler')` from `btrace-instr/build.gradle`
 - Run: `./gradlew :btrace-instr:compileJava :btrace-compiler:compileJava` — must pass
 
@@ -153,7 +153,7 @@ Each step leaves the build green before the next step begins.
 
 ## What Does Not Change
 
-- All Java package names (`org.openjdk.btrace.*`) — no package renames
+- All Java package names (`io.btrace.*`) — no package renames
 - Published artifact names and contents — `btrace-dist` produces the same JARs
 - `btrace-dtrace` — unchanged, preserved for future systemtap/USDT porting
 - `btrace-runtime` — unchanged, multi-JDK source set structure preserved

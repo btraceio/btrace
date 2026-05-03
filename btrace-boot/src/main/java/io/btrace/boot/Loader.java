@@ -58,6 +58,7 @@ public final class Loader {
   private static final String CLIENT_SECTION = "client";
   private static final String AGENT_MAIN_ATTR = "BTrace-Agent-Main";
   private static final String CLIENT_MAIN_ATTR = "BTrace-Client-Main";
+  private static final String CLIENT_MAIN_PROP = "btrace.client.main";
   private static final String DEFAULT_AGENT_MAIN = "io.btrace.agent.Main";
   private static final String DEFAULT_CLIENT_MAIN = "io.btrace.client.Main";
   private static final boolean DEBUG = Boolean.getBoolean("btrace.boot.debug");
@@ -157,8 +158,8 @@ public final class Loader {
       System.setProperty("btrace.jar.path", jarFile.getAbsolutePath());
       debug("Set btrace.jar.path property to: " + jarFile.getAbsolutePath());
 
-      // Read main class from manifest
-      String mainClass = getManifestAttribute(jarFile, CLIENT_MAIN_ATTR, DEFAULT_CLIENT_MAIN);
+      // Allow dedicated launchers such as btracex to override the client entry point.
+      String mainClass = getClientMainClass(jarFile);
       debug("Client main class: " + mainClass);
 
       // Create classloader for client section
@@ -175,6 +176,14 @@ public final class Loader {
       e.printStackTrace();
       System.exit(1);
     }
+  }
+
+  private static String getClientMainClass(File jarFile) {
+    String override = System.getProperty(CLIENT_MAIN_PROP);
+    if (override != null && !override.isEmpty()) {
+      return override;
+    }
+    return getManifestAttribute(jarFile, CLIENT_MAIN_ATTR, DEFAULT_CLIENT_MAIN);
   }
 
   private static String getManifestAttribute(File jarFile, String name, String defaultValue) {

@@ -210,15 +210,16 @@ task prepareClientClassdata(type: Copy) {
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
         include 'io/btrace/client/**/*.class'
+        include 'io/btrace/extcli/**/*.class'
         include 'io/btrace/compiler/**/*.class'
+        include 'io/btrace/libs/org/objectweb/asm/**/*.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
+        include 'io/btrace/libs/org/slf4j/**/*.class'
         include 'com/googlecode/lanterna/**/*.class'
         // Exclude classes that are in bootstrap or shared
         exclude 'io/btrace/core/**'
         exclude 'io/btrace/runtime/**'
         exclude 'io/btrace/extension/**'
-        exclude 'io/btrace/libs/org/objectweb/asm/**'
-        exclude 'io/btrace/libs/org/slf4j/**'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
@@ -458,14 +459,14 @@ btraceFatAgent {
     relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'
 }
 
-task fixPermissions(type: Exec) {
+task fixPermissions {
     onlyIf {
         !OperatingSystem.current().isWindows()
     }
-    commandLine 'chmod', '500', "${distTarget}/bin/btrace"
-    commandLine 'chmod', '500', "${distTarget}/bin/btracec"
-    commandLine 'chmod', '500', "${distTarget}/bin/btracer"
-    commandLine 'chmod', '500', "${distTarget}/bin/btracex"
+
+    doLast {
+        ant.chmod(dir: "${distTarget}/bin", perm: '500', includes: '*', excludes: '*.bat')
+    }
 
     dependsOn processResources
 }

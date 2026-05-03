@@ -24,9 +24,9 @@
  */
 
 
-#define BTRACE_UTILS import static org.openjdk.btrace.core.BTraceUtils.*;
+#define BTRACE_UTILS import static io.btrace.core.BTraceUtils.*;
 
-#define BTRACE_ANNO import org.openjdk.btrace.core.annotations.*;
+#define BTRACE_ANNO import io.btrace.core.annotations.*;
 
 #define BTRACE_IMPORT BTRACE_UTILS \
                       BTRACE_ANNO
