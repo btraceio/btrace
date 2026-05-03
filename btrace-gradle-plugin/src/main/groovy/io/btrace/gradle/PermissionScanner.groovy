@@ -35,7 +35,7 @@ final class PermissionScanner {
         classpath?.each { File f ->
             if (f == null || !f.exists()) return
             def path = f.absolutePath
-            if (path.contains('/btrace-core') || path.contains('/btrace-runtime') || path.contains('/btrace-instr') || path.contains('/btrace-agent')) return
+            if (path.contains('/btrace-core') || path.contains('/btrace-runtime') || path.contains('/btrace-agent')) return
             sources.add(f)
         }
 

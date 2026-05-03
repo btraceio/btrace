@@ -639,7 +639,7 @@ task buildDockerImages {
 
 test {
     doLast {
-        project(':btrace-instr').tasks.test.execute()
+        project(':btrace-agent').tasks.test.execute()
     }
 }
 

@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -262,7 +263,7 @@ class AgentManifestLibsTest {
     @DisplayName("skips non-JAR files")
     void skipsNonJarFiles() throws IOException {
       Path txtFile = libsDir.resolve("readme.txt");
-      Files.writeString(txtFile, "not a jar");
+      Files.write(txtFile, "not a jar".getBytes(StandardCharsets.UTF_8));
       Set<Path> input = new LinkedHashSet<>();
       input.add(txtFile);
 
@@ -377,8 +378,8 @@ class AgentManifestLibsTest {
       Path libDir = tempDir.resolve("libs");
       Files.createDirectories(libDir);
       createJar(libDir, "valid.jar");
-      Files.writeString(libDir.resolve("readme.txt"), "text file");
-      Files.writeString(libDir.resolve("config.xml"), "<config/>");
+      Files.write(libDir.resolve("readme.txt"), "text file".getBytes(StandardCharsets.UTF_8));
+      Files.write(libDir.resolve("config.xml"), "<config/>".getBytes(StandardCharsets.UTF_8));
       Set<Path> result = new LinkedHashSet<>();
 
       AgentManifestLibs.scanLibTree(libDir, result);

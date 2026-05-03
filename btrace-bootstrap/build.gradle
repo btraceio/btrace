@@ -68,7 +68,7 @@ def bootIncludes = {
 dependencies {
     implementation project(':btrace-core')
     implementation project(':btrace-runtime')
-    implementation project(':btrace-instr')
+    implementation project(':btrace-agent')
 }
 
 jar {

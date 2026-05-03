@@ -15,7 +15,7 @@ configurations {
 dependencies {
   implementation project(path: ":btrace-dist", configuration: "shadow")
   implementation project(":btrace-compiler")
-  jmh project(":btrace-instr")
+  jmh project(":btrace-agent")
   jmh project(":btrace-runtime")
   jmh project(":btrace-extensions:btrace-statsd")
   jmh libs.jmh

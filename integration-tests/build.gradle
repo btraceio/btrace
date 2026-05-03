@@ -26,7 +26,7 @@ task buildEventsJar(type: Jar) {
 }
 
 task compileTestProbes {
-    dependsOn compileTestJava, ':btrace-instr:jar', ':btrace-compiler:jar'
+    dependsOn compileTestJava, ':btrace-agent:jar', ':btrace-compiler:jar'
     // Wire all extension buildApiJar tasks dynamically (parent aggregator dissolved)
     gradle.projectsEvaluated {
         rootProject.subprojects.each { sp ->
