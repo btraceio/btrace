@@ -1,4 +1,4 @@
-package org.openjdk.btrace.gradle
+package io.btrace.gradle
 
 import org.gradle.api.Action
 import org.gradle.api.Project

@@ -1,4 +1,4 @@
-package org.openjdk.btrace.gradle
+package io.btrace.gradle
 
 import java.io.File
 import java.io.FileInputStream

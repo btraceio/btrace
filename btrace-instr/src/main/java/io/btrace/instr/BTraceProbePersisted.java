@@ -45,6 +45,15 @@ import static org.objectweb.asm.Opcodes.PUTSTATIC;
 import static org.objectweb.asm.Opcodes.RET;
 import static org.objectweb.asm.Opcodes.SASTORE;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.VerifierException;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.annotations.Where;
+import io.btrace.core.comm.RetransformClassNotification;
+import io.btrace.core.extensions.Permission;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -60,15 +69,6 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.DebugSupport;
-import io.btrace.core.VerifierException;
-import io.btrace.core.annotations.Kind;
-import io.btrace.core.annotations.Sampled;
-import io.btrace.core.annotations.Where;
-import io.btrace.core.comm.RetransformClassNotification;
-import io.btrace.core.extensions.Permission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -676,8 +676,10 @@ public class BTraceProbePersisted implements BTraceProbe {
   }
 
   private void upgradeBytecode() {
-    fullData = ProbeUpgradeVisitor_1_2.upgrade(new ClassReader(fullData));
-    dataHolder = ProbeUpgradeVisitor_1_2.upgrade(new ClassReader(dataHolder));
+    fullData =
+        ProbeUpgradeVisitor_1_2.upgrade(new ClassReader(ProbePackageMigrator.migrate(fullData)));
+    dataHolder =
+        ProbeUpgradeVisitor_1_2.upgrade(new ClassReader(ProbePackageMigrator.migrate(dataHolder)));
   }
 
   private void verifyBytecode() throws VerifierException {

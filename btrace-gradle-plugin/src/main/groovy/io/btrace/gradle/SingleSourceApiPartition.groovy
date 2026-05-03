@@ -1,4 +1,4 @@
-package org.openjdk.btrace.gradle
+package io.btrace.gradle
 
 import groovy.transform.CompileStatic
 import java.io.File
