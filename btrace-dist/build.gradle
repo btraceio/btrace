@@ -103,12 +103,19 @@ includes['client'] = {
 
 configurations {
     artifact.extendsFrom implementation
+    bootstrapInputs {
+        canBeConsumed = false
+        canBeResolved = true
+    }
 }
 
 dependencies {
     implementation project(':btrace-agent')
     implementation project(':btrace-client')
     implementation project(':btrace-compiler')
+    bootstrapInputs project(':btrace-core')
+    bootstrapInputs project(':btrace-runtime')
+    bootstrapInputs project(':btrace-agent')
 }
 
 jar {
@@ -252,6 +259,81 @@ task prepareSharedClassdata(type: Copy) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+def bootIncludes = {
+    if (it.directory) {
+        return true
+    }
+    if (it.path.endsWith('.jar')) {
+        return true
+    }
+    if (it.path.startsWith('io/btrace/core/')) {
+        if (it.path == 'io/btrace/core/Messages.class'
+                || it.path == 'io/btrace/core/messages.properties') {
+            return false
+        }
+        if (it.path.startsWith('io/btrace/core/extensions/')) {
+            return false
+        }
+        // Include handlers - probe classes need them in their static initializers
+        if (it.path.startsWith('io/btrace/core/handlers/')) {
+            return true
+        }
+        if (it.path.startsWith('io/btrace/core/comm/')) {
+            return false
+        }
+        // Include annotations - needed by compiler at compile-time
+        if (it.path.startsWith('io/btrace/core/annotations/')) {
+            return true
+        }
+        return true
+    }
+    if (it.path.startsWith('META-INF/services')) {
+        return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
+    }
+    // Include BTraceRuntimeAccess and LinkingFlag from btrace-core (bootstrap classes)
+    if (it.path.startsWith('io/btrace/runtime/')) {
+        // Match BTraceRuntimeAccess but NOT BTraceRuntimeAccessImpl
+        if (it.path.startsWith('io/btrace/runtime/BTraceRuntimeAccess.class')
+                || it.path.startsWith('io/btrace/runtime/BTraceRuntimeAccess$')
+                || it.path.startsWith('io/btrace/runtime/LinkingFlag')) {
+            return true
+        }
+        // Include invokedynamic bootstrap classes (they use volatile fields to reach agent implementations)
+        if (it.path.startsWith('io/btrace/runtime/Indy')
+                || it.path.startsWith('io/btrace/runtime/ExtensionIndy')) {
+            return true
+        }
+        // Include Auxiliary class - probe classes are defined via MethodHandles.privateLookupIn(Auxiliary.class)
+        // and must be bootstrap-visible so they're accessible from application classloaders
+        if (it.path.startsWith('io/btrace/runtime/auxiliary/Auxiliary')) {
+            return true
+        }
+        return false
+    }
+    // Include ExtensionBridge interface (referenced by ExtensionIndy)
+    if (it.path == 'io/btrace/extension/ExtensionBridge.class') {
+        return true
+    }
+    // Include slf4j for bootstrap classes (DebugSupport needs it)
+    if (it.path.startsWith('org/slf4j/')) {
+        return true
+    }
+    return false
+}
+
+tasks.register('bootstrapJar', ShadowJar) {
+    archiveBaseName.set('btrace-bootstrap')
+    archiveVersion.set('')
+    archiveClassifier.set('')
+
+    include bootIncludes
+
+    configurations = [project.configurations.bootstrapInputs]
+    relocate 'org.jctools', 'io.btrace.libs.boot.org.jctools'
+    relocate 'org.objectweb.asm', 'io.btrace.libs.org.objectweb.asm'
+    relocate 'org.slf4j', 'io.btrace.libs.org.slf4j'
+}
+
 // Single JAR with .classdata masking for bootstrap isolation
 task btraceJar(type: Jar) {
     group 'Build'
@@ -263,15 +345,15 @@ task btraceJar(type: Jar) {
 
     dependsOn prepareAgentClassdata, prepareClientClassdata, prepareSharedClassdata
     dependsOn project(':btrace-boot').tasks.jar
-    dependsOn project(':btrace-bootstrap').tasks.shadowJar
+    dependsOn bootstrapJar
 
     // 1. Include boot loader class (must be in bootstrap as .class)
     from(project(':btrace-boot').sourceSets.main.output) {
         include 'org/openjdk/btrace/boot/**/*.class'
     }
 
-    // 2. Include bootstrap classes from btrace-bootstrap shadowJar (as .class)
-    from(zipTree(project(':btrace-bootstrap').tasks.shadowJar.archiveFile)) {
+    // 2. Include bootstrap classes from bootstrapJar (as .class)
+    from(zipTree(bootstrapJar.archiveFile)) {
         include '**/*.class'
         include 'META-INF/services/**'
         include '**/jaxb.index'  // Required for JAXB probe descriptor loading
