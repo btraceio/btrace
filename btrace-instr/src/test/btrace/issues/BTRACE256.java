@@ -1,10 +1,10 @@
 package traces.issues;
 
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.Profiler;
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.extensions.Permission;
-import org.openjdk.btrace.statsd.Statsd;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.Profiler;
+import io.btrace.core.annotations.*;
+import io.btrace.core.extensions.Permission;
+import io.btrace.statsd.Statsd;
 
 @BTrace
 class BTRACE256 {

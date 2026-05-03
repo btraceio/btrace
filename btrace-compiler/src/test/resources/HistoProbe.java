@@ -1,7 +1,7 @@
 package test;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;

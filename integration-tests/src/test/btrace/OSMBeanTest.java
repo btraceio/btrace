@@ -25,14 +25,14 @@
 
 package btrace;
 
-import org.openjdk.btrace.core.BTraceUtils;
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.OnTimer;
-import org.openjdk.btrace.core.annotations.TLS;
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.TLS;
 
 import java.util.Deque;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
 /**
  * @author Jaroslav Bachorik

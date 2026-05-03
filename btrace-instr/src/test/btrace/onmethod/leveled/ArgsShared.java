@@ -25,13 +25,13 @@
 
 package traces.onmethod.leveled;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Level;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Self;
-import org.openjdk.btrace.core.annotations.TLS;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Level;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.Self;
+import io.btrace.core.annotations.TLS;
 import traces.onmethod.*;
 
 /** @author Jaroslav Bachorik */
@@ -39,7 +39,7 @@ import traces.onmethod.*;
 public class ArgsShared {
   @TLS private static int cntr = 15;
 
-  @org.openjdk.btrace.core.annotations.Export private static long exported = 1;
+  @io.btrace.core.annotations.Export private static long exported = 1;
 
   @OnMethod(clazz = "/.*\\.OnMethodTest/", method = "args", enableAt = @Level(">=1"))
   public static void args(@Self Object self, String a, long b, String[] c, int[] d) {

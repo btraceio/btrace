@@ -22,9 +22,9 @@
 
 package traces;
 
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.BTraceUtils;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import io.btrace.core.BTraceUtils;
+import static io.btrace.core.BTraceUtils.*;
 
 import java.util.concurrent.atomic.AtomicLong;
 

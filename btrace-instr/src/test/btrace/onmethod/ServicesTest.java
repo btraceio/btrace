@@ -25,13 +25,13 @@
 
 package traces;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Injected;
-import org.openjdk.btrace.core.annotations.InjectionMode;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.ProbeClassName;
-import org.openjdk.btrace.utils.PrinterService;
-import org.openjdk.btrace.statsd.Statsd;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.InjectionMode;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.ProbeClassName;
+import io.btrace.utils.PrinterService;
+import io.btrace.statsd.Statsd;
 
 @BTrace
 public class ServicesTest {

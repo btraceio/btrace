@@ -25,9 +25,9 @@
 
 package traces.issues;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.core.annotations.*;
+import io.btrace.core.annotations.*;
 
 /**
  * This script traces method/block entry into every method of every class in javax.swing package!

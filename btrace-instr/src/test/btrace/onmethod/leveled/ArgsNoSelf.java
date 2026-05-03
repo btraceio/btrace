@@ -25,12 +25,12 @@
 
 package traces.onmethod.leveled;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Level;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.ProbeMethodName;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Level;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.ProbeMethodName;
 
 /** @author Jaroslav Bachorik */
 @BTrace

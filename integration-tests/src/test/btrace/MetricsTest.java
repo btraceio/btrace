@@ -25,21 +25,21 @@
 
 package btrace;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Duration;
-import org.openjdk.btrace.core.annotations.Injected;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.OnTimer;
-import org.openjdk.btrace.metrics.MetricsService;
-import org.openjdk.btrace.metrics.histogram.HistogramConfig;
-import org.openjdk.btrace.metrics.histogram.HistogramMetric;
-import org.openjdk.btrace.metrics.histogram.HistogramSnapshot;
-import org.openjdk.btrace.metrics.stats.StatsMetric;
-import org.openjdk.btrace.metrics.stats.StatsSnapshot;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Duration;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.metrics.MetricsService;
+import io.btrace.metrics.histogram.HistogramConfig;
+import io.btrace.metrics.histogram.HistogramMetric;
+import io.btrace.metrics.histogram.HistogramSnapshot;
+import io.btrace.metrics.stats.StatsMetric;
+import io.btrace.metrics.stats.StatsSnapshot;
 
-import static org.openjdk.btrace.core.BTraceUtils.println;
+import static io.btrace.core.BTraceUtils.println;
 
 /**
  * Test HDR histogram metrics integration.

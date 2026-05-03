@@ -24,13 +24,13 @@
  */
 package btrace;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Injected;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.metrics.MetricsService;
-import org.openjdk.btrace.utils.PrinterService;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.metrics.MetricsService;
+import io.btrace.utils.PrinterService;
 
-import static org.openjdk.btrace.core.BTraceUtils.exit;
+import static io.btrace.core.BTraceUtils.exit;
 
 @BTrace
 public class ExtensionLifecycleMultipleTest {

@@ -25,13 +25,13 @@
 
 package traces.onmethod;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
-import org.openjdk.btrace.core.annotations.BTrace;
-import org.openjdk.btrace.core.annotations.Kind;
-import org.openjdk.btrace.core.annotations.Location;
-import org.openjdk.btrace.core.annotations.OnMethod;
-import org.openjdk.btrace.core.annotations.Where;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.Where;
 
 /** @author Jaroslav Bachorik */
 @BTrace(unsafe = true)
