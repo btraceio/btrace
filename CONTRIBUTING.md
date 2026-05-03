@@ -2,8 +2,6 @@
 
 Thanks for your interest in contributing! This guide covers local development, running tests, Gradle tips, and common troubleshooting.
 
-Note: Pull requests can only be accepted from signers of the Oracle Contributor Agreement (OCA). See the project README for details.
-
 ## Local Development
 
 - JDK: Use a reasonably recent JDK (11+ recommended). The project targets a broad range but tests run comfortably on 11/17.

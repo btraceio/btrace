@@ -107,9 +107,7 @@ See [CLAUDE.md](CLAUDE.md) for development setup and architecture.
 
 ## Community & Contributing
 
-**Get help:** [Slack](http://btrace.slack.com/) · [Gitter](https://gitter.im/btraceio/btrace) · [GitHub Issues](https://github.com/btraceio/btrace/issues)
-
-**Contribute:** Pull requests require signing the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/).
+**Get help:** [Slack](http://btrace.slack.com/) · [GitHub Issues](https://github.com/btraceio/btrace/issues)
 
 Tips:
 - Prefer IPv4 if your environment has odd local IPs: set `GRADLE_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"`.
