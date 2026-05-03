@@ -14,7 +14,7 @@ dependencies {
     implementation libs.jctools
     implementation project(':btrace-core')
     implementation project(':btrace-runtime')
-    implementation project(':btrace-compiler')
+    runtimeOnly project(':btrace-compiler')
 
     testImplementation libs.asm.util
     testImplementation libs.slf4j.simple

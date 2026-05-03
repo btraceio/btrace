@@ -16,7 +16,7 @@
  */
 package io.btrace.instr;
 
-import io.btrace.compiler.PackGenerator;
+import io.btrace.core.PackGenerator;
 import io.btrace.core.SharedSettings;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
