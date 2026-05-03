@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
 -->
-<btrace-probes namespace="org.openjdk.btrace">
+<btrace-probes namespace="io.btrace">
     <probe name="noargs">
         <map>
             <clazz>//resources\..*//</clazz>
