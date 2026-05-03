@@ -8,7 +8,7 @@ plugins {
 // so the nexus-publish plugin can resolve its packageGroup (defaults to rootProject.group)
 // and so the SNAPSHOT-skip guard below evaluates against a real version.
 allprojects {
-    group = 'org.openjdk.btrace'
+    group = 'io.btrace'
     version = '3.0.0-SNAPSHOT'
 }
 
