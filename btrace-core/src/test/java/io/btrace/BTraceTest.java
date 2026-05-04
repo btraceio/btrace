@@ -78,4 +78,94 @@ public class BTraceTest {
     assertTrue(BTrace.matches(".*bc.*", "abcd"));
     assertFalse(BTrace.matches("^bc", "abcd"));
   }
+
+  @Test
+  void str_boolean_true() {
+    assertEquals("true", BTrace.str(true));
+  }
+
+  @Test
+  void str_boolean_false() {
+    assertEquals("false", BTrace.str(false));
+  }
+
+  @Test
+  void str_int() {
+    assertEquals("7", BTrace.str(7));
+  }
+
+  @Test
+  void str_long() {
+    assertEquals("7", BTrace.str(7L));
+  }
+
+  @Test
+  void str_float() {
+    assertEquals("1.5", BTrace.str(1.5f));
+  }
+
+  @Test
+  void str_double() {
+    assertEquals("2.5", BTrace.str(2.5));
+  }
+
+  @Test
+  void startsWith_true() {
+    assertTrue(BTrace.startsWith("hello", "hel"));
+  }
+
+  @Test
+  void startsWith_false() {
+    assertFalse(BTrace.startsWith("hello", "ell"));
+  }
+
+  @Test
+  void endsWith_true() {
+    assertTrue(BTrace.endsWith("hello", "llo"));
+  }
+
+  @Test
+  void endsWith_false() {
+    assertFalse(BTrace.endsWith("hello", "hel"));
+  }
+
+  @Test
+  void length_string() {
+    assertEquals(5, BTrace.length("hello"));
+  }
+
+  @Test
+  void length_null() {
+    assertEquals(0, BTrace.length(null));
+  }
+
+  @Test
+  void abs_long() {
+    assertEquals(5L, BTrace.abs(-5L));
+  }
+
+  @Test
+  void abs_double() {
+    assertEquals(3.0, BTrace.abs(-3.0));
+  }
+
+  @Test
+  void min_long() {
+    assertEquals(2L, BTrace.min(2L, 5L));
+  }
+
+  @Test
+  void max_long() {
+    assertEquals(5L, BTrace.max(2L, 5L));
+  }
+
+  @Test
+  void min_double() {
+    assertEquals(1.0, BTrace.min(1.0, 2.0));
+  }
+
+  @Test
+  void max_double() {
+    assertEquals(2.0, BTrace.max(1.0, 2.0));
+  }
 }
