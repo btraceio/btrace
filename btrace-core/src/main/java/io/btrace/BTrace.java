@@ -72,14 +72,15 @@ public final class BTrace {
   }
 
   public static String concat(String a, String b) {
+    if (a == null && b == null) return "";
     return a == null ? b : b == null ? a : a + b;
   }
 
   public static String substr(String s, int start, int end) {
-    return s.substring(start, end);
+    return s == null ? "" : s.substring(start, end);
   }
 
-  public static boolean matches(String regex, String s) {
+  public static boolean matches(String s, String regex) {
     return s != null && s.matches(regex);
   }
 
@@ -147,22 +148,31 @@ public final class BTrace {
 
   // --- Stack ---
 
-  public static void printStack() {
-    println(stackTrace());
-  }
-
   public static String stackTrace() {
     StackTraceElement[] frames = Thread.currentThread().getStackTrace();
+    // frames[0] = getStackTrace, frames[1] = stackTrace (this method)
+    // Start from index 2 to exclude both
     StringBuilder sb = new StringBuilder();
-    // skip getStackTrace() and stackTrace() frames
     for (int i = 2; i < frames.length; i++) {
-      sb.append("\tat ").append(frames[i]).append('\n');
+      sb.append(frames[i]).append('\n');
     }
     return sb.toString();
   }
 
+  public static void printStack() {
+    StackTraceElement[] frames = Thread.currentThread().getStackTrace();
+    // frames[0] = getStackTrace, frames[1] = printStack (this method)
+    // Start from index 2 to exclude both
+    StringBuilder sb = new StringBuilder();
+    for (int i = 2; i < frames.length; i++) {
+      sb.append(frames[i]).append('\n');
+    }
+    BTraceUtils.println(sb.toString());
+  }
+
   public static int stackDepth() {
-    return Thread.currentThread().getStackTrace().length - 2;
+    // -2: exclude getStackTrace frame and stackDepth frame itself
+    return Math.max(0, Thread.currentThread().getStackTrace().length - 2);
   }
 
   // --- Object ---

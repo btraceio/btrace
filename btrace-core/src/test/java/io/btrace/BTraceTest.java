@@ -29,7 +29,7 @@ public class BTraceTest {
 
   @Test
   void str_object_usesToString() {
-    assertEquals("42", BTrace.str(42));
+    assertEquals("42", BTrace.str((Object) 42));
   }
 
   @Test
@@ -75,8 +75,8 @@ public class BTraceTest {
 
   @Test
   void matches_basicRegex() {
-    assertTrue(BTrace.matches(".*bc.*", "abcd"));
-    assertFalse(BTrace.matches("^bc", "abcd"));
+    assertTrue(BTrace.matches("abcd", ".*bc.*"));
+    assertFalse(BTrace.matches("abcd", "^bc"));
   }
 
   @Test
@@ -167,5 +167,25 @@ public class BTraceTest {
   @Test
   void max_double() {
     assertEquals(2.0, BTrace.max(1.0, 2.0));
+  }
+
+  @Test
+  void concat_null_null_returnsEmpty() {
+    assertEquals("", BTrace.concat(null, null));
+  }
+
+  @Test
+  void concat_null_b_returnsB() {
+    assertEquals("b", BTrace.concat(null, "b"));
+  }
+
+  @Test
+  void substr_null_returnsEmpty() {
+    assertEquals("", BTrace.substr(null, 0, 0));
+  }
+
+  @Test
+  void matches_null_subject_returnsFalse() {
+    assertFalse(BTrace.matches(null, ".*"));
   }
 }
