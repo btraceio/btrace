@@ -24,10 +24,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -37,6 +39,17 @@ import org.objectweb.asm.Type;
  * @author Jaroslav Bachorik
  */
 public class Postprocessor extends ClassVisitor {
+  private static final String BTRACE_DSL_OWNER = "io/btrace/BTrace";
+  private static final String BOOTSTRAP_OWNER = "io/btrace/runtime/BTraceBootstrap";
+  private static final Handle BOOTSTRAP_HANDLE =
+      new Handle(
+          Opcodes.H_INVOKESTATIC,
+          BOOTSTRAP_OWNER,
+          "bootstrap",
+          "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;"
+              + "Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;",
+          false);
+
   private final List<FieldDescriptor> fields = new ArrayList<>();
   private boolean shortSyntax = false;
   private String className = "";
@@ -69,7 +82,8 @@ public class Postprocessor extends ClassVisitor {
   @Override
   public MethodVisitor visitMethod(
       int access, String name, String desc, String signature, String[] exceptions) {
-    if (!shortSyntax) return super.visitMethod(access, name, desc, signature, exceptions);
+    if (!shortSyntax)
+      return new BTraceDslRewriter(super.visitMethod(access, name, desc, signature, exceptions));
 
     if ((access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE)) == 0) {
       access &= ~Opcodes.ACC_PROTECTED;
@@ -89,10 +103,11 @@ public class Postprocessor extends ClassVisitor {
       createDefaultConstructor();
     }
 
-    return new MethodConvertor(
-        localVarOffset,
-        isconstructor,
-        super.visitMethod(access, name, desc, signature, exceptions));
+    return new BTraceDslRewriter(
+        new MethodConvertor(
+            localVarOffset,
+            isconstructor,
+            super.visitMethod(access, name, desc, signature, exceptions)));
   }
 
   private void createDefaultConstructor() {
@@ -765,6 +780,22 @@ public class Postprocessor extends ClassVisitor {
       }
       if (copyEnabled) {
         super.visitTypeInsn(opcode, typeName);
+      }
+    }
+  }
+
+  private static final class BTraceDslRewriter extends MethodVisitor {
+    BTraceDslRewriter(MethodVisitor mv) {
+      super(Opcodes.ASM9, mv);
+    }
+
+    @Override
+    public void visitMethodInsn(
+        int opcode, String owner, String name, String desc, boolean isInterface) {
+      if (opcode == Opcodes.INVOKESTATIC && BTRACE_DSL_OWNER.equals(owner)) {
+        super.visitInvokeDynamicInsn(name, desc, BOOTSTRAP_HANDLE);
+      } else {
+        super.visitMethodInsn(opcode, owner, name, desc, isInterface);
       }
     }
   }
