@@ -68,7 +68,10 @@ public class PostprocessorDslRewriteTest {
                       String name, String desc, Handle bsm, Object... args) {
                     if ("println".equals(name)
                         && BOOTSTRAP_OWNER.equals(bsm.getOwner())
-                        && "bootstrap".equals(bsm.getName())) {
+                        && "bootstrap".equals(bsm.getName())
+                        && BOOTSTRAP_DESC.equals(bsm.getDesc())
+                        && bsm.getTag() == Opcodes.H_INVOKESTATIC
+                        && !bsm.isInterface()) {
                       sawIndy.set(true);
                     }
                   }
@@ -132,5 +135,62 @@ public class PostprocessorDslRewriteTest {
             0);
 
     assertFalse(sawIndy.get(), "INVOKESTATIC to BTraceUtils must NOT be rewritten");
+  }
+
+  @Test
+  void shortSyntax_invokestatic_toBTraceDsl_rewrittenToInvokeDynamic() throws Exception {
+    // ACC = 0 (no public/protected/private) triggers shortSyntax=true in Postprocessor
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    cw.visit(Opcodes.V11, 0, "ShortSyntaxProbe", null, "java/lang/Object", null);
+    MethodVisitor mv = cw.visitMethod(0, "probe", "()V", null, null);
+    mv.visitCode();
+    mv.visitLdcInsn("hello");
+    mv.visitMethodInsn(
+        Opcodes.INVOKESTATIC, BTRACE_DSL, "println", "(Ljava/lang/String;)V", false);
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(1, 0);
+    mv.visitEnd();
+    cw.visitEnd();
+    byte[] original = cw.toByteArray();
+
+    ClassWriter out = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    new ClassReader(original).accept(new Postprocessor(out), ClassReader.EXPAND_FRAMES);
+    byte[] rewritten = out.toByteArray();
+
+    AtomicBoolean sawIndy = new AtomicBoolean(false);
+    AtomicBoolean sawInvokeStatic = new AtomicBoolean(false);
+    new ClassReader(rewritten)
+        .accept(
+            new ClassVisitor(Opcodes.ASM9) {
+              @Override
+              public MethodVisitor visitMethod(int a, String n, String d, String s, String[] e) {
+                return new MethodVisitor(Opcodes.ASM9) {
+                  @Override
+                  public void visitInvokeDynamicInsn(
+                      String name, String desc, Handle bsm, Object... args) {
+                    if ("println".equals(name)
+                        && BOOTSTRAP_OWNER.equals(bsm.getOwner())
+                        && "bootstrap".equals(bsm.getName())
+                        && BOOTSTRAP_DESC.equals(bsm.getDesc())
+                        && bsm.getTag() == Opcodes.H_INVOKESTATIC
+                        && !bsm.isInterface()) {
+                      sawIndy.set(true);
+                    }
+                  }
+
+                  @Override
+                  public void visitMethodInsn(
+                      int op, String owner, String name, String desc, boolean itf) {
+                    if (op == Opcodes.INVOKESTATIC && BTRACE_DSL.equals(owner)) {
+                      sawInvokeStatic.set(true);
+                    }
+                  }
+                };
+              }
+            },
+            0);
+
+    assertTrue(sawIndy.get(), "Expected INVOKEDYNAMIC for println in shortSyntax path");
+    assertFalse(sawInvokeStatic.get(), "INVOKESTATIC to io/btrace/BTrace should be gone in shortSyntax path");
   }
 }
