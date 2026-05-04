@@ -217,6 +217,7 @@ public class Compiler {
 
   private static String injectDslImport(String source) {
     if (source.contains("import static io.btrace.BTrace")) return source;
+    if (source.contains("import static io.btrace.core.BTraceUtils")) return source;
     String[] lines = source.split("\n", -1);
     StringBuilder sb = new StringBuilder();
     boolean injected = false;

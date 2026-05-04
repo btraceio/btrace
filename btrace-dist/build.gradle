@@ -176,6 +176,7 @@ task prepareAgentClassdata(type: Copy) {
     into "${maskedJarTmpDir}/agent"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
+        include 'io/btrace/BTrace.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
         include 'io/btrace/agent/**/*.class'
         include 'io/btrace/instr/**/*.class'
@@ -287,6 +288,10 @@ def bootIncludes = {
         if (it.path.startsWith('io/btrace/core/annotations/')) {
             return true
         }
+        return true
+    }
+    // Include BTrace flat DSL class — needed by javac when compiling scripts
+    if (it.path == 'io/btrace/BTrace.class') {
         return true
     }
     if (it.path.startsWith('META-INF/services')) {
