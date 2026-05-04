@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class BTraceBootstrap {
 
   // key: opName + type.toMethodDescriptorString()  e.g. "print(Ljava/lang/String;)V"
-  static final ConcurrentHashMap<String, MethodHandle> OP_TABLE = new ConcurrentHashMap<>();
+  public static final ConcurrentHashMap<String, MethodHandle> OP_TABLE = new ConcurrentHashMap<>();
 
   private BTraceBootstrap() {}
 

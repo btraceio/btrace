@@ -64,6 +64,7 @@ import io.btrace.extension.impl.ExtensionBridgeImpl;
 import io.btrace.instr.BTraceProbeFactory;
 import io.btrace.instr.BTraceTransformer;
 import io.btrace.instr.Constants;
+import io.btrace.runtime.BTraceBootstrap;
 import io.btrace.runtime.BTraceRuntimes;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -72,6 +73,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
@@ -203,6 +206,8 @@ public final class Main {
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Initializing BTraceRuntimes");
       BTraceRuntimes.getDefault();
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] BTraceRuntimes initialized");
+      registerCoreOps();
+      if (AGENT_DEBUG) System.err.println("[BTrace Agent] Core DSL ops registered");
       // ensure runtime accessor is registered
       if (AGENT_DEBUG) System.err.println("[BTrace Agent] Registering runtime accessor");
       BTraceRuntimes.ensureAccessorRegistered();
@@ -1432,6 +1437,69 @@ public final class Main {
             log.warn("Unhandled exception in client handler", t);
           }
         });
+  }
+
+  /**
+   * Register all public static methods from {@link io.btrace.BTrace} into {@link BTraceBootstrap}.
+   * Called at agent startup before any probe fires so that INVOKEDYNAMIC bootstrap lookups succeed.
+   */
+  static void registerCoreOps() {
+    try {
+      MethodHandles.Lookup lookup = MethodHandles.lookup();
+      // --- Output ---
+      reg(lookup, "print", MethodType.methodType(void.class, String.class));
+      reg(lookup, "println", MethodType.methodType(void.class, String.class));
+      reg(lookup, "println", MethodType.methodType(void.class));
+      reg(lookup, "printf", MethodType.methodType(void.class, String.class, Object[].class));
+      // --- Strings ---
+      reg(lookup, "str", MethodType.methodType(String.class, Object.class));
+      reg(lookup, "str", MethodType.methodType(String.class, boolean.class));
+      reg(lookup, "str", MethodType.methodType(String.class, int.class));
+      reg(lookup, "str", MethodType.methodType(String.class, long.class));
+      reg(lookup, "str", MethodType.methodType(String.class, float.class));
+      reg(lookup, "str", MethodType.methodType(String.class, double.class));
+      reg(lookup, "concat", MethodType.methodType(String.class, String.class, String.class));
+      reg(
+          lookup,
+          "substr",
+          MethodType.methodType(String.class, String.class, int.class, int.class));
+      reg(lookup, "matches", MethodType.methodType(boolean.class, String.class, String.class));
+      reg(lookup, "startsWith", MethodType.methodType(boolean.class, String.class, String.class));
+      reg(lookup, "endsWith", MethodType.methodType(boolean.class, String.class, String.class));
+      reg(lookup, "length", MethodType.methodType(int.class, String.class));
+      // --- Numbers ---
+      reg(lookup, "abs", MethodType.methodType(long.class, long.class));
+      reg(lookup, "abs", MethodType.methodType(double.class, double.class));
+      reg(lookup, "min", MethodType.methodType(long.class, long.class, long.class));
+      reg(lookup, "max", MethodType.methodType(long.class, long.class, long.class));
+      reg(lookup, "min", MethodType.methodType(double.class, double.class, double.class));
+      reg(lookup, "max", MethodType.methodType(double.class, double.class, double.class));
+      // --- Time ---
+      reg(lookup, "timestamp", MethodType.methodType(long.class));
+      reg(lookup, "monotonic", MethodType.methodType(long.class));
+      // --- Threads ---
+      reg(lookup, "currentThread", MethodType.methodType(Thread.class));
+      reg(lookup, "threadName", MethodType.methodType(String.class, Thread.class));
+      reg(lookup, "threadId", MethodType.methodType(long.class, Thread.class));
+      // --- Stack ---
+      reg(lookup, "stackTrace", MethodType.methodType(String.class));
+      reg(lookup, "printStack", MethodType.methodType(void.class));
+      reg(lookup, "stackDepth", MethodType.methodType(int.class));
+      // --- Object ---
+      reg(lookup, "className", MethodType.methodType(String.class, Object.class));
+      reg(lookup, "identity", MethodType.methodType(int.class, Object.class));
+      reg(lookup, "size", MethodType.methodType(long.class, Object.class));
+      // --- Control ---
+      reg(lookup, "exit", MethodType.methodType(void.class, int.class));
+    } catch (Exception e) {
+      throw new RuntimeException("BTrace core op registration failed", e);
+    }
+  }
+
+  private static void reg(MethodHandles.Lookup lookup, String name, MethodType type)
+      throws NoSuchMethodException, IllegalAccessException {
+    BTraceBootstrap.registerCoreOp(
+        name, type, lookup.findStatic(io.btrace.BTrace.class, name, type));
   }
 
   private static void error(String msg) {
