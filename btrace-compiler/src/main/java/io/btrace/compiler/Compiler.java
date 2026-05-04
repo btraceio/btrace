@@ -207,8 +207,19 @@ public class Compiler {
 
     // prepare the compilation unit
     List<JavaFileObject> compUnits = new ArrayList<>(1);
-    compUnits.add(MemoryJavaFileManager.makeStringSource(fileName, source, includeDirs));
+    compUnits.add(MemoryJavaFileManager.makeStringSource(fileName, injectDslImport(source), includeDirs));
     return compile(manager, compUnits, err, sourcePath, classPath);
+  }
+
+  private static final String DSL_IMPORT = "import static io.btrace.BTrace.*;\n";
+
+  private static String injectDslImport(String source) {
+    if (source.contains("import static io.btrace.BTrace")) return source;
+    int packageEnd = source.indexOf(';');
+    if (packageEnd >= 0 && source.substring(0, packageEnd).trim().startsWith("package ")) {
+      return source.substring(0, packageEnd + 1) + "\n" + DSL_IMPORT + source.substring(packageEnd + 1);
+    }
+    return DSL_IMPORT + source;
   }
 
   public Map<String, byte[]> compile(File file, Writer err, String sourcePath, String classPath) {
