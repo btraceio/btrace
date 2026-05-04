@@ -200,7 +200,8 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
 
   private boolean isBTraceClass(String typeName) {
     return typeName.equals("io.btrace.core.BTraceUtils")
-        || typeName.startsWith("io.btrace.core.BTraceUtils.");
+        || typeName.startsWith("io.btrace.core.BTraceUtils.")
+        || typeName.equals("io.btrace.BTrace");
   }
 
   @Override
