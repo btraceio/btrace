@@ -24,7 +24,7 @@ import io.btrace.core.annotations.OnTimer;
 import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
 
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * This script demonstrates the possibility to intercept

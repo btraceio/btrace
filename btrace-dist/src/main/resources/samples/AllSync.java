@@ -23,7 +23,7 @@ import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.Where;
 
 import static io.btrace.core.BTraceUtils.identityStr;
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * This script traces method/block entry into every method of

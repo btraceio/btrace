@@ -23,7 +23,7 @@ import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
 
 import static io.btrace.core.BTraceUtils.printArray;
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * This sample demonstrates regular expression

@@ -23,7 +23,7 @@ import io.btrace.core.annotations.Self;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * This simple script traces every AWT focus event in

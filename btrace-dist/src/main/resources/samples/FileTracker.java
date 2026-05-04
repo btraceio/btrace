@@ -27,7 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
-import static io.btrace.core.BTraceUtils.*;
+import static io.btrace.BTrace.*;
 
 /**
  * This sample prints all files opened for read/write
@@ -45,7 +45,7 @@ public class FileTracker {
             method = "<init>"
     )
     public static void onNewFileInputStream(@Self FileInputStream self, File f) {
-        name = Strings.str(f);
+        name = str(f);
     }
 
     @OnMethod(

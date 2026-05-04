@@ -21,8 +21,8 @@ import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
 
-import static io.btrace.core.BTraceUtils.print;
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.print;
+import static io.btrace.BTrace.println;
 
 /**
  * A simple example that demonstrates subtype matching by +foo pattern

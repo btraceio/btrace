@@ -856,8 +856,6 @@ Example:
 ```java
 package myprobes;
 
-import static io.btrace.core.BTraceUtils.*;
-
 import io.btrace.core.annotations.*;
 import io.btrace.metrics.MetricsService;
 import io.btrace.metrics.histogram.HistogramConfig;

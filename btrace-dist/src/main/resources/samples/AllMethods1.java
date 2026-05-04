@@ -22,7 +22,7 @@ import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
 import io.btrace.core.annotations.Self;
 
-import static io.btrace.core.BTraceUtils.*;
+import static io.btrace.BTrace.*;
 
 /**
  * This script traces method entry into every method of

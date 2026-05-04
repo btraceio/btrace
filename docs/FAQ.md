@@ -334,11 +334,11 @@ btrace-scripts/
  */
 
 import io.btrace.core.annotations.*;
-import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class ScriptName {
-    // Script implementation
+    // println, str, and other core ops are auto-imported by the BTrace compiler
+    // For advanced ops: import static io.btrace.core.BTraceUtils.*;
 }
 ```
 

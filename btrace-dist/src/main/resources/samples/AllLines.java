@@ -23,7 +23,7 @@ import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
 
-import static io.btrace.core.BTraceUtils.print;
+import static io.btrace.BTrace.print;
 
 /*
  * This sample prints a line every time any line
