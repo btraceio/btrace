@@ -23,6 +23,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -215,11 +217,17 @@ public class Compiler {
 
   private static String injectDslImport(String source) {
     if (source.contains("import static io.btrace.BTrace")) return source;
-    int packageEnd = source.indexOf(';');
-    if (packageEnd >= 0 && source.substring(0, packageEnd).trim().startsWith("package ")) {
-      return source.substring(0, packageEnd + 1) + "\n" + DSL_IMPORT + source.substring(packageEnd + 1);
+    String[] lines = source.split("\n", -1);
+    StringBuilder sb = new StringBuilder();
+    boolean injected = false;
+    for (String line : lines) {
+      sb.append(line).append("\n");
+      if (!injected && line.trim().startsWith("package ") && line.contains(";")) {
+        sb.append(DSL_IMPORT);
+        injected = true;
+      }
     }
-    return DSL_IMPORT + source;
+    return injected ? sb.toString() : DSL_IMPORT + source;
   }
 
   public Map<String, byte[]> compile(File file, Writer err, String sourcePath, String classPath) {
@@ -230,11 +238,12 @@ public class Compiler {
 
   public Map<String, byte[]> compile(
       File[] files, Writer err, String sourcePath, String classPath) {
-    Iterable<? extends JavaFileObject> compUnits = stdManager.getJavaFileObjects(files);
     List<JavaFileObject> preprocessedCompUnits = new ArrayList<>();
     try {
-      for (JavaFileObject jfo : compUnits) {
-        preprocessedCompUnits.add(MemoryJavaFileManager.preprocessedFileObject(jfo, includeDirs));
+      for (File file : files) {
+        String source = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        preprocessedCompUnits.add(
+            MemoryJavaFileManager.makeStringSource(file.getName(), injectDslImport(source), includeDirs));
       }
     } catch (IOException ioExp) {
       throw new RuntimeException(ioExp);
