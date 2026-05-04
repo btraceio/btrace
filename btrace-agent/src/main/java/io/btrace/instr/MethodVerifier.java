@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Type;
 
@@ -215,6 +216,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
         case INVOKESTATIC:
           if (!owner.equals(Constants.BTRACE_UTILS)
               && !owner.startsWith(Constants.BTRACE_UTILS + "$")
+              && !owner.equals(Constants.BTRACE_DSL)
               && !owner.equals(className)) {
             if ("valueOf".equals(name) && isPrimitiveWrapper(owner)) {
               // allow primitive wrapper boxing methods.
@@ -231,6 +233,16 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
       Verifier.reportError("no.class.literals", delayedClzLoad.toString());
     }
     super.visitMethodInsn(opcode, owner, name, desc, itf);
+  }
+
+  @Override
+  public void visitInvokeDynamicInsn(
+      String name, String desc, Handle bsm, Object... bsmArgs) {
+    String owner = bsm.getOwner();
+    if (!Constants.BTRACE_BOOTSTRAP.equals(owner) && !Constants.INDY_DISPATCHER.equals(owner)) {
+      Verifier.reportError("no.method.calls", name + desc + " [bootstrap: " + owner + "]");
+    }
+    super.visitInvokeDynamicInsn(name, desc, bsm, bsmArgs);
   }
 
   @Override

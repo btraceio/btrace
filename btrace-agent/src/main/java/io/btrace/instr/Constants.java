@@ -108,6 +108,9 @@ public abstract class Constants {
 
   // BTrace specific stuff
   public static final String BTRACE_UTILS = Type.getInternalName(BTraceUtils.class);
+  public static final String BTRACE_DSL = "io/btrace/BTrace";
+  public static final String BTRACE_BOOTSTRAP = "io/btrace/runtime/BTraceBootstrap";
+  public static final String INDY_DISPATCHER = "io/btrace/runtime/IndyDispatcher";
 
   public static final String EXTENSION = Type.getInternalName(Extension.class);
 
