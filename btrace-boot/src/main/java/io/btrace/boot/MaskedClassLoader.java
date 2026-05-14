@@ -93,6 +93,27 @@ public final class MaskedClassLoader extends URLClassLoader {
   }
 
   @Override
+  protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+    synchronized (getClassLoadingLock(name)) {
+      // Check if already loaded
+      Class<?> c = findLoadedClass(name);
+      if (c == null) {
+        try {
+          // Try masked sections first (agent/client, then shared)
+          c = findClass(name);
+        } catch (ClassNotFoundException e) {
+          // Not in masked sections; delegate to parent (bootstrap or system)
+          c = super.loadClass(name, false);
+        }
+      }
+      if (resolve) {
+        resolveClass(c);
+      }
+      return c;
+    }
+  }
+
+  @Override
   protected Class<?> findClass(String name) throws ClassNotFoundException {
     debug("findClass: " + name);
 
@@ -213,14 +234,26 @@ public final class MaskedClassLoader extends URLClassLoader {
   }
 
   private byte[] readEntry(JarEntry entry) throws IOException {
+    long size = entry.getSize();
     try (InputStream is = jarFile.getInputStream(entry)) {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      byte[] buffer = new byte[8192];
-      int bytesRead;
-      while ((bytesRead = is.read(buffer)) != -1) {
-        baos.write(buffer, 0, bytesRead);
+      if (size > 0) {
+        byte[] bytes = new byte[(int) size];
+        int offset = 0, remaining = bytes.length, n;
+        while (remaining > 0 && (n = is.read(bytes, offset, remaining)) != -1) {
+          offset += n;
+          remaining -= n;
+        }
+        return bytes;
+      } else {
+        // size unknown (compressed entry with unknown size): fall back to streaming read
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(8192);
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = is.read(buffer)) != -1) {
+          baos.write(buffer, 0, bytesRead);
+        }
+        return baos.toByteArray();
       }
-      return baos.toByteArray();
     }
   }
 

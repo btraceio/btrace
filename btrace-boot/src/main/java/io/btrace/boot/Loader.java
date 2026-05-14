@@ -117,7 +117,8 @@ public final class Loader {
         inst.appendToBootstrapClassLoaderSearch(new JarFile(jarFile));
         debug("Added btrace.jar to bootstrap classpath");
       } catch (IOException e) {
-        debug("WARNING: Failed to add btrace.jar to bootstrap classpath: " + e.getMessage());
+        throw new RuntimeException(
+            "Failed to add btrace.jar to bootstrap classpath: " + e.getMessage(), e);
       }
 
       // Read main class from manifest
