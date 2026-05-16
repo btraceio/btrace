@@ -1,5 +1,5 @@
 plugins {
-    id 'org.openjdk.btrace.extension'
+    id 'io.btrace.extension'
     alias(libs.plugins.shadow)
 }
 
@@ -18,11 +18,13 @@ btraceExtension {
     id = 'btrace-vibe-guard'
     name = 'BTrace Vibe Guard'
     description = 'Behavioral contracts and runtime validation for AI-generated code paths'
-    services = ['org.openjdk.btrace.vibeguard.VibeGuardService']
+    services = ['io.btrace.vibeguard.VibeGuardService']
 }
 
 dependencies {
+    apiCompileOnly 'org.jetbrains:annotations:26.1.0'
     apiCompileOnly project(':btrace-core')
+    implCompileOnly 'org.jetbrains:annotations:26.1.0'
     implImplementation project(':btrace-core')
 
     testImplementation libs.junit.jupiter

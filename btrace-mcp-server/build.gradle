@@ -22,7 +22,7 @@ dependencies {
 jar {
     manifest {
         attributes(
-                'Main-Class': 'org.openjdk.btrace.mcp.BTraceMcpServer'
+                'Main-Class': 'io.btrace.mcp.BTraceMcpServer'
         )
     }
 }

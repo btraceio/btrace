@@ -1,5 +1,5 @@
 plugins {
-    id 'org.openjdk.btrace.extension'
+    id 'io.btrace.extension'
     alias(libs.plugins.shadow)
 }
 
@@ -18,11 +18,13 @@ btraceExtension {
     id = 'btrace-llm-trace'
     name = 'BTrace LLM Tracing'
     description = 'LLM inference observability: token counts, latency, cost tracking for Java LLM SDKs'
-    services = ['org.openjdk.btrace.llm.LlmTraceService']
+    services = ['io.btrace.llm.LlmTraceService']
 }
 
 dependencies {
+    apiCompileOnly 'org.jetbrains:annotations:26.1.0'
     apiCompileOnly project(':btrace-core')
+    implCompileOnly 'org.jetbrains:annotations:26.1.0'
     implImplementation project(':btrace-core')
 
     testImplementation libs.junit.jupiter

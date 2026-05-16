@@ -1,5 +1,5 @@
 plugins {
-    id 'org.openjdk.btrace.extension'
+    id 'io.btrace.extension'
     alias(libs.plugins.shadow)
 }
 
@@ -18,11 +18,13 @@ btraceExtension {
     id = 'btrace-gpu-bridge'
     name = 'BTrace GPU Bridge'
     description = 'GPU and model inference observability: ONNX Runtime, DJL, TensorFlow Java, and Panama FFM compute tracing'
-    services = ['org.openjdk.btrace.gpu.GpuBridgeService']
+    services = ['io.btrace.gpu.GpuBridgeService']
 }
 
 dependencies {
+    apiCompileOnly 'org.jetbrains:annotations:26.1.0'
     apiCompileOnly project(':btrace-core')
+    implCompileOnly 'org.jetbrains:annotations:26.1.0'
     implImplementation project(':btrace-core')
 
     testImplementation libs.junit.jupiter
