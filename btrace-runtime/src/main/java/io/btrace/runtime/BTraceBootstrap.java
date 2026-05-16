@@ -30,16 +30,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class BTraceBootstrap {
 
   // key: opName + type.toMethodDescriptorString()  e.g. "print(Ljava/lang/String;)V"
-  public static final ConcurrentHashMap<String, MethodHandle> OP_TABLE = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, MethodHandle> OP_TABLE = new ConcurrentHashMap<>();
 
   private BTraceBootstrap() {}
+
+  /** Returns the registered handle for a core op, or {@code null} if not registered. */
+  public static MethodHandle lookupCoreOp(String name, MethodType type) {
+    return OP_TABLE.get(name + type.toMethodDescriptorString());
+  }
 
   /**
    * Called by JVM for every INVOKEDYNAMIC targeting this bootstrap. Returns a ConstantCallSite —
    * the JIT folds it after warmup.
    */
-  public static CallSite bootstrap(MethodHandles.Lookup lookup, String name, MethodType type) {
-    MethodHandle mh = OP_TABLE.get(name + type.toMethodDescriptorString());
+  public static CallSite bootstrap(
+      @SuppressWarnings("unused") MethodHandles.Lookup lookup, String name, MethodType type) {
+    MethodHandle mh = lookupCoreOp(name, type);
     if (mh == null) {
       throw new BootstrapMethodError(
           "Unknown BTrace core op: " + name + type.toMethodDescriptorString());
@@ -48,13 +54,11 @@ public final class BTraceBootstrap {
   }
 
   /**
-   * Register a core op. Called at agent startup before any probe fires. Core op names+types cannot
-   * be registered twice.
+   * Register a core op. Idempotent: if the same key is already registered the call is a no-op,
+   * which makes repeated agent attach safe. Called at agent startup before any probe fires.
    */
   public static void registerCoreOp(String name, MethodType type, MethodHandle impl) {
     String key = name + type.toMethodDescriptorString();
-    if (OP_TABLE.putIfAbsent(key, impl) != null) {
-      throw new IllegalStateException("Core op already registered: " + key);
-    }
+    OP_TABLE.putIfAbsent(key, impl);
   }
 }
