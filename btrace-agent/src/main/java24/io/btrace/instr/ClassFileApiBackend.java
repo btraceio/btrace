@@ -181,9 +181,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
         String methodName = mm.methodName().stringValue();
-        String methodDesc = mm.methodType().stringValue();
-        List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName, methodDesc);
-        List<ProbeHandler> mReturn = filterForMethod(returnHandlers, methodName, methodDesc);
+        List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName);
+        List<ProbeHandler> mReturn = filterForMethod(returnHandlers, methodName);
         if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
           anyMatch[0] = true;
           classBuilder.transformMethod(
@@ -235,7 +234,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   }
 
   private static List<ProbeHandler> filterForMethod(
-      List<ProbeHandler> handlers, String methodName, String methodDesc) {
+      List<ProbeHandler> handlers, String methodName) {
     List<ProbeHandler> result = new ArrayList<>();
     for (ProbeHandler ph : handlers) {
       String pattern = ph.om.getMethod();
