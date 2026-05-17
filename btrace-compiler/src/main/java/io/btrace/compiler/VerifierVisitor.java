@@ -537,14 +537,22 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
   /**
    * Returns true if the given service class name is declared by any extension.
    *
-   * <p>Compile-time validation notes: - This check operates without loading classes. It inspects
-   * extension metadata (BTrace-Extension-Services in MANIFEST.MF and legacy
-   * META-INF/btrace-extension.properties) to verify that an @Injected service type is declared by
-   * some extension. - It complements the bytecode-time check in instr (BTraceProbeNode) and the
-   * runtime reflection-based validation in the agent (Client#validateDeclaredServices). The latter
-   * ensures correctness under the actual runtime classloader/JPMS environment.
+   * <p>Compile-time validation notes: checks first via the annotation processing type model (which
+   * sees -cp JARs), then falls back to scanning jar manifests on the JVM classpath. The agent
+   * performs a definitive runtime check (Client#validateDeclaredServices).
    */
   private boolean isDeclaredExtensionService(String serviceClassName) {
+    // Primary: use the annotation processing Elements API — sees the compilation classpath
+    TypeElement te = verifier.getElementUtils().getTypeElement(serviceClassName);
+    if (te != null) {
+      for (javax.lang.model.element.AnnotationMirror am : te.getAnnotationMirrors()) {
+        String annName = am.getAnnotationType().asElement().toString();
+        if ("io.btrace.core.extensions.ServiceDescriptor".equals(annName)) {
+          return true;
+        }
+      }
+    }
+    // Fallback: scan JAR manifests visible to the JVM classloader
     String resourceName = serviceClassName.replace('.', '/') + ".class";
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     if (cl == null) {
@@ -566,7 +574,6 @@ public class VerifierVisitor extends TreeScanner<Void, Void> {
           }
         }
       }
-      // Fallback: scan system classpath jars
       String cp = System.getProperty("java.class.path", "");
       String[] parts = cp.split(java.io.File.pathSeparator);
       for (String p : parts) {

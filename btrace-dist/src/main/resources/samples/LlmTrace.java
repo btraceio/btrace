@@ -23,10 +23,19 @@
  * questions.
  */
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Duration;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnEvent;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.ProbeClassName;
+import io.btrace.core.annotations.ProbeMethodName;
+import io.btrace.llm.LlmTraceService;
 
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.llm.LlmTraceService;
+import static io.btrace.core.BTraceUtils.*;
 
 /**
  * Sample BTrace script that traces LLM API calls using the btrace-llm-trace extension.
@@ -61,9 +70,8 @@ public class LlmTrace {
       @Duration long duration) {
     // Model name extracted from the class; token counts need return value parsing
     // For a production script, parse the Response<AiMessage> return value
-    llm.recordCall("langchain4j", className, 0, 0, duration);
-    println(strcat(strcat(strcat("LLM call: ", className), " "),
-        strcat(str(duration / 1000000L), "ms")));
+    llm.recordCall(className, duration);
+    println(strcat(strcat("LLM call: ", className), strcat(" ", strcat(str(duration / 1000000L), "ms"))));
   }
 
   /**
@@ -76,7 +84,7 @@ public class LlmTrace {
   public static void onLangchain4jStreaming(
       @ProbeClassName String className,
       @Duration long duration) {
-    llm.recordStreamingCall(className, 0, 0, duration, 0);
+    llm.call(className).streaming().duration(duration).record();
   }
 
   /**
@@ -88,10 +96,9 @@ public class LlmTrace {
       location = @Location(Kind.ERROR))
   public static void onLangchain4jError(
       @ProbeClassName String className,
-      @Duration long duration,
-      Throwable error) {
-    llm.recordError(className, Strings.str(error.getClass()), duration);
-    println(strcat("LLM ERROR: ", Strings.str(error)));
+      @Duration long duration) {
+    llm.recordError(className, "exception", duration);
+    println(strcat("LLM ERROR in: ", className));
   }
 
   /**

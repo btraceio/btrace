@@ -1,8 +1,17 @@
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.extensions.Injected;
-import org.openjdk.btrace.vibeguard.VibeGuardService;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Duration;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnEvent;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.core.annotations.ProbeClassName;
+import io.btrace.core.annotations.ProbeMethodName;
+import io.btrace.core.annotations.Return;
+import io.btrace.vibeguard.VibeGuardService;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
 /**
  * Runtime behavioral contracts for AI-generated code. Enforces latency
@@ -34,8 +43,7 @@ public class VibeGuard {
       @ProbeClassName String cls,
       @ProbeMethodName String method,
       @Duration long dur) {
-    guard.checkLatency(Strings.strcat(cls, Strings.strcat(".", method)),
-        dur, 500_000_000L);
+    guard.checkLatency(strcat(cls, strcat(".", method)), dur, 500_000_000L);
   }
 
   // ==================== Null safety on return values ====================
@@ -48,8 +56,7 @@ public class VibeGuard {
       @ProbeClassName String cls,
       @ProbeMethodName String method,
       @Return Object ret) {
-    guard.checkNotNull(
-        Strings.strcat(cls, Strings.strcat(".", method)), ret);
+    guard.checkNotNull(strcat(cls, strcat(".", method)), ret);
   }
 
   // ==================== Alert on violations ====================

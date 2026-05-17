@@ -1,8 +1,14 @@
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.core.extensions.Injected;
-import org.openjdk.btrace.rag.RagQualityService;
+import io.btrace.core.annotations.BTrace;
+import io.btrace.core.annotations.Duration;
+import io.btrace.core.annotations.Injected;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Location;
+import io.btrace.core.annotations.OnEvent;
+import io.btrace.core.annotations.OnMethod;
+import io.btrace.core.annotations.OnTimer;
+import io.btrace.rag.RagQualityService;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import static io.btrace.core.BTraceUtils.*;
 
 /**
  * Traces RAG pipeline performance: vector DB query latency, similarity
