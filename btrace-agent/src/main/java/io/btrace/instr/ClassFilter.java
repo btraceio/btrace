@@ -16,6 +16,8 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.PrefixMap;
+import io.btrace.core.annotations.BTrace;
 import java.lang.annotation.Annotation;
 import java.lang.ref.Reference;
 import java.util.ArrayList;
@@ -28,10 +30,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
-import io.btrace.core.PrefixMap;
-import io.btrace.core.annotations.BTrace;
-
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassReader;

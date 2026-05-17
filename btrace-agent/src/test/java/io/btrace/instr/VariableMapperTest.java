@@ -16,11 +16,11 @@
  */
 package io.btrace.instr;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.Label;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class VariableMapperTest {
   private VariableMapper instance;

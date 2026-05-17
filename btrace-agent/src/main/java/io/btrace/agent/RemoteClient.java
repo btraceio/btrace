@@ -16,17 +16,6 @@
  */
 package io.btrace.agent;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PushbackInputStream;
-import java.net.Socket;
-import java.net.SocketException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.locks.LockSupport;
-
 import io.btrace.core.*;
 import io.btrace.core.comm.BinaryWireProtocol;
 import io.btrace.core.comm.Command;
@@ -46,7 +35,16 @@ import io.btrace.core.comm.SetSettingsCommand;
 import io.btrace.core.comm.StatusCommand;
 import io.btrace.core.comm.WireProtocol;
 import io.btrace.extension.ExtensionRegistry;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PushbackInputStream;
+import java.net.Socket;
+import java.net.SocketException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.locks.LockSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

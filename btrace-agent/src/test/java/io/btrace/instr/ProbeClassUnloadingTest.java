@@ -16,15 +16,13 @@
  */
 package io.btrace.instr;
 
-import java.io.IOException;
-import java.lang.ref.WeakReference;
-
 import io.btrace.core.ArgsMap;
 import io.btrace.core.BTraceRuntime;
 import io.btrace.core.comm.Command;
 import io.btrace.core.comm.CommandListener;
 import io.btrace.runtime.BTraceRuntimes;
-
+import java.io.IOException;
+import java.lang.ref.WeakReference;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassWriter;

@@ -16,14 +16,13 @@
  */
 package io.btrace.instr;
 
-import java.util.stream.Stream;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.objectweb.asm.Type;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InstrumentUtilsTest {
   @ParameterizedTest(name = "Left: {0}, Right: {1}, Exact match: {2}, Assignable: {3}")

@@ -16,10 +16,8 @@
  */
 package io.btrace.instr;
 
-import java.io.InputStream;
-
 import io.btrace.core.SharedSettings;
-
+import java.io.InputStream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;

@@ -16,12 +16,11 @@
  */
 package io.btrace.instr;
 
-import java.util.Map;
+import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class ClassCacheTest {
   private ClassCache instance;

@@ -16,13 +16,11 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.annotations.Sampled;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
-import io.btrace.core.ArgsMap;
-import io.btrace.core.annotations.Sampled;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

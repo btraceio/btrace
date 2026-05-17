@@ -16,13 +16,6 @@
  */
 package io.btrace.instr;
 
-import io.btrace.runtime.Interval;
-
-import org.objectweb.asm.Handle;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
-
 import static io.btrace.instr.Constants.BOOLEAN_BOXED_INTERNAL;
 import static io.btrace.instr.Constants.BOOLEAN_VALUE;
 import static io.btrace.instr.Constants.BOOLEAN_VALUE_DESC;
@@ -59,7 +52,6 @@ import static io.btrace.instr.Constants.NUMBER_INTERNAL;
 import static io.btrace.instr.Constants.SHORT_BOXED_INTERNAL;
 import static io.btrace.instr.Constants.SHORT_VALUE;
 import static io.btrace.instr.Constants.SHORT_VALUE_DESC;
-
 import static org.objectweb.asm.Opcodes.AALOAD;
 import static org.objectweb.asm.Opcodes.AASTORE;
 import static org.objectweb.asm.Opcodes.ACONST_NULL;
@@ -124,6 +116,12 @@ import static org.objectweb.asm.Opcodes.SALOAD;
 import static org.objectweb.asm.Opcodes.SASTORE;
 import static org.objectweb.asm.Opcodes.SIPUSH;
 import static org.objectweb.asm.Opcodes.SWAP;
+
+import io.btrace.runtime.Interval;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
 
 /**
  * Convenient fluent wrapper over the ASM method visitor

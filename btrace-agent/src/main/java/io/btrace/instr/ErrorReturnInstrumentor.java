@@ -16,13 +16,12 @@
  */
 package io.btrace.instr;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-
 import static io.btrace.instr.Constants.THROWABLE_INTERNAL;
 import static io.btrace.instr.Constants.THROWABLE_TYPE;
-
 import static org.objectweb.asm.Opcodes.ATHROW;
+
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
 
 /**
  * This visitor helps in inserting code whenever a method "returns" because of an exception (i.e.,

@@ -16,12 +16,11 @@
  */
 package io.btrace.compiler;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.*;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class PostprocessorDslRewriteTest {
 

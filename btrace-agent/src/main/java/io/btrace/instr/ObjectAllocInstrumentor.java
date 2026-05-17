@@ -16,9 +16,9 @@
  */
 package io.btrace.instr;
 
-import org.objectweb.asm.MethodVisitor;
-
 import static org.objectweb.asm.Opcodes.NEW;
+
+import org.objectweb.asm.MethodVisitor;
 
 /**
  * This visitor helps in inserting code whenever an object is allocated. The code to insert on

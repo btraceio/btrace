@@ -16,35 +16,6 @@
  */
 package io.btrace.instr;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.DebugSupport;
-import io.btrace.core.VerifierException;
-import io.btrace.core.annotations.Kind;
-import io.btrace.core.annotations.Sampled;
-import io.btrace.core.annotations.Where;
-import io.btrace.core.comm.RetransformClassNotification;
-import io.btrace.core.extensions.Permission;
-
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import static org.objectweb.asm.Opcodes.AASTORE;
 import static org.objectweb.asm.Opcodes.ACC_ENUM;
 import static org.objectweb.asm.Opcodes.ACC_INTERFACE;
@@ -73,6 +44,33 @@ import static org.objectweb.asm.Opcodes.PUTFIELD;
 import static org.objectweb.asm.Opcodes.PUTSTATIC;
 import static org.objectweb.asm.Opcodes.RET;
 import static org.objectweb.asm.Opcodes.SASTORE;
+
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.VerifierException;
+import io.btrace.core.annotations.Kind;
+import io.btrace.core.annotations.Sampled;
+import io.btrace.core.annotations.Where;
+import io.btrace.core.comm.RetransformClassNotification;
+import io.btrace.core.extensions.Permission;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BTraceProbePersisted implements BTraceProbe {
   private static final Logger log = LoggerFactory.getLogger(BTraceProbePersisted.class);

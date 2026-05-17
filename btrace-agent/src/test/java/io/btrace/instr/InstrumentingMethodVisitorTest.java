@@ -16,6 +16,8 @@
  */
 package io.btrace.instr;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -24,7 +26,6 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,8 +39,6 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class InstrumentingMethodVisitorTest {
   private static final class LastVisitedFrame {

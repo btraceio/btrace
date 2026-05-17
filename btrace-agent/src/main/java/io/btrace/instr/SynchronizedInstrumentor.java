@@ -16,9 +16,9 @@
  */
 package io.btrace.instr;
 
-import org.objectweb.asm.MethodVisitor;
-
 import static org.objectweb.asm.Opcodes.*;
+
+import org.objectweb.asm.MethodVisitor;
 
 /**
  * This visitor helps in inserting code whenever a synchronized method or block is about to be

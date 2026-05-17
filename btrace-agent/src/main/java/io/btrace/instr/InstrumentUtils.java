@@ -16,20 +16,18 @@
  */
 package io.btrace.instr;
 
+import static io.btrace.instr.TypeUtils.isAnyType;
+import static io.btrace.instr.TypeUtils.isPrimitive;
+import static org.objectweb.asm.Opcodes.*;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
-
-import static io.btrace.instr.TypeUtils.isAnyType;
-import static io.btrace.instr.TypeUtils.isPrimitive;
-
-import static org.objectweb.asm.Opcodes.*;
 
 /**
  * @author A. Sundararajan

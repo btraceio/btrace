@@ -16,16 +16,14 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.extensions.Permission;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
-
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.extensions.Permission;
-
 import org.objectweb.asm.ClassVisitor;
 
 public interface BTraceProbe {

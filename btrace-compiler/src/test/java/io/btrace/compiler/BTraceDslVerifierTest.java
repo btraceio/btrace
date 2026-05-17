@@ -16,14 +16,13 @@
  */
 package io.btrace.compiler;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class BTraceDslVerifierTest {
 

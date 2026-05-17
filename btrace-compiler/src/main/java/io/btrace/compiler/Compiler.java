@@ -16,6 +16,8 @@
  */
 package io.btrace.compiler;
 
+import io.btrace.core.Messages;
+import io.btrace.runtime.BTraceRuntimeAccess;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -28,15 +30,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-
-import io.btrace.core.Messages;
-import io.btrace.runtime.BTraceRuntimeAccess;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

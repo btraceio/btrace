@@ -16,15 +16,13 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.SharedSettings;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
-
-import io.btrace.core.SharedSettings;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

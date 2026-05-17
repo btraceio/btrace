@@ -16,6 +16,8 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.ArgsMap;
+import io.btrace.core.SharedSettings;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -24,10 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-
-import io.btrace.core.ArgsMap;
-import io.btrace.core.SharedSettings;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

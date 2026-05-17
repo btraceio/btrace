@@ -16,6 +16,12 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.BTraceRuntimeBridge;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.annotations.Event;
+import io.btrace.core.annotations.Return;
+import io.btrace.core.extensions.Extension;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -30,14 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.BTraceRuntimeBridge;
-import io.btrace.core.DebugSupport;
-import io.btrace.core.annotations.Event;
-import io.btrace.core.annotations.Return;
-import io.btrace.core.extensions.Extension;
-
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;

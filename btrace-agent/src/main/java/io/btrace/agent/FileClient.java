@@ -16,6 +16,11 @@
  */
 package io.btrace.agent;
 
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.ExitCommand;
+import io.btrace.core.comm.InstrumentCommand;
+import io.btrace.core.comm.PrintableCommand;
+import io.btrace.instr.Constants;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -28,13 +33,6 @@ import java.util.Enumeration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import io.btrace.core.comm.Command;
-import io.btrace.core.comm.ExitCommand;
-import io.btrace.core.comm.InstrumentCommand;
-import io.btrace.core.comm.PrintableCommand;
-import io.btrace.instr.Constants;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

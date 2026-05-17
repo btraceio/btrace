@@ -16,6 +16,11 @@
  */
 package io.btrace.compiler;
 
+import com.sun.source.util.JavacTask;
+import io.btrace.boot.MaskedClassLoader;
+import io.btrace.boot.MaskedJarUtils;
+import io.btrace.core.PackGenerator;
+import io.btrace.core.SharedSettings;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,20 +39,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
-
 import javax.annotation.processing.Processor;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
-
-import io.btrace.boot.MaskedClassLoader;
-import io.btrace.boot.MaskedJarUtils;
-import io.btrace.core.PackGenerator;
-import io.btrace.core.SharedSettings;
-
-import com.sun.source.util.JavacTask;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.slf4j.Logger;

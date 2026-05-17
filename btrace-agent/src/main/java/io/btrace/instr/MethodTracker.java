@@ -16,10 +16,9 @@
  */
 package io.btrace.instr;
 
+import io.btrace.core.MethodID;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
-
-import io.btrace.core.MethodID;
 
 /**
  * Provides a centralized place to track the fundamental metrics for method execution. It is mostly

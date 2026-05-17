@@ -16,18 +16,16 @@
  */
 package io.btrace.instr;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import io.btrace.core.HandlerRepository;
 import io.btrace.core.SharedSettings;
 import io.btrace.runtime.BTraceRuntimes;
 import io.btrace.runtime.IndyDispatcher;
 import io.btrace.runtime.Interval;
-
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

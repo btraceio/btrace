@@ -34,7 +34,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
