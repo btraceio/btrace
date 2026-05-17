@@ -24,21 +24,12 @@ dependencies {
     // Match versions commonly cached in this repository to avoid extra fetches
     implementation 'org.ow2.asm:asm:9.9.1'
     implementation 'org.ow2.asm:asm-tree:9.9.1'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
-    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.18.2'
-    implementation 'com.fasterxml.jackson.core:jackson-core:2.18.2'
 
     // Testing — version pinned here to match the root project's version catalog (settings.gradle).
     // Note: this is an included build and cannot access the root project's 'libs' version catalog.
     testImplementation gradleTestKit()
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-sourceSets {
-    main {
-        java.srcDir "${rootDir}/../shared/registry-client/src/main/java"
-    }
 }
 
 test {

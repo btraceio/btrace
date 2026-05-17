@@ -19,7 +19,6 @@ btraceExtension {
     name = 'BTrace Hadoop Example'
     description = 'Example provided-style extension for Apache Hadoop'
     services = ['org.example.btrace.hadoop.api.HadoopApi']
-    publishToRegistry = false
 }
 
 dependencies {

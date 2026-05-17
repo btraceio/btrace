@@ -105,9 +105,6 @@ dependencyResolutionManagement {
 
             // https://mvnrepository.com/artifact/com.clearspring.analytics/stream
             library ('stream-lib', 'com.clearspring.analytics', 'stream').version('2.9.8')
-            library ('jackson-databind', 'com.fasterxml.jackson.core', 'jackson-databind').version('2.18.2')
-            library ('jackson-annotations', 'com.fasterxml.jackson.core', 'jackson-annotations').version('2.18.2')
-            library ('jackson-core', 'com.fasterxml.jackson.core', 'jackson-core').version('2.18.2')
         }
     }
 }

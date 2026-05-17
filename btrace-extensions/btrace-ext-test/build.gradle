@@ -19,7 +19,6 @@ btraceExtension {
     name = 'BTrace External-Type Integration Test Extension'
     description = 'Minimal extension used solely by integration tests to verify @ExternalType end-to-end'
     services = ['io.btrace.test.ext.ExternalTypeTestService']
-    publishToRegistry = false
 }
 
 dependencies {

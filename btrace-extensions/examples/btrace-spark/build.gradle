@@ -19,7 +19,6 @@ btraceExtension {
     name = 'BTrace Spark Example'
     description = 'Example provided-style extension for Apache Spark (driver/executor)'
     services = ['org.example.btrace.spark.api.SparkApi']
-    publishToRegistry = false
 }
 
 dependencies {

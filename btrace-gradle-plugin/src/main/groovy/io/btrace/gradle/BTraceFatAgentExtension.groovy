@@ -1,8 +1,5 @@
 package io.btrace.gradle
 
-import io.btrace.registry.ExtensionRegistryClient
-import io.btrace.registry.ExtensionRegistryEntry
-import io.btrace.registry.RegistrySource
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
@@ -169,13 +166,6 @@ class ExtensionSourceSpec {
     void maven(Map<String, String> coords) {
         def coordStr = "${coords.group}:${coords.name}:${coords.version}"
         sources << new MavenExtensionSource(project, coordStr)
-    }
-
-    /**
-     * Add extension from the configured registry by id.
-     */
-    void registry(String extensionId) {
-        sources << new RegistryExtensionSource(project, owner, extensionId)
     }
 
     /**
@@ -411,36 +401,6 @@ class MavenExtensionSource extends ExtensionSource {
     @Override
     String toString() {
         return "maven(${coordinates})"
-    }
-}
-
-/**
- * Extension source resolved from the configured registry by id.
- */
-class RegistryExtensionSource extends ExtensionSource {
-    final BTraceFatAgentExtension owner
-    final String extensionId
-
-    RegistryExtensionSource(Project project, BTraceFatAgentExtension owner, String extensionId) {
-        super(project)
-        this.owner = owner
-        this.extensionId = extensionId
-    }
-
-    @Override
-    ResolvedExtension resolve() {
-        def client = new ExtensionRegistryClient(
-            RegistrySource.uri(owner.registryUrl),
-            owner.registryCacheFile.toPath()
-        )
-        ExtensionRegistryEntry entry = client.findById(extensionId)
-        def delegate = new MavenExtensionSource(project, entry.getMaven().gav())
-        return delegate.resolve()
-    }
-
-    @Override
-    String toString() {
-        return "registry(${extensionId})"
     }
 }
 

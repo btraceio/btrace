@@ -10,9 +10,6 @@ dependencies {
     implementation libs.asm
     implementation libs.asm.tree
     implementation libs.asm.util
-    implementation libs.jackson.databind
-    implementation libs.jackson.annotations
-    implementation libs.jackson.core
 
     def toolsJar = getToolsJar();
     if (toolsJar.getAsFile().exists()) {
@@ -25,12 +22,6 @@ dependencies {
     implementation project(':btrace-boot')
 
     implementation 'com.googlecode.lanterna:lanterna:3.1.5'
-}
-
-sourceSets {
-    main {
-        java.srcDir "${rootProject.projectDir}/shared/registry-client/src/main/java"
-    }
 }
 
 jar {
