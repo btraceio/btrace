@@ -62,8 +62,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
           ClassDesc.of("java.lang.invoke.MethodType"),
           ClassDesc.of("java.lang.String"));
 
-  private static final ClassDesc INDY_DISPATCHER =
-      ClassDesc.of("io.btrace.runtime.IndyDispatcher");
+  private static final ClassDesc INDY_DISPATCHER = ClassDesc.of("io.btrace.runtime.IndyDispatcher");
 
   @Override
   public boolean supports(int classFileMajorVersion) {
@@ -105,7 +104,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     boolean[] anyMatch = {false};
     byte[] result =
         cf.transformClass(
-            classModel, buildClassTransform(javaClassName, entryHandlers, returnHandlers, anyMatch));
+            classModel,
+            buildClassTransform(javaClassName, entryHandlers, returnHandlers, anyMatch));
     return anyMatch[0] ? result : null;
   }
 
@@ -125,20 +125,19 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
         .map(
             attr ->
                 attr.annotations().stream()
-                    .map(a -> {
-                      String desc = a.classSymbol().descriptorString();
-                      // ClassFile API returns annotation class descriptors; probe matching expects dot-separated Java names
-                      return desc.substring(1, desc.length() - 1).replace('/', '.');
-                    })
+                    .map(
+                        a -> {
+                          String desc = a.classSymbol().descriptorString();
+                          // ClassFile API returns annotation class descriptors; probe matching
+                          // expects dot-separated Java names
+                          return desc.substring(1, desc.length() - 1).replace('/', '.');
+                        })
                     .collect(Collectors.toList()))
         .orElse(Collections.emptyList());
   }
 
   private static ClassMeta buildClassMeta(
-      String javaClassName,
-      String internalName,
-      Collection<String> annoTypes,
-      ClassLoader loader) {
+      String javaClassName, String internalName, Collection<String> annoTypes, ClassLoader loader) {
     return new ClassMeta() {
       @Override
       public String getJavaClassName() {
