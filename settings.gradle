@@ -63,11 +63,11 @@ dependencyResolutionManagement {
             version('testcontainers', '2.0.4')
 
             // *** Gradle plugins ***
-            plugin ('spotless', 'com.diffplug.spotless').version('7.0.2')
+            plugin ('spotless', 'com.diffplug.spotless').version('8.5.1')
             plugin ('versioning', 'net.nemerosa.versioning').version('2.15.1')
-            plugin ('ospackage', 'com.netflix.nebula.ospackage').version('11.11.2')
+            plugin ('ospackage', 'com.netflix.nebula.ospackage').version('12.3.0')
             plugin ('publish', 'io.github.gradle-nexus.publish-plugin').version('2.0.0')
-            plugin ('shadow', 'com.github.johnrengelman.shadow').version('8.1.1')
+            plugin ('shadow', 'com.gradleup.shadow').version('9.4.1')
             plugin ('sdkman-vendors', 'io.sdkman.vendors').version('3.0.0')
             plugin ('foojay-resolver', 'org.gradle.toolchains.foojay-resolver-convention').version('1.0.0')
 
@@ -105,6 +105,9 @@ dependencyResolutionManagement {
 
             // https://mvnrepository.com/artifact/com.clearspring.analytics/stream
             library ('stream-lib', 'com.clearspring.analytics', 'stream').version('2.9.8')
+            library ('jackson-databind', 'com.fasterxml.jackson.core', 'jackson-databind').version('2.18.2')
+            library ('jackson-annotations', 'com.fasterxml.jackson.core', 'jackson-annotations').version('2.18.2')
+            library ('jackson-core', 'com.fasterxml.jackson.core', 'jackson-core').version('2.18.2')
         }
     }
 }

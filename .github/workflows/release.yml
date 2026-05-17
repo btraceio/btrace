@@ -558,7 +558,58 @@ jobs:
           fi
 
   # ============================================================
-  # Job 5d: Finalize release tag (RC -> final)
+  # Job 5d: Update extension registry
+  # ============================================================
+  update-extension-registry:
+    name: Update Extension Registry
+    needs: [prepare-release, wait-for-maven]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.dry_run != true }}
+    env:
+      REGISTRY_GH_TOKEN: ${{ secrets.BTRACE_EXTENSIONS_PAT || secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.BTRACE_EXTENSIONS_PAT || secrets.GITHUB_TOKEN }}
+      BTRACE_EXTENSIONS_REGISTRY_REPO_SLUG: btraceio/btrace-extensions
+      BTRACE_EXTENSIONS_REGISTRY_PR_MODE: auto
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare-release.outputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: 11
+          distribution: temurin
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Configure authenticated git for registry repo
+        run: |
+          if [ -z "${REGISTRY_GH_TOKEN}" ]; then
+            echo "::error::Missing registry GitHub token. Set BTRACE_EXTENSIONS_PAT or ensure GITHUB_TOKEN has cross-repo push rights."
+            exit 1
+          fi
+          git config --global url."https://x-access-token:${REGISTRY_GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+      - name: Update first-party extension registry entries
+        run: |
+          ./gradlew --no-daemon \
+            :btrace-extensions:btrace-utils:updateRegistryCatalog \
+            :btrace-extensions:btrace-metrics:updateRegistryCatalog \
+            :btrace-extensions:btrace-statsd:updateRegistryCatalog \
+            :btrace-extensions:btrace-llm-trace:updateRegistryCatalog \
+            :btrace-extensions:btrace-rag-quality:updateRegistryCatalog \
+            :btrace-extensions:btrace-contracts:updateRegistryCatalog \
+            :btrace-extensions:btrace-gpu-bridge:updateRegistryCatalog
+
+  # ============================================================
+  # Job 5e: Finalize release tag (RC -> final)
   # ============================================================
   finalize-tag:
     name: Finalize Release Tag

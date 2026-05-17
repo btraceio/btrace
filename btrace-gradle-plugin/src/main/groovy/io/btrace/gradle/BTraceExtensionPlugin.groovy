@@ -1,5 +1,10 @@
 package io.btrace.gradle
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import io.btrace.registry.ExtensionRegistryDocument
+import io.btrace.registry.ExtensionRegistryEntry
+import io.btrace.registry.MavenCoordinates
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.GradleException
@@ -34,23 +39,24 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         // Try to ensure Shadow is available; if resolution is blocked, we will emit a clear
         // error later with guidance. This is best-effort and safe when already applied.
         try {
-            if (!project.pluginManager.hasPlugin('com.github.johnrengelman.shadow')) {
+            if (!project.pluginManager.hasPlugin('com.gradleup.shadow')) {
                 // Respect opt-out
                 def ext = project.extensions.findByType(BTraceExtensionMetadata)
                 boolean shouldAutoApply = (ext == null) ? true : (ext.autoApplyShadow != false)
                 if (shouldAutoApply) {
-                    project.logger.lifecycle("[BTRACE-EXT] Applying Shadow plugin automatically (com.github.johnrengelman.shadow) for ${project.path}")
-                    project.pluginManager.apply('com.github.johnrengelman.shadow')
+                    project.logger.lifecycle("[BTRACE-EXT] Applying Shadow plugin automatically (com.gradleup.shadow) for ${project.path}")
+                    project.pluginManager.apply('com.gradleup.shadow')
                 } else {
                     project.logger.lifecycle("[BTRACE-EXT] Shadow auto-apply disabled (btraceExtension.autoApplyShadow=false) for ${project.path}")
                 }
             }
         } catch (Throwable t) {
-            project.logger.warn("[BTRACE-EXT] Unable to auto-apply Shadow plugin: ${t.message}. Apply it explicitly via plugins { id 'com.github.johnrengelman.shadow' } or alias(libs.plugins.shadow), or set btraceExtension.autoApplyShadow=true.")
+            project.logger.warn("[BTRACE-EXT] Unable to auto-apply Shadow plugin: ${t.message}. Apply it explicitly via plugins { id 'com.gradleup.shadow' } or alias(libs.plugins.shadow), or set btraceExtension.autoApplyShadow=true.")
         }
 
         // Create extension for metadata
         def extension = project.extensions.create('btraceExtension', BTraceExtensionMetadata)
+        def registry = project.extensions.create('btraceRegistry', BTraceRegistryConfig, project)
         extension.version = project.version
         def authoredSourceSet = {
             project.sourceSets.main
@@ -604,7 +610,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
 
         // Task: Build Implementation JAR (requires Shadow plugin applied by the consumer project)
         def implJarProviderRef = new Object[1]
-        project.pluginManager.withPlugin('com.github.johnrengelman.shadow') {
+        project.pluginManager.withPlugin('com.gradleup.shadow') {
             def shadowJarProvider = project.tasks.named('shadowJar', Jar)
             project.afterEvaluate {
                 shadowJarProvider.configure {
@@ -634,7 +640,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
         def buildImplJar = project.tasks.register('buildImplJar') {
             doFirst {
                 if (implJarProviderRef[0] == null) {
-                    throw new IllegalStateException("Shadow plugin ('com.github.johnrengelman.shadow') must be applied in the project using the BTrace extension plugin.")
+                    throw new IllegalStateException("Shadow plugin ('com.gradleup.shadow') must be applied in the project using the BTrace extension plugin.")
                 }
             }
             dependsOn { implJarProviderRef[0] }
@@ -646,7 +652,7 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                 def ext = project.extensions.findByType(BTraceExtensionMetadata)
                 boolean autoApplied = (ext == null) ? true : (ext.autoApplyShadow != false)
                 String hint = autoApplied ? "Ensure the Shadow plugin is resolvable/available." : "Enable auto-apply (btraceExtension.autoApplyShadow=true) or apply Shadow explicitly."
-                throw new GradleException("[BTRACE-EXT] Shadow plugin is required for ${project.path}. Apply id 'com.github.johnrengelman.shadow' (or alias(libs.plugins.shadow)). ${hint}")
+                throw new GradleException("[BTRACE-EXT] Shadow plugin is required for ${project.path}. Apply id 'com.gradleup.shadow' (or alias(libs.plugins.shadow)). ${hint}")
             }
             def implArchiveProvider = ((org.gradle.api.tasks.TaskProvider) implJarProviderRef[0]).flatMap { it.archiveFile }
             buildApiJar.configure {
@@ -1362,6 +1368,162 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             }
         }
 
+        def registryOutputDir = new File(project.buildDir, 'registry')
+        def registryEntryFile = new File(registryOutputDir, 'entry.json')
+        def registryMapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
+
+        def generateRegistryEntry = project.tasks.register('generateRegistryEntry') {
+            group = 'BTrace Registry'
+            description = 'Generates the registry entry JSON for this extension'
+            outputs.file(registryEntryFile)
+            doLast {
+                if (!extension.publishToRegistry) {
+                    project.logger.lifecycle("[BTRACE-REGISTRY] Registry publishing disabled for ${project.path}")
+                    return
+                }
+                registryOutputDir.mkdirs()
+                def entry = new ExtensionRegistryEntry()
+                entry.setId(extension.id ?: project.name)
+                entry.setName(extension.name ?: project.name)
+                entry.setDescription(extension.description ?: '')
+                entry.setOwner(registry.owner ?: 'btraceio')
+                entry.setSourceRepo(registry.sourceRepo ?: 'https://github.com/btraceio/btrace')
+                def maven = new MavenCoordinates()
+                maven.setGroupId(project.group as String)
+                maven.setArtifactId(project.name)
+                maven.setVersion(project.version as String)
+                entry.setMaven(maven)
+                entry.setTags(registry.tags ?: [])
+                registryMapper.writeValue(registryEntryFile, entry)
+            }
+        }
+
+        def validateRegistryEntry = project.tasks.register('validateRegistryEntry') {
+            group = 'BTrace Registry'
+            description = 'Validates the generated registry entry JSON'
+            dependsOn generateRegistryEntry
+            doLast {
+                if (!extension.publishToRegistry) {
+                    return
+                }
+                def entry = registryMapper.readValue(registryEntryFile, ExtensionRegistryEntry)
+                if (!entry.getId() || !entry.getName() || !entry.getSourceRepo() || entry.getMaven() == null) {
+                    throw new GradleException("Generated registry entry is missing required fields")
+                }
+            }
+        }
+
+        def verifyRegistryCoordinates = project.tasks.register('verifyRegistryCoordinates') {
+            group = 'BTrace Registry'
+            description = 'Verifies that extension coordinates are resolvable before registry publication'
+            dependsOn validateRegistryEntry
+            doLast {
+                if (!extension.publishToRegistry || !registry.verifyPublishedCoordinates) {
+                    return
+                }
+                def entry = registryMapper.readValue(registryEntryFile, ExtensionRegistryEntry)
+                def groupPath = entry.getMaven().getGroupId().replace('.', '/')
+                def artifactId = entry.getMaven().getArtifactId()
+                def version = entry.getMaven().getVersion()
+                boolean resolved = false
+                registry.mavenRepositories.each { repo ->
+                    def base = repo.endsWith('/') ? repo[0..-2] : repo
+                    def url = "${base}/${groupPath}/${artifactId}/${version}/${artifactId}-${version}-extension.zip"
+                    try {
+                        def conn = new URL(url).openConnection()
+                        conn.setConnectTimeout(5000)
+                        conn.setReadTimeout(10000)
+                        conn.connect()
+                        if (conn.respondsTo('getResponseCode')) {
+                            resolved = (conn.getResponseCode() == 200)
+                        } else {
+                            resolved = true
+                        }
+                    } catch (Throwable ignore) {
+                    }
+                }
+                if (!resolved) {
+                    throw new GradleException("Registry entry coordinates are not yet resolvable from configured Maven repositories")
+                }
+            }
+        }
+
+        project.tasks.register('updateRegistryCatalog') {
+            group = 'BTrace Registry'
+            description = 'Updates the configured extension registry checkout with this extension entry'
+            dependsOn verifyRegistryCoordinates
+            doLast {
+                if (!extension.publishToRegistry) {
+                    project.logger.lifecycle("[BTRACE-REGISTRY] Registry publishing disabled for ${project.path}")
+                    return
+                }
+                File registryDir = registry.registryWorktreeDir != null
+                    ? project.file(registry.registryWorktreeDir)
+                    : new File(project.buildDir, 'registry/repo')
+                if (!registryDir.exists()) {
+                    if (!registry.registryRepoGitUrl) {
+                        throw new GradleException("btraceRegistry.registryRepoGitUrl must be configured when registryWorktreeDir is not provided")
+                    }
+                    project.exec {
+                        commandLine 'git', 'clone', registry.registryRepoGitUrl, registryDir.absolutePath
+                    }
+                }
+                def registryFile = new File(registryDir, 'registry/extensions.json')
+                registryFile.parentFile.mkdirs()
+                ExtensionRegistryDocument document = registryFile.exists()
+                    ? registryMapper.readValue(registryFile, ExtensionRegistryDocument)
+                    : new ExtensionRegistryDocument(1, [])
+                def entry = registryMapper.readValue(registryEntryFile, ExtensionRegistryEntry)
+                def items = new ArrayList<ExtensionRegistryEntry>(document.getExtensions() ?: [])
+                def idx = items.findIndexOf { it.getId() == entry.getId() }
+                if (idx >= 0) {
+                    items[idx] = entry
+                } else {
+                    items.add(entry)
+                }
+                registryMapper.writeValue(registryFile, new ExtensionRegistryDocument(1, items))
+
+                if (registry.prMode == 'off') {
+                    return
+                }
+
+                def branchName = "${registry.branchPrefix}/${project.name}-${project.version}".replaceAll('[^A-Za-z0-9._/-]', '-')
+                project.exec {
+                    commandLine 'git', '-C', registryDir.absolutePath, 'config', 'user.name', registry.gitUserName
+                }
+                project.exec {
+                    commandLine 'git', '-C', registryDir.absolutePath, 'config', 'user.email', registry.gitUserEmail
+                }
+                project.exec {
+                    commandLine 'git', '-C', registryDir.absolutePath, 'checkout', '-B', branchName
+                }
+                project.exec {
+                    commandLine 'git', '-C', registryDir.absolutePath, 'add', 'registry/extensions.json'
+                }
+                project.exec {
+                    commandLine 'git', '-C', registryDir.absolutePath, 'commit', '-m', "Update registry entry for ${entry.getId()} ${entry.getMaven().getVersion()}"
+                    ignoreExitValue = true
+                }
+                if (registry.prMode == 'manual') {
+                    project.logger.lifecycle("[BTRACE-REGISTRY] Manual mode: push branch '${branchName}' and open a PR against ${registry.registryRepoSlug}")
+                    return
+                }
+                if (registry.prMode == 'auto') {
+                    project.exec {
+                        commandLine 'git', '-C', registryDir.absolutePath, 'push', '-u', 'origin', branchName
+                    }
+                    project.exec {
+                        commandLine registry.githubCli, 'pr', 'create',
+                            '--repo', registry.registryRepoSlug,
+                            '--title', "Update registry entry for ${entry.getId()} ${entry.getMaven().getVersion()}",
+                            '--body', "Automated registry update for ${entry.getMaven().gav()}",
+                            '--head', branchName
+                        workingDir registryDir
+                    }
+                }
+            }
+        }
+
         // Tests can see both api and impl outputs
         project.afterEvaluate {
             project.dependencies {
@@ -1400,4 +1562,26 @@ class BTraceExtensionMetadata {
     // Generate shims only for interfaces reachable from declared services (via signatures + generics)
     // Set to false to generate shims for all API interfaces.
     boolean generateShimsReachableOnly = true
+    boolean publishToRegistry = true
+}
+
+class BTraceRegistryConfig {
+    final Project project
+    String registryRepoGitUrl = System.getenv('BTRACE_EXTENSIONS_REGISTRY_REPO_GIT_URL') ?: 'https://github.com/btraceio/btrace-extensions.git'
+    String registryRepoSlug = System.getenv('BTRACE_EXTENSIONS_REGISTRY_REPO_SLUG') ?: 'btraceio/btrace-extensions'
+    String sourceRepo = 'https://github.com/btraceio/btrace'
+    String owner = 'btraceio'
+    String prMode = System.getenv('BTRACE_EXTENSIONS_REGISTRY_PR_MODE') ?: 'auto'
+    String branchPrefix = System.getenv('BTRACE_EXTENSIONS_REGISTRY_BRANCH_PREFIX') ?: 'btrace-registry'
+    boolean verifyPublishedCoordinates = true
+    Object registryWorktreeDir
+    String githubCli = System.getenv('BTRACE_EXTENSIONS_REGISTRY_GH') ?: 'gh'
+    String gitUserName = System.getenv('BTRACE_EXTENSIONS_REGISTRY_GIT_USER_NAME') ?: 'github-actions[bot]'
+    String gitUserEmail = System.getenv('BTRACE_EXTENSIONS_REGISTRY_GIT_USER_EMAIL') ?: 'github-actions[bot]@users.noreply.github.com'
+    List<String> mavenRepositories = ['https://repo1.maven.org/maven2']
+    List<String> tags = []
+
+    BTraceRegistryConfig(Project project) {
+        this.project = project
+    }
 }

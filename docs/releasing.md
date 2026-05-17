@@ -45,12 +45,13 @@ The release workflow performs these steps:
 5. **Stage to Maven Central**: Uploads artifacts to staging (requires manual release)
 6. **⏸️ MANUAL CHECKPOINT**: You must release artifacts via Central Portal
 7. **Wait for Maven Central**: Polls until artifacts are available (30 min timeout)
-8. **Build Distributions**: Creates tar.gz, zip, deb, rpm packages
-9. **GitHub Release**: Creates release with artifacts and changelog
-10. **SDKMan Update**: Announces new version to SDKMan
-11. **JBang**: Automatic - uses Maven Central artifacts
-12. **Version Bumps**: Updates develop and release branch to next snapshots
-13. **Milestones**: Creates/closes milestone, associates merged PRs
+8. **Extension Registry Update**: Opens/updates a PR against `btraceio/btrace-extensions` for first-party extensions
+9. **Build Distributions**: Creates tar.gz, zip, deb, rpm packages
+10. **GitHub Release**: Creates release with artifacts and changelog
+11. **SDKMan Update**: Announces new version to SDKMan
+12. **JBang**: Automatic - uses Maven Central artifacts
+13. **Version Bumps**: Updates develop and release branch to next snapshots
+14. **Milestones**: Creates/closes milestone, associates merged PRs
 
 ### Manual Release Step
 
@@ -61,6 +62,8 @@ After step 5, the workflow pauses and waits for you to manually release the Mave
 3. **Review** the artifacts to ensure everything looks correct
 4. Click **Publish** to release to Maven Central
 5. The workflow will detect the release and continue automatically
+
+After Maven Central visibility is confirmed, the workflow updates the extension registry for eligible first-party extensions by opening a PR against `btraceio/btrace-extensions`. Registry updates happen only after the published Maven coordinates are resolvable.
 
 If you don't want to proceed:
 - Simply let the workflow timeout (30 minutes), or
@@ -121,6 +124,7 @@ The workflow uses these GitHub secrets:
 - `SONATYPE_PASSWORD`: Central Portal user token password
 - `GPG_SIGNING_KEY`: GPG private key for artifact signing
 - `GPG_SIGNING_PWD`: GPG key passphrase
+- `BTRACE_EXTENSIONS_PAT`: GitHub token with permission to push branches and open PRs against `btraceio/btrace-extensions`
 
 Generate Central Portal tokens at: https://central.sonatype.com/account
 

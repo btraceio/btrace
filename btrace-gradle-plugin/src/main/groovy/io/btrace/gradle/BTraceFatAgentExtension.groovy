@@ -1,5 +1,8 @@
 package io.btrace.gradle
 
+import io.btrace.registry.ExtensionRegistryClient
+import io.btrace.registry.ExtensionRegistryEntry
+import io.btrace.registry.RegistrySource
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
@@ -25,6 +28,8 @@ import org.gradle.api.file.FileCollection
  * </pre>
  */
 class BTraceFatAgentExtension {
+    static final String DEFAULT_REGISTRY_URL = 'https://btraceio.github.io/btrace-extensions/registry/extensions.json'
+
     private final Project project
     private final List<ExtensionSource> extensionSources = []
     private final ProbeBundleSpec probeBundle
@@ -53,9 +58,16 @@ class BTraceFatAgentExtension {
     /** Property name for filtering extensions when autoDiscover is true */
     String filterProperty = 'embedExtensions'
 
+    /** Extension registry URL for resolving registry("id") sources. */
+    String registryUrl = System.getProperty('btrace.extensions.registry', DEFAULT_REGISTRY_URL)
+
+    /** Local cache file for the extension registry document. */
+    File registryCacheFile
+
     BTraceFatAgentExtension(Project project) {
         this.project = project
         this.outputDir = project.layout.buildDirectory.dir('libs').get().asFile
+        this.registryCacheFile = project.layout.buildDirectory.file('registry/extensions.json').get().asFile
         this.probeBundle = new ProbeBundleSpec(project)
     }
 
@@ -63,7 +75,7 @@ class BTraceFatAgentExtension {
      * Configure embedded extensions.
      */
     void embedExtensions(Action<ExtensionSourceSpec> action) {
-        def spec = new ExtensionSourceSpec(project)
+        def spec = new ExtensionSourceSpec(project, this)
         action.execute(spec)
         extensionSources.addAll(spec.sources)
     }
@@ -119,10 +131,12 @@ class BTraceFatAgentExtension {
  */
 class ExtensionSourceSpec {
     private final Project project
+    private final BTraceFatAgentExtension owner
     final List<ExtensionSource> sources = []
 
-    ExtensionSourceSpec(Project project) {
+    ExtensionSourceSpec(Project project, BTraceFatAgentExtension owner) {
         this.project = project
+        this.owner = owner
     }
 
     /**
@@ -155,6 +169,13 @@ class ExtensionSourceSpec {
     void maven(Map<String, String> coords) {
         def coordStr = "${coords.group}:${coords.name}:${coords.version}"
         sources << new MavenExtensionSource(project, coordStr)
+    }
+
+    /**
+     * Add extension from the configured registry by id.
+     */
+    void registry(String extensionId) {
+        sources << new RegistryExtensionSource(project, owner, extensionId)
     }
 
     /**
@@ -390,6 +411,36 @@ class MavenExtensionSource extends ExtensionSource {
     @Override
     String toString() {
         return "maven(${coordinates})"
+    }
+}
+
+/**
+ * Extension source resolved from the configured registry by id.
+ */
+class RegistryExtensionSource extends ExtensionSource {
+    final BTraceFatAgentExtension owner
+    final String extensionId
+
+    RegistryExtensionSource(Project project, BTraceFatAgentExtension owner, String extensionId) {
+        super(project)
+        this.owner = owner
+        this.extensionId = extensionId
+    }
+
+    @Override
+    ResolvedExtension resolve() {
+        def client = new ExtensionRegistryClient(
+            RegistrySource.uri(owner.registryUrl),
+            owner.registryCacheFile.toPath()
+        )
+        ExtensionRegistryEntry entry = client.findById(extensionId)
+        def delegate = new MavenExtensionSource(project, entry.getMaven().gav())
+        return delegate.resolve()
+    }
+
+    @Override
+    String toString() {
+        return "registry(${extensionId})"
     }
 }
 
