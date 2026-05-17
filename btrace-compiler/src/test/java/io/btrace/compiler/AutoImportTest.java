@@ -16,23 +16,49 @@
  */
 package io.btrace.compiler;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class AutoImportTest {
 
   @TempDir File tempDir;
 
-  // Script with NO explicit import of io.btrace.BTrace — relies on auto-injection
+  // Minimal script with ZERO explicit imports — relies on both auto-injections
+  private static final String SCRIPT_ZERO_IMPORTS =
+      "@BTrace\n"
+          + "public class ZeroImportProbe {\n"
+          + "    @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
+          + "    public static void onLength() {\n"
+          + "        println(\"zero imports\");\n"
+          + "    }\n"
+          + "}\n";
+
+  @Test
+  void scriptWithZeroImports_compilesViaBothAutoInjections() {
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        new Compiler()
+            .compile(
+                "ZeroImportProbe.java",
+                SCRIPT_ZERO_IMPORTS,
+                new PrintWriter(err),
+                null,
+                System.getProperty("java.class.path"));
+    assertNotNull(result, "Compilation should succeed: " + err);
+    assertFalse(result.isEmpty(), "Should produce class bytes");
+  }
+
+  // Script with NO explicit import of io.btrace.BTrace — relies on DSL auto-injection
   private static final String SCRIPT_NO_IMPORT =
       "import io.btrace.core.annotations.BTrace;\n"
           + "import io.btrace.core.annotations.OnMethod;\n"
@@ -45,7 +71,7 @@ public class AutoImportTest {
           + "}\n";
 
   @Test
-  void scriptWithoutImport_compilesAndResolvesFlat() {
+  void scriptWithoutDslImport_compilesAndResolvesFlat() {
     StringWriter err = new StringWriter();
     Map<String, byte[]> result =
         new Compiler()
@@ -63,8 +89,6 @@ public class AutoImportTest {
   void scriptWithPackageDeclaration_compilesAfterInjection() {
     String script =
         "package com.example;\n"
-            + "import io.btrace.core.annotations.BTrace;\n"
-            + "import io.btrace.core.annotations.OnMethod;\n"
             + "@BTrace\n"
             + "public class PkgProbe {\n"
             + "    @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
@@ -86,11 +110,10 @@ public class AutoImportTest {
   }
 
   @Test
-  void scriptAlreadyHasImport_notDoubleInjected() {
+  void scriptAlreadyHasBothImports_notDoubleInjected() {
     String script =
         "import static io.btrace.BTrace.*;\n"
-            + "import io.btrace.core.annotations.BTrace;\n"
-            + "import io.btrace.core.annotations.OnMethod;\n"
+            + "import io.btrace.core.annotations.*;\n"
             + "@BTrace\n"
             + "public class AlreadyImportedProbe {\n"
             + "    @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
@@ -112,11 +135,33 @@ public class AutoImportTest {
   }
 
   @Test
-  void fileBasedCompile_injectsImport() throws Exception {
+  void scriptAlreadyHasAnnotationsWildcard_dslInjectedAnnotationsSkipped() {
     String script =
-        "import io.btrace.core.annotations.BTrace;\n"
-            + "import io.btrace.core.annotations.OnMethod;\n"
+        "import io.btrace.core.annotations.*;\n"
             + "@BTrace\n"
+            + "public class WildcardAnnotationsProbe {\n"
+            + "    @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
+            + "    public static void onLength() {\n"
+            + "        println(\"wildcard annotations\");\n"
+            + "    }\n"
+            + "}\n";
+    StringWriter err = new StringWriter();
+    Map<String, byte[]> result =
+        new Compiler()
+            .compile(
+                "WildcardAnnotationsProbe.java",
+                script,
+                new PrintWriter(err),
+                null,
+                System.getProperty("java.class.path"));
+    assertNotNull(result, "Compilation should succeed: " + err);
+    assertFalse(result.isEmpty(), "Should produce class bytes");
+  }
+
+  @Test
+  void fileBasedCompile_injectsBothImports() throws Exception {
+    String script =
+        "@BTrace\n"
             + "public class FileProbe {\n"
             + "    @OnMethod(clazz=\"java.lang.String\", method=\"length\")\n"
             + "    public static void onLength() {\n"

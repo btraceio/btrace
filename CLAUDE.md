@@ -262,6 +262,32 @@ public class MyTrace {
 - Target application classloaders remain isolated
 - See `Main.java` for bootstrap setup
 
+## Documentation Organization
+
+The repository separates user-facing documentation from internal agent/planning documents.
+
+**User-facing docs** → `docs/`
+- End-user guides, tutorials, FAQ, quick reference, troubleshooting
+- Architecture reference docs (`docs/architecture/`) for contributors and advanced users
+- Developer ops docs (`docs/releasing.md`, `docs/examples/`, `docs/samples/`)
+- `docs/README.md` is the documentation index — keep links here up to date
+
+**Internal/agent docs** → `internal/`
+- `internal/plans/` — session plans, implementation plans, next-steps notes
+- `internal/specs/` — design specs derived from issues or external sources
+- `internal/libretti/` — muse/libretto agent requirement files from GitHub issues
+- `internal/superpowers/plans/` — superpowers agent implementation plans
+- `internal/superpowers/specs/` — superpowers agent design specs
+
+**Rules for agents — MANDATORY:**
+- NEVER store planning documents, session notes, implementation specs, or libretto files under `docs/`
+- NEVER create or write to a `doc/` directory (singular) — it does not exist; use `internal/` instead
+- NEVER create `docs/plans/`, `docs/superpowers/`, or any non-user-facing subdirectory under `docs/`
+- Store all agent-generated plans in `internal/plans/` or `internal/superpowers/plans/`
+- Store all agent-generated design/requirement specs in `internal/specs/` or `internal/superpowers/specs/`
+- Store all libretto/muse requirement files in `internal/libretti/`
+- Do not link internal documents from `docs/README.md` or other user-facing docs
+
 ## Contributing Notes
 
 From Readme.md: Pull requests can only be accepted from signers of the [Oracle Contributor Agreement](https://oca.opensource.oracle.com/)
