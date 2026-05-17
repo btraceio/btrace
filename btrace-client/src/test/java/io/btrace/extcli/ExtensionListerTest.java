@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
@@ -37,24 +36,17 @@ class ExtensionListerTest {
   private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
   private final PrintStream originalOut = System.out;
   private final PrintStream originalErr = System.err;
-  private String originalRegistryUrl;
 
   @BeforeEach
   void setUpStreams() {
     System.setOut(new PrintStream(outContent));
     System.setErr(new PrintStream(errContent));
-    originalRegistryUrl = System.getProperty("btrace.extensions.registry");
   }
 
   @AfterEach
   void restoreStreams() {
     System.setOut(originalOut);
     System.setErr(originalErr);
-    if (originalRegistryUrl == null) {
-      System.clearProperty("btrace.extensions.registry");
-    } else {
-      System.setProperty("btrace.extensions.registry", originalRegistryUrl);
-    }
   }
 
   @Test
@@ -72,35 +64,6 @@ class ExtensionListerTest {
     // Should not crash, output may be empty since BTRACE_HOME is not set
     String output = outContent.toString();
     assertNotNull(output);
-  }
-
-  @Test
-  void listWithJsonFormat() throws IOException {
-    Path registry = tempDir.resolve("extensions.json");
-    Files.writeString(
-        registry,
-        "{\n"
-            + "  \"schema_version\": 1,\n"
-            + "  \"extensions\": [\n"
-            + "    {\n"
-            + "      \"id\": \"btrace-utils\",\n"
-            + "      \"name\": \"BTrace Utilities\",\n"
-            + "      \"description\": \"Utilities\",\n"
-            + "      \"owner\": \"btraceio\",\n"
-            + "      \"source_repo\": \"https://github.com/btraceio/btrace\",\n"
-            + "      \"maven\": {\"groupId\": \"io.btrace\", \"artifactId\": \"btrace-utils\", \"version\": \"2.3.0\"},\n"
-            + "      \"tags\": [\"utility\"]\n"
-            + "    }\n"
-            + "  ]\n"
-            + "}\n",
-        StandardCharsets.UTF_8);
-    System.setProperty("btrace.extensions.registry", registry.toUri().toString());
-
-    ExtensionLister.list(true);
-
-    String output = outContent.toString();
-    assertTrue(output.contains("\"id\":\"btrace-utils\""));
-    assertTrue(output.contains("\"artifactId\":\"btrace-utils\""));
   }
 
   @Test
