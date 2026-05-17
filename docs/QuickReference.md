@@ -517,11 +517,11 @@ java -javaagent:btrace.jar=script=MyTrace.class,port=2020 MyApp
 
 ## Built-in Functions
 
-The BTrace compiler auto-imports `import static io.btrace.BTrace.*` into every script.
-Some functions listed below are part of that auto-import; others come from
-`io.btrace.core.BTraceUtils` and require an explicit
-`import static io.btrace.core.BTraceUtils.*;`. When in doubt, add the BTraceUtils
-import — it covers all core helpers.
+The BTrace compiler auto-imports `import static io.btrace.BTrace.*` into every script,
+so every function listed below is available without any explicit import. For advanced
+operations not listed here (reflection, JMX counters, profiling, speculation), add
+`import static io.btrace.core.BTraceUtils.*;` explicitly — but note that doing so
+suppresses the `io.btrace.BTrace.*` auto-import, so you must then import both.
 
 ### Output Functions
 ```java
