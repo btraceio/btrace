@@ -17,6 +17,7 @@
 package io.btrace.extcli;
 
 import io.btrace.extcli.tui.ExtRepoBrowser;
+import io.btrace.registry.ExtensionRegistryEntry;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,12 +47,22 @@ public final class Main {
         if (Files.exists(p)) {
           report = ExtensionInspector.inspect(p);
         } else {
-          Path resolved = RepoScanner.resolveById(arg);
-          if (resolved == null) {
-            err("Extension id not found in known repositories: " + arg);
+          try {
+            ExtensionRegistryEntry entry = RegistrySupport.client().findById(arg);
+            if (json) {
+              System.out.println(RegistryView.toJson(entry));
+            } else {
+              System.out.println(RegistryView.render(entry));
+            }
             return;
+          } catch (RuntimeException ignored) {
+            Path resolved = RepoScanner.resolveById(arg);
+            if (resolved == null) {
+              err("Extension id not found in registry or known repositories: " + arg);
+              return;
+            }
+            report = ExtensionInspector.inspect(resolved);
           }
-          report = ExtensionInspector.inspect(resolved);
         }
         if (json) System.out.println(report.toJson());
         else System.out.println(report);
@@ -159,5 +170,44 @@ public final class Main {
 
   private static void err(String s) {
     System.err.println(s);
+  }
+
+  private static final class RegistryView {
+    private RegistryView() {}
+
+    private static String render(ExtensionRegistryEntry entry) {
+      String tags =
+          entry.getTags() == null || entry.getTags().isEmpty()
+              ? "(none)"
+              : String.join(",", entry.getTags());
+      return String.join(
+          "\n",
+          "Registry Extension: " + entry.getId(),
+          "Name     : " + entry.getName(),
+          "Version  : " + entry.getMaven().getVersion(),
+          "Maven    : " + entry.getMaven().gav(),
+          "Owner    : " + entry.getOwner(),
+          "Source   : " + entry.getSourceRepo(),
+          "Tags     : " + tags,
+          "Description: " + entry.getDescription());
+    }
+
+    private static String toJson(ExtensionRegistryEntry entry) {
+      java.util.Map<String, Object> maven = new java.util.LinkedHashMap<>();
+      maven.put("groupId", entry.getMaven().getGroupId());
+      maven.put("artifactId", entry.getMaven().getArtifactId());
+      maven.put("version", entry.getMaven().getVersion());
+
+      java.util.Map<String, Object> obj = new java.util.LinkedHashMap<>();
+      obj.put("id", entry.getId());
+      obj.put("name", entry.getName());
+      obj.put("description", entry.getDescription());
+      obj.put("owner", entry.getOwner());
+      obj.put("sourceRepo", entry.getSourceRepo());
+      obj.put("maven", maven);
+      obj.put(
+          "tags", entry.getTags() != null ? entry.getTags() : java.util.Collections.emptyList());
+      return ExtensionReport.toJson(obj);
+    }
   }
 }

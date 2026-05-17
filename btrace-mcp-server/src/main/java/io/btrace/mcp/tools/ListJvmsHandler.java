@@ -16,14 +16,13 @@
  */
 package io.btrace.mcp.tools;
 
+import com.sun.tools.attach.VirtualMachine;
+import com.sun.tools.attach.VirtualMachineDescriptor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.sun.tools.attach.VirtualMachine;
-import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +50,8 @@ public final class ListJvmsHandler {
   }
 
   /** Executes the list_jvms tool. */
-  public static Map<String, Object> execute(@SuppressWarnings("unused") Map<String, Object> arguments) {
+  public static Map<String, Object> execute(
+      @SuppressWarnings("unused") Map<String, Object> arguments) {
     try {
       Collection<Map<String, Object>> vms = listVms();
       StringBuilder sb = new StringBuilder();

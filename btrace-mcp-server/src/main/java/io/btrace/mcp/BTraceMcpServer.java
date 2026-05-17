@@ -16,12 +16,6 @@
  */
 package io.btrace.mcp;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.btrace.mcp.prompts.DiagnosticPrompts;
 import io.btrace.mcp.tools.DeployOnelinerHandler;
 import io.btrace.mcp.tools.DeployScriptHandler;
@@ -30,7 +24,11 @@ import io.btrace.mcp.tools.ExitProbeHandler;
 import io.btrace.mcp.tools.ListJvmsHandler;
 import io.btrace.mcp.tools.ListProbesHandler;
 import io.btrace.mcp.tools.SendEventHandler;
-
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.gradle.testkit.runner.BuildResult;
@@ -291,6 +292,38 @@ class BTraceFatAgentPluginTest {
         // Staging directory should exist
         Path stagingDir = projectDir.resolve("build/fat-agent-staging");
         assertTrue(Files.exists(stagingDir), "Staging directory should be created");
+    }
+
+    @Test
+    @DisplayName("Registry source fails clearly for unknown extension id")
+    void registrySourceFailsForUnknownId() throws IOException {
+        Path registry = projectDir.resolve("extensions.json");
+        Files.writeString(
+            registry,
+            "{\n" +
+            "  \"schema_version\": 1,\n" +
+            "  \"extensions\": []\n" +
+            "}\n",
+            StandardCharsets.UTF_8);
+
+        writeFile(buildFile,
+            "plugins {\n" +
+            "    id 'io.btrace.fat-agent'\n" +
+            "}\n" +
+            "\n" +
+            "btraceFatAgent {\n" +
+            "    registryUrl = '" + registry.toUri().toString() + "'\n" +
+            "    embedExtensions {\n" +
+            "        registry('missing-ext')\n" +
+            "    }\n" +
+            "}\n"
+        );
+
+        BuildResult result = createRunner()
+            .withArguments("stageExtensions")
+            .buildAndFail();
+
+        assertTrue(result.getOutput().contains("Unknown extension id: missing-ext"));
     }
 
     private GradleRunner createRunner() {

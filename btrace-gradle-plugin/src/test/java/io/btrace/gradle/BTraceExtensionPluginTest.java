@@ -154,6 +154,39 @@ class BTraceExtensionPluginTest {
         }
     }
 
+    @Test
+    @DisplayName("updateRegistryCatalog writes entry into local registry checkout")
+    void updateRegistryCatalogWritesLocalRegistry() throws IOException {
+        Path registryDir = projectDir.resolve("registry-repo");
+        Files.createDirectories(registryDir.resolve("registry"));
+        writeFile(
+                registryDir.resolve("registry/extensions.json"),
+                "{\n"
+                        + "  \"schema_version\": 1,\n"
+                        + "  \"extensions\": []\n"
+                        + "}\n");
+
+        writeExtensionProject(
+                "btraceRegistry {\n"
+                        + "  prMode = 'off'\n"
+                        + "  verifyPublishedCoordinates = false\n"
+                        + "  registryWorktreeDir = file('"
+                        + registryDir.toString().replace("\\", "/")
+                        + "')\n"
+                        + "  tags = ['metrics']\n"
+                        + "}\n");
+
+        BuildResult result = createRunner().withArguments(":ext:updateRegistryCatalog").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":ext:updateRegistryCatalog").getOutcome());
+        String json =
+                Files.readString(
+                        registryDir.resolve("registry/extensions.json"), StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"id\" : \"test.ext\""));
+        assertTrue(json.contains("\"artifactId\" : \"ext\""));
+        assertTrue(json.contains("\"version\" : \"1.0\""));
+    }
+
     private void writeStubCoreProject() throws IOException {
         Path dir = projectDir.resolve("btrace-core");
         Files.createDirectories(dir.resolve("src/main/java/org/openjdk/btrace/core/extensions"));
@@ -219,6 +252,10 @@ class BTraceExtensionPluginTest {
     }
 
     private void writeExtensionProject() throws IOException {
+        writeExtensionProject("");
+    }
+
+    private void writeExtensionProject(String extraBuildLogic) throws IOException {
         Path dir = projectDir.resolve("ext");
         Files.createDirectories(dir.resolve("src/main/java/com/example/api"));
         Files.createDirectories(dir.resolve("src/main/java/com/example/impl"));
@@ -228,7 +265,7 @@ class BTraceExtensionPluginTest {
                 "plugins {\n"
                         + "  id 'java-library'\n"
                         + "  id 'io.btrace.extension'\n"
-                        + "  id 'com.github.johnrengelman.shadow'\n"
+                        + "  id 'com.gradleup.shadow'\n"
                         + "}\n"
                         + "group = 'com.example'\n"
                         + "version = '1.0'\n"
@@ -242,7 +279,8 @@ class BTraceExtensionPluginTest {
                         + "  services = ['com.example.api.PublicService']\n"
                         + "  requiredPermissions = ['NONE']\n"
                         + "  scanPermissions = false\n"
-                        + "}\n");
+                        + "}\n"
+                        + extraBuildLogic);
         writeFile(
                 dir.resolve("src/main/java/com/example/api/PublicValue.java"),
                 "package com.example.api;\n"
@@ -321,6 +359,10 @@ class BTraceExtensionPluginTest {
         writeFile(
                 projectDir.resolve(
                         "buildSrc/src/main/resources/META-INF/gradle-plugins/com.github.johnrengelman.shadow.properties"),
+                "implementation-class=com.github.jengelman.gradle.plugins.shadow.ShadowPlugin\n");
+        writeFile(
+                projectDir.resolve(
+                        "buildSrc/src/main/resources/META-INF/gradle-plugins/com.gradleup.shadow.properties"),
                 "implementation-class=com.github.jengelman.gradle.plugins.shadow.ShadowPlugin\n");
     }
 

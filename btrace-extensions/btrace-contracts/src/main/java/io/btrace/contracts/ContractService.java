@@ -80,8 +80,7 @@ public interface ContractService {
   // ==================== Reporting ====================
 
   /** Returns a formatted summary of all contract checks, violations, and tracked paths. */
-  @Nullable
-  String getSummary();
+  @Nullable String getSummary();
 
   /** Returns total number of contract violations across all contracts. */
   long getTotalViolations();

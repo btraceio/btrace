@@ -16,11 +16,9 @@
  */
 package io.btrace.mcp;
 
+import io.btrace.client.Client;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import io.btrace.client.Client;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

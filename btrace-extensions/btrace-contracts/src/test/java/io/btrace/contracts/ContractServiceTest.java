@@ -176,7 +176,8 @@ class ContractServiceTest {
     assertTrue(summary.contains("b"));
     assertTrue(summary.contains("c"));
     // More than 2 tags: no slower/faster comparison
-    assertFalse(summary.contains("slower") || summary.contains("faster"),
+    assertFalse(
+        summary.contains("slower") || summary.contains("faster"),
         "Cross-comparison should only appear for exactly 2 tags");
   }
 

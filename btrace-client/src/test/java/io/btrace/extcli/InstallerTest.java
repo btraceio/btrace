@@ -20,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -34,15 +36,22 @@ class InstallerTest {
 
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
   private final PrintStream originalOut = System.out;
+  private String originalRegistryUrl;
 
   @BeforeEach
   void setUpStreams() {
     System.setOut(new PrintStream(outContent));
+    originalRegistryUrl = System.getProperty("btrace.extensions.registry");
   }
 
   @AfterEach
   void restoreStreams() {
     System.setOut(originalOut);
+    if (originalRegistryUrl == null) {
+      System.clearProperty("btrace.extensions.registry");
+    } else {
+      System.setProperty("btrace.extensions.registry", originalRegistryUrl);
+    }
   }
 
   @Test
@@ -123,5 +132,33 @@ class InstallerTest {
 
     String output = outContent.toString();
     assertTrue(output.contains("[DRY-RUN]"), "Should complete dry-run");
+  }
+
+  @Test
+  void dryRunFromRegistryId() throws Exception {
+    Path registry = tempDir.resolve("extensions.json");
+    Files.writeString(
+        registry,
+        "{\n"
+            + "  \"schema_version\": 1,\n"
+            + "  \"extensions\": [\n"
+            + "    {\n"
+            + "      \"id\": \"btrace-metrics\",\n"
+            + "      \"name\": \"BTrace Metrics\",\n"
+            + "      \"description\": \"Metrics\",\n"
+            + "      \"owner\": \"btraceio\",\n"
+            + "      \"source_repo\": \"https://github.com/btraceio/btrace\",\n"
+            + "      \"maven\": {\"groupId\": \"io.btrace\", \"artifactId\": \"btrace-metrics\", \"version\": \"2.3.0\"}\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}\n",
+        StandardCharsets.UTF_8);
+    System.setProperty("btrace.extensions.registry", registry.toUri().toString());
+
+    Installer.install("btrace-metrics", List.of("https://repo1.maven.org/maven2"), null, true);
+
+    String output = outContent.toString();
+    assertTrue(output.contains("btrace-metrics-2.3.0-extension.zip"));
+    assertTrue(output.contains("[DRY-RUN]"));
   }
 }

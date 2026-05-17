@@ -20,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,17 +36,24 @@ class MainTest {
   private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
   private final PrintStream originalOut = System.out;
   private final PrintStream originalErr = System.err;
+  private String originalRegistryUrl;
 
   @BeforeEach
   void setUpStreams() {
     System.setOut(new PrintStream(outContent));
     System.setErr(new PrintStream(errContent));
+    originalRegistryUrl = System.getProperty("btrace.extensions.registry");
   }
 
   @AfterEach
   void restoreStreams() {
     System.setOut(originalOut);
     System.setErr(originalErr);
+    if (originalRegistryUrl == null) {
+      System.clearProperty("btrace.extensions.registry");
+    } else {
+      System.setProperty("btrace.extensions.registry", originalRegistryUrl);
+    }
   }
 
   @Test
@@ -93,6 +102,35 @@ class MainTest {
     // Should execute without throwing exception
     String output = outContent.toString();
     assertNotNull(output);
+  }
+
+  @Test
+  void inspectCommandResolvesRegistryId() throws Exception {
+    Path registry = tempDir.resolve("extensions.json");
+    Files.writeString(
+        registry,
+        "{\n"
+            + "  \"schema_version\": 1,\n"
+            + "  \"extensions\": [\n"
+            + "    {\n"
+            + "      \"id\": \"btrace-metrics\",\n"
+            + "      \"name\": \"BTrace Metrics\",\n"
+            + "      \"description\": \"Metrics support\",\n"
+            + "      \"owner\": \"btraceio\",\n"
+            + "      \"source_repo\": \"https://github.com/btraceio/btrace\",\n"
+            + "      \"maven\": {\"groupId\": \"io.btrace\", \"artifactId\": \"btrace-metrics\", \"version\": \"2.3.0\"},\n"
+            + "      \"tags\": [\"metrics\"]\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}\n",
+        StandardCharsets.UTF_8);
+    System.setProperty("btrace.extensions.registry", registry.toUri().toString());
+
+    Main.main(new String[] {"inspect", "btrace-metrics"});
+
+    String output = outContent.toString();
+    assertTrue(output.contains("btrace-metrics"));
+    assertTrue(output.contains("io.btrace:btrace-metrics:2.3.0"));
   }
 
   @Test

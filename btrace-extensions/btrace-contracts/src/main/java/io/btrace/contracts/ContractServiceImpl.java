@@ -158,8 +158,7 @@ public final class ContractServiceImpl extends Extension implements ContractServ
 
     if (!taggedPaths.isEmpty()) {
       sb.append("--- Tracked Code Paths ---\n");
-      for (Map.Entry<String, ConcurrentHashMap<String, CodePathStats>> e :
-          taggedPaths.entrySet()) {
+      for (Map.Entry<String, ConcurrentHashMap<String, CodePathStats>> e : taggedPaths.entrySet()) {
         String contractName = e.getKey();
         Map<String, CodePathStats> byTag = e.getValue();
 
@@ -171,8 +170,13 @@ public final class ContractServiceImpl extends Extension implements ContractServ
           CodePathStats s = byTag.get(tag);
           long calls = s.calls.get();
           long avgMs = calls > 0 ? (s.totalDurationNanos.get() / calls) / 1_000_000 : 0;
-          sb.append("    ").append(tag).append(": ").append(calls).append(" calls  avg ")
-              .append(avgMs).append("ms\n");
+          sb.append("    ")
+              .append(tag)
+              .append(": ")
+              .append(calls)
+              .append(" calls  avg ")
+              .append(avgMs)
+              .append("ms\n");
         }
 
         // Cross-compare when exactly 2 tags
@@ -186,11 +190,21 @@ public final class ContractServiceImpl extends Extension implements ContractServ
             if (avg1 > 0) {
               long pct = ((avg0 - avg1) * 100) / avg1;
               if (pct > 0) {
-                sb.append("    [").append(tags.get(0)).append(' ').append(pct)
-                    .append("% slower than ").append(tags.get(1)).append("]\n");
+                sb.append("    [")
+                    .append(tags.get(0))
+                    .append(' ')
+                    .append(pct)
+                    .append("% slower than ")
+                    .append(tags.get(1))
+                    .append("]\n");
               } else if (pct < 0) {
-                sb.append("    [").append(tags.get(0)).append(' ').append(-pct)
-                    .append("% faster than ").append(tags.get(1)).append("]\n");
+                sb.append("    [")
+                    .append(tags.get(0))
+                    .append(' ')
+                    .append(-pct)
+                    .append("% faster than ")
+                    .append(tags.get(1))
+                    .append("]\n");
               }
             }
           }

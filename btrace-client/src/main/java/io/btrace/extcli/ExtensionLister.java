@@ -16,6 +16,7 @@
  */
 package io.btrace.extcli;
 
+import io.btrace.registry.ExtensionRegistryEntry;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -23,6 +24,13 @@ import java.util.*;
 
 final class ExtensionLister {
   static void list(boolean json) throws IOException {
+    try {
+      listFromRegistry(json);
+      return;
+    } catch (RuntimeException e) {
+      // Fall back to installed extensions when the registry is unavailable.
+    }
+
     List<Path> roots = new ArrayList<>();
     String home = System.getenv("BTRACE_HOME");
     if (home != null) roots.add(Path.of(home, "extensions"));
@@ -58,5 +66,38 @@ final class ExtensionLister {
       }
     }
     if (json) System.out.println(ExtensionReport.toJson(items));
+  }
+
+  private static void listFromRegistry(boolean json) {
+    List<ExtensionRegistryEntry> entries = RegistrySupport.client().list();
+    List<Object> items = new ArrayList<>();
+    for (ExtensionRegistryEntry entry : entries) {
+      if (json) {
+        Map<String, Object> maven = new LinkedHashMap<>();
+        maven.put("groupId", entry.getMaven().getGroupId());
+        maven.put("artifactId", entry.getMaven().getArtifactId());
+        maven.put("version", entry.getMaven().getVersion());
+
+        Map<String, Object> obj = new LinkedHashMap<>();
+        obj.put("id", entry.getId());
+        obj.put("name", entry.getName());
+        obj.put("description", entry.getDescription());
+        obj.put("owner", entry.getOwner());
+        obj.put("sourceRepo", entry.getSourceRepo());
+        obj.put("maven", maven);
+        obj.put("tags", entry.getTags() != null ? entry.getTags() : Collections.emptyList());
+        items.add(obj);
+      } else {
+        String tags =
+            entry.getTags() == null || entry.getTags().isEmpty()
+                ? ""
+                : " [" + String.join(",", entry.getTags()) + "]";
+        System.out.println(
+            entry.getId() + " " + entry.getMaven().getVersion() + tags + " - " + entry.getName());
+      }
+    }
+    if (json) {
+      System.out.println(ExtensionReport.toJson(items));
+    }
   }
 }
