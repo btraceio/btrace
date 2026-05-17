@@ -18,14 +18,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Cache Java binaries
-        id: cache-java
-        uses: actions/cache@v5
+      - name: Set up Java 24
+        uses: actions/setup-java@v5
         with:
-          path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
+          java-version: 24
+          distribution: temurin
       - name: Set up Java
-        if: steps.cache-java.outputs.cache-hit != 'true'
         uses: actions/setup-java@v5
         with:
           java-version: 11
@@ -132,6 +130,11 @@ jobs:
         with:
           name: test-trace
           path: btrace-agent/build/classes/traces
+      - name: Set up Java 24
+        uses: actions/setup-java@v5
+        with:
+          java-version: 24
+          distribution: temurin
       - name: Build btrace-agent jar
         run: |
           ./gradlew --no-daemon --parallel --build-cache :btrace-agent:jar

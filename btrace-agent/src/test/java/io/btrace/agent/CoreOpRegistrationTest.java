@@ -19,17 +19,26 @@ package io.btrace.agent;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.btrace.runtime.BTraceBootstrap;
+import java.lang.reflect.Field;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.*;
 
 public class CoreOpRegistrationTest {
 
+  @SuppressWarnings("unchecked")
+  private static ConcurrentHashMap<String, Object> opTable() throws Exception {
+    Field field = BTraceBootstrap.class.getDeclaredField("OP_TABLE");
+    field.setAccessible(true);
+    return (ConcurrentHashMap<String, Object>) field.get(null);
+  }
+
   @BeforeEach
-  void clearTable() {
-    BTraceBootstrap.OP_TABLE.clear();
+  void clearTable() throws Exception {
+    opTable().clear();
   }
 
   @Test
-  void allCoreOpsRegistered() {
+  void allCoreOpsRegistered() throws Exception {
     Main.registerCoreOps();
 
     String[] expected = {
@@ -48,16 +57,16 @@ public class CoreOpRegistrationTest {
       "identity(Ljava/lang/Object;)I",
       "exit(I)V",
     };
+    ConcurrentHashMap<String, Object> table = opTable();
     for (String op : expected) {
-      assertTrue(BTraceBootstrap.OP_TABLE.containsKey(op), "Missing: " + op);
+      assertTrue(table.containsKey(op), "Missing: " + op);
     }
   }
 
   @Test
-  void allBTraceMethodsRegistered() {
+  void allBTraceMethodsRegistered() throws Exception {
     Main.registerCoreOps();
 
-    // Verify all public static methods from BTrace.java are registered
     String[] allExpected = {
       // Output
       "print(Ljava/lang/String;)V",
@@ -102,14 +111,12 @@ public class CoreOpRegistrationTest {
       // Control
       "exit(I)V",
     };
+    ConcurrentHashMap<String, Object> table = opTable();
     for (String op : allExpected) {
-      assertTrue(BTraceBootstrap.OP_TABLE.containsKey(op), "Missing: " + op);
+      assertTrue(table.containsKey(op), "Missing: " + op);
     }
 
-    // Ensure no duplicate registration: second call wraps IllegalStateException in RuntimeException
-    RuntimeException ex = assertThrows(RuntimeException.class, Main::registerCoreOps);
-    assertTrue(
-        ex instanceof IllegalStateException || ex.getCause() instanceof IllegalStateException,
-        "Expected IllegalStateException on duplicate registration, got: " + ex);
+    // Duplicate registration is idempotent — second call must not throw
+    assertDoesNotThrow(Main::registerCoreOps);
   }
 }

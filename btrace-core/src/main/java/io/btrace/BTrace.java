@@ -48,7 +48,16 @@ public final class BTrace {
   // --- Strings ---
 
   public static String str(Object o) {
-    return o == null ? "null" : o.toString();
+    if (o == null) return "null";
+    if (o instanceof String) return (String) o;
+    if (o.getClass().getClassLoader() == null) {
+      try {
+        return o.toString();
+      } catch (NullPointerException e) {
+        return "null";
+      }
+    }
+    return o.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(o));
   }
 
   public static String str(boolean b) {

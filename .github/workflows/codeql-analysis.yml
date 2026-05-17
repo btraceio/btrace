@@ -50,6 +50,12 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
+    - name: Set up Java 24
+      uses: actions/setup-java@v5
+      with:
+        java-version: 24
+        distribution: temurin
+
     - name: Build BTrace
       run: |
         ./gradlew -x test build
