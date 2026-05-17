@@ -54,11 +54,11 @@ public final class BTraceBootstrap {
   }
 
   /**
-   * Register a core op. Called at agent startup before any probe fires. Re-registration of the
-   * same key is a no-op — the first registration wins. This is intentional: {@link
+   * Register a core op. Called at agent startup before any probe fires. Re-registration of the same
+   * key is a no-op — the first registration wins. This is intentional: {@link
    * MethodHandles.Lookup#findStatic} creates a new {@link MethodHandle} wrapper on every call, so
-   * identity comparison cannot distinguish "same method, called twice" from "different method".
-   * Key uniqueness (name + descriptor) is the only meaningful guard against duplicate ops.
+   * identity comparison cannot distinguish "same method, called twice" from "different method". Key
+   * uniqueness (name + descriptor) is the only meaningful guard against duplicate ops.
    */
   public static void registerCoreOp(String name, MethodType type, MethodHandle impl) {
     OP_TABLE.putIfAbsent(name + type.toMethodDescriptorString(), impl);
