@@ -66,7 +66,9 @@ class HiddenClassDefineRegressionTest {
     Class<?> defined = (Class<?>) lookupClassMtd.invoke(hiddenLookup);
 
     assertNotNull(defined, "defineHiddenClass returned null");
-    assertTrue(defined.isHidden(), "expected a hidden class");
+    // isHidden() is Java 15+ API; use reflection so this file compiles on Java 11
+    Method isHiddenMtd = Class.class.getMethod("isHidden");
+    assertTrue((Boolean) isHiddenMtd.invoke(defined), "expected a hidden class");
     assertTrue(
         defined.getName().startsWith(internalName.replace('/', '.')),
         "hidden class name should start with declared name: " + defined.getName());
