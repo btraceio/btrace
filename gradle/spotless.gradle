@@ -2,7 +2,8 @@ apply plugin: 'com.diffplug.spotless'
 
 spotless {
     java {
-        target 'src/*/java/**/*.java', 'src/main/java24/**/*.java'
+        target 'src/*/java/**/*.java'
+        targetExclude 'src/main/java24/**/*.java'
         // note: you can use an empty string for all the imports you didn't specify explicitly, and '\\#` prefix for static imports
         importOrder('java', 'javax', 'io.btrace', '', '\\#io.btrace', '\\#')
 
