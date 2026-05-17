@@ -19,6 +19,7 @@ package io.btrace.agent;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.btrace.runtime.BTraceBootstrap;
+import java.lang.reflect.Field;
 import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.*;
 
@@ -26,7 +27,7 @@ public class CoreOpRegistrationTest {
 
   @SuppressWarnings("unchecked")
   private static ConcurrentHashMap<String, Object> opTable() throws Exception {
-    var field = BTraceBootstrap.class.getDeclaredField("OP_TABLE");
+    Field field = BTraceBootstrap.class.getDeclaredField("OP_TABLE");
     field.setAccessible(true);
     return (ConcurrentHashMap<String, Object>) field.get(null);
   }
@@ -56,7 +57,7 @@ public class CoreOpRegistrationTest {
       "identity(Ljava/lang/Object;)I",
       "exit(I)V",
     };
-    var table = opTable();
+    ConcurrentHashMap<String, Object> table = opTable();
     for (String op : expected) {
       assertTrue(table.containsKey(op), "Missing: " + op);
     }
@@ -110,7 +111,7 @@ public class CoreOpRegistrationTest {
       // Control
       "exit(I)V",
     };
-    var table = opTable();
+    ConcurrentHashMap<String, Object> table = opTable();
     for (String op : allExpected) {
       assertTrue(table.containsKey(op), "Missing: " + op);
     }
