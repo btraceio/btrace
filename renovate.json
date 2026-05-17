@@ -10,7 +10,7 @@
   "packageRules": [
     {
       "matchManagers": ["github-actions"],
-      "additionalLabels": ["github-actions"]
+      "addLabels": ["github-actions"]
     },
     {
       "matchUpdateTypes": ["minor", "patch"],
