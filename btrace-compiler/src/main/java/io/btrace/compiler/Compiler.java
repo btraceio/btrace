@@ -23,9 +23,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -209,26 +209,37 @@ public class Compiler {
 
     // prepare the compilation unit
     List<JavaFileObject> compUnits = new ArrayList<>(1);
-    compUnits.add(MemoryJavaFileManager.makeStringSource(fileName, injectDslImport(source), includeDirs));
+    compUnits.add(
+        MemoryJavaFileManager.makeStringSource(fileName, injectDslImport(source), includeDirs));
     return compile(manager, compUnits, err, sourcePath, classPath);
   }
 
   private static final String DSL_IMPORT = "import static io.btrace.BTrace.*;\n";
+  private static final String ANNOTATIONS_IMPORT = "import io.btrace.core.annotations.*;\n";
 
   private static String injectDslImport(String source) {
-    if (source.contains("import static io.btrace.BTrace")) return source;
-    if (source.contains("import static io.btrace.core.BTraceUtils")) return source;
+    boolean hasDsl =
+        source.contains("import static io.btrace.BTrace")
+            || source.contains("import static io.btrace.core.BTraceUtils");
+    boolean hasAnnotations = source.contains("import io.btrace.core.annotations");
+    if (hasDsl && hasAnnotations) return source;
+
     String[] lines = source.split("\n", -1);
     StringBuilder sb = new StringBuilder();
     boolean injected = false;
     for (String line : lines) {
       sb.append(line).append("\n");
       if (!injected && line.trim().startsWith("package ") && line.contains(";")) {
-        sb.append(DSL_IMPORT);
+        if (!hasDsl) sb.append(DSL_IMPORT);
+        if (!hasAnnotations) sb.append(ANNOTATIONS_IMPORT);
         injected = true;
       }
     }
-    return injected ? sb.toString() : DSL_IMPORT + source;
+    if (!injected) {
+      String prefix = (!hasDsl ? DSL_IMPORT : "") + (!hasAnnotations ? ANNOTATIONS_IMPORT : "");
+      return prefix + source;
+    }
+    return sb.toString();
   }
 
   public Map<String, byte[]> compile(File file, Writer err, String sourcePath, String classPath) {
@@ -244,7 +255,8 @@ public class Compiler {
       for (File file : files) {
         String source = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
         preprocessedCompUnits.add(
-            MemoryJavaFileManager.makeStringSource(file.getName(), injectDslImport(source), includeDirs));
+            MemoryJavaFileManager.makeStringSource(
+                file.getName(), injectDslImport(source), includeDirs));
       }
     } catch (IOException ioExp) {
       throw new RuntimeException(ioExp);

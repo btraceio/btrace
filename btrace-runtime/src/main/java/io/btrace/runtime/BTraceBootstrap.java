@@ -30,16 +30,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class BTraceBootstrap {
 
   // key: opName + type.toMethodDescriptorString()  e.g. "print(Ljava/lang/String;)V"
-  public static final ConcurrentHashMap<String, MethodHandle> OP_TABLE = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, MethodHandle> OP_TABLE = new ConcurrentHashMap<>();
 
   private BTraceBootstrap() {}
+
+  /** Returns the registered handle for a core op, or {@code null} if not registered. */
+  public static MethodHandle lookupCoreOp(String name, MethodType type) {
+    return OP_TABLE.get(name + type.toMethodDescriptorString());
+  }
 
   /**
    * Called by JVM for every INVOKEDYNAMIC targeting this bootstrap. Returns a ConstantCallSite —
    * the JIT folds it after warmup.
    */
-  public static CallSite bootstrap(MethodHandles.Lookup lookup, String name, MethodType type) {
-    MethodHandle mh = OP_TABLE.get(name + type.toMethodDescriptorString());
+  public static CallSite bootstrap(
+      @SuppressWarnings("unused") MethodHandles.Lookup lookup, String name, MethodType type) {
+    MethodHandle mh = lookupCoreOp(name, type);
     if (mh == null) {
       throw new BootstrapMethodError(
           "Unknown BTrace core op: " + name + type.toMethodDescriptorString());
@@ -48,13 +54,13 @@ public final class BTraceBootstrap {
   }
 
   /**
-   * Register a core op. Called at agent startup before any probe fires. Core op names+types cannot
-   * be registered twice.
+   * Register a core op. Called at agent startup before any probe fires. Re-registration of the same
+   * key is a no-op — the first registration wins. This is intentional: {@link
+   * MethodHandles.Lookup#findStatic} creates a new {@link MethodHandle} wrapper on every call, so
+   * identity comparison cannot distinguish "same method, called twice" from "different method". Key
+   * uniqueness (name + descriptor) is the only meaningful guard against duplicate ops.
    */
   public static void registerCoreOp(String name, MethodType type, MethodHandle impl) {
-    String key = name + type.toMethodDescriptorString();
-    if (OP_TABLE.putIfAbsent(key, impl) != null) {
-      throw new IllegalStateException("Core op already registered: " + key);
-    }
+    OP_TABLE.putIfAbsent(name + type.toMethodDescriptorString(), impl);
   }
 }

@@ -57,7 +57,7 @@ public class BTraceBootstrapTest {
   }
 
   @Test
-  void registerCoreOp_duplicate_throwsIllegalStateException() throws Exception {
+  void registerCoreOp_duplicate_isNoOp() throws Exception {
     MethodType type = MethodType.methodType(void.class, String.class);
     var mh =
         MethodHandles.lookup()
@@ -66,8 +66,8 @@ public class BTraceBootstrapTest {
                 "noopPrint",
                 MethodType.methodType(void.class, String.class));
     BTraceBootstrap.registerCoreOp("print", type, mh);
-    assertThrows(
-        IllegalStateException.class, () -> BTraceBootstrap.registerCoreOp("print", type, mh));
+    // idempotent: duplicate registration must not throw (supports repeated agent attach)
+    assertDoesNotThrow(() -> BTraceBootstrap.registerCoreOp("print", type, mh));
   }
 
   @Test

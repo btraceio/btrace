@@ -18,7 +18,7 @@
 
 import io.btrace.core.annotations.BTrace;
 
-import static io.btrace.BTrace.*;
+import static io.btrace.core.BTraceUtils.*;
 
 /*
  * A simple sample that prints system properties, flags and exits.

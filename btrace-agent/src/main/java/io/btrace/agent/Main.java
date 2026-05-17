@@ -16,6 +16,56 @@
  */
 package io.btrace.agent;
 
+import static io.btrace.core.Args.ALLOW_EXTENSIONS;
+import static io.btrace.core.Args.ALLOW_PRIVILEGED;
+import static io.btrace.core.Args.BOOT_CLASS_PATH;
+import static io.btrace.core.Args.CMD_QUEUE_LIMIT;
+import static io.btrace.core.Args.CONFIG;
+import static io.btrace.core.Args.DEBUG;
+import static io.btrace.core.Args.DENY;
+import static io.btrace.core.Args.DENY_EXTENSIONS;
+import static io.btrace.core.Args.DUMP_CLASSES;
+import static io.btrace.core.Args.DUMP_DIR;
+import static io.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
+import static io.btrace.core.Args.FILE_ROLL_MILLISECONDS;
+import static io.btrace.core.Args.GRANT;
+import static io.btrace.core.Args.GRANT_ALL;
+import static io.btrace.core.Args.HELP;
+import static io.btrace.core.Args.LIBS;
+import static io.btrace.core.Args.NO_SERVER;
+import static io.btrace.core.Args.OUTPUT;
+import static io.btrace.core.Args.PORT;
+import static io.btrace.core.Args.PROBES;
+import static io.btrace.core.Args.PROBE_DESC_PATH;
+import static io.btrace.core.Args.SCRIPT;
+import static io.btrace.core.Args.SCRIPT_DIR;
+import static io.btrace.core.Args.SCRIPT_OUTPUT_DIR;
+import static io.btrace.core.Args.SCRIPT_OUTPUT_FILE;
+import static io.btrace.core.Args.STARTUP_RETRANSFORM;
+import static io.btrace.core.Args.STATSD;
+import static io.btrace.core.Args.STDOUT;
+import static io.btrace.core.Args.SYSTEM_CLASS_PATH;
+import static io.btrace.core.Args.TRACK_RETRANSFORMS;
+import static io.btrace.core.Args.TRUSTED;
+
+import io.btrace.core.ArgsMap;
+import io.btrace.core.BTraceRuntime;
+import io.btrace.core.DebugSupport;
+import io.btrace.core.Messages;
+import io.btrace.core.SharedSettings;
+import io.btrace.core.comm.ErrorCommand;
+import io.btrace.core.comm.StatusCommand;
+import io.btrace.core.comm.WireIO;
+import io.btrace.core.extensions.ExtensionConfigurator;
+import io.btrace.core.extensions.ProbeConfiguration;
+import io.btrace.extension.ExtensionDescriptorDTO;
+import io.btrace.extension.ExtensionLoader;
+import io.btrace.extension.impl.ExtensionBridgeImpl;
+import io.btrace.instr.BTraceProbeFactory;
+import io.btrace.instr.BTraceTransformer;
+import io.btrace.instr.Constants;
+import io.btrace.runtime.BTraceBootstrap;
+import io.btrace.runtime.BTraceRuntimes;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -52,60 +102,8 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
-
-import io.btrace.core.ArgsMap;
-import io.btrace.core.BTraceRuntime;
-import io.btrace.core.DebugSupport;
-import io.btrace.core.Messages;
-import io.btrace.core.SharedSettings;
-import io.btrace.core.comm.ErrorCommand;
-import io.btrace.core.comm.StatusCommand;
-import io.btrace.core.comm.WireIO;
-import io.btrace.core.extensions.ExtensionConfigurator;
-import io.btrace.core.extensions.ProbeConfiguration;
-import io.btrace.extension.ExtensionDescriptorDTO;
-import io.btrace.extension.ExtensionLoader;
-import io.btrace.extension.impl.ExtensionBridgeImpl;
-import io.btrace.instr.BTraceProbeFactory;
-import io.btrace.instr.BTraceTransformer;
-import io.btrace.instr.Constants;
-import io.btrace.runtime.BTraceBootstrap;
-import io.btrace.runtime.BTraceRuntimes;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static io.btrace.core.Args.ALLOW_EXTENSIONS;
-import static io.btrace.core.Args.ALLOW_PRIVILEGED;
-import static io.btrace.core.Args.BOOT_CLASS_PATH;
-import static io.btrace.core.Args.CMD_QUEUE_LIMIT;
-import static io.btrace.core.Args.CONFIG;
-import static io.btrace.core.Args.DEBUG;
-import static io.btrace.core.Args.DENY;
-import static io.btrace.core.Args.DENY_EXTENSIONS;
-import static io.btrace.core.Args.DUMP_CLASSES;
-import static io.btrace.core.Args.DUMP_DIR;
-import static io.btrace.core.Args.FILE_ROLL_MAX_ROLLS;
-import static io.btrace.core.Args.FILE_ROLL_MILLISECONDS;
-import static io.btrace.core.Args.GRANT;
-import static io.btrace.core.Args.GRANT_ALL;
-import static io.btrace.core.Args.HELP;
-import static io.btrace.core.Args.LIBS;
-import static io.btrace.core.Args.NO_SERVER;
-import static io.btrace.core.Args.OUTPUT;
-import static io.btrace.core.Args.PORT;
-import static io.btrace.core.Args.PROBES;
-import static io.btrace.core.Args.PROBE_DESC_PATH;
-import static io.btrace.core.Args.SCRIPT;
-import static io.btrace.core.Args.SCRIPT_DIR;
-import static io.btrace.core.Args.SCRIPT_OUTPUT_DIR;
-import static io.btrace.core.Args.SCRIPT_OUTPUT_FILE;
-import static io.btrace.core.Args.STARTUP_RETRANSFORM;
-import static io.btrace.core.Args.STATSD;
-import static io.btrace.core.Args.STDOUT;
-import static io.btrace.core.Args.SYSTEM_CLASS_PATH;
-import static io.btrace.core.Args.TRACK_RETRANSFORMS;
-import static io.btrace.core.Args.TRUSTED;
 
 /**
  * This is the main class for BTrace java.lang.instrument agent.
@@ -147,11 +145,20 @@ public final class Main {
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
   public static void premain(String args, Instrumentation inst) {
-    main(args, inst);
+    startAgent(args, inst);
   }
 
   public static void agentmain(String args, Instrumentation inst) {
-    main(args, inst);
+    startAgent(args, inst);
+  }
+
+  private static void startAgent(String args, Instrumentation inst) {
+    try {
+      main(args, inst);
+    } catch (Exception e) {
+      System.err.println("BTrace agent initialization failed: " + e.getMessage());
+      throw new RuntimeException("BTrace agent initialization failed", e);
+    }
   }
 
   private static synchronized void main(String args, Instrumentation inst) {
@@ -718,7 +725,7 @@ public final class Main {
     }
   }
 
-  private static void parseArgs() {
+  private static void parseArgs() throws ClassNotFoundException {
     String p = argMap.get(HELP);
     if (p != null) {
       usage();
@@ -937,7 +944,7 @@ public final class Main {
     }
   }
 
-  private static void processClasspaths(String libs) {
+  private static void processClasspaths(String libs) throws ClassNotFoundException {
     // Experimental: prefer manifest-driven libs when enabled
     boolean useManifestLibs = Boolean.getBoolean("btrace.feature.manifestLibs");
     boolean hasLegacyLibs = libs != null && !libs.isEmpty();
@@ -961,29 +968,17 @@ public final class Main {
     // Try to find JAR via Loader.class (unmasked bootstrap class)
     // Main.class won't work because it's loaded from .classdata
     String bootPath = null;
-    try {
-      Class<?> loaderClass = Class.forName("io.btrace.boot.Loader");
-      URL loaderResource = loaderClass.getResource("Loader.class");
-      if (loaderResource != null) {
-        bootPath = loaderResource.toString();
-        if (bootPath.startsWith("jar:file:")) {
-          // Extract JAR path from
-          // jar:file:/path/to/btrace.jar!/org/openjdk/btrace/boot/Loader.class
-          bootPath = bootPath.substring("jar:file:".length());
-          int idx = bootPath.indexOf("!");
-          if (idx > -1) {
-            bootPath = bootPath.substring(0, idx);
-          }
-        }
-      }
-    } catch (ClassNotFoundException e) {
-      // Fall back to Main.class if Loader not found (shouldn't happen)
-      URL agentJar = Main.class.getResource("Main.class");
-      if (agentJar != null) {
-        bootPath = agentJar.toString().replace("jar:file:", "");
-        int idx = bootPath.indexOf("btrace-agent.jar");
+    Class<?> loaderClass = Class.forName("io.btrace.boot.Loader");
+    URL loaderResource = loaderClass.getResource("Loader.class");
+    if (loaderResource != null) {
+      bootPath = loaderResource.toString();
+      if (bootPath.startsWith("jar:file:")) {
+        // Extract JAR path from
+        // jar:file:/path/to/btrace.jar!/org/openjdk/btrace/boot/Loader.class
+        bootPath = bootPath.substring("jar:file:".length());
+        int idx = bootPath.indexOf("!");
         if (idx > -1) {
-          bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
+          bootPath = bootPath.substring(0, idx);
         }
       }
     }
@@ -998,11 +993,11 @@ public final class Main {
         bootClassPath = bootPath + File.pathSeparator + bootClassPath;
       }
     }
-    log.debug("Bootstrap ClassPath: {}", bootClassPath);
 
     if (bootClassPath == null || bootClassPath.isEmpty()) {
       log.debug("No boot classpath configured; skipping bootstrap jar setup");
     } else {
+      log.debug("Bootstrap ClassPath: {}", bootClassPath);
       StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
       while (tokenizer.hasMoreTokens()) {
         String path = tokenizer.nextToken();
