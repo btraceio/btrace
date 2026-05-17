@@ -31,6 +31,7 @@ import java.lang.constant.DirectMethodHandleDesc;
 import java.lang.constant.DynamicCallSiteDesc;
 import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
+import java.lang.reflect.AccessFlag;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,9 +48,10 @@ import org.slf4j.LoggerFactory;
  * Instrumentation backend for class file versions that ASM cannot parse (&gt; 69, i.e. Java 26+).
  * Uses the JDK ClassFile API ({@code java.lang.classfile.*}), available since JDK 24.
  *
- * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}. Handlers with unsupported
- * special parameters ({@code @Self}, {@code @Return}, {@code @TargetInstance}, {@code @Duration})
- * or type-constrained method matching are skipped with a debug-level log; the remaining handlers
+ * <p>Supported probe kinds: {@link Kind#ENTRY}, {@link Kind#RETURN}. Handlers with the
+ * {@code @Self} parameter on instance methods are supported. Handlers with other unsupported
+ * special parameters ({@code @Return}, {@code @TargetInstance}, {@code @Duration}) or
+ * type-constrained method matching are skipped with a debug-level log; the remaining handlers
  * are applied.
  */
 public final class ClassFileApiBackend implements InstrumentationBackend {
@@ -182,12 +184,13 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     return (classBuilder, classElement) -> {
       if (classElement instanceof MethodModel mm) {
         String methodName = mm.methodName().stringValue();
+        boolean isStatic = mm.flags().has(AccessFlag.STATIC);
         List<ProbeHandler> mEntry = filterForMethod(entryHandlers, methodName);
         List<ProbeHandler> mReturn = filterForMethod(returnHandlers, methodName);
         if (!mEntry.isEmpty() || !mReturn.isEmpty()) {
           anyMatch[0] = true;
           classBuilder.transformMethod(
-              mm, buildMethodTransform(javaClassName, methodName, mEntry, mReturn));
+              mm, buildMethodTransform(javaClassName, methodName, isStatic, mEntry, mReturn));
         } else {
           classBuilder.with(classElement);
         }
@@ -200,12 +203,13 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   private static MethodTransform buildMethodTransform(
       String javaClassName,
       String methodName,
+      boolean isStatic,
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers) {
     return (methodBuilder, methodElement) -> {
       if (methodElement instanceof CodeModel cm) {
         methodBuilder.transformCode(
-            cm, buildCodeTransform(javaClassName, methodName, entryHandlers, returnHandlers));
+            cm, buildCodeTransform(javaClassName, methodName, isStatic, entryHandlers, returnHandlers));
       } else {
         methodBuilder.with(methodElement);
       }
@@ -215,6 +219,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
   private static CodeTransform buildCodeTransform(
       String javaClassName,
       String methodName,
+      boolean isStatic,
       List<ProbeHandler> entryHandlers,
       List<ProbeHandler> returnHandlers) {
     boolean[] entryInjected = {false};
@@ -222,12 +227,12 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       if (!entryInjected[0] && !(codeElement instanceof PseudoInstruction)) {
         entryInjected[0] = true;
         for (ProbeHandler ph : entryHandlers) {
-          emitProbeCall(codeBuilder, ph, javaClassName, methodName);
+          emitProbeCall(codeBuilder, ph, javaClassName, methodName, isStatic);
         }
       }
       if (!returnHandlers.isEmpty() && codeElement instanceof ReturnInstruction) {
         for (ProbeHandler ph : returnHandlers) {
-          emitProbeCall(codeBuilder, ph, javaClassName, methodName);
+          emitProbeCall(codeBuilder, ph, javaClassName, methodName, isStatic);
         }
       }
       codeBuilder.with(codeElement);
@@ -264,10 +269,10 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       java.lang.classfile.CodeBuilder cb,
       ProbeHandler ph,
       String javaClassName,
-      String methodName) {
+      String methodName,
+      boolean isStatic) {
     OnMethod om = ph.om;
-    if (om.getSelfParameter() != -1
-        || om.getReturnParameter() != -1
+    if (om.getReturnParameter() != -1
         || om.getTargetInstanceParameter() != -1
         || om.getDurationParameter() != -1
         || om.getTargetMethodOrFieldParameter() != -1) {
@@ -283,7 +288,9 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     Type[] argTypes = Type.getArgumentTypes(rawDesc);
 
     for (int i = 0; i < argTypes.length; i++) {
-      if (i != om.getClassNameParameter() && i != om.getMethodParameter()) {
+      if (i != om.getClassNameParameter()
+          && i != om.getMethodParameter()
+          && i != om.getSelfParameter()) {
         log.debug(
             "ClassFileApiBackend: skipping handler {}.{} — unsupported arg at index {}",
             ph.probe.getClassName(),
@@ -294,7 +301,13 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
     }
 
     for (int i = 0; i < argTypes.length; i++) {
-      if (i == om.getClassNameParameter()) {
+      if (i == om.getSelfParameter()) {
+        if (isStatic) {
+          cb.aconst_null();
+        } else {
+          cb.aload(0);
+        }
+      } else if (i == om.getClassNameParameter()) {
         cb.ldc(javaClassName);
       } else if (i == om.getMethodParameter()) {
         cb.ldc(methodName);
