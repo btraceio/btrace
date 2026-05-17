@@ -16,7 +16,6 @@
  */
 package io.btrace.core;
 
-import io.btrace.BTrace;
 import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.ProbeClassName;
 import io.btrace.core.annotations.ProbeMethodName;
@@ -3272,12 +3271,14 @@ public class BTraceUtils {
      * @see #concat(String, String)
      */
     public static String strcat(String str1, String str2) {
-      return BTrace.concat(str1, str2);
+      if (str1 == null) return str2 != null ? str2 : "";
+      return str1.concat(str2 != null ? str2 : "");
     }
 
     /** Concatenates the specified strings together. */
     public static String concat(String str1, String str2) {
-      return BTrace.concat(str1, str2);
+      if (str1 == null) return str2 != null ? str2 : "";
+      return str1.concat(str2 != null ? str2 : "");
     }
 
     /**

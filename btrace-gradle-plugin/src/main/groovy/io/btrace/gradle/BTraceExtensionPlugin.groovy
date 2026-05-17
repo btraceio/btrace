@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import io.btrace.registry.ExtensionRegistryDocument
 import io.btrace.registry.ExtensionRegistryEntry
 import io.btrace.registry.MavenCoordinates
+import java.io.ByteArrayOutputStream
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.GradleException
@@ -1509,15 +1510,39 @@ class BTraceExtensionPlugin implements Plugin<Project> {
                     return
                 }
                 if (registry.prMode == 'auto') {
+                    def prTitle = "Update registry entry for ${entry.getId()} ${entry.getMaven().getVersion()}"
+                    def prBody = "Automated registry update for ${entry.getMaven().gav()}"
+                    if (registry.pushRepoGitUrl) {
+                        def pushRemote = 'origin'
+                        if (registry.pushRepoGitUrl != registry.registryRepoGitUrl) {
+                            pushRemote = 'registry-push'
+                            ensureGitRemote(project, registryDir, pushRemote, registry.pushRepoGitUrl)
+                        }
+                        project.exec {
+                            commandLine 'git', '-C', registryDir.absolutePath, 'push', '-u', pushRemote, branchName
+                        }
+                        project.exec {
+                            commandLine registry.githubCli, 'pr', 'create',
+                                '--repo', registry.registryRepoSlug,
+                                '--title', prTitle,
+                                '--body', prBody,
+                                '--head', branchName
+                            workingDir registryDir
+                        }
+                        return
+                    }
+                    def forkRemote = 'registry-fork'
+                    ensureForkRemote(project, registryDir, registry.githubCli, registry.registryRepoSlug, forkRemote)
+                    def forkOwner = resolveGithubLogin(project, registryDir, registry.githubCli)
                     project.exec {
-                        commandLine 'git', '-C', registryDir.absolutePath, 'push', '-u', 'origin', branchName
+                        commandLine 'git', '-C', registryDir.absolutePath, 'push', '-u', forkRemote, branchName
                     }
                     project.exec {
                         commandLine registry.githubCli, 'pr', 'create',
                             '--repo', registry.registryRepoSlug,
-                            '--title', "Update registry entry for ${entry.getId()} ${entry.getMaven().getVersion()}",
-                            '--body', "Automated registry update for ${entry.getMaven().gav()}",
-                            '--head', branchName
+                            '--title', prTitle,
+                            '--body', prBody,
+                            '--head', "${forkOwner}:${branchName}"
                         workingDir registryDir
                     }
                 }
@@ -1532,6 +1557,53 @@ class BTraceExtensionPlugin implements Plugin<Project> {
             // Fail build on validation errors via check lifecycle
             project.tasks.matching { it.name == 'check' }.configureEach { it.dependsOn validateServiceApis }
         }
+    }
+
+    private static void ensureGitRemote(Project project, File repoDir, String remoteName, String remoteUrl) {
+        def hasRemote = false
+        try {
+            project.exec {
+                commandLine 'git', '-C', repoDir.absolutePath, 'remote', 'get-url', remoteName
+            }
+            hasRemote = true
+        } catch (Throwable ignore) {
+        }
+        project.exec {
+            commandLine 'git', '-C', repoDir.absolutePath,
+                'remote',
+                hasRemote ? 'set-url' : 'add',
+                remoteName,
+                remoteUrl
+        }
+    }
+
+    private static void ensureForkRemote(Project project, File repoDir, String ghCli, String repoSlug, String remoteName) {
+        def hasRemote = false
+        try {
+            project.exec {
+                commandLine 'git', '-C', repoDir.absolutePath, 'remote', 'get-url', remoteName
+            }
+            hasRemote = true
+        } catch (Throwable ignore) {
+        }
+        if (hasRemote) {
+            return
+        }
+        project.exec {
+            commandLine ghCli, 'repo', 'fork', repoSlug,
+                '--remote', '--remote-name', remoteName, '--default-branch-only'
+            workingDir repoDir
+        }
+    }
+
+    private static String resolveGithubLogin(Project project, File repoDir, String ghCli) {
+        def out = new ByteArrayOutputStream()
+        project.exec {
+            commandLine ghCli, 'api', 'user', '--jq', '.login'
+            workingDir repoDir
+            standardOutput = out
+        }
+        return out.toString('UTF-8').trim()
     }
 }
 
@@ -1573,6 +1645,7 @@ class BTraceRegistryConfig {
     String owner = 'btraceio'
     String prMode = System.getenv('BTRACE_EXTENSIONS_REGISTRY_PR_MODE') ?: 'auto'
     String branchPrefix = System.getenv('BTRACE_EXTENSIONS_REGISTRY_BRANCH_PREFIX') ?: 'btrace-registry'
+    String pushRepoGitUrl = System.getenv('BTRACE_EXTENSIONS_REGISTRY_PUSH_REPO_GIT_URL')
     boolean verifyPublishedCoordinates = true
     Object registryWorktreeDir
     String githubCli = System.getenv('BTRACE_EXTENSIONS_REGISTRY_GH') ?: 'gh'

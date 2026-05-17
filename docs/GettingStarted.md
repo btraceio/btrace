@@ -495,6 +495,7 @@ BTrace integrates with Java Flight Recorder (JFR) to create high-performance eve
 ```java
 import io.btrace.core.annotations.*;
 import io.btrace.core.jfr.JfrEvent;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MyJfrTrace {

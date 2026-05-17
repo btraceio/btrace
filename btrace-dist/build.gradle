@@ -15,7 +15,7 @@ repositories {
     mavenCentral()
 }
 
-def distBase = "${project.buildDir}/resources/main"
+def distBase = layout.buildDirectory.dir("resources/main").get().asFile.absolutePath
 def distTarget = "${distBase}/v${project.version}"
 def libsDir = new File("${distTarget}/libs")
 
@@ -143,7 +143,7 @@ task allClassesShadow(type: ShadowJar) {
     archiveBaseName.set('btrace-all-temp')
     archiveVersion.set('')
     archiveClassifier.set('shadow')
-    destinationDirectory = file("${project.buildDir}/tmp")
+    destinationDirectory = layout.buildDirectory.dir("tmp")
 
     configurations = [project.configurations.artifact]
 
@@ -165,13 +165,16 @@ task allClassesShadow(type: ShadowJar) {
 // Bootstrap classes are stored as .class, non-bootstrap as .classdata
 // Uses existing shadow JARs to get properly relocated classes
 
-def maskedJarTmpDir = new File(project.buildDir, "masked-jar-tmp")
+def maskedJarTmpDir = layout.buildDirectory.dir("masked-jar-tmp").get().asFile
 
 // Task to prepare agent classes with .classdata extension
 task prepareAgentClassdata(type: Copy) {
     group 'Build'
     description 'Prepare agent classes with .classdata extension'
     dependsOn allClassesShadow, processResources
+
+    inputs.files allClassesShadow.archiveFile
+    outputs.dir "${maskedJarTmpDir}/agent"
 
     into "${maskedJarTmpDir}/agent"
 
@@ -209,6 +212,9 @@ task prepareClientClassdata(type: Copy) {
     description 'Prepare client classes with .classdata extension'
     dependsOn allClassesShadow, processResources
 
+    inputs.files allClassesShadow.archiveFile
+    outputs.dir "${maskedJarTmpDir}/client"
+
     into "${maskedJarTmpDir}/client"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
@@ -244,6 +250,9 @@ task prepareSharedClassdata(type: Copy) {
     group 'Build'
     description 'Prepare shared classes with .classdata extension (for both agent and client)'
     dependsOn allClassesShadow, processResources
+
+    inputs.files allClassesShadow.archiveFile
+    outputs.dir "${maskedJarTmpDir}/shared"
 
     into "${maskedJarTmpDir}/shared"
 
@@ -552,7 +561,7 @@ task buildZip(type: Zip) {
     archiveBaseName.set('btrace')
     archiveVersion.set("v${project.version}")
     archiveClassifier.set("bin")
-    destinationDirectory = new File(project.buildDir, "distributions")
+    destinationDirectory = layout.buildDirectory.dir("distributions")
 }
 
 task buildSdkmanZip(type: Zip) {
@@ -562,7 +571,7 @@ task buildSdkmanZip(type: Zip) {
     archiveBaseName.set('btrace')
     archiveVersion.set("v${project.version}")
     archiveClassifier.set("sdkman-bin")
-    destinationDirectory = new File(project.buildDir, "distributions")
+    destinationDirectory = layout.buildDirectory.dir("distributions")
 }
 
 task buildTgz(type: Tar) {
@@ -574,7 +583,7 @@ task buildTgz(type: Tar) {
     archiveBaseName.set('btrace')
     archiveVersion.set("v${project.version}")
     archiveClassifier.set("bin")
-    destinationDirectory = new File(project.buildDir, "distributions")
+    destinationDirectory = layout.buildDirectory.dir("distributions")
     archiveExtension.set('tar.gz')
     compression = Compression.GZIP
 }
@@ -628,19 +637,19 @@ task buildDockerContext(type: Copy, dependsOn: [btraceJar, copyDtraceLib, proces
     description 'Prepare Docker build context with BTrace distribution'
 
     from "${distTarget}"
-    into "${buildDir}/docker-context/btrace"
+    into layout.buildDirectory.dir("docker-context/btrace")
     filePermissions { unix(0644) }
 
     doLast {
         // Copy entrypoint script
         copy {
             from "${projectDir}/../docker/docker-entrypoint.sh"
-            into "${buildDir}/docker-context"
+            into layout.buildDirectory.dir("docker-context")
         }
         // Copy .dockerignore to build context so Docker can use it
         copy {
             from "${projectDir}/../docker/.dockerignore"
-            into "${buildDir}/docker-context"
+            into layout.buildDirectory.dir("docker-context")
         }
     }
 }
@@ -664,7 +673,7 @@ task buildDockerImage(type: Exec, dependsOn: buildDockerContext) {
         '-t', "btrace/btrace:${project.version}",
         '-t', "btrace/btrace:latest",
         '-f', 'Dockerfile',
-        "${buildDir}/docker-context"
+        layout.buildDirectory.dir("docker-context").get().asFile.absolutePath
     ]
 
     if (project.hasProperty('dockerBuildx')) {
@@ -694,7 +703,7 @@ task buildDockerImageAlpine(type: Exec, dependsOn: buildDockerContext) {
         '-t', "btrace/btrace:${project.version}-alpine",
         '-t', "btrace/btrace:latest-alpine",
         '-f', 'Dockerfile.alpine',
-        "${buildDir}/docker-context"
+        layout.buildDirectory.dir("docker-context").get().asFile.absolutePath
     ]
 
     if (project.hasProperty('dockerBuildx')) {
@@ -724,7 +733,7 @@ task buildDockerImageDistroless(type: Exec, dependsOn: buildDockerContext) {
         '-t', "btrace/btrace:${project.version}-distroless",
         '-t', "btrace/btrace:latest-distroless",
         '-f', 'Dockerfile.distroless',
-        file("${buildDir}/docker-context").absolutePath
+        layout.buildDirectory.dir("docker-context").get().asFile.absolutePath
     ]
 
     if (project.hasProperty('dockerBuildx')) {
@@ -743,7 +752,7 @@ task buildDockerImages {
 
 ['agent', 'boot', 'client'].each { name ->
     // Define a temporary directory for the sources
-    def tempDir = new File(buildDir, "tmp/${name}Sources")
+    def tempDir = layout.buildDirectory.dir("tmp/${name}Sources").get().asFile
 
     // first, we will copy the classes and make sure there are no empty directories
     tasks.create(name: "${name}CopySources", type: Copy) {

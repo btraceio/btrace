@@ -145,11 +145,20 @@ public final class Main {
   private static final Logger log = LoggerFactory.getLogger(Main.class);
 
   public static void premain(String args, Instrumentation inst) {
-    main(args, inst);
+    startAgent(args, inst);
   }
 
   public static void agentmain(String args, Instrumentation inst) {
-    main(args, inst);
+    startAgent(args, inst);
+  }
+
+  private static void startAgent(String args, Instrumentation inst) {
+    try {
+      main(args, inst);
+    } catch (Exception e) {
+      System.err.println("BTrace agent initialization failed: " + e.getMessage());
+      throw new RuntimeException("BTrace agent initialization failed", e);
+    }
   }
 
   private static synchronized void main(String args, Instrumentation inst) {
@@ -716,7 +725,7 @@ public final class Main {
     }
   }
 
-  private static void parseArgs() {
+  private static void parseArgs() throws ClassNotFoundException {
     String p = argMap.get(HELP);
     if (p != null) {
       usage();
@@ -935,7 +944,7 @@ public final class Main {
     }
   }
 
-  private static void processClasspaths(String libs) {
+  private static void processClasspaths(String libs) throws ClassNotFoundException {
     // Experimental: prefer manifest-driven libs when enabled
     boolean useManifestLibs = Boolean.getBoolean("btrace.feature.manifestLibs");
     boolean hasLegacyLibs = libs != null && !libs.isEmpty();
@@ -959,29 +968,17 @@ public final class Main {
     // Try to find JAR via Loader.class (unmasked bootstrap class)
     // Main.class won't work because it's loaded from .classdata
     String bootPath = null;
-    try {
-      Class<?> loaderClass = Class.forName("io.btrace.boot.Loader");
-      URL loaderResource = loaderClass.getResource("Loader.class");
-      if (loaderResource != null) {
-        bootPath = loaderResource.toString();
-        if (bootPath.startsWith("jar:file:")) {
-          // Extract JAR path from
-          // jar:file:/path/to/btrace.jar!/org/openjdk/btrace/boot/Loader.class
-          bootPath = bootPath.substring("jar:file:".length());
-          int idx = bootPath.indexOf("!");
-          if (idx > -1) {
-            bootPath = bootPath.substring(0, idx);
-          }
-        }
-      }
-    } catch (ClassNotFoundException e) {
-      // Fall back to Main.class if Loader not found (shouldn't happen)
-      URL agentJar = Main.class.getResource("Main.class");
-      if (agentJar != null) {
-        bootPath = agentJar.toString().replace("jar:file:", "");
-        int idx = bootPath.indexOf("btrace-agent.jar");
+    Class<?> loaderClass = Class.forName("io.btrace.boot.Loader");
+    URL loaderResource = loaderClass.getResource("Loader.class");
+    if (loaderResource != null) {
+      bootPath = loaderResource.toString();
+      if (bootPath.startsWith("jar:file:")) {
+        // Extract JAR path from
+        // jar:file:/path/to/btrace.jar!/org/openjdk/btrace/boot/Loader.class
+        bootPath = bootPath.substring("jar:file:".length());
+        int idx = bootPath.indexOf("!");
         if (idx > -1) {
-          bootPath = bootPath.substring(0, idx) + "btrace-boot.jar";
+          bootPath = bootPath.substring(0, idx);
         }
       }
     }
@@ -996,11 +993,11 @@ public final class Main {
         bootClassPath = bootPath + File.pathSeparator + bootClassPath;
       }
     }
-    log.debug("Bootstrap ClassPath: {}", bootClassPath);
 
     if (bootClassPath == null || bootClassPath.isEmpty()) {
       log.debug("No boot classpath configured; skipping bootstrap jar setup");
     } else {
+      log.debug("Bootstrap ClassPath: {}", bootClassPath);
       StringTokenizer tokenizer = new StringTokenizer(bootClassPath, File.pathSeparator);
       while (tokenizer.hasMoreTokens()) {
         String path = tokenizer.nextToken();

@@ -119,12 +119,12 @@ Available artifacts:
 
 ### Credentials
 
-The workflow uses these GitHub secrets:
+The first-party release workflow uses these GitHub secrets:
 - `SONATYPE_USERNAME`: Central Portal user token username
 - `SONATYPE_PASSWORD`: Central Portal user token password
 - `GPG_SIGNING_KEY`: GPG private key for artifact signing
 - `GPG_SIGNING_PWD`: GPG key passphrase
-- `BTRACE_EXTENSIONS_PAT`: GitHub token with permission to push branches and open PRs against `btraceio/btrace-extensions`
+- `BTRACE_EXTENSIONS_PAT`: CI-only GitHub token used by the BTrace release job to push and open registry PRs
 
 Generate Central Portal tokens at: https://central.sonatype.com/account
 
