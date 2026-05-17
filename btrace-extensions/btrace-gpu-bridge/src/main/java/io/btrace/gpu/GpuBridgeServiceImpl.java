@@ -204,11 +204,9 @@ public final class GpuBridgeServiceImpl extends Extension implements GpuBridgeSe
     // Native calls
     if (!nativeStats.isEmpty()) {
       sb.append("--- Native Calls ---\n");
-      long totalNative = 0;
       for (Map.Entry<String, NativeCallStats> entry : nativeStats.entrySet()) {
         NativeCallStats ns = entry.getValue();
         long calls = ns.calls.get();
-        totalNative += calls;
         long avgUs = calls > 0 ? (ns.totalDurationNanos.get() / calls) / 1000 : 0;
         sb.append("  ")
             .append(entry.getKey())

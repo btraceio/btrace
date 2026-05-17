@@ -41,7 +41,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
       "command": "java",
       "args": [
         "-cp", "/path/to/btrace/lib/*",
-        "org.openjdk.btrace.mcp.BTraceMcpServer"
+        "io.btrace.mcp.BTraceMcpServer"
       ]
     }
   }
@@ -59,7 +59,7 @@ Add to your project's `.mcp.json`:
       "command": "java",
       "args": [
         "-cp", "/path/to/btrace/lib/*",
-        "org.openjdk.btrace.mcp.BTraceMcpServer"
+        "io.btrace.mcp.BTraceMcpServer"
       ]
     }
   }
@@ -75,7 +75,7 @@ Or configure globally in `~/.claude/settings.json`:
       "command": "java",
       "args": [
         "-cp", "/path/to/btrace/lib/*",
-        "org.openjdk.btrace.mcp.BTraceMcpServer"
+        "io.btrace.mcp.BTraceMcpServer"
       ]
     }
   }
@@ -93,7 +93,7 @@ If you have BTrace installed (e.g. via SDKMAN), you can reference the distributi
       "command": "java",
       "args": [
         "-cp", "$BTRACE_HOME/lib/*:$BTRACE_HOME/build/btrace-mcp-server.jar",
-        "org.openjdk.btrace.mcp.BTraceMcpServer"
+        "io.btrace.mcp.BTraceMcpServer"
       ]
     }
   }

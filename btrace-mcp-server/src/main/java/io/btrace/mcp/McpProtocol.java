@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -265,9 +266,18 @@ final class McpProtocol {
       }
       String numStr = src.substring(start, pos);
       if (isFloat) {
-        return Double.parseDouble(numStr);
+        try {
+          return Double.parseDouble(numStr);
+        } catch (NumberFormatException e) {
+          throw new IllegalArgumentException("Invalid number at " + start + ": " + numStr, e);
+        }
       }
-      long val = Long.parseLong(numStr);
+      long val;
+      try {
+        val = Long.parseLong(numStr);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("Invalid number at " + start + ": " + numStr, e);
+      }
       if (val >= Integer.MIN_VALUE && val <= Integer.MAX_VALUE) {
         return (int) val;
       }

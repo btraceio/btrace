@@ -16,6 +16,12 @@
  */
 package io.btrace.mcp;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import io.btrace.mcp.prompts.DiagnosticPrompts;
 import io.btrace.mcp.tools.DeployOnelinerHandler;
 import io.btrace.mcp.tools.DeployScriptHandler;
@@ -24,11 +30,7 @@ import io.btrace.mcp.tools.ExitProbeHandler;
 import io.btrace.mcp.tools.ListJvmsHandler;
 import io.btrace.mcp.tools.ListProbesHandler;
 import io.btrace.mcp.tools.SendEventHandler;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +88,7 @@ public final class BTraceMcpServer {
       try {
         switch (method) {
           case "initialize":
-            handleInitialize(id, params);
+            handleInitialize(id);
             break;
           case "notifications/initialized":
             // Client acknowledgement — no response needed
@@ -113,7 +115,7 @@ public final class BTraceMcpServer {
     }
   }
 
-  private void handleInitialize(Object id, Map<String, Object> params) throws IOException {
+  private void handleInitialize(Object id) throws IOException {
     Map<String, Object> serverInfo = new LinkedHashMap<>();
     serverInfo.put("name", SERVER_NAME);
     serverInfo.put("version", SERVER_VERSION);

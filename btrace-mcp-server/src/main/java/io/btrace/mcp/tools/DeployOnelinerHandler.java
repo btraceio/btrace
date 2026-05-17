@@ -16,14 +16,6 @@
  */
 package io.btrace.mcp.tools;
 
-import io.btrace.client.Client;
-import io.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
-import io.btrace.compiler.oneliner.OnelinerCodeGenerator;
-import io.btrace.compiler.oneliner.OnelinerParser;
-import io.btrace.compiler.oneliner.OnelinerValidator;
-import io.btrace.core.comm.Command;
-import io.btrace.core.comm.PrintableCommand;
-import io.btrace.mcp.ClientManager;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -33,6 +25,16 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.btrace.client.Client;
+import io.btrace.compiler.oneliner.OnelinerAST.OnelinerNode;
+import io.btrace.compiler.oneliner.OnelinerCodeGenerator;
+import io.btrace.compiler.oneliner.OnelinerParser;
+import io.btrace.compiler.oneliner.OnelinerValidator;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.PrintableCommand;
+import io.btrace.mcp.ClientManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -164,6 +166,8 @@ public final class DeployOnelinerHandler {
       if (exited.get() && !success.get()) {
         return toolResult("Probe exited with error:\n" + output.toString(), true);
       }
+
+      ClientManager.registerClient(pid, port, client);
 
       String resultText =
           "Probe deployed successfully to PID "

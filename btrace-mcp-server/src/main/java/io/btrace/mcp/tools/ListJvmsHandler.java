@@ -21,12 +21,11 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.sun.tools.attach.VirtualMachine;
+import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.jvmstat.monitor.MonitoredHost;
-import sun.jvmstat.monitor.MonitoredVm;
-import sun.jvmstat.monitor.MonitoredVmUtil;
-import sun.jvmstat.monitor.VmIdentifier;
 
 /** Handles the list_jvms MCP tool - lists all attachable Java VMs. */
 public final class ListJvmsHandler {
@@ -52,14 +51,14 @@ public final class ListJvmsHandler {
   }
 
   /** Executes the list_jvms tool. */
-  public static Map<String, Object> execute(Map<String, Object> arguments) {
+  public static Map<String, Object> execute(@SuppressWarnings("unused") Map<String, Object> arguments) {
     try {
       Collection<Map<String, Object>> vms = listVms();
       StringBuilder sb = new StringBuilder();
       if (vms.isEmpty()) {
-        sb.append("No attachable Java VMs found.");
+        sb.append("No Java VMs found.");
       } else {
-        sb.append("Attachable Java VMs:\n\n");
+        sb.append("Discovered Java VMs:\n\n");
         for (Map<String, Object> vm : vms) {
           sb.append(
               String.format(
@@ -77,17 +76,22 @@ public final class ListJvmsHandler {
   private static Collection<Map<String, Object>> listVms() {
     List<Map<String, Object>> result = new ArrayList<>();
     try {
-      MonitoredHost vmHost = MonitoredHost.getMonitoredHost((String) null);
-      for (Integer vmPid : MonitoredHost.getMonitoredHost("localhost").activeVms()) {
-        VmIdentifier id = new VmIdentifier(vmPid.toString());
-        MonitoredVm mvm = vmHost.getMonitoredVm(id);
-        if (MonitoredVmUtil.isAttachable(mvm)) {
-          Map<String, Object> vmInfo = new LinkedHashMap<>();
-          vmInfo.put("pid", vmPid);
-          vmInfo.put("mainClass", MonitoredVmUtil.mainClass(mvm, false));
-          vmInfo.put("btraceAttached", hasBTraceServer(vmPid) ? "attached" : "not attached");
-          result.add(vmInfo);
+      for (VirtualMachineDescriptor vmd : VirtualMachine.list()) {
+        String pid = vmd.id();
+        int numericPid;
+        try {
+          numericPid = Integer.parseInt(pid);
+        } catch (NumberFormatException e) {
+          log.debug("Skipping JVM with non-numeric PID: {}", pid);
+          continue;
         }
+        String mainClass = vmd.displayName();
+        if (mainClass == null || mainClass.isBlank()) mainClass = "<unknown>";
+        Map<String, Object> vmInfo = new LinkedHashMap<>();
+        vmInfo.put("pid", pid);
+        vmInfo.put("mainClass", mainClass);
+        vmInfo.put("btraceAttached", hasBTraceServer(numericPid) ? "attached" : "not attached");
+        result.add(vmInfo);
       }
     } catch (Exception e) {
       log.warn("Error listing VMs", e);

@@ -32,7 +32,6 @@ import io.btrace.core.annotations.OnEvent;
 import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.OnTimer;
 import io.btrace.core.annotations.ProbeClassName;
-import io.btrace.core.annotations.ProbeMethodName;
 import io.btrace.llm.LlmTraceService;
 
 import static io.btrace.core.BTraceUtils.*;
@@ -66,7 +65,6 @@ public class LlmTrace {
       location = @Location(Kind.RETURN))
   public static void onLangchain4jGenerate(
       @ProbeClassName String className,
-      @ProbeMethodName String methodName,
       @Duration long duration) {
     // Model name extracted from the class; token counts need return value parsing
     // For a production script, parse the Response<AiMessage> return value
