@@ -54,18 +54,13 @@ public final class BTraceBootstrap {
   }
 
   /**
-   * Register a core op. Called at agent startup before any probe fires. Re-registration of the same
-   * {@link MethodHandle} instance is a no-op (safe for repeated agent attach). Registering a
-   * different handle for the same key throws to prevent silent substitution.
+   * Register a core op. Called at agent startup before any probe fires. Re-registration of the
+   * same key is a no-op — the first registration wins. This is intentional: {@link
+   * MethodHandles.Lookup#findStatic} creates a new {@link MethodHandle} wrapper on every call, so
+   * identity comparison cannot distinguish "same method, called twice" from "different method".
+   * Key uniqueness (name + descriptor) is the only meaningful guard against duplicate ops.
    */
   public static void registerCoreOp(String name, MethodType type, MethodHandle impl) {
-    String key = name + type.toMethodDescriptorString();
-    MethodHandle existing = OP_TABLE.putIfAbsent(key, impl);
-    // Identity check is safe: BTraceBootstrap is on the bootstrap classpath and is never
-    // unloaded, so the same logical op always produces the same MethodHandle object across
-    // re-attach cycles.
-    if (existing != null && existing != impl) {
-      throw new IllegalStateException("Core op already registered with a different handle: " + key);
-    }
+    OP_TABLE.putIfAbsent(name + type.toMethodDescriptorString(), impl);
   }
 }
