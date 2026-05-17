@@ -236,8 +236,7 @@ final class MethodVerifier extends StackTrackingMethodVisitor {
   }
 
   @Override
-  public void visitInvokeDynamicInsn(
-      String name, String desc, Handle bsm, Object... bsmArgs) {
+  public void visitInvokeDynamicInsn(String name, String desc, Handle bsm, Object... bsmArgs) {
     String owner = bsm.getOwner();
     if (!Constants.BTRACE_BOOTSTRAP.equals(owner) && !Constants.INDY_DISPATCHER.equals(owner)) {
       Verifier.reportError("no.method.calls", name + desc + " [bootstrap: " + owner + "]");
