@@ -1,0 +1,35 @@
+name: Validate Extension Registry
+
+on:
+  pull_request:
+    paths:
+      - "extension-registry/**"
+      - "scripts/validate_extension_registry.py"
+      - "scripts/tests/test_validate_extension_registry.py"
+      - ".github/workflows/validate-extension-registry.yml"
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - "extension-registry/**"
+      - "scripts/validate_extension_registry.py"
+      - "scripts/tests/test_validate_extension_registry.py"
+      - ".github/workflows/validate-extension-registry.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run registry unit tests
+        run: python -m unittest scripts.tests.test_validate_extension_registry
+
+      - name: Validate canonical registry
+        run: python scripts/validate_extension_registry.py

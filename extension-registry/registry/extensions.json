@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "extensions": [
+    {
+      "id": "btrace-utils",
+      "name": "BTrace Utilities",
+      "description": "Utility services for BTrace scripts, including printer helpers.",
+      "owner": "btraceio",
+      "source_repo": "https://github.com/btraceio/btrace",
+      "maven": {
+        "groupId": "io.btrace",
+        "artifactId": "btrace-utils",
+        "version": "2.3.0"
+      },
+      "compatibility": {
+        "min_btrace_version": "2.3.0"
+      },
+      "tags": ["utility", "core"]
+    },
+    {
+      "id": "btrace-metrics",
+      "name": "BTrace HDR Histogram",
+      "description": "High-performance metrics using HdrHistogram for accurate percentile tracking.",
+      "owner": "btraceio",
+      "source_repo": "https://github.com/btraceio/btrace",
+      "maven": {
+        "groupId": "io.btrace",
+        "artifactId": "btrace-metrics",
+        "version": "2.3.0"
+      },
+      "compatibility": {
+        "min_btrace_version": "2.3.0"
+      },
+      "tags": ["metrics", "latency", "histogram"]
+    },
+    {
+      "id": "btrace-statsd",
+      "name": "BTrace StatsD",
+      "description": "StatsD metrics client for BTrace.",
+      "owner": "btraceio",
+      "source_repo": "https://github.com/btraceio/btrace",
+      "maven": {
+        "groupId": "io.btrace",
+        "artifactId": "btrace-statsd",
+        "version": "2.3.0"
+      },
+      "compatibility": {
+        "min_btrace_version": "2.3.0"
+      },
+      "tags": ["metrics", "statsd", "export"]
+    }
+  ]
+}
