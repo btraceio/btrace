@@ -227,12 +227,12 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       if (!entryInjected[0] && !(codeElement instanceof PseudoInstruction)) {
         entryInjected[0] = true;
         for (ProbeHandler ph : entryHandlers) {
-          emitProbeCall(codeBuilder, ph, javaClassName, methodName, isStatic);
+          emitProbeCall(codeBuilder, ph, javaClassName, methodName, isStatic, true);
         }
       }
       if (!returnHandlers.isEmpty() && codeElement instanceof ReturnInstruction) {
         for (ProbeHandler ph : returnHandlers) {
-          emitProbeCall(codeBuilder, ph, javaClassName, methodName, isStatic);
+          emitProbeCall(codeBuilder, ph, javaClassName, methodName, isStatic, false);
         }
       }
       codeBuilder.with(codeElement);
@@ -270,7 +270,8 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
       ProbeHandler ph,
       String javaClassName,
       String methodName,
-      boolean isStatic) {
+      boolean isStatic,
+      boolean isEntry) {
     OnMethod om = ph.om;
     if (om.getReturnParameter() != -1
         || om.getTargetInstanceParameter() != -1
@@ -302,7 +303,7 @@ public final class ClassFileApiBackend implements InstrumentationBackend {
 
     for (int i = 0; i < argTypes.length; i++) {
       if (i == om.getSelfParameter()) {
-        if (isStatic) {
+        if (isStatic || (isEntry && methodName.equals("<init>"))) {
           cb.aconst_null();
         } else {
           cb.aload(0);
