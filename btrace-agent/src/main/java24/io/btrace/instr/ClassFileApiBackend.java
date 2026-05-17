@@ -16,7 +16,6 @@
  */
 package io.btrace.instr;
 
-import io.btrace.core.annotations.Kind;
 import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
@@ -37,6 +36,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import io.btrace.core.annotations.Kind;
+
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
