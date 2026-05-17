@@ -6,6 +6,7 @@ apply plugin: 'java'
 dependencies {
     implementation project(':btrace-compiler')
     implementation project(':btrace-extensions:btrace-metrics')
+    implementation project(':btrace-extensions:btrace-ext-test')
     testImplementation project(':btrace-client')
     testImplementation project(':btrace-core')
     testImplementation libs.testcontainers
@@ -25,17 +26,28 @@ task buildEventsJar(type: Jar) {
 }
 
 task compileTestProbes {
-    dependsOn compileTestJava, ':btrace-extensions:buildExtensionsApi', ':btrace-instr:jar', ':btrace-compiler:jar'
+    dependsOn compileTestJava, ':btrace-agent:jar', ':btrace-compiler:jar'
+    // Wire all extension buildApiJar tasks dynamically (parent aggregator dissolved)
+    gradle.projectsEvaluated {
+        rootProject.subprojects.each { sp ->
+            if (sp.plugins.hasPlugin('io.btrace.extension')) {
+                def apiTask = sp.tasks.findByName('buildApiJar')
+                if (apiTask != null) {
+                    compileTestProbes.dependsOn(apiTask)
+                }
+            }
+        }
+    }
     doLast {
         def path = project(':integration-tests').sourceSets.main.runtimeClasspath
 
         def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
-        def compiler = loader.loadClass('org.openjdk.btrace.compiler.Compiler')
+        def compiler = loader.loadClass('io.btrace.compiler.Compiler')
         def rtCp = sourceSets.main.runtimeClasspath
         // Ensure the BTrace extension API JAR(s) (with manifest attributes) are present on classpath
         def extApiJars = []
         rootProject.subprojects.each { sp ->
-            if (sp.plugins.hasPlugin('org.openjdk.btrace.extension')) {
+            if (sp.plugins.hasPlugin('io.btrace.extension')) {
                 try {
                     def apiJar = sp.tasks.named('buildApiJar').get().archiveFile.get().asFile
                     extApiJars << apiJar
@@ -43,7 +55,7 @@ task compileTestProbes {
             }
         }
         if (extApiJars.isEmpty()) {
-            logger.lifecycle("[integration-tests] No extension API JARs found. If you renamed an extension module, ensure it applies id 'org.openjdk.btrace.extension'.")
+            logger.lifecycle("[integration-tests] No extension API JARs found. If you renamed an extension module, ensure it applies id 'io.btrace.extension'.")
         } else {
             rtCp = rtCp.plus(files(extApiJars))
             logger.lifecycle("[integration-tests] Using extension API JARs: ${extApiJars}")
@@ -80,7 +92,7 @@ test {
     }
     dependsOn cleanTest, buildEventsJar, compileTestProbes,
              ':btrace-dist:btraceJar',
-             ':btrace-dist:explodeExtensions', ':btrace-extensions:buildExtensionsApi'
+             ':btrace-dist:explodeExtensions'
 
     testLogging.showStandardStreams = true
 
@@ -154,14 +166,21 @@ test {
 
     def props = new Properties()
     props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
+    def libsPath = "${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
     def isJava8 = props.getProperty("JAVA_VERSION")?.contains("1.8")
     if (isJava8) {
-        jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/"
+        jvmArgs "-Dproject.dir=${projectDir}", "-Dproject.version=${project.version}", "-Dbtrace.libs=${libsPath}"
     } else {
-        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${projectDir}/../btrace-dist/build/resources/main/v${project.version}/libs/", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-modules', 'jdk.attach', '--add-exports', 'jdk.attach/sun.tools.attach=ALL-UNNAMED', "-Dproject.version=${project.version}"
+        jvmArgs "-Dproject.dir=${projectDir}", "-Dbtrace.libs=${libsPath}", '-XX:+IgnoreUnrecognizedVMOptions', '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED', '--add-modules', 'jdk.attach', '--add-exports', 'jdk.attach/sun.tools.attach=ALL-UNNAMED', "-Dproject.version=${project.version}"
     }
     if (!isJava8) {
         classpath = classpath.filter { it.name != 'tools.jar' }
+    }
+
+    // Optional test knob: when -Pbtrace.test.skipLibs=true, set a system property that instructs
+    // the agent to skip adding preconfigured btrace-libs (used to exercise manifest-libs path).
+    if (project.findProperty('btrace.test.skipLibs')?.toString()?.toBoolean()) {
+        systemProperty 'btrace.test.skipLibs', 'true'
     }
 
     // Canonical propagation: use Gradle project properties only (-P)

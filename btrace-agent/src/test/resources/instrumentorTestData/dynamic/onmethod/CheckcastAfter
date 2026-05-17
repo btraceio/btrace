@@ -1,0 +1,29 @@
+DUP
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L2
+ALOAD 0
+LDC "casts"
+ALOAD 2
+LDC "java.util.HashMap"
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$CheckcastAfter$args(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/CheckcastAfter"
+]
+FRAME FULL [resources/OnMethodTest java/util/HashMap java/util/HashMap] [java/util/HashMap]
+ASTORE 3
+L3
+LINENUMBER 110 L3
+IFEQ L4
+L5
+LINENUMBER 111 L5
+L4
+LINENUMBER 113 L4
+FRAME FULL [resources/OnMethodTest java/util/Map java/util/HashMap java/util/HashMap] []
+L6
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L6 0
+LOCALVARIABLE c Ljava/util/Map; L1 L6 1
+LOCALVARIABLE d Ljava/util/HashMap; L3 L6 3
+MAXSTACK = 5
+MAXLOCALS = 4

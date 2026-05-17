@@ -23,9 +23,9 @@ extension.name=BTrace Metrics
 extension.description=High-performance metrics...
 btrace.api.version=2.3+
 java.version=8+
-services=org.openjdk.btrace.metrics.MetricsService
+services=io.btrace.metrics.MetricsService
 requires.extensions=btrace-core
-shaded.packages=org.HdrHistogram->org.openjdk.btrace.metrics.shaded.hdrhistogram
+shaded.packages=org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram
 ```
 
 ### To MANIFEST.MF Format
@@ -38,10 +38,10 @@ BTrace-Extension-Description: High-performance metrics with HdrHistogram
  for percentiles and lock-free statistics
 BTrace-API-Version: 2.3+
 BTrace-Java-Version: 8+
-BTrace-Extension-Services: org.openjdk.btrace.metrics.MetricsService
+BTrace-Extension-Services: io.btrace.metrics.MetricsService
 BTrace-Extension-Requires: btrace-core
-BTrace-Shaded-Packages: org.HdrHistogram->org.openjdk.btrace.metrics.sh
- aded.hdrhistogram,com.clearspring.analytics->org.openjdk.btrace.metrics
+BTrace-Shaded-Packages: org.HdrHistogram->io.btrace.metrics.sh
+ aded.hdrhistogram,com.clearspring.analytics->io.btrace.metrics
  .shaded.clearspring
 BTrace-Extension-Permissions: NETWORK,THREADS
 ```
@@ -84,7 +84,7 @@ BTrace-Extension-Permissions: NETWORK,THREADS
 
 **BTrace-Extension-Services**
 - Format: comma-separated fully qualified class names
-- Example: `org.openjdk.btrace.metrics.MetricsService,org.openjdk.btrace.metrics.StatsService`
+- Example: `io.btrace.metrics.MetricsService,io.btrace.metrics.StatsService`
 - Description: Service classes provided by this extension
 
 **BTrace-Extension-Requires**
@@ -94,7 +94,7 @@ BTrace-Extension-Permissions: NETWORK,THREADS
 
 **BTrace-Shaded-Packages**
 - Format: comma-separated package mappings (original->shaded)
-- Example: `org.HdrHistogram->org.openjdk.btrace.metrics.shaded.hdrhistogram`
+- Example: `org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram`
 - Description: Package relocation mappings for shaded dependencies
 
 ## MANIFEST.MF Line Continuation
@@ -106,6 +106,37 @@ BTrace-Extension-Description: This is a very long description that excee
  ds the 72-byte limit and must be continued on the next line with a lead
  ing space character.
 ```
+
+## Embedded Extension Properties (`extension.properties`)
+
+Embedded extensions (shipped inside a fat agent JAR) are described by a
+`META-INF/btrace-extensions/{id}/extension.properties` file rather than a
+MANIFEST.MF. The agent reads the following keys from that file:
+
+| Key | Required | Example | Description |
+|-----|----------|---------|-------------|
+| `id` | no (defaults to directory name) | `btrace-spark` | Extension identifier |
+| `version` | no (defaults to `0.0.0`) | `1.2.0` | Semantic version |
+| `name` | no | `BTrace Spark` | Human-readable name |
+| `description` | no | `Spark job tracing` | Short description |
+| `btrace.api.version` | no (defaults to `3.0+`) | `3.0.0` | Minimum BTrace API version |
+| `java.version` | no (defaults to `8+`) | `11+` | Minimum Java version |
+| `services` | no | `org.example.SparkService` | Comma-separated service class names |
+| `probes` | no | `SparkJobTracer,SparkStageTracer` | Comma-separated bundled probe class names |
+| `configurator` | no | `org.example.SparkConfigurator` | Fully qualified `ExtensionConfigurator` class for zero-config probe auto-selection (see below) |
+
+### `configurator` — Zero-Config Probe Auto-Selection
+
+When a `configurator` class is declared, the agent calls it during startup to
+decide which bundled probes to activate based on the running JVM's environment.
+This allows the extension to enable the right probes automatically (e.g. Spark
+driver probes vs. executor probes) without the operator having to pass a
+`probes=` agent argument.
+
+The class must implement `io.btrace.core.extensions.ExtensionConfigurator`
+and have a public no-arg constructor. It is loaded via the extension's own
+classloader. See [BTraceExtensionDevelopmentGuide.md](../BTraceExtensionDevelopmentGuide.md)
+for a full example.
 
 ## Backward Compatibility
 
@@ -129,8 +160,8 @@ jar {
       'BTrace-Extension-Description': 'High-performance metrics...',
       'BTrace-API-Version': '2.3+',
       'BTrace-Java-Version': '8+',
-      'BTrace-Extension-Services': 'org.openjdk.btrace.metrics.MetricsService',
-      'BTrace-Shaded-Packages': 'org.HdrHistogram->org.openjdk.btrace.metrics.shaded.hdrhistogram'
+      'BTrace-Extension-Services': 'io.btrace.metrics.MetricsService',
+      'BTrace-Shaded-Packages': 'org.HdrHistogram->io.btrace.metrics.shaded.hdrhistogram'
     )
   }
 }

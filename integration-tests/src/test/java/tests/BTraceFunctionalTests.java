@@ -1,44 +1,32 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2008, 2024, Jaroslav Bachorik <j.bachorik@btrace.io>.
+ * All rights reserved.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package tests;
 
-import jdk.jfr.EventType;
-import jdk.jfr.consumer.RecordedEvent;
-import jdk.jfr.consumer.RecordingFile;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.openjdk.btrace.client.Client;
-import org.openjdk.btrace.core.comm.Command;
-import org.openjdk.btrace.core.comm.DisconnectCommand;
-import org.openjdk.btrace.core.comm.StatusCommand;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
+import io.btrace.client.Client;
+import io.btrace.core.comm.Command;
+import io.btrace.core.comm.DisconnectCommand;
+import io.btrace.core.comm.StatusCommand;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,13 +38,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import jdk.jfr.EventType;
+import jdk.jfr.consumer.RecordedEvent;
+import jdk.jfr.consumer.RecordingFile;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * A set of end-to-end functional tests.
@@ -183,9 +173,11 @@ public class BTraceFunctionalTests extends RuntimeTest {
             assertTrue(stdout.contains("heap:init"));
             assertTrue(stdout.contains("prop: test"));
             assertTrue(stdout.contains("fieldSet: field java.lang.String resources.Main#field"));
-            assertTrue(stdout.contains("fieldSet: static field java.lang.String resources.Main#sField"));
+            assertTrue(
+                stdout.contains("fieldSet: static field java.lang.String resources.Main#sField"));
             assertTrue(stdout.contains("fieldGet: field java.lang.String resources.Main#field"));
-            assertTrue(stdout.contains("fieldGet: static field java.lang.String resources.Main#sField"));
+            assertTrue(
+                stdout.contains("fieldGet: static field java.lang.String resources.Main#sField"));
           }
         });
   }
@@ -230,26 +222,26 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testTraceAll() throws Exception {
-      String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
-      if (testJavaHome == null) testJavaHome = System.getenv().get("JAVA_TEST_HOME");
+    String testJavaHome = System.getenv().get("TEST_JAVA_HOME");
+    if (testJavaHome == null) testJavaHome = System.getenv().get("JAVA_TEST_HOME");
+    if (testJavaHome == null) {
+      testJavaHome = System.getenv("JAVA_HOME");
       if (testJavaHome == null) {
-          testJavaHome = System.getenv("JAVA_HOME");
-          if (testJavaHome == null) {
-              testJavaHome = System.getProperty("java.home");
-          }
+        testJavaHome = System.getProperty("java.home");
       }
+    }
 
-      assumeFalse(testJavaHome == null);
+    assumeFalse(testJavaHome == null);
 
-      Properties releaseProps = new Properties();
-      releaseProps.load(
-              Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
-      String rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
-      if (!isVersionSafeForTraceAll(rtVersion)) {
-          System.err.println("Skipping test for JDK " + rtVersion);
-          return;
-      }
-      testStartup(
+    Properties releaseProps = new Properties();
+    releaseProps.load(
+        Files.newInputStream(new File(testJavaHome + File.separator + "release").toPath()));
+    String rtVersion = releaseProps.getProperty("JAVA_VERSION").replace("\"", "");
+    if (!isVersionSafeForTraceAll(rtVersion)) {
+      System.err.println("Skipping test for JDK " + rtVersion);
+      return;
+    }
+    testStartup(
         "resources.Main",
         "traces/TraceAllTest.class",
         null,
@@ -336,8 +328,8 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
   @Test
   public void testProbeArgs() throws Exception {
-//    debugBTrace = true;
-//    debugTestApp = true;
+    //    debugBTrace = true;
+    //    debugTestApp = true;
     isUnsafe = true;
     testDynamic(
         "resources.Main",
@@ -521,9 +513,7 @@ public class BTraceFunctionalTests extends RuntimeTest {
 
     List<String> probes = listProbesWithProtocol(host);
     long matches =
-        probes.stream()
-            .filter(p -> extractProbeClassName(p).endsWith("OnMethodTest"))
-            .count();
+        probes.stream().filter(p -> extractProbeClassName(p).endsWith("OnMethodTest")).count();
     assertEquals(1, matches, "expected exactly one OnMethodTest probe listed by -lp");
     assertTrue(
         probes.stream().anyMatch(p -> p.startsWith(probeId + " ")),
@@ -539,44 +529,44 @@ public class BTraceFunctionalTests extends RuntimeTest {
     return "";
   }
 
-    @ParameterizedTest(name = "testThreadStart: dynamic={0}")
-    @ValueSource(booleans = {true, false})
-    public void testThreadStart(boolean dynamic) throws Exception {
-        if (dynamic) {
-            testDynamic(
-                    "resources.ThreadSpawner",
-                    "traces/ThreadStart.class",
-                    null,
-                    10,
-                    new ResultValidator() {
-                        @Override
-                        public void validate(String stdout, String stderr, int retcode, String jfrFile) {
-                            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
-                            assertTrue(stderr.isEmpty(), "Non-empty stderr");
-                            assertTrue(stdout.contains("starting testThread"));
-                        }
-                    });
-        } else {
-            testStartup(
-                    "resources.ThreadSpawner",
-                    "traces/ThreadStart.class",
-                    null,
-                    20,
-                    new ResultValidator() {
-                        @Override
-                        public void validate(String stdout, String stderr, int retcode, String jfrFile) {
-                            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
-                            assertTrue(stderr.isEmpty(), "Non-empty stderr");
-                            assertTrue(stdout.contains("starting testThread"));
-                        }
-                    });
-        }
+  @ParameterizedTest(name = "testThreadStart: dynamic={0}")
+  @ValueSource(booleans = {true, false})
+  public void testThreadStart(boolean dynamic) throws Exception {
+    if (dynamic) {
+      testDynamic(
+          "resources.ThreadSpawner",
+          "traces/ThreadStart.class",
+          null,
+          10,
+          new ResultValidator() {
+            @Override
+            public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+              assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+              assertTrue(stderr.isEmpty(), "Non-empty stderr");
+              assertTrue(stdout.contains("starting testThread"));
+            }
+          });
+    } else {
+      testStartup(
+          "resources.ThreadSpawner",
+          "traces/ThreadStart.class",
+          null,
+          20,
+          new ResultValidator() {
+            @Override
+            public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+              assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+              assertTrue(stderr.isEmpty(), "Non-empty stderr");
+              assertTrue(stdout.contains("starting testThread"));
+            }
+          });
     }
+  }
 
   @Test
   @DisplayName("Test HDR Histogram Metrics Integration")
   public void testMetrics() throws Exception {
-      testDynamic(
+    testDynamic(
         "resources.Main",
         "btrace/MetricsTest.java",
         20,
@@ -585,7 +575,9 @@ public class BTraceFunctionalTests extends RuntimeTest {
           public void validate(String stdout, String stderr, int retcode, String jfrFile) {
             assertFalse(stdout.contains("FAILED"), "Script should not have failed");
             assertTrue(stderr.isEmpty(), "Non-empty stderr");
-            assertTrue(stdout.contains("=== HDR Histogram Metrics Test ==="), "Should contain metrics test header");
+            assertTrue(
+                stdout.contains("=== HDR Histogram Metrics Test ==="),
+                "Should contain metrics test header");
             assertTrue(stdout.contains("=== Metrics Report ==="), "Should contain metrics report");
             assertTrue(stdout.contains("Count:"), "Should contain count");
             assertTrue(stdout.contains("Mean:"), "Should contain mean");
@@ -597,13 +589,13 @@ public class BTraceFunctionalTests extends RuntimeTest {
   }
 
   private static boolean isVersionSafeForJfr(String rtVersion) {
-      System.out.println("===> version: " + rtVersion);
+    System.out.println("===> version: " + rtVersion);
     String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
     int major = Integer.parseInt(versionParts[0]);
     String updateStr = versionParts.length == 3 ? versionParts[2].replace("0_", "") : "0";
     int idx = updateStr.indexOf('-');
     if (idx > -1) {
-        updateStr = updateStr.substring(0, idx);
+      updateStr = updateStr.substring(0, idx);
     }
     int update = Integer.parseInt(updateStr);
     if (major == 8) {
@@ -620,20 +612,137 @@ public class BTraceFunctionalTests extends RuntimeTest {
     return false;
   }
 
-    private static boolean isVersionSafeForTraceAll(String rtVersion) {
-        System.out.println("===> version: " + rtVersion);
-        String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
-        int major = Integer.parseInt(versionParts[0]);
-        String updateStr = versionParts.length == 3 ? versionParts[2].replace("0_", "") : "0";
-        int idx = updateStr.indexOf('-');
-        if (idx > -1) {
-            updateStr = updateStr.substring(0, idx);
-        }
-        int update = Integer.parseInt(updateStr);
-        // currently, an attempt to instrument all classes and methods will result in crash in jplis agent for JDK 17
-        if (major == 17) {
-            return false;
-        }
-        return true;
+  private static boolean isVersionSafeForTraceAll(String rtVersion) {
+    System.out.println("===> version: " + rtVersion);
+    String[] versionParts = rtVersion.split("\\+")[0].split("\\.");
+    int major = Integer.parseInt(versionParts[0]);
+    String updateStr = versionParts.length == 3 ? versionParts[2].replace("0_", "") : "0";
+    int idx = updateStr.indexOf('-');
+    if (idx > -1) {
+      updateStr = updateStr.substring(0, idx);
     }
+    int update = Integer.parseInt(updateStr);
+    // currently, an attempt to instrument all classes and methods will result in crash in jplis
+    // agent for JDK 17
+    if (major == 17) {
+      return false;
+    }
+    return true;
+  }
+
+  @Test
+  public void testOnelinerMethodEntry() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callA @entry { print method }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callA"), "Method entry not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithArguments() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @entry { print args }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("[1, Hello World]"), "Arguments not captured correctly");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithReturn() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @return { print method, duration }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callB"), "Return method name not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerWithRegexClassMatch() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "/resources\\..*Main/::callA @entry { print method }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(stdout.contains("callA"), "Regex class matching not working");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerStack() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @entry { stack }",
+        10,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr: " + stderr);
+            assertTrue(
+                stdout.contains("resources.Main.callA") || stdout.contains("resources.Main"),
+                "Stack trace not captured");
+          }
+        });
+  }
+
+  @Test
+  public void testOnelinerCompilationError() throws Exception {
+    testDynamicOneliner(
+        "resources.Main",
+        "resources.Main::callB @invalid { print }",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            // Compilation errors should be reported
+            assertTrue(
+                !stderr.isEmpty() || stdout.contains("error") || stdout.contains("Error"),
+                "Expected compilation error not reported");
+          }
+        });
+  }
+
+  @Test
+  @DisplayName("Flat DSL ops work without BTraceUtils import")
+  public void flatDslOpsWork() throws Exception {
+    testDynamic(
+        "resources.Main",
+        "btrace/FlatDslTest.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("flat-dsl:"), "Expected flat-dsl output not found");
+          }
+        });
+  }
 }

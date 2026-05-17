@@ -18,8 +18,10 @@ dependencies {
 
     implementation project(':btrace-core')
     implementation project(':btrace-compiler')
-    implementation project(':btrace-instr')
+    implementation project(':btrace-agent')
     implementation project(':btrace-boot')
+
+    implementation 'com.googlecode.lanterna:lanterna:3.1.5'
 }
 
 jar {
@@ -31,7 +33,7 @@ jar {
                 'Created-By'     : "Gradle ${gradle.gradleVersion}",
                 'Build-Jdk'      : "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
                 'Build-OS'       : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
-                'Main-Class'     : "org.openjdk.btrace.client.Main"
+                'Main-Class'     : "io.btrace.client.Main"
         )
     }
 }

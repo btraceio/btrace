@@ -1,0 +1,12 @@
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 0
+ALOAD 1
+ALOAD 2
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$InterestingVarsTest$entry(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/InterestingVarsTest"
+]
+FRAME SAME

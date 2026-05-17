@@ -2,8 +2,6 @@
 
 Thanks for your interest in contributing! This guide covers local development, running tests, Gradle tips, and common troubleshooting.
 
-Note: Pull requests can only be accepted from signers of the Oracle Contributor Agreement (OCA). See the project README for details.
-
 ## Local Development
 
 - JDK: Use a reasonably recent JDK (11+ recommended). The project targets a broad range but tests run comfortably on 11/17.
@@ -52,7 +50,7 @@ Note: Pull requests can only be accepted from signers of the Oracle Contributor 
 - Enable Gradle debug output for flakiness: add `--info` or `--debug`.
 - Run a single test class/method:
   ```sh
-  ./gradlew :btrace-extension:test --tests org.openjdk.btrace.extension.ExtensionBridgeImplPolicyTest
+  ./gradlew :btrace-extension:test --tests io.btrace.extension.ExtensionBridgeImplPolicyTest
   ./gradlew :btrace-runtime:test --tests "*ExtensionIndyShimIndexTest.resolvesNoopShimFromIndex"
   ```
 

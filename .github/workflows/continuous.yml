@@ -18,17 +18,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Cache Java binaries
-        id: cache-java
-        uses: actions/cache@v5
-        with:
-          path: ${{ runner.tool_cache }}/Java_*
-          key: java-${{ runner.os }}-temurin-11
-      - name: Set up Java
-        if: steps.cache-java.outputs.cache-hit != 'true'
+      - name: Set up Java 24
         uses: actions/setup-java@v5
         with:
-          java-version: 11
+          java-version: 24
+          distribution: temurin
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: 21
           distribution: temurin
       - name: Checkout
         uses: actions/checkout@v6
@@ -55,9 +53,9 @@ jobs:
         run: ./gradlew --no-daemon --parallel --build-cache build
       - name: Run V2 Protocol Tests
         run: |
-          ./gradlew :btrace-core:test --tests "org.openjdk.btrace.core.comm.v2.*" \
-                                       --tests "org.openjdk.btrace.core.comm.Protocol*" \
-                                       --tests "org.openjdk.btrace.core.comm.WireProtocol*"
+          ./gradlew :btrace-core:test --tests "io.btrace.core.comm.v2.*" \
+                                       --tests "io.btrace.core.comm.Protocol*" \
+                                       --tests "io.btrace.core.comm.WireProtocol*"
       - name: Upload dist build data
         if: always()
         uses: actions/upload-artifact@v7
@@ -66,7 +64,7 @@ jobs:
           retention-days: 1
           path: |
             btrace-dist/build
-            btrace-instr/build/classes/traces
+            btrace-agent/build/classes/traces
       - name: Upload test trace data
         if: always()
         uses: actions/upload-artifact@v7
@@ -74,7 +72,7 @@ jobs:
           name: test-trace
           retention-days: 1
           path: |
-            btrace-instr/build/classes/traces
+            btrace-agent/build/classes/traces
       - name: Archive test reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -92,7 +90,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 8.0.482-tem, 11.0.30-tem, 17.0.18-tem, 21.0.10-tem, 25.0.2-tem, 26.ea.35-open ]
+        java: [ 8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem, 25.0.3-tem, 27.ea.20-open ]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
@@ -112,7 +110,7 @@ jobs:
           source "$HOME/.sdkman/bin/sdkman-init.sh"
           echo 'n' | sdk install java ${{ matrix.java }}
           which java
-          echo 'y' | sdk install java 11.0.30-tem
+          echo 'y' | sdk install java 11.0.31-tem
       - name: Cache Gradle
         uses: actions/cache@v5
         with:
@@ -131,10 +129,15 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: test-trace
-          path: btrace-instr/build/classes/traces
-      - name: Build btrace-instr jar
+          path: btrace-agent/build/classes/traces
+      - name: Set up Java 24
+        uses: actions/setup-java@v5
+        with:
+          java-version: 24
+          distribution: temurin
+      - name: Build btrace-agent jar
         run: |
-          ./gradlew --no-daemon --parallel --build-cache :btrace-instr:jar
+          ./gradlew --no-daemon --parallel --build-cache :btrace-agent:jar
       - name: Run tests
         run: |
           set +x

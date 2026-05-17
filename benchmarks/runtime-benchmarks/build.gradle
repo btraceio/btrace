@@ -15,7 +15,7 @@ configurations {
 dependencies {
   implementation project(path: ":btrace-dist", configuration: "shadow")
   implementation project(":btrace-compiler")
-  jmh project(":btrace-instr")
+  jmh project(":btrace-agent")
   jmh project(":btrace-runtime")
   jmh project(":btrace-extensions:btrace-statsd")
   jmh libs.jmh
@@ -31,7 +31,7 @@ task btracec(type: JavaExec) {
 
   environment('BTRACE_HOME', "$projectDir")
   classpath configurations.compilerDeps
-  mainClass = 'org.openjdk.btrace.compiler.Compiler'
+  mainClass = 'io.btrace.compiler.Compiler'
   args '-d'
   args "${buildDir}/classes/java/main/"
   args '-packext'
@@ -63,6 +63,6 @@ jmh {
   duplicateClassesStrategy = DuplicatesStrategy.WARN
   jvmArgsAppend = ["-Djmh.basedir=${project.buildDir.getParent()}", "-Dproject.version=${project.version}"]
 //  jmhVersion = '1.27'
-  includes = ['org.openjdk.btrace.bench.ClassFilterBenchmark']
+  includes = ['io.btrace.bench.ClassFilterBenchmark']
   verbosity = 'EXTRA'
 }

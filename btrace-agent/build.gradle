@@ -1,9 +1,31 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+
 compileJava {
-    // Keep Java 8 compatibility while accessing JDK internal APIs
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
+compileTestJava {
     options.fork = true
-    options.forkOptions.jvmArgs += [
-        '--add-exports', 'jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED'
-    ]
+    options.forkOptions.executable = "${getJavac(8)}"
+}
+
+sourceSets {
+    java24 {
+        java {
+            srcDirs = ['src/main/java24']
+        }
+    }
+}
+
+compileJava24Java {
+    sourceCompatibility = 24
+    targetCompatibility = 24
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(24))
+    }
 }
 
 javadoc {
@@ -15,18 +37,117 @@ javadoc {
 dependencies {
     implementation libs.slf4j
     implementation libs.asm
+    implementation libs.asm.tree
+    implementation libs.asm.util
+    implementation libs.autoService
+    implementation libs.jctools
 
     def toolsJar = getToolsJar();
     if (toolsJar.getAsFile().exists()) {
+        compileOnly files("${toolsJar}")
         runtimeOnly files("${toolsJar}")
     }
     implementation project(':btrace-core')
     implementation project(':btrace-runtime')
-    implementation project(':btrace-instr')
-    implementation project(':btrace-extension')
+    implementation project(':btrace-compiler')
+
+    java24Implementation files(sourceSets.main.output.classesDirs) {
+        builtBy compileJava
+    }
+    java24Implementation project(':btrace-core')
+    java24Implementation project(':btrace-runtime')
+    java24Implementation libs.asm
+    java24Implementation libs.slf4j
+
+    testImplementation libs.asm.util
+    testImplementation libs.slf4j.simple
+    testImplementation libs.junit.jupiter
+    testImplementation project(':btrace-extensions:btrace-statsd')
+    testImplementation project(':btrace-extensions:btrace-utils')
+}
+
+jar {
+    into('') {
+        from sourceSets.java24.output
+    }
 }
 
 // Exclude sources that rely on JDK-internal modules from Javadoc to avoid missing-package errors
 tasks.named('javadoc').configure {
     exclude 'org/openjdk/btrace/agent/PerfReaderImpl.java'
+}
+
+task compileTestProbes {
+    // Mirror the integration-tests compiler invocation so dependent project outputs and extension
+    // API JARs are available before the compiler classpath is resolved.
+    dependsOn compileTestJava, processTestResources,
+            ':btrace-agent:jar',
+            ':btrace-boot:jar',
+            ':btrace-compiler:jar',
+            ':btrace-extensions:btrace-utils:buildApiJar',
+            ':btrace-extensions:btrace-statsd:buildApiJar'
+    doLast {
+        def path = project(':btrace-agent').sourceSets.main.runtimeClasspath
+
+        def loader = new URLClassLoader(path.collect { f -> f.toURL() } as URL[])
+        def compiler = loader.loadClass('io.btrace.compiler.Compiler')
+        // Use test runtime classpath so test-only extension APIs are available
+        def rtCp = sourceSets.test.runtimeClasspath
+
+        def extraCp = files(
+                buildDir.toPath().resolve("classes/java/test"),
+                buildDir.toPath().resolve("classes/java/java11_dummy"),
+                buildDir.toPath().resolve("resources/test")
+        )
+        // Resolve API JARs via archiveFile (not files(task)) so the path is concrete and
+        // the task dependency above guarantees they exist.
+        def utilsApi = files(project(':btrace-extensions:btrace-utils').tasks.named('buildApiJar').get().archiveFile.get().asFile)
+        def statsdApi = files(project(':btrace-extensions:btrace-statsd').tasks.named('buildApiJar').get().archiveFile.get().asFile)
+        def fullCp = rtCp.plus(extraCp).plus(utilsApi).plus(statsdApi)
+        def cpPath = fullCp.getAsPath()
+        def args = [
+                "-cp", cpPath,
+                "-d", buildDir.toPath().resolve("classes")
+        ]
+
+        def files = fileTree(dir: "src/test/btrace", include: '**/*.java', exclude: 'verifier/**/*.java').findAll {
+            it != null
+        }.collect { it }
+
+        args.addAll(files)
+
+        // Keep compiler resource lookups aligned with the loader that resolved the compiler classes.
+        def prev = Thread.currentThread().contextClassLoader
+        def oldCp = System.getProperty('java.class.path')
+        try {
+            Thread.currentThread().contextClassLoader = loader
+            System.setProperty('btrace.allow.undeclared.services', 'true')
+            System.setProperty('java.class.path', cpPath)
+            compiler.main(args as String[])
+        } finally {
+            Thread.currentThread().contextClassLoader = prev
+            if (oldCp != null) System.setProperty('java.class.path', oldCp)
+            System.clearProperty('btrace.allow.undeclared.services')
+        }
+    }
+}
+
+test {
+    dependsOn cleanTest
+    inputs.files compileTestProbes.outputs
+    testLogging.showStandardStreams = true
+
+    def props = new Properties()
+    props.load(Files.newInputStream(Paths.get(System.getenv("JAVA_HOME"), "release")))
+    if (!props.getProperty("JAVA_VERSION")?.contains("1.8")) {
+        jvmArgs '-XX:+IgnoreUnrecognizedVMOptions',
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+                '--add-opens', 'java.base/jdk.internal.reflect=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.reflect=ALL-UNNAMED'
+    }
+    if (project.hasProperty("updateTestData")) {
+        jvmArgs '-Dupdate.test.data=true'
+    }
+    jvmArgs "-Dtest.resources=${projectDir}/src/test/resources"
+    jvmArgs "-Dproject.version=${project.version}"
 }

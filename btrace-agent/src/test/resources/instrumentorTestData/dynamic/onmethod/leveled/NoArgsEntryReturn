@@ -1,0 +1,28 @@
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+ALOAD 0
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$NoArgsEntryReturn$argsEmptyEntry(Ljava/lang/Object;)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/NoArgsEntryReturn"
+]
+FRAME SAME
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L1
+ALOAD 0
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$NoArgsEntryReturn$argsEmptyReturn(Ljava/lang/Object;)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/NoArgsEntryReturn"
+]
+L1
+FRAME SAME1 J
+L2
+LOCALVARIABLE this Lresources/OnMethodTest; L0 L2 0
+LOCALVARIABLE a Ljava/lang/String; L0 L2 1
+LOCALVARIABLE b J L0 L2 2
+LOCALVARIABLE c [Ljava/lang/String; L0 L2 4
+LOCALVARIABLE d [I L0 L2 5
+MAXSTACK = 3

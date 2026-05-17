@@ -60,7 +60,7 @@ if [ -f "${CLIENT_JAR}" ]; then
       echo "Unable to locate tools.jar. Please, make sure JAVA_HOME points to a valid JDK installation"
       exit 1
     fi
-    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR}:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar org.openjdk.btrace.boot.Loader $*
+    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR}:${TOOLS_JAR}:/usr/share/lib/java/dtrace.jar io.btrace.boot.Loader $*
   else
     echo "Please set a valid JAVA_HOME before running this script"
     exit 1

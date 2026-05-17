@@ -1,5 +1,5 @@
 plugins {
-    id 'org.openjdk.btrace.extension'
+    id 'io.btrace.extension'
     alias(libs.plugins.shadow)
 }
 
@@ -18,10 +18,10 @@ btraceExtension {
     id = 'btrace-metrics'
     name = 'BTrace HDR Histogram'
     description = 'High-performance metrics using HdrHistogram for accurate percentile tracking'
-    services = ['org.openjdk.btrace.metrics.MetricsService']
+    services = ['io.btrace.metrics.MetricsService']
     shadedPackages = [
-        'org.HdrHistogram': 'org.openjdk.btrace.metrics.shaded.hdrhistogram',
-        'com.clearspring.analytics': 'org.openjdk.btrace.metrics.shaded.clearspring'
+        'org.HdrHistogram': 'io.btrace.metrics.shaded.hdrhistogram',
+        'com.clearspring.analytics': 'io.btrace.metrics.shaded.clearspring'
     ]
     // Strict lint is enabled by default; API exposes builders instead of public constructors
 }

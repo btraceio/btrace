@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>BTrace Maven Plugin</name>
+  <description>Maven plugin for building BTrace fat agent JARs with embedded extensions</description>
+  <groupId>io.btrace</groupId>
+  <artifactId>btrace-maven-plugin</artifactId>
+  <version>@VERSION@</version>
+  <goalPrefix>btrace</goalPrefix>
+
+  <mojos>
+    <mojo>
+      <goal>fat-agent</goal>
+      <description>Builds a BTrace fat agent JAR with embedded extensions</description>
+      <implementation>io.btrace.maven.FatAgentMojo</implementation>
+      <language>java</language>
+      <phase>package</phase>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution>
+
+      <parameters>
+        <parameter>
+          <name>btraceVersion</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>BTrace version to use. Defaults to the plugin version.</description>
+        </parameter>
+        <parameter>
+          <name>extensions</name>
+          <type>java.util.List</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>List of extension coordinates to embed (groupId:artifactId:version)</description>
+        </parameter>
+        <parameter>
+          <name>outputName</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Output file name (without .jar extension)</description>
+        </parameter>
+        <parameter>
+          <name>outputDirectory</name>
+          <type>java.io.File</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Output directory</description>
+        </parameter>
+        <parameter>
+          <name>skip</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Skip execution</description>
+        </parameter>
+        <parameter>
+          <name>project</name>
+          <type>org.apache.maven.project.MavenProject</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description>Maven project</description>
+        </parameter>
+        <parameter>
+          <name>session</name>
+          <type>org.apache.maven.execution.MavenSession</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description>Maven session</description>
+        </parameter>
+        <parameter>
+          <name>repoSession</name>
+          <type>org.eclipse.aether.RepositorySystemSession</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description>Repository system session</description>
+        </parameter>
+        <parameter>
+          <name>remoteRepositories</name>
+          <type>java.util.List</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description>Remote repositories</description>
+        </parameter>
+      </parameters>
+
+      <configuration>
+        <btraceVersion implementation="java.lang.String" default-value="${plugin.version}">${btrace.version}</btraceVersion>
+        <extensions implementation="java.util.List">${btrace.extensions}</extensions>
+        <outputName implementation="java.lang.String" default-value="btrace-agent-fat">${btrace.outputName}</outputName>
+        <outputDirectory implementation="java.io.File" default-value="${project.build.directory}">${btrace.outputDirectory}</outputDirectory>
+        <skip implementation="boolean" default-value="false">${btrace.skip}</skip>
+        <project implementation="org.apache.maven.project.MavenProject" default-value="${project}"/>
+        <session implementation="org.apache.maven.execution.MavenSession" default-value="${session}"/>
+        <repoSession implementation="org.eclipse.aether.RepositorySystemSession" default-value="${repositorySystemSession}"/>
+        <remoteRepositories implementation="java.util.List" default-value="${project.remoteProjectRepositories}"/>
+      </configuration>
+
+      <requirements>
+        <requirement>
+          <role>org.eclipse.aether.RepositorySystem</role>
+          <field-name>repoSystem</field-name>
+        </requirement>
+      </requirements>
+    </mojo>
+  </mojos>
+</plugin>

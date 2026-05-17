@@ -80,6 +80,7 @@ if [ -d "${JAVA_HOME}" ]; then
       ;;
     -statsd)
       OPTIONS="statsd=$2,$OPTIONS"
+      shift
       ;;
     --noserver)
       OPTIONS="noServer=true,$OPTIONS"
@@ -92,7 +93,7 @@ if [ -d "${JAVA_HOME}" ]; then
         echo "Please set BTRACE_HOME before running this script"
         exit 1
       fi
-      $JAVA_HOME/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR} org.openjdk.btrace.boot.Loader --version
+      $JAVA_HOME/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR} io.btrace.boot.Loader --version
       exit 0
       ;;
     -h)
@@ -105,8 +106,8 @@ if [ -d "${JAVA_HOME}" ]; then
     shift
   done
 
-  if [ -f "${BTRACE_HOME}/libs/btrace-agent.jar" ]; then
-    ${JAVA_HOME}/bin/java -Xshare:off ${JAVA_ARGS} -javaagent:${BTRACE_HOME}/libs/btrace-agent.jar=$OPTIONS,script="$@"
+  if [ -f "${BTRACE_HOME}/libs/btrace.jar" ]; then
+    ${JAVA_HOME}/bin/java -Xshare:off ${JAVA_ARGS} -javaagent:${BTRACE_HOME}/libs/btrace.jar=$OPTIONS,script="$@"
   else
     echo "Please set BTRACE_HOME before running this script"
   fi

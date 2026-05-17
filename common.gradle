@@ -4,9 +4,11 @@
 
 apply plugin: 'java'
 apply plugin: 'idea'
+apply from: rootProject.file('gradle/spotless.gradle')
 
-project.group = 'org.openjdk.btrace'
-project.version = '3.0.0-SNAPSHOT'
+// group and version are set on all projects (including root) via the allprojects
+// block in the root build.gradle. Duplicating them here would drift during releases
+// (the release workflow only updates build.gradle).
 
 buildscript {
     repositories {
@@ -73,6 +75,7 @@ repositories {
 dependencies {
     // Adding dependencies here will add the dependencies to each subproject.
 	testImplementation libs.junit.jupiter
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 String mavenArtifactId = name

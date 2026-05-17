@@ -1,7 +1,0 @@
-// BTrace API module for compile-time dependencies
-// This module provides the compile-time API for BTrace scripts
-
-dependencies {
-    implementation project(':btrace-core')
-    implementation project(':btrace-compiler')
-}

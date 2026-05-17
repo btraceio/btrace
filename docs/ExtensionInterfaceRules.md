@@ -3,7 +3,7 @@
 This page defines the rules for authoring BTrace extension APIs (interfaces), the build-time checks enforced by the Gradle plugin, and how optional services use shims or throwing stubs at runtime.
 
 ## Overview
-- API vs Impl: Put public service interfaces under `src/api/java`. Implementations live under `src/impl/java` and are shaded/packaged into the implementation JAR.
+- API vs Impl: Sources live under `src/main`, but the same API/impl artifact split still applies. Public service interfaces and exported API types still end up in the API JAR; implementation classes still end up in the implementation JAR.
 - Classloading: The API JAR is added to the target VM bootstrap classpath; the implementation JAR is loaded by an isolated extension classloader.
 - Optional injection: A probe can mark an injected service as optional via `@Injected(optional = true)` and select the fallback mode:
   - `SHIM` (production): a no‑op object that implements the interface and returns defaults.
@@ -34,7 +34,7 @@ This page defines the rules for authoring BTrace extension APIs (interfaces), th
   - The plugin scans the implementation JAR and classpath by default and writes merged permissions to the API JAR manifest.
 
 ## Build‑Time Enforcement
-The `org.openjdk.btrace.extension` Gradle plugin runs validation on the API services you declare in `btraceExtension.services`. It fails the build with clear error IDs.
+The `io.btrace.extension` Gradle plugin runs validation on the API services you declare in `btraceExtension.services`. It fails the build with clear error IDs.
 
 Enforced checks (subset shown):
 - `BTRACE-EXT-001`: Service must be a public, top‑level interface.
@@ -53,7 +53,7 @@ Apply the plugin in your extension project and declare services:
 
 ```
 plugins {
-  id 'org.openjdk.btrace.extension'
+  id 'io.btrace.extension'
   id 'com.github.johnrengelman.shadow'
 }
 
@@ -61,7 +61,8 @@ btraceExtension {
   id = 'btrace-metrics'
   name = 'BTrace Metrics (HDR)'
   description = 'HDR Histogram based metrics'
-  services = ['org.openjdk.btrace.metrics.MetricsService']
+  services = ['io.btrace.metrics.MetricsService']
+  // additionalExports = ['io.btrace.metrics.histogram.HistogramMetric']
   // Optional: configure nullability annotations if you use different ones
   nullableAnnotations = ['com.acme.NonRequired']
   nonnullAnnotations = ['com.acme.Required']
@@ -90,9 +91,9 @@ During the API JAR build, the plugin logs the permissions written to the manifes
 Compliant interface:
 
 ```
-package org.openjdk.btrace.metrics;
+package io.btrace.metrics;
 
-import org.openjdk.btrace.core.extensions.Permission;
+import io.btrace.core.extensions.Permission;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -139,8 +140,8 @@ This section maps validation errors to concrete fixes you can apply.
 - BTRACE-EXT-033: Manifest permissions missing annotated requirements.
   - Fix: Ensure that the set written to the manifest (from scan + requiredPermissions) includes all permissions declared in `@ServiceDescriptor.permissions` and package-level `@ExtensionDescriptor.permissions`.
 - BTRACE-EXT-040: API signature or constant pool references implementation type.
-  - Fix: Remove any references to classes compiled under `src/impl/java` from API signatures and annotations.
+  - Fix: Remove any references to implementation-only classes from API signatures and annotations. These classes should remain unexported classes under `src/main/java`.
 - BTRACE-EXT-041: Declared service not found in API output.
-  - Fix: Place the interface in `src/api/java` and list it in `btraceExtension.services`.
+  - Fix: Ensure the interface is part of the exported API set and list it in `btraceExtension.services`.
 - BTRACE-EXT-050: Failed to analyze service (plugin error or unusual bytecode).
   - Fix: Re‑run with `--stacktrace`. If reproducible, file an issue with the API source and the generated class.

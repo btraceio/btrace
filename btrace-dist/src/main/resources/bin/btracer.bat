@@ -1,4 +1,5 @@
 @echo off
+setlocal enableextensions
 
 rem %~dp0 is expanded pathname of the current script under NT
 set DEFAULT_BTRACE_HOME=%~dp0..
@@ -6,9 +7,10 @@ set DEFAULT_BTRACE_HOME=%~dp0..
 if "%BTRACE_HOME%"=="" set BTRACE_HOME=%DEFAULT_BTRACE_HOME%
 set DEFAULT_BTRACE_HOME=
 
-if not exist "%BTRACE_HOME%\libs \btrace-agent.jar" goto noBTraceHome
+set "CLIENT_JAR=%BTRACE_HOME%\libs\btrace.jar"
+if not exist "%CLIENT_JAR%" goto noBTraceHome
 
-set OPTIONS=
+set "OPTIONS="
 
 if "%1"=="" (
   call:usage
@@ -16,83 +18,83 @@ if "%1"=="" (
 )
 if "%JAVA_HOME%" == "" goto noJavaHome
 
+set "JAVA_ARGS=-XX:+IgnoreUnrecognizedVMOptions"
+
 if exist "%JAVA_HOME%/jmods/" (
-  set JAVA_ARGS="%JAVA_ARGS% -XX:+AllowRedefinitionToAddDeleteMethods"
-  set JAVA_ARGS="%JAVA_ARGS% --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
+  set "JAVA_ARGS=%JAVA_ARGS% -XX:+AllowRedefinitionToAddDeleteMethods"
+  set "JAVA_ARGS=%JAVA_ARGS% --add-exports jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
 )
 
 if "%1" == "--version" (
-  set CLIENT_JAR=%BTRACE_HOME%\libs\btrace.jar
-  if not exist "%CLIENT_JAR%" goto noBTraceHome
-  %JAVA_HOME%\bin\java "%JAVA_ARGS%" -cp %CLIENT_JAR% org.openjdk.btrace.boot.Loader --version
+  "%JAVA_HOME%\bin\java" %JAVA_ARGS% -cp "%CLIENT_JAR%" io.btrace.boot.Loader --version
   goto end
 )
 
-set inloop=1
 :loop
   IF "%1"=="-v" (
-    set OPTIONS="debug=true,%OPTIONS"
+    set "OPTIONS=debug=true,%OPTIONS%"
     goto next
   )
   IF "%1"=="-u" (
-    set OPTIONS="unsafe=true,%OPTIONS"
+    set "OPTIONS=unsafe=true,%OPTIONS%"
     goto next
   )
   if "%1"=="-p" (
-    set OPTIONS="port=%2,%OPTIONS"
+    set "OPTIONS=port=%2,%OPTIONS%"
     shift
     goto next
   )
   if "%1"=="-d" (
-    set OPTIONS="dumpClasses=true,dumpDir=%2,%OPTIONS"
-     shift
+    set "OPTIONS=dumpClasses=true,dumpDir=%2,%OPTIONS%"
+    shift
     goto next
   )
   if "%1"=="-o" (
-    set OPTIONS="scriptOutputFile=%2,%OPTIONS"
+    set "OPTIONS=scriptOutputFile=%2,%OPTIONS%"
     shift
     goto next
   )
   if "%1"=="-pd" (
-    set OPTIONS="probeDescPath=%2,%OPTIONS"
+    set "OPTIONS=probeDescPath=%2,%OPTIONS%"
     shift
     goto next
   )
   if "%1"=="-bcp" (
-    OPTIONS="bootClassPath=%2,%OPTIONS"
+    set "OPTIONS=bootClassPath=%2,%OPTIONS%"
     shift
     goto next
   )
   if "%1"=="-scp" (
-    set OPTIONS="systemClassPath=%2,%OPTIONS"
+    set "OPTIONS=systemClassPath=%2,%OPTIONS%"
     shift
     goto next
   )
   if "%1"=="--noserver" (
-    set OPTIONS="noServer=true,%OPTIONS"
+    set "OPTIONS=noServer=true,%OPTIONS%"
     goto next
   )
   if "%1"=="--stdout" (
-    set OPTIONS="stdout=true,%OPTIONS"
+    set "OPTIONS=stdout=true,%OPTIONS%"
     goto next
   )
   if "%1"=="-statsd" (
-    set OPTIONS="statsd=%2,%OPTIONS"
+    set "OPTIONS=statsd=%2,%OPTIONS%"
+    shift
     goto next
   )
-  call :usage
-  goto end
-
-  set inloop=0
+  if "%1"=="-h" (
+    call :usage
+    goto end
+  )
+  goto launch
 
   :next
-  if %inloop==1 (
-    shift
-    goto loop
-  )
+  shift
+  goto loop
 
-%JAVA_HOME%\bin\java -Xshare:off "%JAVA_ARGS%" "-javaagent:%BTRACE_HOME%/libs/btrace-agent.jar=%OPTIONS,script=%~1" %2 %3 %4 %5 %6 %7 %8 %9
-goto end
+:launch
+  "%JAVA_HOME%\bin\java" -Xshare:off %JAVA_ARGS% "-javaagent:%CLIENT_JAR%=%OPTIONS%,script=%~1" %2 %3 %4 %5 %6 %7 %8 %9
+  goto end
 
 :noJavaHome
   echo Please set JAVA_HOME before running this script
@@ -118,3 +120,4 @@ goto end
   echo     -h		          This message
 
 :end
+endlocal

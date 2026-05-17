@@ -518,8 +518,8 @@ btrace -n 'MyClass::process @return if duration>100ms { print method, duration }
 
 **Equivalent BTrace script (MyTrace.java):**
 ```java
-import org.openjdk.btrace.core.annotations.*;
-import static org.openjdk.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MyTrace {

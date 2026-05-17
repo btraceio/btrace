@@ -1,5 +1,21 @@
 # BTrace Tutorial (BTrace 2.3.0)
 
+> **Note:** Examples use `btrace.jar` -- the single masked JAR (BTrace 2.2+). If using a legacy multi-JAR distribution, replace `btrace.jar` with `btrace-agent.jar` (and add `-Xbootclasspath/a:btrace-boot.jar` where needed).
+
+> **Package namespace:** BTrace 2.3+ uses the `io.btrace` package (previously `org.openjdk.btrace`). The compiler auto-injects `import static io.btrace.BTrace.*` into every script, so common helpers like `println`, `str`, `monotonic`, etc. are available without any import. Legacy probes compiled against `org.openjdk.btrace` are transparently migrated at load time.
+
+**Related documentation**
+
+| Document | What's in it |
+|----------|-------------|
+| [Getting Started](GettingStarted.md) | Installation, first run |
+| [Quick Reference](QuickReference.md) | All annotations, parameters, built-in functions |
+| [Oneliner Guide](OnelinerGuide.md) | DTrace-style one-liners (`btrace -n '...'`) |
+| [Extension Development Guide](BTraceExtensionDevelopmentGuide.md) | Writing and shipping extensions |
+| [Extension Interface Rules](ExtensionInterfaceRules.md) | API design contract that the build enforces |
+| [FAQ](FAQ.md) | Common questions and answers |
+| [Troubleshooting](Troubleshooting.md) | Diagnosing agent and probe problems |
+
 ## 1. Hello World
 
 Accustoms the learner to 'btrace' command and the way it is used.
@@ -96,7 +112,7 @@ Once you are attached to the target JVM you can press Ctrl-C in the terminal to 
 
 ###### Directly
 
-`java -javaagent:btrace-agent.jar=[<agent-arg>[,<agent-arg>]*]? <launch-args>`
+`java -javaagent:btrace.jar=[<agent-arg>[,<agent-arg>]*]? <launch-args>`
 
 The agent takes a list of comma separated arguments.
 
@@ -155,6 +171,8 @@ The syntax is straightforward - `./btracep <binary trace file>`. The tool will p
 #### Lesson 2 - Tracing methods
 
 This is the main purpose of BTrace - inject a custom code to custom locations to give the insights about the internal state and dynamics of the application.
+
+> **Import convention:** Code examples in this lesson use `import ...;` as a shorthand. In practice you need **no explicit imports at all**: the compiler auto-injects both `import static io.btrace.BTrace.*;` (utility methods like `println`, `str`, `monotonic`) and `import io.btrace.core.annotations.*;` (all BTrace annotations). The `import ...;` placeholder is kept in these examples only to signal which packages are in use. See [Lesson 7](#lesson-7---flat-dsl) for details.
 
 1. Getting just the information that any method is being executed
 ```java
@@ -468,6 +486,8 @@ public class HelloWorldTrace {
 
 Global callbacks are not directly related to the tracing code injection but they allow us to observe the global state and act correspondingly.
 
+> **Import convention:** Same as Lesson 2 — both annotation and utility imports are auto-injected; no explicit imports are required.
+
 #### __@OnExit__
 
 Called when the traced application is about to exit. Allows to capture the exit code.
@@ -697,6 +717,8 @@ specific methods.
 
 BTrace supports extensions that provide additional functionality beyond the core tracing capabilities. Extensions can send metrics to external systems, integrate with DTrace, and more. To ensure safety, extensions require explicit permissions.
 
+> See the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for the full guide on building and deploying extensions, and the [Extension Interface Rules](ExtensionInterfaceRules.md) for the API design contract.
+
 ##### Permission System
 
 BTrace uses a permission-based security model organized into three tiers:
@@ -762,7 +784,7 @@ btrace --grant=NETWORK,THREADS <pid> MetricsProbe.class
 
 ###### Using the Java agent
 ```bash
-java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
+java -javaagent:btrace.jar=script=MetricsProbe.class,grant=NETWORK,THREADS ...
 ```
 
 ###### Grant all permissions (use with caution)
@@ -771,16 +793,16 @@ btrace --grantAll=true <pid> MetricsProbe.class
 ```
 or
 ```bash
-java -javaagent:btrace-agent.jar=script=MetricsProbe.class,grantAll=true ...
+java -javaagent:btrace.jar=script=MetricsProbe.class,grantAll=true ...
 ```
 
 ##### Per-Extension Allow/Deny (Simplified Policy)
 - Allow specific extensions to link implementations via agent args:
-  - `-javaagent:btrace-agent.jar=...,allowExtensions=btrace-statsd,my-metrics`
+  - `-javaagent:btrace.jar=...,allowExtensions=btrace-statsd,my-metrics`
 - Deny specific extensions (implementation blocked; SHIM fallback):
-  - `-javaagent:btrace-agent.jar=...,denyExtensions=legacy-foo`
+  - `-javaagent:btrace.jar=...,denyExtensions=legacy-foo`
 - Allow all privileged extensions:
-  - `-javaagent:btrace-agent.jar=...,allowPrivileged=true`
+  - `-javaagent:btrace.jar=...,allowPrivileged=true`
 - Optional process-local policy file:
   - `-Dbtrace.permissions=/path/to/permissions.properties` or `~/.btrace/permissions.properties`
   - Example content:
@@ -854,15 +876,13 @@ Example:
 ```java
 package myprobes;
 
-import static org.openjdk.btrace.core.BTraceUtils.*;
-
-import org.openjdk.btrace.core.annotations.*;
-import org.openjdk.btrace.metrics.MetricsService;
-import org.openjdk.btrace.metrics.histogram.HistogramConfig;
-import org.openjdk.btrace.metrics.histogram.HistogramMetric;
-import org.openjdk.btrace.metrics.histogram.HistogramSnapshot;
-import org.openjdk.btrace.metrics.stats.StatsMetric;
-import org.openjdk.btrace.metrics.stats.StatsSnapshot;
+import io.btrace.core.annotations.*;
+import io.btrace.metrics.MetricsService;
+import io.btrace.metrics.histogram.HistogramConfig;
+import io.btrace.metrics.histogram.HistogramMetric;
+import io.btrace.metrics.histogram.HistogramSnapshot;
+import io.btrace.metrics.stats.StatsMetric;
+import io.btrace.metrics.stats.StatsSnapshot;
 
 @BTrace
 public class HistogramExample {
@@ -929,6 +949,88 @@ Configuration (optional):
   - `btrace-metrics.histogram.default-precision=3`
   - `btrace-metrics.histogram.max-value=3600000000`
 
+##### Building App Integration Extensions with @ExternalType
+
+When an extension needs to interact with application-specific types (Spark events, Hadoop objects, custom framework classes), use the `@ExternalType` annotation to eliminate manual reflective boilerplate. The BTrace extension plugin auto-registers the annotation processor.
+
+Declare an interface in `src/main/java` annotated with `@ExternalType("fully.qualified.AppType")`:
+
+```java
+// src/main/java/org/example/spark/api/JobStartEvent.java
+@ExternalType("org.apache.spark.scheduler.SparkListenerJobStart")
+public interface JobStartEvent {
+    int jobId();
+    long time();
+}
+```
+
+The processor generates `JobStartEvent$Ext` with lazy, cached `MethodHandle` dispatchers. Use them directly in the impl — no `try/catch` or cache setup required:
+
+```java
+// src/main/java/org/example/spark/impl/SparkApiImpl.java
+public final class SparkApiImpl extends Extension implements SparkApi {
+    @Override
+    public void onJobStart(Object event) {
+        int  id = JobStartEvent$Ext.jobId(event);
+        long ts = JobStartEvent$Ext.time(event);
+        // emit metrics / logs...
+    }
+}
+```
+
+Resolution happens lazily on the first call via the event object's own class loader; the handle is cached for subsequent calls. If the external class isn't loaded yet, the resolver retries next call — no `ExceptionInInitializerError` at extension startup.
+
+Field access, constructors, non-public methods, and chained external types are **not yet handled** by the processor — they are planned for a future `@ExternalType` version. Use `ClassLoadingUtil` / `MethodHandleCache` directly in the meantime (see [Provided-Style Extensions](architecture/provided-style-extensions.md) for the full scope-limits table and workarounds).
+
+For the full `@ExternalType` reference, see [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md).
+
+##### Zero-Config Probe Auto-Selection (ExtensionConfigurator)
+
+For fat agent deployments (Spark executors, Hadoop nodes, Kubernetes pods), extensions can automatically select the right bundled probes without operator input.
+
+**1. List probe names and declare the configurator in `extension.properties`:**
+
+```properties
+probes=DriverTracer,ExecutorTracer
+configurator=org.example.spark.SparkConfigurator
+```
+
+**2. Stage the compiled probe `.class` files in the fat agent plugin:**
+
+```groovy
+btraceFatAgent {
+    embedExtensions { project(':my-spark-extension') }
+    bundledProbes { from 'src/probes/compiled' }
+}
+```
+
+**3. Implement `ExtensionConfigurator`:**
+
+```java
+public final class SparkConfigurator implements ExtensionConfigurator {
+    @Override
+    public ProbeConfiguration configure(RuntimeEnvironment env, Map<String, String> args) {
+        ProbeConfiguration config = new ProbeConfiguration();
+        if (env.hasClass("org.apache.spark.SparkContext")) {
+            config.enable("DriverTracer");
+        } else if (env.hasClass("org.apache.spark.executor.Executor")) {
+            config.enable("ExecutorTracer");
+        }
+        return config;
+    }
+}
+```
+
+`RuntimeEnvironment` provides `hasClass(String)`, `getSystemProperty(String)`, `getEnv(String)`, and `getMainClassName()` for environment detection.
+
+**4. Operator attaches — no `probes=` argument needed:**
+
+```bash
+java -javaagent:my-btrace-agent-fat.jar spark-submit ...
+```
+
+If the operator supplies `probes=`, it takes priority and the configurator is skipped. See [Extension Development Guide — Bundled Probes](BTraceExtensionDevelopmentGuide.md#bundled-probes-and-zero-config-auto-selection) for the full API.
+
 ##### Troubleshooting Failed Extensions
 
 If extensions fail to load during agent initialization (for example, due to missing dependencies or configuration issues), BTrace will display a warning when you submit a probe:
@@ -951,8 +1053,8 @@ This will display all extensions that failed to load and the reasons for their f
 
 ```
 Failed Extensions:
-  1. org.openjdk.btrace.statsd.StatsdExtension: Connection refused to localhost:8125
-  2. org.openjdk.btrace.dtrace.DTraceExtension: DTrace not available on this platform
+  1. io.btrace.statsd.StatsdExtension: Connection refused to localhost:8125
+  2. io.btrace.dtrace.DTraceExtension: DTrace not available on this platform
 ```
 
 ###### Interactive Menu
@@ -971,3 +1073,898 @@ Please enter your option:
 ```
 
 This is useful for diagnosing issues when probes that rely on specific extensions are not working as expected.
+
+##### Writing Your Own Extension (Quick Start)
+
+Extensions are standalone Gradle projects that expose a typed service interface to BTrace scripts. The full workflow is covered in the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md); the steps below are the minimum to get started.
+
+**1. Apply the BTrace extension Gradle plugin**
+
+```gradle
+plugins {
+    id("io.btrace.extension") version "<btraceVersion>"
+}
+
+btraceExtension {
+    id = "com.example.myext"
+    services = ["com.example.myext.api.MyService"]
+}
+```
+
+**2. Define the service API (what scripts see)**
+
+```java
+// src/main/java/com/example/myext/api/MyService.java
+package com.example.myext.api;
+
+public interface MyService {
+    void record(String key, long value);
+}
+```
+
+**3. Implement the service (stays isolated from scripts)**
+
+```java
+// src/main/java/com/example/myext/impl/MyServiceImpl.java
+package com.example.myext.impl;
+
+import com.example.myext.api.MyService;
+import io.btrace.ext.spi.Extension;
+
+public class MyServiceImpl extends Extension implements MyService {
+    @Override
+    public void record(String key, long value) {
+        // emit metric, write to log, etc.
+    }
+}
+```
+
+**4. Inject and use the service in a script**
+
+```java
+import io.btrace.core.annotations.*;
+import com.example.myext.api.MyService;
+
+@BTrace
+public class MyProbe {
+    @Injected
+    private static MyService myService;
+
+    @OnMethod(clazz="com.example.App", method="processRequest",
+              location=@Location(Kind.RETURN))
+    public static void onReturn(@Duration long d) {
+        myService.record("app.processRequest", d);
+    }
+}
+```
+
+The plugin generates the service descriptor manifest, computes the required permission set, and produces a distributable ZIP that installs under `$BTRACE_HOME/extensions/`. See the [BTrace Extension Development Guide](BTraceExtensionDevelopmentGuide.md) for detailed coverage of: classloader isolation, permission declarations, `@ExternalType` adapters, fat-agent embedding, and the full API design rules documented in [ExtensionInterfaceRules.md](ExtensionInterfaceRules.md).
+
+---
+
+#### Lesson 7 - Flat DSL
+
+BTrace 2.3+ ships a flat DSL class `io.btrace.BTrace` that exposes the most common helper operations as plain static methods. The compiler **automatically injects two imports** into every script:
+
+* `import static io.btrace.BTrace.*;` — all flat DSL helpers (`println`, `str`, `monotonic`, …)
+* `import io.btrace.core.annotations.*;` — all BTrace annotations (`@BTrace`, `@OnMethod`, `@TLS`, `@Level`, …)
+
+This means a minimal BTrace script requires **zero import statements** — just annotate your class and write the probe logic.
+
+##### What the flat DSL provides
+
+| Category | Methods |
+|----------|---------|
+| Output | `print(s)`, `println(s)`, `println()`, `printf(fmt, args...)` |
+| Strings | `str(o)`, `concat(a,b)`, `substr(s,start,end)`, `matches(s,regex)`, `startsWith(s,prefix)`, `endsWith(s,suffix)`, `length(s)` |
+| Numbers | `abs(l/d)`, `min(a,b)`, `max(a,b)` |
+| Time | `timestamp()` (wall clock ms), `monotonic()` (nanos) |
+| Thread | `currentThread()`, `threadName(t)`, `threadId(t)` |
+| Stack | `stackTrace()`, `printStack()`, `stackDepth()` |
+| Object | `className(o)`, `identity(o)`, `size(o)` |
+| Control | `exit(code)` |
+
+For everything else (aggregations, reflection, profiling, JFR, data structures, thread operations) use `BTraceUtils` or an injected extension service.
+
+##### Writing scripts without explicit imports
+
+Before (classic style):
+
+```java
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace {
+    @OnMethod(clazz="extra.HelloWorld", method="/.*/")
+    public static void onMethod(@ProbeMethodName String pmn) {
+        BTraceUtils.println("Hello from method " + pmn);
+    }
+}
+```
+
+After (modern zero-import style — both imports auto-injected by the compiler):
+
+```java
+@BTrace
+public class HelloWorldTrace {
+    @OnMethod(clazz="extra.HelloWorld", method="/.*/")
+    public static void onMethod(@ProbeMethodName String pmn) {
+        println("Hello from method " + pmn);
+    }
+}
+```
+
+You can still write the imports explicitly if you prefer (for IDE auto-complete, for example) — the compiler skips injection when they are already present:
+
+```java
+import static io.btrace.BTrace.*;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace { ... }
+```
+
+##### Mixing flat DSL with BTraceUtils
+
+The flat DSL covers the most frequent operations. When you need something it does not offer, import `BTraceUtils` directly alongside it:
+
+```java
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace {
+    @OnMethod(clazz="extra.HelloWorld", method="/call.*/", location=@Location(Kind.RETURN))
+    public static void onMethod(@ProbeMethodName(fqn = true) String pmn,
+                                @Self Object thiz) {
+        // println/str come from the flat DSL (auto-injected)
+        println("Hello from method " + pmn);
+        // getInt/classOf come from BTraceUtils (explicit import)
+        println("field = " + str(BTraceUtils.getInt("field", thiz)));
+    }
+}
+```
+
+##### How it works under the hood
+
+At compile time, every `INVOKESTATIC` targeting `io.btrace.BTrace.*` is rewritten by the post-processor to an `INVOKEDYNAMIC` instruction that routes the call through `BTraceBootstrap`. This gives probe code stronger isolation from the target application's classloader hierarchy without any visible change in the script source.
+
+---
+
+#### Lesson 8 - Thread-Local Storage
+
+When a probe spans two separate handler methods — for example, recording a start time at method entry and computing duration at method return — you need per-thread state. BTrace provides the `@TLS` annotation for exactly this purpose: a field marked `@TLS` behaves like a `ThreadLocal`, with each thread seeing its own independent copy.
+
+__Note:__ Fields annotated with `@TLS` must be `static`. Primitive types and `String` are the most reliable choices; object references work too but require care because the field is null-initialized per thread on first access.
+
+##### Measuring per-thread duration
+
+```java
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace {
+    @TLS
+    private static long startTime;   // one copy per thread
+
+    @OnMethod(clazz="extra.HelloWorld", method="/call.*/")
+    public static void onEntry(@ProbeMethodName(fqn = true) String pmn) {
+        startTime = monotonic();     // record entry time for this thread
+        println("Entering " + pmn);
+    }
+
+    @OnMethod(clazz="extra.HelloWorld", method="/call.*/",
+              location=@Location(Kind.RETURN))
+    public static void onReturn(@ProbeMethodName(fqn = true) String pmn) {
+        long dur = monotonic() - startTime;
+        println(pmn + " took " + str(dur) + " ns");
+    }
+}
+```
+
+__Note:__ `@TLS` is reset to its zero/null value when the thread exits, so it is safe under thread pools where threads are reused across requests.
+
+---
+
+#### Lesson 9 - Instrumentation Levels
+
+Tracing everything at once can be overwhelming and expensive. The `@Level` annotation lets you define multiple probe handlers that are enabled at different _instrumentation levels_. At runtime you switch the active level through `@OnEvent` handlers, dialing the detail up or down without stopping and restarting the probe.
+
+##### Defining level-aware handlers
+
+```java
+import io.btrace.core.BTraceUtils;
+import io.btrace.core.annotations.*;
+
+@BTrace
+public class HelloWorldTrace {
+    /**
+     * Level 0 (default): only trace entry into HelloWorld's own methods.
+     * Enabled when the instrumentation level equals exactly 0.
+     */
+    @OnMethod(clazz="extra.HelloWorld", method="/.*/",
+              enableAt=@Level("=0"))
+    public static void onMethodL0(@ProbeMethodName(fqn = true) String pmn) {
+        println("[L0] " + pmn);
+    }
+
+    /**
+     * Level 1+: trace the whole class hierarchy including subclasses.
+     * Enabled when the instrumentation level is 1 or higher.
+     */
+    @OnMethod(clazz="+extra.HelloWorld", method="/.*/",
+              enableAt=@Level(">=1"))
+    public static void onMethodL1(@ProbeMethodName(fqn = true) String pmn) {
+        println("[L1] " + pmn);
+    }
+
+    /** Raise to level 1 by sending a named event. */
+    @OnEvent("verbose")
+    public static void setVerbose() {
+        BTraceUtils.setInstrumentationLevel(1);
+        println("Switched to verbose tracing (level 1)");
+    }
+
+    /** Drop back to level 0. */
+    @OnEvent("quiet")
+    public static void setQuiet() {
+        BTraceUtils.setInstrumentationLevel(0);
+        println("Switched back to quiet tracing (level 0)");
+    }
+}
+```
+
+##### Level expression syntax
+
+| Expression | Meaning |
+|------------|---------|
+| `@Level` (no value) | Always enabled (default) |
+| `@Level("N")` | Level >= N (shorthand for `>=N`) |
+| `@Level("=N")` | Exactly level N |
+| `@Level(">N")` | Strictly greater than N |
+| `@Level(">=N")` | Greater than or equal to N |
+| `@Level("<N")` | Strictly less than N |
+| `@Level("<=N")` | Less than or equal to N |
+
+Where N is a non-negative integer.
+
+##### Switching levels from the command line
+
+While attached interactively (press Ctrl-C), choose option **2** or **3** to send an event. For the example above:
+
+```
+Please enter your option: 3
+Please enter event name: verbose
+```
+
+The `setVerbose()` handler fires immediately and BTrace retransforms the target classes to activate the higher-detail probes.
+
+---
+
+#### Lesson 10 - Oneliners
+
+For quick, ad-hoc investigations you do not need a `.java` file at all. BTrace supports **oneliners** via the `-n` flag: a compact, DTrace-inspired syntax that compiles to a full BTrace script internally.
+
+```bash
+btrace -n 'CLASS::METHOD @LOCATION [filter] { ACTION }' <PID>
+```
+
+##### Components
+
+| Part | Description |
+|------|-------------|
+| `CLASS` | Class name, wildcard (`*`, `**`), or `/regex/` |
+| `METHOD` | Method name, wildcards, or `/regex/`; `<init>` for constructors |
+| `@LOCATION` | `@entry`, `@return`, or `@error` |
+| `filter` | Optional: `if duration>100ms` or `if args[0]=="VALUE"` |
+| `ACTION` | One or more of `print`, `count`, `time`, `stack(N)`, separated by commas |
+
+##### Available identifiers in actions
+
+| Identifier | Available at | Description |
+|------------|-------------|-------------|
+| `method` | all | Method name |
+| `class` | all | Class name |
+| `args` | all | Method arguments array |
+| `self` | all | Receiver (`this`) |
+| `duration` | `@return`, `@error` | Execution time in nanoseconds |
+| `return` | `@return` | Return value |
+
+##### Examples
+
+**Print every call into `callA`:**
+```bash
+btrace -n 'extra.HelloWorld::callA @entry { print method, args }' <PID>
+```
+
+**Find calls slower than 5 ms:**
+```bash
+btrace -n 'extra.HelloWorld::* @return if duration>5ms { print method, duration }' <PID>
+```
+
+**Count all file opens:**
+```bash
+btrace -n 'java.io.FileInputStream::<init> @entry { count }' <PID>
+```
+
+**Print the stack when an `IOException` is constructed:**
+```bash
+btrace -n 'java.io.IOException::<init> @entry { print args, stack(8) }' <PID>
+```
+
+**Match methods by regex and time them:**
+```bash
+btrace -n '/com\.example\..*/::/handle.*/ @return { time }' <PID>
+```
+
+##### Limitations
+
+- Single probe point per oneliner (no `|`-separated multi-probe)
+- No `@call` location, no field access probes
+- No aggregations (histograms, averages) — use a full script for those
+- Filters support simple comparisons only; no `&&`/`||`
+
+For complex scenarios — multiple probe points, state across probes, aggregations — convert to a full BTrace script. See the [Oneliner Guide](OnelinerGuide.md) for the complete syntax reference and more examples.
+
+---
+
+## Lesson 11 — Runtime Contracts (`btrace-contracts`)
+
+**Extension ID:** `btrace-contracts`  
+**Service class:** `io.btrace.contracts.ContractService`
+
+`ContractService` enforces behavioral invariants at runtime — latency budgets, call-rate limits, null checks, value-range assertions — without modifying the target code. All checks are non-throwing: a violation is counted internally and the target application keeps running. It also tracks call count and average latency per user-supplied tag, so you can compare any two code paths side by side (e.g. `"cached"` vs `"direct"`, `"v1"` vs `"v2"`).
+
+#### API
+
+```java
+void checkLatency(String contract, long durationNanos, long budgetNanos)
+void checkCallRate(String contract, int maxPerSecond)
+void assertCondition(String contract, boolean condition, String message)
+void checkRange(String contract, long value, long min, long max)
+void checkNotNull(String contract, Object value)
+void trackCodePath(String contract, long durationNanos, String tag)
+String getSummary()
+boolean hasViolations()
+long getTotalViolations()
+```
+
+#### Example — enforcing contracts on a service endpoint
+
+```java
+import io.btrace.contracts.ContractService;
+import io.btrace.core.annotations.*;
+import static io.btrace.BTrace.*;
+
+@BTrace
+public class ContractCheck {
+
+    @Injected private static ContractService contracts;
+
+    @OnMethod(
+        clazz  = "com.example.RecommendationService",
+        method = "recommend",
+        location = @Location(Kind.ENTRY)
+    )
+    public static void onEntry() {
+        contracts.checkCallRate("recommend/rate", 10);
+    }
+
+    @OnMethod(
+        clazz  = "com.example.RecommendationService",
+        method = "recommend",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onReturn(@Return Object result, @Duration long dur) {
+        contracts.checkLatency("recommend/latency", dur, 500_000_000L);
+        contracts.checkNotNull("recommend/non-null-result", result);
+        contracts.trackCodePath("recommend", dur, "impl-a");
+    }
+
+    @OnEvent
+    public static void report() {
+        println(contracts.getSummary());
+        if (contracts.hasViolations()) {
+            println(strcat("Total violations: ", str(contracts.getTotalViolations())));
+        }
+    }
+
+    @OnTimer(15000)
+    public static void periodicReport() { report(); }
+}
+```
+
+Copy `btrace-contracts.jar` to `$BTRACE_HOME/extensions/`, then run:
+
+```bash
+btrace <PID> ContractCheck.java
+```
+
+---
+
+## Lesson 12 — AI/LLM Application Observability
+
+Modern Java applications increasingly embed LLM inference, RAG pipelines, and on-device model execution. BTrace ships three optional extension JARs that add purpose-built services for observing these workloads without modifying application code.
+
+All three extensions use the standard `@Injected` mechanism: declare a field in your BTrace script, annotate it, and BTrace wires up the implementation at deploy time. No reflection, no extra threads, no allocation on the hot path.
+
+#### 12.1 LLM Inference Tracing (`btrace-llm-trace`)
+
+**Extension ID:** `btrace-llm-trace`  
+**Service class:** `io.btrace.llm.LlmTraceService`  
+**Builder class:** `io.btrace.llm.CallRecord`
+
+`LlmTraceService` records LLM API calls: token counts (input, output, cache-read, cache-creation), latency, streaming time-to-first-token, errors, tool calls, and embeddings. It maintains per-model statistics — call count, total tokens, and latency min/mean/max — and estimates cost using a built-in pricing table covering Claude, GPT-4o, Gemini, and other common models. The implementation is thread-safe and allocation-free on the hot path via a `ThreadLocal`-pooled builder.
+
+##### Simple API
+
+```java
+void recordCall(String model, long durationNanos)
+void recordCall(String model, int inputTokens, int outputTokens, long durationNanos)
+CallRecord call(String model)            // returns a fluent builder
+void recordEmbedding(String model, int tokenCount, long durationNanos)
+void recordToolUse(String model, String toolName)
+void recordError(String model, String errorType, long durationNanos)
+String getSummary()
+double getEstimatedCostUsd()
+```
+
+The fluent builder lets you attach every detail of a call in one expression:
+
+```java
+llm.call("claude-sonnet-4-20250514")
+    .provider("anthropic")
+    .inputTokens(1500)
+    .outputTokens(300)
+    .cacheReadTokens(800)
+    .streaming()
+    .timeToFirstToken(200_000_000L)
+    .duration(durationNanos)
+    .record();
+```
+
+##### Full example — instrumenting LangChain4j
+
+The following script instruments the `ChatLanguageModel.generate()` method from the LangChain4j library and extracts token usage from the `AiMessage` response via `@Return`:
+
+```java
+import io.btrace.llm.LlmTraceService;
+import io.btrace.llm.CallRecord;
+import io.btrace.core.annotations.*;
+import static io.btrace.BTrace.*;
+
+@BTrace
+public class LlmTrace {
+
+    @Injected
+    private static LlmTraceService llm;
+
+    // @Duration is available at Kind.RETURN and Kind.ERROR — no manual timestamps needed.
+    // @ProbeClassName identifies the concrete implementation class at the probe site.
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.model.chat.ChatLanguageModel",
+        method = "generate",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onChatReturn(@ProbeClassName String cls,
+                                    @Return Object response,
+                                    @Duration long durationNanos) {
+        // Extract token counts via BTrace field-access helpers.
+        // TokenUsage is nested inside Response<AiMessage>.
+        Object tokenUsage = get(
+            field("dev.langchain4j.model.output.Response", "tokenUsage"),
+            response);
+        int inputTokens  = 0;
+        int outputTokens = 0;
+        if (tokenUsage != null) {
+            inputTokens  = (Integer) get(
+                field("dev.langchain4j.model.output.TokenUsage", "inputTokenCount"),
+                tokenUsage);
+            outputTokens = (Integer) get(
+                field("dev.langchain4j.model.output.TokenUsage", "outputTokenCount"),
+                tokenUsage);
+        }
+
+        llm.call(cls)
+            .inputTokens(inputTokens)
+            .outputTokens(outputTokens)
+            .duration(durationNanos)
+            .record();
+    }
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.model.chat.ChatLanguageModel",
+        method = "generate",
+        location = @Location(Kind.ERROR)
+    )
+    public static void onChatError(@ProbeClassName String cls,
+                                   Throwable t,
+                                   @Duration long durationNanos) {
+        llm.recordError(cls, str(classOf(t)), durationNanos);
+    }
+
+    // Print a summary on demand (btrace send event) or every 60 seconds.
+    @OnEvent
+    public static void printSummary() {
+        println(llm.getSummary());
+        println(strcat("Estimated cost: $",
+                       str(llm.getEstimatedCostUsd())));
+    }
+
+    @OnTimer(60000)
+    public static void periodicSummary() {
+        printSummary();
+    }
+}
+```
+
+Copy `btrace-llm-trace.jar` to `$BTRACE_HOME/extensions/` — the agent discovers and loads it automatically. Then run as normal:
+
+```bash
+btrace <PID> LlmTrace.java
+```
+
+---
+
+#### 12.2 RAG Pipeline Observability (`btrace-rag-quality`)
+
+**Extension ID:** `btrace-rag-quality`  
+**Service class:** `io.btrace.rag.RagQualityService`  
+**Builder class:** `io.btrace.rag.QueryRecord`
+
+`RagQualityService` tracks vector database query performance, result counts, similarity scores, and end-to-end pipeline latency broken down into retrieval and generation phases. It counts empty retrievals and chunk token sizes and works with any vector store: Pinecone, Milvus, Weaviate, Chroma, pgvector, Qdrant, and others.
+
+##### Simple API
+
+```java
+void recordQuery(String source, long durationNanos)
+void recordQuery(String source, int resultCount, long durationNanos)
+QueryRecord query(String source)         // returns a fluent builder
+void recordPipeline(String pipelineName, long retrievalNanos, long generationNanos)
+void recordChunk(String source, int chunkTokens)
+void recordEmptyRetrieval(String source)
+String getSummary()
+float getAverageTopScore()
+```
+
+Fluent builder:
+
+```java
+rag.query("pinecone")
+    .resultCount(5)
+    .topScore(0.92f)
+    .lowScore(0.71f)
+    .embeddingDimension(1536)
+    .duration(durationNanos)
+    .record();
+```
+
+##### Full example — RAG pipeline with Pinecone and LangChain4j
+
+This script instruments the retrieval call to a Pinecone-backed `EmbeddingStore` and the downstream LLM call together, giving a unified view of the pipeline:
+
+```java
+import io.btrace.rag.RagQualityService;
+import io.btrace.rag.QueryRecord;
+import io.btrace.llm.LlmTraceService;
+import io.btrace.core.annotations.*;
+import static io.btrace.BTrace.*;
+
+@BTrace
+public class RagPipeline {
+
+    @Injected private static RagQualityService rag;
+    @Injected private static LlmTraceService   llm;
+
+    // Carries the retrieval duration from the retrieval handler into the pipeline
+    // handler, which runs after retrieval completes on the same thread.
+    @TLS private static long lastRetrievalDur;
+
+    // --- Retrieval phase ---
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.store.embedding.EmbeddingStore",
+        method = "findRelevant",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onRetrievalReturn(@Return Object results,
+                                         @ProbeClassName String store,
+                                         @Duration long dur) {
+        int count = (results != null) ? (Integer) call(
+            method("java.util.List", "size"), results) : 0;
+
+        if (count == 0) {
+            rag.recordEmptyRetrieval(store);
+        } else {
+            rag.query(store)
+               .resultCount(count)
+               .duration(dur)
+               .record();
+        }
+        lastRetrievalDur = dur;
+    }
+
+    // --- Generation phase ---
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.chain.ConversationalRetrievalChain",
+        method = "execute",
+        location = @Location(Kind.ENTRY)
+    )
+    public static void onPipelineEntry() {
+        lastRetrievalDur = 0;
+    }
+
+    @OnMethod(
+        clazz  = "+dev.langchain4j.chain.ConversationalRetrievalChain",
+        method = "execute",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onPipelineReturn(@ProbeClassName String cls,
+                                        @Duration long totalNanos) {
+        long generationNanos = totalNanos - lastRetrievalDur;
+        rag.recordPipeline(cls, lastRetrievalDur, generationNanos);
+        llm.recordCall(cls, generationNanos);
+    }
+
+    @OnEvent
+    public static void printSummary() {
+        println("=== RAG Summary ===");
+        println(rag.getSummary());
+        println(strcat("Average top similarity score: ",
+                       str(rag.getAverageTopScore())));
+        println("=== LLM Summary ===");
+        println(llm.getSummary());
+    }
+
+    @OnTimer(30000)
+    public static void periodicSummary() {
+        printSummary();
+    }
+}
+```
+
+Copy both extension JARs to `$BTRACE_HOME/extensions/`, then run:
+
+```bash
+btrace <PID> RagPipeline.java
+```
+
+---
+
+#### 12.3 GPU and Inference Observability (`btrace-gpu-bridge`)
+
+**Extension ID:** `btrace-gpu-bridge`  
+**Service class:** `io.btrace.gpu.GpuBridgeService`  
+**Builder class:** `io.btrace.gpu.InferenceRecord`
+
+`GpuBridgeService` traces the boundary between JVM code and GPU-accelerated inference runtimes: ONNX Runtime, Deep Java Library (DJL), TensorFlow Java, and Panama FFM calls into CUDA/ROCm native libraries. It tracks batch sizes, tensor dimensions, device type and ID, GPU memory allocation and deallocation, and model load times.
+
+##### Simple API
+
+```java
+void recordInference(String runtime, String modelName, long durationNanos)
+void recordInference(String runtime, String modelName, int batchSize, long durationNanos)
+InferenceRecord inference(String runtime, String modelName)   // fluent builder
+void recordMemoryAlloc(String deviceType, int deviceId, long bytes)
+void recordMemoryFree(String deviceType, int deviceId, long bytes)
+void recordNativeCall(String library, String function, long durationNanos)
+void recordModelLoad(String runtime, String modelName, long durationNanos)
+String getSummary()
+long getCurrentGpuMemoryBytes()
+long getPeakGpuMemoryBytes()
+```
+
+##### Example — instrumenting ONNX Runtime
+
+```java
+import io.btrace.gpu.GpuBridgeService;
+import io.btrace.gpu.InferenceRecord;
+import io.btrace.core.annotations.*;
+import static io.btrace.BTrace.*;
+
+@BTrace
+public class OnnxTrace {
+
+    @Injected private static GpuBridgeService gpu;
+
+    // @Self is available at Kind.RETURN, so no TLS is needed to carry the session reference.
+    // @Duration provides the call duration without manual timestamp diffing.
+
+    @OnMethod(
+        clazz  = "ai.onnxruntime.OrtSession",
+        method = "run",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onRunReturn(@Self Object session, @Duration long dur) {
+        String modelPath = str(get(
+            field("ai.onnxruntime.OrtSession", "modelPath"), session));
+        gpu.inference("onnxruntime", modelPath)
+           .duration(dur)
+           .record();
+    }
+
+    @OnMethod(
+        clazz  = "ai.onnxruntime.OrtSession",
+        method = "run",
+        location = @Location(Kind.ERROR)
+    )
+    public static void onRunError(Throwable t, @Duration long dur) {
+        gpu.recordNativeCall("onnxruntime", "run/error", dur);
+    }
+
+    // @Duration at Kind.RETURN gives the load duration directly; no ENTRY handler needed.
+    @OnMethod(
+        clazz  = "ai.onnxruntime.OrtEnvironment",
+        method = "createSession",
+        location = @Location(Kind.RETURN)
+    )
+    public static void onLoadReturn(@Return Object sess, @Duration long dur) {
+        String mp = str(get(
+            field("ai.onnxruntime.OrtSession", "modelPath"), sess));
+        gpu.recordModelLoad("onnxruntime", mp, dur);
+    }
+
+    @OnEvent
+    public static void printSummary() {
+        println(gpu.getSummary());
+        println(strcat("Current GPU memory: ",
+                       str(gpu.getCurrentGpuMemoryBytes() / (1024 * 1024)) + " MB"));
+        println(strcat("Peak GPU memory:    ",
+                       str(gpu.getPeakGpuMemoryBytes()    / (1024 * 1024)) + " MB"));
+    }
+
+    @OnTimer(60000)
+    public static void periodicSummary() {
+        printSummary();
+    }
+}
+```
+
+Copy `btrace-gpu-bridge.jar` to `$BTRACE_HOME/extensions/`, then run:
+
+```bash
+btrace <PID> OnnxTrace.java
+```
+
+---
+
+#### Using multiple AI extensions together
+
+All four extensions can be combined in a single script. Copy all the extension JARs you need to `$BTRACE_HOME/extensions/` — the agent discovers and loads them automatically:
+
+```bash
+cp btrace-llm-trace.jar btrace-rag-quality.jar \
+   btrace-gpu-bridge.jar \
+   $BTRACE_HOME/extensions/
+btrace <PID> MyAIObservability.java
+```
+
+When using the fat agent at JVM startup, the same rule applies — extensions under `$BTRACE_HOME/extensions/` are loaded automatically:
+
+```bash
+java -javaagent:btrace.jar=script=MyAIObservability.java -jar myapp.jar
+```
+
+Use `@OnEvent` for on-demand reporting triggered by `btrace send event <PID>` and `@OnTimer` for periodic snapshots. Both can coexist in the same script.
+
+---
+
+## Lesson 13 — BTrace MCP Server: AI Agents as Diagnosticians
+
+#### What is MCP?
+
+MCP (Model Context Protocol) is a protocol that lets AI assistants call external tools during a conversation. Instead of the AI only producing text, it can invoke structured operations — search, read a file, query a database — and incorporate the results into its response. The BTrace MCP server exposes BTrace operations as MCP tools, so an LLM client such as Claude Desktop or Claude Code can attach to running JVMs, deploy probes, read output, and clean up — all through natural language conversation.
+
+#### How the BTrace MCP server works
+
+The BTrace MCP server runs as a local subprocess on the same machine as the target JVM. The AI client starts and manages the server process; you do not need to keep a terminal open for it. When the AI calls a BTrace tool, the server forwards the request to the BTrace agent (or attaches one if none is present) and returns the result. Because the server only connects to local JVMs, and because BTrace's safety model — no loops, no allocation, no exceptions, no field assignment — still applies to every probe, the AI cannot break or hang the target application.
+
+#### Starting the server manually
+
+For testing or scripting, you can start the MCP server directly:
+
+```bash
+java -jar btrace-mcp-server.jar
+```
+
+By default the server listens on `stdio` (the MCP transport used by most clients) and connects to the BTrace agent on port 2020. Override the port with:
+
+```bash
+java -Dbtrace.port=2021 -jar btrace-mcp-server.jar
+```
+
+Or via the environment variable `BTRACE_PORT=2021`.
+
+If no BTrace agent is attached to the target JVM, the `deploy_oneliner` and `deploy_script` tools auto-attach one using the JVM's attach API — no extra step required.
+
+#### Client setup
+
+See [MCPServer.md](MCPServer.md) for per-client configuration instructions covering Claude Desktop, Claude Code, Cursor, OpenAI Codex CLI, VS Code, Windsurf, Continue.dev, and Zed. Every client follows the same pattern — point it at `btrace-mcp-server.jar` as the server command — but the configuration file location and schema differ slightly between hosts.
+
+#### Available tools
+
+| Tool | Description |
+|---|---|
+| `list_jvms` | List all local JVMs with their PIDs, main class, and BTrace attachment status |
+| `deploy_oneliner` | Deploy a single-expression probe using oneliner syntax (auto-attaches agent) |
+| `deploy_script` | Deploy a full BTrace script file to a target JVM |
+| `list_probes` | List active probes on a target JVM |
+| `send_event` | Send a named event to trigger `@OnEvent` handlers |
+| `detach_probe` | Detach a single probe without stopping BTrace |
+| `exit_probe` | Stop all BTrace probes and detach the agent from the JVM |
+
+#### Available prompts
+
+The server ships three pre-built diagnostic workflows that the AI can invoke as structured prompts:
+
+| Prompt | What it does |
+|---|---|
+| `diagnose_slow_endpoint` | Attaches timing probes to HTTP handler methods and reports latency distribution |
+| `find_exception_source` | Traces exception construction and propagation across the call stack |
+| `profile_method` | Measures throughput and latency of a named method over a configurable window |
+
+#### Example conversation
+
+The following exchange shows how an AI assistant uses BTrace MCP tools to diagnose a slow HTTP endpoint. Lines marked `[tool]` represent MCP tool calls made by the AI during the conversation.
+
+---
+
+**User:** My `/recommendations` endpoint is taking over two seconds. Can you help me find out why?
+
+**AI:** I will start by finding which JVMs are running on this machine.
+
+`[tool: list_jvms]`
+
+```
+PID    MAIN CLASS                          BTRACE
+12345  com.example.app.ApplicationMain     not attached
+```
+
+I found your application at PID 12345. Let me deploy a timing probe to the HTTP handler layer.
+
+`[tool: deploy_oneliner]`
+```
+pid: 12345
+probe: /com\.example\..*/::/.*recommendations.*/i @return { time }
+```
+
+```
+Probe deployed. Waiting for output…
+[12345] com.example.recommendation.RecommendationController.handle: 2341 ms
+[12345] com.example.recommendation.RecommendationController.handle: 2289 ms
+```
+
+The controller itself is taking over two seconds. Let me look inside it — I will check whether the delay is in the database call or the LLM call.
+
+`[tool: deploy_oneliner]`
+```
+pid: 12345
+probe: /com\.example\.recommendation\..*/::/.+/ @return { time }
+```
+
+```
+[12345] RecommendationRepository.findCandidates:  1987 ms
+[12345] LlmRankingService.rank:                    312 ms
+```
+
+The database retrieval accounts for most of the latency. The LLM ranking step is fast. Let me clean up the probes.
+
+`[tool: exit_probe]`
+```
+pid: 12345
+```
+
+```
+BTrace agent detached from PID 12345.
+```
+
+**AI:** The bottleneck is `RecommendationRepository.findCandidates`, which takes roughly 2 seconds out of the total 2.3 seconds. The LLM ranking step adds only about 300 ms. I recommend investigating the query or index used by `findCandidates` — adding an index on the candidate-selection columns would likely resolve most of the latency.
+
+---
+
+#### Security note
+
+The BTrace MCP server only attaches to JVMs on the local machine; it cannot connect to remote processes. Every probe the AI deploys goes through BTrace's standard verifier, which enforces the same restrictions as any other BTrace script: no loops, no object allocation, no exceptions, no field writes. The AI can observe your application in detail but cannot alter its behavior or cause it to crash.

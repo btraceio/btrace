@@ -1,0 +1,38 @@
+LCONST_0
+LSTORE 1
+LCONST_0
+LSTORE 3
+INVOKESTATIC java/lang/System.nanoTime ()J
+LSTORE 3
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L0
+LDC "public void resources.issues.BTRACE256#doStuff"
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE256$entry(Ljava/lang/String;)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/BTRACE256"
+]
+FRAME APPEND [J J]
+INVOKESTATIC java/lang/System.nanoTime ()J
+LLOAD 3
+LSUB
+LSTORE 1
+L3
+FRAME SAME
+INVOKESTATIC io/btrace/runtime/LinkingFlag.get ()I
+IFNE L4
+LDC "public void resources.issues.BTRACE256#doStuff"
+LLOAD 1
+INVOKEDYNAMIC $btrace$io$btrace$runtime$auxiliary$BTRACE256$exit(Ljava/lang/String;J)V [
+// handle kind 0x6 : INVOKESTATIC
+io/btrace/runtime/IndyDispatcher.bootstrap(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;
+// arguments:
+"io/btrace/runtime/auxiliary/BTRACE256"
+]
+L4
+FRAME SAME
+L5
+LOCALVARIABLE this Lresources/issues/BTRACE256; L0 L5 0
+MAXSTACK = 4
+MAXLOCALS = 5

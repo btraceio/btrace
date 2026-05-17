@@ -28,7 +28,7 @@ BTrace is a safe, dynamic tracing tool for the Java platform. It dynamically ins
 
 ### Code Style
 - **Format**: Google Java Format enforced via Spotless
-- **Packages**: All under `org.openjdk.btrace.*`
+- **Packages**: All under `io.btrace.*`
 - **Naming**: Module names follow `btrace-<component>` pattern
 - **Imports**: Order enforced; remove unused imports
 - **Comments**: Only add if they match existing style or explain complex logic
@@ -101,8 +101,8 @@ JAVA_TOOL_OPTIONS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresse
 ## Example BTrace Script Pattern
 ```java
 package example;
-import static org.openjdk.btrace.core.BTraceUtils.*;
-import org.openjdk.btrace.core.annotations.*;
+import static io.btrace.core.BTraceUtils.*;
+import io.btrace.core.annotations.*;
 
 @BTrace
 public class ExampleTrace {

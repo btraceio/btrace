@@ -204,7 +204,7 @@ jobs:
           retention-days: 1
           path: |
             btrace-dist/build
-            btrace-instr/build/classes/traces
+            btrace-agent/build/classes/traces
 
       - name: Upload test trace data
         uses: actions/upload-artifact@v7
@@ -212,7 +212,7 @@ jobs:
           name: test-trace
           retention-days: 1
           path: |
-            btrace-instr/build/classes/traces
+            btrace-agent/build/classes/traces
 
       - name: Archive test reports
         if: always()
@@ -233,7 +233,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8.0.482-tem, 11.0.30-tem, 17.0.18-tem, 21.0.10-tem]
+        java: [8.0.492-tem, 11.0.31-tem, 17.0.19-tem, 21.0.11-tem]
     env:
       TEST_JAVA_HOME: "/home/runner/.sdkman/candidates/java/${{ matrix.java }}"
     steps:
@@ -259,7 +259,7 @@ jobs:
           source "$HOME/.sdkman/bin/sdkman-init.sh"
           echo 'n' | sdk install java ${{ matrix.java }}
           which java
-          echo 'y' | sdk install java 11.0.30-tem
+          echo 'y' | sdk install java 11.0.31-tem
 
       - name: Cache Gradle
         uses: actions/cache@v5
@@ -281,11 +281,11 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: test-trace
-          path: btrace-instr/build/classes/traces
+          path: btrace-agent/build/classes/traces
 
-      - name: Build btrace-instr jar
+      - name: Build btrace-agent jar
         run: |
-          ./gradlew --no-daemon --parallel --build-cache :btrace-instr:jar
+          ./gradlew --no-daemon --parallel --build-cache :btrace-agent:jar
 
       - name: Run integration tests
         run: |
@@ -332,17 +332,17 @@ jobs:
             git checkout -b "${BRANCH}"
           fi
 
-      - name: Update version in common.gradle
+      - name: Update version in build.gradle
         run: |
           VERSION="${{ inputs.release_version }}"
-          sed -i "s/project.version = '.*'/project.version = '${VERSION}'/" common.gradle
+          sed -i "s/version = '.*'/version = '${VERSION}'/" build.gradle
           echo "Updated version to ${VERSION}"
-          grep "project.version" common.gradle
+          grep "version = " build.gradle
 
       - name: Commit version change
         id: commit
         run: |
-          git add common.gradle
+          git add build.gradle
           git commit -m "Release ${RELEASE_TAG}"
           SHA=$(git rev-parse HEAD)
           echo "sha=${SHA}" >> $GITHUB_OUTPUT

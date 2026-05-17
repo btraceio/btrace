@@ -4,14 +4,13 @@ spotless {
     java {
         target 'src/*/java/**/*.java'
         // note: you can use an empty string for all the imports you didn't specify explicitly, and '\\#` prefix for static imports
-        importOrder('java', 'javax', 'org.openjdk.btrace', '', '\\#org.openjdk.btrace', '\\#')
-        removeUnusedImports()
+        importOrder('java', 'javax', 'io.btrace', '', '\\#io.btrace', '\\#')
 
         googleJavaFormat()   // has its own section below
 
         formatAnnotations()  // fixes formatting of type annotations, see below
 
-//        licenseHeader '/* (C) $YEAR */' // or licenseHeaderFile
+        licenseHeaderFile rootProject.file('license.header')
     }
 }
 

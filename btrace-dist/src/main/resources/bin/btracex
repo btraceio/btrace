@@ -15,7 +15,7 @@ CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
 if [ -f "${CLIENT_JAR}" ]; then
   if [ -d "${JAVA_HOME}" ]; then
     CP="${CLIENT_JAR}"
-    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CP} org.openjdk.btrace.extcli.Main "$@"
+    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -Dbtrace.client.main=io.btrace.extcli.Main -cp ${CP} io.btrace.boot.Loader "$@"
   else
     echo "Please set a valid JAVA_HOME before running this script"
     exit 1

@@ -20,7 +20,7 @@ CLIENT_JAR="${BTRACE_HOME}/libs/btrace.jar"
 if [ -f "${CLIENT_JAR}" ]; then
   if [ -d "${JAVA_HOME}" ]; then
     if [ "$1" = "--version" ]; then
-      ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR} org.openjdk.btrace.boot.Loader --version
+      ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR} io.btrace.boot.Loader --version
       exit 0
     fi
     TOOLS_JAR="$JAVA_HOME/lib/tools.jar"
@@ -51,7 +51,7 @@ if [ -f "${CLIENT_JAR}" ]; then
       exit 1
     fi
 
-    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -cp ${CLIENT_JAR}:${TOOLS_JAR} org.openjdk.btrace.compiler.Compiler $*
+    ${JAVA_HOME}/bin/java ${JAVA_ARGS} -Dbtrace.client.main=io.btrace.compiler.Compiler -cp ${CLIENT_JAR}:${TOOLS_JAR} io.btrace.boot.Loader $*
   else
     echo "Please set a valid JAVA_HOME before running this script"
     exit 1

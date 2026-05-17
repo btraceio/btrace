@@ -91,7 +91,7 @@ This directory contains GitHub Actions workflows for continuous integration and 
 
 #### **code-coverage**
 - Generates JaCoCo coverage reports
-- Focuses on `org.openjdk.btrace.core.comm` package
+- Focuses on `io.btrace.core.comm` package
 - Uploads coverage artifacts for 30 days
 - Creates coverage summary in step output
 
@@ -202,7 +202,7 @@ The workflows ensure comprehensive testing of the v2 protocol implementation:
 
 ```bash
 # Run only v2 tests
-./gradlew :btrace-core:test --tests "org.openjdk.btrace.core.comm.v2.*"
+./gradlew :btrace-core:test --tests "io.btrace.core.comm.v2.*"
 
 # Run protocol negotiation tests
 ./gradlew :btrace-core:test --tests "*Protocol*"
@@ -262,7 +262,7 @@ git commit -m "Optimize binary protocol [benchmark]"
 ### JaCoCo Configuration
 
 **Focus Area:**
-- Package: `org.openjdk.btrace.core.comm.**`
+- Package: `io.btrace.core.comm.**`
 - Includes v2 protocol, negotiation, and abstraction
 
 **Reports Generated:**

@@ -42,6 +42,12 @@ latest_ea_open() {
   printf '%s\n' "$VERSION_LIST" | grep -E "^${major}\\.ea\\.[0-9]+-open$" | sort -t. -k3 -n | tail -1
 }
 
+# Find the highest major version that has any EA builds on SDKMan.
+latest_ea_major() {
+  printf '%s\n' "$VERSION_LIST" | grep -E "^[0-9]+\\.ea\\.[0-9]+-open$" | \
+    sed 's/\.ea\..*//' | sort -n | tail -1
+}
+
 # --- Extract current versions ---
 
 # Test matrix from continuous.yml (superset of release.yml)
@@ -68,6 +74,8 @@ for ver in $MATRIX_VERSIONS; do
     fi
   elif [[ "$ver" =~ ^([0-9]+)\.ea\.([0-9]+)-open$ ]]; then
     major="${BASH_REMATCH[1]}"
+    newest_major=$(latest_ea_major)
+    [[ -n "$newest_major" && "$newest_major" -gt "$major" ]] && major="$newest_major"
     latest=$(latest_ea_open "$major")
     if [[ -n "$latest" && "$latest" != "$ver" ]]; then
       CHANGES+=("$ver -> $latest")
