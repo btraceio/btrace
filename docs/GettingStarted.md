@@ -203,8 +203,6 @@ Create a BTrace script (`TraceMethods.java`) to trace method calls:
 ```java
 import io.btrace.core.annotations.BTrace;
 import io.btrace.core.annotations.OnMethod;
-import static io.btrace.core.BTraceUtils.println;
-import static io.btrace.core.BTraceUtils.str;
 
 @BTrace
 public class TraceMethods {
@@ -214,6 +212,10 @@ public class TraceMethods {
     }
 }
 ```
+
+> **Note:** `println` and `str` are part of BTrace's built-in flat DSL — they are auto-imported by
+> the compiler so you don't need any explicit import. See [BTrace DSL](#btrace-dsl) below for all
+> available methods.
 
 ### Step 3: Attach BTrace to the Running Application
 
@@ -253,8 +255,6 @@ Capture latency distributions and simple stats without external systems using th
 2. Create a probe that injects `MetricsService` (no special flags needed):
 
 ```java
-import static io.btrace.core.BTraceUtils.*;
-
 import io.btrace.core.annotations.*;
 import io.btrace.metrics.MetricsService;
 import io.btrace.metrics.histogram.*;
@@ -426,7 +426,6 @@ btracer MyTrace.class java -cp myapp.jar com.example.Main
 
 ```java
 import io.btrace.core.annotations.*;
-import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MethodEntry {
@@ -441,7 +440,6 @@ public class MethodEntry {
 
 ```java
 import io.btrace.core.annotations.*;
-import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MethodArgs {
@@ -456,7 +454,6 @@ public class MethodArgs {
 
 ```java
 import io.btrace.core.annotations.*;
-import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MethodReturn {
@@ -471,7 +468,6 @@ public class MethodReturn {
 
 ```java
 import io.btrace.core.annotations.*;
-import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MethodDuration {
@@ -484,6 +480,10 @@ public class MethodDuration {
 }
 ```
 
+> **Tip:** `println`, `str`, and other common methods are part of BTrace's built-in flat DSL and are
+> auto-imported by the compiler — no explicit import needed. For advanced operations (reflection,
+> JMX counters, profiling), add `import static io.btrace.core.BTraceUtils.*;` explicitly.
+
 ## Advanced: JFR Integration
 
 BTrace integrates with Java Flight Recorder (JFR) to create high-performance events with <1% overhead. JFR events are recorded natively by the JVM and can be analyzed with JDK Mission Control.
@@ -495,7 +495,6 @@ BTrace integrates with Java Flight Recorder (JFR) to create high-performance eve
 ```java
 import io.btrace.core.annotations.*;
 import io.btrace.core.jfr.JfrEvent;
-import static io.btrace.core.BTraceUtils.*;
 
 @BTrace
 public class MyJfrTrace {

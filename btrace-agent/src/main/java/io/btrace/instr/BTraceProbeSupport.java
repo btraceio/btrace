@@ -105,8 +105,33 @@ public final class BTraceProbeSupport {
   }
 
   Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr) {
+    return getApplicableHandlers(
+        new ClassMeta() {
+          @Override
+          public String getJavaClassName() {
+            return cr.getJavaClassName();
+          }
+
+          @Override
+          public String getInternalName() {
+            return cr.getClassName();
+          }
+
+          @Override
+          public Collection<String> getAnnotationTypes() {
+            return cr.getAnnotationTypes();
+          }
+
+          @Override
+          public ClassLoader getClassLoader() {
+            return cr.getClassLoader();
+          }
+        });
+  }
+
+  Collection<OnMethod> getApplicableHandlers(ClassMeta meta) {
     Collection<OnMethod> applicables = new ArrayList<>(onMethods.size());
-    String targetName = cr.getJavaClassName();
+    String targetName = meta.getJavaClassName();
 
     outer:
     for (OnMethod om : onMethods) {
@@ -117,7 +142,6 @@ public final class BTraceProbeSupport {
         applicables.add(om);
         continue;
       }
-      // Check regex match
       if (om.isClassRegexMatcher() && !om.isClassAnnotationMatcher()) {
         Pattern p = om.getClassPattern();
         if (p != null && p.matcher(targetName).matches()) {
@@ -126,7 +150,7 @@ public final class BTraceProbeSupport {
         }
       }
       if (om.isClassAnnotationMatcher()) {
-        Collection<String> annoTypes = cr.getAnnotationTypes();
+        Collection<String> annoTypes = meta.getAnnotationTypes();
         if (om.isClassRegexMatcher()) {
           Pattern p = om.getClassPattern();
           if (p != null) {
@@ -144,10 +168,8 @@ public final class BTraceProbeSupport {
           }
         }
       }
-      // And, finally, check the class hierarchy
       if (om.isSubtypeMatcher()) {
-        // internal name of super type.
-        if (isSubTypeOf(cr.getClassName(), cr.getClassLoader(), probeClass)) {
+        if (isSubTypeOf(meta.getInternalName(), meta.getClassLoader(), probeClass)) {
           applicables.add(om);
         }
       }

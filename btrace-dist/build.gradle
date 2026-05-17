@@ -176,6 +176,7 @@ task prepareAgentClassdata(type: Copy) {
     into "${maskedJarTmpDir}/agent"
 
     from(provider { zipTree(allClassesShadow.archiveFile) }) {
+        include 'io/btrace/BTrace.class'
         include 'io/btrace/libs/org/jctools/**/*.class'
         include 'io/btrace/agent/**/*.class'
         include 'io/btrace/instr/**/*.class'
@@ -193,6 +194,8 @@ task prepareAgentClassdata(type: Copy) {
         exclude 'io/btrace/runtime/BTraceRuntimeAccess.class'
         exclude 'io/btrace/runtime/BTraceRuntimeAccess$*.class'
         exclude 'io/btrace/runtime/LinkingFlag.class'
+        // BTraceBootstrap is the BSM for flat DSL indy calls; lives in bootstrap CL only
+        exclude 'io/btrace/runtime/BTraceBootstrap.class'
         exclude 'META-INF/**'
         rename { name -> name.endsWith('.class') ? name.replace('.class', '.classdata') : name }
     }
@@ -289,6 +292,10 @@ def bootIncludes = {
         }
         return true
     }
+    // Include BTrace flat DSL class — needed by javac when compiling scripts
+    if (it.path == 'io/btrace/BTrace.class') {
+        return true
+    }
     if (it.path.startsWith('META-INF/services')) {
         return !it.path.contains('com.sun.') && !it.path.contains('javax.annotation.')
     }
@@ -303,6 +310,11 @@ def bootIncludes = {
         // Include invokedynamic bootstrap classes (they use volatile fields to reach agent implementations)
         if (it.path.startsWith('io/btrace/runtime/Indy')
                 || it.path.startsWith('io/btrace/runtime/ExtensionIndy')) {
+            return true
+        }
+        // BTraceBootstrap is the BSM for flat DSL INVOKEDYNAMIC calls; must be visible
+        // to application classloaders so the JVM can resolve the bootstrap method
+        if (it.path.startsWith('io/btrace/runtime/BTraceBootstrap')) {
             return true
         }
         // Include Auxiliary class - probe classes are defined via MethodHandles.privateLookupIn(Auxiliary.class)

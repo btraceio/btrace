@@ -24,7 +24,7 @@ import io.btrace.core.annotations.Self;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.btrace.core.BTraceUtils.*;
+import static io.btrace.BTrace.*;
 
 /**
  * This sample collects histogram of javax.swing.JComponets

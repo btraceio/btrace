@@ -22,6 +22,7 @@ import io.btrace.core.extensions.Permission;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import org.objectweb.asm.ClassVisitor;
 
@@ -37,6 +38,18 @@ public interface BTraceProbe {
   String getActionPrefix();
 
   Collection<OnMethod> getApplicableHandlers(BTraceClassReader cr);
+
+  /**
+   * Returns the {@link OnMethod} handlers applicable to the described class, using raw metadata
+   * instead of an ASM {@code ClassReader}. Used by backends that cannot construct a {@link
+   * BTraceClassReader} (e.g. the ClassFile API backend for unsupported class versions).
+   *
+   * <p>The default implementation returns an empty list. Full implementations (e.g. {@link
+   * BTraceProbeNode} and {@link BTraceProbePersisted}) override this to perform real matching.
+   */
+  default Collection<OnMethod> getApplicableHandlers(ClassMeta meta) {
+    return Collections.emptyList();
+  }
 
   byte[] getFullBytecode();
 

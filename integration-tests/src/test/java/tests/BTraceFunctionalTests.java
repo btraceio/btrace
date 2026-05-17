@@ -728,4 +728,21 @@ public class BTraceFunctionalTests extends RuntimeTest {
           }
         });
   }
+
+  @Test
+  @DisplayName("Flat DSL ops work without BTraceUtils import")
+  public void flatDslOpsWork() throws Exception {
+    testDynamic(
+        "resources.Main",
+        "btrace/FlatDslTest.java",
+        5,
+        new ResultValidator() {
+          @Override
+          public void validate(String stdout, String stderr, int retcode, String jfrFile) {
+            assertFalse(stdout.contains("FAILED"), "Script should not have failed");
+            assertTrue(stderr.isEmpty(), "Non-empty stderr");
+            assertTrue(stdout.contains("flat-dsl:"), "Expected flat-dsl output not found");
+          }
+        });
+  }
 }

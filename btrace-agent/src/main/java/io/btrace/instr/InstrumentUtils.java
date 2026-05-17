@@ -186,7 +186,7 @@ public final class InstrumentUtils {
     return cr.getClassVersion();
   }
 
-  private static int getMajor(byte[] code) {
+  static int getMajor(byte[] code) {
     // skip 0xCAFEBABE magic and minor version
     int majorOffset = 4 + 2;
     return (((code[majorOffset] << 8) & 0xFF00) | ((code[majorOffset + 1]) & 0xFF));

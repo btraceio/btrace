@@ -12,6 +12,22 @@ compileTestJava {
     options.forkOptions.executable = "${getJavac(8)}"
 }
 
+sourceSets {
+    java24 {
+        java {
+            srcDirs = ['src/main/java24']
+        }
+    }
+}
+
+compileJava24Java {
+    sourceCompatibility = 24
+    targetCompatibility = 24
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
+
 javadoc {
     // Javadoc also needs access to internal APIs - but Java 8 javadoc doesn't support --add-exports
     // So we exclude the file that uses internal APIs from javadoc generation
@@ -35,11 +51,25 @@ dependencies {
     implementation project(':btrace-runtime')
     implementation project(':btrace-compiler')
 
+    java24Implementation files(sourceSets.main.output.classesDirs) {
+        builtBy compileJava
+    }
+    java24Implementation project(':btrace-core')
+    java24Implementation project(':btrace-runtime')
+    java24Implementation libs.asm
+    java24Implementation libs.slf4j
+
     testImplementation libs.asm.util
     testImplementation libs.slf4j.simple
     testImplementation libs.junit.jupiter
     testImplementation project(':btrace-extensions:btrace-statsd')
     testImplementation project(':btrace-extensions:btrace-utils')
+}
+
+jar {
+    into('') {
+        from sourceSets.java24.output
+    }
 }
 
 // Exclude sources that rely on JDK-internal modules from Javadoc to avoid missing-package errors

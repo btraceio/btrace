@@ -20,7 +20,7 @@ import io.btrace.core.annotations.BTrace;
 import io.btrace.core.annotations.OnMethod;
 import io.btrace.core.annotations.ProbeClassName;
 
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * This BTrace class demonstrates that we can

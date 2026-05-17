@@ -30,7 +30,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
 
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * This example tracks all server socket creations

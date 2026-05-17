@@ -22,7 +22,7 @@ import io.btrace.core.annotations.OnTimer;
 import io.btrace.core.annotations.Property;
 import io.btrace.core.annotations.Self;
 
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * This sample demonstrates that you can expose a BTrace

@@ -23,7 +23,7 @@ import io.btrace.core.annotations.Self;
 
 import java.awt.*;
 
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * A BTrace program that can be run against a GUI

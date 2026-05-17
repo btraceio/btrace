@@ -21,7 +21,7 @@ import io.btrace.core.annotations.OnLowMemory;
 
 import java.lang.management.MemoryUsage;
 
-import static io.btrace.core.BTraceUtils.println;
+import static io.btrace.BTrace.println;
 
 /**
  * This sample traces memory threshold exceeds.
