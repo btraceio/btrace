@@ -16,6 +16,7 @@
  */
 package io.btrace.extcli;
 
+import io.btrace.registry.ExtensionRegistryEntry;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -107,8 +108,12 @@ final class Installer {
       if (zipPath == null)
         throw new IOException("Failed to download extension from provided repositories.");
     } else {
-      throw new IllegalArgumentException(
-          "Unrecognized input: provide a zip path, URL, or group:artifact:version");
+      ExtensionRegistryEntry entry = RegistrySupport.client().findById(target);
+      if (derivedId == null) {
+        derivedId = entry.getId();
+      }
+      install(entry.getMaven().gav(), repos, derivedId, dryRun);
+      return;
     }
 
     // Validate zip contains -api.jar and -impl.jar, and install
