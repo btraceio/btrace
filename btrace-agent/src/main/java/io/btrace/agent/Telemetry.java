@@ -28,7 +28,7 @@ final class Telemetry {
   // Replace with the actual key from your PostHog project settings.
   static final String API_KEY = "phc_tGurJ2fAYeouW4k8Txkn3zrfrKgoiuXgrAJP33ufX9Hv";
 
-  static final String ENDPOINT = "https://app.posthog.com/capture/";
+  static final String ENDPOINT = "https://eu.posthog.com/capture/";
 
   // Hard wall-clock cap for the guard thread (covers DNS + connect + read).
   // connectTimeout alone does not bound DNS resolution — the guard join does.
